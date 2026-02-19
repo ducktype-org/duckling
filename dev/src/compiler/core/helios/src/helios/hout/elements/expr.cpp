@@ -649,7 +649,9 @@ namespace compiler::helios::code {
 			  },
 			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 		  )),
-		  comparisons{ std::move(comparisons) } {}
+		  comparisons{ std::move(comparisons) } {
+		CORE_ASSERT(comparisons.size() > 0, "ChainComparisonExpr must have at least one comparison");
+	}
 
 	ChainComparisonExpr::ChainComparisonExpr(
 		tsh::ExpressionType<> expression_type, std::vector<ComparisonTriple> comparisons
@@ -659,32 +661,40 @@ namespace compiler::helios::code {
 
 	void ChainComparisonExpr::debugPrint(std::ostream& out) const {
 		using namespace std::views;
-		auto comparison_to_string = [](BuiltinBinary comp) {
-			using enum BuiltinBinary;
-			switch (comp) {
-			case IntegerLt:
-			case FloatLt:
-				return "<";
-			case IntegerLteq:
-			case FloatLteq:
-				return "<=";
-			case IntegerGt:
-			case FloatGt:
-				return ">";
-			case IntegerGteq:
-			case FloatGteq:
-				return ">=";
-			case IntegerEq:
-			case FloatEq:
-			case MetaEq:
-				return "==";
-			case IntegerNeq:
-			case FloatNeq:
-			case MetaNeq:
-				return "!=";
-			default:
-				CORE_UNREACHABLE();
+		auto comparison_to_string = [](const Comparator comp) {
+			variant_match(comp) {
+				variant_case(BuiltinBinary, builtin) {
+					using enum BuiltinBinary;
+					switch (builtin) {
+					case IntegerLt:
+					case FloatLt:
+						return "<";
+					case IntegerLteq:
+					case FloatLteq:
+						return "<=";
+					case IntegerGt:
+					case FloatGt:
+						return ">";
+					case IntegerGteq:
+					case FloatGteq:
+						return ">=";
+					case IntegerEq:
+					case FloatEq:
+					case MetaEq:
+						return "==";
+					case IntegerNeq:
+					case FloatNeq:
+					case MetaNeq:
+						return "!=";
+					default:
+						CORE_UNREACHABLE();
+					}
+				}
+				variant_case(SymID, user_defined) {
+					return name(user_defined).str().c_str();
+				}
 			}
+			CORE_UNREACHABLE();
 		};
 
 		std::string separator = "";

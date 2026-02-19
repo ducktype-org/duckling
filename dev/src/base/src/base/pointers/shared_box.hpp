@@ -5,6 +5,7 @@
 #include <base/pointers/default_deleter.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
+#include <base/pointers/box.hpp>
 
 namespace base {
 	/**
@@ -126,7 +127,7 @@ namespace base {
 			other.nullify();
 		}
 
-		SharedBox(Box<T>&& other) noexcept:
+		explicit SharedBox(Box<T>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
 			  ctrl_ptr{ new ControlBlock(std::move(other).deleter) } {
 			other.ptr = nullptr;

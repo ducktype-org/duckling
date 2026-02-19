@@ -280,26 +280,14 @@ namespace compiler::mir {
 		}
 
 		void visitChainComparisonExpr(const hc::ChainComparisonExpr& chain_expr) override {
-			CORE_ASSERT(!chain_expr.expressions.empty(), "Empty chain comparison");
-			CORE_ASSERT(chain_expr.expressions.size() != 1, "Single element chain comparison");
-			CORE_ASSERT(
-				chain_expr.operators.size() == chain_expr.expressions.size() - 1,
-				"Operands: " + std::to_string(chain_expr.operators.size())
-					+ " expressions: " + std::to_string(chain_expr.expressions.size())
-					+ ", but expected one less operator then expression."
-			);
-
 			auto lower_subexpr_with_result
 				= [this](CRef<hc::Expr> expression, BlockBuilderRef next_block) {
 					  auto lowered = lowerSubExpr(*expression, next_block);
 					  return std::pair{ lowered.begin, lowered.getResult(function) };
 				  };
 
-			using namespace std::views;
-
 			// Place for a comparison instruction
 			auto last_comparison_block = function.newBlock();
-			auto prev_cmp_hole         = last_comparison_block->addHole();
 
 			// After the last comparison, continue regardless of the result.
 			last_comparison_block->setTerminator(Instruction{
@@ -309,57 +297,71 @@ namespace compiler::mir {
 			auto boolean_output
 				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
 
-			// The left-over value. We maintain that this has to partake in only one comparison,
-			// which will be placed in prev_cmp_hole.boolean
-			auto [prev_block, prev_value] = lower_subexpr_with_result(
-				chain_expr.expressions.back().ref(), last_comparison_block
-			);
+			// Now, build the proper comparisons in reverse order.
+			auto  next_block   = continuation;
+			usize triples_left = chain_expr.comparisons.size();
+			for (auto& comparison_triple: chain_expr.comparisons | std::views::reverse) {
+				triples_left--;
+				// First, prepare the block.
+				// If the comparison is the last one (next_block == continuation), we jump to the
+				// continuation regardless of the result. Otherwise, we branch to the next comparison
+				// if the result is true, and to the continuation if the results is false.
+				auto comparison_block = function.newBlock();
+				if (next_block->getID() == continuation->getID()) {
+					comparison_block->setTerminator(Instruction{
+						Operation::Jump,
+						{},
+						{ continuation->getID() },
+						{},
+						expr_scope,
+					});
+				} else {
+					comparison_block->setTerminator(Instruction{
+						Operation::Branch,
+						{},
+						{ boolean_output, next_block->getID(), continuation->getID() },
+						{},
+						expr_scope,
+					});
+				}
+				auto comparison_hole = next_block->addHole();
 
-			auto mir_operators = chain_expr.operators | transform(builtinBinaryToOperation);
+				// Now, lower the triple.
+				auto& [lhs, comparator, rhs] = comparison_triple;
+				// First, we lower the right-hand side, because we're lowering backwards.
+				auto [rhs_cont, rhs_res] = lower_subexpr_with_result(rhs.ref(), next_block);
+				// Now, the left-hand side.
+				auto [lhs_cont, lhs_res] = lower_subexpr_with_result(lhs.ref(), rhs_cont);
 
-			// First and last expressions require special handling. We build them in reverse, as usual.
-			auto expressions = chain_expr.expressions | drop(1) | reverse | drop(1);
-			auto comparisons = mir_operators | drop(1) | reverse;
-
-			for (const auto& [expr, comp]: zip(expressions, comparisons)) {
-				// Place for the next comparison.
-				BlockBuilderRef new_comparison_block = function.newBlock();
-				auto            new_cmp_hole         = new_comparison_block->addHole();
-				new_comparison_block->setTerminator(Instruction{
-					Operation::Branch,
-					{},
-					{ boolean_output, prev_block->getID(), continuation->getID() },
-					{},
-					expr_scope });  // We evaluate prev_value only after this comparison is true, as
-				                    // prev_cmp will be the first comparison it is a part of.
-
-				// Next expression (completes the prev_cmp).
-				auto [new_block, new_value]
-					= lower_subexpr_with_result(expr.ref(), new_comparison_block);
-
-				// We create the prev_cmp, as we only now have both expressions.
-				prev_cmp_hole.fill(Instruction{
-					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
-
-				prev_block    = new_block;
-				prev_cmp_hole = new_cmp_hole;
-
-				// expr_result participated in the previous comparison fulfilling the invariant.
-				prev_value = new_value;
+				// Finally, fill in the comparison instruction.
+				// Remember to set construction flag for boolean_output only for the first comparison.
+				variant_match(comparator) {
+					variant_case(helios::code::BuiltinBinary, builtin) {
+						comparison_hole.fill(Instruction{
+							builtinBinaryToOperation(builtin),
+							{ boolean_output },
+							{ lhs_res, rhs_res },
+							triples_left == 0 ? std::vector{ flagConstruct(boolean_output) }
+											  : std::vector<OperationFlag>{},
+							expr_scope,
+						});
+					}
+					variant_case(helios::SymID, user_defined) {
+						comparison_hole.fill(Instruction{
+							Operation::Call,
+							{ boolean_output },
+							{ MIRFunctionLiteral{ user_defined }, lhs_res, rhs_res },
+							triples_left == 0 ? std::vector{ flagConstruct(boolean_output) }
+											  : std::vector<OperationFlag>{},
+							expr_scope,
+						});
+					}
+				}
+				next_block = comparison_block;
 			}
 
-			// The first expression to be evaluated.
-			auto [first_block, first_value]
-				= lower_subexpr_with_result(chain_expr.expressions.front().ref(), prev_block);
-
-			// The first comparison to be performed.
-			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
-			                                { boolean_output },
-			                                { first_value, prev_value },
-			                                { flagConstruct(boolean_output) },
-			                                expr_scope });
-
-			valueOutput(first_block, boolean_output);
+			// Now next_block is the starting block of the first comparison.
+			valueOutput(next_block, boolean_output);
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {

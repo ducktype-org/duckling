@@ -511,7 +511,9 @@ namespace compiler::helios::code {
 	 * @TODO: User defined comparison operators.
 	 */
 	struct ChainComparisonExpr final: public Expr {
-		using ComparisonTriple = std::tuple<Box<Expr>, BuiltinBinary, Box<Expr>>;
+		// A comparator can be a builtin operator or a user-defined function.
+		using Comparator = std::variant<BuiltinBinary, SymID>;
+		using ComparisonTriple = std::tuple<Box<Expr>, Comparator, Box<Expr>>;
 		std::vector<ComparisonTriple> comparisons;
 
 		ChainComparisonExpr(query::Context& ctx, std::vector<ComparisonTriple> comparisons);
@@ -633,3 +635,5 @@ namespace compiler::helios::code {
 		LiftToTypeExpr(tsh::ExpressionType<> expression_type, Box<Expr> value_expr);
 	};
 }
+
+ID_STD_HASH(compiler::helios::code::HOUTExprID)
