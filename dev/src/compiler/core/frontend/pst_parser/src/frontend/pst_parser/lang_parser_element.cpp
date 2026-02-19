@@ -113,8 +113,8 @@ namespace pst {
 		for (auto& sub_el: sub_elements) {
 			variant_match(sub_el) {
 				variant_case(InternalChild, el) { addToHash(partial_hash, el->getHash().data); }
-				variant_case(InternalNamedChild, el) { 
-					addToHash(partial_hash, el.element->getHash().data); 
+				variant_case(InternalNamedChild, el) {
+					addToHash(partial_hash, el.element->getHash().data);
 				}
 			}
 		}

@@ -172,14 +172,15 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Calculates the total signature (Hash of the whole pst) and signs all of the elements with it (Adds it to their hash).
+		 * @brief Calculates the total signature (Hash of the whole pst) and signs all of the
+		 * elements with it (Adds it to their hash).
 		 */
 		void signGenerated() {
 			if (auto ref = element.internalMut()) {
 				LangElement::HashAlg partial_hash{};
 				ref->calcSignature(partial_hash);
 				auto hash = partial_hash.finalize();
-				ref->signGenerated(hash);	
+				ref->signGenerated(hash);
 			}
 		}
 

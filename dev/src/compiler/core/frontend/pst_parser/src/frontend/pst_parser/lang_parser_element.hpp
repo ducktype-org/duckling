@@ -340,7 +340,8 @@ namespace pst {
 		HashAlg calcStableHash() const;
 
 		/**
-		 * @brief Calculates the signature of the whole PST sub-tree. Assumes the hashes are already calculated.
+		 * @brief Calculates the signature of the whole PST sub-tree. Assumes the hashes are already
+		 * calculated.
 		 */
 		void calcSignature(LangElement::HashAlg& partial_hash) const;
 
