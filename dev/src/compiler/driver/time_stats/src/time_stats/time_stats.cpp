@@ -7,6 +7,8 @@
 #include <iostream>
 #include <utility>
 
+#include <time_stats/module_flags/module_flags.hpp>
+
 namespace time_stats {
 
 	namespace {
@@ -19,12 +21,19 @@ namespace time_stats {
 		 * \parallel This need to stay thread-safe.
 		 */
 		constinit std::array<timer::AtomicDuration, TIME_CATEGORIES_COUNT> time_statistics{};
-		constinit std::array<std::atomic<bool>, TIME_CATEGORIES_COUNT>     is_category_active{};
+
+		/**
+		 * @note This is intentially thread local, as it is valid for for each thread to track the same category at the same time.
+		 */
+		constinit thread_local std::array<std::atomic<bool>, TIME_CATEGORIES_COUNT>     is_category_active{};
 	}
 
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):
 		  category(category),
 		  ended(false) {
+
+		if (not ENABLE_TIME_STATS) return; // intentially do nothing.
+
 		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(true);
 
 		CORE_ASSERT(
@@ -37,6 +46,8 @@ namespace time_stats {
 	}
 
 	void TrackCategoryTime::end() {
+		if (not ENABLE_TIME_STATS) return; // intentially do nothing.
+
 		// multiple calls to end() do nothing:
 		if (ended) return;
 
@@ -57,6 +68,8 @@ namespace time_stats {
 	}
 
 	TrackCategoryTime::~TrackCategoryTime() {
+		if (not ENABLE_TIME_STATS) return; // intentially do nothing.
+
 		// we don't do anything if already ended:
 		if (ended) return;
 
@@ -79,6 +92,11 @@ namespace time_stats {
 
 	void prettyPrintTimeStatistics() {
 		std::cerr << "=== Time statistics collected by compiler time_stats module ===\n\n";
+
+		if (not ENABLE_TIME_STATS) {
+			std::cerr << "Time statistics collection is disabled. No statistics to show.\n";
+			return;
+		}
 
 		std::cerr << "Driver initialization time: ";
 		timer::printAs(
