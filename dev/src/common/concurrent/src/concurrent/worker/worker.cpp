@@ -1,10 +1,27 @@
 #include "worker.hpp"
 
 #include <base/except/exceptions.hpp>
+#include <timer/timer.hpp>
 
 #include <random>
+#include <iostream>
 
 namespace concurrent::worker {
+
+	struct WaitTimePrinter final {
+			WaitTimePrinter(std::string_view name_): name(name_) {}
+			
+			timer::AtomicDuration wait_time;
+			std::string_view name;
+
+			~WaitTimePrinter() {
+				std::cerr << "TaskPool " << name << ": ";
+				timer::printAs(std::cerr, wait_time.toDuration(), timer::TimeUnit::Milliseconds);
+				std::cerr << "\n";
+			}
+		};
+
+
 	namespace {
 		thread_local base::Optional<WRef> current_worker = std::nullopt;
 	}
@@ -51,6 +68,10 @@ namespace concurrent::worker {
 			current_worker.emplace(this);
 			while (loop_run_flag) {
 				Task task;
+				static WaitTimePrinter wait_time_printer("Worker between tasks");
+				timer::TimeMeasurement tm;
+				tm.startMeasurement();
+
 				{
 					std::unique_lock lock(mut);
 
@@ -73,6 +94,10 @@ namespace concurrent::worker {
 					task = task_queue.front();
 					task_queue.pop();
 				}
+
+				tm.endMeasurement();
+				wait_time_printer.wait_time.add(tm.duration());
+
 				task(this);
 			}
 		} };

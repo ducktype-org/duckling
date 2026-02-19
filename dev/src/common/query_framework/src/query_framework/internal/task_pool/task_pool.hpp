@@ -110,7 +110,7 @@ namespace query::internal {
 	class TaskPool final {
 		using WRef = concurrent::worker::WRef;
 
-		static constexpr usize TASK_SHARDS = 127;
+		static constexpr usize TASK_SHARDS = 127 * 3;
 
 	public:
 		/**
