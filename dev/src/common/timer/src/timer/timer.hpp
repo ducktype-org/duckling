@@ -105,7 +105,8 @@ namespace timer {
 
 	/**
 	 * RAII-like object to add time to a given AtomicDuration variable.
-	 * Measures time from construction to destruction and adds it to the given AtomicDuration reference.
+	 * Measures time from construction to destruction and adds it to the given AtomicDuration
+	 * reference.
 	 */
 	struct AddToTimeAtomic final {
 		AddToTimeAtomic(Ref<AtomicDuration> to_add): to_add(to_add), start(timer::now()) {}
