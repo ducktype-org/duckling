@@ -65,7 +65,9 @@ namespace query::internal {
 		cv.wait(lock, [this, id] { return isTaskDone(id); });
 
 		tm.endMeasurement();
-		wait_time_printer.wait_time.add(tm.duration());
+		if (concurrent::worker::Worker::isWorkerThread()) { // this is a good-enough check for now for are we in query
+			wait_time_printer.wait_time.add(tm.duration());
+		}
 	}
 
 

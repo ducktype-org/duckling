@@ -99,4 +99,8 @@ namespace concurrent::worker {
 			CORE_PANIC("Accessing the thread-local current worker reference that is empty");
 		return current_worker.value();
 	}
+
+	bool Worker::isWorkerThread() {
+		return current_worker.has_value();
+	}
 }

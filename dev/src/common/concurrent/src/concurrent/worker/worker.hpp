@@ -88,6 +88,7 @@ namespace concurrent::worker {
 		 * Panics if called from a non-worker thread.
 		 */
 		static WRef getCurrentWorker();
+		static bool isWorkerThread();
 
 	private:
 		Worker(usize seed);
