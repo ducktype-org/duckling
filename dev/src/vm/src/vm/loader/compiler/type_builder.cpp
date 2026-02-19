@@ -1,5 +1,6 @@
 #include "type_builder.hpp"
 
+#include "vm/bytecode/validator/type.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -43,6 +44,7 @@ namespace {
 	/**
 	 * @brief Builds a vector of fields (FieldVector) for an InheritableType. Collects all
 	 * fields from superclasses.
+	 * TODO: This is wrong, because it duplicates fields from superclasses in case of multiple levels of inheritance.
 	 */
 	template<InheritableTypeConcept InheritableType>
 	FieldVector buildFieldVector(
@@ -126,7 +128,7 @@ namespace {
 		const vm::ObjIdNameMap<TypeOfData>& types,
 		const std::vector<TypeOfData>&      new_types
 	) {
-		for (const auto& type: types) {
+		for (const auto& type: new_types) {
 			variant_match(type) {
 				variant_case(PrimitiveType, data) {
 					type_metadata->at(data.name)->definePrimitive(data.size);

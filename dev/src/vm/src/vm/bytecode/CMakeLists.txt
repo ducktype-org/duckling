@@ -5,7 +5,6 @@ add_files(
     validator/function_validator.cpp
     validator/type_validator.cpp
     validator/type_context.cpp
-    validator/type_builder.cpp
     validator/valid_program.cpp
 )
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
