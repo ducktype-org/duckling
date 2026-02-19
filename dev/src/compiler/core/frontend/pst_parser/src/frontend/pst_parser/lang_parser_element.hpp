@@ -31,10 +31,6 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 	protected:
-		/**
-		 * @brief Hash algorithm used for PST stable hashing
-		 * @TODO: #1337 Swap to CRC256
-		 */
 		using HashAlg = hashing::StatefulHash<hashing::Blake3_256>;
 
 	public:
