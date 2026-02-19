@@ -58,7 +58,7 @@ namespace dia_int {
 	private:
 		concurrent::ConHashMap<std::string, template_file::DiagnosticTemplate> cache;
 		Box<TemplateRegistryProvider>                                          provider;
-		std::mutex                                                             loading_mutex;
+		static std::mutex                                                      instance_mutex;
 
 		static MBox<TemplateRegistrySingleton> instance;
 
@@ -77,7 +77,17 @@ namespace dia_int {
 
 		static TemplateRegistrySingleton& getInstance();
 
+		/**
+		 * @brief Set the instance object based on the provider.
+		 * When called multiple times, only the first call will have an effect.
+		 */
 		static void setInstance(Box<TemplateRegistryProvider> provider);
+
+		/**
+		 * @brief Force the registry to use a new provider.
+		 * For testing purposes.
+		 */
+		static void setNewInstance(Box<TemplateRegistryProvider> provider);
 	};
 
 }

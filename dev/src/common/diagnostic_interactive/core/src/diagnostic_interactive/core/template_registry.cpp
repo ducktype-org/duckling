@@ -82,26 +82,31 @@ namespace dia_int {
 	MBox<TemplateRegistrySingleton> TemplateRegistrySingleton::instance;
 
 	TemplateRegistrySingleton& TemplateRegistrySingleton::getInstance() {
+		std::lock_guard lock(instance_mutex);
 		if (!instance.toOpt().has_value())
 			throw TemplateEvaluationException("TemplateRegistry instance not initialized.");
 		return *instance.toOpt().value();
 	}
 
 	void TemplateRegistrySingleton::setInstance(Box<TemplateRegistryProvider> provider) {
+		std::lock_guard lock(instance_mutex);
 		if (instance.toOpt().empty())
 			instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
+	}
+
+	void TemplateRegistrySingleton::setNewInstance(Box<TemplateRegistryProvider> provider) {
+		std::lock_guard lock(instance_mutex);
+		instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
 	}
 
 	template_file::DiagnosticTemplate& TemplateRegistrySingleton::loadTemplate(
 		const dia_args::Metadata& metadata
 	) {
-		std::string key = metadata.type + "/" + metadata.family + "/" + metadata.name;
+		std::lock_guard lock(instance_mutex);
+		std::string     key = metadata.type + "/" + metadata.family + "/" + metadata.name;
 
 		if (auto cached = cache.atMaybe(key); cached.has_value()) return *cached.value();
 
-		std::lock_guard lock(loading_mutex);
-
-		if (auto cached = cache.atMaybe(key); cached.has_value()) return *cached.value();
 
 		auto str_content_opt = provider->loadTemplate(key);
 		if (!str_content_opt.has_value()) {
