@@ -80,6 +80,7 @@ namespace dia_int {
 	// --------------------------------------------------------------------------------
 
 	MBox<TemplateRegistrySingleton> TemplateRegistrySingleton::instance;
+	std::mutex                      TemplateRegistrySingleton::instance_mutex;
 
 	TemplateRegistrySingleton& TemplateRegistrySingleton::getInstance() {
 		std::lock_guard lock(instance_mutex);

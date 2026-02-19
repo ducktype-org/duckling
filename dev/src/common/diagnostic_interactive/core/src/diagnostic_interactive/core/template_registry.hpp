@@ -58,8 +58,8 @@ namespace dia_int {
 	private:
 		concurrent::ConHashMap<std::string, template_file::DiagnosticTemplate> cache;
 		Box<TemplateRegistryProvider>                                          provider;
-		static std::mutex                                                      instance_mutex;
 
+		static std::mutex                      instance_mutex;
 		static MBox<TemplateRegistrySingleton> instance;
 
 		TemplateRegistrySingleton(Box<TemplateRegistryProvider> provider):
