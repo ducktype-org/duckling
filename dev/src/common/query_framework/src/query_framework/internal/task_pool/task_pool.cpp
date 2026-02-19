@@ -5,10 +5,24 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 #include <timer/timer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <atomic>
 #include <iostream>
 #include <mutex>
+
+struct WaitTimePrinter final {
+			WaitTimePrinter(std::string_view name_): name(name_) {}
+			
+			timer::AtomicDuration wait_time;
+			std::string_view name;
+
+			~WaitTimePrinter() {
+				std::cerr << "TaskPool " << name << ": ";
+				timer::printAs(std::cerr, wait_time.toDuration(), timer::TimeUnit::Milliseconds);
+				std::cerr << "\n";
+			}
+		};
 
 namespace query::internal {
 
@@ -45,16 +59,8 @@ namespace query::internal {
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
-		struct WaitTimePrinter final {
-			timer::AtomicDuration wait_time;
-
-			~WaitTimePrinter() {
-				std::cerr << "Total wait time for tasks in TaskPool: ";
-				timer::printAs(std::cerr, wait_time.toDuration(), timer::TimeUnit::Milliseconds);
-				std::cerr << "\n";
-			}
-		};
-		static  WaitTimePrinter wait_time_printer;
+		
+		static  WaitTimePrinter wait_time_printer("await for task");
 
 		timer::TimeMeasurement tm;
 		tm.startMeasurement();
@@ -142,6 +148,15 @@ namespace query::internal {
 
 
 		{
+			static  WaitTimePrinter wait_time_printer("schedule task");
+			timer::TimeMeasurement tm;
+			tm.startMeasurement();
+			defer ({
+				tm.endMeasurement();
+				wait_time_printer.wait_time.add(tm.duration());
+				
+			});
+
 			std::lock_guard lock(pool_mutex);
 			auto            free_worker_opt = getFreeWorkerUnlocked();
 
