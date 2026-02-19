@@ -171,6 +171,18 @@ namespace pst {
 			if (auto ref = element.internalMut()) ref->calcHashRecursive();
 		}
 
+		/**
+		 * @brief Calculates the total signature (Hash of the whole pst) and signs all of the elements with it (Adds it to their hash).
+		 */
+		void signGenerated() {
+			if (auto ref = element.internalMut()) {
+				LangElement::HashAlg partial_hash{};
+				ref->calcSignature(partial_hash);
+				auto hash = partial_hash.finalize();
+				ref->signGenerated(hash);	
+			}
+		}
+
 	public:
 		/**
 		 * @brief Construct a new Pst from tokenized file
@@ -223,7 +235,7 @@ namespace pst {
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {}
 		) {
-			return PST(pos, contents, std::move(parsing_ctx), std::move(hash_ctx));
+			return fromExpandWithArgs(pos, contents, std::move(parsing_ctx), hash_ctx);
 		}
 
 		template<typename... Args>
@@ -234,9 +246,11 @@ namespace pst {
 			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
 		) requires ParseAble<Args...> {
-			return PST(
+			auto out = PST(
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
+			out.signGenerated();
+			return out;
 		}
 
 		[[nodiscard]]
