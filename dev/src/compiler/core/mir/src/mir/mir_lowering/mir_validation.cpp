@@ -170,13 +170,15 @@ namespace compiler::mir {
 					for (auto def: *prev_defs) {
 						auto lc_scope = lca(*def->scope, *local.scope);
 						if (lc_scope == *def->scope || lc_scope == *local.scope) {
+							// Since the LCA is one of the scopes, the other has to be contained in it.
 							auto [shadowing, shadowed] = (lc_scope == *def->scope)
 							                               ? std::tuple{ base::Ref(&local), def }
 							                               : std::tuple{ def, base::Ref(&local) };
-							auto get_pos               = [&](auto local_ref) {
-                                return helios::symbolPst(local_ref->helios_id.value())
-                                    .unlock(ctx)
-                                    ->getSourcePosition();
+
+							auto get_pos = [&](auto local_ref) {
+								return helios::symbolPst(local_ref->helios_id.value())
+								    .unlock(ctx)
+								    ->getSourcePosition();
 							};
 							auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
 							msg->addAttachedMessage(

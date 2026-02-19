@@ -115,7 +115,7 @@ namespace compiler::helios {
 				auto msg = makeBox<ShadowedVariableLookupError>(error_position);
 				for (auto& leaf: lookup_result->leaves) {
 					if_opt_some(getSymRef(leaf)->getPSTDataOpt(), pst_data) {
-						auto decl_pos = pst_data->pst_element.unlock(ctx)->getSourcePosition();
+						auto decl_pos = pst_data->getElement().unlock(ctx)->getSourcePosition();
 						msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
 					}
 				}
