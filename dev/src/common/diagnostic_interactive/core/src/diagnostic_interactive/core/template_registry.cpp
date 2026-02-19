@@ -88,7 +88,8 @@ namespace dia_int {
 	}
 
 	void TemplateRegistrySingleton::setInstance(Box<TemplateRegistryProvider> provider) {
-		instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
+		if (instance.toOpt().empty())
+			instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
 	}
 
 	template_file::DiagnosticTemplate& TemplateRegistrySingleton::loadTemplate(
