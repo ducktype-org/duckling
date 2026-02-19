@@ -4,6 +4,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
+#include <timer/timer.hpp>
 
 #include <atomic>
 #include <iostream>
@@ -44,10 +45,27 @@ namespace query::internal {
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
+		struct WaitTimePrinter final {
+			timer::AtomicDuration wait_time;
+
+			~WaitTimePrinter() {
+				std::cerr << "Total wait time for tasks in TaskPool: ";
+				timer::printAs(std::cerr, wait_time.toDuration(), timer::TimeUnit::Milliseconds);
+				std::cerr << "\n";
+			}
+		};
+		static  WaitTimePrinter wait_time_printer;
+
+		timer::TimeMeasurement tm;
+		tm.startMeasurement();
+
 		auto& mutex = task_completed_mutexes[taskHash(id) % TASK_SHARDS];
 		auto& cv = task_completed_cvs[taskHash(id) % TASK_SHARDS];
 		std::unique_lock lock(mutex);
 		cv.wait(lock, [this, id] { return isTaskDone(id); });
+
+		tm.endMeasurement();
+		wait_time_printer.wait_time.add(tm.duration());
 	}
 
 
@@ -63,24 +81,21 @@ namespace query::internal {
 				return;
 			}
 			else if (*task_status == TaskStatus::InProgress) {
-				auto& 		   mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
-				auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
-			
-				std::unique_lock lock(mutex);
-				cv.wait(lock, [this, id = task.id] { return isTaskDone(id); });
+				waitForTask(task.id);
 				return;
 			}
 		}
 
-
 		bool task_done = tryExecuteTask(task);
-		if (not task_done) {
-			auto& 		   mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
-			auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
 
-			const auto       id = task.id;
-			std::unique_lock lock(mutex);
-			cv.wait(lock, [this, id] { return isTaskDone(id); });
+		if (not task_done) {
+			// auto& 		   mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
+			// auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
+
+			// const auto       id = task.id;
+			// std::unique_lock lock(mutex);
+			// cv.wait(lock, [this, id] { return isTaskDone(id); });
+			waitForTask(task.id);
 		}
 	}
 
@@ -152,30 +167,28 @@ namespace query::internal {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->await is performing a lot of operations even in such case
 
-		auto& mutex = task_completed_mutexes[taskHash(id) % TASK_SHARDS];
-		auto& cv = task_completed_cvs[taskHash(id) % TASK_SHARDS];
-
 		if (auto task_status = task_status_map.getCurrent(id)) {
 			if (*task_status == TaskStatus::Done) {
 				return;
 			}
 			else if (*task_status == TaskStatus::InProgress) {
-				std::unique_lock lock(mutex);
-				cv.wait(lock, [this, id] { return isTaskDone(id); });
+				waitForTask(id);
 				return;
 			}
 		}
 
-		std::unique_lock lock(mutex);
-
+		auto& mutex = task_completed_mutexes[taskHash(id) % TASK_SHARDS];
+		
+		mutex.lock();
 		auto             task_opt
 			= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
+		mutex.unlock();
+			
 		if_opt_some(task_opt, task) {
-			lock.unlock();
 			tryExecuteTask(task);
-			lock.lock();
 		}
-		cv.wait(lock, [this, id] { return isTaskDone(id); });
+
+		waitForTask(id);
 	}
 
 	bool TaskPool::isTaskDone(NodeID id) const {

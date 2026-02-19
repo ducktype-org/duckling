@@ -5,6 +5,18 @@
 #include <atomic>
 #include <iostream>
 
+#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
+
+// XD TODO revert it:
+namespace concurrent {
+
+	AtomicFlagSpinlock::Printer AtomicFlagSpinlock::printer{};
+	
+	constinit std::atomic<u64> AtomicFlagSpinlock::Printer::wait_hit{ 0 };
+	constinit std::atomic<u64> AtomicFlagSpinlock::Printer::all_uses{ 0 };
+
+} // namespace concurrent
+
 namespace concurrent::worker {
 
 	namespace {

@@ -199,6 +199,7 @@ namespace compiler::mir {
 				get_condition_return.fillNop(condition_scope);
 
 			} else {
+				// this claims some uninitialized value by GCC under o3, TODO: investigate why and fix it.
 				possible_result = function.addNoLifetimeBoolTmp();
 
 				expr_result.storeResultInGivenPlace(

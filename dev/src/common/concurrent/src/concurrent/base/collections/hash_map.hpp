@@ -79,10 +79,14 @@ namespace concurrent {
 			WithSharedShardLock(const ConHashMap& self, u64 shard_index) noexcept:
 				  shard_index(shard_index),
 				  self(self) {
-				self.shard_mutexes[shard_index]->lock_shared();
+				// self.shard_mutexes[shard_index]->lock_shared();
+				self.shard_mutexes[shard_index]->lock();
 			}
 
-			~WithSharedShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
+			~WithSharedShardLock() noexcept { 
+				// self.shard_mutexes[shard_index]->unlock_shared();
+				self.shard_mutexes[shard_index]->unlock();
+			}
 		};
 
 		/**
@@ -112,7 +116,7 @@ namespace concurrent {
 	public:
 		ConHashMap(): shards(SHARD_COUNT) {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
-				shard_mutexes.emplace_back(makeBox<std::shared_mutex>());
+				shard_mutexes.emplace_back(makeBox<LockType>());
 		}
 
 		ConHashMap(const ConHashMap&) = delete;
@@ -436,11 +440,13 @@ namespace concurrent {
 		 */
 		std::vector<HashMapType> shards;
 
+		using LockType = concurrent::AtomicFlagSpinlock;
+		// using LockType = std::shared_mutex;
+
 		/**
 		 * The locks protecting each shard.
 		 */
-		mutable std::vector<Box<std::shared_mutex>> shard_mutexes;
-		// mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
+		mutable std::vector<Box<LockType>> shard_mutexes;
 
 		/**
 		 * Atomic counter tracking the number of elements in the map.

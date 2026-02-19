@@ -5,6 +5,7 @@
 #include <atomic>
 #include <thread>
 #include <version>
+#include <iostream>
 
 namespace concurrent {
 
@@ -32,20 +33,41 @@ namespace concurrent {
 	class AtomicFlagSpinlock final {
 		std::atomic_flag atomic_flag{};
 
+		
+		struct Printer final {
+
+			static std::atomic<u64> wait_hit;
+			static std::atomic<u64> all_uses;
+
+			~Printer() {
+				u64 hits = wait_hit.load(std::memory_order_relaxed);
+				u64 uses = all_uses.load(std::memory_order_relaxed);
+				std::cerr << "AtomicFlagSpinlock: " << hits << " waits out of " << uses << " uses (" << (double(hits) * 100.0 / double(uses)) << "%)\n";
+			}
+		};
+
+		static Printer printer;
+
 
 	public:
 		/**
 		 * Acquires the lock, spinning and/or sleeping if necessary.
 		 */
 		void lock() noexcept {
+			Printer::all_uses.fetch_add(1, std::memory_order_relaxed);
+
+
 			u64 wait_repetitions = 2;
 			while (true) {
 				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
+
+				Printer::wait_hit.fetch_add(1, std::memory_order_relaxed);
+
 				wait_repetitions *= 2;
 
 				if (wait_repetitions > 128) {
-					// std::this_thread::sleep_for(std::chrono::nanoseconds(50));
-					std::this_thread::yield();
+					std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+					// std::this_thread::yield();
 					wait_repetitions = 4;
 				} else {
 					concurrent::nopWait(wait_repetitions);
@@ -69,3 +91,5 @@ namespace concurrent {
 		void unlock() noexcept { atomic_flag.clear(std::memory_order_release); }
 	};
 }
+
+
