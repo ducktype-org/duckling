@@ -520,5 +520,4 @@ namespace base {
 		 */
 		u64 element_count = 0;
 	};
-
 }

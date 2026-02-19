@@ -163,10 +163,10 @@ private:
 		assertTrue(hash_algorithm<SHA256>, "SHA256 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Blake3_256>, "Blake3_256 should be a hashing algorithm");
 
-		constexpr auto RES1 = Hash<Fnv1a_32>{}(4);
+		constexpr auto RES_1 = Hash<Fnv1a_32>{}(4);
 
-		constexpr auto ARR  = std::array{ 1, 2, 3 };
-		constexpr auto RES2 = Hash<Fnv1a_64>{}(std::span{ ARR });
+		constexpr auto ARR   = std::array{ 1, 2, 3 };
+		constexpr auto RES_2 = Hash<Fnv1a_64>{}(std::span{ ARR });
 
 		auto res3 = [] {
 			DebugHash dh;
@@ -175,10 +175,10 @@ private:
 		}();
 
 		assertTrue(
-			std::is_same_v<decltype(RES1), const u32>, "Fnv1a_32's finalize() should return u32"
+			std::is_same_v<decltype(RES_1), const u32>, "Fnv1a_32's finalize() should return u32"
 		);
 		assertTrue(
-			std::is_same_v<decltype(RES2), const u64>, "Fnv1a_64's finalize() should return u64"
+			std::is_same_v<decltype(RES_2), const u64>, "Fnv1a_64's finalize() should return u64"
 		);
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 
@@ -203,9 +203,9 @@ private:
 
 		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
 
-		const auto RES1 = hasher(X{});
-		const auto RES2 = hasher(S{});
-		assertTrue(RES1 != RES2, "hashes should differ");
+		const auto res_1 = hasher(X{});
+		const auto res_2 = hasher(S{});
+		assertTrue(res_1 != res_2, "hashes should differ");
 
 		my_map::unordered_map<std::string, int> m;
 		m["hello"] = 42;
@@ -274,8 +274,9 @@ private:
 		);
 	}
 
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void Blake3_256Test() {
-		const auto HASH_VALUE
+		const auto hash_value
 			= hashing::StatefulHash<hashing::Blake3_256>{}(
 				  42, std::string("Hello"), 7, std::string_view("World"), 123, std::string("!")
 			)
@@ -283,7 +284,7 @@ private:
 
 		const std::string expected_hash
 			= "2a6afca2fbc44ccd6fbd1b46838a71d7eed51da26a3040486eeb835aba54c640";
-		const std::string computed_hash = HASH_VALUE.toStringHex();
+		const std::string computed_hash = hash_value.toStringHex();
 		assertTrue(
 			computed_hash == expected_hash,
 			"Blake3_256 hash does not match expected value.\nExpected: " + expected_hash

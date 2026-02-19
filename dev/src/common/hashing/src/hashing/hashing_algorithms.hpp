@@ -345,7 +345,7 @@ namespace hashing {
 	};
 
 	class Blake3_256 final {
-		llvm::BLAKE3 state_;
+		llvm::BLAKE3 state;
 
 	public:
 		using result_type = base::Bit256;
@@ -353,11 +353,11 @@ namespace hashing {
 		Blake3_256& operator()(internal::span_of_bytes auto data) {
 			llvm::ArrayRef<uint8_t> bytes{ reinterpret_cast<const uint8_t*>(data.data()),
 				                           data.size() };
-			state_.update(bytes);
+			state.update(bytes);
 			return *this;
 		}
 
-		[[nodiscard]] result_type finalize() { return { state_.final() }; }
+		[[nodiscard]] result_type finalize() { return { state.final() }; }
 	};
 
 	/**
