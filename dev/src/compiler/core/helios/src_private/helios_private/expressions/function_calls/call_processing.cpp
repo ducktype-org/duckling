@@ -8,6 +8,7 @@
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/function_calls/errors.hpp>
@@ -108,15 +109,36 @@ namespace compiler::helios::code {
 	MatchResult matchOverloadCandidate(
 		query::Context&                                        ctx,
 		SymID                                                  fun,
-		const std::vector<Box<Expr>>&                          positional_arguments,
-		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
+		const std::vector<Box<Expr>>&                          explicit_positional_arguments,
+		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
+		base::Optional<Box<Expr>>     						   self_symbol
 	) {
 		auto& decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
 		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());
 		std::vector<base::Optional<Coercion>>       coercions(decl.parameters.size());
 		bool                                        coercion_present = false;
+		
+		std::vector<Box<Expr>> positional_arguments;
+		if (kind(fun) == SymbolKind::Method) {
+			if (self_symbol.empty()) {
+				return NoMatch{ .function = fun,
+					.reason = MissingSelfArgumentInMethodCall {.method = fun}
+				};
+			} else {
+				positional_arguments.reserve(explicit_positional_arguments.size() + 1);
+				positional_arguments.push_back(std::move(self_symbol.value()));
+				for (const auto& arg : explicit_positional_arguments) {
+					positional_arguments.push_back(arg->clone());
+				}
+			}
+		} else {
+			for (const auto& arg : explicit_positional_arguments) {
+				positional_arguments.push_back(arg->clone());
+			}
+		}
 
 		if (positional_arguments.size() > decl.parameters.size())
+			// TODO: HERE!!!
 			return NoMatch{ .function = fun,
 				            .reason
 				            = TooManyCallArguments{ .valid_arguments = decl.parameters.size(),
@@ -453,7 +475,8 @@ namespace compiler::helios::code {
 		query::Context&               ctx,
 		const std::vector<SymID>&     candidates,
 		pst::Access<pst::ExprElement> callee_expr,
-		pst::Access<pst::expr::Call>  call_expr
+		pst::Access<pst::expr::Call>  call_expr,
+		base::Optional<Box<Expr>>     self_symbol
 	) {
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                          positional_arguments;
@@ -483,8 +506,7 @@ namespace compiler::helios::code {
 
 
 		for (auto candidate: candidates) {
-			MatchResult match
-				= matchOverloadCandidate(ctx, candidate, positional_arguments, named_arguments);
+			MatchResult match = matchOverloadCandidate(ctx, candidate, positional_arguments, named_arguments, std::move(self_symbol));
 
 			variant_match(match) {
 				variant_case(ExactMatch, data) { exact_match.push_back(std::move(data)); }
@@ -505,6 +527,13 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 		if (exact_match.size() == 1) {
+			if (kind(exact_match.back().function) == SymbolKind::Method) {
+				positional_arguments.insert(
+					positional_arguments.begin(),
+					std::move(self_symbol.value())
+				);
+			}
+
 			return constructCallExpr(
 				ctx,
 				exact_match.back().function,
@@ -525,6 +554,13 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 		if (coercion_match.size() == 1) {
+			if (kind(coercion_match.back().function) == SymbolKind::Method) {
+				positional_arguments.insert(
+					positional_arguments.begin(),
+					std::move(self_symbol.value())
+				);
+			}
+
 			return constructCallExpr(
 				ctx,
 				coercion_match.back().function,

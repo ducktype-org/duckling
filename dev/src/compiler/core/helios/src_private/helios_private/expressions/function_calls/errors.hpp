@@ -45,6 +45,10 @@ namespace compiler::helios::code {
 		SymID       function;
 	};
 
+	struct MissingSelfArgumentInMethodCall final {
+		SymID method;
+	};
+
 	struct TypeMismatch final {
 		tsh::SymbolType<> given_type;
 		tsh::SymbolType<> expected_type;
@@ -63,7 +67,8 @@ namespace compiler::helios::code {
 		NamedArgumentProvidedByPositional,
 		UnknownNamedArgument,
 		TypeMismatch,
-		MissingCallArgument>;
+		MissingCallArgument,
+		MissingSelfArgumentInMethodCall>;
 
 	using CallFailure
 		= std::variant<PositionalAfterNamedArgument, RepeatedNamedArgument, FunctionMatchFailure>;

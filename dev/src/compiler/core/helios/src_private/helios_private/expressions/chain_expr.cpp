@@ -255,16 +255,11 @@ namespace compiler::helios::code {
 		query::QResult<std::vector<SymID>> getCallableCandidates(
 			const std::vector<SymID>& looked_up_callees
 		) const {
-			// If all candidates are functions, return them as is.
+			// If all candidates are functions or methods, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Function
-				        || kind(symbol) == SymbolKind::FunctionDeclaration;
-				}))
-				return looked_up_callees;
-
-			// If all candidates are methods, return them as is.	
-			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
-					return kind(symbol) == SymbolKind::Method;
+				        || kind(symbol) == SymbolKind::FunctionDeclaration
+				        || kind(symbol) == SymbolKind::Method;
 				}))
 				return looked_up_callees;
 
@@ -327,7 +322,7 @@ namespace compiler::helios::code {
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto res = processFunctionCall(query_ctx, callees, ident, call_expr);
+			auto res = processFunctionCall(query_ctx, callees, ident, call_expr, {});
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
 			return ChainState::ofExpr(std::move(expr));
 		}
@@ -428,7 +423,7 @@ namespace compiler::helios::code {
 			// This is only a temporary thing for error handling, note the incorrect callee PST
 			// expression.
 			auto expr_result
-				= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr);
+				= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr, {});
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 			return ChainState::ofExpr(std::move(expr));
 		}
@@ -562,7 +557,7 @@ namespace compiler::helios::code {
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto expr_result = processFunctionCall(query_ctx, callees, call_expr);
+			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr, std::move(current_expr));
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 
 			return ChainState::ofExpr(std::move(expr));
@@ -585,7 +580,7 @@ namespace compiler::helios::code {
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
+			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr, {});
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 			return ChainState::ofExpr(std::move(expr));
 		}
