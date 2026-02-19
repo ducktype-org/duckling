@@ -2,7 +2,12 @@ add_library(Hashing
 	src/hashing/component_hash.cpp
 )
 
-make_module(Hashing USES Base StringID)
+llvm_map_components_to_libnames(llvm_libs
+    Support)
+target_include_directories(Hashing PRIVATE ${LLVM_INCLUDE_DIRS})
+target_link_libraries(Hashing ${llvm_libs})
+
+make_module(Hashing USES Base StringID llvm_helpers)
 
 add_example(hash_example examples/example.cpp USES Hashing Base)
 

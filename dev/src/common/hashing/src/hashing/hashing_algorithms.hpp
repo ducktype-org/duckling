@@ -2,9 +2,15 @@
 
 #include "hash_algorithm_utils.hpp"
 
+#include <llvm_helpers/llvm_helpers.hpp>
+
 #include <base/comptime/type_traits.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
+
+LLVM_INCLUDE_BEGIN()
+#include <llvm/Support/BLAKE3.h>
+LLVM_INCLUDE_END()
 
 #include <array>
 #include <bit>
@@ -336,6 +342,22 @@ namespace hashing {
 		static constexpr u32 rightRotate(u32 value, u64 count) noexcept {
 			return (value >> count) | (value << (32 - count));
 		}
+	};
+
+	class Blake3_256 final {
+		llvm::BLAKE3 state_;
+
+	public:
+		using result_type = base::Bit256;
+
+		Blake3_256& operator()(internal::span_of_bytes auto data) {
+			llvm::ArrayRef<uint8_t> bytes{ reinterpret_cast<const uint8_t*>(data.data()),
+				                           data.size() };
+			state_.update(bytes);
+			return *this;
+		}
+
+		[[nodiscard]] result_type finalize() { return { state_.final() }; }
 	};
 
 	/**

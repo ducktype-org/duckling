@@ -145,11 +145,14 @@ public:
 		TESTER_ADD_TEST(hashTest<Fnv1a_32>);
 		TESTER_ADD_TEST(hashTest<Fnv1a_64>);
 		TESTER_ADD_TEST(hashTest<SHA256>);
+		TESTER_ADD_TEST(hashTest<Blake3_256>);
 		TESTER_ADD_TEST(constexprTest);
 		TESTER_ADD_TEST(defaultsTest<Fnv1a_32>);
 		TESTER_ADD_TEST(defaultsTest<Fnv1a_64>);
 		TESTER_ADD_TEST(defaultsTest<SHA256>);
+		TESTER_ADD_TEST(defaultsTest<Blake3_256>);
 		TESTER_ADD_TEST(sha256Test);
+		TESTER_ADD_TEST(Blake3_256Test);
 	}
 
 private:
@@ -157,6 +160,8 @@ private:
 		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
+		assertTrue(hash_algorithm<SHA256>, "SHA256 should be a hashing algorithm");
+		assertTrue(hash_algorithm<Blake3_256>, "Blake3_256 should be a hashing algorithm");
 
 		constexpr auto RES1 = Hash<Fnv1a_32>{}(4);
 
@@ -181,6 +186,15 @@ private:
 		dh(std::as_bytes(std::span{ "hello 1234567890" }));
 
 		Hash<DebugHash>{}(type4{});
+
+		const auto res4 = hashing::StatefulHash<hashing::Blake3_256>{}(std::byte{ 0x42 })
+		                      .finalize()
+		                      .toStringHex();
+		assertEqual(
+			res4,
+			"9f9524ca18c0cc03aef1a0b84faed9375e5d19575e9328e65fea72991f0f58cf",
+			"Blake3_256 hash does not match expected value"
+		);
 	}
 
 	template<typename Alg>
@@ -189,8 +203,8 @@ private:
 
 		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
 
-		constexpr auto RES1 = hasher(X{});
-		constexpr auto RES2 = hasher(S{});
+		const auto RES1 = hasher(X{});
+		const auto RES2 = hasher(S{});
 		assertTrue(RES1 != RES2, "hashes should differ");
 
 		my_map::unordered_map<std::string, int> m;
@@ -256,6 +270,23 @@ private:
 		assertTrue(
 			computed_hash == expected_hash,
 			"SHA256 hash does not match expected value.\nExpected: " + expected_hash
+				+ "\nComputed: " + computed_hash
+		);
+	}
+
+	void Blake3_256Test() {
+		const auto HASH_VALUE
+			= hashing::StatefulHash<hashing::Blake3_256>{}(
+				  42, std::string("Hello"), 7, std::string_view("World"), 123, std::string("!")
+			)
+		          .finalize();
+
+		const std::string expected_hash
+			= "2a6afca2fbc44ccd6fbd1b46838a71d7eed51da26a3040486eeb835aba54c640";
+		const std::string computed_hash = HASH_VALUE.toStringHex();
+		assertTrue(
+			computed_hash == expected_hash,
+			"Blake3_256 hash does not match expected value.\nExpected: " + expected_hash
 				+ "\nComputed: " + computed_hash
 		);
 	}

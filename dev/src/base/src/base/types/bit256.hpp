@@ -17,6 +17,16 @@ namespace base {
 
 		constexpr Bit256() = default;
 
+		constexpr Bit256(const std::array<uint8_t, 32>& bytes) noexcept {
+			for (size_t i = 0; i < 4; ++i) {
+				data.at(i) = 0;
+				for (size_t j = 0; j < 8; ++j) {
+					data.at(i) <<= 8;
+					data.at(i) |= bytes.at(i * 8 + j);
+				}
+			}
+		}
+
 		constexpr Bit256(const std::array<u32, 8>& arr) noexcept {
 			for (size_t i = 0; i < 4; ++i)
 				data.at(i) = (static_cast<u64>(arr.at(i * 2)) << 32) | arr.at(i * 2 + 1);

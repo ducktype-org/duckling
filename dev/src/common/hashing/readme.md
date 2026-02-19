@@ -210,7 +210,7 @@ std::cout << hashing::StatefulHash<hashing::DebugHash>{}(
 		42,
         3.14,
         "hello",
-        std::pair<std::string, char>{"abc", 'x'
+        std::pair<std::string, char>{"abc", 'x'}
     ).finalize() << '\n';
 ~~~~~
 
