@@ -1,18 +1,20 @@
+use async_scoped::TokioScope;
 use futures::future::select_all;
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
 };
+use url::Url;
 
 use tempfile::TempDir;
 use tokio::sync::Mutex;
 
 use crate::{
-    QpCtx, QuackResult, QuackResultContext, qp_bail_internal,
+    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
     quackpack::{
         core::{
-            FeatureName, Git, Manifest, PackageLoader, SolverMode,
+            BranchOrTag, FeatureName, Git, Manifest, PackageLoader, SolverMode,
             fetcher::{
                 Fetcher,
                 types::{GitCloneResponse, MultiMetadata, PackageWithUrl},
@@ -32,6 +34,7 @@ use crate::{
             },
         },
         schemas::registry,
+        util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
     },
 };
 
@@ -161,11 +164,19 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
             }
             ManifestsRequest::NotPinned(not_pinned_request) => {
                 match not_pinned_request.location.as_ref() {
-                    Location::Registry { .. } => {
-                        self.fetch_registry_not_pinned(not_pinned_request).await
+                    Location::Registry { url, real_name } => {
+                        self.fetch_registry_not_pinned(&not_pinned_request, url, real_name)
+                            .await
                     }
-                    Location::Git { .. } => self.fetch_git(not_pinned_request).await,
-                    Location::Local { .. } => self.fetch_local(not_pinned_request),
+                    Location::Git {
+                        url,
+                        branch_or_tag,
+                        rev,
+                    } => {
+                        self.fetch_git(&not_pinned_request, url, branch_or_tag, rev)
+                            .await
+                    }
+                    Location::Local { path } => self.fetch_local(&not_pinned_request, path),
                 }
             }
         }
@@ -218,13 +229,10 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
     /// (registry fetch of all the versions of some package).
     async fn fetch_registry_not_pinned(
         &self,
-        request: NotPinnedRequest,
+        request: &NotPinnedRequest,
+        url: &Url,
+        real_name: &StrId,
     ) -> GathererResult<Option<FetchResult>> {
-        let Location::Registry { url, real_name } = request.location.as_ref() else {
-            qp_bail_internal!(
-                "Tried to make not pinned registry fetch for a non-registry location"
-            );
-        };
         let fetcher_response: GathererComputation<Option<MultiMetadata>> = self
             .fetcher
             .get_package_all_metadata(url, *real_name)
@@ -267,15 +275,13 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
     /// (fetch from an external git repository).
-    async fn fetch_git(&self, request: NotPinnedRequest) -> GathererResult<Option<FetchResult>> {
-        let Location::Git {
-            url,
-            branch_or_tag,
-            rev,
-        } = request.location.as_ref()
-        else {
-            qp_bail_internal!("Tried to make git fetch for a non-git location");
-        };
+    async fn fetch_git(
+        &self,
+        request: &NotPinnedRequest,
+        url: &Url,
+        branch_or_tag: &BranchOrTag,
+        rev: &Option<StrId>,
+    ) -> GathererResult<Option<FetchResult>> {
         let git_source = Git::new(url.clone(), *branch_or_tag, *rev);
         let fetcher_response: GathererComputation<Option<(GitCloneResponse, TempDir)>> =
             self.fetcher.clone_from_git(&git_source).await.into();
@@ -313,31 +319,38 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
 
     /// Helper for [`Gatherer::explore()`], performs a local fetch
     /// (fetch from a given path).
-    fn fetch_local(&self, request: NotPinnedRequest) -> GathererResult<Option<FetchResult>> {
-        let Location::Local { path } = request.location.as_ref() else {
-            qp_bail_internal!("Tried to make local fetch for a non-local location")
-        };
-        let pkg_ctx = PackageLoader::find_at_exact_directory(path, self.ctx);
+    fn fetch_local(
+        &self,
+        request: &NotPinnedRequest,
+        path: &Path,
+    ) -> GathererResult<Option<FetchResult>> {
+        let res = TokioScope::scope_and_block(|spawner| {
+            let fetch_local = || async {
+                let pkg_ctx = PackageLoader::find_at_exact_directory(path, self.ctx);
 
-        match pkg_ctx {
-            Ok(pkg_ctx) => {
-                let exp_pkg = ExpandedPackage {
-                    location: InternedExpandedLocation::new(ExpandedLocation::Local {
-                        absolute_path: path.to_path_buf(),
-                    }),
-                    version: None,
-                };
-                Ok(GathererComputation::only_success(Some(
-                    FetchResult::NotPinned(NotPinnedResult {
-                        origin_location: request.location,
-                        fetched_manifests: HashMap::from([(
-                            exp_pkg,
-                            Box::new(pkg_ctx.package().manifest().clone()),
-                        )]),
-                    }),
-                )))
-            }
-            Err(e) => Ok(GathererComputation::only_error(e)),
-        }
+                match pkg_ctx {
+                    Ok(pkg_ctx) => {
+                        let exp_pkg = ExpandedPackage {
+                            location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                                absolute_path: path.to_path_buf(),
+                            }),
+                            version: None,
+                        };
+                        Ok(GathererComputation::only_success(Some(
+                            FetchResult::NotPinned(NotPinnedResult {
+                                origin_location: request.location,
+                                fetched_manifests: HashMap::from([(
+                                    exp_pkg,
+                                    Box::new(pkg_ctx.package().manifest().clone()),
+                                )]),
+                            }),
+                        )))
+                    }
+                    Err(e) => Ok(GathererComputation::only_error(e)),
+                }
+            };
+            spawner.spawn(fetch_local());
+        });
+        extract_single_item_from_vec(unpack_tokio_scoped_vector(res.1)?)?
     }
 }
