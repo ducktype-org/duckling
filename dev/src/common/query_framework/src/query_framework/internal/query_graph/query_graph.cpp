@@ -7,23 +7,40 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
+#include <query_framework/module_flags/module_flags.hpp>
+
+#include <algorithm>
 #include <cstring>
 #include <iomanip>
 #include <ostream>
 #include <queue>
 #include <ranges>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace query::internal {
 
+	thread_local base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps = {
+		base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()
+	};
+
 	QueryGraph::QueryGraph():
-		  node_deps(base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()) {}
+		  node_reverse_deps(base::makeBox<concurrent::ConHashMap<NodeID, std::vector<NodeID>>>()) {}
 
 	void QueryGraph::addDependency(NodeID from, NodeID to) {
 		CORE_ASSERT(
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
+
+		if (track_reverse_graph) {
+			node_reverse_deps->maybePutAndUpdate(
+				to,
+				std::vector<NodeID>{},
+				[from](Ref<std::vector<NodeID>> deps) { deps->emplace_back(from); }
+			);
+		}
+
 		auto children_data = node_deps->atMaybe(from).value();
 		auto children      = children_data->getHolder();
 		children->push_back(to);
@@ -129,10 +146,10 @@ namespace query::internal {
 	}
 
 	bool QueryGraph::compare(const QueryGraph& other) const {
-		if (node_deps->size() != other.node_deps->size()) return false;
+		if (node_deps->size() != node_deps->size()) return false;
 
 		for (auto& [node, deps]: *node_deps) {
-			auto it = other.node_deps->atMaybe(node);
+			auto it = node_deps->atMaybe(node);
 			if (!it.has_value()) return false;
 
 			auto deps_holder       = deps.getHolder();
@@ -141,7 +158,7 @@ namespace query::internal {
 			if (*deps_holder != *other_deps_holder) return false;
 		}
 
-		for (auto& [node, deps]: *other.node_deps) {
+		for (auto& [node, deps]: *node_deps) {
 			auto it = node_deps->atMaybe(node);
 			if (!it.has_value()) return false;
 
@@ -307,7 +324,7 @@ namespace query::internal {
 			}
 
 			auto key_value_pair
-				= graph.node_deps->maybePut(nodes.at(node_index), std::move(children));
+				= node_deps->maybePut(nodes.at(node_index), std::move(children));
 			if (key_value_pair == nullptr)
 				CORE_PANIC("Duplicate node detected during deserialization");
 		}
@@ -331,5 +348,62 @@ namespace query::internal {
 		auto& deps        = *it.value();
 		auto  deps_holder = deps.getHolder();
 		return !deps_holder->empty();
+	}
+
+	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
+	) const {
+		CORE_ASSERT(
+			track_reverse_graph,
+			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
+		);
+
+		std::queue<NodeID>         queue{ start_nodes.begin(), start_nodes.end() };
+		std::unordered_set<NodeID> visited;
+
+		while (not queue.empty()) {
+			auto node = queue.front();
+			queue.pop();
+
+			if (visited.contains(node)) continue;
+			visited.insert(node);
+
+			if_opt_some(node_reverse_deps->atMaybe(node), its_reverse_deps) {
+				for (auto& new_node: *its_reverse_deps) queue.push(new_node);
+			}
+		}
+
+		return QueryGraph::Dependents{ .dependents_recursive = { visited.begin(), visited.end() } };
+	}
+
+	void QueryGraph::eraseNodes(const QueryGraph::Dependents& nodes_to_erase) {
+		CORE_ASSERT(
+			track_reverse_graph,
+			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
+		);
+
+
+		for (const auto& node: nodes_to_erase.dependents_recursive) {
+			// A(input) <- B <- C
+			//        D <--┘
+			// deps(B) = {A, D}
+			// rev_deps(A) = {B}
+			// rev_deps(D) = {B}
+
+			// Some input's may have no dependencies at all when in Language Server mode (e.g. no
+			// queries were executed between reparsings).
+			if_opt_some(node_deps->atMaybe(node), node_deps_children_data) {
+				auto removed_node_deps = node_deps_children_data->getHolder();
+
+				for (const auto& dep: *removed_node_deps) {
+					if_opt_some(node_reverse_deps->atMaybe(dep), its_reverse_deps) {
+						auto new_end = std::ranges::remove(*its_reverse_deps, node);
+						its_reverse_deps->erase(new_end.begin(), new_end.end());
+					}
+				}
+			}
+
+			node_deps->erase(node);
+			node_reverse_deps->erase(node);
+		}
 	}
 }

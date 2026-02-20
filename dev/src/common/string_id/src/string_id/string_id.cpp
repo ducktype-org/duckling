@@ -4,6 +4,9 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <concurrent/base/profiling/wait_stats.hpp>
+
+#include <chrono>
 #include <cstring>
 #include <iostream>
 #include <mutex>
@@ -73,14 +76,22 @@ namespace base {
 
 		// Fast path: check if string already exists under shared lock
 		{
+			auto sid_t0 = std::chrono::steady_clock::now();
 			std::shared_lock lock(mutex);
+			auto sid_dt = std::chrono::steady_clock::now() - sid_t0;
+			concurrent::g_wait_stats.strid_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(sid_dt).count(), std::memory_order_relaxed);
+			concurrent::g_wait_stats.strid_count.fetch_add(1, std::memory_order_relaxed);
 			if (auto id = getToIDMap()->atMaybe(data)) {
 				this->id = **id;
 				return;
 			}
 		}
 
+		auto sid_t0 = std::chrono::steady_clock::now();
 		std::unique_lock lock(mutex);
+		auto sid_dt = std::chrono::steady_clock::now() - sid_t0;
+		concurrent::g_wait_stats.strid_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(sid_dt).count(), std::memory_order_relaxed);
+		concurrent::g_wait_stats.strid_count.fetch_add(1, std::memory_order_relaxed);
 
 		if (auto id = getToIDMap()->atMaybe(data)) {
 			this->id = **id;
@@ -122,7 +133,11 @@ namespace base {
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
+		auto sid_t0 = std::chrono::steady_clock::now();
 		std::shared_lock lock(mutex);
+		auto sid_dt = std::chrono::steady_clock::now() - sid_t0;
+		concurrent::g_wait_stats.strid_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(sid_dt).count(), std::memory_order_relaxed);
+		concurrent::g_wait_stats.strid_count.fetch_add(1, std::memory_order_relaxed);
 		return to_data_map[id];
 	}
 

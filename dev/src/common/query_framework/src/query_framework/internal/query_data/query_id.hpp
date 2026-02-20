@@ -33,19 +33,6 @@ namespace query::internal {
 		friend class QueryGraph;
 		friend class QueryState;
 		friend class MetadataStorage;
-		friend void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
-
-		/**
-		 * @note Unregistered queries occurs only during the deserialisation of previous graph
-		 * This method is used to determinate whether the query is registered - it points to query
-		 * actually implemented in the system. Dummy queries from previous graph aren't registered.
-		 * All other queries should be registered.
-		 *
-		 * Unregistered query does not have QueryData associated with it.
-		 * This also means that unregistered queries don't have any kind associated with it, but
-		 * they should be viewed as implicitly dummy.
-		 */
-		[[nodiscard]] bool registered() const;
 
 	public:
 		[[nodiscard]]
@@ -73,6 +60,18 @@ namespace query::internal {
 		explicit constexpr operator usize() const {
 			return static_cast<usize>(val);
 		}
+
+		/**
+		 * @note Unregistered queries occurs only during the deserialisation of previous graph
+		 * This method is used to determinate whether the query is registered - it points to query
+		 * actually implemented in the system. Dummy queries from previous graph aren't registered.
+		 * All other queries should be registered.
+		 *
+		 * Unregistered query does not have QueryData associated with it.
+		 * This also means that unregistered queries don't have any kind associated with it, but
+		 * they should be viewed as implicitly dummy.
+		 */
+		[[nodiscard]] bool registered() const;
 	};
 
 	/**

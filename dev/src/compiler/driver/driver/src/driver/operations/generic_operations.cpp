@@ -24,9 +24,12 @@
 
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -34,6 +37,7 @@
 #include <fstream>
 #include <iostream>
 #include <utility>
+#include <vector>
 
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
@@ -115,7 +119,6 @@ namespace compiler::driver {
 				{
 					// compileLIRModuleToLLVM time is added on its own,
 					// but tracking time of the actual compilation to object file is done here
-					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
 						output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
@@ -186,6 +189,9 @@ namespace compiler::driver {
 
 		std::vector<artifacts::FileArtifact> objects;
 
+		// Start measuring hte time here:
+		auto start_time = std::chrono::high_resolution_clock::now();
+
 		// this is std::function, so it can be recursive
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
@@ -198,6 +204,11 @@ namespace compiler::driver {
 			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
 		};
 		handle_module(root);
+
+		//Print compilation time:
+		auto end_time = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+		std::cerr << "Compilation time: " << duration.count() << " ms\n";
 
 		if (result.isBad()) return result;
 
@@ -212,7 +223,7 @@ namespace compiler::driver {
 			linker::link(output_file, objects, linking_options);
 		}
 
-		return result;
+		return base::OK;
 	}
 
 	std::expected<RunOutput, std::string> runModuleOnDVM(

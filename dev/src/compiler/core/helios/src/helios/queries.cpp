@@ -28,10 +28,14 @@
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+#include "base/pointers/ref.hpp"
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+
+#include <concurrent/base/profiling/wait_stats.hpp>
+#include <chrono>
 
 namespace compiler::helios {
 
@@ -42,40 +46,69 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto hout_t0 = std::chrono::steady_clock::now();
+			auto result = provide_impl(ctx, key);
+			auto hout_dt = std::chrono::steady_clock::now() - hout_t0;
+			concurrent::g_wait_stats.module_hout_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(hout_dt).count(), std::memory_order_relaxed);
+			concurrent::g_wait_stats.module_hout_count.fetch_add(1, std::memory_order_relaxed);
+			return result;
+		}
+
+		static auto provide_impl(Context& ctx, QKey key) -> PResult {
 			auto scopes = ctx.query<QueryScopesInModule>(key);
 
-			HOUTUnit out;
+			auto t1 = std::chrono::steady_clock::now();
 
-			// We want to continue gathering other entities
-			// even if some function queries fail,
-			// so we store in this variable whether any failure occurred,
-			// and return failure at the end if so.
+			HOUTUnit out;
 			bool is_failed = false;
+
+			// Phase 2a: FIRST schedule all functions (so workers start ASAP)
+			std::vector<query::TaskHandle> scheduled_tasks;
+			std::vector<SymID> class_syms;
 
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
 				for (auto sym: *symbols_in_scope) {
-					// grab constants:
+					if (kind(sym) == SymbolKind::Function)
+						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
+					if (kind(sym) == SymbolKind::Class)
+						class_syms.push_back(sym);
+				}
+			}
+
+			// Now do the rest (constants, variables, class ctors)
+			// while workers are already compiling functions
+			for (auto scope: *scopes) {
+				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+
+				for (auto sym: *symbols_in_scope) {
 					if (kind(sym) == SymbolKind::Const)
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
-					// grab functions:
-					if (kind(sym) == SymbolKind::Function) {
-						// we "catch" failure here to continue gathering other functions:
-						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
-						if (hout_function->hasFailed()) {
-							is_failed = true;
-							continue;
-						} else {
-							out.functions.emplace_back(&hout_function->valueOrPanic());
-						}
-					}
-					if (kind(sym) == SymbolKind::Class)
-						appendClassConstructors(out.functions, sym, ctx);
 				}
 			}
+			for (auto cls: class_syms)
+				appendClassConstructors(out.functions, cls, ctx);
+
+			// Await all scheduled functions
+			for (auto handler: scheduled_tasks) {
+				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
+				if (hout_function->hasFailed()) {
+					is_failed = true;
+					continue;
+				} else {
+					out.functions.emplace_back(&hout_function->valueOrPanic());
+				}
+			}
+
+			auto t4 = std::chrono::steady_clock::now();
+
+			fprintf(stderr, "\n  HOUT concurrent time (t1→t4): %ld us\n\n",
+				std::chrono::duration_cast<std::chrono::microseconds>(t4 - t1).count());
+
+			concurrent::g_cof_timings.dump();
 
 			if (is_failed) return query::Failed();
 
@@ -784,9 +817,13 @@ namespace compiler::helios {
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// declaration:
+				auto decl_t0 = std::chrono::steady_clock::now();
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
+				auto decl_dt = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - decl_t0).count();
+				concurrent::g_wait_stats.cof_decl_ns.fetch_add(decl_dt, std::memory_order_relaxed);
 
 				// body:
+				auto body_t0 = std::chrono::steady_clock::now();
 				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
 				auto                                   fun_body    = stmt->getBody();
 
@@ -808,11 +845,16 @@ namespace compiler::helios {
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
+				auto body_dt = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - body_t0).count();
+				concurrent::g_wait_stats.cof_body_ns.fetch_add(body_dt, std::memory_order_relaxed);
+
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto cof_t0 = std::chrono::steady_clock::now();
+
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
 			);
@@ -821,8 +863,22 @@ namespace compiler::helios {
 				"Query code of function does not support generated functions"
 			);
 
+			auto decl_t0 = std::chrono::steady_clock::now();
 			HOUTFunctionMaker func_maker(ctx, key);
+			// visitFun calls QueryDeclOfFun internally, then processes body
 			stmt(ctx, key).value()->acceptVisitor(func_maker);
+			auto cof_t1 = std::chrono::steady_clock::now();
+
+			auto total_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(cof_t1 - cof_t0).count();
+			concurrent::g_wait_stats.cof_total_ns.fetch_add(total_ns, std::memory_order_relaxed);
+			concurrent::g_wait_stats.cof_count.fetch_add(1, std::memory_order_relaxed);
+			// Update max atomically
+			u64 prev_max = concurrent::g_wait_stats.cof_max_ns.load(std::memory_order_relaxed);
+			while (prev_max < static_cast<u64>(total_ns) &&
+				   !concurrent::g_wait_stats.cof_max_ns.compare_exchange_weak(prev_max, total_ns, std::memory_order_relaxed));
+
+			// Record per-function timing
+			concurrent::g_cof_timings.record(total_ns / 1000, std::string(name(key).strView()));
 
 			return func_maker.out.value();
 		}

@@ -20,11 +20,6 @@ namespace query::internal {
 
 	class QueryState;
 
-	/**
-	 * @brief Core dependency graph powering evaluation across the compiler.
-	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
-	 */
-	class QueryGraph final {
 		struct ChildrenData;
 
 		template<class T>
@@ -62,12 +57,10 @@ namespace query::internal {
 			 * time, one of them will panic. This is intentional, as it should never happen that two
 			 * threads try to access the same node's children at the same time.
 			 */
-			ChildrenDataHolder getHolder() { return { this }; }
+			inline ChildrenDataHolder getHolder();
 
 			[[nodiscard]]
-			ConstChildrenDataHolder getHolder() const {
-				return { this };
-			}
+			inline ConstChildrenDataHolder getHolder() const;
 
 			// Each node (query call with unique key) should be executed once at the same time, but
 			// we use AssertLock to be sure about that
@@ -160,7 +153,26 @@ namespace query::internal {
 			}
 		};
 
-		base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;
+		inline ChildrenDataHolder ChildrenData::getHolder() { return { this }; }
+
+		inline ConstChildrenDataHolder ChildrenData::getHolder() const { return { this }; }
+
+	extern thread_local base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;
+
+	/**
+	 * @brief Core dependency graph powering evaluation across the compiler.
+	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
+	 */
+	class QueryGraph final {
+
+		/**
+		 * Graph that tracks the reversed relation to `node_deps`.
+		 * Only used if @p track_reverse_graph is true.
+		 *
+		 * Does not take part in any of the additional logic like serialization
+		 * or deserialization.
+		 */
+		base::Box<concurrent::ConHashMap<NodeID, std::vector<NodeID>>> node_reverse_deps;
 
 		/*
 		 * for direct access to node_deps
@@ -282,9 +294,32 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Get all Nodes in the graph.
-		 * @return A vector of all NodeIDs in the graph.
+		 * @brief Helper function to keep the output of the `getDependentNodes`
+		 * function in a single struct, as it should be the transitive closure of
+		 * the dependent nodes.
 		 */
+		struct Dependents {
+			std::vector<NodeID> dependents_recursive;
+		};
+
+		/**
+		 * @brief Gets the set of all nodes that are (transitively) dependent on any of the given
+		 * start nodes, including the start nodes themselves.
+		 *
+		 * @warning This method should not be used when the query graph is being concurrently
+		 * modified.
+		 */
+		[[nodiscard]] Dependents getDependentNodes(const std::vector<NodeID>& start_nodes) const;
+
+		/**
+		 * @brief Erase the given nodes from the graph. The nodes to erase should be obtained
+		 * from getDependentNodes() to ensure all dependent nodes are erased.
+		 *
+		 * @warning This method should not be used when the query graph is being concurrently
+		 * modified.
+		 */
+		void eraseNodes(const Dependents& nodes_to_erase);
+
 		[[nodiscard]] std::vector<NodeID> getAllNodes() const;
 
 		/** @brief Check if a node has any dependencies. */

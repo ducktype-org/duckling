@@ -2,19 +2,13 @@
 
 
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
+#include <diagnostic_interactive/message_fwd.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>  // IWYU pragma: export
 
 #include <base/pointers/box.hpp>
 
 #include <iostream>
 #include <ostream>
-#include <vector>
-
-namespace dia_int {
-	class MessageBase;
-}
-
-DEFAULT_BOX_PTR_DELETER_DECLARATION(dia_int::MessageBase);
 
 namespace dia_int {
 	class Logger {
@@ -66,6 +60,12 @@ namespace dia_int {
 			std::ostream&              out,
 			bool                       catch_exceptions = true
 		);
+
+		/**
+		 * @brief Merge another Logger into this one, moving all diagnostics.
+		 * Invalidates the other Logger.
+		 */
+		void mergeWith(Logger&& other);
 	};
 
 	/**

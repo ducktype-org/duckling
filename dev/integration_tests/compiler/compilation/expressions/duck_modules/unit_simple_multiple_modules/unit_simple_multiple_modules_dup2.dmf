@@ -1,0 +1,12 @@
+# AUTO-GENERATED duplicate for race testing — do not edit
+# Simple self-contained test for units as values and types, in multiple modules.
+
+import unit_simple_multiple_modules.unit_simple_submodule as unit_simple_submodule;
+
+let a: () = ();
+
+fun _generated_main_dup2() -> i64 = {
+    unit_simple_submodule.foo(a);
+    # unit_simple_submodule.foo(unitType); # @TODO: #1742 not compiling
+    return 0i64;
+}

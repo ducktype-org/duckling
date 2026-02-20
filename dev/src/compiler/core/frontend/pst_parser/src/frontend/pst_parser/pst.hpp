@@ -11,6 +11,8 @@
 
 #include <token_source/source.hpp>
 
+#include <iostream>
+
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
@@ -85,7 +87,7 @@ namespace pst {
 		template<typename... Args>
 		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args) requires ParseAble<Args...>
 		{
-			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
+			std::cerr << "Parsing PST with root element: " << typeid(Element).name() << "\n";
 
 			const lexer::TokenData& token_data = file->getTokenData();
 			auto                    state_box  = internal::makeState(
@@ -107,6 +109,9 @@ namespace pst {
 				calcElementPathHash();
 				calcHashes();
 			}
+
+			std::cerr << "PST construction time: ";
+			std::cerr << "\n";
 		}
 
 		static Box<LangParserContext> makeParserContext(PSTContext&& pst_ctx) {

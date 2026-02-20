@@ -10,8 +10,6 @@
 
 namespace compiler::driver {
 	vm::code::CodeCollection compileLIRModuleToDVM(CRef<LIRModuleData> data) {
-		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-
 		backend_vm::Module module(data->module_id);
 
 		for (const auto& global: data->globals)

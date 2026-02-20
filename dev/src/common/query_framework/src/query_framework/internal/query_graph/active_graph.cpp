@@ -2,6 +2,8 @@
 
 namespace query::internal {
 
+	thread_local concurrent::ConHashMap<NodeID, ActiveData> active_nodes = {};
+
 	void ActiveGraph::putNode(NodeID node_id) {
 		active_nodes.put(node_id, {});
 		active_node_count++;

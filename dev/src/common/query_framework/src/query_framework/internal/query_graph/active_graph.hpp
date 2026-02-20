@@ -18,17 +18,20 @@ namespace query::internal {
 	 * In the future, if this will be noticeable, we might want to optimize it to for example only
 	 * storing pointers to data in the proper query graph, for always lock-free operations.
 	 */
+
+	 	struct ActiveData final {
+		base::Optional<NodeID> active_edge;
+
+		// @TODO: #1886 we will also need to store key refs here (in type-erased way),
+		// we might want to put in in multiple hash maps, as key operations will be
+		// performed less often and will need less strict synchronization.
+		// We might want to store Ref<void> – maybe we need custom base type?.
+	};
+
+	extern thread_local concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
+
 	class ActiveGraph final {
-		struct ActiveData final {
-			base::Optional<NodeID> active_edge;
 
-			// @TODO: #1886 we will also need to store key refs here (in type-erased way),
-			// we might want to put in in multiple hash maps, as key operations will be
-			// performed less often and will need less strict synchronization.
-			// We might want to store Ref<void> – maybe we need custom base type?.
-		};
-
-		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
 		std::atomic<u64>                           active_node_count = 0;
 
 		/**

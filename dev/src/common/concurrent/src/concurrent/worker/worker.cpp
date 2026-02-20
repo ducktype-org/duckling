@@ -2,6 +2,9 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <concurrent/base/profiling/wait_stats.hpp>
+
+#include <chrono>
 #include <random>
 
 namespace concurrent::worker {
@@ -12,7 +15,11 @@ namespace concurrent::worker {
 	void Worker::scheduleTask(const Task& task) {
 		CORE_ASSERT(loop_run_flag, "Cannot push task to stopped worker");
 		{
+			auto wm_t0 = std::chrono::steady_clock::now();
 			std::scoped_lock lock(mut);
+			auto wm_dt = std::chrono::steady_clock::now() - wm_t0;
+			concurrent::g_wait_stats.worker_mut_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(wm_dt).count(), std::memory_order_relaxed);
+			concurrent::g_wait_stats.worker_mut_count.fetch_add(1, std::memory_order_relaxed);
 			is_free = false;
 			task_queue.push(task);
 		}
@@ -21,7 +28,11 @@ namespace concurrent::worker {
 
 	bool Worker::scheduleTaskIfFree(const Task& task) {
 		{
+			auto wm_t0 = std::chrono::steady_clock::now();
 			std::scoped_lock lock(mut);
+			auto wm_dt = std::chrono::steady_clock::now() - wm_t0;
+			concurrent::g_wait_stats.worker_mut_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(wm_dt).count(), std::memory_order_relaxed);
+			concurrent::g_wait_stats.worker_mut_count.fetch_add(1, std::memory_order_relaxed);
 			if (!is_free) return false;
 			is_free = false;
 			task_queue.push(task);
@@ -33,7 +44,11 @@ namespace concurrent::worker {
 	bool Worker::isFree() const { return is_free; }
 
 	bool Worker::internalHasTasks() const {
+		auto wm_t0 = std::chrono::steady_clock::now();
 		std::scoped_lock lock(mut);
+		auto wm_dt = std::chrono::steady_clock::now() - wm_t0;
+		concurrent::g_wait_stats.worker_mut_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(wm_dt).count(), std::memory_order_relaxed);
+		concurrent::g_wait_stats.worker_mut_count.fetch_add(1, std::memory_order_relaxed);
 		return !task_queue.empty();
 	}
 
@@ -52,7 +67,11 @@ namespace concurrent::worker {
 			while (loop_run_flag) {
 				Task task;
 				{
+					auto wm_t0 = std::chrono::steady_clock::now();
 					std::unique_lock lock(mut);
+					auto wm_dt = std::chrono::steady_clock::now() - wm_t0;
+					concurrent::g_wait_stats.worker_mut_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(wm_dt).count(), std::memory_order_relaxed);
+					concurrent::g_wait_stats.worker_mut_count.fetch_add(1, std::memory_order_relaxed);
 
 					if (task_queue.empty()) {
 						// This is copied as the callback might be changed during its invocation.
@@ -67,7 +86,11 @@ namespace concurrent::worker {
 
 					while (task_queue.empty()) {
 						is_free = true;
+						auto t0 = std::chrono::steady_clock::now();
 						task_cv.wait(lock);
+						auto dt = std::chrono::steady_clock::now() - t0;
+						concurrent::g_wait_stats.worker_idle_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(dt).count(), std::memory_order_relaxed);
+						concurrent::g_wait_stats.worker_idle_count.fetch_add(1, std::memory_order_relaxed);
 						if (!loop_run_flag) return;
 					}
 					task = task_queue.front();
@@ -80,7 +103,11 @@ namespace concurrent::worker {
 
 	void Worker::setNoTasksCallback(const NoTasksCallback& callback) {
 		{
+			auto wm_t0 = std::chrono::steady_clock::now();
 			std::unique_lock lock(mut);
+			auto wm_dt = std::chrono::steady_clock::now() - wm_t0;
+			concurrent::g_wait_stats.worker_mut_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(wm_dt).count(), std::memory_order_relaxed);
+			concurrent::g_wait_stats.worker_mut_count.fetch_add(1, std::memory_order_relaxed);
 			no_tasks_callback = callback;
 
 			if (is_free) {

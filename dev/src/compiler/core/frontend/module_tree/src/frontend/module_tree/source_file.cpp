@@ -1,12 +1,17 @@
 #include "source_file.hpp"
+#include <chrono>
+#include <mutex>
 
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
+#include "base/pointers/box.hpp"
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+
+#include <concurrent/base/profiling/wait_stats.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -35,7 +40,7 @@ namespace compiler::frontend {
 
 	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
 		  file(std::move(file)),
-		  linked_module(linked_module) {
+		  linked_module(linked_module), parse_mutex(base::makeBox<std::mutex>()) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
 		// Add or replace file content in cache
 		auto abs_path = this->file.getFilePath().absolute().getPath();
@@ -53,9 +58,6 @@ namespace compiler::frontend {
 		created_ref->file_id        = FileID(created_ref);
 		files_map.at(abs_path).emplace_back(created_ref);
 
-		// Parse the file immediately
-		// Thanks to that the file is parsed before any concurrent query operations
-		// @TODO: #1974 change this
 		created_ref->getPST();
 
 		return created_ref;
@@ -85,6 +87,11 @@ namespace compiler::frontend {
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
+		auto pm_t0 = std::chrono::steady_clock::now();
+		std::scoped_lock lock(*parse_mutex.get());
+		auto pm_dt = std::chrono::steady_clock::now() - pm_t0;
+		concurrent::g_wait_stats.parse_mutex_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(pm_dt).count(), std::memory_order_relaxed);
+		concurrent::g_wait_stats.parse_mutex_count.fetch_add(1, std::memory_order_relaxed);
 		// If component hash changed, reset parse tree
 		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();

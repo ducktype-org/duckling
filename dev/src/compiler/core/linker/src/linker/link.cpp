@@ -13,8 +13,6 @@ namespace compiler::linker {
 		const std::vector<artifacts::FileArtifact>& inputs,
 		const LinkingOptions&                       options
 	) {
-		time_stats::TrackCategoryTime linking_time(time_stats::TimeCategories::Linking);
-
 		// Link the object file.
 		// Use the default system linker - for Ubuntu it is advised to use gcc.
 		// Related research links:

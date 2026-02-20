@@ -1,6 +1,7 @@
 #include "query_state.hpp"
 
 #include <concurrent/base/locks/assert_lock.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
@@ -110,13 +111,13 @@ namespace {
 
 namespace query::internal {
 	void QueryState::addGraphNode(NodeID node_id) {
-		CORE_ASSERT(!query_graph.node_deps->contains(node_id), "Node already exists in the graph");
-		query_graph.node_deps->put(node_id, QueryGraph::ChildrenData{});
+		CORE_ASSERT(!node_deps->contains(node_id), "Node already exists in the graph");
+		node_deps->put(node_id, ChildrenData{});
 	}
 
 	void QueryState::addSideInputNode(NodeID node_id) {
 		CORE_ASSERT(node_id.q_id.getData().isInputQuery(), "Node is not an input query");
-		query_graph.node_deps->maybePut(node_id, QueryGraph::ChildrenData{});
+		node_deps->maybePut(node_id, ChildrenData{});
 	}
 
 	void QueryState::addDependency(NodeID from, NodeID to) { query_graph.addDependency(from, to); }
@@ -127,6 +128,11 @@ namespace query::internal {
 	}
 
 	Ref<ActiveGraph> QueryState::getActiveGraph() noexcept { return &active_graph; }
+
+	Ref<TaskPool> QueryState::getTaskPool() const {
+		static TaskPool task_pool;
+		return &task_pool;
+	}
 
 	u64 QueryState::activeQueryCount() const { return active_graph.size(); }
 
@@ -226,9 +232,9 @@ namespace query::internal {
 
 			// At this point, node must exist in previous graph because its a child of an existing
 			// node and aren't colored yet So the cannot be merged yet
-			CORE_ASSERT(prev_graph.node_deps->contains(node), "Node should exist in previous graph");
+			CORE_ASSERT(node_deps->contains(node), "Node should exist in previous graph");
 
-			auto& deps        = *prev_graph.node_deps->atMaybe(node).value();
+			auto& deps        = *node_deps->atMaybe(node).value();
 			auto  deps_holder = deps.getHolder();
 
 			// If node has no entry or no deps -> treat as leaf; mark Green if not colored yet
@@ -296,7 +302,10 @@ namespace query::internal {
 			return { **existing, node.hash };
 
 		QueryData dummy_query_data(
-			QueryKind::Dummy, "Dummy from previous graph created during deserialization", {}
+			QueryKind::Dummy,
+			"Dummy from previous graph created during deserialization",
+			{},
+			{ .erase_function = nullptr }
 		);
 		QueryID new_qid = registerQuery(dummy_query_data);
 		old_to_new.put(node.q_id, new_qid);
@@ -324,7 +333,7 @@ namespace query::internal {
 		if (!previous.has_value()) return;
 
 		// If the start node exists in the current graph -> it's already merged or recomputed
-		if (query_graph.node_deps->contains(start_node)) return;
+		if (node_deps->contains(start_node)) return;
 
 		auto& prev_graph = previous->graph;
 
@@ -348,10 +357,10 @@ namespace query::internal {
 
 			// Node may already have been merged if it was scheduled multiple times (e.g. duplicate
 			// deps) This can happen when some Node has multiple parents in the previous graph
-			if (query_graph.node_deps->contains(node)) continue;
+			if (node_deps->contains(node)) continue;
 
 			CORE_ASSERT(
-				prev_graph.node_deps->contains(node), "Node to merge should exist in previous graph"
+				node_deps->contains(node), "Node to merge should exist in previous graph"
 			);
 
 			// Node must have a color assigned already
@@ -369,16 +378,16 @@ namespace query::internal {
 			// Retrieve dependencies from previous graph; if none -> keep empty deps in current graph
 			// Node should exist in previous graph at this point (because its not in current graph yet)
 
-			auto prev_it = prev_graph.node_deps->atMaybe(node);
+			auto prev_it = node_deps->atMaybe(node);
 			CORE_ASSERT(prev_it.has_value(), "Failed to find node in previous graph during merge");
 
 			// Get holder only to hold the assert lock
 			auto node_deps_holder = prev_it.value()->getHolder();
 
 			auto prev_deps = node_deps_holder.moveFrom();  // implicit release.
-			prev_graph.node_deps->erase(node);
+			node_deps->erase(node);
 
-			auto key_value_pair = query_graph.node_deps->maybePut(node, std::move(prev_deps));
+			auto key_value_pair = node_deps->maybePut(node, std::move(prev_deps));
 			CORE_ASSERT(
 				key_value_pair != nullptr, "Node should not exist in current graph during merge"
 			);
@@ -397,9 +406,6 @@ namespace query::internal {
 
 	QueryGraph::ReducedGraphData QueryState::reduceOptimizeGraph(const QueryGraph& graph) const {
 		// measure time spent in graph optimization:
-		time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::GraphOptimization);
-
-		const auto& node_deps = graph.node_deps;
 		using LocalNodeID     = usize;
 
 
@@ -932,4 +938,25 @@ namespace query::internal {
 		return { .nodes = std::move(new_idx_to_node), .adjacency = std::move(new_opt_graph) };
 	}
 
+	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic) {
+		diagnostic_loggers.maybePutAndUpdate(
+			node_id,
+			makeBox<dia_int::Logger>(),
+			[diag = std::move(diagnostic)](Ref<Box<dia_int::Logger>> logger) mutable {
+				logger->refMut()->log(std::move(diag));
+			}
+		);
+	}
+
+	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
+
+	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
+	) const {
+		return &diagnostic_loggers;
+	}
+
+	base::Optional<CRef<dia_int::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
+		if (auto it = diagnostic_loggers.atMaybe(node_id); it.has_value()) return it.value()->ref();
+		return std::nullopt;
+	}
 }  // namespace query::internal

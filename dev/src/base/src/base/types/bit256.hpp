@@ -76,7 +76,7 @@ namespace std {
 		std::size_t operator()(const base::Bit256& bit256) const noexcept {
 			std::size_t hash = 0;
 			for (const auto& value: bit256.data)
-				hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
+				hash ^= std::hash<u64>{}(value * 17);  // Combine hashes using XOR
 			return hash;
 		}
 	};

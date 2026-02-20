@@ -9,6 +9,7 @@
 
 namespace query {
 
+	// @TODO: #2024 \parallel make it thread safe
 	timer::Duration total_red_green_sweep_time = timer::Duration::zero();
 	timer::Duration total_graph_merge_time     = timer::Duration::zero();
 

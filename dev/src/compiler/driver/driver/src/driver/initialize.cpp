@@ -113,13 +113,13 @@ namespace compiler::driver {
 		void handleBackendOptions(const global_state::BackendOptions& backend_options) {
 			global_state::setters::setBackendOptions(backend_options);
 		}
+
+		void handleExecutionOptions(const options_types::ExecutionOptions& execution_options) {
+			concurrent::worker::setWorkerCount(execution_options.worker_count);
+		}
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
-		time_stats::TrackCategoryTime driver_initialization_time(
-			time_stats::TimeCategories::DriverInitialization
-		);
-
 		CORE_ASSERT(
 			init::wasInitObject(),
 			"InitObject should be used before call to the initializeTheCompiler function!"
@@ -137,6 +137,7 @@ namespace compiler::driver {
 				package_compilation_options
 			) {
 				handleDebugOptions(package_compilation_options.debug_options);
+				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 				handlePackageOptions(package_compilation_options.main_package_info);
 				handleBackendOptions(package_compilation_options.backend_options);
@@ -144,6 +145,7 @@ namespace compiler::driver {
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
 				handleDebugOptions(repl_options.debug_options);
+				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

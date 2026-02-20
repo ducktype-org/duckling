@@ -81,13 +81,13 @@ namespace dia_int {
 		 * @brief Set the instance object based on the provider.
 		 * When called multiple times, only the first call will have an effect.
 		 */
-		static void setInstance(Box<TemplateRegistryProvider>&& provider);
+		static void setInstance(Box<TemplateRegistryProvider> provider);
 
 		/**
 		 * @brief Force the registry to use a new provider.
 		 * For testing purposes.
 		 */
-		static void setNewInstance(Box<TemplateRegistryProvider>&& provider);
+		static void setNewInstance(Box<TemplateRegistryProvider> provider);
 	};
 
 }

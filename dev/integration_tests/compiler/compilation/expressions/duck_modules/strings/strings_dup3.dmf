@@ -1,0 +1,7 @@
+# AUTO-GENERATED duplicate for race testing — do not edit
+fun _generated_main_dup3() -> i64 = {
+    let myString = builtin_input_string();
+    builtin_output_string(myString);
+    builtin_output_string("\nHello, world!\n");
+    return 0;
+}

@@ -1,0 +1,6 @@
+# AUTO-GENERATED duplicate for race testing — do not edit
+fun _generated_main_dup2() -> i64 = {
+    const a = 2;
+    builtin_output_i64(a);
+    return 0;
+}

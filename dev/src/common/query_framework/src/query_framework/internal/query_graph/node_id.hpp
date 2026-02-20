@@ -17,6 +17,8 @@ namespace query::internal {
 	 */
 	struct KeyHash final {
 		base::Bit256 val;
+
+		bool operator==(const KeyHash& other) const = default;
 	};
 
 	/**
@@ -50,5 +52,14 @@ struct std::hash<query::internal::NodeID> final {
 
 		// This is questionable
 		return l.asInt() * 9'223'372'036'854'775'783UL + std::hash<base::Bit256>{}(r);
+	}
+};
+
+
+
+template<>
+struct std::hash<query::internal::KeyHash> final {
+	std::size_t operator()(const query::internal::KeyHash& key) const {
+		return std::hash<base::Bit256>{}(key.val);
 	}
 };

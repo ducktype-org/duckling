@@ -10,9 +10,10 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <filesystem/file.hpp>
+#include <concurrent/base/profiling/wait_stats.hpp>
 
-#include <mutex>
+#include <chrono>
+#include <filesystem/file.hpp>
 
 namespace dia_int {
 
@@ -85,28 +86,44 @@ namespace dia_int {
 	std::mutex                      TemplateRegistrySingleton::instance_mutex;
 
 	TemplateRegistrySingleton& TemplateRegistrySingleton::getInstance() {
-		std::scoped_lock lock(instance_mutex);
+		auto tr_t0 = std::chrono::steady_clock::now();
+		std::lock_guard lock(instance_mutex);
+		auto tr_dt = std::chrono::steady_clock::now() - tr_t0;
+		concurrent::g_wait_stats.tmpl_registry_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(tr_dt).count(), std::memory_order_relaxed);
+		concurrent::g_wait_stats.tmpl_registry_count.fetch_add(1, std::memory_order_relaxed);
 		if (!instance.toOpt().has_value())
 			throw TemplateEvaluationException("TemplateRegistry instance not initialized.");
 		return *instance.toOpt().value();
 	}
 
-	void TemplateRegistrySingleton::setInstance(Box<TemplateRegistryProvider>&& provider) {
-		std::scoped_lock lock(instance_mutex);
+	void TemplateRegistrySingleton::setInstance(Box<TemplateRegistryProvider> provider) {
+		auto tr_t0 = std::chrono::steady_clock::now();
+		std::lock_guard lock(instance_mutex);
+		auto tr_dt = std::chrono::steady_clock::now() - tr_t0;
+		concurrent::g_wait_stats.tmpl_registry_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(tr_dt).count(), std::memory_order_relaxed);
+		concurrent::g_wait_stats.tmpl_registry_count.fetch_add(1, std::memory_order_relaxed);
 		if (instance.toOpt().empty())
 			instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
 	}
 
-	void TemplateRegistrySingleton::setNewInstance(Box<TemplateRegistryProvider>&& provider) {
-		std::scoped_lock lock(instance_mutex);
+	void TemplateRegistrySingleton::setNewInstance(Box<TemplateRegistryProvider> provider) {
+		auto tr_t0 = std::chrono::steady_clock::now();
+		std::lock_guard lock(instance_mutex);
+		auto tr_dt = std::chrono::steady_clock::now() - tr_t0;
+		concurrent::g_wait_stats.tmpl_registry_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(tr_dt).count(), std::memory_order_relaxed);
+		concurrent::g_wait_stats.tmpl_registry_count.fetch_add(1, std::memory_order_relaxed);
 		instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
 	}
 
 	template_file::DiagnosticTemplate& TemplateRegistrySingleton::loadTemplate(
 		const dia_args::Metadata& metadata
 	) {
-		std::scoped_lock lock(instance_mutex);
-		std::string      key = metadata.type + "/" + metadata.family + "/" + metadata.name;
+		auto tr_t0 = std::chrono::steady_clock::now();
+		std::lock_guard lock(instance_mutex);
+		auto tr_dt = std::chrono::steady_clock::now() - tr_t0;
+		concurrent::g_wait_stats.tmpl_registry_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(tr_dt).count(), std::memory_order_relaxed);
+		concurrent::g_wait_stats.tmpl_registry_count.fetch_add(1, std::memory_order_relaxed);
+		std::string     key = metadata.type + "/" + metadata.family + "/" + metadata.name;
 
 		if (auto cached = cache.atMaybe(key); cached.has_value()) return *cached.value();
 

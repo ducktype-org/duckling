@@ -277,6 +277,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = 1,
+							},
 						}
 					);
 
@@ -342,10 +345,18 @@ clah::Clah getClahForMain() {
 							 "Disable incremental compilation (do not load previous query graph)."
 						 )
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
+
+					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -360,14 +371,12 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
-
-
-					time_stats::TrackCategoryTime total_compilation_time(
-						time_stats::TimeCategories::TotalCompilationTime
-					);
 
 					auto backend_type = options.isFlag("dvm-backend")
 		                                  ? compiler::driver::BackendType::DVM
@@ -376,8 +385,6 @@ clah::Clah getClahForMain() {
 					base::OkBad result = compiler::driver::compileEntirePackage(
 						global_state::getMainPackage(), backend_type, linking_options
 					);
-
-					total_compilation_time.end();
 
 					compiler::driver::exit();
 
@@ -435,6 +442,9 @@ clah::Clah getClahForMain() {
 									.backend_options = {},
 									.debug_options = getDebugOptionsFromClap(options),
 									.incremental = {.enabled = !options.isFlag("no-incremental") },
+									.execution_options = {
+										.worker_count = 1,
+									},
 						}
 					);
 
@@ -461,6 +471,9 @@ clah::Clah getClahForMain() {
 							   compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options = getDebugOptionsFromClap(options),
+									   .execution_options = {
+										   .worker_count = 1,
+									   },
 								   }
 							   );
 

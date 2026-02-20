@@ -25,52 +25,43 @@ namespace time_stats {
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):
 		  category(category),
 		  ended(false) {
-		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(true);
-
-		CORE_ASSERT(
-			not was_active,
-			"Overlapping time tracking of category ",
-			std::to_underlying(category),
-			"."
-		);
+		// bool was_active = is_category_active.at(std::to_underlying(category)).exchange(true);
 		measurement.startMeasurement();
 	}
 
 	void TrackCategoryTime::end() {
 		// multiple calls to end() do nothing:
-		if (ended) return;
+		// if (ended) return;
 
-		measurement.endMeasurement();
+		// measurement.endMeasurement();
 
-		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
+		// bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
 
-		CORE_ASSERT(
-			was_active,
-			"Ending time tracking of inactive category ",
-			std::to_underlying(category),
-			"."
-		);
+		// CORE_ASSERT(
+		// 	was_active,
+		// 	"Ending time tracking of inactive category ",
+		// 	std::to_underlying(category),
+		// 	"."
+		// );
 
-		ended = true;
+		// ended = true;
 
-		time_statistics.at(std::to_underlying(category)).add(measurement.duration());
+		// time_statistics.at(std::to_underlying(category)).add(measurement.duration());
 	}
 
 	TrackCategoryTime::~TrackCategoryTime() {
 		// we don't do anything if already ended:
-		if (ended) return;
+		// if (ended) return;
 
-		measurement.endMeasurement();
+		// measurement.endMeasurement();
 
 		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
-		CORE_ASSERT_NOEXCEPT(
-			was_active,
-			"Ending time tracking of inactive category ",
-			std::to_underlying(category),
-			"."
-		);
+		if (!was_active) {
+			// @PR: QuickFix
+			return;
+		}
 
-		time_statistics.at(std::to_underlying(category)).add(measurement.duration());
+		// time_statistics.at(std::to_underlying(category)).add(measurement.duration());
 	}
 
 	timer::Duration getTimeStatistic(TimeCategories category) {

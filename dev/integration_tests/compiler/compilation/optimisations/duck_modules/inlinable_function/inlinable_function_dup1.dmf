@@ -1,0 +1,9 @@
+# AUTO-GENERATED duplicate for race testing — do not edit
+fun foo(a: i64, b: i64) -> () = {
+    builtin_output_i64(a + b);
+}
+
+fun _generated_main_dup1() -> i64 = {
+    foo(1, 2);
+    return 0;
+}

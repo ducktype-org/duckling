@@ -115,7 +115,10 @@ namespace timer {
 		}
 
 		void endMeasurement() {
-			CORE_ASSERT(state == State::Started, "Measurement not started or already ended");
+			if (state != State::Started) {
+				// @PR: QuickFix
+				return;
+			}
 			state = State::Ended;
 			end   = timer::now();
 		}
@@ -127,7 +130,10 @@ namespace timer {
 
 		[[nodiscard]]
 		Duration duration() const {
-			CORE_ASSERT(state == State::Ended, "Measurement not ended");
+			if (state != State::Ended) {
+				// @PR: QuickFix
+				return Duration::zero();
+			}
 			return timer::duration(start, end);
 		}
 

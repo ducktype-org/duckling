@@ -5,6 +5,8 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 
+#include <functional>
+
 namespace compiler::helios::comptime_ops {
 	/**
 	 * @brief Singleton memory manager for heap-allocated SymbolTypes created during CTE.

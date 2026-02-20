@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <mutex>
 #include <frontend/module_tree/access.hpp>
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
@@ -28,6 +29,7 @@ namespace compiler::frontend {
 		ModuleID                   linked_module;
 		base::Optional<pst::PST<>> parse_tree;
 		base::Optional<usize>      storage_handle;  //< Key to support removal from static storage
+		base::Box<std::mutex>		   		   parse_mutex;     //< Mutex to protect parse tree initialization
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
 		mutable base::Optional<hashing::ComponentHash>

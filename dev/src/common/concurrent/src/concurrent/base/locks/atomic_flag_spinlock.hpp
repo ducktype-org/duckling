@@ -1,8 +1,10 @@
 #pragma once
 
+#include <concurrent/base/profiling/wait_stats.hpp>
 #include <concurrent/utils/nop_wait.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <thread>
 #include <version>
 
@@ -31,6 +33,7 @@ namespace concurrent {
 	 */
 	class AtomicFlagSpinlock final {
 		std::atomic_flag atomic_flag{};
+		std::atomic_flag dummy_flag{}; // This is used to prevent false sharing on some platforms, as atomic_flag might be implemented as a single byte.
 
 
 	public:
@@ -38,16 +41,28 @@ namespace concurrent {
 		 * Acquires the lock, spinning and/or sleeping if necessary.
 		 */
 		void lock() noexcept {
+			// g_wait_stats.spinlock_total_count.fetch_add(1, std::memory_order_relaxed);
+			// Fast path: uncontended
+			if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
+			dummy_flag.test_and_set(std::memory_order_acquire);
+
+			// Slow path: contended — measure spin time
+			// auto t0 = std::chrono::steady_clock::now();
 			u64 wait_repetitions = 2;
 			while (true) {
-				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
 				wait_repetitions *= 2;
 
 				if (wait_repetitions > 128) {
-					std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+					std::this_thread::yield();
 					wait_repetitions = 4;
 				} else {
 					concurrent::nopWait(wait_repetitions);
+				}
+				if (!atomic_flag.test_and_set(std::memory_order_acquire)) {
+					// auto dt = std::chrono::steady_clock::now() - t0;
+					// g_wait_stats.spinlock_spin_ns.fetch_add(std::chrono::duration_cast<std::chrono::nanoseconds>(dt).count(), std::memory_order_relaxed);
+					// g_wait_stats.spinlock_spin_count.fetch_add(1, std::memory_order_relaxed);
+					return;
 				}
 			}
 		}
@@ -65,6 +80,6 @@ namespace concurrent {
 		/**
 		 * Releases the lock.
 		 */
-		void unlock() noexcept { atomic_flag.clear(std::memory_order_release); }
+		void unlock() noexcept { atomic_flag.clear(std::memory_order_release); dummy_flag.clear(std::memory_order_release); }
 	};
 }

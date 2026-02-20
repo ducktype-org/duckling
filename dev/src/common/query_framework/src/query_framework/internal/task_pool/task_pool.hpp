@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/base/profiling/wait_stats.hpp>
 #include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
@@ -9,18 +10,21 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
+#include <query_framework/internal/query_graph/node_id.hpp>
+
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
-#include <vector>
 
-namespace concurrent::pool {
+namespace query::internal {
+
 	class TaskPool;
 
-	/**
-	 * @brief TaskID is a unique identifier for tasks in the TaskPool.
-	 */
-	using TaskID = std::size_t;
+	inline std::size_t taskHash(const query::internal::NodeID& node) {
+		return std::hash<query::internal::NodeID>{}(node);
+	}
+
 
 	/**
 	 * @brief Status of a task in the TaskPool.
@@ -31,15 +35,59 @@ namespace concurrent::pool {
 		Done,        ///< Task has completed execution.
 	};
 
+
+	struct TaskStatusMap final {
+	private:
+		using Map = concurrent::ConHashMap<query::internal::KeyHash, TaskStatus>;
+
+		std::array<Map, 128> maps;
+
+		Map& getMap(NodeID id) {
+			return maps.at(id.q_id.asInt());
+		}
+
+		const Map& getMap(NodeID id) const {
+			return maps.at(id.q_id.asInt());
+		}
+
+	public:
+		/** return true if added */
+		bool addIfNotExists(NodeID id) {
+			return getMap(id).maybePut(id.hash, TaskStatus::InProgress).toOpt().has_value();
+		}
+
+		base::Optional<TaskStatus> getCurrent(NodeID id) const {
+			return getMap(id).atMaybeCopy(id.hash);
+		}
+
+		bool isDone(NodeID id) const {
+			if (auto status_opt = getCurrent(id)) {
+				return *status_opt == TaskStatus::Done;
+			}
+			return false;
+		}
+
+		void setDone(NodeID id) {
+			getMap(id).update(id.hash, TaskStatus::Done);
+		}
+
+		bool contains(NodeID id) const {
+			return getMap(id).contains(id.hash);
+		}
+	};
+
 	/**
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
 	struct Task final {
-		// @TODO: #1973 integrate with query.
-		TaskID       id;
-		worker::Task work;
+		// @TODO: #2035 at least one layer of std::function should be removed here, as it adds
+		// unnecessary overhead. (the other one is inside the task pool implementation). See if
+		// std::any apparch/manual void* is sufficiently faster to be used instead of std::function.
 
-		Task(TaskID id, worker::Task work): id(id), work(std::move(work)) {}
+		NodeID                   id;
+		concurrent::worker::Task work;
+
+		Task(NodeID id, concurrent::worker::Task&& work): id(id), work(std::move(work)) {}
 	};
 
 	/**
@@ -47,15 +95,15 @@ namespace concurrent::pool {
 	 */
 	class TaskHandle final {
 	public:
-		explicit TaskHandle(TaskPool& pool, TaskID id): pool(pool), task_id(id) {}
+		explicit TaskHandle(TaskPool& pool, NodeID id): pool(pool), task_id(id) {}
 
-		[[nodiscard]] TaskID getId() const { return task_id; }
+		[[nodiscard]] NodeID getID() const { return task_id; }
 
 		void await();
 
 	private:
 		TaskPool& pool;
-		TaskID    task_id;
+		NodeID    task_id;
 	};
 
 	/**
@@ -63,6 +111,10 @@ namespace concurrent::pool {
 	 * @note All public methods are thread-safe.
 	 */
 	class TaskPool final {
+		using WRef = concurrent::worker::WRef;
+
+		static constexpr usize TASK_SHARDS = 127;
+
 	public:
 		/**
 		 * @brief Constructs a TaskPool.
@@ -80,18 +132,14 @@ namespace concurrent::pool {
 
 
 		/**
-		 * @brief Add the initial set of tasks to the pool.
-		 * These tasks will be distributed to workers when execute() is called.
-		 *
-		 * For now it may only be called once, it panics if called more than once.
+		 * @brief Add the tasks to the pool.
 		 */
-		void addInitialTasks(std::vector<Task> tasks);
+		void addTask(Task&& tasks);
 
 		/**
 		 * @brief Start execution of all tasks in the pool.
 		 * Distributes initial tasks: one to each worker and the rest to the global pool.
 		 * Is non-blocking, returns immediately after scheduling the initial tasks.
-		 * @note execute() must be called after addInitialTasks()
 		 */
 		void execute();
 
@@ -99,7 +147,7 @@ namespace concurrent::pool {
 		 * @brief Wait for all tasks in the pool to complete.
 		 * Should be called after execute().
 		 */
-		void waitExecutionCompletion();
+		// void waitExecutionCompletion();
 
 		/**
 		 * @brief Query (execute) a task immediately.
@@ -133,7 +181,7 @@ namespace concurrent::pool {
 		 *
 		 * @note Must be called from a worker thread.
 		 */
-		void await(TaskID id);
+		void await(NodeID id);
 
 
 		/**
@@ -142,14 +190,19 @@ namespace concurrent::pool {
 		 *
 		 * @return True if the task is done, false otherwise.
 		 */
-		[[nodiscard]] bool isTaskDone(TaskID id) const;
+		[[nodiscard]] bool isTaskDone(NodeID id) const;
 
 		/**
 		 * @brief Callback invoked when a worker has no tasks.
 		 * Attempts to steal work from the pool and shedules it on the
 		 * current worker. Should be called from the worker's no_tasks_callback.
 		 */
-		void onWorkerNoTasks(worker::WRef current_worker);
+		void onWorkerNoTasks(WRef current_worker);
+
+		/**
+		 * @brief Waits until some worker executed the task.
+		 */
+		void waitForTask(NodeID id);
 
 	private:
 		/**
@@ -163,12 +216,12 @@ namespace concurrent::pool {
 		 * @param worker_ref The ID of the worker to steal from.
 		 * @return Optional Task if one was available.
 		 */
-		base::Optional<Task> tryStealFromWorkerUnlocked(worker::WRef worker_ref);
+		base::Optional<Task> tryStealFromWorkerUnlocked(WRef worker_ref);
 
 		/**
 		 * @brief Same as above but only steals the task of the given ID by @param task_id.
 		 */
-		base::Optional<Task> tryStealFromWorkerUnlocked(worker::WRef worker_ref, TaskID task_id);
+		base::Optional<Task> tryStealFromWorkerUnlocked(WRef worker_ref, NodeID task_id);
 
 		/**
 		 * @brief Tries to execute the given task.
@@ -189,7 +242,7 @@ namespace concurrent::pool {
 		 * @param worker_ref The worker ref.
 		 * @param task The task to add.
 		 */
-		void addToWorkerPoolUnlocked(worker::WRef worker_ref, Task&& task);
+		void addToWorkerPoolUnlocked(WRef worker_ref, Task&& task);
 
 		/**
 		 * @brief Add a task to the global pool.
@@ -203,7 +256,7 @@ namespace concurrent::pool {
 		 * set the availability of the worker under our mutex
 		 * avoiding the missed wake up problem (missed schedule problem in this case).
 		 */
-		base::Optional<worker::WRef> getFreeWorkerUnlocked() const;
+		base::Optional<WRef> getFreeWorkerUnlocked() const;
 
 
 		/**
@@ -214,7 +267,7 @@ namespace concurrent::pool {
 		void flushWorkers();
 
 		/// Reference to the WorkerManager.
-		worker::WorkerManager& worker_manager;
+		concurrent::worker::WorkerManager& worker_manager;
 
 		/// Number of workers.
 		usize num_workers;
@@ -225,28 +278,25 @@ namespace concurrent::pool {
 		std::deque<Task> global_pool;
 
 		/// Per-worker task pools.
-		base::HashMap<worker::WRef, std::deque<Task>> worker_pools;
+		base::HashMap<WRef, std::deque<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
-		ConHashMap<TaskID, TaskStatus> task_status_map;
+		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
+		TaskStatusMap task_status_map;
 
 		/// Condition variable for signaling task completion.
-		std::condition_variable task_completed_cv;
+		// std::condition_variable task_completed_cv;
+		std::vector<std::mutex> task_completed_mutexes;
+		std::vector<std::condition_variable> task_completed_cvs;
 
 		/// Counter for completed tasks (used in execute()).
-		std::atomic<usize> completed_tasks{ 0 };
+		// std::atomic<usize> completed_tasks{ 0 };
 
 		/// Total number of tasks (used in execute()).
-		std::atomic<usize> added_tasks{ 0 };
+		// std::atomic<usize> added_tasks{ 0 };
 
 		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
-		base::HashMap<worker::WRef, std::atomic<bool>> is_worker_free_map;
-
-		/// Flag indicating if execution is in progress.
-		std::atomic<bool> is_executing{ false };
-
-		/// If addInitialTasks() was called already, to prevent multiple calls.
-		bool first_call = true;
+		base::StableHashMap<WRef, std::atomic<bool>> is_worker_free_map;
 	};
 
 }  // namespace concurrent
