@@ -334,7 +334,7 @@ namespace {
 			= owned_args | std::views::transform([](auto& value) { return value.refMut(); })
 		    | std::ranges::to<vm::FunctionRunArguments>();
 
-		if (!vm::api::runFunction(pid, func_name, args))
+		if (!vm::api::runFunctionAwait(pid, func_name, args))
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
 				"Failed to run a function '" + func_name + "' on VM."
