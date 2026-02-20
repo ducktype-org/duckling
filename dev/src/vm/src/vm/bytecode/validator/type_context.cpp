@@ -54,12 +54,13 @@ namespace {
 				for (const auto& field: clazz.fields)
 					fields_definitions.emplace_back(field.name, types.at(field.type)->getId());
 				tp.defineClass(
-					types.at(typeName(SpecialTypes::get().vtable_ptr))->getId(),
 					fields_definitions,
 					clazz.is_abstract,
-					clazz.extends.map([&](const auto& parent) { return types.at(parent)->getId(); }),
-					clazz.implements | std::views::transform([&](const auto& interface) {
-						return types.at(interface)->getId();
+					clazz.extends
+						? base::Optional<vm::code::type::TypeID>(types.at(*clazz.extends)->getId())
+						: base::Optional<vm::code::type::TypeID>(),
+					clazz.implements | std::views::transform([&](const auto& i) {
+						return types.at(i)->getId();
 					}) | std::ranges::to<std::vector>(),
 					clazz.virtual_methods | std::views::transform([&](const auto& method) {
 						return std::make_pair(method.name, types.at(method.type)->getId());
@@ -108,7 +109,14 @@ void vm::code::TypeContext::insertAndValidate(
 		}
 	}
 
+	// Define
 	for (const auto& type: new_types) defineTypeFromData(types, *types.at(typeName(type)), type);
+
+	// Finalize
+	for (const auto& type: new_types) {
+		auto& tp = *types.at(typeName(type));
+		tp.finalize(types);
+	}
 }
 
 const TypeMap& TypeContext::getCurrentTypes() const { return types; }

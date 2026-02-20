@@ -9,6 +9,7 @@
 
 #include <string_id/string_id.hpp>
 
+#include "vm/bytecode/validator/type_size.hpp"
 #include "vm/utils/stable_obj_id_name_map.hpp"
 #include <vm/bytecode/type_of_data.hpp>
 
@@ -46,13 +47,14 @@ namespace vm::code::type {
 		 */
 		struct Field {
 			STRONG_TYPEDEF_ID_DIRECT_CREATION(ID);
+			type::TypeSize offset;
 			base::StrID name;
 			TypeID      type;
 		};
 
 		/**
-		 * @brief Inheritance metadata for a Structure type. Contains information about superclasses
-		 * and interfaces.
+		 * @brief Inheritance metadata for a Structure type. Contains information related to
+		 * inheritance, like super types, implemented interfaces, virtual methods and vtable.
 		 */
 		struct InheritanceMetadata {
 			/**
@@ -65,11 +67,6 @@ namespace vm::code::type {
 			std::unordered_set<TypeID> super_types;
 
 			/**
-			 * @brief In a class-like way. Only one superclass allowed
-			 */
-			base::Optional<TypeID> extends;
-
-			/**
 			 * @brief In an interface-like way. Multiple interfaces allowed
 			 */
 			std::unordered_set<TypeID> implements;
@@ -79,7 +76,7 @@ namespace vm::code::type {
 			 * this type, including inherited ones. Maps method name to its type.
 			 * @note Unimplemented methods *do* exist in this map, but do not exist in the vtable.
 			 */
-			base::HashMap<base::StrID, TypeID> virtual_methods;
+			base::HashMap<base::StrID, TypeID> available_methods;
 
 			/**
 			 * @brief A map from virtual method name to the name of the function that implements it.
@@ -89,11 +86,27 @@ namespace vm::code::type {
 			base::HashMap<base::StrID, base::StrID> vtable;
 
 			/**
-			 * @brief Whether this type is abstract (i.e. cannot be instantiated)
+			 * @brief Class kind. If this type is a class, contains information about its superclass
+			 * and whether it's abstract.
 			 */
-			bool is_abstract = false;
+			struct ClassKind {
+				/**
+				 * @brief A super-class. Only one super-class allowed
+				 */
+				base::Optional<TypeID> extends;
 
-			enum Kind { Class, Interface } kind = Kind::Class;
+				/**
+				 * @brief Whether this type is abstract (i.e. cannot be instantiated)
+				 */
+				bool is_abstract = false;
+			};
+
+			/**
+			 * @brief Interface kind. If this type is an interface, then no additional data is needed.
+			 */
+			struct InterfaceKind {};
+
+			std::variant<InterfaceKind, ClassKind> kind;
 		};
 
 		/**
@@ -154,213 +167,38 @@ namespace vm::code::type {
 		enum class State { Declared, Defined, Finalizing, Finalized } state = State::Declared;
 
 	public:
-		static Type declareType(base::StrID name, TypeID id) { return { name, id }; }
+		static Type declareType(base::StrID name, TypeID id);
 
-		void definePrimitive(Bytes size) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			state = State::Defined;
+		void definePrimitive(Bytes size);
 
-			kind = concrete::Primitive{ size };
-			if (name == "void") is_instantiable = false;
-		}
+		void definePointer(type::TypeID inner);
 
-		void definePointer(type::TypeID inner) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			state = State::Defined;
+		void defineFixedSizeTable(type::TypeID inner, usize element_count);
 
-			kind = concrete::Pointer{ inner };
-			finalizeInstantiability();
-		}
+		void defineDynamicTable(type::TypeID inner);
 
-		void defineFixedSizeTable(type::TypeID inner, usize element_count) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			state = State::Defined;
-
-			kind = concrete::FixedSizeTable{ .inner = inner, .element_count = element_count };
-			finalizeInstantiability();
-		}
-
-		void defineDynamicTable(type::TypeID inner) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			state = State::Defined;
-
-			kind = concrete::DynamicTable{ .inner = inner };
-			finalizeInstantiability();
-		}
-
-		void defineData(const std::vector<std::pair<base::StrID, type::TypeID>>& fields_definitions) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			state = State::Defined;
-
-			ObjIdNameMap<concrete::Field, concrete::Field::ID> fields;
-			for (const auto& field_def: fields_definitions)
-				fields.insert(
-					concrete::Field{ .name = field_def.first, .type = field_def.second },
-					field_def.first
-				);
-
-			concrete::Structure structure{
-				.fields               = std::move(fields),
-				.inheritance_metadata = {},
-			};
-
-			kind = structure;
-			finalizeInstantiability();
-		}
+		void defineData(const std::vector<std::pair<base::StrID, type::TypeID>>& fields_definitions);
 
 		void defineClass(
-			const type::TypeID                                       vtable_type,
 			const std::vector<std::pair<base::StrID, type::TypeID>>& fields_definitions,
 			const bool                                               is_abstract,
 			const base::Optional<type::TypeID>&                      extends,
 			const std::vector<type::TypeID>&                         implements,
 			const std::vector<std::pair<base::StrID, type::TypeID>>& new_virtual_methods,
 			const std::vector<std::pair<base::StrID, base::StrID>>&  implementations
-		) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			state = State::Defined;
-
-			defineData(fields_definitions);
-			CORE_ASSERT(
-				std::holds_alternative<concrete::Structure>(kind),
-				"Invalid type kind after defineData"
-			);
-
-			base::HashMap<base::StrID, type::TypeID> virtual_methods;
-			for (const auto& method: new_virtual_methods)
-				virtual_methods.put(method.first, method.second);
-
-			base::HashMap<base::StrID, base::StrID> vtable;
-			for (const auto& impl: implementations) vtable.put(impl.first, impl.second);
-
-			// Forward the data to be used in inheritance metadata construction during finalization.
-			std::get<concrete::Structure>(kind).inheritance_metadata
-				= concrete::InheritanceMetadata{
-					  .super_types     = { getId() },
-					  .extends         = extends,
-					  .implements      = implements | std::ranges::to<std::unordered_set>(),
-					  .virtual_methods = virtual_methods,
-					  .vtable          = vtable,
-					  .is_abstract     = is_abstract,
-					  .kind            = concrete::InheritanceMetadata::Kind::Class
-				  };
-
-			// Build inheritance metadata for this class.
-
-			// // 1. Finalize superclass and interfaces first.
-			// for (auto& i: implements) i->finalize();
-			// if_opt_some(extends, superclass) superclass->finalize();
-
-			// // 2. Fill the data
-			// std::vector<std::pair<base::StrID, type::TypeID>> fields;
-			// concrete::InheritanceMetadata                     imd
-			// 	= { .super_types = { getId() },
-			// 	    .extends     = {},
-			// 	    .implements  = implements
-			// 	                | std::views::transform([](auto& i) { return i->getId(); })
-			// 	                | std::ranges::to<std::unordered_set>(),
-			// 	    .virtual_methods = {},
-			// 	    .vtable          = {},
-			// 	    .is_abstract     = is_abstract,
-			// 	    .kind            = concrete::InheritanceMetadata::Kind::Class };
-
-			// match_optional(extends) {
-			// 	opt_some(superclass) {
-			// 		CORE_ASSERT(
-			// 			superclass->is<concrete::Structure>(), "Superclass must be a structure"
-			// 		);
-			// 		const auto& super_structure = superclass->get<concrete::Structure>();
-			// 		const auto& super_imd       = super_structure.inheritance_metadata.expect(
-			//             "Superclass must have inheritance metadata"
-			//         );
-
-			// 		// Fields. Superclass fields are inserted before subclass fields.
-			// 		for (const auto& field: superclass->get<concrete::Structure>().fields)
-			// 			fields.emplace_back(field.name, field.type);
-			// 		// Super types
-			// 		imd.super_types.insert(
-			// 			superclass->get<concrete::Structure>()
-			// 				.inheritance_metadata->super_types.begin(),
-			// 			superclass->get<concrete::Structure>().inheritance_metadata->super_types.end()
-			// 		);
-			// 		// Extends
-			// 		imd.extends = superclass->getId();
-			// 		// Virtual methods
-			// 		for (const auto& method: super_imd.virtual_methods)
-			// 			imd.virtual_methods.put(method.first, method.second);
-			// 		// Vtable
-			// 		for (const auto& impl: super_imd.vtable)
-			// 			imd.vtable.put(impl.first, impl.second);
-			// 	}
-
-			// 	opt_none { fields.emplace_back(base::StrID(".vtable"), vtable_type->getId()); }
-			// }
-
-
-			// // 3. Add fields from this class and build inheritance metadata for this class.
-			// // Fields
-			// for (const auto& new_field: fields_definitions)
-			// 	fields.emplace_back(new_field.first, new_field.second->getId());
-			// // Virtual methods
-			// for (const auto& new_virtual_method: new_virtual_methods)
-			// 	imd.virtual_methods.put(
-			// 		new_virtual_method.first, new_virtual_method.second->getId()
-			// 	);
-			// // Vtable
-			// for (const auto& impl: implementations) imd.vtable.put(impl.first, impl.second);
-
-			// // 4. Put the data into the type and finalize it.
-			// defineData(fields_definitions);
-
-			// CORE_ASSERT(
-			// 	std::holds_alternative<concrete::Structure>(kind),
-			// 	"Invalid type kind after defineData"
-			// );
-			// std::get<concrete::Structure>(kind).inheritance_metadata = imd;
-
-			finalizeInstantiability();
-		}
+		);
 
 		void defineInterface(
 			const std::vector<type::TypeID>&                         implements,
 			const std::vector<std::pair<base::StrID, type::TypeID>>& new_virtual_methods,
 			const std::vector<std::pair<base::StrID, base::StrID>>&  implementations
-		) {
-			throw base::NotYetImplemented("Interface types are not yet supported");
-		}
+		);
 
-		void defineVariant(const std::vector<TypeID>& variant_types) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			CORE_ASSERT(variant_types.size() != 0, "Cannot define variant with no alternatives");
-			state = State::Defined;
+		void defineVariant(const std::vector<TypeID>& variant_types);
 
-			// log_256(x) = log_2(x) / log_2(256) = log_2(x) / 8.0
-			const auto needed_bytes = ceil(log2(static_cast<double>(variant_types.size())) / 8.0);
+		void defineFunction(const std::vector<TypeID>& parameters, TypeID result);
 
-			// Need to get a power of 2 - 1, 2, 4, 8, 16 etc
-			// 2 ** (ceil(log2(needed_bytes)))
-			const auto rounded_to_power_of_2
-				= static_cast<usize>(std::pow(2, ceil(log2(needed_bytes))));
-
-			kind = concrete::Variant{ .type_tag_size = Bytes(rounded_to_power_of_2),
-				                      .alternatives  = variant_types };
-		}
-
-		void defineFunction(const std::vector<TypeID>& parameters, TypeID result) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			state = State::Defined;
-
-			kind = concrete::Function{ .parameters = parameters, .result = result };
-			finalizeInstantiability();
-		}
-
-		void defineOpaque(Bytes size) {
-			CORE_ASSERT(state == State::Declared, "Bad type define");
-			state = State::Defined;
-
-			kind = concrete::Opaque{ size };
-			finalizeInstantiability();
-		}
+		void defineOpaque(Bytes size);
 
 		/**
 		 * @brief Finalize this type. During finalization we check for cyclic dependencies between
@@ -369,92 +207,11 @@ namespace vm::code::type {
 		 * @note There is no need for a type to be "unfinalizable", because we finalize all types at
 		 * the end of validation, and after that we don't need to change them anymore.
 		 */
-		void finalize(ObjIdNameMap<type::Type>& types) {
-			switch (state) {
-			case State::Declared:
-				CORE_PANIC("Tried to finalize a type that was not defined");
-			case State::Defined:
-				state = State::Finalizing;
-				break;
-			case State::Finalizing:
-				CORE_PANIC("Cyclic dependency not detected during type validation");
-			case State::Finalized:
-				return;
-			}
-			variant_match(kind) {
-				variant_case(concrete::Structure, structure) {
-					// 1. Finalize superclass and interfaces first.
-					for (auto& i: implements) i->finalize();
-					if_opt_some(extends, superclass) superclass->finalize();
+		void finalize(ObjIdNameMap<type::Type>& types);
 
-					// 2. Fill the data
-					std::vector<std::pair<base::StrID, type::TypeID>> fields;
-					concrete::InheritanceMetadata                     imd
-						= { .super_types = { getId() },
-						    .extends     = {},
-						    .implements  = implements
-						                | std::views::transform([](auto& i) { return i->getId(); })
-						                | std::ranges::to<std::unordered_set>(),
-						    .virtual_methods = {},
-						    .vtable          = {},
-						    .is_abstract     = is_abstract,
-						    .kind            = concrete::InheritanceMetadata::Kind::Class };
+		[[nodiscard]] base::StrID getName() const;
 
-					match_optional(extends) {
-						opt_some(superclass) {
-							CORE_ASSERT(
-								superclass->is<concrete::Structure>(),
-								"Superclass must be a structure"
-							);
-							const auto& super_structure = superclass->get<concrete::Structure>();
-							const auto& super_imd = super_structure.inheritance_metadata.expect(
-								"Superclass must have inheritance metadata"
-							);
-
-							// Fields. Superclass fields are inserted before subclass fields.
-							for (const auto& field: superclass->get<concrete::Structure>().fields)
-								fields.emplace_back(field.name, field.type);
-							// Super types
-							imd.super_types.insert(
-								superclass->get<concrete::Structure>()
-									.inheritance_metadata->super_types.begin(),
-								superclass->get<concrete::Structure>()
-									.inheritance_metadata->super_types.end()
-							);
-							// Extends
-							imd.extends = superclass->getId();
-							// Virtual methods
-							for (const auto& method: super_imd.virtual_methods)
-								imd.virtual_methods.put(method.first, method.second);
-							// Vtable
-							for (const auto& impl: super_imd.vtable)
-								imd.vtable.put(impl.first, impl.second);
-						}
-
-						opt_none {
-							fields.emplace_back(base::StrID(".vtable"), vtable_type->getId());
-						}
-					}
-
-
-					// 3. Add fields from this class and build inheritance metadata for this class.
-					// Fields
-					for (const auto& new_field: fields_definitions)
-						fields.emplace_back(new_field.first, new_field.second->getId());
-					// Virtual methods
-					for (const auto& new_virtual_method: new_virtual_methods)
-						imd.virtual_methods.put(
-							new_virtual_method.first, new_virtual_method.second->getId()
-						);
-					// Vtable
-					for (const auto& impl: implementations) imd.vtable.put(impl.first, impl.second);
-				}
-			}
-		}
-
-		[[nodiscard]] base::StrID getName() const { return name; }
-
-		[[nodiscard]] TypeID getId() const { return id; }
+		[[nodiscard]] TypeID getId() const;
 
 		template<ConcreteType T>
 		[[nodiscard]]
@@ -475,7 +232,9 @@ namespace vm::code::type {
 			return std::holds_alternative<T>(kind);
 		}
 
-		bool operator==(const Type& other) const { return other.id == id; }
+		[[nodiscard]] type::TypeSize getSize() const;
+
+		bool operator==(const Type& other) const;
 
 		// /**
 		//  * Get inner type of pointer, fixed size or dynamic table
@@ -517,15 +276,13 @@ namespace vm::code::type {
 		// base::Optional<TypeCRef> getResultType() const;
 
 	private:
-		void finalizeInstantiability() {
-			throw base::NotYetImplemented("finalizeInstantiability is not implemented yet");
-		}
+		void finalizeInstantiability();
 
 		bool is_instantiable = true;
 
-		Bytes size{ -1 };
+		type::TypeSize size;
 
-		Type(base::StrID name, TypeID id): name(name), id(id) {}
+		Type(base::StrID name, TypeID id);
 
 		base::StrID name;
 		TypeID      id;
