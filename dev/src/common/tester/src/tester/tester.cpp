@@ -47,13 +47,13 @@ namespace tester {
 	usize fullEqualSignL([[maybe_unused]] usize name_l) { return HEADER_LINE_LENGTH; }
 
 	TestSuite::CritTestError::CritTestError(std::string_view message) {
-		// This temporarily prints an early stack trace, since 
+		// This temporarily prints an early stack trace, since
 		// we now ofter terminate, after CritTestError is thrown within the worker thread.
 		std::cerr << "Critical test failure. Stopping test execution.\n";
 		std::cerr << "Stack trace at the point of failure:\n";
 		std::cerr << base::getCurrentStackTrace();
 		std::cerr << "Error message: " << message << "\n";
-	};
+	}
 
 	const char* TestSuite::CritTestError::what() const noexcept {
 		return "This shouldn't be called";
