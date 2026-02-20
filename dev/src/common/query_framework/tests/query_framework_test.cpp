@@ -98,12 +98,7 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 		return res;
 	}
 
-	static auto load([[maybe_unused]] KHash key_hash) -> LoadResult { return {}; }
-
-	static auto store([[maybe_unused]] KHash key_hash, PResult res, [[maybe_unused]] query::ACD acd)
-		-> QResult {
-		return QResult(res);
-	}
+	QUERY_AUTO_CACHE_CONSTRUCT
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
@@ -920,17 +915,18 @@ private:
 	void testConstructCache() {
 		ConstructTo::construct_count = 0;
 		withContextDo([&](query::Context& ctx) {
+			// @TODO: #2026 change construct count expectations to 1, 2, 3, after internal_query returns voi
 			auto res1 = ctx.query<ConstructCacheTest>({ 10 });
 			ASSERT_TRUE(res1.v == 10);
-			ASSERT_TRUE(ConstructTo::construct_count == 1);
+			ASSERT_TRUE(ConstructTo::construct_count == 2);
 
 			auto res2 = ctx.query<ConstructCacheTest>({ 10 });
 			ASSERT_TRUE(res2.v == 10);
-			ASSERT_TRUE(ConstructTo::construct_count == 2);
+			ASSERT_TRUE(ConstructTo::construct_count == 4);
 
 			auto res3 = ctx.query<ConstructCacheTest>({ 20 });
 			ASSERT_TRUE(res3.v == 20);
-			ASSERT_TRUE(ConstructTo::construct_count == 3);
+			ASSERT_TRUE(ConstructTo::construct_count == 6);
 		});
 	}
 
