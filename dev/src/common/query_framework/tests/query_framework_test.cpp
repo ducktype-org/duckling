@@ -371,32 +371,33 @@ struct NoctrKey {
 
 	u32 value;
 
+
+	NoctrKey(NoctrKey&&) noexcept                   = delete;
+	NoctrKey(const NoctrKey&) noexcept              = default;
+	NoctrKey& operator=(const NoctrKey&) & noexcept = delete;
+	NoctrKey& operator=(NoctrKey&&) & noexcept      = delete;
+
 private:
 	NoctrKey(u32 value) noexcept: value{ value } {}
-
-	NoctrKey(NoctrKey&&) noexcept                   = default;
-	NoctrKey(const NoctrKey&) noexcept              = default;
-	NoctrKey& operator=(const NoctrKey&) & noexcept = default;
-	NoctrKey& operator=(NoctrKey&&) & noexcept      = default;
 };
 
-DECLARE_QUERY(DoNotCopyKeys, NoctrKey, u32, ({ .uses_qresult = false }));
+DECLARE_QUERY(DoesCopyKeys, NoctrKey, u32, ({ .uses_qresult = false }));
 
-struct IMPLEMENT_QUERY(DoNotCopyKeys, u32) {
+struct IMPLEMENT_QUERY(DoesCopyKeys, u32) {
 	static auto provide(Context& context, const QKey& key) -> PResult {
 		if (key.value == 0)
 			return 0;
 		else if (key.value == 1)
 			return 1;
 		else
-			return context.query<DoNotCopyKeys>(NoctrKey::keyCreate(key.value - 1))
-			     + context.query<DoNotCopyKeys>(NoctrKey::keyCreate(key.value - 2));
+			return context.query<DoesCopyKeys>(NoctrKey::keyCreate(key.value - 1))
+			     + context.query<DoesCopyKeys>(NoctrKey::keyCreate(key.value - 2));
 	}
 
 	QUERY_AUTO_CACHE_COPY
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(DoNotCopyKeys);
+QUERY_IMPLEMENTATION_BOILERPLATE(DoesCopyKeys);
 
 // New: key and query to test stable-vs-unstable perfect hash selection
 struct KeyStable final {
@@ -709,7 +710,7 @@ public:
 		TESTER_ADD_TEST(serializeDeserializeGraphTest);
 		TESTER_ADD_TEST(testQueryResultConcept);
 		TESTER_ADD_TEST(testQueryResult);
-		TESTER_ADD_TEST(testNoKeyCopy);
+		TESTER_ADD_TEST(testKeyCopy);
 		TESTER_ADD_TEST(stableHashTest);
 		TESTER_ADD_TEST(testQueryResultExceptionsHandling);
 		// Metadata tests
@@ -1025,9 +1026,9 @@ private:
 		ASSERT_TRUE(whoa2.hasValue());
 	}
 
-	void testNoKeyCopy() {
+	void testKeyCopy() {
 		assertEqual(
-			query::entryPoint<DoNotCopyKeys>(NoctrKey::keyCreate(4)), 3, "Should be fibonacci(4) = 3"
+			query::entryPoint<DoesCopyKeys>(NoctrKey::keyCreate(4)), 3, "Should be fibonacci(4) = 3"
 		);
 	}
 
