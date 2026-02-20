@@ -35,6 +35,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <fstream>
+#include <chrono>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -202,6 +203,8 @@ namespace compiler::driver {
 		std::atomic_flag modules_failed;
 		modules_failed.clear();
 
+		auto compile_t0 = std::chrono::steady_clock::now();
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			std::vector<query::internal::TaskHandle> handles;
 			for (const auto& module_id: modules_to_compile) {
@@ -215,6 +218,10 @@ namespace compiler::driver {
 					modules_failed.test_and_set();
 			}
 		});
+
+		auto compile_t1 = std::chrono::steady_clock::now();
+		auto compile_us = std::chrono::duration_cast<std::chrono::microseconds>(compile_t1 - compile_t0).count();
+		fprintf(stderr, "\n  Total multi-module compilation time: %ld us (%zu modules)\n\n", compile_us, modules_to_compile.size());
 
 		if (modules_failed.test()) return base::BAD;
 
