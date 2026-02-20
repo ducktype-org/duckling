@@ -165,7 +165,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
             ManifestsRequest::NotPinned(not_pinned_request) => {
                 match not_pinned_request.location.as_ref() {
                     Location::Registry { url, real_name } => {
-                        self.fetch_registry_not_pinned(&not_pinned_request, url, real_name)
+                        self.fetch_registry_not_pinned(&not_pinned_request, url, *real_name)
                             .await
                     }
                     Location::Git {
@@ -173,7 +173,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                         branch_or_tag,
                         rev,
                     } => {
-                        self.fetch_git(&not_pinned_request, url, branch_or_tag, rev)
+                        self.fetch_git(&not_pinned_request, url, *branch_or_tag, *rev)
                             .await
                     }
                     Location::Local { path } => self.fetch_local(&not_pinned_request, path),
@@ -231,11 +231,11 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         &self,
         request: &NotPinnedRequest,
         url: &Url,
-        real_name: &StrId,
+        real_name: StrId,
     ) -> GathererResult<Option<FetchResult>> {
         let fetcher_response: GathererComputation<Option<MultiMetadata>> = self
             .fetcher
-            .get_package_all_metadata(url, *real_name)
+            .get_package_all_metadata(url, real_name)
             .await
             .into();
         let Some(fetcher_response) = fetcher_response.0 else {
@@ -243,7 +243,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         };
         let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: url.clone(),
-            real_name: *real_name,
+            real_name,
         });
         let mut fetch_result = NotPinnedResult {
             origin_location: request.location,
@@ -279,10 +279,10 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         &self,
         request: &NotPinnedRequest,
         url: &Url,
-        branch_or_tag: &BranchOrTag,
-        rev: &Option<StrId>,
+        branch_or_tag: BranchOrTag,
+        rev: Option<StrId>,
     ) -> GathererResult<Option<FetchResult>> {
-        let git_source = Git::new(url.clone(), *branch_or_tag, *rev);
+        let git_source = Git::new(url.clone(), branch_or_tag, rev);
         let fetcher_response: GathererComputation<Option<(GitCloneResponse, TempDir)>> =
             self.fetcher.clone_from_git(&git_source).await.into();
         let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
