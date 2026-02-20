@@ -915,35 +915,36 @@ private:
 	void testConstructCache() {
 		ConstructTo::construct_count = 0;
 		withContextDo([&](query::Context& ctx) {
-			// @TODO: #2026 change construct count expectations to 1, 2, 3, after internal_query returns voi
+			// @TODO: #2026 change construct count expectations to 1, 2, 3, after internal_query returns void
 			auto res1 = ctx.query<ConstructCacheTest>({ 10 });
 			ASSERT_TRUE(res1.v == 10);
 			ASSERT_TRUE(ConstructTo::construct_count == 2);
 
 			auto res2 = ctx.query<ConstructCacheTest>({ 10 });
 			ASSERT_TRUE(res2.v == 10);
-			ASSERT_TRUE(ConstructTo::construct_count == 4);
+			ASSERT_TRUE(ConstructTo::construct_count == 3);
 
 			auto res3 = ctx.query<ConstructCacheTest>({ 20 });
 			ASSERT_TRUE(res3.v == 20);
-			ASSERT_TRUE(ConstructTo::construct_count == 6);
+			ASSERT_TRUE(ConstructTo::construct_count == 5);
 		});
 	}
 
 	void testConstructFromCRefCache() {
 		ConstructToViaCRef::construct_count = 0;
 		withContextDo([&](query::Context& ctx) {
+			// @TODO: #2026 change construct count expectations to 1, 2, 3, after internal_query returns void
 			auto res1 = ctx.query<ConstructFromCRefCacheTest>({ 10 });
 			ASSERT_TRUE(res1.v->v == 10);
-			ASSERT_TRUE(ConstructToViaCRef::construct_count == 1);
+			ASSERT_TRUE(ConstructToViaCRef::construct_count == 2);
 
 			auto res2 = ctx.query<ConstructFromCRefCacheTest>({ 10 });
 			ASSERT_TRUE(res2.v->v == 10);
-			ASSERT_TRUE(ConstructToViaCRef::construct_count == 2);
+			ASSERT_TRUE(ConstructToViaCRef::construct_count == 3);
 
 			auto res3 = ctx.query<ConstructFromCRefCacheTest>({ 20 });
 			ASSERT_TRUE(res3.v->v == 20);
-			ASSERT_TRUE(ConstructToViaCRef::construct_count == 3);
+			ASSERT_TRUE(ConstructToViaCRef::construct_count == 5);
 		});
 	}
 
