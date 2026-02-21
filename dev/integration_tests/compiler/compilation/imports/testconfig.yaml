@@ -1,0 +1,33 @@
+# Tests for statements
+
+Tests:
+  named_simple_imports:
+    Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n"
+        ExitCode: 0
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n"
+        ExitCode: 0
+
+  unnamed_simple_imports:
+    Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n"
+        ExitCode: 0
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n"
+        ExitCode: 0
+        
+
+
+
+
