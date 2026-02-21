@@ -33,6 +33,8 @@ public:
 	void stop() const;
 	void getCurrentPosition() const;
 
+	void printMemory() const;
+
 private:
 	struct CallInfo {
 		std::string       func_name;

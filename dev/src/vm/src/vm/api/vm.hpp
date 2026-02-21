@@ -182,4 +182,15 @@ namespace vm::api {
 	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
 	 */
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
+
+	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
+		PID pid
+	);
+	std::expected<response::StackFrameVars, ApiError> debuggerGetStackFrameVars(
+		PID pid, u64 stack_frame_number
+	);
+	std::expected<response::PointerData, ApiError> debuggerGetPointerData(
+		PID pid, Pointer pointer, u64 size
+	);
+	std::expected<response::Pointer, ApiError> debuggerDereferencePointer(PID pid, Pointer pointer);
 }

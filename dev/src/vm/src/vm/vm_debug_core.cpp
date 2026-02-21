@@ -219,3 +219,76 @@ void DuckVMDebugCore::getCurrentPosition() const {
 	std::cout << "Line " << position.instr_number << " of function nr " << position.function_id
 			  << "\n";
 }
+
+void DuckVMDebugCore::printMemory() const {
+	auto response_nosf = vm::api::debuggerGetNumberOfStackFrames(pid);
+	if (!response_nosf.has_value()) {
+		std::cerr << "get number of stack frames error";
+		return;
+	}
+
+	u64 number_of_stack_frames = response_nosf.value().number_of_stack_frames;
+	for (u64 frame_index = 0; frame_index < number_of_stack_frames; frame_index++) {
+		std::cout << "Frame " << frame_index << "\n";
+		auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, frame_index);
+		if (!response_sfv.has_value()) {
+			std::cerr << "get number of stack frames error";
+			return;
+		}
+
+		auto vars = response_sfv.value().frame_vars;
+		for (auto& var: vars) {
+			std::cout << "\t+ 0x" << std::hex << var.offset << " aka. " << std::dec << var.offset
+					  << " <" << var.type->getName().strView() << "> [size: 0x" << std::hex
+					  << var.type->getSize() << std::dec << "]:";
+			auto response_pd
+				= vm::api::debuggerGetPointerData(pid, var.pointer, var.type->getSize());
+			if (!response_pd.has_value()) {
+				std::cerr << "get pointer data error";
+				return;
+			}
+			base::ModRawView var_data_view = response_pd.value().data;
+
+
+			switch (var.type->getKind()) {
+			case vm::Type::Kind::None:
+				break;
+			case vm::Type::Kind::Primitive:
+				if (var_data_view.size() == 1) {
+					u8 value = vm::safeReadPointerBytes<u8>(var_data_view.getBegin());
+					std::cout << " " << (u16) value << "\n";
+				}
+				if (var_data_view.size() == 2) {
+					u16 value = vm::safeReadPointerBytes<u16>(var_data_view.getBegin());
+					std::cout << " " << value << "\n";
+				}
+				if (var_data_view.size() == 4) {
+					u32 value = vm::safeReadPointerBytes<u32>(var_data_view.getBegin());
+					std::cout << " " << value << "\n";
+				}
+				if (var_data_view.size() == 8) {
+					u64 value = vm::safeReadPointerBytes<u64>(var_data_view.getBegin());
+					std::cout << " " << value << "\n";
+				}
+
+				break;
+			case vm::Type::Kind::Pointer:
+				std::cout << " pointer\n";
+				break;
+			// FixedSizeTable
+			// DynamicTable
+			// Data
+			// Variant
+			// Function
+			// Opaque
+			default:
+				for (u64 i = 0; i < var_data_view.size(); i++) {
+					std::cout << " 0x" << std::hex << std::setfill('0') << std::setw(2)
+							  << std::to_integer<u64>(var_data_view.getBegin()[i]);
+				}
+				std::cout << std::dec << "\n";
+				break;
+			}
+		}
+	}
+}

@@ -87,6 +87,8 @@ bool DuckVMDebugCli::handleLine(std::string line) {
 		core.getCurrentPosition();
 	else if (stripped_line == "help" || stripped_line == "?" || stripped_line == "h")
 		help();
+	else if (stripped_line == "mem" || stripped_line == "m")
+		core.printMemory();
 	else
 		std::cout << "Invalid input: \"" << line << "\"\n";
 	return true;
