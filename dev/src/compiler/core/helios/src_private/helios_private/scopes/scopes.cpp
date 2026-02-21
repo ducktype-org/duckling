@@ -9,6 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -406,8 +407,8 @@ namespace compiler::helios {
 						symbols.emplace_back(sym_id);
 					} else if (auto import_opt
 					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
-						// Import has DeclType::Transparent as it can intrude many different symbols.
-						// This is currently handled the same way as DeclType::Symbol.
+						// Import has DeclType::Transparent as it can intrude many different
+						// symbols. This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 						symbols.emplace_back(sym_id);
 					} else {

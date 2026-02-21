@@ -273,16 +273,14 @@ namespace compiler::helios {
 			// import a.b.c;
 			// import a.b.c as d;
 
-			auto import = stmt.dynamicCast<pst::Import>().value();
+			auto import       = stmt.dynamicCast<pst::Import>().value();
 			auto import_chain = import->getImportChain().unlock(ctx);
 			if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
 				base::StrID name;
-				if (import_as.value()->isImportAs()) {
+				if (import_as.value()->isImportAs())
 					name = import_as.value()->asWhat().value();
-				}
-				else {
+				else
 					name = import_as.value()->getNames().back().value;
-				}
 
 				return SymbolData::makePSTSymbolData(
 					{
@@ -293,12 +291,10 @@ namespace compiler::helios {
 					},
 					pst_data
 				);
-			}
-			else {
+			} else {
 				// PR dia
 				CORE_PANIC("Not handled import chain in makeSymbolFromStatement");
 			}
-			
 		}
 		case pst::StmtKind::Method: {
 			auto method = stmt.dynamicCast<pst::Method>().value();
@@ -647,10 +643,12 @@ namespace compiler::helios {
 
 			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
-				auto imported_module = frontend::getRelativeModule(
-										   ctx, module(scope(key)), import_stmt->getModulePath()
-				)
-				                           .value();
+
+				auto names = import_stmt.dynamicCast<pst::ImportIdentifierAs>().value()->getNames();
+				std::vector<base::StrID> module_path{ names.begin(), names.end() - 1 };
+
+				auto imported_module
+					= frontend::getRelativeModule(ctx, module(scope(key)), module_path).value();
 
 				// Here we don't access just root scope, because root scopes are currently empty:
 				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
