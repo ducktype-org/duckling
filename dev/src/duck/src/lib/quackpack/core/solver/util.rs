@@ -74,7 +74,6 @@ mod test {
         path::PathBuf,
     };
 
-    use rustvil::fs::PathExt;
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
@@ -88,6 +87,7 @@ mod test {
             },
             util::get_possible_realisations,
         },
+        util_common::path_ops_ext::PathOpsExt,
     };
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {

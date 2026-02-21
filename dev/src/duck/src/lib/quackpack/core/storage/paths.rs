@@ -29,11 +29,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use rustvil::fs::PathExt;
-
 use crate::{
     QuackResult, duck::util::duck_home::DuckHome, qp_bail_internal,
-    quackpack::core::storage::venv_id::VenvId,
+    quackpack::core::storage::venv_id::VenvId, util_common::path_ops_ext::PathOpsExt,
 };
 
 use super::package_id::PackageId;
