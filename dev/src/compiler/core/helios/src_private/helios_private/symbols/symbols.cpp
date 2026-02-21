@@ -644,7 +644,12 @@ namespace compiler::helios {
 			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
 
-				auto names = import_stmt.dynamicCast<pst::Import>().value()->getImportChain().dynamicCast<pst::ImportIdentifierAs>().unlock(ctx)->getNames();
+				auto names = import_stmt.dynamicCast<pst::Import>()
+				                 .value()
+				                 ->getImportChain()
+				                 .dynamicCast<pst::ImportIdentifierAs>()
+				                 .unlock(ctx)
+				                 ->getNames();
 				std::vector<base::StrID> module_path{ names.begin(), names.end() };
 
 				auto imported_module
