@@ -37,6 +37,19 @@ namespace compiler::frontend {
 	struct GetModuleID_Functor;
 
 	/**
+	 * @brief REPL-specific data structure.
+	 *
+	 * Only used for repl modules.
+	 */
+	struct ReplData final {
+		/**
+		 * Parent REPL module in chronological order.
+		 * Optional - only set for non-first REPL modules.
+		 */
+		base::Optional<ModuleID> m_repl_module_parent;
+	};
+
+	/**
 	 * @brief Represents a single module in the Duckling project tree.
 	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
@@ -138,6 +151,27 @@ namespace compiler::frontend {
 		base::StrID getPackageID() const { return m_package_id; }
 
 		/**
+		 * Check if this module is a REPL-generated module.
+		 * REPL modules have special cross-module lookup behavior.
+		 * @return true if this is a REPL module, false otherwise
+		 */
+		[[nodiscard]]
+		bool isReplModule() const {
+			return m_repl_data.has_value();
+		}
+
+		/**
+		 * Get the parent REPL module.
+		 * Only valid for REPL modules.
+		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
+		 */
+		[[nodiscard]]
+		base::Optional<ModuleID> getReplModuleParent() const {
+			if (m_repl_data.has_value()) return m_repl_data->m_repl_module_parent;
+			return {};
+		}
+
+		/**
 		 * Returns ComponentHash of the module.
 		 * it is calculated from module logical path
 		 * eg. for module tree like:
@@ -235,6 +269,13 @@ namespace compiler::frontend {
 		 * Used for component hash calculation.
 		 */
 		base::StrID m_package_id;
+
+		/**
+		 * REPL-specific data.
+		 * Optional - only set for modules created in REPL sessions.
+		 * Presence of this optional indicates the module is a REPL module.
+		 */
+		base::Optional<ReplData> m_repl_data;
 	};
 
 	/**
@@ -330,6 +371,12 @@ namespace compiler::frontend {
 		void setParent(base::Ref<ModuleTree> parent);
 
 		/**
+		 * Sets REPL-specific module data.
+		 * @param repl_data The ReplData struct.
+		 */
+		void setReplModule(const ReplData& repl_data);
+
+		/**
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.
 		 */
@@ -385,6 +432,8 @@ namespace compiler::frontend {
 
 		base::StrID m_name;
 		bool        m_finalized;
+
+		base::Optional<ReplData> m_repl_data;
 	};
 
 	/**

@@ -435,6 +435,11 @@ namespace compiler::frontend {
 		m_parent = parent;
 	}
 
+	void ModuleTreeBuilder::setReplModule(const ReplData& repl_data) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		m_repl_data = repl_data;
+	}
+
 	void ModuleTreeBuilder::setPackageID(std::string_view package_id) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
@@ -463,6 +468,9 @@ namespace compiler::frontend {
 
 		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for every module tree!");
 		module_ref->m_package_id = m_package_id;
+
+		// Set REPL-specific attributes
+		module_ref->m_repl_data = m_repl_data;
 
 		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
