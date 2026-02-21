@@ -367,10 +367,8 @@ namespace vm {
 			std::cerr << "Inside jit_call_entrypoint\n";
 
 			struct JitData {
-				JitOpFun* func_ptr;
-				uint      counter;
-
-				JitData(): func_ptr{ nullptr }, counter{ 0 } {}
+				JitOpFun* func_ptr          = nullptr;
+				uint      until_compilation = 1;
 			};
 
 			static std::vector<JitData> jit_data;  // TODO: move this to thread? couldn't as thead
@@ -379,22 +377,36 @@ namespace vm {
 			auto func_id = instr->arg0;            // TODO: manage the size when inserting new code
 			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
 
-			auto& my_data = jit_data[func_id];
+			JitData& my_data = jit_data[func_id];
 
-			if (my_data.counter == 0) {
-				std::cerr << "Getting functions\n";
-				const low::LowFuncData& func_data
-					= thread.executing_program->getFunctions()[func_id];
-				std::cerr << "Calling compileJit\n";
-				my_data.func_ptr = compileJit(func_data);
-				std::cerr << "Returned from compileJit\n";
-			}
-
-			performFunctionCall(instr, local_stack, frame, thread, func_id);
-			if (my_data.func_ptr) {
-				std::cerr << "Attempting JITted function call\n";
+			auto run_compiled = [&]() {
+				performFunctionCall(instr, local_stack, frame, thread, func_id);
 				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+			};
+
+			if (my_data.func_ptr) {
+				// is already compiled
+				std::cerr << "Attempting JITted function call\n";
+				run_compiled();
 				std::cerr << "JITed function returned\n";
+			} else if (0 < my_data.until_compilation) {
+				// should be compiled later
+				std::cerr << "Calling a function with the interpreter\n";
+				--my_data.until_compilation;
+				performFunctionCall(instr, local_stack, frame, thread, func_id);
+			} else {
+				// should be compiled now
+				const low::LowFuncData& current_function
+					= thread.executing_program->getFunctions()[func_id];
+
+				std::cerr << "Calling compileJit\n";
+				JitOpFun* compiled = compileJit(current_function);
+				std::cerr << "Returned from compileJit\n";
+
+				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
+				my_data.func_ptr = compiled;
+
+				run_compiled();
 			}
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
