@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use rustvil::fs::{MkdirOptions, PathExt};
 use tempfile::TempDir;
 use tracing::{Level, debug, span};
 use url::Url;
@@ -8,6 +7,7 @@ use url::Url;
 use crate::{
     DuckCtx, QpCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
     quackpack::{core::Git, schemas::registry},
+    util_common::path_ops_ext::{MkdirOptions, PathOpsExt},
 };
 
 pub mod cache;
@@ -126,9 +126,7 @@ impl<'duck> Fetcher<'duck> {
         }
 
         if let Some(parent) = destination.parent() {
-            parent
-                .mkdir(MkdirOptions::WithParents)
-                .with_context(|| format!("failed to create directory `{}`", parent.display()))?;
+            parent.mkdir(MkdirOptions::WithParents)?;
         } else {
             qp_bail_internal!("path without a parent")
         }
