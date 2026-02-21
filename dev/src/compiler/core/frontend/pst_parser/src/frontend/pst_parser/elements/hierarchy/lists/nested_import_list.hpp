@@ -5,7 +5,7 @@
 
 namespace pst {
 	/**
-	 * @brief Function declaration parameter list.
+	 * @brief Bracketed import list with import chains as elements.
 	 */
 	class NestedImportList final:
 		  public List<ImportChain, internal::NameGetters::nestedImportList> {

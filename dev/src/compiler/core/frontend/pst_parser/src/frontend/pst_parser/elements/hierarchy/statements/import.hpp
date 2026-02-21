@@ -3,6 +3,11 @@
 #include "../meta.hpp"
 
 namespace pst {
+
+	/**
+	 * @brief Import statement, more specifics about the syntax in the import chains.
+	 *
+	 */
 	class Import final: public Stmt {
 		NAMED_CHILD(import_chain, ImportChain);
 
