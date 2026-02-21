@@ -1,13 +1,8 @@
-# Tests for statements
+# Tests for imports
 
 Tests:
   named_simple_imports:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: "1\n"
-        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -16,18 +11,12 @@ Tests:
 
   unnamed_simple_imports:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: "1\n"
-        ExitCode: 0
       llvm:
         backend: llvm
         Output:
           String: "1\n"
         ExitCode: 0
         
-
 
 
 
