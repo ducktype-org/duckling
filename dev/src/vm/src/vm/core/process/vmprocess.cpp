@@ -292,7 +292,8 @@ namespace vm {
 						.type    = memory.getBlockType(block) });
 				}
 
-				return api::Response(api::response::StackFrameVars{ .frame_vars = frame_vars });
+				return api::Response(api::response::StackFrameVars{
+					.function_name = frame.current_function->name, .frame_vars = frame_vars });
 			}
 
 			variant_case(api::request::DebuggerGetPointerData, request) {

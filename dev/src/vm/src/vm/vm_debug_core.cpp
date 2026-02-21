@@ -229,12 +229,14 @@ void DuckVMDebugCore::printMemory() const {
 
 	u64 number_of_stack_frames = response_nosf.value().number_of_stack_frames;
 	for (u64 frame_index = 0; frame_index < number_of_stack_frames; frame_index++) {
-		std::cout << "Frame " << frame_index << "\n";
 		auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, frame_index);
 		if (!response_sfv.has_value()) {
 			std::cerr << "get number of stack frames error";
 			return;
 		}
+
+		std::cout << "Frame " << frame_index << " (" << response_sfv.value().function_name.strView()
+				  << ")\n";
 
 		auto vars = response_sfv.value().frame_vars;
 		for (auto& var: vars) {
