@@ -131,7 +131,6 @@ namespace tpc {
 		 */
 		virtual void goUpAndSkip();
 
-
 		virtual void logInt(Box<dia_int::MessageBase> message) { int_err->log(std::move(message)); }
 
 		template<TokenStreamCondition until>

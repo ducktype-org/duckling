@@ -63,7 +63,7 @@ namespace vm::loader {
 			base::Optional<std::string> pointer_message_content = "here"
 		) {
 			match_optional(elem.bytecode_pos) {
-				opt_none errors.push_back(std::string(header_message));
+				opt_none errors.emplace_back(header_message);
 				opt_some(pos) {
 					auto t = makeBox<dia_int::PlaceholderCodeError>(
 						std::string(header_message),
@@ -89,7 +89,7 @@ namespace vm::loader {
 			base::Optional<std::string>         pointer_message_content = "here"
 		) {
 			match_optional(elem.bytecode_pos) {
-				opt_none errors.push_back(std::string(header_message));
+				opt_none errors.emplace_back(header_message);
 				opt_some(pos) {
 					error->addAttachedMessage(makeBox<dia_int::PlaceholderCodeNote>(
 						std::string(header_message),
@@ -110,7 +110,7 @@ namespace vm::loader {
 			base::Optional<std::string>         pointer_message_content = "here"
 		) {
 			match_optional(elem.bytecode_pos) {
-				opt_none errors.push_back(std::string(header_message));
+				opt_none errors.emplace_back(header_message);
 				opt_some(pos) {
 					error->addAttachedMessage(makeBox<dia_int::PlaceholderCodeNote>(
 						std::string(header_message),
