@@ -105,9 +105,9 @@ namespace query {
 		/**
 		 * @brief Access the value, panic on no value.
 		 */
-		constexpr const Value& valueOrPanic() const& {
+		constexpr base::CRef<Value> valueOrPanic() const& {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::get<Value>(storage);
+			return &std::get<Value>(storage);
 		}
 
 		constexpr const Value&& valueOrPanic() const&& {
@@ -115,9 +115,9 @@ namespace query {
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr Value& valueOrPanic() & {
+		constexpr base::Ref<Value> valueOrPanic() & {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::get<Value>(storage);
+			return &std::get<Value>(storage);
 		}
 
 		constexpr Value&& valueOrPanic() && {
@@ -128,9 +128,9 @@ namespace query {
 		/**
 		 * @brief Access the value, panic with given message on no value.
 		 */
-		constexpr const Value& valueOrPanicMsg([[maybe_unused]] std::string_view message) const& {
+		constexpr base::CRef<Value> valueOrPanicMsg([[maybe_unused]] std::string_view message) const& {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
-			return std::get<Value>(storage);
+			return &std::get<Value>(storage);
 		}
 
 		constexpr const Value&& valueOrPanicMsg([[maybe_unused]] std::string_view message) const&& {
@@ -138,9 +138,9 @@ namespace query {
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr Value& valueOrPanicMsg([[maybe_unused]] std::string_view message) & {
+		constexpr base::Ref<Value> valueOrPanicMsg([[maybe_unused]] std::string_view message) & {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
-			return std::get<Value>(storage);
+			return &std::get<Value>(storage);
 		}
 
 		constexpr Value&& valueOrPanicMsg([[maybe_unused]] std::string_view message) && {
@@ -153,19 +153,18 @@ namespace query {
 		 * This kind of exception can be caught by the query framework.
 		 * If you are not handling query exceptions, use valueOrPanic instead.
 		 */
-		constexpr const Value& valueOrThrow() const& {
+		constexpr base::CRef<Value> valueOrThrow() const& {
 			if (!hasValue()) throwFailed("Result is empty.");
-			return std::get<Value>(storage);
+			return &std::get<Value>(storage);
 		}
-
 		constexpr const Value&& valueOrThrow() const&& {
 			if (!hasValue()) throwFailed("Result is empty.");
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr Value& valueOrThrow() & {
+		constexpr base::Ref<Value> valueOrThrow() & {
 			if (!hasValue()) throwFailed("Result is empty.");
-			return std::get<Value>(storage);
+			return &std::get<Value>(storage);
 		}
 
 		constexpr Value&& valueOrThrow() && {
