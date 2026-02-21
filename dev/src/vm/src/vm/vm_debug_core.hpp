@@ -38,13 +38,14 @@ private:
 		std::string       func_name;
 		OwnedArgumentList func_args;
 	};
-	int event_pipe[2]; // event_pipe[0] = read end, event_pipe[1] = write end
+
+	int event_pipe[2];  // event_pipe[0] = read end, event_pipe[1] = write end
 
 	vm::PID pid{};
 	u64     step_counter = 0;
 
 	std::vector<std::string> debug_args;
-	OwnedArgumentList arguments;
+	OwnedArgumentList        arguments;
 };
 
 class DuckVMDebugCoreException: public base::Exception {
@@ -56,11 +57,11 @@ public:
 	[[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
 };
 
-#define DEFINE_DEBUG_EXCEPTION(err, msg)                     \
-struct err: public DuckVMDebugCoreException {                \
-constexpr static std::string_view ERR_MSG = msg;    \
-err(): DuckVMDebugCoreException(std::string(ERR_MSG)) {} \
-}
+#define DEFINE_DEBUG_EXCEPTION(err, msg)                         \
+	struct err: public DuckVMDebugCoreException {                \
+		constexpr static std::string_view ERR_MSG = msg;         \
+		err(): DuckVMDebugCoreException(std::string(ERR_MSG)) {} \
+	}
 
 DEFINE_DEBUG_EXCEPTION(BeRDFailedToSpawnProcessException, "Failed to spawn the VM process for BeRD.");
 DEFINE_DEBUG_EXCEPTION(
