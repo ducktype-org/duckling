@@ -59,8 +59,7 @@ private:
 	}
 
 	void invalidLocalName() {
-		// @TODO: #1785 dia 2.0 in the vm
-		// parseInvalidDbc("invalid_local_name.dbc", { tpc::NoIdentifierErrorOld::ERR_MSG });
+		parseInvalidDbc("invalid_local_name.dbc", { "Expected an identifier here" });
 	}
 };
 
