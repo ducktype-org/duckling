@@ -63,6 +63,7 @@ namespace vm::api {
 				TypeCRef    type;
 			};
 
+			base::StrID           function_name;
 			std::vector<FrameVar> frame_vars;
 		};
 
