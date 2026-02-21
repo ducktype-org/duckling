@@ -7,16 +7,16 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/deductions.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -50,8 +50,8 @@ namespace compiler::helios {
 				if (type_ctv.hasFailed()) {
 					setFailed();
 				} else {
-					setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::SymbolType<>>()->withMutability(
-						expected_mutability
+					setTypeOfSymbol(tsh::deductions::declarationTypeFromProvidedType(
+						type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(), expected_mutability
 					));
 				}
 			}
@@ -71,14 +71,14 @@ namespace compiler::helios {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
 					);
-					if (parsed.hasFailed()) {
+					if (parsed->hasFailed()) {
 						setFailed();
 						return;
 					}
-					const auto& expr_type = parsed.valueOrThrow()->expression_type;
-					setTypeOfSymbol(
-						expr_type.getSymbolType().withMutability(tsh::Mutability::Immutable)
-					);
+					const auto& expr_type = parsed->valueOrThrow()->expression_type;
+					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
+						expr_type, tsh::Mutability::Immutable
+					));
 				} else {
 					CORE_PANIC(
 						"Variable declaration without type or value, this should not parse in the "
@@ -95,13 +95,15 @@ namespace compiler::helios {
 						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx), decl_mutability
 					);
 				} else if (stmt->getValue().has_value()) {
-					auto parsed = ctx.query<QueryHoutOfExpr>(
-										 { stmt->getValue().value().unlock(ctx)->getExpr() }
+					auto& parsed = ctx.query<QueryHoutOfExpr>(
+										  { stmt->getValue().value().unlock(ctx)->getExpr() }
 					)
-					                  .valueOrThrow();
+					                   ->valueOrThrow();
 
 					const auto& expr_type = parsed->expression_type;
-					setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
+					setTypeOfSymbol(
+						tsh::deductions::declarationTypeFromInitializer(expr_type, decl_mutability)
+					);
 				} else {
 					CORE_PANIC(
 						"Variable declaration without type or value, this should not parse in the "
@@ -119,15 +121,15 @@ namespace compiler::helios {
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryMetaType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getMetaType());
 			}
 
 			void visitNamespace(pst::Access<pst::Namespace>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryNamespaceType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getNamespaceType());
 			}
 
 			void visitImport(pst::Access<pst::Import>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryImportType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getImportType());
 			}
 
 			void visitParam(pst::Access<pst::Param> param) final {
@@ -163,7 +165,7 @@ namespace compiler::helios {
 						return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
-					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
+					pst_data.getElement().unlock(ctx)->acceptVisitor(visitor);
 
 					return visitor.symbol_type_qresult;
 				}

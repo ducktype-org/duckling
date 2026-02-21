@@ -25,7 +25,7 @@ namespace pst {
 		} else {
 			state.parse(out).goDown();
 
-			state.parse(out).one(&out->iterator, true);
+			state.parse(out).one(&out->iterator);
 
 			if (state.parse(out).tryEat(NamedOperator::Colon)) {
 				state.parse(out).one(&out->type);
@@ -39,9 +39,9 @@ namespace pst {
 			state.parse(out).goUpAndSkip();
 		}
 
-		state.parse(out).withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+		state.parse(out).withDef(&out->body, BlockOrderType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void For::dprint(std::ostream& out) const {

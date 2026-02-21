@@ -8,8 +8,6 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Destructor>(position, ctx);
 
-		out->parseSpecifiers(state);
-
 		state.parse(out).eatOne();
 
 		tpc::Identifier ident;
@@ -20,11 +18,9 @@ namespace pst {
 		if (state.notEmpty()) state.logInt(makeBox<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
-		state.parse(out)
-			.one(NamedOperator::Assign)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Destructor::dprint(std::ostream& out) const {

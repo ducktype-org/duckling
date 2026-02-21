@@ -6,6 +6,7 @@ from .helpers import (
     cc_compiler,
 )
 from ..impl.helpers import (
+    PromptForCoverageIfBuildNotOptimised,
     default_compiler_from_ctx,
     default_linker_from_ctx,
     default_gcov_from_ctx,
@@ -17,6 +18,17 @@ from click import Choice, option, command
 @build_dir(help="The name of the directory.")
 @build_system(
     help="Build system to use",
+)
+@option(
+    "-t",
+    "--type",
+    prompt="build type",
+    help="The build type.",
+    default="Debug",
+    type=Choice(
+        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
+        case_sensitive=False,
+    ),
 )
 # @TODO check if it is necessary to get compiler path from context
 @cxx_compiler(
@@ -46,6 +58,8 @@ from click import Choice, option, command
     type=bool,
     default=False,
     is_flag=True,
+    # this skips the prompt if the build is optimised
+    cls=PromptForCoverageIfBuildNotOptimised
 )
 @option(
     "-d",
@@ -68,17 +82,6 @@ from click import Choice, option, command
     cls=default_linker_from_ctx(),
 )
 @option(
-    "-t",
-    "--type",
-    prompt="build type",
-    help="The build type.",
-    default="Debug",
-    type=Choice(
-        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
-        case_sensitive=False,
-    ),
-)
-@option(
     "--shared_libs",
     help="Whether to use shared or static libraries.",
     type=bool,
@@ -86,6 +89,7 @@ from click import Choice, option, command
     is_flag=True,
 )
 @option(
+    "-i",
     "--strip-symbol-information",
     help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
     type=bool,

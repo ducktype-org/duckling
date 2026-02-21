@@ -6,7 +6,8 @@
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/query_entry_point.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::frontend;
@@ -241,7 +242,7 @@ private:
 
 		auto main_id = sources->at(0);
 
-		[[maybe_unused]] auto pst = query::entryPoint<QueryFilePST>(main_id);
+		query::utils::withContextDo([&](query::Context& ctx) { getFilePST(ctx, main_id); });
 	}
 
 	void testParseDirectoryLikeFsTree() {

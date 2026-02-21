@@ -52,6 +52,12 @@ namespace compiler::frontend {
 		created_ref->storage_handle = storage_key;
 		created_ref->file_id        = FileID(created_ref);
 		files_map.at(abs_path).emplace_back(created_ref);
+
+		// Parse the file immediately
+		// Thanks to that the file is parsed before any concurrent query operations
+		// @TODO: #1974 change this
+		created_ref->getPST();
+
 		return created_ref;
 	}
 
@@ -83,7 +89,8 @@ namespace compiler::frontend {
 		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
 		} else {
-			parse_tree.emplace(pst::PST(file, getComponentHash()));
+			// @TODO: #1879 Program chosen as default type
+			parse_tree.emplace(pst::PST(file, pst::PSTType::Program, getComponentHash()));
 			return &parse_tree.value();
 		}
 	}

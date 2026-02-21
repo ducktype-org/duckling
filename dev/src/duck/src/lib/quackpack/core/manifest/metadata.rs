@@ -1,6 +1,6 @@
 use crate::StrId;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Various package metadata.
 /// This is mostly useless information for us, but it may be useful for a user.
 pub struct PackageMetadata {

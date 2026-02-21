@@ -48,7 +48,7 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContents(code);
+			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
 			return (not parsed.hasErrors()) == good;
 		}
 
@@ -68,7 +68,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -89,7 +89,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -114,15 +114,15 @@ class PSTErrorTests: public tester::TestSuite {
 
 		ClassStmtExample(std::string code):
 			  GenExample(std::move(code)),
-			  context{ .name = base::StrID("unnamed"), .specifiers = {} } {}
+			  context{ .name = base::StrID("unnamed") } {}
 
 		ClassStmtExample(std::string code, const std::string& class_name):
 			  GenExample(std::move(code)),
-			  context{ .name = base::StrID(class_name.c_str()), .specifiers = {} } {}
+			  context{ .name = base::StrID(class_name.c_str()) } {}
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
-				this->code, hashing::ComponentHash{}, context
+				this->code, pst::PSTType::Program, hashing::ComponentHash{}, context
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -235,24 +235,24 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::RoundGroupExpr, true>  simple_round_group{ "(a + b)" };
 	Example<pst::RoundGroupExpr, false> bad_round_group{ "a + b" };
 
-	Example<pst::Stmt, true>  simple_stmt{ "x = a + b;" };
-	Example<pst::Stmt, true>  expand_stmt{ "expand \"return 0;\";" };
-	Example<pst::Stmt, false> bad_stmt{ "x = a + b" };
+	Example<pst::Stmt, true> simple_stmt{ "x = a + b;" };
+	Example<pst::Stmt, true> simple_stmt_implicit_return{ "x = a + b" };
+	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 
 	Example<pst::Using, true> simple_using{ "using std.math" };
 
-	Example<pst::StmtSpecifier, true>  public_specifier{ "public expand \"return 0;\";" };
-	Example<pst::StmtSpecifier, true>  private_specifier{ "private fun foo() = {}" };
-	Example<pst::StmtSpecifier, true>  protected_specifier{ "protected class x{}" };
-	Example<pst::StmtSpecifier, true>  public_block{ "public {class x{}}" };
-	Example<pst::StmtSpecifier, true>  extern_block{ "extern (\"C\") {class x{}}" };
-	Example<pst::StmtSpecifier, true>  complex_block{ "public extern (\"C\") debug {class x{}}" };
-	Example<pst::StmtSpecifier, true>  extern_block_two{ R"(extern ("C", "obj.o") {class x{}})" };
-	Example<pst::StmtSpecifier, false> bad_specifier{ "def class x{}" };
-	Example<pst::StmtSpecifier, false> empty_specifier{ "public" };
-	Example<pst::StmtSpecifier, false> bad_extern_block{ "extern {class x{}}" };
+	Example<pst::Stmt, true>  public_specifier{ "public expand \"return 0;\"" };
+	Example<pst::Stmt, true>  private_specifier{ "private fun foo() = {}" };
+	Example<pst::Stmt, true>  protected_specifier{ "protected class x{}" };
+	Example<pst::Stmt, true>  public_block{ "public {class x{}}" };
+	Example<pst::Stmt, true>  extern_block{ "extern (\"C\") {class x{}}" };
+	Example<pst::Stmt, true>  complex_block{ "public extern (\"C\") debug {class x{}}" };
+	Example<pst::Stmt, true>  extern_block_two{ R"(extern ("C", "obj.o") {class x{}})" };
+	Example<pst::Stmt, false> bad_specifier{ "def class x{};" };
+	Example<pst::Stmt, false> empty_specifier{ "public;" };
+	Example<pst::Stmt, false> bad_extern_block{ "extern {class x{}};" };
 
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
@@ -281,13 +281,16 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
 
-	ClassStmtExample<pst::AccessBlock, true>  public_access_block{ "public {}" };
-	ClassStmtExample<pst::AccessBlock, true>  private_access_block{ "private {}" };
-	ClassStmtExample<pst::AccessBlock, true>  protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::AccessBlock, false> multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::ClassStmt, true> public_access_block{ "public {}" };
+	ClassStmtExample<pst::ClassStmt, true> private_access_block{ "private {}" };
+	ClassStmtExample<pst::ClassStmt, true> protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::ClassStmt, true> multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::ClassStmt, true> simple_specified_field{ "public static x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_specified_field{ "public static x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  simple_let_field{ "let x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  simple_let_field1{ "let x: i32" };
 	ClassStmtExample<pst::Field, false> bad_field{ "x = 5" };
 	ClassStmtExample<pst::Field, false> bad_field2{ "x : = 5" };
 
@@ -322,6 +325,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, false> bad1_ternary{ "if if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad2_ternary{ "+ if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad3_ternary{ "if 5 else y" };
+
+	Example<pst::UniversalExprHolder, true> range_operator{ "x[1 .. 10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_to{ "x[.. 10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_from{ "x[1 ..]" };
+	// This is because it's lexed as two floats 1. and .10, not necessarily desired behaviour
+	Example<pst::UniversalExprHolder, false> range_operator_bad{ "x[1..10]" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
 	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };
@@ -494,6 +503,7 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::InvalidExternContentWarning>(
 			ss, dia::SourcePosition::fakePosition()
 		);
+		testDiagnosticMessage<pst::NoExternArgumentError>(ss, dia::SourcePosition::fakePosition());
 
 		testDiagnosticMessage<
 			pst::OpeningBracketMissingError<pst::internal::NameGetters::inheritanceList>>(

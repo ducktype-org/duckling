@@ -7,7 +7,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/function_calls/errors.hpp>
@@ -23,7 +23,7 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
 #include <utility>
@@ -238,10 +238,25 @@ namespace compiler::helios::code {
 	 * constructs a helios CallExpr. The expressions will be moved from the arguments.
 	 * @p argument_origin define the actual structure of the arguments, while @p
 	 * positional_arguments and @p named_arguments define their content.
+	 *
+	 * @param ctx Query context
+	 * @param fun The function symbol being called
+	 * @param callee_expr The PST expression representing the callee being invoked.
+	 * @param call_parentheses_expr The PST call expression representing the function call. (the
+	 * `(...)` part and not the callee)
+	 * @param positional_arguments Vector of positional argument of the call
+	 * @param named_arguments Vector of named argument expressions (name, expression) of the call
+	 * @param argument_origin The origin of each argument in the call (e.x. first argument is
+	 * positional, second is named, third is default, etc.)
+	 * @param coercions Optional vector of coercions to apply to each argument
+	 *
+	 * @return Box<CallExpr> representing the function call
 	 */
 	Box<CallExpr> constructCallExpr(
 		query::Context&                                  ctx,
 		SymID                                            fun,
+		pst::Access<pst::ExprElement>                    callee_expr,
+		pst::Access<pst::expr::Call>                     call_parentheses_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
 		std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
 		const std::vector<ArgumentOrigin>&               argument_origin,
@@ -277,7 +292,12 @@ namespace compiler::helios::code {
 				final_arguments.push_back(std::move(expr));
 			}
 		}
-		return makeBox<CallExpr>(ctx, makeBox<IdentifierExpr>(ctx, fun), std::move(final_arguments));
+		return makeBox<CallExpr>(
+			ctx,
+			multiplePstOrigin({ callee_expr, call_parentheses_expr }),
+			makeBox<IdentifierExpr>(ctx, pstOrigin(callee_expr), fun),
+			std::move(final_arguments)
+		);
 	}
 
 	/**
@@ -299,23 +319,23 @@ namespace compiler::helios::code {
 	) {
 		usize arg_index = 0;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			auto arg_expr
+			auto arg_expr_result
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			if (arg_expr.hasFailed()) return query::Failed();
+			UNPACK_QRESULT_CREF_TO_BOX(auto arg_expr =, arg_expr_result);
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
 				for (auto&& [existing_name, _]: named_arguments)
 					if (existing_name == arg_name)
 						return RepeatedNamedArgument{ arg_index };  // Duplicate named argument.
-				named_arguments.emplace_back(arg_name, std::move(arg_expr.valueOrThrow()));
+				named_arguments.emplace_back(arg_name, arg_expr->clone());
 			} else {
 				if (!named_arguments.empty())
 					return PositionalAfterNamedArgument{
 						arg_index
 					};  // Normal argument after named one.
 
-				positional_arguments.emplace_back(std::move(arg_expr.valueOrThrow()));
+				positional_arguments.emplace_back(arg_expr->clone());
 			}
 			arg_index++;
 		}
@@ -333,7 +353,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<ExactCandidateNote>> first_candidate_msg{};
 		for (const auto& match: exact_matches) {
-			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note
 				= makeBox<ExactCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 
@@ -362,7 +382,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<CoercibleCandidateNote>> first_candidate_msg{};
 		for (const auto& match: coercible_matches) {
-			auto decl           = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl           = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note = makeBox<CoercibleCandidateNote>(
 				getFunctionParamList(ctx, decl)->getSourcePosition()
 			);
@@ -407,7 +427,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<FailedCandidateNote>> first_candidate_msg{};
 		for (const auto& match: failed_matches) {
-			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note
 				= makeBox<FailedCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 
@@ -430,9 +450,10 @@ namespace compiler::helios::code {
 	}
 
 	query::QResult<Box<CallExpr>> processFunctionCall(
-		query::Context&              ctx,
-		const std::vector<SymID>&    candidates,
-		pst::Access<pst::expr::Call> call_expr
+		query::Context&               ctx,
+		const std::vector<SymID>&     candidates,
+		pst::Access<pst::ExprElement> callee_expr,
+		pst::Access<pst::expr::Call>  call_expr
 	) {
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                          positional_arguments;
@@ -440,6 +461,11 @@ namespace compiler::helios::code {
 		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
 
 		if (verify_result.hasFailed()) return query::Failed();
+
+		if (candidates.empty()) {
+			ctx.logInt(makeBox<NoCandidatesFoundError>(call_expr->getSourcePosition()));
+			return query::Failed();
+		}
 
 		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrThrow())) {
 			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
@@ -465,7 +491,7 @@ namespace compiler::helios::code {
 				variant_case(CoercionMatch, data) { coercion_match.push_back(std::move(data)); }
 				variant_case(NoMatch, data) {
 					no_match.push_back(data);
-					// For now ignore it, it is handled by the logic bellow.
+					// For now ignore it, it is handled by the logic below.
 				}
 			}
 		}
@@ -482,6 +508,8 @@ namespace compiler::helios::code {
 			return constructCallExpr(
 				ctx,
 				exact_match.back().function,
+				callee_expr,
+				call_expr,
 				positional_arguments,
 				named_arguments,
 				exact_match.back().argument_origin,
@@ -500,6 +528,8 @@ namespace compiler::helios::code {
 			return constructCallExpr(
 				ctx,
 				coercion_match.back().function,
+				callee_expr,
+				call_expr,
 				positional_arguments,
 				named_arguments,
 				coercion_match.back().argument_origin,

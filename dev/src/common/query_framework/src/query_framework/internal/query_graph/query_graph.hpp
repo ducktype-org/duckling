@@ -3,19 +3,167 @@
 #include "node_id.hpp"
 #include "node_making.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/base/locks/assert_lock.hpp>
+
 #include <base/collections/maps.hpp>
+#include <base/config/build_type.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/preproc/utils.hpp>
 
 #include <ostream>
+#include <type_traits>
 #include <vector>
 
 namespace query::internal {
 
 	class QueryState;
 
+	/**
+	 * @brief Core dependency graph powering evaluation across the compiler.
+	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
+	 */
 	class QueryGraph final {
-		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
+		struct ChildrenData;
+
+		template<class T>
+		struct ChildrenDataHolderImpl;
+
+		using ChildrenDataHolder      = ChildrenDataHolderImpl<ChildrenData>;
+		using ConstChildrenDataHolder = ChildrenDataHolderImpl<const ChildrenData>;
+
+		struct ChildrenData final {
+		private:
+			std::vector<NodeID> children;
+			IF_BUILD_TYPE_DEV(mutable base::Box<concurrent::AssertLock> lock
+			                  = base::makeBox<concurrent::AssertLock>();  // protects children vector
+			)
+
+		public:
+			ChildrenData() = default;
+
+			ChildrenData(const ChildrenData&) = delete;
+			ChildrenData(ChildrenData&&)      = default;
+
+			ChildrenData& operator=(const ChildrenData&) = delete;
+			ChildrenData& operator=(ChildrenData&&)      = default;
+
+			ChildrenData(std::vector<NodeID>&& children): children(std::move(children)) {}
+
+			template<class T>
+			friend struct ChildrenDataHolderImpl;
+
+			/**
+			 * @brief Get a holder for the children vector. The holder will lock the children data
+			 * until it is destroyed.
+			 * @return A holder for the children vector.
+			 * @note Holder uses assert lock, so if two threads try to get the holder at the same
+			 * time, one of them will panic. This is intentional, as it should never happen that two
+			 * threads try to access the same node's children at the same time.
+			 */
+			ChildrenDataHolder getHolder() { return { this }; }
+
+			[[nodiscard]]
+			ConstChildrenDataHolder getHolder() const {
+				return { this };
+			}
+
+			// Each node (query call with unique key) should be executed once at the same time, but
+			// we use AssertLock to be sure about that
+		};
+
+		/**
+		 * @brief Holder for the children data. Locks the children data until destroyed or release()
+		 * is called.
+		 *
+		 * @note This is a template to allow for both const and non-const access to the children data.
+		 */
+		template<class T>
+		struct ChildrenDataHolderImpl final {
+		private:
+			static_assert(
+				std::is_same_v<T, ChildrenData> || std::is_same_v<T, const ChildrenData>,
+				"ChildrenDataHolderImpl can only be instantiated with ChildrenData or const "
+				"ChildrenData"
+			);
+
+			base::Ref<T> children;
+
+			IF_BUILD_TYPE_DEV(mutable std::atomic_flag was_released = false;)
+
+		public:
+			ChildrenDataHolderImpl(base::Ref<T> children): children(children) {
+				IF_BUILD_TYPE_DEV(children->lock->lock();)
+			}
+
+			ChildrenDataHolderImpl(const ChildrenDataHolderImpl&)            = delete;
+			ChildrenDataHolderImpl& operator=(const ChildrenDataHolderImpl&) = delete;
+			ChildrenDataHolderImpl(ChildrenDataHolderImpl&&)                 = delete;
+			ChildrenDataHolderImpl& operator=(ChildrenDataHolderImpl&&)      = delete;
+
+			auto operator*() -> std::conditional_t<
+				std::is_const_v<T>,
+				const std::vector<NodeID>&,
+				std::vector<NodeID>&> {
+				return children->children;
+			}
+
+			auto operator->() -> std::conditional_t<
+				std::is_const_v<T>,
+				const std::vector<NodeID>*,
+				std::vector<NodeID>*> {
+				return &children->children;
+			}
+
+			void release() const { IF_BUILD_TYPE_DEV({
+				auto was_released_check = was_released.test_and_set(std::memory_order_acquire);
+				CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
+
+				children->lock->unlock();
+			}) }
+
+			/**
+			 * This moves the hold children data out of the holder into a local object returned by
+			 * this method. Importantly:
+			 * - lock of the moved from object will be a nullptr after this, so any access to it
+			 * will panic,
+			 * - lock of the moved into object will be unlocked. New holder has to be created to
+			 * access the children data after this move, as a reference hold in this lock will
+			 * become dangling after the move.
+			 */
+			ChildrenData moveFrom() {
+				// this sets the original lock to nullptr,
+				// we have to do it first:
+				auto moved_1 = std::move(*children);
+
+				IF_BUILD_TYPE_DEV({
+					bool was_released_check = was_released.test_and_set(std::memory_order_acquire);
+					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
+
+					// we unlock not on *children, as that object is moved from, but on this local
+					// one no one else can see (yet):
+					moved_1.lock->unlock();
+				})
+
+				// we move again, to actually return the children data:
+				return std::move(moved_1);
+			}
+
+			~ChildrenDataHolderImpl() {
+				// we don't cal release() in the destructor, because we don't want to panic on
+				// double release here.
+				IF_BUILD_TYPE_DEV({
+					auto was_released_check = was_released.test_and_set(std::memory_order_acquire);
+					if (!was_released_check) children->lock->unlock();
+				})
+			}
+		};
+
+		base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;
+
 		/*
-		 * for direct acces to node_deps
+		 * for direct access to node_deps
 		 */
 		friend class QueryState;
 		/**
@@ -26,19 +174,25 @@ namespace query::internal {
 		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
 
 	public:
-		QueryGraph()                             = default;
+		/**
+		 * @brief Reduced graph representation used for compact serialization.
+		 */
+		struct ReducedGraphData final {
+			std::vector<NodeID>             nodes;
+			std::vector<std::vector<usize>> adjacency;
+		};
+
+		QueryGraph();
 		QueryGraph(const QueryGraph&)            = delete;
 		QueryGraph(QueryGraph&&)                 = default;
 		QueryGraph& operator=(const QueryGraph&) = delete;
 		QueryGraph& operator=(QueryGraph&&)      = delete;
 
-		enum class DependencyStatus { OK, Cycle };
-
 		/**
 		 * @brief Marks that given query depends on another query.
 		 * Note that @p to does not need to be in the graph at the moment of calling this function.
 		 */
-		DependencyStatus addDependency(internal::NodeID from, internal::NodeID to);
+		void addDependency(internal::NodeID from, internal::NodeID to);
 
 		/**
 		 * Returns all dependencies of a @p node_id.
@@ -52,6 +206,13 @@ namespace query::internal {
 		[[nodiscard]]
 		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
 			const;
+
+		/**
+		 * @brief Returns the immediate dependencies of a @p node_id.
+		 * @note This is not thread-safe and should only be used for debugging/testing purposes.
+		 *       Access to the return reference can race with other operations.
+		 */
+		[[nodiscard]] const std::vector<NodeID>& getDirectDependencies(const NodeID& node_id) const;
 
 		void debugPrint(std::ostream& out) const;
 		void debugPrintForDrawing(std::ostream& out) const;
@@ -76,9 +237,20 @@ namespace query::internal {
 
 		/**
 		 * @brief Serializes the QueryGraph into a vector of bytes.
+		 * @note This DOES NOT optimize anything, it just serializes.
 		 * @return A vector of bytes representing the serialized QueryGraph.
 		 */
 		[[nodiscard]] std::vector<byte> serialize() const;
+
+		/**
+		 * @brief Serializes an already reduced graph description.
+		 * @details The provided mapping must mirror the exact structure we intend to persist, i.e.
+		 * each adjacency index references the precomputed NodeID at the same position. This helper
+		 * is meant for scenarios where another algorithm (e.g. QueryState::reduceOptimizeGraph) has
+		 * already produced a compacted graph representation and we only need to emit bytes without
+		 * rebuilding the mapping.
+		 */
+		[[nodiscard]] static std::vector<byte> serializeReducedGraph(ReducedGraphData reduced_graph);
 
 		/**
 		 * @brief Deserializes a QueryGraph from a vector of bytes.
@@ -106,7 +278,7 @@ namespace query::internal {
 		 */
 		[[nodiscard]]
 		bool nodeExists(const NodeID& node_id) const {
-			return node_deps.contains(node_id);
+			return node_deps->contains(node_id);
 		}
 
 		/**

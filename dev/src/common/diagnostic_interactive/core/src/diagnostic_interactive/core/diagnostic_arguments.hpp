@@ -110,14 +110,24 @@ namespace dia_int::dia_args {
 	};
 
 	struct CodeLocationComponent final: public Component {
-		std::string file;
-		u64         line;
-		u64         column;
+		std::string         file;
+		u64                 line;
+		u64                 column;
+		base::Optional<u64> end_line;
+		base::Optional<u64> end_column;
 
-		CodeLocationComponent(std::string file, u64 line, u64 column):
+		CodeLocationComponent(
+			std::string         file,
+			u64                 line,
+			u64                 column,
+			base::Optional<u64> end_line   = {},
+			base::Optional<u64> end_column = {}
+		):
 			  file(std::move(file)),
 			  line(line),
-			  column(column) {}
+			  column(column),
+			  end_line(end_line),
+			  end_column(end_column) {}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitCodeLocationComponent(*this);

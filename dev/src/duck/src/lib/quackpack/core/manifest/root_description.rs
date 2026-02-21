@@ -1,6 +1,6 @@
 use crate::{StrId, quackpack::core::Version};
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 /// Crucial description of a root package we are working on.
 pub struct RootDescription {
     name: StrId,

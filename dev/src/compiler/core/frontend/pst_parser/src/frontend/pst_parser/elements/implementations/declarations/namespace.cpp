@@ -12,9 +12,9 @@ namespace pst {
 
 		state.parse(out)
 			.all(Keyword::Namespace, &out->name)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Unordered);
+			.withDef(&out->body, BlockOrderType::Unordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Namespace::dprint(std::ostream& out) const {

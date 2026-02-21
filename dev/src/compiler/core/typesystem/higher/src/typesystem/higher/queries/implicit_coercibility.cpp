@@ -1,6 +1,6 @@
 #include "implicit_coercibility.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <set>
 
@@ -37,6 +37,23 @@ namespace compiler::tsh {
 
 	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnSymbolType, bool) {
 		static auto provide(Context& context, const QKey& key) -> PResult {
+			const auto from_ref_kind = key.source.getRefKind();
+			const auto to_ref_kind   = key.target.getRefKind();
+
+			/*
+			 * The current coercion logic regarding reference kinds is:
+			 * 						  FROM
+			 * 			    | Direct | Ref | Box
+			 *	 	Direct 	|  Yes	 | Yes | Yes
+			 * TO 	Ref		|   No   | Yes | No
+			 *	 	Box		|  Yes   | Yes | Yes
+			 */
+			if (from_ref_kind == ReferenceKind::Direct && to_ref_kind == ReferenceKind::Ref)
+				return false;
+
+			if (from_ref_kind == ReferenceKind::Box && to_ref_kind == ReferenceKind::Ref)
+				return false;
+
 			// @TODO: #584
 			return context.query<QueryImplicitCoercibilityOnAbstractType>({
 				key.source.getType(),

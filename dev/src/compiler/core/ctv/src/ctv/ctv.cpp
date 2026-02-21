@@ -3,7 +3,8 @@
 #include <ctv/numeric_value.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
+#include <string_id/string_id.hpp>
 
 #include <sstream>
 #include <string>
@@ -17,6 +18,7 @@ namespace compiler::ctv {
 		variant_match(value) {
 			variant_case(bool, val) { return val ? "true" : "false"; }
 			variant_case(NumericValue, val) { return val.toString(); }
+			variant_case(base::StrID, val) { return "\"" + val.str() + "\""; }
 			variant_case_novalue(UnitCTV) { return "()"; }
 			variant_case(TupleCTV, tuple) {
 				std::stringstream ss;
@@ -38,15 +40,22 @@ namespace compiler::ctv {
 		variant_match(value) {
 			variant_case_novalue(bool) {
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryBoolType>({}),
+					tsh::getBoolType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
 			}
 			variant_case(NumericValue, numeric) { return numeric.getTypeOfStoredValue(ctx); }
+			variant_case_novalue(base::StrID) {
+				return tsh::SymbolType<>{
+					tsh::getStringType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			}
 			variant_case_novalue(UnitCTV) {
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -66,7 +75,7 @@ namespace compiler::ctv {
 
 			variant_case(tsh::SymbolType<>, val) {
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryMetaType>({}),
+					tsh::getMetaType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};

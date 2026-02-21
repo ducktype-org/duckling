@@ -1,12 +1,12 @@
 #include "mir_structure.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 #include <iomanip>
 #include <sstream>
@@ -205,9 +205,23 @@ namespace compiler::mir {
 		this->scope.emplace(scope);
 	}
 
+	MIRPlace MIRPlace::withDeref() const {
+		MIRPlace result = *this;
+
+		result.projection_chain.push_back(Projection::deref());
+		// New type after deref is the one which was referenced by the ref/box, without the
+		// reference specifier.
+		result.type = result.type.getPointeeSymbolType();
+		return result;
+	}
+
 	MIRPlace MIRPlace::withField(query::Context& ctx, const helios::SymID field) const {
 		MIRPlace result = *this;
-		result.access_chain.push_back(field);
+		CORE_ASSERT(
+			result.type.getRefKind() == tsh::ReferenceKind::Direct,
+			"Field access on ref/box type. A proper DerefExpr should be inserted in HOUT"
+		);
+		result.projection_chain.push_back(Projection::field(field));
 		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;
 	}
@@ -217,10 +231,18 @@ namespace compiler::mir {
 			variant_case(MIRLocalRef, local) { local->debugPrint(os, detailed); }
 			variant_case(MIRGlobal, global) { global.debugPrint(os, detailed); }
 		}
-		for (const auto& arg: access_chain) os << "." << name(arg).strView();
-		if (detailed and not access_chain.empty()) {
-			os << ": Unstable hash: " << access_chain.back().queryUnstablePerfectHash();
-			os << ", Type: ";
+
+		for (const auto& proj: projection_chain) {
+			variant_match(proj.storage) {
+				variant_case(FieldProjection, field) {
+					os << "." << name(field.field_id).strView();
+				}
+				variant_case_novalue(DerefProjection) { os << ".*"; }
+			}
+		}
+
+		if (detailed) {
+			os << ": Type: ";
 			os << type.toString();
 		}
 	}

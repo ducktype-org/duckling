@@ -4,6 +4,10 @@ function(add_to_coverage target)
 	endif()
 endfunction()
 
+if (ENABLE_COVERAGE AND BUILD_TYPE_IS_OPTIMISED)
+	message(WARNING "Chosen build type expects to be optimised, but coverage is enabled, which disables optimisations.")
+endif()
+
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 
@@ -108,12 +112,12 @@ function(add_custom_test_pack NAME)
 	set_property(TEST ${BUILD_PACK_TARGET} PROPERTY LABELS "${NAME}")
 
 	add_custom_target("test_${NAME}"
-		COMMAND ${CMAKE_CTEST_COMMAND} -L ${NAME}
+		COMMAND ${CMAKE_CTEST_COMMAND} -L ${NAME} --output-on-failure
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 	add_custom_target("memcheck_test_${NAME}"
 		COMMAND ${CMAKE_CTEST_COMMAND} -L ${NAME}
-		--force-new-ctest-process --test-action memcheck
+		--force-new-ctest-process --test-action memcheck --output-on-failure
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 	add_dependencies(build_all_tests ${BUILD_PACK_TARGET})
@@ -127,11 +131,11 @@ endfunction()
 # To run tests in parallel locally, you can invoke ctest -j <num_jobs> [options] directly.
 add_custom_target(memcheck_test
 	COMMAND ${CMAKE_CTEST_COMMAND}
-	--force-new-ctest-process --test-action memcheck -j $ENV{CTEST_PARALLEL_LEVEL}
+	--force-new-ctest-process --test-action memcheck -j $ENV{CTEST_PARALLEL_LEVEL} --output-on-failure
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
 	USES_TERMINAL)
 
 add_custom_target(test_parallel
-	COMMAND ${CMAKE_CTEST_COMMAND} -j $ENV{CTEST_PARALLEL_LEVEL}
+	COMMAND ${CMAKE_CTEST_COMMAND} -j $ENV{CTEST_PARALLEL_LEVEL} --output-on-failure
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
 	USES_TERMINAL)

@@ -4,7 +4,7 @@
 
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_framework/query_hash.hpp>
+#include <query_framework/utils/query_hash.hpp>
 
 #include <cstddef>
 #include <span>
@@ -37,5 +37,23 @@ namespace query::external {
 	void setPreviousGraphFromRawBytes(
 		std::span<const std::byte> graph_raw_bytes, std::vector<InputData>&& inputs
 	);
+
+	/**
+	 * @brief Optimize and serialize the current query graph for persistence on disk.
+	 */
+	[[nodiscard]] std::vector<byte> optAndSerializeQueryGraph();
+
+	/**
+	 * @brief Set the previous compilation metadata from serialized bytes.
+	 * Must be called after setPreviousGraphFromRawBytes.
+	 * @param metadata_raw_bytes Raw bytes of serialized metadata storage.
+	 */
+	void setPreviousMetadataFromRawBytes(std::span<const std::byte> metadata_raw_bytes);
+
+	/**
+	 * @brief Serialize the current metadata storage for persistence on disk.
+	 * @return Serialized metadata as raw bytes.
+	 */
+	[[nodiscard]] std::vector<byte> serializeMetadata();
 
 }  // namespace query::external

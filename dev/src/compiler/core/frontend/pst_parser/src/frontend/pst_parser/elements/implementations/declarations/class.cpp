@@ -19,14 +19,11 @@ namespace pst {
 		state.parse(out).all(Keyword::Class, &out->name);
 
 		if (state.parse(out).tryEat(Keyword::Extends)) state.parse(out).one(&out->base);
-		if (state.parse(out).tryEat(Keyword::Implements))
-			state.parse(out).one(&out->implements, true);
+		if (state.parse(out).tryEat(Keyword::Implements)) state.parse(out).one(&out->implements);
 
-		state.parse(out).with(
-			&out->body, ClassBlock::parse, { .name = out->name, .specifiers = {} }
-		);
+		state.parse(out).with(&out->body, ClassBlock::parse, { .name = out->name });
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Class::dprint(std::ostream& out) const {

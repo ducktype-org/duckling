@@ -4,8 +4,9 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
+
 #include <helios/queries.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -14,9 +15,9 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::tsh;
@@ -38,6 +39,7 @@ public:
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 	}
@@ -101,8 +103,8 @@ private:
 					base::strConcat("Could not validate LIR function ", lir_func->mangled_name)
 				);
 				result.funcs.put(
-					hout_func.declaration->original_name,
-					std::make_tuple(CRef(&hout_func), mir_func, lir_func)
+					hout_func->declaration->original_name,
+					std::make_tuple(hout_func, mir_func, lir_func)
 				);
 			}
 			for (const auto& hout_glob: unit.glob_data) {
@@ -143,16 +145,16 @@ private:
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
@@ -267,8 +269,8 @@ private:
 					found_a = true;
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
@@ -349,8 +351,8 @@ private:
 
 	void simpleConstant() {
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
-		auto hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
+		const auto& hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
 
@@ -376,11 +378,82 @@ private:
 		});
 	}
 
+	void referencesTest() {
+		auto module   = getLIROfModule(path("modules/references"));
+		auto lir_func = module.lirFunc("references");
+
+		bool found_simple_address_of     = false;
+		bool found_address_of_with_deref = false;
+		bool found_complex_assignment    = false;
+
+		using namespace compiler::lir;
+
+		for (const auto& block: lir_func->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation == Operation::AddressOf) {
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					auto& arg = instr.arguments[0].get<LIRPlace>();
+
+					if (arg.projection_chain.empty()) {
+						found_simple_address_of = true;
+					} else if (arg.projection_chain.size() == 2) {
+						bool pattern_ok = std::holds_alternative<LIRPlace::DerefProjection>(
+											  arg.projection_chain[0].storage
+										  )
+						               && std::holds_alternative<LIRPlace::FieldProjection>(
+											  arg.projection_chain[1].storage
+									   );
+
+						if (pattern_ok) {
+							auto field = std::get<LIRPlace::FieldProjection>(
+								arg.projection_chain[1].storage
+							);
+							if (helios::name(field.field_id) == base::StrID("x"))
+								found_address_of_with_deref = true;
+						}
+					}
+				}
+
+				if (instr.operation == Operation::Assign && instr.output.has_value()) {
+					auto& out_place = instr.output.value();
+
+					if (out_place.projection_chain.size() == 5) {
+						const auto& chain = out_place.projection_chain;
+
+						bool pattern_ok
+							= std::holds_alternative<LIRPlace::DerefProjection>(chain[0].storage)
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage)
+						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[2].storage)
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[3].storage)
+						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[4].storage);
+
+						if (pattern_ok) {
+							auto f_p = std::get<LIRPlace::FieldProjection>(chain[1].storage);
+							auto f_x = std::get<LIRPlace::FieldProjection>(chain[3].storage);
+
+							if (helios::name(f_p.field_id) == base::StrID("p")
+							    && helios::name(f_x.field_id) == base::StrID("x")) {
+								auto constant = instr.arguments[0].get<LIRConstant>();
+								auto num
+									= constant.value.get<compiler::numeric_value::NumericValue>();
+								if (num->get<i32>() == 999) found_complex_assignment = true;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		ASSERT_TRUE(found_simple_address_of);
+		ASSERT_TRUE(found_address_of_with_deref);
+		ASSERT_TRUE(found_complex_assignment);
+	}
+
 	void metaFunctionsTest() {
 		auto module = getLIROfModule(path("modules/meta_functions"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto                  meta_type_entity = ctx.query<tsh::QueryMetaType>({});
+			auto                  meta_type_entity = tsh::getMetaType();
 			CRef<tsl::TypeLayout> meta_layout
 				= ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity);
 
@@ -459,12 +532,11 @@ private:
 			bool found_result_f32 = false;
 			bool found_some_i16   = false;
 
-			auto bool_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryBoolType>({}));
-			auto f32_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryFloatType>({ 32 }));
-			auto i16_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryIntegralType>({ 16 }));
+			auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType());
+			auto f32_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32));
+			auto i16_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(
+                getIntegralType(ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+            );
 
 			for (const auto& local: proc_data_lir->local_list) {
 				if (!local.helios_id.has_value()) continue;

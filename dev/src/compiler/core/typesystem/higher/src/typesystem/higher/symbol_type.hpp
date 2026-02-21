@@ -3,6 +3,9 @@
 #include "abstract_type.hpp"
 #include "mutability.hpp"
 
+#include <hashing/hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
+
 namespace compiler::tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
@@ -172,6 +175,11 @@ namespace compiler::tsh {
 				// Ref types have trivial destructors, because it do not own its contents.
 				return true;
 			}
+			if (reference_kind == ReferenceKind::Box) {
+				// Box types don't have trivial destructors, as they have to deallocate the
+				// memory.
+				return false;
+			}
 			if (abstract_type.hasNoOpDestructor()) return true;
 			// @TODO #1271: add more cases where destructor is trivial
 			// NOTE: abstract_type check should probably be the last one as it may be expensive
@@ -186,6 +194,12 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		SymbolType withMutability(const Mutability new_mutability) const {
 			return SymbolType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
+		}
+
+		[[nodiscard]]
+		SymbolType getPointeeSymbolType() const {
+			CORE_ASSERT(reference_kind != ReferenceKind::Direct, "Cannot dereference a Direct type");
+			return withReferenceKind(ReferenceKind::Direct);
 		}
 
 		/**
@@ -224,12 +238,16 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<SymbolType, u64> hashes{};
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-			auto new_hash = hashes.size();
-			hashes.put(*this, new_hash);
-			return new_hash;
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				abstract_type, reference_kind, mutability, leakage, uniqueness
+			);
+		}
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const SymbolType& t
+		) noexcept {
+			addToHash(h, t.queryUnstablePerfectHash());
 		}
 
 		[[nodiscard]]

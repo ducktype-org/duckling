@@ -13,7 +13,7 @@ namespace pst {
 		state.parse(out).all(Keyword::Import, &out->import_chain);
 
 		state.addImport(out.ref());
-		return out;
+		PST_RETURN out;
 	}
 
 	void Import::dprint(std::ostream& out) const {

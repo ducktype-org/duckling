@@ -90,15 +90,20 @@ namespace dia_int {
 	class CodeLocationArgument final: public Argument {
 	public:
 		struct FileLocation {
-			std::string file;
-			u64         line;
-			u64         column;
+			std::string         file;
+			u64                 line;
+			u64                 column;
+			base::Optional<u64> end_line{};
+			base::Optional<u64> end_column{};
 
 			static FileLocation fromSourcePosition(const dia::SourcePosition& pos) {
-				auto [line, column] = pos.getStartLineColumn();
-				return { .file   = pos.getSource()->getFile().getFilePath().string(),
-					     .line   = (u64) line,
-					     .column = (u64) column };
+				auto [line, column]         = pos.getStartLineColumn();
+				auto [end_line, end_column] = pos.getEndLineColumn();
+				return { .file       = pos.getSource()->getFile().getFilePath().string(),
+					     .line       = (u64) line,
+					     .column     = (u64) column,
+					     .end_line   = end_line,
+					     .end_column = end_column };
 			}
 		};
 
@@ -373,7 +378,7 @@ namespace dia_int {
 	 * The `cause` is the name of the pointer message.
 	 * A pointer message is a text displayed below the highlighted code fragment.
 	 *
-	 * So this class besided the code fragment also adds a pointer message titled "cause"
+	 * So this class besides the code fragment also adds a pointer message titled "cause"
 	 * argument. All is handled by one SourcePosition, because the code fragment is the
 	 * source position and some lines around it, and the pointer message points to exactly
 	 * the given source position.

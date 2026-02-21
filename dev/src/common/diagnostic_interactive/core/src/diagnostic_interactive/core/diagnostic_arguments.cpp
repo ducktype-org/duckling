@@ -68,6 +68,8 @@ namespace dia_int::dia_args {
 		result["file"]   = file;
 		result["line"]   = line;
 		result["column"] = column;
+		if (end_line.has_value()) result["end_line"] = end_line.value();
+		if (end_column.has_value()) result["end_column"] = end_column.value();
 		return result;
 	}
 
@@ -76,10 +78,22 @@ namespace dia_int::dia_args {
 		ASSUME_UINT(elem, "line");
 		ASSUME_UINT(elem, "column");
 
-		std::string file   = elem["file"];
-		u64         line   = elem["line"];
-		u64         column = elem["column"];
-		return base::makeBox<CodeLocationComponent>(std::move(file), line, column);
+		std::string         file   = elem["file"];
+		u64                 line   = elem["line"];
+		u64                 column = elem["column"];
+		base::Optional<u64> end_line{};
+		base::Optional<u64> end_column{};
+		if (elem.contains("end_line")) {
+			ASSUME_UINT(elem, "end_line");
+			end_line = elem["end_line"];
+		}
+		if (elem.contains("end_column")) {
+			ASSUME_UINT(elem, "end_column");
+			end_column = elem["end_column"];
+		}
+		return base::makeBox<CodeLocationComponent>(
+			std::move(file), line, column, end_line, end_column
+		);
 	}
 
 	json StartLineComponent::toJson() const {

@@ -1,4 +1,4 @@
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <string_id/string_id.hpp>
@@ -32,7 +32,10 @@ namespace compiler::helios::mangler {
 		u64                         mangling_scheme_version = 0;
 		base::Optional<std::string> additional_metadata     = std::nullopt;
 
-		constexpr auto operator<=>(const KeyOf_MangledSymbol& other) const;
+		/**
+		 * @TODO: #2027 likely remove, it is used only by the hash map.
+		 */
+		constexpr auto operator==(const KeyOf_MangledSymbol& other) const;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
@@ -40,6 +43,8 @@ namespace compiler::helios::mangler {
 
 	/**
 	 * @brief Gets the mangled name of a symbol from SymID.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({ .uses_qresult = false }));
 
@@ -68,3 +73,12 @@ namespace compiler::helios::mangler {
 		query::Context& ctx, SymID sym_id
 	);
 }
+
+/**
+ * Hashed used for the perfect hash of KeyOf_MangledSymbol.
+ * @TODO: #2027 likely remove.
+ */
+template<>
+struct std::hash<compiler::helios::mangler::KeyOf_MangledSymbol> final {
+	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledSymbol& key) const;
+};

@@ -21,7 +21,7 @@ namespace compiler::helios {
 		// @TODO: #1807 Refactor the code so that it's impossible to create
 		// two symbols with the same counter but different return types.
 		base::Bit256 GeneratedSymbolData::ReplExpressionWrapper::queryUnstablePerfectHash() const {
-			return { return_type.queryUnstablePerfectHash(), counter };
+			return hashing::justHash<hashing::SHA256>(return_type, counter);
 		}
 
 		GeneratedSymbolData::GeneratedSymbolData(
@@ -30,7 +30,7 @@ namespace compiler::helios {
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256, void>(
+			return hashing::justHash<hashing::SHA256>(
 				data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
 			);
 		}
@@ -72,11 +72,9 @@ namespace compiler::helios {
 					          ->valueOrThrow()
 					          .getType()
 					          .as<tsh::FunctionAbstractType>();
-					return tsh::SymbolType{
-						function_type.getParameterTypes().at(param.parameter_index).getType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
+					auto param_symbol_type
+						= function_type.getParameterTypes().at(param.parameter_index);
+					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
 				}
 				variant_case(Variable, var) { return var.type; }
 				variant_case(ReplExpressionWrapper, repl) {

@@ -2,7 +2,7 @@ find_package(Doxygen REQUIRED)
 
 # Find all the public headers and source files
 # TEMPORARY SOLUTION (Nothing is as permanent as a temporary solution)
-file(GLOB_RECURSE DUCKLING_PP_FILES ${PROJECT_SOURCE_DIR}/*.*pp ${PROJECT_SOURCE_DIR}/*.md)
+file(GLOB_RECURSE DUCKLING_PP_FILES ${PROJECT_SOURCE_DIR}/*.*pp ${PROJECT_SOURCE_DIR}/*.md ${PROJECT_SOURCE_DIR}/*.dox)
 list(REMOVE_ITEM DUCKLING_PP_FILES */.venv/*)
 list(REMOVE_ITEM DUCKLING_PP_FILES */*build*/*)
 

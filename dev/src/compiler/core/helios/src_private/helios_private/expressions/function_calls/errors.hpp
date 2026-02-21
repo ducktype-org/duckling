@@ -7,10 +7,9 @@
 
 #include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 
 namespace compiler::helios::code {
@@ -110,6 +109,12 @@ namespace compiler::helios::code {
 		bool                         is_for_candidate_function
 	);
 
+	/**
+	 * @brief Helper function that retrieves PST of the parameter list
+	 * from a function-like declaration. A function-like can be a function,
+	 * a `fundecl` or a class method. It used to exctract PST position of the
+	 * parameters for error messages.
+	 */
 	pst::Access<pst::ParamList> getFunctionParamList(
 		query::Context& ctx, pst::Access<pst::LangElement> function_decl
 	);
@@ -176,6 +181,19 @@ namespace compiler::helios::code {
 
 	public:
 		FailedCandidateNote(dia::SourcePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class NoCandidatesFoundError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "no_candidates_found" };
+		}
+
+	public:
+		NoCandidatesFoundError(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

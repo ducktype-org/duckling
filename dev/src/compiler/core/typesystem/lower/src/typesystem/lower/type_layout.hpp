@@ -10,7 +10,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
 
 #include <variant>
@@ -213,6 +213,15 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "string : " + base::toString(getSize());
+		}
+
+		/**
+		 * @return The offset of the pointer to the data
+		 */
+		[[nodiscard]]
+		Bytes getDataPointerPosition() const {
+			(void) this;
+			return Bytes(0);
 		}
 
 		/**
@@ -669,9 +678,9 @@ namespace compiler::tsl {
 
 		friend struct ImplementationOf_QuerySymbolTypeLayout;
 
-	public:
 		TypeLayoutDirectVariant variant;
 
+	public:
 		// Move constructor needed for caching in QueryAbstract/SymbolTypeLayout.
 		TypeLayout(TypeLayout&& other) noexcept = default;
 
@@ -690,6 +699,12 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		const TypeLayoutDirectVariant& getVariant() const {
 			return variant;
+		}
+
+		template<typename T>
+		[[nodiscard]]
+		bool is() const {
+			return std::holds_alternative<T>(variant);
 		}
 
 		/**

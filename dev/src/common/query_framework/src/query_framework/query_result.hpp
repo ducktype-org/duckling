@@ -9,7 +9,6 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/utils.hpp>
 
-#include <expected>
 #include <type_traits>
 #include <variant>
 
@@ -129,22 +128,22 @@ namespace query {
 		/**
 		 * @brief Access the value, panic with given message on no value.
 		 */
-		constexpr const Value& valueOrPanicMsg(std::string_view message) const& {
+		constexpr const Value& valueOrPanicMsg([[maybe_unused]] std::string_view message) const& {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::get<Value>(storage);
 		}
 
-		constexpr const Value&& valueOrPanicMsg(std::string_view message) const&& {
+		constexpr const Value&& valueOrPanicMsg([[maybe_unused]] std::string_view message) const&& {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr Value& valueOrPanicMsg(std::string_view message) & {
+		constexpr Value& valueOrPanicMsg([[maybe_unused]] std::string_view message) & {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::get<Value>(storage);
 		}
 
-		constexpr Value&& valueOrPanicMsg(std::string_view message) && {
+		constexpr Value&& valueOrPanicMsg([[maybe_unused]] std::string_view message) && {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::move(std::get<Value>(storage));
 		}
@@ -209,6 +208,24 @@ namespace query {
 	auto&& RES_VAR_NAME = new_value;                      \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
 	var std::move(RES_VAR_NAME).valueOrPanic()
+
+/**
+ * Unpack a result from QResult or return the Failed state.
+ * In situations where you have a CRef<QResult<...>>
+ */
+#define UNPACK_QRESULT_CREF(var, new_value)                \
+	auto&& RES_VAR_NAME = new_value;                       \
+	if (RES_VAR_NAME->hasFailed()) return query::Failed(); \
+	var RES_VAR_NAME->valueOrPanic()
+
+/**
+ * Unpack a result from QResult or return the Failed state.
+ * Used in situations where you have a CRef<QResult<Box<...>>>,
+ */
+#define UNPACK_QRESULT_CREF_TO_BOX(var, new_value)         \
+	auto&& RES_VAR_NAME = new_value;                       \
+	if (RES_VAR_NAME->hasFailed()) return query::Failed(); \
+	var RES_VAR_NAME->valueOrPanic().ref()
 
 
 /**

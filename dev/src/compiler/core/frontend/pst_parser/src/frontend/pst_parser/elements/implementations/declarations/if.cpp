@@ -13,13 +13,13 @@ namespace pst {
 
 		state.parse(out)
 			.all(Keyword::If, &out->optional_name, &out->condition)
-			.withDef(&out->then_body, CodeBlock::CodeBlockType::Ordered);
+			.withDef(&out->then_body, BlockOrderType::Ordered);
 		;
 
 		if (state.parse(out).tryEat(Keyword::Else))
-			state.parse(out).withDef(&out->else_body, CodeBlock::CodeBlockType::Ordered);
+			state.parse(out).withDef(&out->else_body, BlockOrderType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void If::dprint(std::ostream& out) const {

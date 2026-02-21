@@ -1,10 +1,12 @@
-#include "query_framework_decl.hpp"       // query declaration
+#include "query_framework_decl.hpp"  // query declaration
+
+#include <diagnostic_interactive/message.hpp>
 
 #include <base/collections/maps.hpp>      // base::Map
 #include <base/collections/optional.hpp>  // base::Optional
 #include <base/str/str_utils.hpp>         // base::strConcat
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 /**
  * PResult type for MyQuery
@@ -14,23 +16,23 @@ struct PResult final {
 };
 
 struct IMPLEMENT_QUERY(MyQuery, PResult) {
-	struct InfoInMyQuery final: dia::Info {
-		std::string str;
-
-		explicit InfoInMyQuery(const dia::SourcePosition& source_position, std::string str):
-			  Info(source_position),
-			  str(std::move(str)) {}
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return { "Some random log from Query1." };
+	/**
+	 * @brief Some dummy error message for demonstration purposes.
+	 *
+	 * Search in editor for the `error/misc/example.yaml` to see how the message is defined in the
+	 * `yaml` template file.
+	 */
+	class ExampleError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return {
+				.template_type = "message", .type = "error", .family = "misc", .name = "example"
+			};
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Misc;
+		ExampleError(dia::SourcePosition source_pos, std::string argument):
+			  MessageWithCodeFragmentAndCause(source_pos) {
+			addArgument<dia_int::TextArgument>("argument", std::move(argument));
 		}
 	};
 
@@ -49,7 +51,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 		std::string str_to_log = base::strConcat("Result of query 2 : ", result);
 		// Dummy source position:
 		dia::SourcePosition source_position = dia::SourcePosition::fakePosition();
-		context.log(makeBox<InfoInMyQuery>(source_position, str_to_log));
+		context.logInt(makeBox<ExampleError>(source_position, str_to_log));
 
 		// some trivial implementation:
 		return PResult{ key.v };

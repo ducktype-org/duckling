@@ -17,7 +17,7 @@ namespace compiler::tsh {
 	 * expanded with information about a value of that type.
 	 *
 	 * An ExpressionType<AbstractType> object will contain information about any type,
-	 * while a ExpressionType<IntegralAbstractTypr> object is guaranteed to contain information
+	 * while a ExpressionType<IntegralAbstractType> object is guaranteed to contain information
 	 * about some Integral type described with an IntegralAbstractType object.
 	 *
 	 * An ExpressionType object describes the value of an expression. That value has a type, as well
@@ -119,6 +119,17 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		bool operator==(const ExpressionType<OTHER_ABSTRACT_TYPE>& other) const {
 			return *this <=> other == 0;
+		}
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(symbol_type, value_category);
+		}
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const ExpressionType& t
+		) noexcept {
+			addToHash(h, t.queryUnstablePerfectHash());
 		}
 
 	private:

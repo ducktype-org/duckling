@@ -29,6 +29,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		"-Wall -Wextra "
 		"-pedantic "
 		"-Wno-sign-compare "
+		"-Wno-redundant-move "
 		)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_GNU_FLAGS}")
 
@@ -59,6 +60,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 		"-pedantic "
 		"-Wno-sign-compare "
 		"-Wno-sign-conversion "
+		"-Wno-redundant-move "
 	)
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )

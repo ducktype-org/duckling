@@ -4,7 +4,7 @@ use crate::QuackError;
 use crate::quackpack::schemas::registry;
 use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Conditions required by a dependency or a feature flag in order to be enabled.
 /// This is enabled for `any(system) and any(arch) and any(flags)`.
 pub struct Conditions {
@@ -55,6 +55,11 @@ impl Conditions {
         // @TODO: #1353 We could work with plain iterators and/or keep `required_root_package_features` as a HashSet,
         //  but only if creating temporary HashSets becomes a bottleneck. Also connected with !TODO above, in `is_enabled_for`.
         !enabled_features.is_disjoint(&required_features)
+    }
+
+    /// Returns root packages mentioned in the manifest
+    pub fn required_root_package_features(&self) -> Option<&[FeatureName]> {
+        self.required_root_package_features.as_deref()
     }
 }
 

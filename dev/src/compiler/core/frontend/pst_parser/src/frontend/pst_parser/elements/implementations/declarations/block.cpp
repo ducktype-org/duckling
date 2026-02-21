@@ -12,9 +12,9 @@ namespace pst {
 
 		state.parse(out)
 			.all(Keyword::Block, &out->optional_name)
-			.withDef(&out->code_block, CodeBlock::CodeBlockType::Unordered);
+			.withDef(&out->code_block, BlockOrderType::Unordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Block::dprint(std::ostream& out) const {

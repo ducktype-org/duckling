@@ -84,6 +84,16 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
+	std::expected<ExitValue, ApiError> runFunctionAwait(
+		PID pid, const std::string& function_name, const FunctionRunArguments& args
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid, request::RunFunctionAwait{ .func_name = function_name, .func_args = args }
+			))
+		    .and_then(mapOrWrongResponse<ExitValue>);
+	}
+
 	std::expected<void, ApiError> join(PID pid) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Join{}))

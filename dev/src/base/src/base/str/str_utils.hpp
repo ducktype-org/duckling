@@ -92,6 +92,10 @@ namespace base {
 
 		constexpr void strConcat(std::string& out, Bits bits);
 		constexpr void strConcat(std::string& out, Bytes bytes);
+
+		constexpr void strConcat(std::string& out, std::monostate) {
+			strConcat(out, "<monostate>");
+		}
 	}
 
 	/**
@@ -165,4 +169,38 @@ namespace base {
 	 */
 	std::string generateRandomString(u64 length);
 
+	struct UnescapedString {
+		// The successfully unescaped string.
+		std::string value;
+	};
+
+	struct UnknownEscapeSequence {
+		// The unknown escape sequence that caused the error.
+		std::string value;
+	};
+
+	using UnescapeResult = std::variant<UnescapedString, UnknownEscapeSequence>;
+
+	/**
+	 * @brief Unescapes a string containing C-style escape sequences.
+	 * @param raw The raw string with escape sequences.
+	 * @return The unescaped string.
+	 *
+	 * Supported escape sequences:
+	 * - \n : Newline
+	 * - \r : Carriage return
+	 * - \t : Tab
+	 * - \v : Vertical tab
+	 * - \b : Backspace
+	 * - \f : Form feed
+	 * - \a : Alert (bell)
+	 * - \e : Escape (non-standard but common)
+	 * - \\ : Literal backslash
+	 * - \" : Double quote
+	 * - \' : Single quote
+	 * - \0 : Null character
+	 *
+	 * Unknown escape sequences result in a panic.
+	 */
+	UnescapeResult unescapeString(std::string_view raw);
 }

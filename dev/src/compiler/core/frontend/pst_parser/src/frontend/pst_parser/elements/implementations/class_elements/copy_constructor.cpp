@@ -1,14 +1,12 @@
 #include "../../hierarchy/class_elements/copy_constructor.hpp"
 
-#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
 	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeBox<CopyConstructor>(position, ctx);
-
-		out->parseSpecifiers(state);
 
 		state.parse(out).eatOne();
 
@@ -17,11 +15,9 @@ namespace pst {
 
 		state.parse(out).one(&out->params);
 		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out)
-			.one(NamedOperator::Assign)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void CopyConstructor::dprint(std::ostream& out) const {

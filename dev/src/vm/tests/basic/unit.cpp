@@ -2,7 +2,9 @@
 
 #include <tester/tester.hpp>
 
+#include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/core/process/interface_types.hpp>
 
 class VmUnitTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -31,9 +33,13 @@ public:
 		TESTER_ADD_TEST(checkLiteralErrorHandling);
 		TESTER_ADD_TEST(checkZeroDivision);
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
+		TESTER_ADD_TEST(checkCastingInstructions);
+		TESTER_ADD_TEST(testSyncRun);
 	}
 
 private:
+	void checkCastingInstructions() { runTestOnVm("casting.dbc", "", "11111111111", {}); }
+
 	void jump() { runTestOnVm("jump.dbc", "", "5", {}); }
 
 	void return1337() { runTestOnVm("return_1337.dbc", {}, {}, {}, 1'337); }
@@ -137,6 +143,13 @@ private:
 				vm::code::VoidTypeArgumentError::ERR_MSG,
 			}
 		);
+	}
+
+	void testSyncRun() {
+		vm::PID pid = initProcess();
+		ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }).has_value());
+		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
+		vm::api::deinitAndValidate(pid);
 	}
 };
 

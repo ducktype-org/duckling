@@ -308,38 +308,6 @@ namespace vm {
 		});
 	}
 
-	base::Optional<TypeCRef> Type::getNonCompoundTypeAtOffsetRecursive(Offset offset) const {
-		variant_match(kind) {
-			variant_case(kind::Data, data) {
-				for (const auto& field: data.fields)
-					if (field.offset <= offset && offset < field.offset + field.type->size)
-						return field.type->getNonCompoundTypeAtOffsetRecursive(
-							offset - field.offset
-						);
-				return {};
-			}
-			variant_case(kind::DynamicTable, table) {
-				// Dynamic table can only be a top-level type in the block,
-				// it cannot be e.g. a field of a struct or an element of an array.
-				return table.inner_type->getNonCompoundTypeAtOffsetRecursive(
-					offset % table.inner_type->size
-				);
-			}
-			variant_case(kind::FixedSizeTable, table) {
-				if (offset < table.element_count * table.inner_type->size)
-					return table.inner_type->getNonCompoundTypeAtOffsetRecursive(
-						offset % table.inner_type->size
-					);
-				return {};
-			}
-			variant_default {
-				if (offset == 0) return this;
-				return {};
-			}
-		}
-		CORE_UNREACHABLE();
-	}
-
 	bool Type::isTriviallyCopyable() const {
 		variant_match(kind) {
 			variant_case(kind::Data, data) {

@@ -16,11 +16,9 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
-		state.parse(out)
-			.one(NamedOperator::Assign)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	base::Optional<AccessLocked<ExprHolder>> Fun::getRet() const {

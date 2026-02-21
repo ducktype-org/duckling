@@ -313,17 +313,29 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_cmpNull_lptr, i) { addLow<Op_cmpNull_lptr>(i.ptr); }
 			instr_case(high::Op_variantSetInner_lvnt_type, i) {
 				addLow<Op_variantSetInner_lvnt_type>(i.variant, i.inner_type);
+				opargs::Type variant_type = ctx.locals_map.at(i.variant.var_name).type->getName();
+				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_lptr_lvnt_type, i) {
 				addLow<Op_variantGetInner_lptr_lvnt>(i.dst_ptr, i.variant);
-				addLow<Op_ext_type>(i.expected_type);
+				opargs::Type variant_type = ctx.locals_map.at(i.variant.var_name).type->getName();
+				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_variantSetInner_lptr_type, i) {
 				addLow<Op_variantSetInner_lptr_type>(i.variant_ptr, i.inner_type);
+				opargs::Type variant_type = ctx.locals_map.at(i.variant_ptr.var_name)
+				                                .type->getInnerType()
+				                                .value()
+				                                ->getName();
+				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_lptr_lptr_type, i) {
 				addLow<Op_variantGetInner_lptr_lptr>(i.dst_ptr, i.variant_ptr);
-				addLow<Op_ext_type>(i.expected_type);
+				opargs::Type variant_type = ctx.locals_map.at(i.variant_ptr.var_name)
+				                                .type->getInnerType()
+				                                .value()
+				                                ->getName();
+				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
 			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
@@ -411,7 +423,71 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_cast_l64_type, i) {
 				addLow<Op_cast_l64_type>(i.value, i.target_type);
-			}
+			}  // Sign Extension
+			instr_case(high::Op_sext_l16_l8, i) { addLow<Op_sext_l16_l8>(i.dst, i.src); }
+			instr_case(high::Op_sext_l32_l8, i) { addLow<Op_sext_l32_l8>(i.dst, i.src); }
+			instr_case(high::Op_sext_l64_l8, i) { addLow<Op_sext_l64_l8>(i.dst, i.src); }
+			instr_case(high::Op_sext_l32_l16, i) { addLow<Op_sext_l32_l16>(i.dst, i.src); }
+			instr_case(high::Op_sext_l64_l16, i) { addLow<Op_sext_l64_l16>(i.dst, i.src); }
+			instr_case(high::Op_sext_l64_l32, i) { addLow<Op_sext_l64_l32>(i.dst, i.src); }
+
+			// Zero Extension
+			instr_case(high::Op_zext_l16_l8, i) { addLow<Op_zext_l16_l8>(i.dst, i.src); }
+			instr_case(high::Op_zext_l32_l8, i) { addLow<Op_zext_l32_l8>(i.dst, i.src); }
+			instr_case(high::Op_zext_l64_l8, i) { addLow<Op_zext_l64_l8>(i.dst, i.src); }
+			instr_case(high::Op_zext_l32_l16, i) { addLow<Op_zext_l32_l16>(i.dst, i.src); }
+			instr_case(high::Op_zext_l64_l16, i) { addLow<Op_zext_l64_l16>(i.dst, i.src); }
+			instr_case(high::Op_zext_l64_l32, i) { addLow<Op_zext_l64_l32>(i.dst, i.src); }
+
+			// Truncation
+			instr_case(high::Op_trunc_l8_l16, i) { addLow<Op_trunc_l8_l16>(i.dst, i.src); }
+			instr_case(high::Op_trunc_l8_l32, i) { addLow<Op_trunc_l8_l32>(i.dst, i.src); }
+			instr_case(high::Op_trunc_l8_l64, i) { addLow<Op_trunc_l8_l64>(i.dst, i.src); }
+			instr_case(high::Op_trunc_l16_l32, i) { addLow<Op_trunc_l16_l32>(i.dst, i.src); }
+			instr_case(high::Op_trunc_l16_l64, i) { addLow<Op_trunc_l16_l64>(i.dst, i.src); }
+			instr_case(high::Op_trunc_l32_l64, i) { addLow<Op_trunc_l32_l64>(i.dst, i.src); }
+
+			// Int to Float
+			instr_case(high::Op_sitofp_l32_l8, i) { addLow<Op_sitofp_l32_l8>(i.dst, i.src); }
+			instr_case(high::Op_uitofp_l32_l8, i) { addLow<Op_uitofp_l32_l8>(i.dst, i.src); }
+			instr_case(high::Op_sitofp_l32_l16, i) { addLow<Op_sitofp_l32_l16>(i.dst, i.src); }
+			instr_case(high::Op_uitofp_l32_l16, i) { addLow<Op_uitofp_l32_l16>(i.dst, i.src); }
+			instr_case(high::Op_sitofp_l32_l32, i) { addLow<Op_sitofp_l32_l32>(i.dst, i.src); }
+			instr_case(high::Op_uitofp_l32_l32, i) { addLow<Op_uitofp_l32_l32>(i.dst, i.src); }
+			instr_case(high::Op_sitofp_l32_l64, i) { addLow<Op_sitofp_l32_l64>(i.dst, i.src); }
+			instr_case(high::Op_uitofp_l32_l64, i) { addLow<Op_uitofp_l32_l64>(i.dst, i.src); }
+
+			instr_case(high::Op_sitofp_l64_l8, i) { addLow<Op_sitofp_l64_l8>(i.dst, i.src); }
+			instr_case(high::Op_uitofp_l64_l8, i) { addLow<Op_uitofp_l64_l8>(i.dst, i.src); }
+			instr_case(high::Op_sitofp_l64_l16, i) { addLow<Op_sitofp_l64_l16>(i.dst, i.src); }
+			instr_case(high::Op_uitofp_l64_l16, i) { addLow<Op_uitofp_l64_l16>(i.dst, i.src); }
+			instr_case(high::Op_sitofp_l64_l32, i) { addLow<Op_sitofp_l64_l32>(i.dst, i.src); }
+			instr_case(high::Op_uitofp_l64_l32, i) { addLow<Op_uitofp_l64_l32>(i.dst, i.src); }
+			instr_case(high::Op_sitofp_l64_l64, i) { addLow<Op_sitofp_l64_l64>(i.dst, i.src); }
+			instr_case(high::Op_uitofp_l64_l64, i) { addLow<Op_uitofp_l64_l64>(i.dst, i.src); }
+
+			// Float to Int
+			instr_case(high::Op_fptosi_l8_l32, i) { addLow<Op_fptosi_l8_l32>(i.dst, i.src); }
+			instr_case(high::Op_fptoui_l8_l32, i) { addLow<Op_fptoui_l8_l32>(i.dst, i.src); }
+			instr_case(high::Op_fptosi_l16_l32, i) { addLow<Op_fptosi_l16_l32>(i.dst, i.src); }
+			instr_case(high::Op_fptoui_l16_l32, i) { addLow<Op_fptoui_l16_l32>(i.dst, i.src); }
+			instr_case(high::Op_fptosi_l32_l32, i) { addLow<Op_fptosi_l32_l32>(i.dst, i.src); }
+			instr_case(high::Op_fptoui_l32_l32, i) { addLow<Op_fptoui_l32_l32>(i.dst, i.src); }
+			instr_case(high::Op_fptosi_l64_l32, i) { addLow<Op_fptosi_l64_l32>(i.dst, i.src); }
+			instr_case(high::Op_fptoui_l64_l32, i) { addLow<Op_fptoui_l64_l32>(i.dst, i.src); }
+
+			instr_case(high::Op_fptosi_l8_l64, i) { addLow<Op_fptosi_l8_l64>(i.dst, i.src); }
+			instr_case(high::Op_fptoui_l8_l64, i) { addLow<Op_fptoui_l8_l64>(i.dst, i.src); }
+			instr_case(high::Op_fptosi_l16_l64, i) { addLow<Op_fptosi_l16_l64>(i.dst, i.src); }
+			instr_case(high::Op_fptoui_l16_l64, i) { addLow<Op_fptoui_l16_l64>(i.dst, i.src); }
+			instr_case(high::Op_fptosi_l32_l64, i) { addLow<Op_fptosi_l32_l64>(i.dst, i.src); }
+			instr_case(high::Op_fptoui_l32_l64, i) { addLow<Op_fptoui_l32_l64>(i.dst, i.src); }
+			instr_case(high::Op_fptosi_l64_l64, i) { addLow<Op_fptosi_l64_l64>(i.dst, i.src); }
+			instr_case(high::Op_fptoui_l64_l64, i) { addLow<Op_fptoui_l64_l64>(i.dst, i.src); }
+
+			instr_case(high::Op_fptrunc_l32_l64, i) { addLow<Op_fptrunc_l32_l64>(i.dst, i.src); }
+			instr_case(high::Op_fpext_l64_l32, i) { addLow<Op_fpext_l64_l32>(i.dst, i.src); }
+
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
 			instr_case(high::Op_breakpoint, i) { addLow<Op_breakpoint>(); }

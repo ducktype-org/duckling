@@ -16,8 +16,8 @@
 #include <base/except/exceptions.hpp>
 
 #include <logger/logger.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <vm/api/vm.hpp>
 
@@ -149,7 +149,7 @@ namespace compiler::repl {
 
 		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
 		helios::HOUTUnit hout_unit;
-		hout_unit.functions.push_back(std::move(expr_wrapper.value()));
+		hout_unit.functions.emplace_back(&expr_wrapper.value());
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
@@ -165,7 +165,7 @@ namespace compiler::repl {
 
 			CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
 
-			auto return_type = hout_unit.functions[0].declaration->return_type;
+			auto return_type = hout_unit.functions[0]->declaration->return_type;
 			auto run_result
 				= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 			if (run_result.has_value()) {
@@ -191,7 +191,8 @@ namespace compiler::repl {
 		std::string error_message;
 		bool        had_error = false;
 
-		auto hout_unit = query::entryPoint<helios::QueryModuleHOUT>(module_id).valueOrThrow();
+		const auto& hout_unit
+			= query::entryPoint<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
@@ -228,7 +229,7 @@ namespace compiler::repl {
 			base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
-				auto pst       = ctx.query<frontend::QueryFilePST>(main_file);
+				auto pst       = getFilePST(ctx, main_file);
 
 				CORE_DEV_LOG(REPL, "PST:\n");
 				if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {

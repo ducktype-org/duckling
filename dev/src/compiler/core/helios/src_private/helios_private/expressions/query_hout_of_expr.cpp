@@ -4,11 +4,12 @@
 #include "errors.hpp"
 #include "numeric_literals.hpp"
 
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -19,10 +20,43 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::code {
 	namespace {
+		/**
+		 * @brief This error message is used when there is a string literal with escape sequences
+		 * that failed to parse.
+		 */
+		class UnknownEscapeSequenceError final: public dia_int::MessageWithCodeFragmentAndCause {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "error",
+					     .family        = "parser",
+					     .name          = "unknown_escape_sequence" };
+			}
+
+			class SupportedEscapeSequencesDocs final: public dia_int::MessageBase {
+				dia_int::Metadata getMetadata() const final {
+					return { .template_type = "message",
+						     .type          = "docs",
+						     .family        = "expressions",
+						     .name          = "supported_escape_sequences" };
+				}
+
+			public:
+				SupportedEscapeSequencesDocs(): MessageBase() {}
+			};
+
+		public:
+			UnknownEscapeSequenceError(dia::SourcePosition source_position, std::string sequence):
+				  MessageWithCodeFragmentAndCause(source_position) {
+				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
+				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
+			}
+		};
 
 		/**
 		 * This is an effective implementation of QueryHoutOfExpr.
@@ -40,7 +74,8 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator().str() == "|") {
+				if (bin_op->getOperator()
+				    == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
@@ -56,7 +91,11 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(
 			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
-			CORE_ASSERT(expr.unlock(ctx)->getOperator().str() == "|", "Not a variant operator");
+			CORE_ASSERT(
+				expr.unlock(ctx)->getOperator()
+					== lang_def::operatorToStr(lang_def::NamedOperator::Pipe),
+				"Not a variant operator"
+			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
@@ -76,23 +115,39 @@ namespace compiler::helios::code {
 			 */
 			base::Optional<base::Box<Expr>> node;
 
-			void visitUnitExpr(pst::Access<pst::expr::UnitExpr>) override {
-				node = makeBox<LiteralUnitExpr>(ctx);
+			void visitUnitExpr(pst::Access<pst::expr::UnitExpr> elem) override {
+				node = makeBox<LiteralUnitExpr>(ctx, pstOrigin(elem));
 			}
 
-			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				auto parsed_numeric_value = fromExprValue(ctx, stmt);
+			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
+				auto parsed_numeric_value = fromExprNumericValue(ctx, stmt);
 
 				if (parsed_numeric_value.has_value()) {
-					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
+					node = makeBox<LiteralNumericExpr>(
+						ctx, pstOrigin(stmt), parsed_numeric_value.value()
+					);
 				} else {
-					// Error was logged in fromExprValue.
+					// Error was logged in fromExprNumericValue.
 					return;
 				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
-				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue());
+				const auto escaped_string  = stmt->getValue().value.strView();
+				const auto unescape_result = base::unescapeString(escaped_string);
+				variant_match(unescape_result) {
+					variant_case(base::UnescapedString, result) {
+						node = makeBox<LiteralStringExpr>(
+							ctx, pstOrigin(stmt), base::StrID(result.value)
+						);
+					}
+					variant_case(base::UnknownEscapeSequence, error) {
+						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+							stmt->getSourcePosition(), error.value
+						));
+					}
+					variant_default CORE_UNREACHABLE();
+				}
 			}
 
 			/**
@@ -100,9 +155,9 @@ namespace compiler::helios::code {
 			 * Otherwise, returns None.
 			 */
 			base::Optional<Box<Expr>> binaryBuiltin(
-				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
+				pst::Access<pst::expr::BinaryOperator> expr, Box<Expr> lhs, Box<Expr> rhs
 			) {
-				auto result = findBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+				auto result = findBinaryBuiltin(ctx, expr->getOperator(), lhs.ref(), rhs.ref());
 
 				match_optional(result) {
 					opt_some_move(value) {
@@ -112,7 +167,11 @@ namespace compiler::helios::code {
 						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
 
 						return makeBox<BinaryOperatorExpr>(
-							ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
+							ctx,
+							pstOrigin(expr),
+							operation,
+							std::move(coerced_lhs),
+							std::move(coerced_rhs)
 						);
 					}
 					opt_none { return {}; }
@@ -124,25 +183,31 @@ namespace compiler::helios::code {
 			 * If a valid builtin exists (special characters only), returns it.
 			 * Otherwise, returns None.
 			 */
-			base::Optional<Box<Expr>> unaryBuiltin(lexer::Operator op, Box<Expr> expr) {
-				auto operation = findUnaryBuiltin(op, expr.ref());
-
-				if (operation)
-					return makeBox<UnaryOperatorExpr>(operation.value(), std::move(expr));
-				else
-					return {};
+			base::Optional<Box<Expr>> unaryBuiltin(
+				lexer::Operator op, Box<Expr> expr, ElementOrigin origin
+			) {
+				auto result = findUnaryBuiltin(ctx, op, expr.ref());
+				match_optional(result) {
+					opt_some_move(value) {
+						auto [operation, coercion] = value;
+						auto coerced               = coercion.coerce(ctx, std::move(expr));
+						return makeBox<UnaryOperatorExpr>(origin, operation, std::move(coerced));
+					}
+					opt_none { return {}; }
+				}
+				CORE_UNREACHABLE();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				if (stmt->getOperator().str() == "|") {
+				if (stmt->getOperator() == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
 					// Expect all subexpressions in variant constructor to be Meta types or try to
 					// lift them if they aren't.
 					const auto meta_type = tsh::SymbolType<>{
-						ctx.query<tsh::QueryMetaType>({}),
+						tsh::getMetaType(),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable,
 					};
@@ -156,7 +221,9 @@ namespace compiler::helios::code {
 						}
 						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
 					}
-					node = makeBox<VariantTypeConstructorExpr>(ctx, std::move(all_subtypes));
+					node = makeBox<VariantTypeConstructorExpr>(
+						ctx, pstOrigin(stmt), std::move(all_subtypes)
+					);
 					return;
 				}
 
@@ -169,26 +236,25 @@ namespace compiler::helios::code {
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
+				auto lhs_type = lhs->expression_type.getSymbolType();
+				auto rhs_type = rhs->expression_type.getSymbolType();
+
 				// @todo here we should:
 				// * lookup for user defined operators
 				// * type check
 				// * make function call
 				// For now we support just builtins
 
-				// if no function call is found, we try to use builtin operators:
-				auto lhs_type = lhs->expression_type.getType();
-				auto rhs_type = rhs->expression_type.getType();
-
-				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
+				auto builtin = binaryBuiltin(stmt, std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(makeBox<code::UndefinedBinaryOperator>(
+					ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
 						stmt->getSourcePosition(),
 						stmt->getOperator().str(),
-						lhs_type.toString(),
-						rhs_type.toString()
+						makeBox<InteractiveType>(ctx, lhs_type),
+						makeBox<InteractiveType>(ctx, rhs_type)
 					));
 					// failed
 				}
@@ -201,7 +267,8 @@ namespace compiler::helios::code {
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
 				PstExprToHoutExprVisitor vis(ctx);
 				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
-				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, std::move(*vis.node));
+				if (vis.node)
+					node = makeBox<ParenthesisExpr>(ctx, pstOrigin(stmt), std::move(*vis.node));
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
@@ -212,7 +279,8 @@ namespace compiler::helios::code {
 					stmt->getName().position, ctx, stmt->getName().value
 				);
 
-				node = makeBox<IdentifierExpr>(ctx, sym_list.valueOrThrow().back());
+				node
+					= makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), sym_list.valueOrThrow().back());
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
@@ -220,96 +288,102 @@ namespace compiler::helios::code {
 				switch (stmt->getKeyword()) {
 				// true, false:
 				case pst::Keyword::True:
-					node = makeBox<LiteralBoolExpr>(ctx, true);
+					node = makeBox<LiteralBoolExpr>(ctx, pstOrigin(stmt), true);
 					break;
 				case pst::Keyword::False:
-					node = makeBox<LiteralBoolExpr>(ctx, false);
+					node = makeBox<LiteralBoolExpr>(ctx, pstOrigin(stmt), false);
 					break;
 
 
 				// types:
 				case pst::Keyword::Bool:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryBoolType>({}));
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getBoolType());
 					break;
 
 				case pst::Keyword::Char:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryCharType>({}));
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getCharType());
 					break;
 
 				case pst::Keyword::Str:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryStringType>({}));
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getStringType());
 					break;
 
 				case pst::Keyword::Type:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryMetaType>({}));
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
 					break;
 
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 128, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 128, Signed)
 					);
 					break;
 				case pst::Keyword::i64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 64, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 64, Signed)
 					);
 					break;
 				case pst::Keyword::i32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 32, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 32, Signed)
 					);
 					break;
 				case pst::Keyword::i16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 16, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 16, Signed)
 					);
 					break;
 				case pst::Keyword::i8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 8, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 8, Signed)
 					);
 					break;
 
 				case pst::Keyword::u128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 128, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 128, Unsigned)
 					);
 					break;
 				case pst::Keyword::u64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 64, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 64, Unsigned)
 					);
 					break;
 				case pst::Keyword::u32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 32, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 32, Unsigned)
 					);
 					break;
 				case pst::Keyword::u16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 16, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 16, Unsigned)
 					);
 					break;
 				case pst::Keyword::u8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 8, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 8, Unsigned)
 					);
 					break;
 
 				case pst::Keyword::f80:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 80 }));
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 80));
 					break;
 				case pst::Keyword::f128:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 128 }));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 128)
+					);
 					break;
 				case pst::Keyword::f64:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 64 }));
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 64));
 					break;
 				case pst::Keyword::f32:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 32 }));
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 32));
 					break;
 				case pst::Keyword::f16:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 16 }));
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
 
 
@@ -330,21 +404,21 @@ namespace compiler::helios::code {
 					}
 					expressions.emplace_back(std::move(res).valueOrThrow());
 				}
-
-				node = makeBox<TupleExpr>(ctx, std::move(expressions));
+				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				throw base::NotYetImplemented(
-					"Suffix operators are not yet implemented in HOUT, since there are any for now"
+					"Suffix operators are not yet implemented in HOUT, "
+					"since they don't exist yet"
 				);
 			}
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
-				auto inner = fromPST(ctx, stmt->getExpr());
-				if (inner.hasFailed()) return;  // failed
+				auto inner_res = fromPST(ctx, stmt->getExpr());
+				if (inner_res.hasFailed()) return;  // failed
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -353,16 +427,27 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
+				auto inner      = std::move(inner_res).valueOrThrow();
+				auto inner_type = inner->expression_type.getSymbolType();
 
-				auto expr_type = inner.valueOrThrow()->expression_type.getType();
-				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner.valueOrThrow()));
+				if (stmt->getOperator()
+				    == lang_def::operatorToStr(lang_def::NamedOperator::Ampersand)) {
+					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
+					// This should change to take value category into consideration as well as
+					// the `unique`/`leaking` specifiers.
+					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
 
+				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner), pstOrigin(stmt));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(makeBox<UndefinedUnaryOperator>(
-						stmt->getSourcePosition(), stmt->getOperator().str(), expr_type.toString()
+					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
+						stmt->getSourcePosition(),
+						stmt->getOperator().str(),
+						makeBox<InteractiveType>(ctx, inner_type)
 					));
 					// failed
 				}
@@ -381,7 +466,11 @@ namespace compiler::helios::code {
 				auto if_false  = std::move(if_false_res).valueOrThrow();
 
 				node = makeBox<TernaryOperatorExpr>(
-					ctx, std::move(condition), std::move(if_true), std::move(if_false)
+					ctx,
+					pstOrigin(stmt),
+					std::move(condition),
+					std::move(if_true),
+					std::move(if_false)
 				);
 			}
 
@@ -413,8 +502,8 @@ namespace compiler::helios::code {
 				std::vector<BuiltinBinary> operators;
 				operators.reserve(operator_count);
 				for (size_t i = 0; i < operator_count; ++i) {
-					auto lhs_type = result_exprs.at(i)->expression_type.getType();
-					auto rhs_type = result_exprs.at(i + 1)->expression_type.getType();
+					auto lhs_type = result_exprs.at(i)->expression_type.getSymbolType();
+					auto rhs_type = result_exprs.at(i + 1)->expression_type.getSymbolType();
 
 					auto result = findBinaryBuiltin(
 						ctx,
@@ -430,11 +519,11 @@ namespace compiler::helios::code {
 							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
 						operators.push_back(op);
 					} else {
-						ctx.log(makeBox<code::UndefinedBinaryOperator>(
+						ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
 							stmt->getSourcePosition(),
 							pst_operators.at(i).str(),
-							lhs_type.toString(),
-							rhs_type.toString()
+							makeBox<InteractiveType>(ctx, lhs_type),
+							makeBox<InteractiveType>(ctx, rhs_type)
 						));
 
 						return;
@@ -442,7 +531,7 @@ namespace compiler::helios::code {
 				}
 
 				node = makeBox<ChainComparisonExpr>(
-					ctx, std::move(result_exprs), std::move(operators)
+					ctx, pstOrigin(stmt), std::move(result_exprs), std::move(operators)
 				);
 			}
 		};
@@ -467,12 +556,7 @@ namespace compiler::helios {
 			return code::fromPST(ctx, key.element);
 		}
 
-		// @TODO: perhaps add cache
-		// Right now its not that simple since QueryHoutOfExpr
-		// has to return different expresion tree (unique_ptr).
-		// It might not be a problem in the future, so for now it is left without cache.
-
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
@@ -485,16 +569,14 @@ namespace compiler::helios {
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
-		if (expr_hout_qresult.hasFailed()) return query::Failed();
-
-		auto expr_hout = std::move(expr_hout_qresult).valueOrThrow();
+		UNPACK_QRESULT_CREF_TO_BOX(auto expr_hout =, expr_hout_qresult);
 
 		const auto coercion_qresult
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, expr_hout->clone()); }
 			variant_case(InvalidCoercion, _) {
 				if (log_error.has_value()) {
 					(*log_error)(ctx);

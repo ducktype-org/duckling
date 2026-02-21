@@ -9,7 +9,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
 #include <ranges>
@@ -66,11 +66,11 @@ namespace compiler::mir {
 			return lowerExpr(expr, continuation, function, expr_scope);
 		}
 
-		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
+		void visitLiteralUnitExpr(const hc::LiteralUnitExpr&) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
 
-		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
+		void visitLiteralNumericExpr(const hc::LiteralNumericExpr& value) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ value.value } });
 		}
 
@@ -78,8 +78,8 @@ namespace compiler::mir {
 			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
-		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
-			throw base::NotYetImplemented("string literal");
+		void visitLiteralStringExpr(const hc::LiteralStringExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {
@@ -397,6 +397,56 @@ namespace compiler::mir {
 			);
 		}
 
+		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
+			const auto& inner_type = expr.inner->expression_type.getSymbolType();
+
+			// If a reference of box is taken, no `AddressOf` instruction is inserted.
+			if (inner_type.getRefKind() == tsh::ReferenceKind::Box) {
+				output(lowerSubExpr(*expr.inner, continuation));
+			} else {
+				auto       hole          = continuation->addHole();
+				auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
+				const auto res_inner     = lowered_inner.getResult(function);
+				const auto result_type   = expr.expression_type.getSymbolType();
+
+				noValueOutput(
+					lowered_inner.begin,
+					hole,
+					Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
+					result_type
+				);
+			}
+		}
+
+		void visitBoxOfExpr(const hc::BoxOfExpr& expr) override {
+			auto       hole          = continuation->addHole();
+			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			const auto res_inner     = lowered_inner.getResult(function);
+			const auto result_type   = expr.expression_type.getSymbolType();
+
+			noValueOutput(
+				lowered_inner.begin,
+				hole,
+				Instruction(Operation::AllocBox, {}, { res_inner }, {}, expr_scope),
+				result_type
+			);
+		}
+
+		void visitDerefExpr(const hc::DerefExpr& expr) override {
+			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			auto value         = lowered_inner.getResult(function);
+
+			variant_match(std::move(value.getVariant())) {
+				variant_case(MIRPlace, place) {
+					valueOutput(lowered_inner.begin, place.withDeref());
+				}
+				variant_default {
+					// Deref base is not a place.
+					CORE_UNREACHABLE();
+				}
+			}
+		}
+
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
 			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));
@@ -414,7 +464,7 @@ namespace compiler::mir {
 		) {
 			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
 				tsh::SymbolType<> unit_sym_type{
-					function.getContext().query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -433,9 +483,11 @@ namespace compiler::mir {
 				}
 				std::ranges::reverse(element_types);
 
-				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
-					                           tsh::ReferenceKind::Direct,
-					                           tsh::Mutability::Mutable };
+				tsh::SymbolType<> result_type{
+					tsh::getMetaType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
 
 				return ExprLowerRes(
 					current,

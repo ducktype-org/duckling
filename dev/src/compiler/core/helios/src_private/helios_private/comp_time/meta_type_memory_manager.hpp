@@ -21,7 +21,9 @@ namespace compiler::helios::comptime_ops {
 		// Wrapper struct since hash function must be copy constructible.
 		struct SymbolTypeHasher {
 			std::size_t operator()(const tsh::SymbolType<>& t) const {
-				return static_cast<std::size_t>(t.queryUnstablePerfectHash());
+				return std::hash<decltype(t.queryUnstablePerfectHash())>{}(
+					t.queryUnstablePerfectHash()
+				);
 			}
 		};
 

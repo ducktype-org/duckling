@@ -22,6 +22,7 @@ namespace pst {
 	class CodeBlock;
 	class CodeBlockOrStmt;
 	class ClassBlock;
+	class StmtSpecifier;
 	class RoundGroupExpr;
 	class ExprElement;
 	// Patterns
@@ -39,13 +40,13 @@ namespace pst {
 	class ImportNested;
 	// Statements
 	class Import;
-	class StmtSpecifier;
 	class Using;
 	class ExprStmt;
 	class Alias;
 	class Action;
 	class Decl;
 	class Expand;
+	class SpecifierBlock;
 	// Declarations
 	class CodeDecl;
 	class TopLevel;
@@ -69,7 +70,7 @@ namespace pst {
 	class Throw;
 	class Break;
 	// Class Elements
-	class AccessBlock;
+	class ClassSpecifierBlock;
 	class ClassSpecial;
 	class Constructor;
 	class CopyConstructor;
@@ -81,7 +82,7 @@ namespace pst {
 		class PrefixOperator;
 		class SuffixOperator;
 		class BinaryOperator;
-		class ExprValue;
+		class ExprNumericValue;
 		class ExprStrValue;
 		class ExprCharValue;
 		class Literal;

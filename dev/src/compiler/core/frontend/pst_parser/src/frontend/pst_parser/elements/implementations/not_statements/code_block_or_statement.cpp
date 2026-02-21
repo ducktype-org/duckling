@@ -4,7 +4,7 @@
 
 namespace pst {
 	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(
-		LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
+		LangParserState& state, BlockOrderType code_block_order_type
 	) {
 		auto out = makeBox<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
@@ -19,7 +19,7 @@ namespace pst {
 			state.parse(out).assign(&out->stmt, std::move(stmt));
 		}
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void CodeBlockOrStmt::dprint(std::ostream& out) const {

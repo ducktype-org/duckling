@@ -8,6 +8,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -16,8 +17,8 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <cmath>
 #include <ranges>
@@ -61,8 +62,8 @@ namespace compiler::helios {
 				result = CompileTimeValue{ expr.value };
 			}
 
-			void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
-				throw base::NotYetImplemented("Evaluation of string values in compile time");
+			void visitLiteralStringExpr(const code::LiteralStringExpr& expr) final {
+				result = CompileTimeValue{ expr.value };
 			}
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {
@@ -78,10 +79,32 @@ namespace compiler::helios {
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
 					result    = type->valueOrThrow();
-				} else {
+				} else if (kind(expr.symbol) == SymbolKind::Const) {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
+				} else {
+					match_optional(expr.origin.getSourcePosition()) {
+						opt_some(pos) {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								"Expression cannot be evaluated at compile-time.", pos
+							));
+						}
+						opt_none {
+							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+								"Expression cannot be evaluated at compile-time.",
+								base::strConcat(
+									"The code is unavailable because the expression is at least "
+									"partially compiler generated.",
+									"The failure happened for the symbol `",
+									name(expr.symbol),
+									"`."
+								)
+							));
+						}
+					}
+					result = query::Failed();
+					return;
 				}
 			}
 
@@ -149,12 +172,26 @@ namespace compiler::helios {
 										break;
 									case IntegerDiv:
 									case FloatDiv:
-										if (rhs_val == 0) return query::Failed();
+										if (rhs_val == 0) {
+											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+												"Division by zero in compile-time expression "
+												"evaluation.",
+												expr.origin.getSourcePosition().value()
+											));
+											return query::Failed();
+										}
 										result = lhs_val / rhs_val;
 										break;
 									case IntegerMod:
 									case FloatMod:
-										if (rhs_val == 0) return query::Failed();
+										if (rhs_val == 0) {
+											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+												"Modulo by zero in compile-time expression "
+												"evaluation.",
+												expr.origin.getSourcePosition().value()
+											));
+											return query::Failed();
+										}
 										if constexpr (std::is_integral_v<ResultT>)
 											result = lhs_val % rhs_val;
 										else
@@ -453,51 +490,22 @@ namespace compiler::helios {
 			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 
-				bool coercion_success = true;
-
 				for (auto& sub_type: expr.subtypes) {
-					auto coercion_qresult
-						= canCoerceToMeta(ctx, sub_type->expression_type.getSymbolType());
-					if (coercion_qresult.hasFailed()) {
-						coercion_success = false;
-						continue;
+					CORE_ASSERT(
+						sub_type->expression_type.getType().getKind() == tsh::Kind::Meta,
+						"It's impossible to create a variant of non-type sub-types in HOUT"
+					);
+
+					const auto sub_type_ctv
+						= ctx.query<QueryEvaluateHOUTExpression>({ sub_type.ref() });
+					if (sub_type_ctv.hasFailed()) {
+						result = query::Failed();
+						return;
 					}
 
-					variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-						variant_case(Coercion, coercion) {
-							const auto sub_type_coerced = coercion.coerce(ctx, sub_type->clone());
-
-							const auto sub_type_ctv
-								= ctx.query<QueryEvaluateHOUTExpression>({ sub_type_coerced.ref() });
-							if (sub_type_ctv.hasFailed()) {
-								result = query::Failed();
-								return;
-							}
-
-							subtypes.emplace_back(
-								sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
-							);
-						}
-						variant_case(InvalidCoercion, _) {
-							coercion_success = false;
-
-							// @TODO: #1620 report error properly when HOUT exposes source positions.
-
-							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-								"Cannot coerce variant subtype of type ",
-								sub_type->expression_type.getSymbolType().toString(),
-								" to meta type."
-							)));
-						}
-						variant_default {
-							CORE_PANIC("Unexpected coercion result when coercing to meta type.");
-						}
-					}
-				}
-
-				if (!coercion_success) {
-					result = query::Failed();
-					return;
+					subtypes.emplace_back(
+						sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+					);
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
@@ -538,6 +546,12 @@ namespace compiler::helios {
 				result = sub_result.valueOrThrow();
 			}
 
+			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitBoxOfExpr(const code::BoxOfExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
+
 			/**
 			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,
 			 * or a unit to a type.
@@ -551,7 +565,7 @@ namespace compiler::helios {
 					variant_case(tsh::SymbolType<>, symbol_type) { return symbol_type; }
 					variant_case_novalue(CompileTimeValue::UnitCTV) {
 						return tsh::SymbolType<>{
-							ctx.query<tsh::QueryUnitType>({}),
+							tsh::getUnitType(),
 							tsh::ReferenceKind::Direct,
 							tsh::Mutability::Mutable,
 						};
@@ -621,8 +635,8 @@ namespace compiler::helios {
 
 			for (const SymID& func_id: *dependencies) {
 				// @TODO: #826 Change this code to a single query once it gets implemented.
-				auto  hout_func = ctx.query<QueryCodeOfFun>(func_id).valueOrThrow();
-				auto& mir_func  = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
+				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
+				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();
 
 				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
 
@@ -735,17 +749,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateHOUTExpression);
 
-	struct IMPLEMENT_QUERY(QueryEvaluatePSTExpression, CompTimeEvalResult) {
-		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			UNPACK_QRESULT_MOVE(auto expr =, ctx.query<QueryHoutOfExpr>({ key.element }));
-			return ctx.query<QueryEvaluateHOUTExpression>({ expr.ref() });
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluatePSTExpression);
-
 	CompTimeEvalResult getTypeCTVFromPST(
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
@@ -753,7 +756,7 @@ namespace compiler::helios {
 			ctx,
 			pst_expr,
 			tsh::SymbolType<>{
-				ctx.query<tsh::QueryMetaType>({}),
+				tsh::getMetaType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			}

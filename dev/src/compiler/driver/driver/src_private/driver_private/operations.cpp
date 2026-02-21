@@ -10,16 +10,14 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/component_hash.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_cache_macros.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::driver {
 
 
 	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
-		QUERY_AUTO_NO_CACHE
-
 		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
 			const auto& hout_unit   = *key.hout_unit.get();
 			auto        module_name = key.module_name;
@@ -83,15 +81,17 @@ namespace compiler::driver {
 				.globals   = globals,
 			};
 		}
+
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileHOUTUnitToLIRModuleData);
 
 	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRModuleData>) {
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_CREF
 
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
-			auto hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id).valueOrThrow();
+			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
 
 			auto module_name
@@ -102,7 +102,9 @@ namespace compiler::driver {
 				)
 			                      .c_str());
 
-			return ctx.query<CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
+			// we intentially make copy here, to keep the data in the
+			// cache of this query
+			return *ctx.query<CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
 		}
 	};
 

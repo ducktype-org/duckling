@@ -191,7 +191,7 @@ namespace pst {
 			if constexpr (BRACKETS != lexer::Token::BracketType::None)
 				state.parse(out).goUpAndSkip();
 
-			return out;
+			PST_RETURN out;
 		}
 	};
 }

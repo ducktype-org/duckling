@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/box.hpp>
@@ -42,24 +44,42 @@ namespace artifacts {
 	/**
 	 * @brief Represents an artifact that maps to a file, e.g. an object file produced by the
 	 * compiler.
+	 *
+	 * @note This type is intentially simple and copyable, think of it as a File-ID.
+	 *
+	 * \parallel There is at the moment no synchronization on file access. During
+	 * compilation/lowering/backends files can be written to disk. Processed files and backend
+	 * outputs (LLVM IR/ASM/object files, DVM files) in concurrent builds of the same module/package
+	 * can collide on paths. See:
+	 *  - \ref dev/src/compiler/driver/driver/src/driver/operations/generic_operations.cpp
+	 *  - \ref
+	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_llvm.cpp
+	 *  - \ref
+	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_dvm.cpp
 	 */
 	struct FileArtifact final {
-		const Ref<ArtifactCollection> PARENT;
-		const base::StrID             NAME;
+		const Ref<ArtifactCollection> parent;
+		const base::StrID             name;
 
 		/**
 		 * @brief File that stores this `FileArtifact`'s data.
 		 */
-		const fs::File FILE;
+		const fs::File file;
 	};
 
 	/**
 	 * @brief Represents an artifact, that can be represented as bytes, e.g. result of a query that
 	 * returns an int.
+	 *
+	 * @note This type is intentially simple and copyable, think of it as a Blob-ID.
+	 *
+	 * @note Methods call on this object are thread safe, but there is no synchronization beyond
+	 * that. If threads are writing to the blob, while someone is reading content by using the view
+	 * from `getDataView`, it will result in a race condition.
 	 */
 	struct BlobArtifact final {
-		const Ref<ArtifactCollection> PARENT;
-		const base::StrID             NAME;
+		const Ref<ArtifactCollection> parent;
+		const base::StrID             name;
 
 		/**
 		 * @brief Sets blob's data.
@@ -128,22 +148,22 @@ namespace artifacts {
 
 		/////////////////////////// FILE ARTIFACTS /////////////////////////
 
-		const FileArtifact& fileArtifactNew(base::StrID artifact_name);
+		FileArtifact fileArtifactNew(base::StrID artifact_name);
 
-		const FileArtifact& fileArtifactAtOrNew(base::StrID artifact_name);
+		FileArtifact fileArtifactAtOrNew(base::StrID artifact_name);
 
-		const FileArtifact& fileArtifactAt(base::StrID artifact_name) const;
+		FileArtifact fileArtifactAt(base::StrID artifact_name) const;
 
 		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybe(base::StrID artifact_name
 		) const;
 
 		/////////////////////////// BLOB ARTIFACTS /////////////////////////
 
-		const BlobArtifact& blobArtifactNew(base::StrID artifact_name);
+		BlobArtifact blobArtifactNew(base::StrID artifact_name);
 
-		const BlobArtifact& blobArtifactAtOrNew(base::StrID artifact_name);
+		BlobArtifact blobArtifactAtOrNew(base::StrID artifact_name);
 
-		const BlobArtifact& blobArtifactAt(base::StrID artifact_name) const;
+		BlobArtifact blobArtifactAt(base::StrID artifact_name) const;
 
 		base::Optional<base::CRef<BlobArtifact>> blobArtifactAtMaybe(base::StrID artifact_name
 		) const;
@@ -152,6 +172,7 @@ namespace artifacts {
 
 		template<SerdeType T>
 		void setBlobData(const BlobArtifact& blob, const T& data) {
+			// lock will happen in the call bellow:
 			setBlobData(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
 		}
 
@@ -159,21 +180,102 @@ namespace artifacts {
 
 		template<SerdeType T>
 		const T getBlobData(const BlobArtifact& blob) const {
+			// lock will happen in the call bellow:
 			return deserialize<T>(getBlobDataView(blob));
 		}
 
 		/////////////////////////// PRIVATE /////////////////////////
 
 	private:
+		/////////////////// NO LOCK INTERNALL API ///////////////////
+
+		/**
+		 * @brief Flushes ArtifactCollection tree data to the disk.
+		 */
+		void flushNoLock();
+
+		Ref<ArtifactCollection> subCollectionNewNoLock(base::StrID collection_name);
+
+		Ref<ArtifactCollection> subCollectionAtOrNewNoLock(base::StrID collection_name);
+
+		Ref<ArtifactCollection> subCollectionAtNoLock(base::StrID collection_name);
+
+		base::Optional<Ref<ArtifactCollection>> subCollectionAtMaybeNoLock(base::StrID collection_name
+		);
+
+		FileArtifact fileArtifactNewNoLock(base::StrID artifact_name);
+
+		FileArtifact fileArtifactAtOrNewNoLock(base::StrID artifact_name);
+
+		FileArtifact fileArtifactAtNoLock(base::StrID artifact_name) const;
+
+		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybeNoLock(base::StrID artifact_name
+		) const;
+
+
+		BlobArtifact blobArtifactNewNoLock(base::StrID artifact_name);
+
+		BlobArtifact blobArtifactAtOrNewNoLock(base::StrID artifact_name);
+
+		BlobArtifact blobArtifactAtNoLock(base::StrID artifact_name) const;
+
+		base::Optional<base::CRef<BlobArtifact>> blobArtifactAtMaybeNoLock(base::StrID artifact_name
+		) const;
+
+		void setBlobDataNoLock(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
+
+		template<SerdeType T>
+		void setBlobDataNoLock(const BlobArtifact& blob, const T& data) {
+			setBlobDataNoLock(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
+		}
+
+		base::RawView getBlobDataViewNoLock(const BlobArtifact& blob) const;
+
+		template<SerdeType T>
+		const T getBlobDataNoLock(const BlobArtifact& blob) const {
+			return deserialize<T>(getBlobDataViewNoLock(blob));
+		}
+
+		///////////////////////// OBJECT STATE //////////////////////
+
+
 		const std::filesystem::path PATH;
 
+		mutable concurrent::AtomicFlagSpinlock lock;
+
+		/**
+		 * @brief RAII struct for locking the collection.
+		 */
+		struct WithLock final {
+			const ArtifactCollection& collection;
+
+			WithLock(const ArtifactCollection& collection): collection(collection) {
+				collection.lock.lock();
+			}
+
+			~WithLock() { collection.lock.unlock(); }
+		};
+
+		/**
+		 * @name  Artifacts storage
+		 * @brief Global artifacts hierarchy for build/query outputs (files and blobs), persisted to
+		 * disk.
+		 * \parallel Written by CompileModule and other driver operations; concurrent writes can race.
+		 * @note Accessed by \ref getRootCollection and \ref setRootCollection
+		 * @{
+		 */
 		base::HashMap<base::StrID, FileArtifact> file_artifacts;
 		base::HashMap<base::StrID, BlobArtifact> blob_artifacts;
 		base::HashMap<base::StrID, Box<Bytes>>   blob_data;
 
-		base::HashMap<base::StrID, Box<ArtifactCollection>>
-			sub_collections;  /// Box, because we may need stable refs. Cannot be base::StableHashMap,
-		                      /// because we are using a private constructor of collection.
+		/**
+		 * Box, because we may need stable refs. Cannot be base::StableHashMap, because we are using
+		 * a private constructor of collection.
+		 */
+		base::HashMap<base::StrID, Box<ArtifactCollection>> sub_collections;
+		/**
+		 * @}
+		 */
 
 		const base::Optional<Ref<ArtifactCollection>> PARENT;
 
