@@ -652,11 +652,19 @@ namespace compiler::helios {
 				                 ->getNames();
 				std::vector<base::StrID> module_path{ names.begin(), names.end() };
 
-				auto imported_module
-					= frontend::getRelativeModule(ctx, module(scope(key)), module_path).value();
+				auto maybe_imported_module
+					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
+
+				if (!maybe_imported_module.has_value()) {
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Module not found",
+						import_stmt->getSourcePosition()
+					));
+					return;
+				}
 
 				// Here we don't access just root scope, because root scopes are currently empty:
-				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
+				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, maybe_imported_module.value());
 
 				output(linked_scope);
 			}

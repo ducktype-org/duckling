@@ -1,0 +1,5 @@
+import sub;
+
+fun main() = {
+    sub.print();
+}
