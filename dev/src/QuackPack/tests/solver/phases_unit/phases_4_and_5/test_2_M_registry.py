@@ -9,7 +9,11 @@ from quackpack.core.solver.solving.build_rules_constructor import construct_buil
 from quackpack.core.solver.solving.solver_engine import run_engine
 from quackpack.core.solver.types.flag_type import FeatureId
 from quackpack.core.solver.types.packages_by_id import PackagesById
-from quackpack.core.solver.types.resolved_id import ResolvedIdGit, ResolvedIdLocal, ResolvedIdRegistry
+from quackpack.core.solver.types.resolved_id import (
+    ResolvedIdGit,
+    ResolvedIdLocal,
+    ResolvedIdRegistry,
+)
 from quackpack.core.solver.types.resolved_package import (
     ResolvedPackage,
     ResolvedPackageLocal,
@@ -42,12 +46,24 @@ class FakeGlobalContext(GlobalContext):
 
 def tests_2_medium_with_flags(tmp_path: Path):
     main_id = ResolvedIdLocal(local_path=Path.cwd())
-    U_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("U"))
-    V_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("V"))
-    W_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("W"))
-    X_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("X"))
-    Y_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("Y"))
-    Z_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("Z"))
+    U_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("U")
+    )
+    V_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("V")
+    )
+    W_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("W")
+    )
+    X_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("X")
+    )
+    Y_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("Y")
+    )
+    Z_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("Z")
+    )
 
     main_v1 = ResolvedPackageLocal(_id=main_id)
     U_v13 = ResolvedPackageRegistry(_id=U_id, _version=Version(1, 3))
@@ -97,7 +113,9 @@ features: {m1: [m1], m2: [m2], m3: [m3]}"""
     tmp_file.touch()
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[main_v1] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[main_v1] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_U_v13 = """
 metadata:
@@ -140,7 +158,9 @@ dependencies:
     tmp_file.touch()
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[U_v312] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[U_v312] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_V_v1 = """
 metadata:
@@ -278,7 +298,9 @@ features: {y: [y]}"""
     tmp_file.touch()
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[Y_v314] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[Y_v314] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_Y_v4 = """
 metadata:
@@ -354,7 +376,9 @@ features: {z1: [z1], z2: [z2]}"""
     tmp_file.touch()
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[Z_v263] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[Z_v263] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     packages_by_id: PackagesById = PackagesById()
     packages_by_id[main_id].add(main_v1)
@@ -420,9 +444,14 @@ features: {z1: [z1], z2: [z2]}"""
     )
 
     solution = run_engine(
-        data=gathered, root_projects=[(main_v1, {Identifier("m1"), Identifier("m2"), Identifier("m3")})]
+        data=gathered,
+        root_projects=[
+            (main_v1, {Identifier("m1"), Identifier("m2"), Identifier("m3")})
+        ],
     )
-    build_rules = construct_build_rules(summaries=summaries, solution=solution, id_resolvents=id_resolvents)
+    build_rules = construct_build_rules(
+        summaries=summaries, solution=solution, id_resolvents=id_resolvents
+    )
 
     assert set(build_rules.flags_to_install[main_v1]) == {
         Identifier("m1"),
@@ -436,7 +465,10 @@ features: {z1: [z1], z2: [z2]}"""
     assert build_rules.flags_to_install[X_v11] == []
     assert build_rules.flags_to_install[Y_v1] == []
     assert build_rules.flags_to_install[Y_v314] == [Identifier("y")]
-    assert set(build_rules.flags_to_install[Z_v263]) == {Identifier("z1"), Identifier("z2")}
+    assert set(build_rules.flags_to_install[Z_v263]) == {
+        Identifier("z1"),
+        Identifier("z2"),
+    }
     assert {U_v13, V_v1, X_v1, Y_v2, Y_v3, Y_v4, Y_v5, Z_v24}.intersection(
         set(build_rules.flags_to_install.keys())
     ) == set()
@@ -451,11 +483,17 @@ features: {z1: [z1], z2: [z2]}"""
     assert build_rules.instructions[U_v27] == {}
     assert build_rules.instructions[U_v312] == {Identifier("Y"): Y_v1}
     assert build_rules.instructions[V_v2] == {}
-    assert build_rules.instructions[W_v1] == {Identifier("Y"): Y_v314, Identifier("Z"): Z_v263}
+    assert build_rules.instructions[W_v1] == {
+        Identifier("Y"): Y_v314,
+        Identifier("Z"): Z_v263,
+    }
     assert build_rules.instructions[X_v11] == {}
     assert build_rules.instructions[Y_v1] == {}
     assert build_rules.instructions[Y_v314] == {}
-    assert build_rules.instructions[Z_v263] == {Identifier("V"): V_v2, Identifier("U"): U_v27}
+    assert build_rules.instructions[Z_v263] == {
+        Identifier("V"): V_v2,
+        Identifier("U"): U_v27,
+    }
     assert {U_v13, V_v1, X_v1, Y_v2, Y_v3, Y_v4, Y_v5, Z_v24}.intersection(
         set(build_rules.instructions.keys())
     ) == set()

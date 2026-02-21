@@ -52,7 +52,9 @@ class CompileConnection(CodeSinkConnection):
         self.dependencies: str | None = None
 
     @override
-    def load_dependencies(self, freeze: VenvFreeze, path_mapping: dict[PackageId, Path]) -> None:
+    def load_dependencies(
+        self, freeze: VenvFreeze, path_mapping: dict[PackageId, Path]
+    ) -> None:
         # print(f"LOAD_DEPENDENCIES: venv freeze: {freeze}, paths: {path_mapping}")
 
         class _DependencyCmdEntry(BaseModel):
@@ -62,7 +64,9 @@ class CompileConnection(CodeSinkConnection):
         path_mappings = [(k, str(v)) for k, v in path_mapping.items()]
 
         # NOTE: This format is temporary.
-        self.dependencies = _DependencyCmdEntry(freeze=freeze, path_mapping=path_mappings).model_dump_json()
+        self.dependencies = _DependencyCmdEntry(
+            freeze=freeze, path_mapping=path_mappings
+        ).model_dump_json()
 
     def get_compiler_args(self) -> list[str]:
         assert self.artifacts is not None

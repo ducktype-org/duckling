@@ -39,11 +39,15 @@ async def _info_impl(
     with FetcherContext(ctx) as fetcher:
         result = await fetcher.search(ctx.registry_url(), package_name)
 
-    exact_matches = [pkg for pkg in result.result if str(pkg.id).lower() == package_name.lower()]
+    exact_matches = [
+        pkg for pkg in result.result if str(pkg.id).lower() == package_name.lower()
+    ]
 
     if package_version is not None:
         exact_matches = [
-            pkg for pkg in exact_matches if Version.create_from_string(pkg.version) == package_version
+            pkg
+            for pkg in exact_matches
+            if Version.create_from_string(pkg.version) == package_version
         ]
 
     exact_matches.sort(key=lambda pkg: pkg.version, reverse=True)

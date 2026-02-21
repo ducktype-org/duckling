@@ -1,6 +1,11 @@
 from quackpack.core.package_loader import PackageLoader
 from quackpack.core.types.manifest.editable import Section
-from quackpack.driver.commands.add import AddOptions, NewDependencyType, add, parse_feature_flags
+from quackpack.driver.commands.add import (
+    AddOptions,
+    NewDependencyType,
+    add,
+    parse_feature_flags,
+)
 from quackpack.util.global_context import GlobalContext
 
 from ._arguments import Arguments
@@ -18,10 +23,16 @@ def get_parser() -> CliParser:
     return (
         CliParser.subcommand(name="add", description="Add packages to the current venv")
         .add_flag(long_name="--dev", help="Add packages as dev dependencies")
-        .add_flag(long_name="--global", short_name="-g", help="Add packages to the global venv instead")
+        .add_flag(
+            long_name="--global",
+            short_name="-g",
+            help="Add packages to the global venv instead",
+        )
         .add_exclusive_group(
             group=ExclusiveGroup()
-            .add_flag(long_name="--local", help="Add dependencies as local dependencies")
+            .add_flag(
+                long_name="--local", help="Add dependencies as local dependencies"
+            )
             .add_flag(long_name="--git", help="Add dependencies as git dependencies")
         )
         .add_str(
@@ -30,7 +41,11 @@ def get_parser() -> CliParser:
             help="Enable features for new packages",
             argument_count=ArgumentCount.ZeroOrMore,
         )
-        .add_str(long_name="packages", argument_count=ArgumentCount.OneOrMore, help="Packages to add")
+        .add_str(
+            long_name="packages",
+            argument_count=ArgumentCount.OneOrMore,
+            help="Packages to add",
+        )
     )
 
 
@@ -57,5 +72,12 @@ def execute(ctx: GlobalContext, args: Arguments) -> None:
         type_ = NewDependencyType.Local
     else:
         type_ = NewDependencyType.Registry
-    opts = AddOptions(packages=packages, type=type_, flags=flags, ctx=ctx, section=section, source=package)
+    opts = AddOptions(
+        packages=packages,
+        type=type_,
+        flags=flags,
+        ctx=ctx,
+        section=section,
+        source=package,
+    )
     add(opts)

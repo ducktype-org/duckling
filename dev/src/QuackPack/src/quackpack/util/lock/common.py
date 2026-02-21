@@ -23,7 +23,11 @@ class BaseFileLock(AbstractContextManager[None], ABC):
 
     @abstractmethod
     def __init__(
-        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, *, blocking: bool = True
+        self,
+        path: Path,
+        lock_type: LockType = LockType.EXCLUSIVE,
+        *,
+        blocking: bool = True
     ) -> None: ...
 
     @classmethod

@@ -56,7 +56,9 @@ class SQLiteDatabase:
         cursor.execute(query, params)
         self.connection.commit()
 
-    def fetch_all(self, query: str, params: tuple[Any, ...] = ()) -> list[tuple[Any, ...]]:
+    def fetch_all(
+        self, query: str, params: tuple[Any, ...] = ()
+    ) -> list[tuple[Any, ...]]:
         """
         Execute an SQL query and fetch all results.
 
@@ -73,7 +75,9 @@ class SQLiteDatabase:
         self.connection.commit()
         return cursor.fetchall()
 
-    def fetch_one(self, query: str, params: tuple[Any, ...] = ()) -> tuple[Any, ...] | None:
+    def fetch_one(
+        self, query: str, params: tuple[Any, ...] = ()
+    ) -> tuple[Any, ...] | None:
         """
         Execute an SQL query and fetch a single result.
 

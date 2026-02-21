@@ -33,7 +33,9 @@ def execute(ctx: GlobalContext, args: Arguments) -> None:
     package_version: str = args.matched.version
 
     opts = InfoOptions(
-        ctx=ctx, package_name=package_name, package_version=Version.create_from_string(package_version)
+        ctx=ctx,
+        package_name=package_name,
+        package_version=Version.create_from_string(package_version),
     )
 
     info(opts)

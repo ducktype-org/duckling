@@ -517,4 +517,7 @@ dependencies:
 """)
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
-    assert str(excinfo.value) == "`dependencies.a.conditions.package_features` is an empty list"
+    assert (
+        str(excinfo.value)
+        == "`dependencies.a.conditions.package_features` is an empty list"
+    )

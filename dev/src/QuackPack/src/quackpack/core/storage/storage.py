@@ -23,7 +23,13 @@ from quackpack.core.package_loader import PackageLoader
 from quackpack.core.signals import EnableInterrupt
 from quackpack.core.solver.solver import Solver
 from quackpack.core.solver.types.solver_mode import SolverMode
-from quackpack.core.storage.files import StorageVenv, VenvFreeze, fix_and_load_venv, save_venv, try_fsync_dir
+from quackpack.core.storage.files import (
+    StorageVenv,
+    VenvFreeze,
+    fix_and_load_venv,
+    save_venv,
+    try_fsync_dir,
+)
 from quackpack.core.storage.git_access import StorageGitAccess
 from quackpack.core.storage.locks import CleanLock, RunLock, TrySyncLock, cleanup_locks
 from quackpack.core.storage.paths import StoragePaths
@@ -35,7 +41,13 @@ from quackpack.util.lock import FileLock
 from quackpack.util.lock.common import LockWouldBlock
 from quackpack.util.logger import get_logger
 from quackpack.util.types.errors import QuackPackError
-from quackpack.util.types.pkgid import GitPackageId, Identifier, LocalPackageId, PackageId, RegistryPackageId
+from quackpack.util.types.pkgid import (
+    GitPackageId,
+    Identifier,
+    LocalPackageId,
+    PackageId,
+    RegistryPackageId,
+)
 
 logger = get_logger(__name__)
 
@@ -44,7 +56,10 @@ MAX_BLOB_RETRY_COUNT: Final[int] = 3
 
 
 def run(
-    ctx: GlobalContext, id_or_package: Package | Identifier, sink: CodeSink, entry_path: Path
+    ctx: GlobalContext,
+    id_or_package: Package | Identifier,
+    sink: CodeSink,
+    entry_path: Path,
 ) -> Continuation:
     """
     Run code or compile it, depending on the provided ``sink``.
@@ -76,13 +91,18 @@ def run(
         with FileLock(storage.venv_data_lock(venv_id)):
             data = fix_and_load_venv(storage, venv_id)
             if data is None:
-                raise QuackPackError(f"the virtual environment {venv_id} does not exist")
+                raise QuackPackError(
+                    f"the virtual environment {venv_id} does not exist"
+                )
             if isinstance(id_or_package, Package):
                 summary = None
                 if manifest is not None:
                     summary = manifest.summary
                 if not is_synchronized(
-                    summary, input_freeze, data, id_or_package.venv_config.freezefile_exposed()
+                    summary,
+                    input_freeze,
+                    data,
+                    id_or_package.venv_config.freezefile_exposed(),
                 ):
                     raise QuackPackError("Venv is unsynchronized")
             data.last_access = time()
@@ -105,18 +125,28 @@ def run(
     return connection.finalize(entry_path)
 
 
-def _dependency_paths(storage: StoragePaths, data: StorageVenv) -> dict[PackageId, Path]:
+def _dependency_paths(
+    storage: StoragePaths, data: StorageVenv
+) -> dict[PackageId, Path]:
     result = dict[PackageId, Path]()
     for id in data.freeze.dependencies:
         if isinstance(id.inner, LocalPackageId):
-            result[id] = id.inner.path if id.inner.path.is_absolute() else data.last_location / id.inner.path
+            result[id] = (
+                id.inner.path
+                if id.inner.path.is_absolute()
+                else data.last_location / id.inner.path
+            )
         else:
             result[id] = storage.pkg_dir(id)
     return result
 
 
 def venv_sync(
-    ctx: GlobalContext, package: Package, overwrite: bool = False, frozen: bool = False, offline: bool = False
+    ctx: GlobalContext,
+    package: Package,
+    overwrite: bool = False,
+    frozen: bool = False,
+    offline: bool = False,
 ) -> None:
     """
     Synchronize the storage state of a virtual environment with the user's package configuration.
@@ -136,19 +166,25 @@ def venv_sync(
         with TrySyncLock(storage, venv_id):
             with FileLock(storage.venv_data_lock(venv_id)):
                 data = fix_and_load_venv(storage, venv_id)
-            if is_synchronized(manifest.summary, input_freeze, data, venv_config.freezefile_exposed()):
+            if is_synchronized(
+                manifest.summary, input_freeze, data, venv_config.freezefile_exposed()
+            ):
                 logger.debug("Already synchronized")
                 return
 
             freeze: VenvFreeze | None = None
-            if input_freeze is not None and check_direct_dependencies(manifest.summary, input_freeze):
+            if input_freeze is not None and check_direct_dependencies(
+                manifest.summary, input_freeze
+            ):
                 # TODO the external freezefile should probably be checked for correctness
                 # (also note: currently when direct dependencies are not satisfied, the freeze file is regenerated,
                 # maybe user should opt-in to that)
                 freeze = input_freeze
             if freeze is None:
                 if frozen:
-                    raise QuackPackError("Synchronization would require changing the freezefile")
+                    raise QuackPackError(
+                        "Synchronization would require changing the freezefile"
+                    )
                 solver = Solver(
                     ctx=ctx,
                     root_path=package.package_root,
@@ -162,7 +198,8 @@ def venv_sync(
                 )
                 with FileLock(ctx.ensure_fetcher_lockfile()):
                     git_access = StorageGitAccess(
-                        paths=storage, cached=data.freeze.git_fetch_cache if data is not None else {}
+                        paths=storage,
+                        cached=data.freeze.git_fetch_cache if data is not None else {},
                     )
                     gathered_data = asyncio.run(solver.prepare_solving(git_access))
                 freeze = solver.finish_solving(gathered_data)
@@ -186,7 +223,12 @@ def venv_sync(
                 and data.last_location.exists()
             ):
                 try:
-                    replaces = Package(data.last_location, None, None, ctx).manifest.summary.name == venv_id
+                    replaces = (
+                        Package(
+                            data.last_location, None, None, ctx
+                        ).manifest.summary.name
+                        == venv_id
+                    )
                 except QuackPackError:
                     replaces = False
                 if replaces:
@@ -216,7 +258,9 @@ def venv_sync(
         ) from None
 
 
-async def _fetch_blobs(storage: StoragePaths, fetcher_ctx: FetcherContext, to_install: list[PackageId]):
+async def _fetch_blobs(
+    storage: StoragePaths, fetcher_ctx: FetcherContext, to_install: list[PackageId]
+):
     """
     Fetch and extract package blobs required for installation.
 
@@ -254,7 +298,9 @@ async def _fetch_blobs(storage: StoragePaths, fetcher_ctx: FetcherContext, to_in
 
         async def fetch_task_git(pkg_id: GitPackageId) -> None:
             pkg_dir = storage.pkg_dir(pkg_id.upcast())
-            git_result = await fetcher.clone_from_git(GitSource(git_url=pkg_id.url, commit=pkg_id.commit))
+            git_result = await fetcher.clone_from_git(
+                GitSource(git_url=pkg_id.url, commit=pkg_id.commit)
+            )
             if pkg_dir.exists():
                 shutil.rmtree(pkg_dir)
             git_result.destination_path.rename(pkg_dir)
@@ -285,9 +331,17 @@ def venv_delete(ctx: GlobalContext, id_or_package: Package | Identifier) -> None
     :rtype: None
     """
     storage = StoragePaths(ctx.ensure_storage_dir())
-    venv_id = id_or_package if isinstance(id_or_package, Identifier) else id_or_package.manifest.summary.name
+    venv_id = (
+        id_or_package
+        if isinstance(id_or_package, Identifier)
+        else id_or_package.manifest.summary.name
+    )
     try:
-        with TrySyncLock(storage, venv_id), FileLock(storage.venv_data_lock(venv_id)), EnableInterrupt():
+        with (
+            TrySyncLock(storage, venv_id),
+            FileLock(storage.venv_data_lock(venv_id)),
+            EnableInterrupt(),
+        ):
             shutil.rmtree(storage.venv_dir(venv_id), ignore_errors=True)
     except LockWouldBlock:
         raise QuackPackError(
@@ -332,7 +386,10 @@ def clean_storage(ctx: GlobalContext) -> CleanOutput:
                     if data.last_access > current_time:
                         data.last_access = current_time
                         requires_save = True
-                    if data.is_ephemeral and data.last_access + ctx.storage_tmp_lifetime() < current_time:
+                    if (
+                        data.is_ephemeral
+                        and data.last_access + ctx.storage_tmp_lifetime() < current_time
+                    ):
                         logger.debug(
                             f"Removing expired ephemeral virtual environment at {venv} from the shared storage"
                         )
@@ -395,7 +452,9 @@ def venv_list(ctx: GlobalContext) -> dict[str, StorageVenv]:
     return metadata
 
 
-def venv_info(ctx: GlobalContext, id_or_package: Package | Identifier) -> StorageVenv | None:
+def venv_info(
+    ctx: GlobalContext, id_or_package: Package | Identifier
+) -> StorageVenv | None:
     """
     Retrieve the storage state of a specific virtual environment.
 
@@ -405,7 +464,11 @@ def venv_info(ctx: GlobalContext, id_or_package: Package | Identifier) -> Storag
     :rtype: quackpack.storage.files.StorageVenv | None
     """
     storage = StoragePaths(ctx.ensure_storage_dir())
-    venv_id = id_or_package if isinstance(id_or_package, Identifier) else id_or_package.manifest.summary.name
+    venv_id = (
+        id_or_package
+        if isinstance(id_or_package, Identifier)
+        else id_or_package.manifest.summary.name
+    )
     with FileLock(storage.venv_data_lock(venv_id)):
         data = fix_and_load_venv(storage, venv_id)
     return data
@@ -426,13 +489,19 @@ def check_direct_dependencies(summary: Summary, freeze: VenvFreeze) -> bool:
             return False
         freeze_dep_id = freeze.direct_dependencies[alias]
         forced_features = set(dep.enabled_features(summary.features))
-        missing_features = forced_features.difference(freeze.dependencies[freeze_dep_id].used_flags)
+        missing_features = forced_features.difference(
+            freeze.dependencies[freeze_dep_id].used_flags
+        )
         if missing_features:
-            logger.debug(f"Direct dependencies check failed: features missing {missing_features}")
+            logger.debug(
+                f"Direct dependencies check failed: features missing {missing_features}"
+            )
             return False
         if dep.is_pinned:
             if not isinstance(freeze_dep_id.inner, RegistryPackageId):
-                logger.debug(f"Direct dependencies check failed on {freeze_dep_id}: expected registry id")
+                logger.debug(
+                    f"Direct dependencies check failed on {freeze_dep_id}: expected registry id"
+                )
                 return False
             if dep.real_name != freeze_dep_id.inner.id:
                 logger.debug(
@@ -470,14 +539,19 @@ def check_direct_dependencies(summary: Summary, freeze: VenvFreeze) -> bool:
                             f"Direct dependencies check failed on {freeze_dep_id}: registry urls differ. Expected {registry_url}"
                         )
                         return False
-                    if not any(ver.can_be_upgraded_to(freeze_dep_id.version) for ver in dep.versions):
+                    if not any(
+                        ver.can_be_upgraded_to(freeze_dep_id.version)
+                        for ver in dep.versions
+                    ):
                         logger.debug(
                             f"Direct dependencies check failed on {freeze_dep_id}: not upgradable from versions. Expected any of {dep.versions}"
                         )
                         return False
                 case SourceKind.Git:
                     if not isinstance(freeze_dep_id.inner, GitPackageId):
-                        logger.debug(f"Direct dependencies check failed on {freeze_dep_id}: expected git id")
+                        logger.debug(
+                            f"Direct dependencies check failed on {freeze_dep_id}: expected git id"
+                        )
                         return False
                     freeze_dep_id = freeze_dep_id.inner
                     # Use AnyUrl to ignore f.e. trailing slashes.
@@ -493,7 +567,10 @@ def check_direct_dependencies(summary: Summary, freeze: VenvFreeze) -> bool:
                         )
                         return False
                     freeze_dep_id = freeze_dep_id.inner
-                    if dep.source.as_local().absolute_dir_root.resolve() != freeze_dep_id.path:
+                    if (
+                        dep.source.as_local().absolute_dir_root.resolve()
+                        != freeze_dep_id.path
+                    ):
                         logger.debug(
                             f"Direct dependencies check failed on {freeze_dep_id}: local paths differ. Expected {dep.source.as_local().absolute_dir_root.resolve()}"
                         )
@@ -531,11 +608,15 @@ def get_freeze(ctx: GlobalContext, package: Package) -> VenvFreeze | None:
         try:
             external_freeze = _load_external_freezefile(package)
         except CorruptedFreezefile:
-            raise QuackPackError("Corrupted freeze file. Synchronize to regenerate.") from None
+            raise QuackPackError(
+                "Corrupted freeze file. Synchronize to regenerate."
+            ) from None
         if is_synchronized(package.manifest.summary, external_freeze, data, True):
             return external_freeze
         else:
-            raise QuackPackError("Freeze file not synchronized with manifest. Synchronize to regenerate.")
+            raise QuackPackError(
+                "Freeze file not synchronized with manifest. Synchronize to regenerate."
+            )
     else:
         if data is not None:
             return data.freeze

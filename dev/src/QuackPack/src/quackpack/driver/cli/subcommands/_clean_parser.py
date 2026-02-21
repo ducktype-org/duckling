@@ -16,7 +16,11 @@ def get_parser() -> CliParser:
     return CliParser.subcommand(
         name="clean",
         description="Clean all of the packages from the shared storage not pointed by any virtual environment",
-    ).add_flag(long_name="--verbose", short_name="-v", help="Show all of the removed venvs and packages")
+    ).add_flag(
+        long_name="--verbose",
+        short_name="-v",
+        help="Show all of the removed venvs and packages",
+    )
 
 
 def execute(ctx: GlobalContext, args: Arguments) -> None:

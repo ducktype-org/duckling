@@ -1,7 +1,13 @@
 from collections import deque
 
-from quackpack.core.solver.cleaning.cleaner_graph_constructor import CleanerGraph, create_cleaner_graph
-from quackpack.core.solver.cleaning.package_with_flags import PackageWithFlags, PackageWithFlagsDependency
+from quackpack.core.solver.cleaning.cleaner_graph_constructor import (
+    CleanerGraph,
+    create_cleaner_graph,
+)
+from quackpack.core.solver.cleaning.package_with_flags import (
+    PackageWithFlags,
+    PackageWithFlagsDependency,
+)
 from quackpack.core.solver.gathering import GatheredInfo
 from quackpack.core.solver.types.flag_type import NoFlag
 from quackpack.core.solver.types.unresolved_package import ResolvedPackage
@@ -36,9 +42,18 @@ class _UnusablesCleaner:
             unusables.add(package_with_flags)
 
             for parent in self.parents[package_with_flags]:
-                dependency = PackageWithFlagsDependency(parent, package_with_flags.package.id)
-                self.possible_realization_counts[dependency][package_with_flags.flags] -= 1
-                if self.possible_realization_counts[dependency][package_with_flags.flags] == 0:
+                dependency = PackageWithFlagsDependency(
+                    parent, package_with_flags.package.id
+                )
+                self.possible_realization_counts[dependency][
+                    package_with_flags.flags
+                ] -= 1
+                if (
+                    self.possible_realization_counts[dependency][
+                        package_with_flags.flags
+                    ]
+                    == 0
+                ):
                     unusables_queue.append(parent)
         return unusables
 
@@ -51,7 +66,9 @@ class _UnusablesCleaner:
                 if unusable_flag == NoFlag.NoFlag:
                     unusable_packages.add(unusable.package)
                 else:
-                    logger.debug(f"Package {unusable.package!s} has an unusable flag {unusable_flag!s}")
+                    logger.debug(
+                        f"Package {unusable.package!s} has an unusable flag {unusable_flag!s}"
+                    )
                     data.possible_features[unusable.package].remove(unusable_flag)
 
         for package in unusable_packages:

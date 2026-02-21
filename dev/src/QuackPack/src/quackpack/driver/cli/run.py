@@ -83,7 +83,9 @@ def run(ctx: GlobalContext) -> int | None:
 # NOTE: Ideally, instead of `list[str]`, we would operate on `argparse.Namespace` and call the parser to parse matches from aliases.
 # But then we would have to manually handle `--help` and deal with unknown_commands.
 # Although it's impossible in Python anyway, because argparse is flawed.
-def fix_user_typos(ctx: GlobalContext, qp_args: list[str], cli_commands: list[str]) -> None:
+def fix_user_typos(
+    ctx: GlobalContext, qp_args: list[str], cli_commands: list[str]
+) -> None:
     """
     Try to fix first positional command with Levenshtein distance.
 
@@ -128,7 +130,9 @@ def fix_user_typos(ctx: GlobalContext, qp_args: list[str], cli_commands: list[st
     qp_args[match_idx] = matched[0]
 
 
-def expand_user_aliases(ctx: GlobalContext, qp_args: list[str], already_expanded_aliases: list[str]) -> None:
+def expand_user_aliases(
+    ctx: GlobalContext, qp_args: list[str], already_expanded_aliases: list[str]
+) -> None:
     """
     Expand user aliases.
     ----
@@ -155,7 +159,9 @@ def expand_user_aliases(ctx: GlobalContext, qp_args: list[str], already_expanded
             # Ensure current alias appears in trace.
             already_expanded_aliases.append(arg)
             backtrace = " -> ".join(already_expanded_aliases)
-            raise QuackPackError(f"Alias `{arg}` was already expanded. Found cycle: '{backtrace}'")
+            raise QuackPackError(
+                f"Alias `{arg}` was already expanded. Found cycle: '{backtrace}'"
+            )
         already_expanded_aliases.append(arg)
         alias = maybe_alias
         logger.debug(f"Expanding user alias `{arg}` to `{alias}`")

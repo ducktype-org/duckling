@@ -15,7 +15,7 @@ def get_sources_of_gcno_file(gcno_path: Path) -> set[Path]:
 
     dev_dir = get_dev_directory()
 
-    (strings_output, _) = bash_command_get_output(f"strings {gcno_path}")
+    strings_output, _ = bash_command_get_output(f"strings {gcno_path}")
     project_file_references = {
         line_path
         for line in strings_output.splitlines()

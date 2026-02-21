@@ -97,7 +97,7 @@ def install_llvm_impl(
         f"-DCMAKE_INSTALL_PREFIX={install_dir}",
         f"-DLLVM_TARGETS_TO_BUILD={targets}",
         f"-DLLVM_PARALLEL_LINK_JOBS={link_jobs}",
-        f"-DLLVM_ENABLE_PROJECTS=\"clang\"",
+        f'-DLLVM_ENABLE_PROJECTS="clang"',
     ]
 
     # Add linker option only if a specific linker is selected

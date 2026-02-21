@@ -55,24 +55,30 @@ class Solver:
         if root_package not in gathered_info.possible_features:
             raise QuackPackError("Cannot satisfy dependencies!")
 
-        solution = run_engine(data=gathered_info, root_projects=[(root_package, self.root_flags)])
+        solution = run_engine(
+            data=gathered_info, root_projects=[(root_package, self.root_flags)]
+        )
         if root_package not in solution.packages:
             # this should be unreachable if info cleaner and its
             # error handling works correctly, but it does not hurt
             raise QuackPackError("Cannot satisfy dependencies!")
 
         build_rules = construct_build_rules(
-            solution=solution, summaries=gathered_info.summaries, id_resolvents=gathered_info.id_resolvents
+            solution=solution,
+            summaries=gathered_info.summaries,
+            id_resolvents=gathered_info.id_resolvents,
         )
 
         return VenvFreeze(
             direct_dependencies={
-                alias: dep.to_package_id() for alias, dep in build_rules.instructions[root_package].items()
+                alias: dep.to_package_id()
+                for alias, dep in build_rules.instructions[root_package].items()
             },
             dependencies={
                 id.to_package_id(): PackageFreeze(
                     dependencies={
-                        alias: dep.to_package_id() for alias, dep in build_rules.instructions[id].items()
+                        alias: dep.to_package_id()
+                        for alias, dep in build_rules.instructions[id].items()
                     },
                     used_flags=flags,
                 )

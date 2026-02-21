@@ -15,7 +15,10 @@ from test_http_client import (
 )
 
 from quackpack.core.fetcher.api_types import MultiMetadata, Package, SingleMetadata
-from quackpack.core.fetcher.client.ducknest_client import DucknestClient, DucknestClientContext
+from quackpack.core.fetcher.client.ducknest_client import (
+    DucknestClient,
+    DucknestClientContext,
+)
 from quackpack.util.types.errors import QuackPackError
 from quackpack.util.types.pkgid import Identifier
 
@@ -71,7 +74,9 @@ class TestDucknestClient:
         self, ducknest_client: DucknestClient, ducknest_app: FastAPI, tcp_port: int
     ):
         pkg = Package(id=Identifier("foo"), version="1.2.3")
-        result = await ducknest_client.get_package_metadata(f"http://localhost:{tcp_port}", pkg)
+        result = await ducknest_client.get_package_metadata(
+            f"http://localhost:{tcp_port}", pkg
+        )
 
         expected = FOO123_JSON
 
@@ -80,24 +85,32 @@ class TestDucknestClient:
         pkg = Package(id=Identifier("foo"), version="1.2.4")
 
         with pytest.raises(QuackPackError):
-            result = await ducknest_client.get_package_metadata(f"http://localhost:{tcp_port}", pkg)
+            result = await ducknest_client.get_package_metadata(
+                f"http://localhost:{tcp_port}", pkg
+            )
 
     async def test_multi_metadata(
         self, ducknest_client: DucknestClient, ducknest_app: FastAPI, tcp_port: int
     ):
         pkg_name = Identifier("foo")
-        result = await ducknest_client.get_package_all_metadata(f"http://localhost:{tcp_port}", pkg_name)
+        result = await ducknest_client.get_package_all_metadata(
+            f"http://localhost:{tcp_port}", pkg_name
+        )
 
         assert result == MultiMetadata.model_validate_json(FOO_MULTI)
 
         pkg_name = Identifier("bar")
-        result = await ducknest_client.get_package_all_metadata(f"http://localhost:{tcp_port}", pkg_name)
+        result = await ducknest_client.get_package_all_metadata(
+            f"http://localhost:{tcp_port}", pkg_name
+        )
 
         assert result == MultiMetadata.model_validate_json(BAR_MUTLI)
 
         pkg_name = Identifier("baz")
         with pytest.raises(QuackPackError):
-            result = await ducknest_client.get_package_all_metadata(f"http://localhost:{tcp_port}", pkg_name)
+            result = await ducknest_client.get_package_all_metadata(
+                f"http://localhost:{tcp_port}", pkg_name
+            )
 
     async def test_blob(
         self,
@@ -108,7 +121,9 @@ class TestDucknestClient:
     ):
         pkg = Package(id=Identifier("bar"), version="2.5.6")
         fp = static_file_structure / "blob-bar"
-        result = await ducknest_client.get_package_blob(f"http://localhost:{tcp_port}", pkg, fp, None)
+        result = await ducknest_client.get_package_blob(
+            f"http://localhost:{tcp_port}", pkg, fp, None
+        )
 
         assert result is True
         with open(fp, "rb") as f:
@@ -116,7 +131,9 @@ class TestDucknestClient:
 
         pkg = Package(id=Identifier("baz"), version="2.5.6")
         fp = static_file_structure / "blob-baz"
-        result = await ducknest_client.get_package_blob(f"http://localhost:{tcp_port}", pkg, fp, None)
+        result = await ducknest_client.get_package_blob(
+            f"http://localhost:{tcp_port}", pkg, fp, None
+        )
 
         assert result is False
         with open(fp, "rb") as f:
@@ -128,7 +145,9 @@ class TestDucknestClientContext:
     async def test_single_metadata(self, ducknest_app: FastAPI, tcp_port: int):
         with DucknestClientContext() as ducknest_client:
             pkg = Package(id=Identifier("foo"), version="1.2.3")
-            result = await ducknest_client.get_package_metadata(f"http://localhost:{tcp_port}", pkg)
+            result = await ducknest_client.get_package_metadata(
+                f"http://localhost:{tcp_port}", pkg
+            )
 
             expected = FOO123_JSON
             assert result == SingleMetadata.model_validate_json(expected)

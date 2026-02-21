@@ -38,8 +38,12 @@ def get_parser() -> CliParser:
     :rtype: quackpack.cli._parser.CliParser
     """
 
-    return CliParser.subcommand(name="update", description="Update packages in the current venv").add_str(
-        long_name="packages", help="Packages to update", argument_count=ArgumentCount.OneOrMore
+    return CliParser.subcommand(
+        name="update", description="Update packages in the current venv"
+    ).add_str(
+        long_name="packages",
+        help="Packages to update",
+        argument_count=ArgumentCount.OneOrMore,
     )
 
 

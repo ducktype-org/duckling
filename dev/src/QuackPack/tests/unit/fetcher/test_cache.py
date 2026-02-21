@@ -4,7 +4,10 @@ from pathlib import Path
 import pytest
 
 from quackpack.core.fetcher.api_types import Package, SingleMetadata
-from quackpack.core.fetcher.cache.metadata_cache import MetadataCache, MetadataCacheContext
+from quackpack.core.fetcher.cache.metadata_cache import (
+    MetadataCache,
+    MetadataCacheContext,
+)
 from quackpack.core.fetcher.cache.sqlite_database import SQLiteDatabase
 from quackpack.util.types.errors import QuackPackError
 from quackpack.util.types.pkgid import Identifier
@@ -67,7 +70,9 @@ class TestSQLiteDatabase:
 
     def test_execute_query(self, temp_db_file: Path):
         db = SQLiteDatabase(temp_db_file)
-        db.execute_query("CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)")
+        db.execute_query(
+            "CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)"
+        )
         db.execute_query("INSERT INTO test_table (name) VALUES (?)", ("Alice",))
         result = db.fetch_all("SELECT name FROM test_table WHERE id = 1")
         assert result == [("Alice",)]
@@ -75,7 +80,9 @@ class TestSQLiteDatabase:
 
     def test_fetch_all(self, temp_db_file: Path):
         db = SQLiteDatabase(temp_db_file)
-        db.execute_query("CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)")
+        db.execute_query(
+            "CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)"
+        )
         db.execute_query("INSERT INTO test_table (name) VALUES (?)", ("Alice",))
         db.execute_query("INSERT INTO test_table (name) VALUES (?)", ("Bob",))
         result = db.fetch_all("SELECT name FROM test_table")
@@ -84,7 +91,9 @@ class TestSQLiteDatabase:
 
     def test_fetch_one(self, temp_db_file: Path):
         db = SQLiteDatabase(temp_db_file)
-        db.execute_query("CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)")
+        db.execute_query(
+            "CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)"
+        )
         db.execute_query("INSERT INTO test_table (name) VALUES (?)", ("Alice",))
         result = db.fetch_one("SELECT name FROM test_table WHERE id = 1")
         assert result == ("Alice",)
@@ -92,16 +101,22 @@ class TestSQLiteDatabase:
 
     def test_invalid_query(self, temp_db_file: Path):
         db = SQLiteDatabase(temp_db_file)
-        db.execute_query("CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)")
+        db.execute_query(
+            "CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)"
+        )
 
         with pytest.raises(sqlite3.DatabaseError):
-            db.execute_query("INSERT INTO test_table (non_existing_column) VALUES (?)", ("Invalid",))
+            db.execute_query(
+                "INSERT INTO test_table (non_existing_column) VALUES (?)", ("Invalid",)
+            )
 
         db.close_connection()
 
     def test_with_rollback(self, temp_db_file: Path):
         db = SQLiteDatabase(temp_db_file)
-        db.execute_query("CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT);")
+        db.execute_query(
+            "CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT);"
+        )
         with pytest.raises(sqlite3.DatabaseError):
             db.execute_query(
                 "INSERT INTO test_table (name) VALUES (?); INSERT INTO test_table (name) VALUES (?);",
@@ -128,7 +143,10 @@ class TestMetadataCache:
         cache.close_connection()
 
     def test_add_and_get_metadata(
-        self, temp_db_file: Path, example_package: Package, example_metadata: SingleMetadata
+        self,
+        temp_db_file: Path,
+        example_package: Package,
+        example_metadata: SingleMetadata,
     ):
         cache = MetadataCache(temp_db_file)
 
@@ -147,7 +165,9 @@ class TestMetadataCache:
 
         cache.close_connection()
 
-    def test_get_metadata_with_invalid_json(self, temp_db_file: Path, example_package: Package):
+    def test_get_metadata_with_invalid_json(
+        self, temp_db_file: Path, example_package: Package
+    ):
         cache = MetadataCache(temp_db_file)
         cache.execute_query(
             f"INSERT INTO {cache.SQLiteMetadata.TABLE} ({cache.SQLiteMetadata.Columns.NAME}, {cache.SQLiteMetadata.Columns.VERSION}, {cache.SQLiteMetadata.Columns.METADATA}) VALUES (?, ?, ?)",
@@ -162,7 +182,10 @@ class TestMetadataCache:
 
 class TestMetadataCacheContext:
     def test_context_manager_add_and_get_metadata(
-        self, temp_db_file: Path, example_package: Package, example_metadata: SingleMetadata
+        self,
+        temp_db_file: Path,
+        example_package: Package,
+        example_metadata: SingleMetadata,
     ):
         with MetadataCacheContext(db_path=temp_db_file) as cache:
             assert isinstance(cache, MetadataCache)

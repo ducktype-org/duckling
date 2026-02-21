@@ -28,7 +28,6 @@ from scripts.py.toolbox.commands.test import test
 from scripts.py.toolbox.commands.todo_counter import todo_counter
 from scripts.py.toolbox.commands.todo_validate import todo_validate
 
-
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
 DATA_PASS = "7ocwXWOAwg="

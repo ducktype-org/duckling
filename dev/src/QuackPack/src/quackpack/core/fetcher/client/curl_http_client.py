@@ -114,7 +114,9 @@ class CurlHTTPClient:
         # relevant file descriptors and timeouts to TIMERFUNCTION/
         # SOCKETFUNCTION.  Mitigate the effects of such bugs by
         # forcing a periodic scan of all active requests.
-        self._force_timeout_callback = self._loop.create_task(self._periodical_force_timeout(1000.0))
+        self._force_timeout_callback = self._loop.create_task(
+            self._periodical_force_timeout(1000.0)
+        )
 
         # NOTE: Original comment.
         # Work around a bug in libcurl 7.29.0: Some fields in the curl
@@ -156,7 +158,9 @@ class CurlHTTPClient:
         if self._timeout is not None:
             self._timeout.cancel()
 
-        self._timeout = self._loop.call_at(self._loop.time() + milliseconds / 1000.0, self._handle_timeout)
+        self._timeout = self._loop.call_at(
+            self._loop.time() + milliseconds / 1000.0, self._handle_timeout
+        )
 
     def _handle_timeout(self) -> None:
         """
@@ -234,7 +238,9 @@ class CurlHTTPClient:
 
         self._check_multi_info()
 
-    def _handle_socket(self, event: int, fd: int, _multi: pycurl.CurlMulti, _data: bytes) -> None:
+    def _handle_socket(
+        self, event: int, fd: int, _multi: pycurl.CurlMulti, _data: bytes
+    ) -> None:
         """
         Handle socket events for cURL operations.
 
@@ -283,7 +289,10 @@ class CurlHTTPClient:
         self._check_multi_info()
 
     def _finish(
-        self, curl: pycurl.Curl, curl_error: int | None = None, curl_message: str | None = None
+        self,
+        curl: pycurl.Curl,
+        curl_error: int | None = None,
+        curl_message: str | None = None,
     ) -> None:
         """
         Finish a cURL operation and process the result.
@@ -342,7 +351,10 @@ class CurlHTTPClient:
             headers_buffer.close()
 
     async def fetch(
-        self, request: HTTPRequest, buffer: BytesIO | FileIO, progress: CurlProgress | None = None
+        self,
+        request: HTTPRequest,
+        buffer: BytesIO | FileIO,
+        progress: CurlProgress | None = None,
     ) -> HTTPResponse | None:
         """
         Fetch an HTTP request using cURL.
@@ -409,7 +421,11 @@ class CurlHTTPClient:
         return curl
 
     def _curl_setup_request(
-        self, curl: pycurl.Curl, request: HTTPRequest, buffer: BytesIO | FileIO, headers_buffer: BytesIO
+        self,
+        curl: pycurl.Curl,
+        request: HTTPRequest,
+        buffer: BytesIO | FileIO,
+        headers_buffer: BytesIO,
     ) -> None:
         """
         Set up a cURL request with the specified options.
@@ -430,7 +446,9 @@ class CurlHTTPClient:
             curl.setopt(pycurl.NOPROGRESS, False)
             curl.setopt(
                 pycurl.XFERINFOFUNCTION,
-                lambda dlt, dld, ult, uld: self._curl_progress.status(curl, dlt, dld, ult, uld),  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType, reportOptionalMemberAccess]
+                lambda dlt, dld, ult, uld: self._curl_progress.status(
+                    curl, dlt, dld, ult, uld
+                ),  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType, reportOptionalMemberAccess]
             )
 
         # NOTE: Original comment.
@@ -450,11 +468,16 @@ class CurlHTTPClient:
         if "Pragma" not in request.headers:
             request.headers["Pragma"] = ""
 
-        curl.setopt(pycurl.HTTPHEADER, [f"{k}: {v}".encode() for k, v in request.headers.items()])
+        curl.setopt(
+            pycurl.HTTPHEADER,
+            [f"{k}: {v}".encode() for k, v in request.headers.items()],
+        )
 
         curl.setopt(
             pycurl.HEADERFUNCTION,
-            partial(self._curl_header_callback, headers_buffer, request.header_callback),
+            partial(
+                self._curl_header_callback, headers_buffer, request.header_callback
+            ),
         )
         curl.setopt(pycurl.FOLLOWLOCATION, request.follow_redirects)
         curl.setopt(pycurl.MAXREDIRS, request.max_redirects)
@@ -485,7 +508,9 @@ class CurlHTTPClient:
             elif request.proxy_auth_mode == "digest":
                 curl.setopt(pycurl.PROXYAUTH, pycurl.HTTPAUTH_DIGEST)
             else:
-                raise ValueError(f"Unsupported proxy_auth_mode {request.proxy_auth_mode}")
+                raise ValueError(
+                    f"Unsupported proxy_auth_mode {request.proxy_auth_mode}"
+                )
         else:
             curl.setopt(pycurl.PROXY, b"")
             curl.unsetopt(pycurl.PROXYUSERPWD)
@@ -556,7 +581,11 @@ class CurlHTTPClient:
                 # disallows the server from doing anything with them.
                 raise ValueError("Body must be None for GET request")
 
-            body = request.body if isinstance(request.body, bytes) else (request.body or "").encode()
+            body = (
+                request.body
+                if isinstance(request.body, bytes)
+                else (request.body or "").encode()
+            )
             request_buffer = BytesIO(body)
 
             def ioctl(cmd: int) -> None:
@@ -582,7 +611,9 @@ class CurlHTTPClient:
                 raise ValueError(f"Unsupported auth_mode {request.auth_mode}")
 
             curl.setopt(pycurl.USERPWD, userpwd.encode())
-            curl_log.debug(f"{request.method} {request.url} (username: {request.auth_username})")
+            curl_log.debug(
+                f"{request.method} {request.url} (username: {request.auth_username})"
+            )
         else:
             curl.unsetopt(pycurl.USERPWD)
             curl_log.debug(f"{request.method} {request.url}")
@@ -611,7 +642,10 @@ class CurlHTTPClient:
             request.prepare_curl_callback(curl)
 
     def _curl_header_callback(
-        self, headers_buffer: BytesIO, header_callback: Callable[[str], None] | None, header_line: bytes
+        self,
+        headers_buffer: BytesIO,
+        header_callback: Callable[[str], None] | None,
+        header_line: bytes,
     ) -> None:
         """
         Handle a header line received from a cURL request.
@@ -635,7 +669,9 @@ class CurlHTTPClient:
             headers_buffer.seek(0)
             headers_buffer.truncate()
             try:
-                (_, _, reason) = parse_http1_response_start_line(header_line.decode("latin-1"))
+                _, _, reason = parse_http1_response_start_line(
+                    header_line.decode("latin-1")
+                )
                 header_line = f"X-Http-Reason: {reason}".encode()
             except HTTPInputError:
                 return

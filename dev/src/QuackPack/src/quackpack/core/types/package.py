@@ -37,7 +37,9 @@ class Package:
         self._venv_config = Package._read_venv_config(self._venv_config_path)
 
         if local_storage_path is not None:
-            self._local_storage_path = local_storage_path.expanduser().resolve(strict=False)
+            self._local_storage_path = local_storage_path.expanduser().resolve(
+                strict=False
+            )
         else:
             self._local_storage_path = None
 
@@ -49,17 +51,23 @@ class Package:
         # Modify the venv_config of the package directly so that
         # chaning the venv_config file in the global package location
         # has no effect on the global venv config.
-        venv_config = VenvConfig(config=TOMLConfig(content=TOMLDocument(), location=None))
+        venv_config = VenvConfig(
+            config=TOMLConfig(content=TOMLDocument(), location=None)
+        )
         venv_config.set_freezefile_exposed(True)
         package._venv_config = venv_config
         package._is_global = True
         return package
 
     @contextmanager
-    def lock(self, *, locktype: LockType = LockType.EXCLUSIVE, blocking: bool = True) -> Iterator[None]:
+    def lock(
+        self, *, locktype: LockType = LockType.EXCLUSIVE, blocking: bool = True
+    ) -> Iterator[None]:
         lockfile = self.manifest_path.with_name(f".{self.manifest_path.stem}.lock")
         assert lockfile != self.manifest_path, "SoftwareFileLock can remove files"
-        logger.debug(f"Locking {locktype!s} package using path `{lockfile}` with `blocking={blocking}`")
+        logger.debug(
+            f"Locking {locktype!s} package using path `{lockfile}` with `blocking={blocking}`"
+        )
         with RobustSignalHandler():
             try:
                 with FileLock(lockfile, locktype, blocking=blocking), EnableInterrupt():

@@ -59,7 +59,7 @@ from click import Choice, option, command
     default=False,
     is_flag=True,
     # this skips the prompt if the build is optimised
-    cls=PromptForCoverageIfBuildNotOptimised
+    cls=PromptForCoverageIfBuildNotOptimised,
 )
 @option(
     "-d",

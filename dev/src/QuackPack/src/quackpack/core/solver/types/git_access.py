@@ -16,5 +16,9 @@ class GitAccess(ABC):
 
     @abstractmethod
     def get_cached_git(
-        self, url: str, commit: str | None = None, tag: str | None = None, branch: str | None = None
+        self,
+        url: str,
+        commit: str | None = None,
+        tag: str | None = None,
+        branch: str | None = None,
     ) -> GitPackageId | None: ...

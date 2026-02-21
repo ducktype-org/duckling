@@ -16,14 +16,16 @@ from quackpack.util.lock import BaseFileLock, LockType, LockWouldBlock
 
 
 def spawn_locker(platform: str, lock_type: str, tmp_dir: Path, lock_time: float):
-    Popen([
-        sys.executable,
-        Path(__file__).parent / "locker.py",
-        platform,
-        lock_type,
-        tmp_dir / "lock",
-        str(lock_time),
-    ])
+    Popen(
+        [
+            sys.executable,
+            Path(__file__).parent / "locker.py",
+            platform,
+            lock_type,
+            tmp_dir / "lock",
+            str(lock_time),
+        ]
+    )
 
 
 def spawn_killer():
@@ -35,7 +37,9 @@ def common_basic_test(tmp_dir: Path, platform: str, lock_class: type[BaseFileLoc
     spawn_locker(platform, "exclusive", tmp_dir, 1.0)
     with RobustSignalHandler():
         sleep(0.3)
-        with pytest.raises(LockWouldBlock), lock_class(lock_path, lock_type=LockType.SHARED, blocking=False):
+        with pytest.raises(LockWouldBlock), lock_class(
+            lock_path, lock_type=LockType.SHARED, blocking=False
+        ):
             pass
         start_time = monotonic()
         with lock_class(lock_path):

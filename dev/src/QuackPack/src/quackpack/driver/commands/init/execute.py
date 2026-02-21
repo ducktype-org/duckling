@@ -2,7 +2,11 @@ from contextlib import chdir
 
 from quackpack.core.package_loader import PackageLoader
 from quackpack.core.types.manifest.editable import EditableManifest
-from quackpack.core.types.manifest.schemas.manifest import ManifestSchema, MetadataSchema, SemverSchema
+from quackpack.core.types.manifest.schemas.manifest import (
+    ManifestSchema,
+    MetadataSchema,
+    SemverSchema,
+)
 from quackpack.driver.commands.init.file_creators import AdvancedPackage, BasicPackage
 from quackpack.driver.commands.init.types import InitOptions, NewVenvType
 from quackpack.util.logger import get_logger
@@ -31,7 +35,9 @@ def create_at(options: InitOptions) -> None:
         ) from None
     if options.ctx.console.quiet and options.type is NewVenvType.Full:
         raise QuackPackError("don't pass '--quiet' with '--full'")
-    logger.debug(f"Creating new package '{options.name}' at '{options.destination}' of type {options.type!s}")
+    logger.debug(
+        f"Creating new package '{options.name}' at '{options.destination}' of type {options.type!s}"
+    )
     try:
         options.destination.mkdir(parents=True, exist_ok=True)
     # https://docs.python.org/3/library/pathlib.html#pathlib.Path.mkdir
@@ -40,7 +46,9 @@ def create_at(options: InitOptions) -> None:
             f"package's root directory `{options.destination}` already exists, but it's not a directory"
         ) from None
     manifest_destination = options.destination / PackageLoader.MANIFEST_NAME
-    metadata = MetadataSchema(version=SemverSchema(str(Version.default())), name=str(venv_id))
+    metadata = MetadataSchema(
+        version=SemverSchema(str(Version.default())), name=str(venv_id)
+    )
     manifest = ManifestSchema(metadata=metadata)
     saveable_manifest = EditableManifest.create_with_data(
         manifest.model_dump(exclude_none=True, exclude_unset=True)
@@ -49,7 +57,9 @@ def create_at(options: InitOptions) -> None:
         with open(manifest_destination, mode="x") as f:
             f.write(saveable_manifest.as_str())
     except FileExistsError:
-        raise QuackPackError(f"cannot reinitialize package at `{options.destination}`") from None
+        raise QuackPackError(
+            f"cannot reinitialize package at `{options.destination}`"
+        ) from None
     if options.type is NewVenvType.PlainVenv:
         options.ctx.console.info(
             f"Successfully created new package `{options.name}` at `{options.destination}`"
@@ -66,7 +76,9 @@ def _populate_package_files(options: InitOptions, manifest: ManifestSchema) -> N
     Args:
     - `options`: init options.
     """
-    assert options.type is not NewVenvType.PlainVenv, "PlainVenvs have no files to populate"
+    assert (
+        options.type is not NewVenvType.PlainVenv
+    ), "PlainVenvs have no files to populate"
     match options.type:
         case NewVenvType.Binary:
             creator = BasicPackage(options=options)

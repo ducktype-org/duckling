@@ -61,7 +61,9 @@ class VenvConfigCreator:
             venv_config_toml["ephemeral"] = self.options.is_ephemeral
 
         if self.options.use_local_storage:
-            local_storage_path = self.options.destination / PackageLoader.LOCAL_STORAGE_NAME
+            local_storage_path = (
+                self.options.destination / PackageLoader.LOCAL_STORAGE_NAME
+            )
 
             venv_config_toml["local_storage"] = self.options.use_local_storage
             local_storage_dir = PlainDirectory(destination=local_storage_path)
@@ -73,7 +75,9 @@ class VenvConfigCreator:
 
         if venv_config_toml:
             venv_config_path = self.options.destination / PackageLoader.VENV_CONFIG_NAME
-            venv_config_file = FileWithData(destination=venv_config_path, data=dumps(venv_config_toml))
+            venv_config_file = FileWithData(
+                destination=venv_config_path, data=dumps(venv_config_toml)
+            )
 
             to_create.append(venv_config_file)
 
@@ -115,17 +119,27 @@ class BasicPackage:
 class AdvancedPackage:
     options: InitOptions
     manifest: ManifestSchema
-    creators: list[PlainDirectory | FileWithData] = field(default_factory=list[PlainDirectory | FileWithData])
+    creators: list[PlainDirectory | FileWithData] = field(
+        default_factory=list[PlainDirectory | FileWithData]
+    )
 
     def execute_impl(self) -> None:
         assert self.manifest.metadata is not None, "it should be populated earlier"
         metadata = self.manifest.metadata
         console = self.options.ctx.console
         self.creators.append(BasicPackage(options=self.options).file)
-        if Confirm.ask(prompt="Create `docs` directory?", default=True, console=console):
-            self.creators.append(PlainDirectory(destination=self.options.destination / Path("docs")))
-        if Confirm.ask(prompt="Create `tests` directory?", default=True, console=console):
-            self.creators.append(PlainDirectory(destination=self.options.destination / Path("tests")))
+        if Confirm.ask(
+            prompt="Create `docs` directory?", default=True, console=console
+        ):
+            self.creators.append(
+                PlainDirectory(destination=self.options.destination / Path("docs"))
+            )
+        if Confirm.ask(
+            prompt="Create `tests` directory?", default=True, console=console
+        ):
+            self.creators.append(
+                PlainDirectory(destination=self.options.destination / Path("tests"))
+            )
         if name := Prompt.ask("Set package name", console=console):
             if not is_valid_identifier(name):
                 raise QuackPackError(f"`{name}` is not a valid package name")
@@ -146,4 +160,6 @@ class AdvancedPackage:
         assert self.manifest.metadata is not None, "it should be populated earlier"
         metadata = self.manifest.metadata
         console = self.options.ctx.console
-        console.info(f"successfully created new package `{metadata.name}` at `{self.options.destination}`")
+        console.info(
+            f"successfully created new package `{metadata.name}` at `{self.options.destination}`"
+        )

@@ -84,7 +84,9 @@ class CliParser(argparse.ArgumentParser):
         self.subcommands: list[str] = []
 
     @classmethod
-    def subcommand(cls, *, name: str, description: str, with_help: bool = True) -> CliParser:
+    def subcommand(
+        cls, *, name: str, description: str, with_help: bool = True
+    ) -> CliParser:
         """
         Return a new parser for a subcommand.
 
@@ -113,11 +115,18 @@ class CliParser(argparse.ArgumentParser):
         :return: Self for chaining.
         """
 
-        self.add_argument("-V", "--version", action="version", version="%(prog)s v0.1.0")
+        self.add_argument(
+            "-V", "--version", action="version", version="%(prog)s v0.1.0"
+        )
         return self
 
     def add_flag(
-        self, *, long_name: str, short_name: str | None = None, default: bool = True, help: str
+        self,
+        *,
+        long_name: str,
+        short_name: str | None = None,
+        default: bool = True,
+        help: str,
     ) -> CliParser:
         """
         Add a boolean flag option.
@@ -132,7 +141,9 @@ class CliParser(argparse.ArgumentParser):
         options = [long_name]
         if short_name is not None:
             options.append(short_name)
-        self.add_argument(*options, action="store_true" if default else "store_false", help=help)
+        self.add_argument(
+            *options, action="store_true" if default else "store_false", help=help
+        )
         return self
 
     def add_path(
@@ -163,9 +174,9 @@ class CliParser(argparse.ArgumentParser):
             extras["default"] = default
             if argument_count is None:
                 argument_count = ArgumentCount.Optional
-            assert argument_count is ArgumentCount.Optional, (
-                "only pass 'default' with 'argument_count=ArgumentCount.Optional'"
-            )
+            assert (
+                argument_count is ArgumentCount.Optional
+            ), "only pass 'default' with 'argument_count=ArgumentCount.Optional'"
         if argument_count is not None:
             extras["nargs"] = str(argument_count)
         extras["type"] = Path
@@ -199,9 +210,9 @@ class CliParser(argparse.ArgumentParser):
         if default is not None:
             if argument_count is None:
                 argument_count = ArgumentCount.Optional
-            assert argument_count is ArgumentCount.Optional, (
-                "only pass 'default' with 'argument_count=ArgumentCount.Optional'"
-            )
+            assert (
+                argument_count is ArgumentCount.Optional
+            ), "only pass 'default' with 'argument_count=ArgumentCount.Optional'"
             extras["default"] = default
         if argument_count is not None:
             extras["nargs"] = str(argument_count)
@@ -210,7 +221,12 @@ class CliParser(argparse.ArgumentParser):
         return self
 
     def add_int(
-        self, *, long_name: str, short_name: str | None = None, help: str, default: int | None = None
+        self,
+        *,
+        long_name: str,
+        short_name: str | None = None,
+        help: str,
+        default: int | None = None,
     ) -> CliParser:
         """
         Add an integer argument.
@@ -287,7 +303,9 @@ class CliParser(argparse.ArgumentParser):
         """
 
         aliases = aliases or defaultdict(list)
-        s = self.add_subparsers(title=title, dest=destination, metavar="", required=required, prog=prog)
+        s = self.add_subparsers(
+            title=title, dest=destination, metavar="", required=required, prog=prog
+        )
         for subparser in subparsers:
             p = s.add_parser(
                 subparser.prog,
@@ -304,7 +322,9 @@ class CliParser(argparse.ArgumentParser):
             self.subcommands.append(subparser.prog)
         return self
 
-    def add_exclusive_group(self, *, group: ExclusiveGroup, required: bool = False) -> CliParser:
+    def add_exclusive_group(
+        self, *, group: ExclusiveGroup, required: bool = False
+    ) -> CliParser:
         """
         Add mutually exclusive group of options.
 
@@ -329,7 +349,9 @@ class CliParser(argparse.ArgumentParser):
         """
 
         return self.add_str(
-            long_name="--duckc", default=DEFAULT_DUCKC_BINARY, help="Change path of the Duckling binary"
+            long_name="--duckc",
+            default=DEFAULT_DUCKC_BINARY,
+            help="Change path of the Duckling binary",
         )
 
     def add_chdir(self) -> CliParser:
@@ -340,7 +362,9 @@ class CliParser(argparse.ArgumentParser):
         """
 
         return self.add_path(
-            long_name="--directory", short_name="-C", help="Change to DIRECTORY before performing any actions"
+            long_name="--directory",
+            short_name="-C",
+            help="Change to DIRECTORY before performing any actions",
         )
 
 
@@ -360,7 +384,10 @@ class BooleanInfo:
         Return keyword args for ``argparse.add_argument()`` for this flag.
         """
 
-        return {"action": "store_true" if self.default else "store_false", "help": self.help}
+        return {
+            "action": "store_true" if self.default else "store_false",
+            "help": self.help,
+        }
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -386,9 +413,9 @@ class Info:
         if self.default is not None:
             if count is None:
                 count = ArgumentCount.Optional
-            assert count is ArgumentCount.Optional, (
-                "only pass 'default' with 'argument_count=ArgumentCount.Optional'"
-            )
+            assert (
+                count is ArgumentCount.Optional
+            ), "only pass 'default' with 'argument_count=ArgumentCount.Optional'"
             assert isinstance(self.default, self.type), "'default' and 'type' mismatch"
             extras["default"] = self.default
         if count is not None:
@@ -406,7 +433,12 @@ class ExclusiveGroup:
         self.args: list[BooleanInfo | Info] = []
 
     def add_flag(
-        self, *, long_name: str, short_name: str | None = None, default: bool = True, help: str
+        self,
+        *,
+        long_name: str,
+        short_name: str | None = None,
+        default: bool = True,
+        help: str,
     ) -> ExclusiveGroup:
         """
         Add a boolean flag to this exclusive group.
@@ -414,7 +446,11 @@ class ExclusiveGroup:
         :return: Self for chaining.
         """
 
-        self.args.append(BooleanInfo(long_name=long_name, short_name=short_name, default=default, help=help))
+        self.args.append(
+            BooleanInfo(
+                long_name=long_name, short_name=short_name, default=default, help=help
+            )
+        )
         return self
 
     def add_quiet(self) -> ExclusiveGroup:
@@ -424,7 +460,9 @@ class ExclusiveGroup:
         :return: Self for chaining.
         """
 
-        return self.add_flag(long_name="--quiet", short_name="-q", help="Supress all output")
+        return self.add_flag(
+            long_name="--quiet", short_name="-q", help="Supress all output"
+        )
 
     def add_verbose(self) -> ExclusiveGroup:
         """
@@ -433,7 +471,9 @@ class ExclusiveGroup:
         :return: Self for chaining.
         """
 
-        return self.add_flag(long_name="--verbose", short_name="-v", help="Use verbose output")
+        return self.add_flag(
+            long_name="--verbose", short_name="-v", help="Use verbose output"
+        )
 
     def add_profile(self) -> ExclusiveGroup:
         """
@@ -460,7 +500,9 @@ class ExclusiveGroup:
         :return: Self for chaining.
         """
 
-        return self.add_flag(long_name="--release", help=f"Alias for [{ARGS_STYLE}]--profile=release[/]")
+        return self.add_flag(
+            long_name="--release", help=f"Alias for [{ARGS_STYLE}]--profile=release[/]"
+        )
 
     def add_str(
         self,

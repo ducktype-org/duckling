@@ -14,10 +14,18 @@ from quackpack.core.solver.gathering.fetch_types import (
     UnpinnedFetchRequest,
 )
 from quackpack.core.solver.gathering.gathered_info import GatheredInfo
-from quackpack.core.solver.gathering.gatherer_state import GathererState, RequestActionMore, error_with_mercy
+from quackpack.core.solver.gathering.gatherer_state import (
+    GathererState,
+    RequestActionMore,
+    error_with_mercy,
+)
 from quackpack.core.solver.types.flag_type import FeatureId
 from quackpack.core.solver.types.git_access import GitAccess
-from quackpack.core.solver.types.resolved_id import ResolvedIdGit, ResolvedIdLocal, ResolvedIdRegistry
+from quackpack.core.solver.types.resolved_id import (
+    ResolvedIdGit,
+    ResolvedIdLocal,
+    ResolvedIdRegistry,
+)
 from quackpack.core.solver.types.resolved_package import (
     ResolvedPackage,
     ResolvedPackageGit,
@@ -25,7 +33,11 @@ from quackpack.core.solver.types.resolved_package import (
     ResolvedPackageRegistry,
 )
 from quackpack.core.solver.types.solver_mode import SolverMode
-from quackpack.core.solver.types.unresolved_id import UnresolvedIdGit, UnresolvedIdLocal, UnresolvedIdRegistry
+from quackpack.core.solver.types.unresolved_id import (
+    UnresolvedIdGit,
+    UnresolvedIdLocal,
+    UnresolvedIdRegistry,
+)
 from quackpack.core.solver.types.unresolved_package import UnresolvedPackageRegistry
 from quackpack.core.types.manifest.parse import create_schema, summary_from_schema
 from quackpack.core.types.manifest.source import GitSource, SourceKind
@@ -55,12 +67,16 @@ async def explore(
 
     root_id = UnresolvedIdLocal(root_path)
     root_request = UnpinnedFetchRequest(
-        id=root_id, versions=(root_summary.version,), flags=frozenset(root_flags), local_root=root_path
+        id=root_id,
+        versions=(root_summary.version,),
+        flags=frozenset(root_flags),
+        local_root=root_path,
     )
     # the action is always RequestActionFetch, so ignore return value
     state.get_request_action(root_request)
     root_fetch_result = FetchResult(
-        request=root_id, packages={ResolvedPackageLocal(ResolvedIdLocal(root_path)): root_summary}
+        request=root_id,
+        packages={ResolvedPackageLocal(ResolvedIdLocal(root_path)): root_summary},
     )
     deps = state.handle_response(root_fetch_result)
 
@@ -72,9 +88,13 @@ async def explore(
             if isinstance(action, RequestActionMore):
                 deps |= action.requests
             else:
-                tasks.append(asyncio.create_task(_fetch(fetcher, git_access, request, ctx)))
+                tasks.append(
+                    asyncio.create_task(_fetch(fetcher, git_access, request, ctx))
+                )
         else:
-            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            done, pending = await asyncio.wait(
+                tasks, return_when=asyncio.FIRST_COMPLETED
+            )
             tasks = list(pending)
             for done_task in done:
                 result = done_task.result()
@@ -107,7 +127,11 @@ async def _fetch(
                 )
             case SourceKind.Git:
                 return await _fetch_git(
-                    ctx, fetcher, git_access, request, id=cast(UnresolvedIdGit, request.id)
+                    ctx,
+                    fetcher,
+                    git_access,
+                    request,
+                    id=cast(UnresolvedIdGit, request.id),
                 )
             case SourceKind.Local:
                 return _fetch_local(ctx, request, cast(UnresolvedIdLocal, request.id))
@@ -118,7 +142,8 @@ async def _fetch_registry_pinned(
     fetcher: Fetcher, request: FetchRequest, pkg: UnresolvedPackageRegistry
 ) -> FetchResult | FetchFailure:
     result = await fetcher.get_package_metadata(
-        instance_url=pkg.id.registry_url, package=Package(id=pkg.id.package_name, version=str(pkg.version))
+        instance_url=pkg.id.registry_url,
+        package=Package(id=pkg.id.package_name, version=str(pkg.version)),
     )
     if result.result is None:
         return FetchFailure(request, reason="fetch did not succeed")
@@ -126,7 +151,9 @@ async def _fetch_registry_pinned(
         summary = Summary.from_schema(result.result)
     except QuackPackError as err:
         return FetchFailure(request, reason=f"could not decode response: {err!s}")
-    resolved_pkg = ResolvedPackageRegistry(_id=_resolve_registry_id(pkg.id), _version=pkg.version)
+    resolved_pkg = ResolvedPackageRegistry(
+        _id=_resolve_registry_id(pkg.id), _version=pkg.version
+    )
     return FetchResult(request=pkg, packages={resolved_pkg: summary})
 
 
@@ -145,7 +172,9 @@ async def _fetch_registry_multi(
             summary = Summary.from_schema(spec)
         except QuackPackError as err:
             return FetchFailure(request, reason=f"could not decode response: {err!s}")
-        resolved_pkg = ResolvedPackageRegistry(_id=resolved_id, _version=summary.spec.version)
+        resolved_pkg = ResolvedPackageRegistry(
+            _id=resolved_id, _version=summary.spec.version
+        )
         packages[resolved_pkg] = summary
     return FetchResult(request=id, packages=packages)
 
@@ -157,18 +186,31 @@ def _fetch_local(
     # to deal with relative paths in local dependencies.
     assert request.local_root is not None
     manifest = PackageLoader.find_at_exact_directory(request.local_root, ctx).manifest
-    resolved_pkg = ResolvedPackageLocal(_id=ResolvedIdLocal(local_path=request.local_root))
+    resolved_pkg = ResolvedPackageLocal(
+        _id=ResolvedIdLocal(local_path=request.local_root)
+    )
     return FetchResult(request=id, packages={resolved_pkg: manifest.summary})
 
 
 async def _fetch_git(
-    ctx: GlobalContext, fetcher: Fetcher, git_access: GitAccess, request: FetchRequest, id: UnresolvedIdGit
+    ctx: GlobalContext,
+    fetcher: Fetcher,
+    git_access: GitAccess,
+    request: FetchRequest,
+    id: UnresolvedIdGit,
 ) -> FetchResult | FetchFailure:
-    cached = git_access.get_cached_git(url=id.repository_url, commit=id.commit, branch=id.branch, tag=id.tag)
+    cached = git_access.get_cached_git(
+        url=id.repository_url, commit=id.commit, branch=id.branch, tag=id.tag
+    )
 
     if cached is None:
         result = await fetcher.clone_from_git(
-            GitSource(git_url=id.repository_url, commit=id.commit, tag=id.tag, branch=id.branch)
+            GitSource(
+                git_url=id.repository_url,
+                commit=id.commit,
+                tag=id.tag,
+                branch=id.branch,
+            )
         )
         if result.result is None:
             return FetchFailure(request, reason="fetch did not succeed")
@@ -178,17 +220,21 @@ async def _fetch_git(
             return FetchFailure(request, reason=f"could not decode response: {err!s}")
         if not git_access.is_stored(url=id.repository_url, commit=result.commit_hash):
             git_access.store(
-                url=id.repository_url, commit=result.commit_hash, source_path=result.destination_path
+                url=id.repository_url,
+                commit=result.commit_hash,
+                source_path=result.destination_path,
             )
         else:
             logger.debug(f"Git depdendency {id!s} already present in storage")
-        resolved_id = ResolvedIdGit(repository_url=id.repository_url, commit=result.commit_hash)
+        resolved_id = ResolvedIdGit(
+            repository_url=id.repository_url, commit=result.commit_hash
+        )
 
     else:
         storage_path = git_access.git_path(url=cached.url, commit=cached.commit)
         schema = create_schema(storage_path / PackageLoader.MANIFEST_NAME)
-        # @TODO: #1598 I really don't like passing ctx here; maybe we need to additionally 
-        # store RegistryManifest in storage within packages? (currently ctx can 
+        # @TODO: #1598 I really don't like passing ctx here; maybe we need to additionally
+        # store RegistryManifest in storage within packages? (currently ctx can
         # e.g. change the default registry, which doesn't sound right)
         summary = summary_from_schema(schema, storage_path, ctx)
         resolved_id = ResolvedIdGit(repository_url=cached.url, commit=cached.commit)
@@ -198,4 +244,6 @@ async def _fetch_git(
 
 
 def _resolve_registry_id(id: UnresolvedIdRegistry) -> ResolvedIdRegistry:
-    return ResolvedIdRegistry(package_name=id.package_name, registry_url=id.registry_url)
+    return ResolvedIdRegistry(
+        package_name=id.package_name, registry_url=id.registry_url
+    )

@@ -22,13 +22,15 @@ def extract_first_header(content: str) -> Optional[str]:
     return None
 
 
-def update_markdown_file(file_path: str, base_dir: str, links: List[str]) -> tuple[bool, bool]:
+def update_markdown_file(
+    file_path: str, base_dir: str, links: List[str]
+) -> tuple[bool, bool]:
     """
     Update a markdown file by adding/updating a list of direct descendant links at the end.
     file_path: Absolute path to the markdown file
     base_dir: Base directory as absolute path to resolve relative paths
     links: List of direct descendant readme absolute paths
-    
+
     Returns: (success, has_h1_header)
     """
     try:
@@ -36,7 +38,7 @@ def update_markdown_file(file_path: str, base_dir: str, links: List[str]) -> tup
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
         lines = content.split("\n")
-        
+
         # Check if file has H1 header
         has_h1_header = extract_first_header(content) is not None
 
@@ -44,16 +46,16 @@ def update_markdown_file(file_path: str, base_dir: str, links: List[str]) -> tup
         subpage_start = -1
         subpage_end = -1
         insert_position = len(lines)  # Default to end of file
-        
+
         for i, line in enumerate(lines):
             if re.match(r"^[\*\-]\s+\[.*?\]\(.*?\.md\)$", line):
                 if subpage_start == -1:
                     subpage_start = i
                     # Check if there's an empty line before the pattern
-                    if i > 0 and lines[i-1].strip() == "":
+                    if i > 0 and lines[i - 1].strip() == "":
                         subpage_start = i - 1
                 subpage_end = i
-        
+
         # Prepare new descendant links
         subpage_lines = []
         for absolute_readme_path in links:
@@ -64,30 +66,34 @@ def update_markdown_file(file_path: str, base_dir: str, links: List[str]) -> tup
                 else os.path.basename(relative_readme_path)[:-3]
             )
             subpage_lines.append(f"* [{desc}](./{relative_readme_path})")
-        
+
         if subpage_lines:
             if subpage_start != -1:
                 # Replace existing pattern in place
                 # Check if we need an empty line before
-                need_empty_before = subpage_start > 0 and lines[subpage_start-1].strip() != ""
+                need_empty_before = (
+                    subpage_start > 0 and lines[subpage_start - 1].strip() != ""
+                )
                 # Check if there's an empty line after the existing pattern
-                has_empty_after = (subpage_end + 1 < len(lines) and 
-                                 lines[subpage_end + 1].strip() == "")
-                
+                has_empty_after = (
+                    subpage_end + 1 < len(lines)
+                    and lines[subpage_end + 1].strip() == ""
+                )
+
                 replacement = []
                 if need_empty_before:
                     replacement.append("")
                 replacement.extend(subpage_lines)
                 if not has_empty_after and subpage_end + 1 < len(lines):
                     replacement.append("")
-                
-                lines[subpage_start:subpage_end + 1] = replacement
+
+                lines[subpage_start : subpage_end + 1] = replacement
             else:
                 # Add at the end, ensuring proper spacing
                 # Remove trailing empty lines
                 while lines and lines[-1].strip() == "":
                     lines.pop()
-                
+
                 if lines and lines[-1].strip():
                     lines.append("")
                 lines.extend(subpage_lines)
@@ -96,7 +102,7 @@ def update_markdown_file(file_path: str, base_dir: str, links: List[str]) -> tup
         content_to_write = "\n".join(lines)
         if content_to_write and not content_to_write.endswith("\n"):
             content_to_write += "\n"
-        
+
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(content_to_write)
         return True, has_h1_header
@@ -152,7 +158,9 @@ def main():
         return any(fnmatch.fnmatch(path, pattern) for pattern in exclude_patterns)
 
     filtered_files = [
-        file_path for file_path in readme_files if not is_excluded(os.path.relpath(file_path, base_dir))
+        file_path
+        for file_path in readme_files
+        if not is_excluded(os.path.relpath(file_path, base_dir))
     ]
     readme_files = sorted(filtered_files)
     print(f"Found {len(readme_files)} markdown files (after filtering)")

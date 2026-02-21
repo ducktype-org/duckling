@@ -5,7 +5,12 @@ from .source import Source
 
 
 class DependencySpec:
-    def __init__(self, manifest_name: Identifier, versions: Version | list[Version], source: Source):
+    def __init__(
+        self,
+        manifest_name: Identifier,
+        versions: Version | list[Version],
+        source: Source,
+    ):
         self._manifest_name = manifest_name
         self._source = source
         if isinstance(versions, Version):

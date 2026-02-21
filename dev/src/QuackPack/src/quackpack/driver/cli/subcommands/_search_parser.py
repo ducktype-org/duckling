@@ -13,9 +13,9 @@ def get_parser() -> CliParser:
     :rtype: quackpack.cli._parser.CliParser
     """
 
-    return CliParser.subcommand(name="search", description="Search for a package in the registry").add_str(
-        long_name="package", help="Package name"
-    )
+    return CliParser.subcommand(
+        name="search", description="Search for a package in the registry"
+    ).add_str(long_name="package", help="Package name")
 
 
 def execute(ctx: GlobalContext, args: Arguments) -> None:

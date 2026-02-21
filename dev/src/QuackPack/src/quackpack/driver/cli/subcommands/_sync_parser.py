@@ -24,7 +24,9 @@ def get_parser() -> CliParser:
                 help="If a virtual environment of the same name exists in storage, forcefuly replace it",
             )
             .add_flag(
-                long_name="--global", short_name="-g", help="Synchronize the global virtual environment"
+                long_name="--global",
+                short_name="-g",
+                help="Synchronize the global virtual environment",
             )
         )
     )

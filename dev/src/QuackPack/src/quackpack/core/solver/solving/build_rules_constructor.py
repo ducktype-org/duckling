@@ -28,12 +28,16 @@ class _BuildRulesConstructor:
         self.solution = solution
         self.id_resolvents = id_resolvents
 
-    def _construct_for_single_package(self, output: BuildRules, package: ResolvedPackage) -> None:
+    def _construct_for_single_package(
+        self, output: BuildRules, package: ResolvedPackage
+    ) -> None:
         lit_flags = self.solution.package_flags[package]
         output.flags_to_install[package] = list(lit_flags)
         output.instructions[package] = {}
 
-        for dependency_alias, dependency_description in self.summaries[package].deps.items():
+        for dependency_alias, dependency_description in self.summaries[
+            package
+        ].deps.items():
             dependency = PackageAndDependencyId.from_dependency(
                 package, dependency_description, self.id_resolvents
             )
@@ -46,8 +50,12 @@ class _BuildRulesConstructor:
 
 
 def construct_build_rules(
-    solution: SolverModelOutput, summaries: dict[ResolvedPackage, Summary], id_resolvents: IdResolvents
+    solution: SolverModelOutput,
+    summaries: dict[ResolvedPackage, Summary],
+    id_resolvents: IdResolvents,
 ) -> BuildRules:
     rules = BuildRules(flags_to_install={}, instructions={})
-    _BuildRulesConstructor(summaries, solution, id_resolvents).construct_all_instructions(rules)
+    _BuildRulesConstructor(
+        summaries, solution, id_resolvents
+    ).construct_all_instructions(rules)
     return rules

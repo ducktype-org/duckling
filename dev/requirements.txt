@@ -23,3 +23,5 @@ soupsieve==2.7
 typing_extensions==4.13.2
 urllib3==2.4.0
 fastcov==1.16
+black==26.1.0
+click==8.3.1

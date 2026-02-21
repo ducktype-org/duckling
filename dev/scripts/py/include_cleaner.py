@@ -19,7 +19,6 @@ every couple of months when someone has time to sift through its work,
 it's not meant to be a CI step.
 """
 
-
 from typing import Iterator, Optional
 import sys
 import re

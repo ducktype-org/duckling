@@ -11,6 +11,6 @@ args = parser.parse_args()
 filename = args.filename
 
 with open(filename, "r") as file:
-	contents = file.read()
+    contents = file.read()
 
 print(re.sub("\n^[ \t]*:", ":\n", contents, flags=re.MULTILINE))
