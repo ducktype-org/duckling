@@ -56,14 +56,16 @@ use std::{
     time::SystemTime,
 };
 
-use rustvil::fs::{MkdirOptions, PathExt};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::storage::{freeze, paths::Storage, venv_id::VenvId},
-    util_common::{hash, path_ops_ext::PathOpsExt},
+    util_common::{
+        hash,
+        path_ops_ext::{MkdirOptions, PathOpsExt},
+    },
 };
 
 #[derive(Debug)]
