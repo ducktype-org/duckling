@@ -657,14 +657,14 @@ namespace compiler::helios {
 
 				if (!maybe_imported_module.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Module not found",
-						import_stmt->getSourcePosition()
+						"Module not found", import_stmt->getSourcePosition()
 					));
 					return;
 				}
 
 				// Here we don't access just root scope, because root scopes are currently empty:
-				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, maybe_imported_module.value());
+				auto linked_scope
+					= queryRootScopeOfMainModuleFile(ctx, maybe_imported_module.value());
 
 				output(linked_scope);
 			}
