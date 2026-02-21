@@ -47,9 +47,10 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
-			u64 function_id;
-			u64 instr_number;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
+			u64         function_id;
+			u64         instr_number;
+			base::StrID function_name;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id, function_name);
 		};
 
 		struct NumberOfCurrentStackFrames {

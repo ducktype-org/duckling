@@ -216,8 +216,8 @@ void DuckVMDebugCore::getCurrentPosition() const {
 	auto position_response = vm::api::getCurrentPosition(pid);
 	if (!position_response.has_value()) throw std::runtime_error("Failed to get current position");
 	vm::api::response::CodePosition position = position_response.value();
-	std::cout << "Line " << position.instr_number << " of function nr " << position.function_id
-			  << "\n";
+	std::cout << "Line " << position.instr_number << " of function "
+			  << position.function_name.strView() << " (id: " << position.function_id << ")\n";
 }
 
 void DuckVMDebugCore::printMemory() const {
