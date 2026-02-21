@@ -269,17 +269,36 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::Import: {
-			// For now only non-wildcard import exist
+			// For now we assume that only two types of import exists:
+			// import a.b.c;
+			// import a.b.c as d;
+
 			auto import = stmt.dynamicCast<pst::Import>().value();
-			return SymbolData::makePSTSymbolData(
-				{
-					.name        = import->getAlias(),
-					.kind        = SymbolKind::Import,
-					.is_wildcard = false,
-					.is_alias    = false,
-				},
-				pst_data
-			);
+			auto import_chain = import->getImportChain().unlock(ctx);
+			if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
+				base::StrID name;
+				if (import_as.value()->isImportAs()) {
+					name = import_as.value()->asWhat().value();
+				}
+				else {
+					name = import_as.value()->getNames().back().value;
+				}
+
+				return SymbolData::makePSTSymbolData(
+					{
+						.name        = name,
+						.kind        = SymbolKind::Import,
+						.is_wildcard = false,
+						.is_alias    = false,
+					},
+					pst_data
+				);
+			}
+			else {
+				// PR dia
+				CORE_PANIC("Not handled import chain in makeSymbolFromStatement");
+			}
+			
 		}
 		case pst::StmtKind::Method: {
 			auto method = stmt.dynamicCast<pst::Method>().value();

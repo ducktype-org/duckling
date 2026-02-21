@@ -404,6 +404,12 @@ namespace compiler::helios {
 						// This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 						symbols.emplace_back(sym_id);
+					} else if (auto import_opt
+					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
+						// Import has DeclType::Transparent as it can intrude many different symbols.
+						// This is currently handled the same way as DeclType::Symbol.
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						symbols.emplace_back(sym_id);
 					} else {
 						CORE_PANIC(
 							"Not handled element ",

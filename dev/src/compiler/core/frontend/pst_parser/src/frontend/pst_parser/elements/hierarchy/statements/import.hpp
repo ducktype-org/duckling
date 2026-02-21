@@ -20,6 +20,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
+		auto getImportChain() const { return import_chain.give(); }	
+
+		[[nodiscard]]
 		std::string elementType() const override {
 			return "Import";
 		}
