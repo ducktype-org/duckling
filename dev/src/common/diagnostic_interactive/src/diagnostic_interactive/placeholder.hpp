@@ -62,4 +62,41 @@ namespace dia_int {
 			base::Optional<std::string> pointer_message_content = "here"
 		);
 	};
+
+	/**
+	 * @brief Same as PlaceholderHeaderError but with type "note".
+	 * Used to add a note to an error message when the source position is not available.
+	 */
+	class PlaceholderHeaderNote: public MessageBase {
+		Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "misc",
+				     .name          = "placeholder_header" };
+		}
+
+	public:
+		PlaceholderHeaderNote(std::string header_message, std::string description = "");
+	};
+
+	/**
+	 * @brief A Placeholder message with a code snippet and optional description and pointer message.
+	 */
+	class PlaceholderCodeNote final: public MessageBase {
+		Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "misc",
+				     .name          = "placeholder_code" };
+		}
+
+	public:
+		PlaceholderCodeNote(
+			std::string                 header_message,
+			dia::SourcePosition         source_position,
+			std::string                 description             = "",
+			base::Optional<std::string> pointer_message_content = "here"
+		);
+	};
+
 }

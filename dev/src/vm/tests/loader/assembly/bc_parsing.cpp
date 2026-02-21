@@ -1,6 +1,5 @@
 #include <vm_tester_utils.hpp>
 
-#include <vm/loader/parser/errors.hpp>
 #include <vm/loader/parser/parser.hpp>
 
 using namespace vm::loader;
@@ -45,7 +44,7 @@ private:
 		parseInvalidDbc(
 			"invalid_opcode.dbc",
 			{
-				base::strConcat(parser::UnknownOpCodeError::ERR_MSG, "mov_l46_imm"),
+				"Given OpCode does not exist: mov_l46_imm",
 			}
 		);
 	}
@@ -54,7 +53,7 @@ private:
 		parseInvalidDbc(
 			"no_semicolon.dbc",
 			{
-				parser::ExpectedSemicolonAfterError::ERR_MSG,
+				"Expected `;` after here",
 			}
 		);
 	}
