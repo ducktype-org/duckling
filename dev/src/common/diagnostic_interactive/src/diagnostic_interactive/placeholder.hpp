@@ -98,5 +98,4 @@ namespace dia_int {
 			base::Optional<std::string> pointer_message_content = "here"
 		);
 	};
-
 }
