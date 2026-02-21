@@ -270,6 +270,42 @@ namespace vm {
 				}
 			}
 
+			variant_case_novalue(api::request::DebuggerGetNumberOfCurrentStackFrames) {
+				RuntimeData& runtime_data = getMainVMThread().runtime_data;
+				u64 frames = runtime_data.frame_stack_current - runtime_data.frame_stack_base + 1;
+				return api::Response(api::response::NumberOfCurrentStackFrames{
+					.number_of_stack_frames = frames });
+			}
+
+			variant_case(api::request::DebuggerGetStackFrameVars, request) {
+				RuntimeData& runtime_data = getMainVMThread().runtime_data;
+				Frame&       frame
+					= runtime_data
+				          .frame_stack_base[request.frame_index];  // TODO: assert it's a valid frame
+
+				std::vector<api::response::StackFrameVars::FrameVar> frame_vars;
+				for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
+					Ref<Block> block = frame.block_stack[block_idx];
+					frame_vars.push_back(api::response::StackFrameVars::FrameVar{
+						.offset  = offset,
+						.pointer = Pointer(block, 0),
+						.type    = memory.getBlockType(block) });
+				}
+
+				return api::Response(api::response::StackFrameVars{ .frame_vars = frame_vars });
+			}
+
+			variant_case(api::request::DebuggerGetPointerData, request) {
+				base::ModRawView view = memory.getPointerData(request.pointer, request.size);
+				return api::Response(api::response::PointerData{ .data = view });
+			}
+
+			variant_case(api::request::DebuggerDereferencePointer, request) {
+				base::ModRawView view = memory.getPointerData(request.pointer, Type::POINTER_SIZE);
+				Pointer          pointer = safeReadPointerBytes<Pointer>(view.getBegin());
+				return api::Response(api::response::Pointer{ .pointer = pointer });
+			}
+
 			variant_case(api::request::StatusRequest, status_request) {
 				return api::Response(getStatus());
 			}
@@ -312,6 +348,7 @@ namespace vm {
 		  loaded_program(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
 	}
+
 	VMProcess::VMProcess(const PID my_pid, const int debugger_event_fd):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
@@ -348,8 +385,8 @@ namespace vm {
 		}
 		status_cv.notify_all();
 		if (debugger_event_fd != -1) {
-			uint8_t byte = 1; 
-			write(debugger_event_fd, &byte, 1); 
+			uint8_t byte = 1;
+			write(debugger_event_fd, &byte, 1);
 		}
 	}
 

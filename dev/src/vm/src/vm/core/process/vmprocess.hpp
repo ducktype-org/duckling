@@ -50,7 +50,7 @@ namespace vm {
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
-		int debugger_event_fd;
+		int                         debugger_event_fd;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
@@ -200,6 +200,5 @@ namespace vm {
 
 		VMProcess(PID my_pid);
 		VMProcess(PID my_pid, int debugger_event_fd);
-
 	};
 }

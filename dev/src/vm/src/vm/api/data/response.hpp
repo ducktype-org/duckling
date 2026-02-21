@@ -52,6 +52,28 @@ namespace vm::api {
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
 		};
 
+		struct NumberOfCurrentStackFrames {
+			u64 number_of_stack_frames;
+		};
+
+		struct StackFrameVars {
+			struct FrameVar {
+				u64         offset;
+				vm::Pointer pointer;
+				TypeCRef    type;
+			};
+
+			std::vector<FrameVar> frame_vars;
+		};
+
+		struct PointerData {
+			base::ModRawView data;
+		};
+
+		struct Pointer {
+			vm::Pointer pointer;
+		};
+
 		using Boolean = bool;
 	}
 
@@ -63,5 +85,9 @@ namespace vm::api {
 		response::CodePosition,
 		response::VmValue,
 		response::Boolean,
+		response::NumberOfCurrentStackFrames,
+		response::StackFrameVars,
+		response::PointerData,
+		response::Pointer,
 		ExitValue>;
 }

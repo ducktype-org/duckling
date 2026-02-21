@@ -133,6 +133,42 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponseMove<response::VmValue>);
 	}
 
+	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
+		PID pid
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::DebuggerGetNumberOfCurrentStackFrames{}))
+		    .and_then(mapOrWrongResponse<response::NumberOfCurrentStackFrames>);
+	}
+
+	std::expected<response::StackFrameVars, ApiError> debuggerGetStackFrameVars(
+		PID pid, u64 frame_index
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid, request::DebuggerGetStackFrameVars{ .frame_index = frame_index }
+			))
+		    .and_then(mapOrWrongResponse<response::StackFrameVars>);
+	}
+
+	std::expected<response::PointerData, ApiError> debuggerGetPointerData(
+		PID pid, Pointer pointer, u64 size
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid, request::DebuggerGetPointerData{ .pointer = pointer, .size = size }
+			))
+		    .and_then(mapOrWrongResponse<response::PointerData>);
+	}
+
+	std::expected<response::Pointer, ApiError> debuggerDereferencePointer(PID pid, Pointer pointer) {
+		return Supervisor::get()
+		    .doRequest(
+				SupervisorRequest(pid, request::DebuggerDereferencePointer{ .pointer = pointer })
+			)
+		    .and_then(mapOrWrongResponse<response::Pointer>);
+	}
+
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })

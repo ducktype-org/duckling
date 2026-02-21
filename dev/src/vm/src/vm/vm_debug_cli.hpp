@@ -23,7 +23,7 @@ public:
 	void run();
 
 private:
-    DuckVMDebugCore core;
+	DuckVMDebugCore core;
 
 	DuckVMDebugCli();
 	DuckVMDebugCli(const fs::File& filepath, const std::vector<std::string>& args = {});
@@ -32,5 +32,4 @@ private:
 	bool handleLine(std::string line);
 	void handleEvent();
 	void help() const;
-
 };

@@ -1,11 +1,11 @@
 #include "vm_debug_core.hpp"
 
-#include <iostream>
-#include <string>
-#include <variant>
 #include "vm/api/data/api_error.hpp"
 #include "vm/api/data/status.hpp"
 
+#include <iostream>
+#include <string>
+#include <variant>
 
 namespace {
 	Box<vm::VmValue> getIntVmValue(const vm::PID pid, const i64 value) {
@@ -40,32 +40,34 @@ namespace {
 	}
 }
 
-
-DuckVMDebugCore DuckVMDebugCore::get(const fs::File& filepath, const std::vector<std::string>& args) { return {filepath, args}; }
+DuckVMDebugCore DuckVMDebugCore::get(const fs::File& filepath, const std::vector<std::string>& args) {
+	return { filepath, args };
+}
 
 DuckVMDebugCore::DuckVMDebugCore() {
-	if (pipe(event_pipe) < 0) { throw std::runtime_error("Failed to create event pipe"); }
+	if (pipe(event_pipe) < 0) throw std::runtime_error("Failed to create event pipe");
 	const auto process_pid_response = vm::api::spawn();
 	if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
 	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
 }
 
-DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args) : debug_args(args) {
-	if (pipe(event_pipe) < 0) { throw std::runtime_error("Failed to create event pipe"); }
+DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args):
+	  debug_args(args) {
+	if (pipe(event_pipe) < 0) throw std::runtime_error("Failed to create event pipe");
 	const auto process_pid_response = vm::api::spawn(event_pipe[1]);
 	if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
 	if (!vm::api::loadFiles(pid, { filepath })) throw BeRDFailedToLoadFile();
-	std::cout<<"File loaded\n";
+	std::cout << "File loaded\n";
 	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
 }
 
 void DuckVMDebugCore::runVm() {
 	auto response = vm::api::getExecutionStatus(pid);
-	if (response.has_value() && 
-		(!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
-		 && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
+	if (response.has_value()
+	    && (!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
+	        && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
 		std::cout << "You have to finish execution to run VM.\n";
 		getStatus();
 		return;
@@ -97,7 +99,7 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 
 	std::string args_str = string.substr(paren_open + 1, paren_close - paren_open - 1);
 
-	u64               start = 0;
+	u64 start = 0;
 	arguments = OwnedArgumentList();
 	while (start < args_str.length()) {
 		u64 end = args_str.find(',', start);
@@ -116,9 +118,9 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 	}
 
 	auto response = vm::api::getExecutionStatus(pid);
-	if (response.has_value() && 
-		(!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
-		 && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
+	if (response.has_value()
+	    && (!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
+	        && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
 		std::cout << "You have to finish execution and get exit value.\n";
 		getStatus();
 		return;
@@ -127,35 +129,38 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 		throw BeRDFailedToRunCodeException();
 }
 
-
 void DuckVMDebugCore::getStatus() {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value()) {
 		vm::api::ProcStatus status = response.value();
-		std::cout << "The program is "; 
-		std::visit([](auto&& arg) -> void {
-			using T = std::decay_t<decltype(arg)>;
-			std::cout << TypeParseTraits<T>::NAME.data() << "\n";
-		}, status);
+		std::cout << "The program is ";
+		std::visit(
+			[](auto&& arg) -> void {
+				using T = std::decay_t<decltype(arg)>;
+				std::cout << TypeParseTraits<T>::NAME.data() << "\n";
+			},
+			status
+		);
 
-		if(std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
+		if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
 			freeArguments(arguments);
 			arguments = OwnedArgumentList();
 
 			auto exitval = std::get<vm::api::ExecutionCompleted>(response.value()).exit_value;
 
-			if (exitval->type->getName() != base::StrID("i64"))
-				throw BeRDWrongTypeException();
-			
-			std::cout<< "Ret: " << exitval->readBytes<i64>() << "\n";
-			
+			if (exitval->type->getName() != base::StrID("i64")) throw BeRDWrongTypeException();
+
+			std::cout << "Ret: " << exitval->readBytes<i64>() << "\n";
+
 			if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
 		}
-		if(std::holds_alternative<vm::api::Paused>(response.value())) {
+		if (std::holds_alternative<vm::api::Paused>(response.value())) {
 			auto position_response = vm::api::getCurrentPosition(pid);
-			if (!position_response.has_value()) throw std::runtime_error("Failed to get current position");
+			if (!position_response.has_value())
+				throw std::runtime_error("Failed to get current position");
 			vm::api::response::CodePosition position = position_response.value();
-			std::cout << "Paused on line " << position.instr_number << " of function nr " << position.function_id << "\n";
+			std::cout << "Paused on line " << position.instr_number << " of function nr "
+					  << position.function_id << "\n";
 		}
 	} else {
 		const vm::api::ApiError& err = response.error();
@@ -208,5 +213,79 @@ void DuckVMDebugCore::getCurrentPosition() const {
 	auto position_response = vm::api::getCurrentPosition(pid);
 	if (!position_response.has_value()) throw std::runtime_error("Failed to get current position");
 	vm::api::response::CodePosition position = position_response.value();
-	std::cout << "Line " << position.instr_number << " of function nr " << position.function_id << "\n";
+	std::cout << "Line " << position.instr_number << " of function nr " << position.function_id
+			  << "\n";
+}
+
+void DuckVMDebugCore::printMemory() const {
+	auto response_nosf = vm::api::debuggerGetNumberOfStackFrames(pid);
+	if (!response_nosf.has_value()) {
+		std::cerr << "get number of stack frames error";
+		return;
+	}
+
+	u64 number_of_stack_frames = response_nosf.value().number_of_stack_frames;
+	for (u64 frame_index = 0; frame_index < number_of_stack_frames; frame_index++) {
+		std::cout << "Frame " << frame_index << "\n";
+		auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, frame_index);
+		if (!response_sfv.has_value()) {
+			std::cerr << "get number of stack frames error";
+			return;
+		}
+
+		auto vars = response_sfv.value().frame_vars;
+		for (auto& var: vars) {
+			std::cout << "\t+ 0x" << std::hex << var.offset << " aka. " << std::dec << var.offset
+					  << " <" << var.type->getName().strView() << "> [size: 0x" << std::hex
+					  << var.type->getSize() << std::dec << "]:";
+			auto response_pd
+				= vm::api::debuggerGetPointerData(pid, var.pointer, var.type->getSize());
+			if (!response_pd.has_value()) {
+				std::cerr << "get pointer data error";
+				return;
+			}
+			base::ModRawView var_data_view = response_pd.value().data;
+
+
+			switch (var.type->getKind()) {
+			case vm::Type::Kind::None:
+				break;
+			case vm::Type::Kind::Primitive:
+				if (var_data_view.size() == 1) {
+					u8 value = vm::safeReadPointerBytes<u8>(var_data_view.getBegin());
+					std::cout << " " << (u16) value << "\n";
+				}
+				if (var_data_view.size() == 2) {
+					u16 value = vm::safeReadPointerBytes<u16>(var_data_view.getBegin());
+					std::cout << " " << value << "\n";
+				}
+				if (var_data_view.size() == 4) {
+					u32 value = vm::safeReadPointerBytes<u32>(var_data_view.getBegin());
+					std::cout << " " << value << "\n";
+				}
+				if (var_data_view.size() == 8) {
+					u64 value = vm::safeReadPointerBytes<u64>(var_data_view.getBegin());
+					std::cout << " " << value << "\n";
+				}
+
+				break;
+			case vm::Type::Kind::Pointer:
+				std::cout << " pointer\n";
+				break;
+			// FixedSizeTable
+			// DynamicTable
+			// Data
+			// Variant
+			// Function
+			// Opaque
+			default:
+				for (u64 i = 0; i < var_data_view.size(); i++) {
+					std::cout << " 0x" << std::hex << std::setfill('0') << std::setw(2)
+							  << std::to_integer<u64>(var_data_view.getBegin()[i]);
+				}
+				std::cout << std::dec << "\n";
+				break;
+			}
+		}
+	}
 }
