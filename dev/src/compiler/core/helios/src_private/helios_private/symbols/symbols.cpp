@@ -292,8 +292,9 @@ namespace compiler::helios {
 					pst_data
 				);
 			} else {
-				// PR dia
-				CORE_PANIC("Not handled import chain in makeSymbolFromStatement");
+				throw base::NotYetImplemented(
+					"Not handled type of import chain in makeSymbolFromStatement"
+				);
 			}
 		}
 		case pst::StmtKind::Method: {
