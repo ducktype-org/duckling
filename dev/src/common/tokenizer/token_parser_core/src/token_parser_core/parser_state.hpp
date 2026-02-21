@@ -131,15 +131,6 @@ namespace tpc {
 		 */
 		virtual void goUpAndSkip();
 
-		// /**
-		//  * @brief Logs an error relatively to the current token.
-		//  * @note This version is deprecated in favor of the diagnostic Message system.
-		//  */
-		// [[deprecated]]
-		// virtual void fail(i64 rel_pos, const std::string& message) {
-		// 	err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
-		// }
-
 
 		virtual void logInt(Box<dia_int::MessageBase> message) { int_err->log(std::move(message)); }
 
