@@ -6,7 +6,7 @@ namespace pst {
 	/**
 	 * @brief Simple dotted name that is Identifiers separated by dots potentially ended by `.*`
 	 *
-	 * used for imports
+	 * used for imports. Examples can be found in specific import chains.
 	 */
 	class ImportChain: public NotStmt {
 	public:
