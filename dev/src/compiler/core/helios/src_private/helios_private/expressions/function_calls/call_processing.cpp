@@ -111,7 +111,7 @@ namespace compiler::helios::code {
 		SymID                                                  fun,
 		const std::vector<Box<Expr>>&                          explicit_positional_arguments,
 		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
-		base::Optional<Box<Expr>>     						   self_symbol
+		const base::Optional<Box<Expr>>     				   self_symbol
 	) {
 		auto& decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
 		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());
@@ -126,7 +126,7 @@ namespace compiler::helios::code {
 				};
 			} else {
 				positional_arguments.reserve(explicit_positional_arguments.size() + 1);
-				positional_arguments.push_back(std::move(self_symbol.value()));
+				positional_arguments.push_back(self_symbol.value()->clone());
 				for (const auto& arg : explicit_positional_arguments) {
 					positional_arguments.push_back(arg->clone());
 				}
@@ -506,7 +506,7 @@ namespace compiler::helios::code {
 
 
 		for (auto candidate: candidates) {
-			MatchResult match = matchOverloadCandidate(ctx, candidate, positional_arguments, named_arguments, std::move(self_symbol));
+			MatchResult match = matchOverloadCandidate(ctx, candidate, positional_arguments, named_arguments, self_symbol);
 
 			variant_match(match) {
 				variant_case(ExactMatch, data) { exact_match.push_back(std::move(data)); }

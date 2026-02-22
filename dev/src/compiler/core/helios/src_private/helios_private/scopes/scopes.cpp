@@ -458,6 +458,11 @@ namespace compiler::helios {
 				for (auto params: *meth->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
 
+				out.emplace_back(ctx.query<houtgen::QueryGeneratedSymbol>({
+					.name = base::StrID("self"),
+					.generated_symbol_data = houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Parameter{ .function_symbol=ctx.query<QuerySymbolOfSTMT>(meth), .parameter_index=0 } },
+				}));
+
 				output(std::move(out));
 			}
 
