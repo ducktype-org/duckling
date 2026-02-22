@@ -1,5 +1,4 @@
 #include "queries.hpp"
-#include <iostream>
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -350,22 +349,15 @@ namespace compiler::helios {
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 
 				const auto class_symbol = *ctx.query<QueryClassOfMember>(original_symbol);
-
-				std::cout << "Containing class symbol: " << name(class_symbol).str() << std::endl;
-
 				const auto class_type = ctx.query<QueryTypeFromDefinition>(class_symbol)
 							->valueOrThrow()
 							.getType()
 							.as<tsh::ClassAbstractType>();
 
-				std::cout << "Containing class type: " << class_type.toString() << std::endl;
-
 				const SymID self_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data = houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Parameter{ .function_symbol=this->original_symbol, .parameter_index=0 } },
 				});
-
-				std::cout << "Self symbol: " << name(self_symbol).str() << std::endl;
 
 				this->out->parameters.insert(
 					this->out->parameters.begin(),
@@ -380,8 +372,6 @@ namespace compiler::helios {
 						.helios_symbol = self_symbol,
 					}
 				);
-
-				std::cout << "Method delaration done." << std::endl;
 			}
 		};
 
@@ -797,9 +787,6 @@ namespace compiler::helios {
 						" We should add default initialization here."
 					);
 				} else {
-					std::cout << "Variable declaration with initial value: " << name(symbol).str() << std::endl;
-					stmt->dprint(std::cout);
-					std::cout << std::endl;
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(
 							  ctx, stmt->getValue().value().unlock(ctx)->getExpr(), symbol_type
@@ -867,8 +854,6 @@ namespace compiler::helios {
 				getSymRef(key)->getPSTDataOpt().has_value(),
 				"Query code of function does not support generated functions"
 			);
-
-			std::cout << "Making function" << std::endl;
 			HOUTFunctionMaker func_maker(ctx, key);
 			stmt(ctx, key).value()->acceptVisitor(func_maker);
 
