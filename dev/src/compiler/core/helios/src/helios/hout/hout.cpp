@@ -42,7 +42,8 @@ namespace compiler::helios {
 		  return_type(ret_type),
 		  parameters(std::move(parameters)) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration or kind(symbol) == SymbolKind::Method,
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
+				or kind(symbol) == SymbolKind::Method,
 			"Symbol is not a function, function declaration nor method"
 		);
 	}

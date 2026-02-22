@@ -162,7 +162,7 @@ namespace compiler::helios {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
 					if (kind(key) == SymbolKind::Function
 					    or kind(key) == SymbolKind::FunctionDeclaration
-						or kind(key) == SymbolKind::Method)
+					    or kind(key) == SymbolKind::Method)
 						return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);

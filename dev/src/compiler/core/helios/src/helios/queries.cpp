@@ -12,6 +12,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -33,7 +34,6 @@
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
 
 namespace compiler::helios {
 
@@ -349,14 +349,16 @@ namespace compiler::helios {
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 
 				const auto class_symbol = *ctx.query<QueryClassOfMember>(original_symbol);
-				const auto class_type = ctx.query<QueryTypeFromDefinition>(class_symbol)
-							->valueOrThrow()
-							.getType()
-							.as<tsh::ClassAbstractType>();
+				const auto class_type   = ctx.query<QueryTypeFromDefinition>(class_symbol)
+				                            ->valueOrThrow()
+				                            .getType()
+				                            .as<tsh::ClassAbstractType>();
 
 				const SymID self_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
-					.generated_symbol_data = houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Parameter{ .function_symbol=this->original_symbol, .parameter_index=0 } },
+					.generated_symbol_data
+					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Parameter{
+						.function_symbol = this->original_symbol, .parameter_index = 0 } },
 				});
 
 				this->out->parameters.insert(

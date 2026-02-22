@@ -96,7 +96,8 @@ namespace compiler::helios::code {
 		}
 	};
 
-	class MissingSelfArgumentInMethodCallError final: public dia_int::MessageWithCodeFragmentAndCause {
+	class MissingSelfArgumentInMethodCallError final:
+		  public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -104,10 +105,11 @@ namespace compiler::helios::code {
 				     .name          = "call_arg_missing_self_method" };
 		}
 
-		public: MissingSelfArgumentInMethodCallError(
-			dia::SourcePosition                      source_position,
-			base::Optional<Box<InteractiveFunction>> method_name
-		): MessageWithCodeFragmentAndCause(source_position) {
+	public:
+		MissingSelfArgumentInMethodCallError(
+			dia::SourcePosition source_position, base::Optional<Box<InteractiveFunction>> method_name
+		):
+			  MessageWithCodeFragmentAndCause(source_position) {
 			if (method_name.has_value())
 				addArgument<dia_int::InteractiveArgument>(
 					"method_name", std::move(method_name.value())
@@ -313,8 +315,7 @@ namespace compiler::helios::code {
 					}
 					variant_case(MissingSelfArgumentInMethodCall, data) {
 						return makeBox<MissingSelfArgumentInMethodCallError>(
-							call_expr->getSourcePosition(),
-							get_interactive_function(data.method)
+							call_expr->getSourcePosition(), get_interactive_function(data.method)
 						);
 					}
 				}

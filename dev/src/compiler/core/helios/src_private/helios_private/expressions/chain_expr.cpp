@@ -545,8 +545,11 @@ namespace compiler::helios::code {
 		   This may result in a method. Method
 		 * parameter overload is possible.
 		 */
-		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState> {
+		auto processPSTExpr(
+			base::Box<Expr>                current_expr,
+			pst::Access<pst::expr::Access> expr_access,
+			pst::Access<pst::expr::Call>   call_expr
+		) -> query::QResult<ChainState> {
 			// TODO: HERE!!!
 
 			auto current_expr_type = current_expr->expression_type.getType();
@@ -557,7 +560,9 @@ namespace compiler::helios::code {
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr, std::move(current_expr));
+			auto expr_result = processFunctionCall(
+				query_ctx, callees, expr_access, call_expr, std::move(current_expr)
+			);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 
 			return ChainState::ofExpr(std::move(expr));

@@ -243,14 +243,10 @@ namespace compiler::helios {
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
-			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID())) {
-				CORE_ASSERT(
-					*scope_in_map == parent,
-					"Parent mismatch in QueryPrimaryCodeScopeFor"
-				);
-			} else {
+			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID()))
+				CORE_ASSERT(*scope_in_map == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
+			else
 				parent_map.put(element->getID(), parent);
-			}
 
 			return ScopeData{
 				parent, false, element, module(parent), scopeDepth(parent) + 1,
@@ -460,7 +456,10 @@ namespace compiler::helios {
 
 				out.emplace_back(ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
-					.generated_symbol_data = houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Parameter{ .function_symbol=ctx.query<QuerySymbolOfSTMT>(meth), .parameter_index=0 } },
+					.generated_symbol_data
+					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Parameter{
+						.function_symbol = ctx.query<QuerySymbolOfSTMT>(meth),
+						.parameter_index = 0 } },
 				}));
 
 				output(std::move(out));

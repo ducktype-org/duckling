@@ -1755,14 +1755,14 @@ private:
 			assertTrue(cast_expr != nullptr, "Cast expression expected.");
 		}
 	}
+
 	void testMethodCalls() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/method_calls")));
 
-		auto& hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			std::cout << hout.debugPrint(ctx);
-		});
+		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
 	}
 
 	void testMangler() {
