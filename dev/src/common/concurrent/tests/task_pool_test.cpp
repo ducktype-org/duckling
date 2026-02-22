@@ -14,7 +14,6 @@ class TaskPoolTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		concurrent::worker::setWorkerCount(10);
 		TESTER_ADD_TEST(basicFunctionalityTest);
 		TESTER_ADD_TEST(testFibbonaciSchedule);
 		TESTER_ADD_TEST(testFibbonaciScheduleReversed);
@@ -24,6 +23,8 @@ public:
 	}
 
 protected:
+	void beforeAll() override { concurrent::worker::setWorkerCount(10); }
+
 	void fail(std::string_view err, bool critical = true) override {
 		concurrent::runOrTimeout(
 			concurrent::worker::WorkerManager::get().testPrivateAccessReloadState,

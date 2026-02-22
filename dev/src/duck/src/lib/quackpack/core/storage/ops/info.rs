@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use rustvil::fs::{PathExt, ShouldBlock};
-
 use crate::quackpack::core::storage;
 
 use crate::StrId;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult};
 use storage::paths;
 

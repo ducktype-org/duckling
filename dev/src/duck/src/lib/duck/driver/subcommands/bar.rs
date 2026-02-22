@@ -4,9 +4,9 @@ use std::hash::Hasher;
 use std::hash::{DefaultHasher, Hash};
 use std::time::Duration;
 
+use crate::StrId;
 use crate::{
     DuckCtx, QuackResult, quackpack::util::progress_bar::DownloadingPackagesProgressBarManager,
-    static_str_id,
 };
 use clap::{ArgMatches, Command};
 
@@ -25,11 +25,11 @@ pub fn execute(ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
         .unwrap()
         .block_on(async move {
             let pkgs = vec![
-                static_str_id!("foo"),
-                static_str_id!("bar"),
-                static_str_id!("baz"),
-                static_str_id!("duck"),
-                static_str_id!("compiler"),
+                StrId::from("foo"),
+                StrId::from("bar"),
+                StrId::from("baz"),
+                StrId::from("duck"),
+                StrId::from("compiler"),
             ];
             let bar = DownloadingPackagesProgressBarManager::new(ctx.console(), pkgs.clone());
 

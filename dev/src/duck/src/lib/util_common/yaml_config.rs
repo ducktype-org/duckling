@@ -2,7 +2,6 @@
 // so we have to pull it in order to use it.
 use ordered_float::OrderedFloat;
 use paste::item;
-use rustvil::fs::PathExt;
 use saphyr::{
     LoadableYamlNode, Mapping, MappingOwned, Scalar, ScalarOwned, SequenceOwned, Yaml, YamlEmitter,
     YamlOwned,
@@ -16,6 +15,7 @@ use tracing::debug;
 
 use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
+    util_common::path_ops_ext::PathOpsExt,
 };
 
 use super::DescriptionWithAnArticle;
@@ -124,7 +124,7 @@ impl YamlConfig {
         debug!("parsing YAML config at `{}`", path.display());
         let content = match path.as_path().read_to_string() {
             Ok(string) => string,
-            Err(e) if matches!(e.kind(), ErrorKind::NotFound) => {
+            Err(e) if matches!(e.source().kind(), ErrorKind::NotFound) => {
                 debug!(
                     "there is no config at `{}`, falling back to defaults...",
                     path.display()

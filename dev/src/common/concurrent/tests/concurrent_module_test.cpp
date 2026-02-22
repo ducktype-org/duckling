@@ -30,8 +30,6 @@ class ConcurrentTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		concurrent::worker::setWorkerCount(4);
-
 		TESTER_ADD_TEST(hashMapSingleThreadTest1);
 
 		TESTER_ADD_TEST(singleThreadedRandomTest<0>);
@@ -69,6 +67,9 @@ public:
 
 		TESTER_ADD_TEST(testGetAllKeyValuePairs);
 	}
+
+protected:
+	void beforeAll() override { concurrent::worker::setWorkerCount(4); }
 
 private:
 	void testGetAllKeyValuePairs() {
