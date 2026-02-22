@@ -78,13 +78,33 @@ impl SolverFreeze {
         }
         self.package_freezes
             .retain(|pkg, _| *pkg == self.main_pkg || still_satisfied_pkgs.contains(pkg));
+
+        let main_pkg_freeze = self
+            .package_freezes
+            .get(&self.main_pkg)
+            .context_internal("Main package was not put into package freezes")?;
+        let main_manifest = manifests
+            .get(&new_root)
+            .context_internal("Main package manifest not provided")?;
+        // Check which main package dependencies are still satisfied.
+        let mut still_satisfied_root_deps = HashSet::new();
+        for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
+            if let Some(dependency) = main_manifest.dependencies().get_dependency(*alias)
+                && let Some(realization_freeze) = self.package_freezes.get(realization)
+                && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
+            {
+                still_satisfied_root_deps.insert(*alias);
+            }
+        }
+        // Leave only still satisfied dependencies.
         let main_pkg_freeze = self
             .package_freezes
             .get_mut(&self.main_pkg)
             .context_internal("Main package was not put into package freezes")?;
         main_pkg_freeze
             .dependencies_realization
-            .retain(|_, realization| still_satisfied_pkgs.contains(realization));
+            .retain(|alias, _| still_satisfied_root_deps.contains(alias));
+        // Change the previous main package to the new root package.
         let main_pkg_freeze = self
             .package_freezes
             .remove(&self.main_pkg)

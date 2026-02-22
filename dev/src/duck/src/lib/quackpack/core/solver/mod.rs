@@ -23,6 +23,9 @@ pub mod solving;
 pub mod types_common;
 pub mod util;
 
+#[cfg(test)]
+mod tests;
+
 use std::{cell::OnceCell, collections::HashSet, marker::PhantomData, sync::Arc};
 
 use tokio::sync::Mutex;
@@ -40,6 +43,7 @@ use crate::{
     },
 };
 
+#[derive(Clone, Copy, Debug)]
 pub enum SolverMode {
     Merciful,
     Strict,
@@ -63,6 +67,7 @@ pub struct Solver<'duck, State: SolverState> {
     current_freeze: SolverFreeze,
     gathered_info: OnceCell<SolverInput>,
     state: PhantomData<State>,
+    mode: SolverMode,
 }
 
 impl<'duck> Solver<'duck, Prepared> {
@@ -71,6 +76,7 @@ impl<'duck> Solver<'duck, Prepared> {
         package_ctx: &'duck PackageCtx<'duck>,
         fetcher: &'duck Fetcher<'duck>,
         current_freeze: SolverFreeze,
+        mode: SolverMode,
     ) -> Self {
         Self {
             qp_ctx: package_ctx.ctx(),
@@ -93,6 +99,7 @@ impl<'duck> Solver<'duck, Prepared> {
             current_freeze,
             gathered_info: OnceCell::new(),
             state: PhantomData,
+            mode,
         }
     }
 
@@ -126,7 +133,7 @@ impl<'duck> Solver<'duck, Prepared> {
                 .remove(dep);
         }
 
-        let root_path = self.root_package_ctx.package().manifest_path().into();
+        let root_path = self.root_package_ctx.package().root_directory().into();
         let root_features = root_manifest
             .features()
             .all_features()
@@ -134,7 +141,7 @@ impl<'duck> Solver<'duck, Prepared> {
             .copied()
             .collect();
         let gathered_info = gatherer
-            .explore(root_path, root_manifest, root_features, SolverMode::Strict)
+            .explore(root_path, root_manifest, root_features, self.mode)
             .await?;
         let solver_input = SolverInput::from_freeze_and_gathered_info(
             &maximal_valid_freeze,
@@ -152,6 +159,7 @@ impl<'duck> Solver<'duck, Prepared> {
             current_freeze: self.current_freeze,
             gathered_info: self.gathered_info,
             state: PhantomData,
+            mode: self.mode,
         })
     }
 }

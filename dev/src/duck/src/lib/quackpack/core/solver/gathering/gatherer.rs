@@ -107,7 +107,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                 SolverMode::Merciful => {
                     for e in errors {
                         self.ctx.error_console().info(format!(
-                            "Error {e} surpressed due to the Merciful mode of the solver"
+                            "\nError:\n\"{e}\"\nsurpressed due to the Merciful mode of the solver"
                         ));
                     }
                 }
