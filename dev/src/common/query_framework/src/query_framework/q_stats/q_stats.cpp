@@ -41,8 +41,7 @@ namespace query {
 		 */
 		Ref<QueryStatsData> getQueryStatData(internal::QueryID query_id) {
 			auto maybe_inserted = data.maybePut(query_id, QueryStatsDataConstructionTag{});
-			if (maybe_inserted)
-				return maybe_inserted.toOpt().value();
+			if (maybe_inserted) return maybe_inserted.toOpt().value();
 			return data.at(query_id);
 		}
 	}
@@ -57,7 +56,7 @@ namespace query {
 
 	CallStatsObject::~CallStatsObject() {
 		this->call_time.endMeasurement();
-		
+
 		Ref data_ref = getQueryStatData(query_id);
 
 		if (was_provide_call) data_ref->num_provide_calls.fetch_add(1, std::memory_order_relaxed);

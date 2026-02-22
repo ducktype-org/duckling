@@ -25,8 +25,7 @@ namespace time_stats {
 		 * @note This is intentionally thread local, as it is valid for each thread to track the
 		 * same category at the same time.
 		 */
-		constinit thread_local std::array<bool, TIME_CATEGORIES_COUNT>
-			is_category_active{};
+		constinit thread_local std::array<bool, TIME_CATEGORIES_COUNT> is_category_active{};
 	}
 
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):
@@ -79,7 +78,7 @@ namespace time_stats {
 
 		bool was_active = is_category_active.at(std::to_underlying(category));
 		is_category_active.at(std::to_underlying(category)) = false;
-		
+
 		CORE_ASSERT_NOEXCEPT(
 			was_active,
 			"Ending time tracking of inactive category ",
