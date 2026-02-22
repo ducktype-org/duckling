@@ -1,7 +1,7 @@
 #include "vm_debug_core.hpp"
 
-#include "vm/api/data/api_error.hpp"
-#include "vm/api/data/status.hpp"
+#include <vm/api/data/api_error.hpp>
+#include <vm/api/data/status.hpp>
 
 #include <iostream>
 #include <istream>
@@ -46,22 +46,26 @@ DuckVMDebugCore DuckVMDebugCore::get(const fs::File& filepath, const std::vector
 	return { filepath, args };
 }
 
-DuckVMDebugCore::DuckVMDebugCore()
-	: DuckVMDebugCore(std::cin, std::cout) 
-{}
+DuckVMDebugCore::DuckVMDebugCore(): DuckVMDebugCore(std::cin, std::cout) {}
 
 DuckVMDebugCore::DuckVMDebugCore(std::istream& vm_input_stream, std::ostream& vm_output_stream) {
 	if (pipe(event_pipe) < 0) throw std::runtime_error("Failed to create event pipe");
 	const auto process_pid_response = vm::api::spawn();
 	if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
-	if (!vm::api::attach(pid, vm_input_stream, vm_output_stream)) throw BeRDFailedToAttachStreamsException();
+	if (!vm::api::attach(pid, vm_input_stream, vm_output_stream))
+		throw BeRDFailedToAttachStreamsException();
 }
-DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args)
-	: DuckVMDebugCore(filepath, std::cin, std::cout, args)
-{}
 
-DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, std::istream& vm_input_stream, std::ostream& vm_output_stream, const std::vector<std::string>& args):
+DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args):
+	  DuckVMDebugCore(filepath, std::cin, std::cout, args) {}
+
+DuckVMDebugCore::DuckVMDebugCore(
+	const fs::File&                 filepath,
+	std::istream&                   vm_input_stream,
+	std::ostream&                   vm_output_stream,
+	const std::vector<std::string>& args
+):
 	  debug_args(args) {
 	if (pipe(event_pipe) < 0) throw std::runtime_error("Failed to create event pipe");
 	const auto process_pid_response = vm::api::spawn(event_pipe[1]);
@@ -69,7 +73,8 @@ DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, std::istream& vm_inpu
 	pid = process_pid_response->pid;
 	if (!vm::api::loadFiles(pid, { filepath })) throw BeRDFailedToLoadFile();
 	std::cout << "File loaded\n";
-	if (!vm::api::attach(pid, vm_input_stream, vm_output_stream)) throw BeRDFailedToAttachStreamsException();
+	if (!vm::api::attach(pid, vm_input_stream, vm_output_stream))
+		throw BeRDFailedToAttachStreamsException();
 }
 
 void DuckVMDebugCore::runVm() {
@@ -142,7 +147,6 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 	if (!vm::api::runFunction(pid, function_name, createArgumentList(arguments)))
 		throw BeRDFailedToRunCodeException();
 }
-
 
 vm::api::ProcStatus DuckVMDebugCore::getStatus() {
 	auto response = vm::api::getExecutionStatus(pid);
