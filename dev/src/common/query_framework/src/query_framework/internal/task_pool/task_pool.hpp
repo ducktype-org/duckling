@@ -35,26 +35,27 @@ namespace query::internal {
 
 	struct TaskStatusMap final {
 	private:
-		using Map = concurrent::ConHashMap<query::internal::KeyHash, TaskStatus>;
+		using Map = concurrent::ConHashMap<NodeID, TaskStatus>;
 
-		std::array<Map, 128> maps;
+		std::array<Map, 1> maps;
 
 		Map& getMap(NodeID id) {
-			return maps.at(id.q_id.asInt());
+			return maps.at(0);
+			// return maps.at(id.q_id.asInt());
 		}
 
 		const Map& getMap(NodeID id) const {
-			return maps.at(id.q_id.asInt());
+			return maps.at(0);
 		}
 
 	public:
 		/** return true if added */
 		bool addIfNotExists(NodeID id) {
-			return getMap(id).maybePut(id.hash, TaskStatus::InProgress).toOpt().has_value();
+			return getMap(id).maybePut(id, TaskStatus::InProgress).toOpt().has_value();
 		}
 
 		base::Optional<TaskStatus> getCurrent(NodeID id) const {
-			return getMap(id).atMaybeCopy(id.hash);
+			return getMap(id).atMaybeCopy(id);
 		}
 
 		bool isDone(NodeID id) const {
@@ -65,11 +66,11 @@ namespace query::internal {
 		}
 
 		void setDone(NodeID id) {
-			getMap(id).update(id.hash, TaskStatus::Done);
+			getMap(id).update(id, TaskStatus::Done);
 		}
 
 		bool contains(NodeID id) const {
-			return getMap(id).contains(id.hash);
+			return getMap(id).contains(id);
 		}
 	};
 
