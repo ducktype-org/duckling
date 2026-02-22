@@ -34,9 +34,7 @@ def run(opts: RunOptions):
         else:
             entry_path = opts.package.package_root / "src" / "main.duck"
     runner = CompileAndRun(opts.duckc_binary, opts.compiler_args, opts.exec_args)
-    continuation = run_impl(
-        opts.ctx, opts.package, runner, entry_path.expanduser().resolve()
-    )
+    continuation = run_impl(opts.ctx, opts.package, runner, entry_path.expanduser().resolve())
     # Note: we instantly end the program here.
     # If there are changes that add something important up the stacktrace,
     # we may need to return the Continuation and pass it upwards.

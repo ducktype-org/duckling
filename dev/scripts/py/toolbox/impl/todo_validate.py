@@ -14,6 +14,7 @@ from .helpers import (
 )
 from .list_files import list_files_impl
 
+
 # Define strict patterns for TODO/FIXME comments in the required format
 # Format: @TODO: #123 description or @FIXME #123 description (only @ prefixed)
 VALID_TODO_PATTERNS = [
@@ -148,13 +149,13 @@ def todo_validate_impl(
     Returns:
         bool: True if all TODOs are properly formatted, False if any violations are found.
     """
-
+    
     if exclude_files is None:
         exclude_files = []
 
     files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(
         only_modified=not all, lines=True, branch=branch, no_merge_base=no_merge_base
-    )  # type: ignore
+    ) # type: ignore
 
     # Pop the current file, so that the verification can pass
     for file in list(files_and_lines.keys()):
@@ -209,7 +210,9 @@ def todo_validate_impl(
                     break
 
             if not valid_format:
-                log_warning(f"{todo_line.path}:{todo_line.line_num}: {line.strip()}")
+                log_warning(
+                    f"{todo_line.path}:{todo_line.line_num}: {line.strip()}"
+                )
                 violations_found = True
                 violation_count += 1
             elif issue_number and not check_issue_exists_and_open(issue_number):
@@ -241,14 +244,12 @@ def todo_validate_impl(
     return not violations_found
 
 
-def get_todos_from_lines(
-    files_and_lines: dict[str, list[tuple[int, int]]],
-) -> list[str]:
+def get_todos_from_lines(files_and_lines: dict[str, list[tuple[int, int]]]) -> list[str]:
     """
     Returns newly added TODOs with issue numbers in modified files.
-
+    
     Scans modified files for TODO/FIXME comments that contain issue numbers.
-
+    
     Args:
         files_and_lines: Dictionary mapping file paths to line ranges to scan
     """
@@ -268,3 +269,4 @@ def get_todos_from_lines(
                 found_issues.add(match.group(1))
     sorted_issues = sorted(found_issues, key=int)
     return sorted_issues
+

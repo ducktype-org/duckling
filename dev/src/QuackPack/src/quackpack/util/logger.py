@@ -33,10 +33,7 @@ class QuackPackDebugFilter(logging.Filter):
             is_good_module = module_name.startswith(("quackpack", "qp"))
             self._cached_filter = is_good_module and (
                 _debug_env_value in (filename, module_name, "quackpack", "qp", "all")
-                or (
-                    _debug_env_value is not None
-                    and module_name.startswith(_debug_env_value)
-                )
+                or (_debug_env_value is not None and module_name.startswith(_debug_env_value))
             )
         return self._cached_filter
 
@@ -55,11 +52,7 @@ def setup_logger(debug_env_value: str | None) -> None:
         force=True,
         handlers=[
             RichHandler(
-                rich_tracebacks=True,
-                show_time=True,
-                markup=True,
-                omit_repeated_times=False,
-                show_path=False,
+                rich_tracebacks=True, show_time=True, markup=True, omit_repeated_times=False, show_path=False
             )
         ],
     )

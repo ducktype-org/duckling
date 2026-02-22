@@ -6,6 +6,7 @@ import shutil
 import subprocess as sp
 import sys
 
+
 # Regex patterns for compiler version detection
 CLANG_VERSION_PATTERN = re.compile(r"(?:^|/)clang\+\+-(\d+)$")
 GCC_VERSION_PATTERN = re.compile(r"(?:^|/)g\+\+-(\d+)$")

@@ -44,13 +44,9 @@ def parse_feature_flags(cli_input: list[str], ctx: GlobalContext) -> NewFlags:
         if "/" not in flag:
             logger.debug(f"flag `{flag}` is simple flag")
             if not is_valid_identifier(flag):
-                raise QuackPackError(
-                    f"flag name `{flag}` does not follow valid flag syntax"
-                )
+                raise QuackPackError(f"flag name `{flag}` does not follow valid flag syntax")
             if flag in global_flags:
-                ctx.error_console.warn(
-                    f"attemtping to re-add flag `{flag}`, ignoring..."
-                )
+                ctx.error_console.warn(f"attemtping to re-add flag `{flag}`, ignoring...")
                 continue
             global_flags.add(Identifier(flag))
             continue
@@ -59,17 +55,13 @@ def parse_feature_flags(cli_input: list[str], ctx: GlobalContext) -> NewFlags:
         package_name, flags = flag.split(sep="/", maxsplit=1)
         logger.debug(f"package name=`{package_name}`, flags=`{flags}`")
         if not is_valid_identifier(package_name):
-            raise QuackPackError(
-                f"package name `{package_name}` is not valid identifier"
-            )
+            raise QuackPackError(f"package name `{package_name}` is not valid identifier")
         package_name = Identifier(package_name)
         flags = flags.split(",")
         flags_as_idents: set[Identifier] = set()
         for flag_ in flags:
             if not is_valid_identifier(flag_):
-                raise QuackPackError(
-                    f"flag name `{flag_}` does not follow valid flag syntax"
-                )
+                raise QuackPackError(f"flag name `{flag_}` does not follow valid flag syntax")
             flags_as_idents.add(Identifier(flag_))
         if package_name in flags_per_package:
             ctx.error_console.warn(

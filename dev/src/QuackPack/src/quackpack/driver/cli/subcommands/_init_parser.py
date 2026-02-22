@@ -17,11 +17,7 @@ def get_parser() -> CliParser:
 
     return (
         CliParser.subcommand(name="init", description="Initialize a new package")
-        .add_path(
-            long_name="path",
-            help="Path to the new package",
-            argument_count=ArgumentCount.Optional,
-        )
+        .add_path(long_name="path", help="Path to the new package", argument_count=ArgumentCount.Optional)
         .add_exclusive_group(
             group=ExclusiveGroup()
             .add_flag(long_name="--venv", help="Initialize venv instead of a package")
@@ -30,10 +26,7 @@ def get_parser() -> CliParser:
         .add_exclusive_group(
             group=ExclusiveGroup()
             .add_flag(long_name="--ephemeral", help="Mark new venv as ephemeral")
-            .add_flag(
-                long_name="--local-storage",
-                help="Use local package storage instead of shared storage",
-            )
+            .add_flag(long_name="--local-storage", help="Use local package storage instead of shared storage")
         )
         .add_flag(
             long_name="--expose-freezefile",
@@ -51,11 +44,7 @@ def execute(ctx: GlobalContext, args: Arguments) -> None:
     :param quackpack.cli._arguments.Arguments args: Parsed command-line arguments for this subcommand.
     """
 
-    venv_path = (
-        args.matched.path.expanduser().resolve()
-        if args.matched.path is not None
-        else Path.cwd()
-    )
+    venv_path = args.matched.path.expanduser().resolve() if args.matched.path is not None else Path.cwd()
     venv_name = args.matched.name if args.matched.name is not None else venv_path.name
     if args.matched.venv:
         venv_type = NewVenvType.PlainVenv

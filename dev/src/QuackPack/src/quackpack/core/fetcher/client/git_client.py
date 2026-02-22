@@ -52,9 +52,7 @@ class GitClient:
         :rtype: tuple[str, quackpack.fetcher.api_types.SingleMetadata]
         """
 
-        logger.debug(
-            f"Git client: cloning '{url}' to {destination}; {branch=}, {tag=}, {rev=}"
-        )
+        logger.debug(f"Git client: cloning '{url}' to {destination}; {branch=}, {tag=}, {rev=}")
 
         if branch is not None and tag is not None:
             raise ValueError("Expected at most one option of 'branch' and 'tag'.")
@@ -69,9 +67,7 @@ class GitClient:
 
         try:
             if progress is not None:
-                repo = Repo.clone_from(
-                    url, destination, **clone_options, progress=progress
-                )  # pyright: ignore[reportArgumentType]
+                repo = Repo.clone_from(url, destination, **clone_options, progress=progress)  # pyright: ignore[reportArgumentType]
             else:
                 repo = Repo.clone_from(url, destination, **clone_options)
         except (GitCommandNotFound, GitCommandError) as e:

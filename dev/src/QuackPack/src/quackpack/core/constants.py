@@ -2,11 +2,7 @@ from pathlib import Path
 from typing import Final
 
 from quackpack.util.env import Env
-from quackpack.util.xdg_directories import (
-    cache_directory,
-    config_directory,
-    data_directory,
-)
+from quackpack.util.xdg_directories import cache_directory, config_directory, data_directory
 
 SHOULD_BUILD_FROM_SOURCE: Final[bool] = False
 DEFAULT_BUILD_PROFILE: Final[str] = "debug"

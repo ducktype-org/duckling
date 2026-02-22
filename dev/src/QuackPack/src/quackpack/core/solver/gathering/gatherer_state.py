@@ -59,26 +59,17 @@ class PackageData:
             local_root = None
             if dep.source.is_local():
                 if self.local_root is None:
-                    raise QuackPackError(
-                        "Cannot depend on local package from non-local package!"
-                    )
+                    raise QuackPackError("Cannot depend on local package from non-local package!")
                 dep_path = dep.source.as_local().absolute_dir_root
-                local_root = (
-                    dep_path if dep_path.is_absolute() else self.local_root / dep_path
-                )
+                local_root = dep_path if dep_path.is_absolute() else self.local_root / dep_path
 
             result.add(
                 PinnedFetchRequest(
-                    local_root=local_root,
-                    flags=flags,
-                    pkg=UnresolvedPackage.create(id, dep.versions[0]),
+                    local_root=local_root, flags=flags, pkg=UnresolvedPackage.create(id, dep.versions[0])
                 )
                 if dep.is_pinned
                 else UnpinnedFetchRequest(
-                    local_root=local_root,
-                    flags=flags,
-                    id=id,
-                    versions=tuple(dep.versions),
+                    local_root=local_root, flags=flags, id=id, versions=tuple(dep.versions)
                 )
             )
 
@@ -141,36 +132,26 @@ class GathererState:
             return self._get_request_action_pinned(request)
         raise Exception("unreachable")
 
-    def _get_request_action_unpinned(
-        self, request: UnpinnedFetchRequest
-    ) -> RequestAction:
+    def _get_request_action_unpinned(self, request: UnpinnedFetchRequest) -> RequestAction:
         logger.debug(f"Asked for request action for dependency {request.id!s}")
         state = self._unpinned.get(request.id)
 
         if state is None:
             logger.debug(f"Dependency {request.id!s} requires fetch")
-            self._unpinned[request.id] = Pending(
-                local_root=request.local_root, requests={request}
-            )
+            self._unpinned[request.id] = Pending(local_root=request.local_root, requests={request})
             return RequestActionFetch()
 
         elif isinstance(state, Pending):
-            logger.debug(
-                f"Dependency {request.id!s} is already requested; chaining request to fetch"
-            )
+            logger.debug(f"Dependency {request.id!s} is already requested; chaining request to fetch")
             assert state.local_root == request.local_root  # sanity check
             state.requests.add(request)
             return RequestActionMore(requests=set())
 
         elif isinstance(state, Done):
-            logger.debug(
-                f"Dependency {request.id!s} was already fetched; handling flags"
-            )
+            logger.debug(f"Dependency {request.id!s} was already fetched; handling flags")
             return RequestActionMore(
                 requests=self._update_flags_unpinned(
-                    id=request.id,
-                    selector=list(request.versions),
-                    requested_flags=set(request.flags),
+                    id=request.id, selector=list(request.versions), requested_flags=set(request.flags)
                 )
             )
 
@@ -187,9 +168,7 @@ class GathererState:
 
             if unpinned_state is None:
                 logger.debug(f"Pinned dependency {request.pkg!s} requires fetch")
-                self._pinned[request.pkg] = Pending(
-                    local_root=request.local_root, requests={request}
-                )
+                self._pinned[request.pkg] = Pending(local_root=request.local_root, requests={request})
                 return RequestActionFetch()
 
             elif isinstance(unpinned_state, Pending):
@@ -216,26 +195,18 @@ class GathererState:
                 logger.debug(
                     f"Pinned dependency {request.pkg!s} was already fetched by id fetch; handling flags"
                 )
-                return RequestActionMore(
-                    requests=self._update_flags(resolved_pkg, set(request.flags))
-                )
+                return RequestActionMore(requests=self._update_flags(resolved_pkg, set(request.flags)))
 
         elif isinstance(state, Pending):
-            logger.debug(
-                f"Pinned dependency {request.pkg!s} is already requested; chaining request to fetch"
-            )
+            logger.debug(f"Pinned dependency {request.pkg!s} is already requested; chaining request to fetch")
             assert state.local_root == request.local_root  # sanity check
             state.requests.add(request)
             return RequestActionMore(requests=set())
 
         elif isinstance(state, Done):
-            logger.debug(
-                f"Pinned dependency {request.pkg!s} was already fetched; handling flags"
-            )
+            logger.debug(f"Pinned dependency {request.pkg!s} was already fetched; handling flags")
             return RequestActionMore(
-                requests=self._update_flags(
-                    request.pkg.resolve(self._id_resolvents), set(request.flags)
-                )
+                requests=self._update_flags(request.pkg.resolve(self._id_resolvents), set(request.flags))
             )
 
         # already failed before
@@ -257,9 +228,7 @@ class GathererState:
         assert isinstance(state, Pending)
 
         if len(result.packages) == 0:
-            self._fail_unpinned(
-                id, f"Fetch of dependency {id!s} yielded invalid result"
-            )
+            self._fail_unpinned(id, f"Fetch of dependency {id!s} yielded invalid result")
             return set()
 
         self._id_resolvents.update(id, next(iter(result.packages)).id)
@@ -275,15 +244,11 @@ class GathererState:
         assert isinstance(state, Pending)
 
         if len(result.packages) != 1:
-            self._fail_pinned(
-                pkg, f"Fetch of pinned dependency {pkg!s} yielded invalid result"
-            )
+            self._fail_pinned(pkg, f"Fetch of pinned dependency {pkg!s} yielded invalid result")
             return set()
         result_pkg = next(iter(result.packages))
         if result_pkg.version != pkg.version:
-            self._fail_pinned(
-                pkg, f"Fetch of pinned dependency {pkg!s} yielded wrong version"
-            )
+            self._fail_pinned(pkg, f"Fetch of pinned dependency {pkg!s} yielded wrong version")
             return set()
 
         self._id_resolvents.update(pkg.id, result_pkg.id)
@@ -302,17 +267,11 @@ class GathererState:
         for request in requests:
             if isinstance(request, UnpinnedFetchRequest):
                 result |= self._update_flags_unpinned(
-                    id=request.id,
-                    selector=list(request.versions),
-                    requested_flags=set(request.flags),
+                    id=request.id, selector=list(request.versions), requested_flags=set(request.flags)
                 )
             elif isinstance(request, PinnedFetchRequest):
-                packages = self._packages_by_id[
-                    request.pkg.id.resolve(self._id_resolvents)
-                ]
-                matching = {
-                    pkg for pkg in packages if pkg.version == request.pkg.version
-                }
+                packages = self._packages_by_id[request.pkg.id.resolve(self._id_resolvents)]
+                matching = {pkg for pkg in packages if pkg.version == request.pkg.version}
                 if len(matching) != 1:
                     self._fail_pinned(
                         request.pkg,
@@ -356,9 +315,7 @@ class GathererState:
             )
         return requests
 
-    def _update_flags(
-        self, pkg: ResolvedPackage, requested_flags: set[FeatureId]
-    ) -> set[FetchRequest]:
+    def _update_flags(self, pkg: ResolvedPackage, requested_flags: set[FeatureId]) -> set[FetchRequest]:
         """
         Requests new flags from the package and returns requests required to satisfy
         its dependencies with the new flag set.
@@ -370,9 +327,7 @@ class GathererState:
         pkg_data = self._data[pkg]
         nonexistent_flags = requested_flags.difference(pkg_data.summary.features)
         if nonexistent_flags:
-            error_with_mercy(
-                logger, self.mode, f"Flags {nonexistent_flags} do not exist for package"
-            )
+            error_with_mercy(logger, self.mode, f"Flags {nonexistent_flags} do not exist for package")
             return set()
         if pkg_data.possible_features is None:
             pkg_data.possible_features = set(requested_flags)
@@ -391,9 +346,7 @@ class GathererState:
         for pkg, manifest in result.packages.items():
             if pkg not in self._data:
                 self._packages_by_id[pkg.id].add(pkg)
-                self._data[pkg] = PackageData(
-                    possible_features=None, local_root=local_root, summary=manifest
-                )
+                self._data[pkg] = PackageData(possible_features=None, local_root=local_root, summary=manifest)
 
     def _fail_unpinned(self, id: UnresolvedId, reason: str) -> None:
         """

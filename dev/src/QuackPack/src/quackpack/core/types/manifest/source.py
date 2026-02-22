@@ -75,9 +75,7 @@ class Source(ABC):
                 tag=schema.inner.tag,
                 branch=schema.inner.branch,
             )
-        if isinstance(
-            schema.inner, LocalSourceSchema
-        ):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if isinstance(schema.inner, LocalSourceSchema):  # pyright: ignore[reportUnnecessaryIsInstance]
             return LocalSource(
                 absolute_dir_root=schema.inner.absolute_dir_root,
                 dir_entry_in_manifest=schema.inner.dir_entry_in_manifest,
@@ -95,9 +93,7 @@ class RegistrySource(Source):
 
     @override
     def into_schema(self) -> RegistrySourceSchema:
-        return RegistrySourceSchema(
-            inner=DefaultSourceSchema(registry_url=self.registry_url)
-        )
+        return RegistrySourceSchema(inner=DefaultSourceSchema(registry_url=self.registry_url))
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -114,12 +110,7 @@ class GitSource(Source):
     @override
     def into_schema(self) -> RegistrySourceSchema:
         return RegistrySourceSchema(
-            inner=GitSourceSchema(
-                git_url=self.git_url,
-                commit=self.commit,
-                tag=self.tag,
-                branch=self.branch,
-            )
+            inner=GitSourceSchema(git_url=self.git_url, commit=self.commit, tag=self.tag, branch=self.branch)
         )
 
 
@@ -136,7 +127,6 @@ class LocalSource(Source):
     def into_schema(self) -> RegistrySourceSchema:
         return RegistrySourceSchema(
             inner=LocalSourceSchema(
-                absolute_dir_root=self.absolute_dir_root,
-                dir_entry_in_manifest=self.dir_entry_in_manifest,
+                absolute_dir_root=self.absolute_dir_root, dir_entry_in_manifest=self.dir_entry_in_manifest
             )
         )

@@ -13,9 +13,7 @@ def get_parser() -> CliParser:
     """
 
     return (
-        CliParser.subcommand(
-            name="test", description="Test a current package [NOT IMPLEMENTED]"
-        )
+        CliParser.subcommand(name="test", description="Test a current package [NOT IMPLEMENTED]")
         .add_jobs()
         .add_exclusive_group(group=ExclusiveGroup().add_profile().add_release())
         .add_exclusive_group(

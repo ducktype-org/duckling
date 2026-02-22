@@ -9,13 +9,7 @@ from quackpack.util.logger import get_logger
 from quackpack.util.types.errors import QuackPackError
 from quackpack.util.types.pkgid import Identifier
 
-from .sources import (
-    FetchVersion,
-    GitSource,
-    LocalSource,
-    NewDependencySource,
-    RegistrySource,
-)
+from .sources import FetchVersion, GitSource, LocalSource, NewDependencySource, RegistrySource
 from .types import AddOptions, NewDependencyType, NewFlags
 
 logger = get_logger(__name__)
@@ -50,29 +44,21 @@ def add(opts: AddOptions) -> None:
         print_add_info(opts.ctx.console, name, enabled_flags, not_enabled_flags)
 
     for extra in opts.flags.per_package:
-        opts.ctx.error_console.warn(
-            f"Package `{extra}` appears in detailed feature flag, but is not added"
-        )
+        opts.ctx.error_console.warn(f"Package `{extra}` appears in detailed feature flag, but is not added")
     with opts.source.lock():
         editable = EditableManifest.load(root_manifest.original_content)
         table = editable.get_table_or_insert_if_absent(opts.section)
         for name, dep in new_entries:
             if name in table:
-                opts.ctx.error_console.warn(
-                    f"{opts.section.as_str()} `{name}` already exists, ignoring..."
-                )
+                opts.ctx.error_console.warn(f"{opts.section.as_str()} `{name}` already exists, ignoring...")
                 continue
             editable.insert_into_table_with_override(
-                opts.section,
-                str(name),
-                dep.model_dump(exclude_none=True, exclude_unset=True),
+                opts.section, str(name), dep.model_dump(exclude_none=True, exclude_unset=True)
             )
         opts.source.manifest_path.write_text(editable.as_str())
 
 
-def make_deps(
-    cli_input: list[str], type_: NewDependencyType
-) -> list[NewDependencySource]:
+def make_deps(cli_input: list[str], type_: NewDependencyType) -> list[NewDependencySource]:
     result: list[NewDependencySource] = []
     logger.debug(f"making new deps of type `{type_!s}`")
     for name in cli_input:
@@ -96,9 +82,7 @@ def make_dep_impl(name: str, type_: NewDependencyType) -> NewDependencySource:
         logger.debug(f"making simple registry entry with name {name}")
         return RegistrySource(name, FetchVersion.Tag)
     name, version = name.split(sep="@", maxsplit=1)
-    logger.debug(
-        f"making detailed registry entry with name {name} and version {version}"
-    )
+    logger.debug(f"making detailed registry entry with name {name} and version {version}")
     return RegistrySource(name, version)
 
 
@@ -106,15 +90,11 @@ def check_if_has_flags(summary: Summary, flags: NewFlags):
     logger.debug(summary.features.items())
     for flag in flags.global_:
         if flag not in summary.features:
-            raise QuackPackError(
-                f"dependency `{summary.name!s}` doesn't have flag `{flag}`"
-            )
+            raise QuackPackError(f"dependency `{summary.name!s}` doesn't have flag `{flag}`")
     specific = flags.per_package.get(summary.name, set())
     for flag in specific:
         if flag not in summary.features:
-            raise QuackPackError(
-                f"dependency `{summary.name!s}` doesn't have flag `{flag}`"
-            )
+            raise QuackPackError(f"dependency `{summary.name!s}` doesn't have flag `{flag}`")
 
 
 def print_add_info(

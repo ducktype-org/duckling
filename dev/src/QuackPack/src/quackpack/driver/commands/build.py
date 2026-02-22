@@ -32,9 +32,7 @@ def build(opts: BuildOptions):
         else:
             entry_path = opts.package.package_root / "src" / "main.duck"
     runner = Compile(opts.duckc_binary, opts.compiler_args)
-    continuation = run_impl(
-        opts.ctx, opts.package, runner, entry_path.expanduser().resolve()
-    )
+    continuation = run_impl(opts.ctx, opts.package, runner, entry_path.expanduser().resolve())
     # Note: we instantly end the program here.
     # If there are changes that add something important up the stacktrace,
     # we may need to return the Continuation and pass it upwards.

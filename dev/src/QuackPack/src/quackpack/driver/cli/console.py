@@ -31,9 +31,7 @@ class Console(RichConsole):
     def __init__(
         self,
         *,
-        color_system: (
-            Literal["auto", "standard", "256", "truecolor", "windows"] | None
-        ) = "auto",
+        color_system: Literal["auto", "standard", "256", "truecolor", "windows"] | None = "auto",
         force_terminal: bool | None = None,
         force_jupyter: bool | None = None,
         force_interactive: bool | None = None,
@@ -55,9 +53,7 @@ class Console(RichConsole):
         log_time: bool = True,
         log_path: bool = True,
         log_time_format: str | FormatTimeCallable = "[%X]",
-        highlighter: (
-            HighlighterType | None
-        ) = ReprHighlighter(),  # noqa: B008, silence ruff warnings, as we're just passing everything up.
+        highlighter: HighlighterType | None = ReprHighlighter(),  # noqa: B008, silence ruff warnings, as we're just passing everything up.
         legacy_windows: bool | None = None,
         safe_box: bool = True,
         get_datetime: Callable[[], datetime] | None = None,

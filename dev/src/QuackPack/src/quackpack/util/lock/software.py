@@ -13,11 +13,7 @@ PROBE_INTERVAL: Final[float] = 0.25
 class SoftwareFileLock(BaseFileLock):
     @override
     def __init__(
-        self,
-        path: Path,
-        lock_type: LockType = LockType.EXCLUSIVE,
-        *,
-        blocking: bool = True
+        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, *, blocking: bool = True
     ) -> None:
         self.path = path
         self.lock_type = lock_type

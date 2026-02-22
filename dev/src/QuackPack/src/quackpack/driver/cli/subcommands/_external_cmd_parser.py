@@ -21,9 +21,7 @@ def get_parser(name: str) -> CliParser:
     """
 
     return CliParser.subcommand(
-        name=name,
-        description=f"Run external cmd '{EXTERNAL_CMD_PREFIX}{name}'",
-        with_help=False,
+        name=name, description=f"Run external cmd '{EXTERNAL_CMD_PREFIX}{name}'", with_help=False
     )
 
 

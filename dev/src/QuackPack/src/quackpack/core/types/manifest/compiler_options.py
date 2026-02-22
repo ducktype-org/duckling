@@ -4,10 +4,7 @@ from dataclasses import dataclass
 
 from pydantic import RootModel
 
-from quackpack.core.types.manifest.schemas.registry import (
-    CompilerOptionsSchema,
-    ProfileSchema,
-)
+from quackpack.core.types.manifest.schemas.registry import CompilerOptionsSchema, ProfileSchema
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -32,9 +29,7 @@ class ProfileAndTargetCommon:
         return self._impl[key].compiler_flags
 
     def into_schema(self) -> ProfileSchema:
-        return RootModel(
-            {key: value.into_schema() for key, value in self._impl.items()}
-        )
+        return RootModel({key: value.into_schema() for key, value in self._impl.items()})
 
 
 class Profiles(ProfileAndTargetCommon):
@@ -43,12 +38,7 @@ class Profiles(ProfileAndTargetCommon):
 
     @classmethod
     def from_schema(cls, schema: ProfileSchema) -> Profiles:
-        return Profiles(
-            {
-                key: ManifestExtraOpts.from_schema(value)
-                for key, value in schema.root.items()
-            }
-        )
+        return Profiles({key: ManifestExtraOpts.from_schema(value) for key, value in schema.root.items()})
 
 
 class Targets(ProfileAndTargetCommon):
@@ -57,9 +47,4 @@ class Targets(ProfileAndTargetCommon):
 
     @classmethod
     def from_schema(cls, schema: ProfileSchema) -> Targets:
-        return Targets(
-            {
-                key: ManifestExtraOpts.from_schema(value)
-                for key, value in schema.root.items()
-            }
-        )
+        return Targets({key: ManifestExtraOpts.from_schema(value) for key, value in schema.root.items()})

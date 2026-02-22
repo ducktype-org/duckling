@@ -4,18 +4,10 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import override
 
-from quackpack.core.fetcher.api_types import (
-    MultiMetadata,
-    SingleGitMetadataResult,
-    SingleMetadata,
-)
+from quackpack.core.fetcher.api_types import MultiMetadata, SingleGitMetadataResult, SingleMetadata
 from quackpack.core.fetcher.fetcher import FetcherContext
 from quackpack.core.package_loader import PackageLoader
-from quackpack.core.types.manifest.schemas.manifest import (
-    DependencySchema,
-    OredSemverSchema,
-    SourceSchema,
-)
+from quackpack.core.types.manifest.schemas.manifest import DependencySchema, OredSemverSchema, SourceSchema
 from quackpack.core.types.manifest.source import GitSource as CoreGitSource
 from quackpack.core.types.manifest.summary import Summary
 from quackpack.core.types.package import Package
@@ -27,7 +19,6 @@ from quackpack.util.types.pkgid import Identifier
 from quackpack.util.types.version import Version
 
 logger = get_logger(__name__)
-
 
 # Dumb tag, which tells us to fetch newest version of a package, instead of a specified one.
 class FetchVersion(Enum):
@@ -64,18 +55,14 @@ class GitSource(NewDependencySource):
         api_result = asyncio.run(run_fetcher())
         if api_result.result is not None:
             return Summary.from_schema(api_result.result)
-        package = PackageLoader.find_at_exact_directory(
-            api_result.destination_path, ctx
-        )
+        package = PackageLoader.find_at_exact_directory(api_result.destination_path, ctx)
         return package.manifest.summary
 
 
 class LocalSource(NewDependencySource):
     def __init__(self, root: Path):
         if not root.is_dir():
-            raise QuackPackError(
-                f"local dependency root `{root!s}` does not point to the directory"
-            )
+            raise QuackPackError(f"local dependency root `{root!s}` does not point to the directory")
         self.root = root
 
     @override
@@ -99,9 +86,7 @@ class LocalSource(NewDependencySource):
 class RegistrySource(NewDependencySource):
     def __init__(self, name: str, version: str | FetchVersion):
         if not is_valid_identifier(name):
-            raise QuackPackError(
-                f"registry dependency `{name}` is not a valid identifier"
-            )
+            raise QuackPackError(f"registry dependency `{name}` is not a valid identifier")
         self.name = Identifier(name)
         if isinstance(version, FetchVersion):
             self.version = version
@@ -126,9 +111,7 @@ class RegistrySource(NewDependencySource):
         metadata = asyncio.run(self.run_fetcher(ctx))
 
         if metadata is None:
-            raise QuackPackError(
-                f"registry has no metadata for package `{self.name!s}`"
-            )
+            raise QuackPackError(f"registry has no metadata for package `{self.name!s}`")
 
         metadata = metadata.packages_metadata
         if not metadata:
@@ -147,9 +130,7 @@ class RegistrySource(NewDependencySource):
         metadata = asyncio.run(self.run_fetcher(ctx))
 
         if metadata is None:
-            raise QuackPackError(
-                f"registry has no metadata for package `{self.name!s}`"
-            )
+            raise QuackPackError(f"registry has no metadata for package `{self.name!s}`")
 
         metadata = metadata.packages_metadata
         if not metadata:
@@ -161,14 +142,10 @@ class RegistrySource(NewDependencySource):
         metadata = [
             x
             for x in metadata
-            if version.can_be_upgraded_to(
-                Version.create_from_string(x.metadata.version.root)
-            )
+            if version.can_be_upgraded_to(Version.create_from_string(x.metadata.version.root))
         ]
         if not metadata:
-            raise QuackPackError(
-                f"No matching versions of `{version!s}` for package `{self.name!s}`"
-            )
+            raise QuackPackError(f"No matching versions of `{version!s}` for package `{self.name!s}`")
 
         def sort_manifest_key(x: SingleMetadata) -> Version:
             return Version.create_from_string(x.metadata.version.root)

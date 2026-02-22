@@ -67,10 +67,7 @@ from pydantic_core import ValidationError
 
 from quackpack.core.signals import EnableInterrupt
 from quackpack.core.storage.paths import StoragePaths
-from quackpack.core.types.manifest.schemas.registry import (
-    GitSourceSchema,
-    RegistryManifestSchema,
-)
+from quackpack.core.types.manifest.schemas.registry import GitSourceSchema, RegistryManifestSchema
 from quackpack.core.types.manifest.source import GitSource
 from quackpack.util.context_managers import OsFdContext
 from quackpack.util.types.pkgid import GitPackageId, Identifier, PackageId
@@ -144,12 +141,7 @@ class _GitFetchCacheEntry(BaseModel):
             return value
         value = GitSourceSchema.model_validate(value)
         # this should be `GitSource.from_schema`, but for dumb python reason it cannot exist
-        return GitSource(
-            git_url=value.git_url,
-            commit=value.commit,
-            tag=value.tag,
-            branch=value.branch,
-        )
+        return GitSource(git_url=value.git_url, commit=value.commit, tag=value.tag, branch=value.branch)
 
     @field_serializer("source")
     def serialize_source(self, source: GitSource) -> GitSourceSchema:
@@ -184,17 +176,13 @@ class VenvFreeze(BaseModel):
                 for k, v in cast(dict[Any, Any], value).items()
             )
         elif isinstance(value, list):
-            entries = (
-                _Dependency.model_validate(dep) for dep in cast(list[Any], value)
-            )
+            entries = (_Dependency.model_validate(dep) for dep in cast(list[Any], value))
         else:
             raise ValueError("Expected dict or list of dependency entries")
         return {dep.id: dep.data for dep in entries}
 
     @field_serializer("dependencies")
-    def serialize_dependencies(
-        self, dependencies: dict[PackageId, PackageFreeze]
-    ) -> list[_Dependency]:
+    def serialize_dependencies(self, dependencies: dict[PackageId, PackageFreeze]) -> list[_Dependency]:
         return [_Dependency(id=k, data=v) for k, v in dependencies.items()]
 
     @field_validator("git_fetch_cache", mode="before")
@@ -206,10 +194,7 @@ class VenvFreeze(BaseModel):
                 for k, v in cast(dict[Any, Any], value).items()
             )
         elif isinstance(value, list):
-            entries = (
-                _GitFetchCacheEntry.model_validate(entry)
-                for entry in cast(list[Any], value)
-            )
+            entries = (_GitFetchCacheEntry.model_validate(entry) for entry in cast(list[Any], value))
         else:
             raise ValueError("Expected dict or list of git fetch cache entries")
         return {entry.source: entry.result for entry in entries}
@@ -219,8 +204,7 @@ class VenvFreeze(BaseModel):
         self, git_fetch_cache: dict[GitSource, GitPackageId]
     ) -> list[_GitFetchCacheEntry]:
         return [
-            _GitFetchCacheEntry(source=source, result=result)
-            for source, result in git_fetch_cache.items()
+            _GitFetchCacheEntry(source=source, result=result) for source, result in git_fetch_cache.items()
         ]
 
 
@@ -334,9 +318,7 @@ def fix_and_load_venv(storage: StoragePaths, venv_id: Identifier) -> StorageVenv
     return None
 
 
-def save_venv(
-    storage: StoragePaths, venv_id: Identifier, venv_data: StorageVenv
-) -> None:
+def save_venv(storage: StoragePaths, venv_id: Identifier, venv_data: StorageVenv) -> None:
     """
     Save a new canonical state of the virtual environment to storage.
 

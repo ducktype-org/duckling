@@ -25,9 +25,7 @@ class CurlProgress:
     ) -> None:
         self.blob_progress = blob_progress
         self.completed_progress = completed_progress
-        self.completed_task_id = self.completed_progress.add_task(
-            "Downloaded", total=packages_count
-        )
+        self.completed_task_id = self.completed_progress.add_task("Downloaded", total=packages_count)
         self.tasks: dict[pycurl.Curl, progress.TaskID] = {}
         self.total_downloaded_bytes: dict[pycurl.Curl, int] = {}
 
@@ -64,9 +62,7 @@ class CurlProgress:
         return progress.Progress(
             progress.SpinnerColumn(),
             progress.BarColumn(),
-            progress.TextColumn(
-                "{task.description} {task.completed} of {task.total} packages"
-            ),
+            progress.TextColumn("{task.description} {task.completed} of {task.total} packages"),
             console=console,
             transient=True,
         )
@@ -103,12 +99,7 @@ class CurlProgress:
             del self.total_downloaded_bytes[curl]
 
     def status(
-        self,
-        curl: pycurl.Curl,
-        download_t: int,
-        download_d: int,
-        _upload_t: int,
-        _upload_d: int,
+        self, curl: pycurl.Curl, download_t: int, download_d: int, _upload_t: int, _upload_d: int
     ) -> int:
         """
         Callback function for reporting pycurl download progress.
@@ -139,9 +130,7 @@ class CurlProgress:
 
         if download_d > self.total_downloaded_bytes[curl]:
             self.blob_progress.update(
-                task_id=task_id,
-                completed=download_d,
-                message=f"Downloaded {download_d} bytes",
+                task_id=task_id, completed=download_d, message=f"Downloaded {download_d} bytes"
             )
             self.total_downloaded_bytes[curl] = download_d
 

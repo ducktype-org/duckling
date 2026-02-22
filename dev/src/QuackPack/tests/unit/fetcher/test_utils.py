@@ -41,10 +41,7 @@ class TestHTTPHeaders:
         headers.add("Content-Type", "application/json")
         headers.add("Content-Type", "application/xml")
         assert headers["Content-Type"] == "application/json,application/xml"
-        assert headers.get_list("Content-Type") == [
-            "application/json",
-            "application/xml",
-        ]
+        assert headers.get_list("Content-Type") == ["application/json", "application/xml"]
 
     def test_parse_line_valid(self):
         headers = HTTPHeaders()

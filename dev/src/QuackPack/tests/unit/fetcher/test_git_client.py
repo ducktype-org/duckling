@@ -32,9 +32,7 @@ def local_git_repo(tmp_path: Path):
     metadata:
         name: fixtured_git_dependency
         version: 1.0""")
-    repo.index.add(
-        ["test_file.txt", PackageLoader.MANIFEST_NAME]
-    )  # pyright: ignore[reportUnknownMemberType]; `add()` has generic lambda inside.
+    repo.index.add(["test_file.txt", PackageLoader.MANIFEST_NAME])  # pyright: ignore[reportUnknownMemberType]; `add()` has generic lambda inside.
     repo.index.commit("Initial commit")
 
     repo.create_head("test-branch")
@@ -60,9 +58,7 @@ class TestGitClient:
         _cloned_repo = Repo(mock_filepath)
         assert (mock_filepath / "test_file.txt").read_text() == "Hello, Git!"
 
-    async def test_clone_local_repo_with_branch(
-        self, local_git_repo: Path, mock_filepath: Path
-    ):
+    async def test_clone_local_repo_with_branch(self, local_git_repo: Path, mock_filepath: Path):
         url = str(local_git_repo)
         branch = "test-branch"
         await GitClient.clone(url, mock_filepath, branch=branch, ctx=GlobalContext())
@@ -70,9 +66,7 @@ class TestGitClient:
         cloned_repo = Repo(mock_filepath)
         assert cloned_repo.active_branch.name == branch
 
-    async def test_clone_local_repo_with_tag(
-        self, local_git_repo: Path, mock_filepath: Path
-    ):
+    async def test_clone_local_repo_with_tag(self, local_git_repo: Path, mock_filepath: Path):
         url = str(local_git_repo)
         tag = "v1.0.0"
         await GitClient.clone(url, mock_filepath, tag=tag, ctx=GlobalContext())
@@ -80,9 +74,7 @@ class TestGitClient:
         cloned_repo = Repo(mock_filepath)
         assert cloned_repo.git.describe("--tags") == tag
 
-    async def test_clone_local_repo_with_rev(
-        self, local_git_repo: Path, mock_filepath: Path
-    ):
+    async def test_clone_local_repo_with_rev(self, local_git_repo: Path, mock_filepath: Path):
         url = str(local_git_repo)
         repo = Repo(local_git_repo)
         rev = repo.head.commit.hexsha
@@ -92,9 +84,7 @@ class TestGitClient:
         cloned_repo = Repo(mock_filepath)
         assert cloned_repo.head.commit.hexsha == rev
 
-    async def test_clone_local_repo_git_command_error(
-        self, local_git_repo: Path, mock_filepath: Path
-    ):
+    async def test_clone_local_repo_git_command_error(self, local_git_repo: Path, mock_filepath: Path):
         url = str(local_git_repo)
         with (
             patch("git.Repo.clone_from", side_effect=GitCommandError("clone failed")),
@@ -102,23 +92,17 @@ class TestGitClient:
         ):
             await GitClient.clone(url, mock_filepath, ctx=GlobalContext())
 
-    async def test_clone_local_repo_checkout_error(
-        self, local_git_repo: Path, mock_filepath: Path
-    ):
+    async def test_clone_local_repo_checkout_error(self, local_git_repo: Path, mock_filepath: Path):
         url = str(local_git_repo)
         rev = "invalid-revision"
 
         with pytest.raises(QuackPackError):
             await GitClient.clone(url, mock_filepath, rev=rev, ctx=GlobalContext())
 
-    async def test_clone_local_repo_branch_and_tag_error(
-        self, local_git_repo: Path, mock_filepath: Path
-    ):
+    async def test_clone_local_repo_branch_and_tag_error(self, local_git_repo: Path, mock_filepath: Path):
         url = str(local_git_repo)
         branch = "test-branch"
         tag = "v1.0.0"
 
         with pytest.raises(ValueError):
-            await GitClient.clone(
-                url, mock_filepath, branch=branch, tag=tag, ctx=GlobalContext()
-            )
+            await GitClient.clone(url, mock_filepath, branch=branch, tag=tag, ctx=GlobalContext())

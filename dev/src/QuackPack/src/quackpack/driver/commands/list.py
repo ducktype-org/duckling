@@ -70,17 +70,13 @@ def _print_existing_venv(console: Console, name: str, venv: StorageVenv):
     console.print(f"  - `{name}`:")
     console.print(f"     - path: `{venv.last_location.as_posix()}`")
     console.print(f"     - last access: `{_format_timestamp(venv.last_access)}`")
-    console.print(
-        f"     - last modification: `{_format_timestamp(venv.last_modification)}`"
-    )
+    console.print(f"     - last modification: `{_format_timestamp(venv.last_modification)}`")
 
 
 def _print_non_existing_venv(console: Console, name: str, venv: StorageVenv):
     console.print(f"  - `{name}`")
     console.print(f"     - last access: `{_format_timestamp(venv.last_access)}`")
-    console.print(
-        f"     - last modification: `{_format_timestamp(venv.last_modification)}`"
-    )
+    console.print(f"     - last modification: `{_format_timestamp(venv.last_modification)}`")
 
 
 def _format_timestamp(timestamp: float) -> str:

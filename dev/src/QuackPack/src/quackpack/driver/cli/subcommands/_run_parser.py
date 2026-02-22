@@ -16,9 +16,7 @@ def get_parser() -> CliParser:
     """
 
     return (
-        CliParser.subcommand(
-            name="run", description="Build a current package and run it"
-        )
+        CliParser.subcommand(name="run", description="Build a current package and run it")
         .add_jobs()
         .add_exclusive_group(group=ExclusiveGroup().add_profile().add_release())
         .add_exclusive_group(
