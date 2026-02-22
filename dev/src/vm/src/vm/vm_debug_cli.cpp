@@ -78,13 +78,10 @@ void DuckVMDebugCli::run() {
 	}
 }
 
-// returns true if debugger cli should be in runMode
-bool DuckVMDebugCli::handleEvent() {
+void DuckVMDebugCli::handleEvent() {
 	std::cout << "VM says:\n";
 	auto status = core.getStatus();
 	changeMode(status);
-	return std::holds_alternative<vm::api::Running>(status)
-	    || std::holds_alternative<vm::api::WaitingForInput>(status);
 }
 
 void DuckVMDebugCli::changeMode(vm::api::ProcStatus status) {

@@ -36,9 +36,8 @@ private:
 	DuckVMDebugCli(const fs::File& filepath, const std::vector<std::string>& args = {});
 
 	// returns if cli should be still running
-	bool handleLine(std::string& line);
-	// returns true if debugger cli should be in runmode
-	bool        handleEvent();
+	bool        handleLine(std::string& line);
+	void        handleEvent();
 	void        help() const;
 	void        changeMode(vm::api::ProcStatus status);
 	void        handleTstp(int signo);
