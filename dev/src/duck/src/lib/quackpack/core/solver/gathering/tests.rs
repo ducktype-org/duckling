@@ -58,7 +58,7 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
 async fn create_mock_server() -> MockServer {
     let server = MockServer::start().await;
 
-    // Test 1
+    // Assets for not_pinned_registry test.
     let foo_bar_dep = registry::Dependency {
         version: vec![Version::new(3, 0, 0), Version::new(4, 0, 0)],
         source: registry::DependencySource {
@@ -130,7 +130,7 @@ async fn create_mock_server() -> MockServer {
         profiles: HashMap::new(),
     };
 
-    // Test 2 & 3
+    // Assets for pinned_registry and features tests.
     let dx_xd_dep = registry::Dependency {
         version: vec![Version::new(1, 0, 0)],
         source: registry::DependencySource {
@@ -179,7 +179,7 @@ async fn create_mock_server() -> MockServer {
         profiles: HashMap::new(),
     };
 
-    // Test 4
+    // Assets for pinned_request_while_pending_not_pinned test.
     let b_a_dep = registry::Dependency {
         version: vec![Version::new(1, 0, 0)],
         source: registry::DependencySource {
@@ -195,6 +195,21 @@ async fn create_mock_server() -> MockServer {
         is_alias_for: None,
     };
 
+    let a_c_dep = registry::Dependency {
+        version: vec![Version::new(1, 0, 0)],
+        source: registry::DependencySource {
+            inner: registry::SourceInner::Registry {
+                registry_url: server.uri(),
+            },
+        },
+        features: vec![],
+        pinned: false,
+        conditions: registry::DependencyCondition {
+            package_features: Some(vec!["f".into()]),
+        },
+        is_alias_for: None,
+    };
+
     let a1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
@@ -203,7 +218,7 @@ async fn create_mock_server() -> MockServer {
             name: "a".into(),
             description: "".into(),
         },
-        dependencies: [].into(),
+        dependencies: [("c".into(), a_c_dep)].into(),
         dev_dependencies: registry::Dependencies::new(),
         features: [("f".into(), vec![])].into(),
         profiles: HashMap::new(),
@@ -237,7 +252,21 @@ async fn create_mock_server() -> MockServer {
         profiles: HashMap::new(),
     };
 
-    // Test 1
+    let c1 = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(1, 0, 0),
+            authors: vec!["Patryk Rogalski".into()],
+            license: "GLWTSPL".into(),
+            name: "c".into(),
+            description: "".into(),
+        },
+        dependencies: [].into(),
+        dev_dependencies: registry::Dependencies::new(),
+        features: [].into(),
+        profiles: HashMap::new(),
+    };
+
+    // Assets for not_pinned_registry test.
     Mock::given(method("GET"))
         .and(path("/packages/foo/1.0.0"))
         .respond_with(ResponseTemplate::new(200).set_body_json(&foo1))
@@ -282,7 +311,7 @@ async fn create_mock_server() -> MockServer {
         .mount(&server)
         .await;
 
-    // Test 2 & 3
+    // Assets for pinned_registry and features tests.
     Mock::given(method("GET"))
         .and(path("/packages/xd/1.0.0"))
         .respond_with(ResponseTemplate::new(200).set_body_json(&xd1))
@@ -299,7 +328,7 @@ async fn create_mock_server() -> MockServer {
         .mount(&server)
         .await;
 
-    // Test 4
+    // Assets for pinned_request_while_pending_not_pinned test.
     Mock::given(method("GET"))
         .and(path("/packages/a/1.0.0"))
         .respond_with(ResponseTemplate::new(200).set_body_json(&a1))
@@ -326,6 +355,16 @@ async fn create_mock_server() -> MockServer {
                 .set_body_json(&types::MultiMetadata {
                     packages_metadata: vec![b1],
                 }),
+        )
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/packages/c"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(&types::MultiMetadata {
+                packages_metadata: vec![c1],
+            }),
         )
         .mount(&server)
         .await;
@@ -397,8 +436,8 @@ mod private {
 
     /// Not pinned registry dependencies test.
     /// Synopsis:
-    ///    * root depends on foo 1.0.0 or 2.0.0,
-    ///    * foo 1.0.0 depends on bar 3.0.0 or 4.0.0
+    /// * root depends on foo 1.0.0 or 2.0.0,
+    /// * foo 1.0.0 depends on bar 3.0.0 or 4.0.0
     pub async fn not_pinned_registry(ctx: DuckCtx) {
         let server = create_mock_server().await;
         let qpctx = QpCtx::new(&ctx);
@@ -523,9 +562,9 @@ dependencies:
 
     /// Pinned registry dependencies test.
     /// Synopsis:
-    ///    * root depends on xd exactly 1.0.0,
-    ///    * root depends on dx exactly 2.0.0,
-    ///    * dx depends exactly on xd 1.0.0
+    /// * root depends on xd exactly 1.0.0,
+    /// * root depends on dx exactly 2.0.0,
+    /// * dx depends exactly on xd 1.0.0
     pub async fn pinned_registry(ctx: DuckCtx) {
         let server = create_mock_server().await;
         let qpctx = QpCtx::new(&ctx);
@@ -586,9 +625,9 @@ dependencies:
 
     /// Features propagation test.
     /// Same scenario as in [`pinned_registry`], but additionally:
-    ///    * root has feature *my_feature*,
-    ///    * this feature forces dx to have feature *root*
-    ///    * this feature forces xd to have feature *dx*
+    /// * root has feature *my_feature*,
+    /// * this feature forces dx to have feature *root*
+    /// * this feature forces xd to have feature *dx*
     pub async fn features(ctx: DuckCtx) {
         let server = create_mock_server().await;
         let qpctx = QpCtx::new(&ctx);
@@ -671,6 +710,21 @@ features:
         );
     }
 
+    /// Pinned request while pending not pinned request test.
+    /// Synopsis:
+    /// * root depends on *a* in version either 1 or 2
+    /// * root depends on *b* in version 1
+    /// * *b* depends on *a* in version precisely 1, with feature *f*
+    /// * *a* in version 1 with feature *f* depends on *c*
+    /// * fetcher responds to *a* not pinned request with a delay of 200ms
+    /// * fetcher responds to *b* not pinned request with a delay of 100ms
+    ///
+    /// What happens:
+    /// 1. Not pinned fetches of *a* and *b* are requested.
+    /// 2. Fetch of *b* succeeds first, but only after fetch of *a* is requested, because of the delay.
+    /// 3. Pinned request of *a* in version 1 is chained to the not pinned request.
+    /// 4. Not pinned request succeeds.
+    /// 5. A request for *c* is made.
     pub async fn pinned_request_while_pending_not_pinned(ctx: DuckCtx) {
         let server = create_mock_server().await;
         let qpctx = QpCtx::new(&ctx);
@@ -717,6 +771,10 @@ dependencies:
             url: url.clone(),
             real_name: "b".into(),
         });
+        let loc_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: "c".into(),
+        });
         assert!(
             gathered_info.versions_for_location
                 == HashMap::from([
@@ -725,8 +783,49 @@ dependencies:
                         loc_a,
                         [Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))].into()
                     ),
-                    (loc_b, [Some(Version::new(1, 0, 0))].into())
+                    (loc_b, [Some(Version::new(1, 0, 0))].into()),
+                    (loc_c, [Some(Version::new(1, 0, 0))].into()),
                 ])
         );
+        assert!(
+            gathered_info.possible_features
+                == HashMap::from([
+                    (
+                        ExpandedPackage {
+                            location: loc_root,
+                            version: None,
+                        },
+                        [].into()
+                    ),
+                    (
+                        ExpandedPackage {
+                            location: loc_a,
+                            version: Some(1.into()),
+                        },
+                        ["f".into()].into()
+                    ),
+                    (
+                        ExpandedPackage {
+                            location: loc_a,
+                            version: Some(2.into()),
+                        },
+                        [].into()
+                    ),
+                    (
+                        ExpandedPackage {
+                            location: loc_b,
+                            version: Some(1.into()),
+                        },
+                        [].into()
+                    ),
+                    (
+                        ExpandedPackage {
+                            location: loc_c,
+                            version: Some(1.into()),
+                        },
+                        [].into()
+                    ),
+                ])
+        )
     }
 }
