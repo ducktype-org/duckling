@@ -78,7 +78,7 @@ namespace compiler::driver {
 		static void moduleLog(const QKey& key, std::string_view info) {
 			auto total = total_module_count.load(std::memory_order_relaxed);
 			CORE_USER_LOG(
-				"[", 
+				"[",
 				this_module_count.fetch_add(1, std::memory_order_relaxed),
 				"/",
 				total == 0 ? "?" : std::to_string(total),
@@ -199,7 +199,7 @@ namespace compiler::driver {
 		std::vector<artifacts::FileArtifact> objects;
 
 		std::vector<frontend::ModuleID> modules_to_compile;
-		
+
 		std::function<void(frontend::ModuleID)> collect_modules
 			= [&](frontend::ModuleID module_id) -> void {
 			modules_to_compile.push_back(module_id);
