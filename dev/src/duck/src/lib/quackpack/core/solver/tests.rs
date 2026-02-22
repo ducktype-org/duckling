@@ -261,7 +261,7 @@ dependencies:
 
         let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Strict);
         solver = solver.prepare_solving(MockGitAccess()).await.unwrap();
-        let new_freeze = solver.solve().unwrap();
+        let new_freeze = solver.solve().unwrap().0;
         assert!(new_freeze.main_pkg == root_pkg);
         assert!(
             new_freeze.package_freezes
@@ -373,7 +373,7 @@ dependencies:
 
         let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Strict);
         solver = solver.prepare_solving(MockGitAccess()).await.unwrap();
-        let new_freeze = solver.solve().unwrap();
+        let new_freeze = solver.solve().unwrap().0;
         assert!(new_freeze.main_pkg == root_pkg);
         assert!(
             new_freeze.package_freezes
@@ -471,7 +471,7 @@ dependencies:
 
         let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Merciful);
         solver = solver.prepare_solving(MockGitAccess()).await.unwrap();
-        let new_freeze = solver.solve().unwrap();
+        let new_freeze = solver.solve().unwrap().0;
         assert!(new_freeze.main_pkg == root_pkg);
         assert!(
             new_freeze.package_freezes

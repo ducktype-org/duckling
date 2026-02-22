@@ -26,20 +26,14 @@ pub mod util;
 #[cfg(test)]
 mod tests;
 
-use std::{cell::OnceCell, collections::HashSet, marker::PhantomData, sync::Arc};
+use std::{cell::OnceCell, collections::{HashMap, HashSet}, marker::PhantomData, sync::Arc};
 
 use tokio::sync::Mutex;
 
 use crate::{
     QpCtx, QuackResult, qp_bail_internal,
     quackpack::core::{
-        FeatureName, PackageCtx,
-        fetcher::Fetcher,
-        gathering::gatherer::Gatherer,
-        git_access::GitAccess,
-        solver_freeze::SolverFreeze,
-        solving::solver_engine::{SolverEngine, SolverInput},
-        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
+        FeatureName, Manifest, PackageCtx, fetcher::Fetcher, gathering::gatherer::Gatherer, git_access::GitAccess, solver_freeze::SolverFreeze, solving::solver_engine::{SolverEngine, SolverInput}, types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation}
     },
 };
 
@@ -165,13 +159,14 @@ impl<'duck> Solver<'duck, Prepared> {
 }
 
 impl<'duck> Solver<'duck, Prepared> {
-    pub fn solve(mut self) -> QuackResult<SolverFreeze> {
+    pub fn solve(mut self) -> QuackResult<(SolverFreeze, HashMap<ExpandedPackage, Box<Manifest>>)> {
         let Some(input) = self.gathered_info.take() else {
             qp_bail_internal!("Tried to run solver without input specified");
         };
         let manifests = input.gathered_manifests.clone();
         let solver_output =
             SolverEngine::run_engine(input, &(self.root_pkg, self.root_pkg_features))?;
-        self.current_freeze.new_freeze(&manifests, solver_output)
+        let new_freeze = self.current_freeze.new_freeze(&manifests, solver_output)?;
+        Ok((new_freeze, manifests))
     }
 }
