@@ -55,12 +55,14 @@ pub fn sync(
     let solver_freeze = input_freeze.try_into()?;
     let solver = Solver::new(pkg_ctx, &fetcher, solver_freeze, SolverMode::Strict);
     let (_, results) = TokioScope::scope_and_block(move |spawner| {
-            spawner.spawn(solver.prepare_solving(git_access))
+        spawner.spawn(async move {
+            let solver = solver.prepare_solving(git_access).await?;
+            solver.solve()
         });
+    });
 
     let result = unpack_tokio_scoped_vector(results)?;
-    let solver = extract_single_item_from_vec(result)??;
-    let new_freeze = solver.solve()?;
+    let new_freeze = extract_single_item_from_vec(result)??;
     let freeze = new_freeze.0.generate_storage_freeze(&new_freeze.1)?;
     if !_options.overwrite
         && let Some(venv) = venv
