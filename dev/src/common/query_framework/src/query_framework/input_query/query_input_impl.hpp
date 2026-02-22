@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/except/exceptions.hpp>                            // IWYU pragma: export
+#include <base/collections/stable_hashmap.hpp> // IWYU pragma: export
 
 #include <query_framework/context/context.hpp>                   // IWYU pragma: export
 #include <query_framework/internal/context_access.hpp>           // IWYU pragma: export
@@ -14,8 +15,13 @@
  * @TODO: #1887 make it clear what query invocation layers happen here.
  */
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                                  \
+	thread_local static base::StableHashMap<base::Bit256, bool> values_already_done_##query_type; \
 	auto query_type::internal_query(const query_type::QKey& key) -> query_type::QResult {       \
 		auto node_id = ::query::internal::makeNodeID<query_type>(key);                          \
+		if (values_already_done_##query_type.contains(node_id.hash.val)) {                                            \
+			return ::query::internal::SideInputMockValue{};                                         \
+		}\
+		values_already_done_##query_type.put(node_id.hash.val, true);                                                   \
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);                \
 		return ::query::internal::SideInputMockValue{};                                         \
 	}                                                                                           \

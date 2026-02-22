@@ -54,14 +54,14 @@ namespace concurrent {
 		 * Acquires the lock, spinning and/or sleeping if necessary.
 		 */
 		void lock() noexcept {
-			Printer::all_uses.fetch_add(1, std::memory_order_relaxed);
+			// Printer::all_uses.fetch_add(1, std::memory_order_relaxed);
 
 
 			u64 wait_repetitions = 2;
 			while (true) {
 				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
 
-				Printer::wait_hit.fetch_add(1, std::memory_order_relaxed);
+				// Printer::wait_hit.fetch_add(1, std::memory_order_relaxed);
 
 				wait_repetitions *= 2;
 
