@@ -226,12 +226,13 @@ namespace compiler::helios::code {
 			/**
 			 * @brief Finds the appropriate binary operator to call and constructs the corresponding
 			 * HOUT expression. Consumes the provided expressions of the arguments.
-			 * @param stmt The original PST expression
+			 * @param op The operator
 			 * @param lhs The precomputed left-hand side argument
 			 * @param rhs The precomputed right-hand side argument
+			 * @param scope The scope in which the operator call happens
 			 */
 			Box<Expr> resolveBinaryOperator(
-				pst::Access<pst::expr::BinaryOperator> stmt, Box<Expr> lhs, Box<Expr> rhs
+				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
 			) const {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
@@ -247,9 +248,9 @@ namespace compiler::helios::code {
 
 				// Step 1. — special path for numeric promotions
 				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
-				    && isNumericOperator(stmt->getOperator())) {
+				    && isNumericOperator(op)) {
 					auto numeric_builtin_opt
-						= findNumericBinaryBuiltin(ctx, stmt->getOperator(), lhs.ref(), rhs.ref());
+						= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
 						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
@@ -262,9 +263,8 @@ namespace compiler::helios::code {
 				}
 
 				// Step 2. — Regular lookup and overload resolution
-				const auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 				const auto lookup_result
-					= HInterface::ofScopeWithParents(scope).lookup(ctx, stmt->getOperator().value);
+					= HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
 				// @TODO: #1412 fix dealias
 				auto       all_candidates    = lookup_result->leaves;
 				const auto builtin_operators = getRegularBinaryBuiltinSymbols(ctx);
@@ -277,7 +277,8 @@ namespace compiler::helios::code {
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				if (stmt->getOperator() == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
+				const auto op = stmt->getOperator();
+				if (op == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
@@ -311,7 +312,9 @@ namespace compiler::helios::code {
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
-				node = resolveBinaryOperator(stmt, std::move(lhs), std::move(rhs));
+				node = resolveBinaryOperator(
+					op, std::move(lhs), std::move(rhs), ctx.query<QueryPrimaryCodeScopeFor>({ stmt })
+				);
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
@@ -539,10 +542,8 @@ namespace compiler::helios::code {
 				result_exprs.reserve(expr_count);
 				for (size_t i = 0; i < expr_count; ++i) {
 					auto result = fromPST(ctx, stmt->getSubExpr(i));
-					if (result.hasFailed())
-						return;
-					else
-						result_exprs.push_back(std::move(result.valueOrThrow()));
+					if (result.hasFailed()) return;
+					result_exprs.push_back(std::move(result.valueOrThrow()));
 				}
 
 				// Comparison chain construction is unusual, because it reuses some of its
@@ -550,55 +551,28 @@ namespace compiler::helios::code {
 				// which we pass to operator resolution. The resolved expressions (binary operators
 				// or calls) are then passed to the final ChainComparisonExpr.
 
-				// The rhs argument of the previous comparison.
-				// Initialised to the lhs argument of the 1st comparison (think: rhs of 0th).
-				// It will be
-				auto prev_expr = std::move(result_exprs.at(0));
+				// The lhs argument of the comparison to be processed.
+				auto lhs = std::move(result_exprs.at(0));
+				// The scope of the entire expression.
+				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
+				// The resolved comparisons.
+				std::vector<Box<Expr>> comparisons;
+				comparisons.reserve(operator_count);
 
-				for (int op_id = 0; op_id < operator_count; op_id++) {}
+				// Perform operator resolution for each operator in the chain. Reuse the expressions
+				// which are between two operators. The last expressions is not reused, but that's fine.
+				for (int op_idx = 0; op_idx < operator_count; op_idx++) {
+					const auto op = pst_operators.at(op_idx);
+					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
+					auto next_lhs = rhs->nextUse();
 
-				// @todo here we should:
-				// * lookup for user defined operators
-				// * type check
-				// * make function call
-				// For now we support just builtins
-
-				// if no function call is found, we try to use builtin operators:
-
-				std::vector<BuiltinBinary> operators;
-				operators.reserve(operator_count);
-				for (size_t i = 0; i < operator_count; ++i) {
-					auto lhs_type = result_exprs.at(i)->expression_type.getSymbolType();
-					auto rhs_type = result_exprs.at(i + 1)->expression_type.getSymbolType();
-
-					auto result = findBinaryBuiltin(
-						ctx,
-						pst_operators.at(i),
-						result_exprs.at(i).ref(),
-						result_exprs.at(i + 1).ref()
+					comparisons.emplace_back(
+						resolveBinaryOperator(op, std::move(lhs), std::move(rhs), scope)
 					);
-
-					if (result) {
-						auto [op, lhs_coercion, rhs_coercion] = std::move(result).value();
-						result_exprs[i] = lhs_coercion.coerce(ctx, std::move(result_exprs[i]));
-						result_exprs[i + 1]
-							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
-						operators.push_back(op);
-					} else {
-						ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
-							stmt->getSourcePosition(),
-							pst_operators.at(i).str(),
-							makeBox<InteractiveType>(ctx, lhs_type),
-							makeBox<InteractiveType>(ctx, rhs_type)
-						));
-
-						return;
-					}
+					lhs = std::move(next_lhs);
 				}
 
-				node = makeBox<ChainComparisonExpr>(
-					ctx, pstOrigin(stmt), std::move(result_exprs), std::move(operators)
-				);
+				node = makeBox<ChainComparisonExpr>(ctx, pstOrigin(stmt), std::move(comparisons));
 			}
 		};
 

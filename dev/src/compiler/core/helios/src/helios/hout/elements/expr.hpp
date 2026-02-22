@@ -232,7 +232,7 @@ namespace compiler::helios::code {
 		bool            first_use;
 
 		ReusableExpr(
-			query::Context& ctx, const ElementOrigin& origin, Box<Expr> inner, bool first_use = true
+			query::Context& ctx, Box<Expr> inner, bool first_use = true
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -245,7 +245,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		ReusableExpr(const ElementOrigin& origin, const SharedBox<Expr>& inner, bool first_use);
+		ReusableExpr(const SharedBox<Expr>& inner, bool first_use);
 	};
 
 	/**

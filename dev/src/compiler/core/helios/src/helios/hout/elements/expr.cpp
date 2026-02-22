@@ -228,10 +228,8 @@ namespace compiler::helios::code {
 		return makeBox<IdentifierExpr>(expression_type, origin, symbol);
 	}
 
-	ReusableExpr::ReusableExpr(
-		query::Context&, const ElementOrigin& origin, Box<Expr> inner, const bool first_use
-	):
-		  Expr(inner->expression_type, origin),
+	ReusableExpr::ReusableExpr(query::Context&, Box<Expr> inner, const bool first_use):
+		  Expr(inner->expression_type, inner->origin),
 		  inner(std::move(inner)),
 		  first_use(first_use) {}
 
@@ -246,22 +244,20 @@ namespace compiler::helios::code {
 
 	Box<Expr> ReusableExpr::clone() const {
 		auto inner_cloned = SharedBox(inner->clone());
-		return makeBox<ReusableExpr>(origin, inner_cloned, first_use);
+		return makeBox<ReusableExpr>(inner_cloned->origin, inner_cloned, first_use);
 	}
 
 	Box<Expr> ReusableExpr::nextUse() const {
 		return makeBox<ReusableExpr>(origin, inner, /*first_use=*/false);
 	}
 
-	ReusableExpr::ReusableExpr(
-		const ElementOrigin& origin, const SharedBox<Expr>& inner, const bool first_use
-	):
-		  Expr(inner->expression_type, origin),
+	ReusableExpr::ReusableExpr(const SharedBox<Expr>& inner, const bool first_use):
+		  Expr(inner->expression_type, inner->origin),
 		  inner(inner),
 		  first_use(first_use) {}
 
 	tsh::AbstractType builtinOperationToReturnType(
-		query::Context&, BuiltinBinary operation, tsh::AbstractType argument_type
+		query::Context&, const BuiltinBinary operation, const tsh::AbstractType argument_type
 	) {
 		using enum BuiltinBinary;
 		switch (operation) {
