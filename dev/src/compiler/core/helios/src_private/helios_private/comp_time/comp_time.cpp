@@ -180,7 +180,7 @@ namespace compiler::helios {
 											));
 											return query::Failed();
 										}
-										result = lhs_val / rhs_val;
+										result = static_cast<ResultT>(lhs_val / rhs_val);
 										break;
 									case IntegerMod:
 									case FloatMod:
@@ -193,7 +193,7 @@ namespace compiler::helios {
 											return query::Failed();
 										}
 										if constexpr (std::is_integral_v<ResultT>)
-											result = lhs_val % rhs_val;
+											result = static_cast<ResultT>(lhs_val % rhs_val);
 										else
 											result = std::fmod(lhs_val, rhs_val);
 										break;
