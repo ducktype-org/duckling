@@ -22,7 +22,7 @@ impl DependencyEdge {
         manifest_dependency: &Dependency,
         location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
     ) -> QuackResult<Self> {
-        let child_loc = Location::try_from(manifest_dependency)?;
+        let child_loc = Location::from(manifest_dependency);
         location_resolver
             .get(&InternedLocation::new(child_loc))
             .map(|child_loc| Self {
