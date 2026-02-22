@@ -7,6 +7,7 @@
 
 #include <base/collections/maps.hpp>
 #include <base/memory/single_type_memory_pool_allocator.hpp>
+#include <base/memory/std_allocator.hpp>
 #include <base/pointers/box.hpp>
 
 #include <iterator>
@@ -26,7 +27,7 @@ namespace base {
 		typename KEY_T,
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
-		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
+		u64 ALLOCATOR_BLOCK_SIZE = 4'096 * 4>
 	class StableHashMap final {
 	public:
 		/**
@@ -514,6 +515,7 @@ namespace base {
 		 * Memory pool allocator for node storage.
 		 */
 		SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
+		// StdAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
 
 		/**
 		 * Number of elements stored in the map.
