@@ -26,14 +26,25 @@ pub mod util;
 #[cfg(test)]
 mod tests;
 
-use std::{cell::OnceCell, collections::{HashMap, HashSet}, marker::PhantomData, sync::Arc};
+use std::{
+    cell::OnceCell,
+    collections::{HashMap, HashSet},
+    marker::PhantomData,
+    sync::Arc,
+};
 
 use tokio::sync::Mutex;
 
 use crate::{
     QpCtx, QuackResult, qp_bail_internal,
     quackpack::core::{
-        FeatureName, Manifest, PackageCtx, fetcher::Fetcher, gathering::gatherer::Gatherer, git_access::GitAccess, solver_freeze::SolverFreeze, solving::solver_engine::{SolverEngine, SolverInput}, types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation}
+        FeatureName, Manifest, PackageCtx,
+        fetcher::Fetcher,
+        gathering::gatherer::Gatherer,
+        git_access::GitAccess,
+        solver_freeze::SolverFreeze,
+        solving::solver_engine::{SolverEngine, SolverInput},
+        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
     },
 };
 

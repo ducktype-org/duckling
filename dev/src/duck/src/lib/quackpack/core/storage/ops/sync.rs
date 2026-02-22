@@ -1,16 +1,23 @@
-#![allow(unreachable_code)] // @TODO: #1962 Remove this
 use std::{collections::HashMap, path::PathBuf, time::SystemTime};
 
 use async_scoped::TokioScope;
-use tracing::debug;
 
 use crate::{
     DuckCtx, QuackResult, QuackResultContext, qp_err,
-    quackpack::{core::{
-        Package, PackageCtx, PackageLoader, Solver, SolverMode, fetcher::Fetcher, storage::{
-            git_access::StorageGitAccess, locks::CompileLock, paths::Storage, venv::{Venv, VenvData}, venv_id::ToVenvId
-        }
-    }, util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector}},
+    quackpack::{
+        core::{
+            Package, PackageCtx, PackageLoader, Solver, SolverMode,
+            fetcher::Fetcher,
+            storage::{
+                git_access::StorageGitAccess,
+                locks::CompileLock,
+                paths::Storage,
+                venv::{Venv, VenvData},
+                venv_id::ToVenvId,
+            },
+        },
+        util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
+    },
     util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
 
@@ -90,7 +97,7 @@ pub fn sync(
         pkg_ctx.package().manifest_path().to_path_buf(),
         now,
     );
-    let mut venv = Venv::new(id, data);
+    let venv = Venv::new(id, data);
     venv.save_to(&storage)?;
     drop(data_lock);
     if expose_freezefile && !_options.frozen {

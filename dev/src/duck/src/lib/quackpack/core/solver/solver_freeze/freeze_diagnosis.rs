@@ -58,25 +58,24 @@ impl SolverFreeze {
     /// Then the information about being flawed is propagated upwards (if child is flawed then so is parent who depends on it).
     ///
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
-    
-    /*Note:
-    /// Changing the old main_pkg to the new_root may seem bug-prone,
-    /// since the new_root might have been a dependency in the previous freeze.
-    /// There are two cases:
-    /// 1. The new_root is taken into still_satisfied_pkgs.
-    ///    Then the only issue is that, after the change we might not deduce that its dependencies are all satisfied,
-    ///    which is slightly (the solver engine will solve the problem quickly) inefficient, but not a bug.
-    ///    The packages that depended on the new_root and belong to still_satisfied_pkgs are tehcnically not satisfied,
-    ///    so this is a bug to be addressed (though they will get removed as unnecessary).
-    /// 2. The new_root is not taken into still_satisfied_pkgs.
-    ///    This does not change whether its dependencies are still satisfied, and since we prohibit cycles,
-    ///    packages depending on the new_root should not be in the freeze nonetheless.
-    /// The main thing is that we use the new_root's new manifest, so everything is correct.*/
     pub fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
         new_root: ExpandedPackage,
     ) -> QuackResult<Self> {
+        // TODO: #2076
+        // Changing the old main_pkg to the new_root may seem bug-prone,
+        // since the new_root might have been a dependency in the previous freeze.
+        // There are two cases:
+        // 1. The new_root is taken into still_satisfied_pkgs.
+        //    Then the only issue is that, after the change we might not deduce that its dependencies are all satisfied,
+        //    which is slightly (the solver engine will solve the problem quickly) inefficient, but not a bug.
+        //    The packages that depended on the new_root and belong to still_satisfied_pkgs are tehcnically not satisfied,
+        //    so this is a bug to be addressed (though they will get removed as unnecessary).
+        // 2. The new_root is not taken into still_satisfied_pkgs.
+        //    This does not change whether its dependencies are still satisfied, and since we prohibit cycles,
+        //    packages depending on the new_root should not be in the freeze nonetheless.
+        // The main thing is that we use the new_root's new manifest, so everything is correct.
         let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests)?;
         let reversed_graph = self.reversed_dependency_graph();
         let mut visited = HashSet::new();
