@@ -48,7 +48,9 @@ namespace query {
 		internal::NodeID my_node;
 		bool             active = true;
 
-		Context(internal::NodeID my_node): my_node(my_node) {}
+		internal::QueryGraph::ChildrenDataHolder deps_holder;
+
+		Context(internal::NodeID my_node): my_node(my_node), deps_holder(main_query_state.getDepsHolder(my_node)) {}
 		friend struct query::internal::ContextAccess;
 
 		/**
@@ -66,7 +68,6 @@ namespace query {
 		private:
 			internal::NodeID caller;
 			internal::NodeID callee;
-			internal::QueryGraph::ChildrenDataHolder deps_holder;
 
 
 		public:
@@ -74,11 +75,10 @@ namespace query {
 				Context& this_context, internal::NodeID caller, internal::NodeID callee
 			):
 				  caller(caller),
-				  callee(callee),
-				  deps_holder(this_context.main_query_state.getDepsHolder(caller)) {
+				  callee(callee) {
 
 				// main_query_state.addDependency(caller, callee);
-				deps_holder->push_back(callee);
+				this_context.deps_holder->push_back(callee);
 
 				// @TODO: #2026: Optimize it, we only need to add edge here, when the query is not ready.
 

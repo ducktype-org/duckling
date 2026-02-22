@@ -58,7 +58,6 @@ namespace query::internal {
 		});
 
 		auto node_id = makeNodeID<QueryIntType>(key);
-		auto context = ContextAccess::make(node_id);
 
 		// @FUTURE: provide legit acd here
 		ACD acd;
@@ -110,6 +109,10 @@ namespace query::internal {
 		// actual cycle checks are done in ctx.query
 		// @TODO: #1887 might want to put it under one more layer of abstraction:
 		ContextAccess::getState()->addGraphNode(node_id);
+
+		// move it after add graph node, to avoid panics:
+		auto context = ContextAccess::make(node_id);
+
 		ContextAccess::getState()->getActiveGraph()->putNode(node_id);
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
