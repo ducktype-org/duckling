@@ -74,8 +74,10 @@ namespace compiler::helios {
 							out.functions.emplace_back(&hout_function->valueOrPanic());
 						}
 					}
-					if (kind(sym) == SymbolKind::Class)
+					if (kind(sym) == SymbolKind::Class) {
+						// @TODO: Append class methods!
 						appendClassConstructors(out.functions, sym, ctx);
+					}
 				}
 			}
 

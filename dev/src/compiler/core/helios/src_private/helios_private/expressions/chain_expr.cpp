@@ -5,6 +5,8 @@
 
 #include "chain_expr.hpp"
 
+#include "helios/hout/origin.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -32,6 +34,7 @@
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
+#include <string_id/string_id.hpp>
 #include <token_parser_core/common_elements.hpp>
 
 namespace compiler::helios::code {
@@ -624,6 +627,23 @@ namespace compiler::helios::code {
 			}
 		}
 
+		[[nodiscard]]
+		base::Optional<SymID> getSelfSymbolInMethod(pst::Access<pst::ExprElement> elem) {
+			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ elem });
+			auto res = HInterface::ofScopeWithParents(scope).lookup(query_ctx, base::StrID("self"));
+			if (res->isEmpty()) return {};
+
+			CORE_ASSERT(res->leaves.size() == 1, "Expected exactly one self symbol in method scope");
+			return res->leaves.front();
+		}
+
+		auto processSelfSymbolInMethod(SymID self_sym_id, ElementOrigin origin)
+			-> query::QResult<ChainState> {
+			auto expr = makeBox<IdentifierExpr>(query_ctx, origin, self_sym_id);
+
+			return ChainState::ofExpr(std::move(expr));
+		}
+
 		// =============================== MAIN PROCESSING LOOP ===============================
 
 		/**
@@ -686,6 +706,13 @@ namespace compiler::helios::code {
 			);
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
+			auto self = getSelfSymbolInMethod(current_element_value);
+			if (self.has_value()) {
+				auto self_expr
+					= processSelfSymbolInMethod(self.value(), pstOrigin(current_element_value));
+				UNPACK_QRESULT_MOVE(this->current_state =, std::move(self_expr));
+			}
+
 			auto res = processPSTExpr(current_element_value);
 			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
@@ -702,7 +729,15 @@ namespace compiler::helios::code {
 			);
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
-			auto res                   = processPSTExpr(current_element_value, next_element_value);
+
+			auto self = getSelfSymbolInMethod(current_element_value);
+			if (self.has_value()) {
+				auto self_expr
+					= processSelfSymbolInMethod(self.value(), pstOrigin(current_element_value));
+				UNPACK_QRESULT_MOVE(this->current_state =, std::move(self_expr));
+			}
+
+			auto res = processPSTExpr(current_element_value, next_element_value);
 			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
 		}
