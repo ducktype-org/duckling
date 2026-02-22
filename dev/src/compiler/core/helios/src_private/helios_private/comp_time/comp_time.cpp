@@ -172,12 +172,26 @@ namespace compiler::helios {
 										break;
 									case IntegerDiv:
 									case FloatDiv:
-										if (rhs_val == 0) return query::Failed();
+										if (rhs_val == 0) {
+											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+												"Division by zero in compile-time expression "
+												"evaluation.",
+												expr.origin.getSourcePosition().value()
+											));
+											return query::Failed();
+										}
 										result = lhs_val / rhs_val;
 										break;
 									case IntegerMod:
 									case FloatMod:
-										if (rhs_val == 0) return query::Failed();
+										if (rhs_val == 0) {
+											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+												"Modulo by zero in compile-time expression "
+												"evaluation.",
+												expr.origin.getSourcePosition().value()
+											));
+											return query::Failed();
+										}
 										if constexpr (std::is_integral_v<ResultT>)
 											result = lhs_val % rhs_val;
 										else
@@ -734,17 +748,6 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateHOUTExpression);
-
-	struct IMPLEMENT_QUERY(QueryEvaluatePSTExpression, CompTimeEvalResult) {
-		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			UNPACK_QRESULT_CREF_TO_BOX(auto expr =, ctx.query<QueryHoutOfExpr>({ key.element }));
-			return ctx.query<QueryEvaluateHOUTExpression>({ expr });
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluatePSTExpression);
 
 	CompTimeEvalResult getTypeCTVFromPST(
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr

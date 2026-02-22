@@ -7,6 +7,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -85,6 +86,7 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::Import:
+		case pst::ElementKind::ImportIdentifierAs:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -243,13 +245,17 @@ namespace compiler::helios {
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
-			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID()))
+			// clang-format off
+			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID())) {
 				CORE_ASSERT(*scope_in_map == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
-			else
+			}
+			else {
 				parent_map.put(element->getID(), parent);
+			}
+			// clang-format on
 
 			return ScopeData{
-				parent, false, element, module(parent), scopeDepth(parent) + 1,
+				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
 			};
 		}
 
@@ -334,7 +340,7 @@ namespace compiler::helios {
 		};
 
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<std::vector<ScopeID>> out) {
-			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
+			auto root = getFilePST(ctx, file)->getRootElement().unlock(ctx);
 
 			ScopeGrabPseudoVisitor scope_grab(out, ctx);
 			scope_grab.visit(root);
@@ -398,6 +404,12 @@ namespace compiler::helios {
 					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						symbols.emplace_back(sym_id);
+					} else if (auto import_opt
+					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
+						// Import has DeclType::Transparent as it can intrude many different
+						// symbols. This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 						symbols.emplace_back(sym_id);
 					} else {
@@ -505,11 +517,11 @@ namespace compiler::helios {
 		static auto getSymbols(Context& ctx, QKey key) -> PResult {
 			// @TODO: expand macros?
 
-			if (not key.ref->related_pst_element.has_value()) {
+			if (not key.ref->related_pst_element_hash.has_value()) {
 				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
 				return {};
 			}
-			auto base_element = key.ref->related_pst_element.value().unlock(ctx);
+			auto base_element = key.ref->relatedPSTElement().value().unlock(ctx);
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
@@ -546,14 +558,14 @@ namespace compiler::helios {
 						name(sym),
 						"\n\n"
 						" considered scope : ",
-						key.ref->related_pst_element.value().unlock(ctx)->elementType(),
+						key.ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						key.ref->related_pst_element.value().unlock(ctx)->getID().asInt(),
+						key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 						"\n\n",
 						" scope of symbol: ",
-						scope(sym).ref->related_pst_element.value().unlock(ctx)->elementType(),
+						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						scope(sym).ref->related_pst_element.value().unlock(ctx)->getID().asInt(),
+						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 						"\n"
 					)
 				);
@@ -688,7 +700,7 @@ namespace compiler::helios {
 
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
-		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
+		auto main_source_pst  = getFilePST(ctx, main_source_file);
 
 		auto main_file_root_scope
 			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst->getRootElement() });
@@ -701,8 +713,9 @@ namespace compiler::helios {
 
 		while (true) {
 			os << iter_scope.queryUnstablePerfectHash() << "("
-			   << (iter_scope.ref->related_pst_element.has_value()
-			           ? iter_scope.ref->related_pst_element.value()
+			   << (iter_scope.ref->relatedPSTElement().has_value()
+			           ? iter_scope.ref->relatedPSTElement()
+			                 .value()
 			                 .illegalAccess()
 			                 .value()
 			                 ->elementType()

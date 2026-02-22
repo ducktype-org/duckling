@@ -166,7 +166,7 @@ namespace compiler::helios {
 						return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
-					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
+					pst_data.getElement().unlock(ctx)->acceptVisitor(visitor);
 
 					return visitor.symbol_type_qresult;
 				}

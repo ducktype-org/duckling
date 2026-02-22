@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::StrId;
 use crate::quackpack::schemas::registry;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// List of specific options which should be passed to the compiler.
 pub struct CompilerSpecificOptions {
     flags: Vec<StrId>,
@@ -33,7 +33,7 @@ impl From<CompilerSpecificOptions> for registry::CompilerOptions {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Common helper for `Profiles` and `Targets` structs.
 struct CompilerFlagsMap(HashMap<StrId, CompilerSpecificOptions>);
 
@@ -64,7 +64,7 @@ impl From<CompilerFlagsMap> for HashMap<String, registry::CompilerOptions> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Map `profile name <-> options for compiler`
 pub struct Profiles(CompilerFlagsMap);
 

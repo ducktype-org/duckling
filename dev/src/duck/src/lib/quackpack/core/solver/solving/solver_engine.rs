@@ -9,20 +9,22 @@ use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
         Dependency, FeatureName, Manifest, Version,
+        gathering::gatherer_state::GatheredInfo,
+        solver_freeze::SolverFreeze,
         solving::solver_model::{FoundSolution, SolverModel},
         types_common::{
-            DependencyEdge, ExpandedPackage, InternedExpandedLocation, InternedLocation,
+            DependencyEdge, ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
         },
         util::get_possible_realisations,
     },
 };
 
-// Input for solver engine type, currently here, after implementing the gathering information stage will be moved there.
+/// Struct with all the necessary information for the solver to be run.
 #[derive(Debug)]
-pub struct GatheredInfo<'a> {
-    pub gathered_manifests: HashMap<ExpandedPackage, &'a Manifest>,
+pub struct SolverInput {
+    pub gathered_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
     pub all_possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
-    pub versions_for_location: HashMap<InternedExpandedLocation, Vec<Option<Version>>>,
+    pub versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     pub location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
 
     pub preexisting_packages: HashSet<ExpandedPackage>,
@@ -30,10 +32,68 @@ pub struct GatheredInfo<'a> {
     pub preexisting_dependencies: HashMap<DependencyEdge, Option<Version>>,
 }
 
+impl SolverInput {
+    /// Creates the solver input, based on the previous freeze, its packages' manifests and information gathered
+    /// in the gathering phase.
+    pub fn from_freeze_and_gathered_info(
+        prev_freeze: &SolverFreeze,
+        prev_freeze_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+        gathered_info: GatheredInfo,
+    ) -> Self {
+        let mut gathered_manifests = gathered_info.gathered_manifests;
+        for (pkg, manifest) in prev_freeze_manifests {
+            if prev_freeze.package_freezes.contains_key(&pkg) {
+                gathered_manifests.insert(pkg, manifest);
+            }
+        }
+        let mut all_possible_features = gathered_info.possible_features;
+        let mut versions_for_location = gathered_info.versions_for_location;
+        let mut location_resolver = gathered_info.location_resolver;
+        let mut preexisting_packages = HashSet::new();
+        let mut preexisting_features = HashMap::new();
+        let mut preexisting_dependencies = HashMap::new();
+        for (pkg, freeze) in prev_freeze.package_freezes.iter() {
+            all_possible_features
+                .entry(*pkg)
+                .or_default()
+                .extend(freeze.features.iter().copied());
+            versions_for_location
+                .entry(pkg.location)
+                .or_default()
+                .insert(pkg.version);
+            location_resolver.insert(
+                InternedLocation::new(Location::canonical_unexpansion(pkg.location())),
+                pkg.location,
+            );
+            preexisting_packages.insert(*pkg);
+            preexisting_features.insert(*pkg, freeze.features.clone());
+            for (dep_name, realization) in freeze.dependencies_realization.iter() {
+                preexisting_dependencies.insert(
+                    DependencyEdge {
+                        parent: *pkg,
+                        dependency_loc: realization.location,
+                        manifest_child_name: *dep_name,
+                    },
+                    realization.version,
+                );
+            }
+        }
+        Self {
+            gathered_manifests,
+            all_possible_features,
+            versions_for_location,
+            location_resolver,
+            preexisting_packages,
+            preexisting_features,
+            preexisting_dependencies,
+        }
+    }
+}
+
 #[derive(Debug)]
 /// Struct performing dependencies resolving.
 pub struct SolverEngine<'a> {
-    input: &'a GatheredInfo<'a>,
+    input: &'a SolverInput,
     model: SolverModel<'a, ProblemCreated>,
 }
 
@@ -41,14 +101,15 @@ impl<'a> SolverEngine<'a> {
     /// Main entry point.
     /// Creates an engine and runs it.
     pub fn run_engine(
-        input: &GatheredInfo,
+        input: SolverInput,
         main_pkg: &(ExpandedPackage, HashSet<FeatureName>),
     ) -> QuackResult<FoundSolution> {
-        let engine = SolverEngine::new(input);
+        let engine = SolverEngine::new(&input);
         engine.run(main_pkg)
     }
-    /// Creates a new [`SolverEngine`] from the given [`GatheredInfo`] reference.
-    fn new(input: &'a GatheredInfo) -> Self {
+
+    /// Creates a new [`SolverEngine`] from the given [`SolverInput`] reference.
+    fn new(input: &'a SolverInput) -> Self {
         Self {
             input,
             model: SolverModel::new(&input.preexisting_packages, &input.preexisting_features),
@@ -83,7 +144,7 @@ impl<'a> SolverEngine<'a> {
         self.model.solve()
     }
 
-    /// Creates necesseary varaiables for all the packages.
+    /// Creates necessary variables for all the packages.
     fn create_package_variables(&mut self) {
         for pkg in self.input.gathered_manifests.keys() {
             self.model.add_package_var(*pkg);
@@ -255,7 +316,7 @@ impl<'a> SolverEngine<'a> {
 /// The [`None`] signifies the lack of any parent features,
 /// so that features of the child forced by default can be considered.
 fn parent_features_to_consider<'a>(
-    input: &'a GatheredInfo,
+    input: &'a SolverInput,
     edge: &DependencyEdge,
 ) -> impl Iterator<Item = Option<&'a StrId>> {
     input
@@ -271,7 +332,6 @@ fn parent_features_to_consider<'a>(
 mod test {
     use std::path::PathBuf;
 
-    use rustvil::fs::PathExt;
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
@@ -279,8 +339,9 @@ mod test {
         DuckCtx, QpCtx,
         quackpack::core::{
             parse_manifest,
-            types_common::{ExpandedLocRegistry, ExpandedLocation, LocRegistry, Location},
+            types_common::{ExpandedLocation, Location},
         },
+        util_common::path_ops_ext::PathOpsExt,
     };
 
     use super::*;
@@ -318,24 +379,22 @@ metadata:
         let qpctx = QpCtx::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        }));
-        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
+        });
+        let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        }));
-        let exp_location_a =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("a"),
-            }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
+        });
+        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -345,21 +404,19 @@ metadata:
             version: Some(Version::new(2, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let all_possible_features =
             HashMap::from([(exp_pkg_a, HashSet::new()), (exp_pkg_b, HashSet::new())]);
         let versions_for_location = HashMap::from([
-            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
+            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
         ]);
-        let location_resolver = HashMap::from([
-            (location_a, exp_location_a),
-            (location_b, exp_location_b.clone()),
-        ]);
+        let location_resolver =
+            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
 
-        let input = GatheredInfo {
+        let input = SolverInput {
             gathered_manifests,
             all_possible_features,
             versions_for_location,
@@ -370,8 +427,8 @@ metadata:
         };
 
         let main_pkg = (exp_pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b.clone()]));
+        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
         assert!(output.new_features == HashMap::new());
         assert!(
             output.new_edges
@@ -420,24 +477,22 @@ dependencies:
         let qpctx = QpCtx::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        }));
-        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
+        });
+        let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        }));
-        let exp_location_a =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("a"),
-            }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
+        });
+        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -447,21 +502,21 @@ dependencies:
             version: Some(Version::new(2, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let all_possible_features = HashMap::from([
             (exp_pkg_a, HashSet::from([FeatureName::new("xd")])),
             (exp_pkg_b, HashSet::new()),
         ]);
         let versions_for_location = HashMap::from([
-            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
+            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
         ]);
         let location_resolver =
             HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
 
-        let input = GatheredInfo {
+        let input = SolverInput {
             gathered_manifests,
             all_possible_features,
             versions_for_location,
@@ -472,7 +527,7 @@ dependencies:
         };
 
         let main_pkg = (exp_pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
+        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
         assert!(
             output.new_features
@@ -532,24 +587,22 @@ features:
         let qpctx = QpCtx::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        }));
-        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
+        });
+        let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        }));
-        let exp_location_a =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("a"),
-            }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
+        });
+        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -559,8 +612,8 @@ features:
             version: Some(Version::new(2, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let all_possible_features = HashMap::from([
             (exp_pkg_a, HashSet::new()),
@@ -570,8 +623,8 @@ features:
             ),
         ]);
         let versions_for_location = HashMap::from([
-            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
+            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
         ]);
         let location_resolver =
             HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
@@ -580,7 +633,7 @@ features:
         let preexisting_features =
             HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xdd")]))]);
 
-        let input = GatheredInfo {
+        let input = SolverInput {
             gathered_manifests,
             all_possible_features,
             versions_for_location,
@@ -591,7 +644,7 @@ features:
         };
 
         let main_pkg = (exp_pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
+        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a]));
         assert!(
             output.new_features
@@ -630,24 +683,22 @@ features:
         let qpctx = QpCtx::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        }));
-        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
+        });
+        let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        }));
-        let exp_location_a =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("a"),
-            }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
+        });
+        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -657,8 +708,8 @@ features:
             version: Some(Version::new(2, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let all_possible_features = HashMap::from([
             (exp_pkg_a, HashSet::new()),
@@ -668,15 +719,15 @@ features:
             ),
         ]);
         let versions_for_location = HashMap::from([
-            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
+            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
         ]);
         let location_resolver =
             HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
 
         let preexisting_packages = HashSet::from([exp_pkg_b]);
 
-        let input = GatheredInfo {
+        let input = SolverInput {
             gathered_manifests,
             all_possible_features,
             versions_for_location,
@@ -687,8 +738,8 @@ features:
         };
 
         let main_pkg = (exp_pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
+        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        assert!(output.new_packages == HashSet::from([exp_pkg_a]));
         assert!(
             output.new_features
                 == HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xd")]))])
@@ -744,33 +795,30 @@ features:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        }));
-        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
+        });
+        let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        }));
-        let location_c = InternedLocation::new(Location::Registry(LocRegistry {
+        });
+        let location_c = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("c"),
-        }));
-        let exp_location_a =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("a"),
-            }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
-        let exp_location_c =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("c"),
-            }));
+        });
+        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("c"),
+        });
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -784,9 +832,9 @@ features:
             version: Some(Version::new(3, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
-            (exp_pkg_c, manifest_c.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
         ]);
         let all_possible_features = HashMap::from([
             (exp_pkg_a, HashSet::new()),
@@ -794,9 +842,9 @@ features:
             (exp_pkg_c, HashSet::from([FeatureName::new("xdd")])),
         ]);
         let versions_for_location = HashMap::from([
-            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
-            (exp_location_c, vec![Some(Version::new(3, 0, 0))]),
+            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
+            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
+            (exp_location_c, HashSet::from([Some(Version::new(3, 0, 0))])),
         ]);
         let location_resolver = HashMap::from([
             (location_a, exp_location_a),
@@ -814,7 +862,7 @@ features:
             Some(Version::new(3, 0, 0)),
         )]);
 
-        let input = GatheredInfo {
+        let input = SolverInput {
             gathered_manifests,
             all_possible_features,
             versions_for_location,
@@ -825,7 +873,7 @@ features:
         };
 
         let main_pkg = (exp_pkg_a, HashSet::new());
-        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
+        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a]));
         assert!(
             output.new_features

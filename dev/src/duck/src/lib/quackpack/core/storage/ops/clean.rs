@@ -1,0 +1,150 @@
+use tracing::debug;
+
+use crate::quackpack::core::storage;
+
+use crate::quackpack::core::storage::venv::Venv;
+use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
+use crate::{DuckCtx, QuackResult, QuackResultContext, StrId};
+use std::collections::HashSet;
+use std::fs::DirEntry;
+use std::time::{Duration, SystemTime};
+use std::{io, path::PathBuf};
+use storage::paths::Storage;
+use storage::{locks, paths};
+
+#[derive(Debug)]
+pub struct CleanOutput {
+    pub removed_vevns: Vec<StrId>,
+    pub removed_packages: Vec<PathBuf>,
+}
+
+/// Delete a virtual environment from storage.
+pub fn delete_venv(ctx: &DuckCtx, venv: impl ToVenvId) -> QuackResult<()> {
+    debug!("deleting venv `{}`", venv.to_venv_id());
+    let storage = paths::Storage::new(ctx.duck_home());
+    let venv_id = venv.to_venv_id();
+
+    let _sync_lock = {
+        let mut would_block = false;
+        locks::TrySyncLock::new(&storage, venv_id)
+            .inspect_err(|err| {
+                if err.source().kind() == io::ErrorKind::WouldBlock {
+                    would_block = true;
+                }
+            })
+            .with_context(|| {
+                if would_block {
+                    format!("another synchronization operation is ongoing in venv `{venv_id}`")
+                } else {
+                    format!("failed to acquire a lock for venv `{venv_id}`")
+                }
+            })?
+    };
+    let _lock = storage
+        .data_lock(venv_id)
+        .lock(ShouldBlock::Yes)
+        .with_context(|| {
+            format!(
+                "failed to acquire exclusive data lock for venv `{}`",
+                venv_id
+            )
+        })?;
+    storage.venv_dir(venv_id).rmtree()?;
+    Ok(())
+}
+
+/// Remove orphaned packages and expired temporary virtual environments from storage.
+pub fn clean_storage(ctx: &DuckCtx) -> QuackResult<CleanOutput> {
+    let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
+    let storage = paths::Storage::new(ctx.duck_home());
+    let mut removed_vevns = vec![];
+    let _lock = locks::CleanLock::new(&storage).context("failed to acquire a clean lock")?;
+    let mut all_deps = HashSet::new();
+    let now = SystemTime::now();
+    let venvs = {
+        let venvs = storage.iter_venvs()?;
+        venvs.into_iter().collect::<Result<Vec<_>, _>>()?
+    };
+    for venv in venvs {
+        clean_venv_from_storage(
+            venv,
+            &storage,
+            temporary_lifetime,
+            now,
+            &mut removed_vevns,
+            &mut all_deps,
+        )?;
+    }
+    locks::cleanup_locks(&storage)?;
+    let all_pkgs = storage.iter_pkgs()?.collect::<Result<Vec<_>, _>>()?;
+    let pgks_to_remove = all_pkgs
+        .into_iter()
+        .flat_map(|pkg| {
+            let venv_id: StrId = pkg.file_name().to_string_lossy().into_owned().into();
+            if !all_deps.contains(&venv_id) {
+                Some(pkg.path())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    for pkg in pgks_to_remove.iter() {
+        pkg.rmtree()?;
+    }
+    Ok(CleanOutput {
+        removed_vevns,
+        removed_packages: pgks_to_remove,
+    })
+}
+
+fn clean_venv_from_storage(
+    dir: DirEntry,
+    storage: &Storage,
+    temporary_lifetime: Duration,
+    now: SystemTime,
+    removed_vevns: &mut Vec<VenvId>,
+    all_deps: &mut HashSet<StrId>,
+) -> QuackResult<()> {
+    let venv_id = dir.file_name().to_string_lossy().into_owned().into();
+    let _lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
+    let venv = Venv::fix_and_load(storage, venv_id)?;
+    let Some(mut venv) = venv else {
+        return Ok(());
+    };
+    let mut requires_save = false;
+    let data = venv.data_mut();
+    // last_access can exceed current_time only if there was a system time change.
+    // If ephemeral venv's previous last_access is far in the future, we may never
+    // clean it. Choosing to truncate the last_access to the present time may instead
+    // cause premature cleanups (when measured in real time), but that should
+    // not be problem for ephemeral venv.
+    if data.last_access() > now {
+        data.set_last_access(now);
+        requires_save = true;
+    }
+    if data.is_ephemeral() && data.last_access() + temporary_lifetime < now {
+        debug!("removing venv `{venv_id}` from the shared storage");
+        dir.path().rmtree().with_context(|| {
+            format!(
+                "while removing venv `{venv_id}` at `{}`",
+                dir.path().display()
+            )
+        })?;
+        removed_vevns.push(venv_id);
+        return Ok(());
+    }
+    // We're done mutating data, let's make borrow checker happy.
+    let data = venv.data();
+    if requires_save {
+        venv.save_to(storage)?;
+    }
+    all_deps.extend(data.freeze().dependencies().iter().filter_map(|dep| {
+        if dep.source().is_local() {
+            None
+        } else {
+            Some(dep.to_package_id().storage_name())
+        }
+    }));
+    Ok(())
+}

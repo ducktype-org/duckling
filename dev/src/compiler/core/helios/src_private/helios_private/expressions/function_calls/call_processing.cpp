@@ -372,7 +372,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<ExactCandidateNote>> first_candidate_msg{};
 		for (const auto& match: exact_matches) {
-			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note
 				= makeBox<ExactCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 
@@ -401,7 +401,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<CoercibleCandidateNote>> first_candidate_msg{};
 		for (const auto& match: coercible_matches) {
-			auto decl           = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl           = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note = makeBox<CoercibleCandidateNote>(
 				getFunctionParamList(ctx, decl)->getSourcePosition()
 			);
@@ -446,7 +446,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<FailedCandidateNote>> first_candidate_msg{};
 		for (const auto& match: failed_matches) {
-			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note
 				= makeBox<FailedCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 

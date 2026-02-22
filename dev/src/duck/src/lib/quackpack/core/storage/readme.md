@@ -4,7 +4,7 @@ file is to explain how they work).
 
 # Overview
 
-Virtual environments in quackpack do not store their downloaded dependencies
+Virtual environments in QuackPack do not store their downloaded dependencies
 in the project directory, instead all dependencies are stored in a *storage*.
 There can be many storages on the system, and many virtual environments may
 correspond to one storage.
@@ -27,9 +27,12 @@ virtual environment config:
 1. freeze stored in the storage,
 2. freezefile exposed to the user.
 
-In the second variant, when the `quackfreeze.json` file is provided in the package directory,
-any synchronization operation will first try to use it as the realization
-of manifest's dependencies. If it is invalid or not present, the solver will be called instead,
-and its result will be exported to the freezefile in the package directory.
-Note that the freezes are also present in the storage venv state for the purposes
-of the clean operations — they still pin their used packages in the storage.
+In both cases, storage will use an old freeze as a base for a new dependency resolution.
+Note that, regarding the `freezefile_exposed` flag, current freeze is *always* stored in
+a virtual environment.
+In other words, setting `freezefile_exposed` affects only two things: whether to consider user-exposed freeze
+(`quackfreeze.json`), and whether to update it after finding new dependencies.
+
+It's also worth mentioning that "to consider user-exposed freeze" means, that we prioritize
+user-exposed freeze over storage's freeze: but if user didn't have a freezefile, we *would* use freeze stored in
+storage.

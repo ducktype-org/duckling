@@ -82,7 +82,8 @@ namespace compiler::helios {
 				  if (kind(nested.node) == SymbolKind::Alias) {
 					  auto alias_stmt = getSymRef(nested.node)
 				                            ->getPSTData()
-				                            ->pst_element.unlock(ctx)
+				                            ->getElement()
+				                            .unlock(ctx)
 				                            .dynamicCast<pst::Alias>()
 				                            .value();
 					  auto underlying_chain
@@ -193,7 +194,7 @@ namespace compiler::helios {
 		  function_symbol(function_symbol),
 		  pst_expr(std::move(pst_expr)) {
 		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstSymbolData>(), pst_data) {
-			auto position = getFunctionLikeSourcePosition(ctx, pst_data->pst_element.unlock(ctx));
+			auto position = getFunctionLikeSourcePosition(ctx, pst_data->getElement().unlock(ctx));
 			auto id       = MessageBase::getUniqueID();
 			this->linked_messages.put(std::move(id), makeBox<FunctionDeclaredHereNote>(position));
 		}

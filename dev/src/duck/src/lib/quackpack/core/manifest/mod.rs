@@ -23,7 +23,7 @@ pub use source::*;
 
 use crate::{QuackError, quackpack::schemas::registry};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
 pub struct Manifest {
     root_description: RootDescription,
@@ -72,6 +72,11 @@ impl Manifest {
     /// Get the dependencies.
     pub fn dependencies(&self) -> &Dependencies {
         &self.dependencies
+    }
+
+    /// Get mutable access to the dependencies.
+    pub fn dependencies_mut(&mut self) -> &mut Dependencies {
+        &mut self.dependencies
     }
 
     /// Get the development dependencies.

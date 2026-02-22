@@ -114,7 +114,7 @@ namespace concurrent {
 		 * @returns A reference to the inserted key-value pair.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			auto          result
 				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
@@ -146,14 +146,15 @@ namespace concurrent {
 		 * 2. Calls f with reference to the value associated with the key.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		void putOrAssign(const K& key, const D& value) RELEASE_NOEXCEPT {
+		void putOrAssign(const K& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
-			auto inserted = shards[lock.shard_index].maybePut(key, value);
-			if (inserted != nullptr)
-				elements_count.fetch_add(1, std::memory_order_relaxed);
-			else
-				shards[lock.shard_index][key] = value;
+			if (shards[lock.shard_index].contains(key)) {
+				shards[lock.shard_index][key] = std::forward<D>(value);
+				return;
+			}
+			shards[lock.shard_index].maybePut(key, std::forward<D>(value));
+			elements_count.fetch_add(1, std::memory_order_relaxed);
 		}
 
 		/**
@@ -162,12 +163,12 @@ namespace concurrent {
 		 * 2. Calls f with reference to the value associated with the key.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T, typename Func>
-		void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
+		void maybePutAndUpdate(const K& key, D&& value, Func f) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
-			auto inserted = shards[lock.shard_index].maybePut(key, value);
+			auto inserted = shards[lock.shard_index].maybePut(key, std::forward<D>(value));
 			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
-			f(shards[lock.shard_index][key]);
+			f(Ref<DATA_T>(&shards[lock.shard_index][key]));
 		}
 
 		/**
@@ -202,6 +203,11 @@ namespace concurrent {
 			return shards[lock.shard_index].atMaybe(key);
 		}
 
+		auto atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT -> base::Optional<CRef<DATA_T>> {
+			WithShardLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].atMaybe(key);
+		}
+
 		[[nodiscard]]
 		auto at(const KEY_T& key) RELEASE_NOEXCEPT -> Ref<DATA_T> {
 			return atMaybe(key).value();
@@ -211,13 +217,13 @@ namespace concurrent {
 		 * Atomically updates the value associated with the given key.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
+		void update(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
-			shards[lock.shard_index][key] = value;
+			shards[lock.shard_index][std::forward<K>(key)] = std::forward<D>(value);
 		}
 
 		[[nodiscard]]
-		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].contains(key);
 		}
@@ -225,7 +231,7 @@ namespace concurrent {
 		/**
 		 * Atomically erases the given key->value pair from the map.
 		 */
-		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto erase(const KEY_T& key) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			bool          erased = shards[lock.shard_index].erase(key);
 			if (erased) elements_count.fetch_sub(1, std::memory_order_relaxed);

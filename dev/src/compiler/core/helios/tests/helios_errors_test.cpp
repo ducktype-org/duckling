@@ -229,6 +229,38 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				const unitType: type = ();
+
+				fun foo(u: ()) -> () = {
+				    builtin_output_i64(1);
+				    return u;
+				}
+				
+				fun main() -> i64 = {
+					foo(unitType);
+					return 0;
+				}
+			)",
+			{ "The given argument type `const type` cannot be converted to the expected type "
+		      "`()`" },
+			1
+		);
+
+
+		// ========================== Comp time errors ==========================
+
+		checkForErrorOnCompileModule(
+			R"(
+				const a: f64 = 1.0 / 0.0;
+				fun main() -> i64 = 0;
+			)",
+			{ "Division", "zero" },
+			1
+		);
+
+
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1

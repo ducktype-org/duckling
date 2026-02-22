@@ -7,6 +7,7 @@
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::frontend;
@@ -50,7 +51,6 @@ class ModuleTreeTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		::compiler::frontend::use_module_modifier_remove = true;
 		TESTER_ADD_TEST(parseModule);
 		TESTER_ADD_TEST(testOtherFeatures);
 		TESTER_ADD_TEST(testQueries);
@@ -64,6 +64,9 @@ public:
 		TESTER_ADD_TEST(testComponentHash);
 		TESTER_ADD_TEST(testPrintModuleTree);
 	}
+
+protected:
+	void beforeAll() override { ::compiler::frontend::use_module_modifier_remove = true; }
 
 private:
 	void testPrintModuleTree() {
@@ -241,7 +244,7 @@ private:
 
 		auto main_id = sources->at(0);
 
-		[[maybe_unused]] auto pst = query::entryPoint<QueryFilePST>(main_id);
+		query::utils::withContextDo([&](query::Context& ctx) { getFilePST(ctx, main_id); });
 	}
 
 	void testParseDirectoryLikeFsTree() {

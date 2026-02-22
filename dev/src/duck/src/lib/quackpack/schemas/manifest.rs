@@ -1,6 +1,6 @@
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::fmt;
 
 use serde::Deserialize;
@@ -16,9 +16,6 @@ pub struct Manifest {
     pub dev_dependencies: Option<Dependencies>,
     pub features: Option<HashMap<String, Vec<String>>>,
     pub profiles: Option<HashMap<String, CompilerOptions>>,
-
-    #[serde(skip)]
-    pub _unused_keys: BTreeSet<String>,
 }
 
 #[derive(Debug, Deserialize)]

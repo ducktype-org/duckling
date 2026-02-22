@@ -2,6 +2,7 @@
 
 #include "node_id.hpp"
 
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
@@ -16,19 +17,21 @@
 
 namespace query::internal {
 
-	QueryGraph::DependencyStatus QueryGraph::addDependency(NodeID from, NodeID to) {
-		CORE_ASSERT(
-			node_deps.contains(from), "Node not found in dep graph, call the given query first."
-		);
-		node_deps.at(from).emplace_back(to);
+	QueryGraph::QueryGraph():
+		  node_deps(base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()) {}
 
-		// @TODO: see if cycle was created inside dep and propagate as if I was cyclic
-		return DependencyStatus::OK;
+	void QueryGraph::addDependency(NodeID from, NodeID to) {
+		CORE_ASSERT(
+			node_deps->contains(from), "Node not found in dep graph, call the given query first."
+		);
+		auto children_data = node_deps->atMaybe(from).value();
+		auto children      = children_data->getHolder();
+		children->push_back(to);
 	}
 
 	std::vector<NodeID> QueryGraph::getNodeDeps(internal::NodeID node_id) const {
 		CORE_ASSERT(
-			node_deps.contains(node_id), "Node not found in dep graph, call the given query first."
+			node_deps->contains(node_id), "Node not found in dep graph, call the given query first."
 		);
 
 		// some simple bfs for now:
@@ -44,15 +47,16 @@ namespace query::internal {
 			visited.insert(visited_node_id);
 
 			CORE_ASSERT(
-				node_deps.contains(visited_node_id),
+				node_deps->contains(visited_node_id),
 				"Node not found in dep graph. Node ID: ",
 				visited_node_id.q_id.getData().name,
 				" Key: ",
 				visited_node_id.hash.val.toStringHex()
 			);
 
-			const auto& node = node_deps.at(visited_node_id);
-			for (auto& dep: node)
+			const auto node            = node_deps->atMaybe(visited_node_id).value();
+			auto       children_holder = node->getHolder();
+			for (auto dep: *children_holder)
 				if (!visited.contains(dep)) queue.push(dep);
 		}
 
@@ -73,38 +77,46 @@ namespace query::internal {
 
 	const std::vector<NodeID>& QueryGraph::getDirectDependencies(const NodeID& node_id) const {
 		CORE_ASSERT(
-			node_deps.contains(node_id),
+			node_deps->contains(node_id),
 			"Node not found in dep graph when requesting direct dependencies."
 		);
-		return node_deps.at(node_id);
+		auto  children_data   = node_deps->atMaybe(node_id).value();
+		auto  children_holder = children_data->getHolder();
+		auto& children        = *children_holder;
+		children_holder.release();
+		return children;
 	}
 
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
 		std::vector<NodeID> all_nodes;
-		for (const auto& [k, _]: node_deps) all_nodes.push_back(k);
+		for (const auto& [k, _]: *node_deps) all_nodes.push_back(k);
 		debugPrintNodes(all_nodes, out);
 	}
 
 	void QueryGraph::debugPrintForDrawing(std::ostream& out) const {
 		out << "Dep Graph: \n";
-		out << node_deps.size() << "\n";
+		out << node_deps->size() << "\n";
 
 		std::map<NodeID, u64> index;
 		u64                   id = 0;
-		for (auto& [k, v]: node_deps) {
+		for (auto& [k, _]: *node_deps) {
 			index[k] = id++;
 			out << id << " " << k.q_id.getData().name << "\n";
 		}
 
-		for (auto& [k, v]: node_deps)
-			for (auto& dep: v) out << index[k] << " " << index[dep] << "\n";
+		for (auto& [k, v]: *node_deps) {
+			auto children_holder = v.getHolder();
+			for (auto& dep: *children_holder) out << index[k] << " " << index[dep] << "\n";
+		}
 	}
 
 	void QueryGraph::debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const {
 		std::string spacing(25, ' ');
 		for (const auto& n: nodes) {
-			const auto& node_data_entry = node_deps.at(n);
+			auto        children_data   = node_deps->atMaybe(n).value();
+			auto        children_holder = children_data->getHolder();
+			const auto& node_data_entry = *children_holder;
 			out << "    > Query - " << std::setw(5) << std::left;
 			out << n.q_id.asInt() << "\"" << n.q_id.getData().name << "\"";
 			out << " Key " << n.hash.val << " :=>\n";
@@ -117,40 +129,54 @@ namespace query::internal {
 	}
 
 	bool QueryGraph::compare(const QueryGraph& other) const {
-		if (node_deps.size() != other.node_deps.size()) return false;
+		if (node_deps->size() != other.node_deps->size()) return false;
 
-		for (const auto& [node, deps]: node_deps) {
-			auto it = other.node_deps.find(node);
-			if (it == other.node_deps.end() || deps != it->second) return false;
+		for (auto& [node, deps]: *node_deps) {
+			auto it = other.node_deps->atMaybe(node);
+			if (!it.has_value()) return false;
+
+			auto deps_holder       = deps.getHolder();
+			auto other_deps_holder = it.value()->getHolder();
+
+			if (*deps_holder != *other_deps_holder) return false;
 		}
 
-		for (const auto& [node, deps]: other.node_deps) {
-			auto it = node_deps.find(node);
-			if (it == node_deps.end() || deps != it->second) return false;
+		for (auto& [node, deps]: *other.node_deps) {
+			auto it = node_deps->atMaybe(node);
+			if (!it.has_value()) return false;
+
+			auto deps_holder       = deps.getHolder();
+			auto other_deps_holder = it.value()->getHolder();
+
+			bool are_same = *deps_holder == *other_deps_holder;
+			if (!are_same) return false;
 		}
 
 		return true;
 	}
 
 	std::vector<byte> QueryGraph::serialize() const {
-		const usize         node_count = node_deps.size();
 		std::vector<NodeID> nodes;
-		nodes.reserve(node_count);
+		nodes.reserve(node_deps->size());
 		base::HashMap<NodeID, usize> node_to_index;
-		node_to_index.reserve(node_count);
+		node_to_index.reserve(node_deps->size());
 
 		usize next_index = 0;
-		for (const auto& [node, _]: node_deps) {
+		for (const auto& [node, _]: *node_deps) {
 			node_to_index.emplace(node, next_index++);
 			nodes.push_back(node);
 		}
 
+		const usize node_count = nodes.size();
+
 		std::vector<std::vector<usize>> adjacency(node_count);
 		for (const auto& node: nodes) {
-			const auto& deps = node_deps.at(node);
-			auto&       out  = adjacency.at(node_to_index.at(node));
-			out.reserve(deps.size());
-			for (const auto& dep: deps) {
+			auto& deps        = *node_deps->atMaybe(node).value();
+			auto  deps_holder = deps.getHolder();
+
+			auto& out = adjacency.at(node_to_index.at(node));
+			out.reserve(deps_holder->size());
+			for (const auto& dep: *deps_holder) {
 				CORE_ASSERT(
 					node_to_index.contains(dep),
 					"Dependency node missing from graph during serialization."
@@ -268,8 +294,8 @@ namespace query::internal {
 			usize deps_size = 0;
 			read(deps_size);
 
-			std::vector<NodeID> deps;
-			deps.reserve(deps_size);
+			std::vector<NodeID> children;
+			children.reserve(deps_size);
 
 			// Deserialize each dependency index
 			for (usize j = 0; j < deps_size; ++j) {
@@ -277,11 +303,13 @@ namespace query::internal {
 				read(dep_index);
 				if (dep_index >= nodes.size())
 					throw std::out_of_range("Dependency index out of range during deserialization");
-				deps.emplace_back(nodes.at(dep_index));
+				children.emplace_back(nodes.at(dep_index));
 			}
 
-			auto [it, inserted] = graph.node_deps.emplace(nodes.at(node_index), std::move(deps));
-			if (!inserted) CORE_PANIC("Duplicate node detected during deserialization");
+			auto key_value_pair
+				= graph.node_deps->maybePut(nodes.at(node_index), std::move(children));
+			if (key_value_pair == nullptr)
+				CORE_PANIC("Duplicate node detected during deserialization");
 		}
 
 		// Ensure that the entire buffer was consumed
@@ -292,13 +320,16 @@ namespace query::internal {
 
 	std::vector<NodeID> QueryGraph::getAllNodes() const {
 		std::vector<NodeID> nodes;
-		nodes.reserve(node_deps.size());
-		for (const auto& [node, _]: node_deps) nodes.push_back(node);
+		nodes.reserve(node_deps->size());
+		for (const auto& [node, _]: *node_deps) nodes.push_back(node);
 		return nodes;
 	}
 
 	bool QueryGraph::hasDependencies(const NodeID& node_id) const {
-		auto it = node_deps.find(node_id);
-		return it != node_deps.end() && !it->second.empty();
+		auto it = node_deps->atMaybe(node_id);
+		if (!it.has_value()) return false;
+		auto& deps        = *it.value();
+		auto  deps_holder = deps.getHolder();
+		return !deps_holder->empty();
 	}
 }
