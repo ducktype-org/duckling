@@ -23,23 +23,23 @@ namespace query {
 		/**
 		 * Data structure to hold statistics for a single query (not query call).
 		 */
-		struct QueryStatData final {
+		struct QueryStatsData final {
 			std::atomic<u64>      num_calls         = 0;
 			std::atomic<u64>      num_provide_calls = 0;
 			timer::AtomicDuration total_call_time   = timer::Duration::zero();
 
-			QueryStatData(QueryStatsDataConstructionTag) {}
+			QueryStatsData(QueryStatsDataConstructionTag) {}
 		};
 
 		/**
 		 * Map from QueryID to its statistics data.
 		 */
-		concurrent::ConHashMap<internal::QueryID, QueryStatData> data;
+		concurrent::ConHashMap<internal::QueryID, QueryStatsData> data;
 
 		/**
 		 * Get the statistics data for a specific query.
 		 */
-		Ref<QueryStatData> getQueryStatData(internal::QueryID query_id) {
+		Ref<QueryStatsData> getQueryStatData(internal::QueryID query_id) {
 			auto maybe_inserted = data.maybePut(query_id, QueryStatsDataConstructionTag{});
 			if (maybe_inserted)
 				return maybe_inserted.toOpt().value();
