@@ -111,7 +111,7 @@ namespace compiler::helios::code {
 		SymID                                                  fun,
 		const std::vector<Box<Expr>>&                          explicit_positional_arguments,
 		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
-		const base::Optional<Box<Expr>>                        self_symbol
+		const base::Optional<Box<Expr>>&                       self_symbol
 	) {
 		auto& decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
 		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());

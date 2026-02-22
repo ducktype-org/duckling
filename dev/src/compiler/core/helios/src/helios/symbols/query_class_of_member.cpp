@@ -13,9 +13,11 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope_id = scope(key);
 			auto pst_element
-				= scope_id.ref->related_pst_element.value().unlock(ctx)->getParent().value().unlock(
-					ctx
-				);
+				= pst::LangElement::getByStableHash(scope_id.ref->related_pst_element_hash.value())
+			          .unlock(ctx)
+			          ->getParent()
+			          .value()
+			          .unlock(ctx);
 			auto class_symbol = ctx.query<QuerySymbolOfSTMT>(pst_element);
 
 			return class_symbol;
