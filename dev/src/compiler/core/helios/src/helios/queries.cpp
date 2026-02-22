@@ -1,5 +1,7 @@
 #include "queries.hpp"
 
+#include "frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -75,8 +77,8 @@ namespace compiler::helios {
 						}
 					}
 					if (kind(sym) == SymbolKind::Class) {
-						// @TODO: Append class methods!
 						appendClassConstructors(out.functions, sym, ctx);
+						appendClassMethods(out.functions, sym, ctx);
 					}
 				}
 			}
@@ -110,6 +112,34 @@ namespace compiler::helios {
 			const auto& implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
 			out_functions.emplace_back(&implicit_ctor);
+		}
+
+		/**
+		 * Append the methods of a class to the provided vector of functions.
+		 * @param out_functions The vector of functions to be modified.
+		 * @param class_sym The symbol of the class, whose methods are to be appended.
+		 * @param ctx The query context.
+		 */
+		static void appendClassMethods(
+			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
+		) {
+			CORE_ASSERT(
+				kind(class_sym) == SymbolKind::Class,
+				"Invalid argument exception: expected class symbol"
+			);
+
+			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
+			                            ->valueOrThrow()
+			                            .getType()
+			                            .as<tsh::ClassAbstractType>();
+
+			auto methods = class_type.getInterface(ctx)->getMethodsView();
+
+			for (const auto& method: methods) {
+				auto method_sym  = method.getSymbol();
+				auto hout_method = ctx.query<QueryCodeOfFun>(method_sym);
+				out_functions.emplace_back(&hout_method->valueOrPanic());
+			}
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -820,31 +850,49 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  original_symbol(symbol) {}
 
+			std::shared_ptr<const code::CodeBlock> processBody(
+				const HOUTFunctionDeclaration& decl, pst::AccessLocked<pst::CodeBlockOrStmt> body
+			) {
+				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
+
+				if (body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+					// The `fun abc() = expr;` case.
+
+					code::CodeBlock function_body
+						= queryCodeOfSingleStmtFunctionBody(ctx, body.unlock(ctx), decl.return_type);
+					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
+				} else {
+					CORE_ASSERT(
+						body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+						"This should not happen"
+					);
+					code::CodeBlock function_body
+						= queryCodeOfCodeBlock(ctx, body, decl.return_type);
+					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
+				}
+				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
+
+				return output_body;
+			}
+
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
 
 				// body:
-				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
-				auto                                   fun_body    = stmt->getBody();
+				auto fun_body    = stmt->getBody();
+				auto output_body = processBody(decl, fun_body);
 
-				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
-					// The `fun abc() = expr;` case.
+				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
+			}
 
-					code::CodeBlock function_body = queryCodeOfSingleStmtFunctionBody(
-						ctx, fun_body.unlock(ctx), decl.return_type
-					);
-					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
-				} else {
-					CORE_ASSERT(
-						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
-						"This should not happen"
-					);
-					code::CodeBlock function_body
-						= queryCodeOfCodeBlock(ctx, fun_body, decl.return_type);
-					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
-				}
-				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
+			void visitMethod(pst::Access<pst::Method> stmt) final {
+				// declaration:
+				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
+
+				// body:
+				auto fun_body    = stmt->getBody();
+				auto output_body = processBody(decl, fun_body);
 
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
@@ -852,7 +900,8 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
+				kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
+				"Function creation called on non-function and non-method symbol"
 			);
 			CORE_ASSERT(
 				getSymRef(key)->getPSTDataOpt().has_value(),
