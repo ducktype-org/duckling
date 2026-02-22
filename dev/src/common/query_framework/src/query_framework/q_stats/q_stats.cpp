@@ -41,7 +41,7 @@ namespace query {
 		 */
 		Ref<QueryStatsData> getQueryStatData(internal::QueryID query_id) {
 			auto maybe_inserted = data.maybePut(query_id, QueryStatsDataConstructionTag{});
-			if (maybe_inserted) return maybe_inserted.toOpt().value();
+			if (maybe_inserted) return &maybe_inserted->value;
 			return data.at(query_id);
 		}
 	}
