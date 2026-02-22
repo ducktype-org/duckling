@@ -309,11 +309,20 @@ namespace compiler::mir {
 				auto comparison_block = function.newBlock();
 				if (next_block->getID() == continuation->getID()) {
 					comparison_block->setTerminator(Instruction{
-						Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
+						Operation::Jump,
+						{},
+						{ continuation->getID() },
+						{},
+						expr_scope,
+					});
 				} else {
-					auto args = { boolean_output, next_block->getID(), continuation->getID() };
 					comparison_block->setTerminator(Instruction{
-						Operation::Branch, {}, args, {}, expr_scope });
+						Operation::Branch,
+						{},
+						{ boolean_output, next_block->getID(), continuation->getID() },
+						{},
+						expr_scope,
+					});
 				}
 				auto comparison_hole = next_block->addHole();
 

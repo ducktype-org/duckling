@@ -41,9 +41,6 @@ namespace compiler::helios::code {
 	 * @param rhs The preprocessed right-hand side argument of the operator call.
 	 */
 	query::QResult<Box<Expr>> processBinaryOperatorCall(
-		query::Context&            ctx,
-		const std::vector<SymID>&  candidates,
-		Box<pst::ExprElement>      lhs,
-		Box<pst::ExprElement>      rhs
+		query::Context& ctx, const std::vector<SymID>& candidates, Box<Expr> lhs, Box<Expr> rhs
 	);
 }

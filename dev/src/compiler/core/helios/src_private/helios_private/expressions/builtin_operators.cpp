@@ -131,7 +131,7 @@ namespace compiler::helios::code {
 		using Signedness = tsh::IntegralAbstractType::Signedness;
 
 		const auto bool_type = tsh::SymbolType<>{
-			ctx.query<tsh::QueryBoolType>({}),
+			tsh::getBoolType(),
 			tsh::ReferenceKind::Direct,
 			tsh::Mutability::Mutable,
 		};
@@ -159,7 +159,7 @@ namespace compiler::helios::code {
 		for (auto size: sizes) {
 			for (auto signedness: signednesses) {
 				const auto int_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryIntegralType>({ size, signedness }),
+					tsh::getIntegralType(ctx, size, signedness ),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -170,7 +170,7 @@ namespace compiler::helios::code {
 		/// Meta comparisons ///
 		for (const auto name: std::vector{ base::StrID("=="), base::StrID("!=") }) {
 			const auto meta_type = tsh::SymbolType<>{
-				ctx.query<tsh::QueryMetaType>({}),
+				tsh::getMetaType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
@@ -189,12 +189,12 @@ namespace compiler::helios::code {
 
 		/// Character arithmetic ///
 		const auto u8_type = tsh::SymbolType<>{
-			ctx.query<tsh::QueryIntegralType>({ 8, Signedness::Unsigned }),
+			tsh::getIntegralType(ctx, 8, Signedness::Unsigned),
 			tsh::ReferenceKind::Direct,
 			tsh::Mutability::Mutable,
 		};
 		const auto char_type = tsh::SymbolType<>{
-			ctx.query<tsh::QueryCharType>({}),
+			tsh::getCharType(),
 			tsh::ReferenceKind::Direct,
 			tsh::Mutability::Mutable,
 		};

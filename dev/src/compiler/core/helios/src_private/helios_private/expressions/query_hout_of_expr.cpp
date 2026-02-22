@@ -93,8 +93,7 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator()
-				    == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
+				if (bin_op->getOperator() == lang_def::NamedOperator::Pipe) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
@@ -111,8 +110,7 @@ namespace compiler::helios::code {
 			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(
-				expr.unlock(ctx)->getOperator()
-					== lang_def::operatorToStr(lang_def::NamedOperator::Pipe),
+				expr.unlock(ctx)->getOperator() == lang_def::NamedOperator::Pipe,
 				"Not a variant operator"
 			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
@@ -257,7 +255,11 @@ namespace compiler::helios::code {
 						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
 						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
 						return makeBox<BinaryOperatorExpr>(
-							operation, std::move(coerced_lhs), std::move(coerced_rhs)
+							ctx,
+							lhs->origin.extended(rhs->origin),
+							operation,
+							std::move(coerced_lhs),
+							std::move(coerced_rhs)
 						);
 					}
 				}
@@ -278,7 +280,7 @@ namespace compiler::helios::code {
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
 				const auto op = stmt->getOperator();
-				if (op == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
+				if (op == lang_def::NamedOperator::Pipe) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
@@ -487,8 +489,7 @@ namespace compiler::helios::code {
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
-				if (stmt->getOperator()
-				    == lang_def::operatorToStr(lang_def::NamedOperator::Ampersand)) {
+				if (stmt->getOperator() == lang_def::NamedOperator::Ampersand) {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as
 					// the `unique`/`leaking` specifiers.

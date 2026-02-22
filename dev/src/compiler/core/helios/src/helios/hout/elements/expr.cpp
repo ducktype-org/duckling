@@ -118,7 +118,7 @@ namespace compiler::helios::code {
 		return makeBox<LiteralBoolExpr>(expression_type, origin, value);
 	}
 
-	LiteralCharExpr::LiteralCharExpr(query::Context& ctx, const ElementOrigin& origin, char value):
+	LiteralCharExpr::LiteralCharExpr(query::Context&, const ElementOrigin& origin, char value):
 		  Expr(
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
@@ -244,11 +244,11 @@ namespace compiler::helios::code {
 
 	Box<Expr> ReusableExpr::clone() const {
 		auto inner_cloned = SharedBox(inner->clone());
-		return makeBox<ReusableExpr>(inner_cloned->origin, inner_cloned, first_use);
+		return makeBox<ReusableExpr>(inner_cloned, first_use);
 	}
 
 	Box<Expr> ReusableExpr::nextUse() const {
-		return makeBox<ReusableExpr>(origin, inner, /*first_use=*/false);
+		return makeBox<ReusableExpr>(inner, /*first_use=*/false);
 	}
 
 	ReusableExpr::ReusableExpr(const SharedBox<Expr>& inner, const bool first_use):

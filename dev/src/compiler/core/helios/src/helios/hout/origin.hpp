@@ -25,6 +25,18 @@ namespace compiler::helios::code {
 
 		/**
 		 * @brief Helper function that creates a new origin based on the current one
+		 * but extending the source position to include another source position.
+		 */
+		[[nodiscard]] ElementOrigin extended(base::Optional<dia::SourcePosition> other_pos) const;
+
+		/**
+		 * @brief Helper function that creates a new origin based on the current one
+		 * but extending the source position to include another origin.
+		 */
+		[[nodiscard]] ElementOrigin extended(const ElementOrigin& other) const;
+
+		/**
+		 * @brief Helper function that creates a new origin based on the current one
 		 * but extending the source position to include the additional PST element.
 		 */
 		[[nodiscard]] ElementOrigin extended(pst::Access<pst::LangElement> pst_element) const;

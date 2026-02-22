@@ -147,8 +147,7 @@ namespace compiler::helios {
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
 										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at "
-											"compile "
+											"Operands on binary expression evaluated at compile "
 											"time are of different type. This should be "
 											"prevented by casts.\nLeft side is:",
 											lhs.getTypeOfStoredValue(ctx).getType().toString(),
@@ -599,6 +598,10 @@ namespace compiler::helios {
 				// This is fine, because we assume that this has been checked beforehand by HOUT.
 				result
 					= CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
+			}
+
+			void visitReusableExpr(const code::ReusableExpr& reusable) override {
+				evaluateSubExpr(reusable.inner.ref());
 			}
 		};
 

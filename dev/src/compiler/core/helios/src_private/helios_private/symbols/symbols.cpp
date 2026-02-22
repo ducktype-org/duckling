@@ -466,7 +466,7 @@ namespace compiler::helios {
 					std::vector<SymbolData> output_symbol_data;
 
 					auto char_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryCharType>({}),
+						tsh::getCharType(),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
@@ -986,7 +986,7 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& expr) override {
-				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
+				for (const auto& sub_expr: expr.comparisons) sub_expr->acceptVisitor(*this);
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) override {

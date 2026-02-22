@@ -11,15 +11,28 @@ namespace compiler::helios::code {
 		return source_position;
 	}
 
-	ElementOrigin ElementOrigin::extended(pst::Access<pst::LangElement> pst_element) const {
+	ElementOrigin ElementOrigin::extended(base::Optional<dia::SourcePosition> other_pos) const {
 		base::Optional<dia::SourcePosition> new_pos;
 		match_optional(source_position) {
 			opt_some(pos) {
-				new_pos = dia::SourcePosition::merge(pos, pst_element->getSourcePosition());
+				match_optional(other_pos) {
+					opt_some(other_pos_val) {
+						new_pos = dia::SourcePosition::merge(pos, other_pos_val);
+					}
+				}
+				opt_none { new_pos = pos; }
 			}
-			opt_none { new_pos = pst_element->getSourcePosition(); }
+			opt_none { new_pos = other_pos; }
 		}
 		return { new_pos, false };
+	}
+
+	ElementOrigin ElementOrigin::extended(const ElementOrigin& other) const {
+		return extended(other.getSourcePosition());
+	}
+
+	ElementOrigin ElementOrigin::extended(const pst::Access<pst::LangElement> pst_element) const {
+		return extended(pst_element->getSourcePosition());
 	}
 
 	ElementOrigin ElementOrigin::generatedFrom() const { return { source_position, true }; }

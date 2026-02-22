@@ -298,7 +298,7 @@ namespace compiler::helios::code {
 				dia::SourcePosition::merge(source_positions.callee, source_positions.arg_group),
 				false
 			),
-			makeBox<IdentifierExpr>(ctx, source_positions.callee, fun),
+			makeBox<IdentifierExpr>(ctx, ElementOrigin(source_positions.callee, false), fun),
 			std::move(final_arguments)
 		);
 	}
@@ -647,25 +647,27 @@ namespace compiler::helios::code {
 	}
 
 	query::QResult<Box<Expr>> processBinaryOperatorCall(
-		query::Context&           ctx,
-		const std::vector<SymID>& candidates,
-		Box<pst::ExprElement>     lhs,
-		Box<pst::ExprElement>     rhs
+		query::Context& ctx, const std::vector<SymID>& candidates, Box<Expr> lhs, Box<Expr> rhs
 	) {
 		// Obtain the call source positions
-		const auto arg_group_position
-			= dia::SourcePosition::merge(lhs->getSourcePosition(), rhs->getSourcePosition());
+		const auto lhs_sp = lhs->origin.getSourcePosition().value();
+		const auto rhs_sp = rhs->origin.getSourcePosition().value();
+
+		const auto arg_group_position = dia::SourcePosition::merge(lhs_sp, rhs_sp);
+
 		const CallSourcePositions source_positions{
 			// Giving the callee the position of the argument group is not strictly correct,
 			// but currently has no adverse effects. @TODO: 2075 fix this.
-			.callee = arg_group_position,
+			.callee    = arg_group_position,
 			.arg_group = arg_group_position,
-			.args = { lhs->getSourcePosition(), rhs->getSourcePosition() }
+			.args      = { lhs_sp, rhs_sp }
 		};
 
 
 		// Resolve overloads and construct call expression
-		std::vector<Box<Expr>> positional_arguments{ std::move(lhs), std::move(rhs) };
+		std::vector<Box<Expr>> positional_arguments;
+		positional_arguments.emplace_back(std::move(lhs));
+		positional_arguments.emplace_back(std::move(rhs));
 		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments{};
 
 		auto overload_resolution_result = doOverloadResolution(
