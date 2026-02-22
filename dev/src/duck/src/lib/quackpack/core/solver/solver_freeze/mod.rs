@@ -45,7 +45,7 @@ impl Default for SolverPackageFreeze {
 }
 
 impl TryFrom<Option<&VenvFreeze>> for SolverFreeze {
-    // TODO: #2076 Fix issues with storage's freeze.
+    // @TODO: #2076 Fix issues with storage's freeze.
     type Error = QuackError;
     fn try_from(value: Option<&VenvFreeze>) -> QuackResult<Self> {
         let Some(value) = value else {
