@@ -351,10 +351,7 @@ impl GathererState {
         let expanded_locs: HashSet<InternedExpandedLocation> = not_pinned_result
             .fetched_manifests
             .keys()
-            .map(|pkg| {
-                println!("\n{:?}\n", pkg.location);
-                pkg.location
-            })
+            .map(|pkg| pkg.location)
             .collect();
         if expanded_locs.iter().len() == 1
             && let Some(expanded_loc) = expanded_locs.into_iter().next()

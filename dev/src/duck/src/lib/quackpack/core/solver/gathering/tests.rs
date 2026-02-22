@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, time::Duration};
 
 use tempfile::{TempDir, tempdir};
 use wiremock::{
@@ -10,7 +10,10 @@ use crate::{
     DuckCtx,
     quackpack::{
         core::{Version, fetcher::types, git_access::GitAccess},
-        schemas::registry,
+        schemas::{
+            OneEntryMap,
+            registry::{self, DependencyCondition, DependencyFeature},
+        },
     },
     util_common::path_ops_ext::PathOpsExt,
 };
@@ -55,6 +58,7 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
 async fn create_mock_server() -> MockServer {
     let server = MockServer::start().await;
 
+    // Test 1
     let foo_bar_dep = registry::Dependency {
         version: vec![Version::new(3, 0, 0), Version::new(4, 0, 0)],
         source: registry::DependencySource {
@@ -126,6 +130,114 @@ async fn create_mock_server() -> MockServer {
         profiles: HashMap::new(),
     };
 
+    // Test 2 & 3
+    let dx_xd_dep = registry::Dependency {
+        version: vec![Version::new(1, 0, 0)],
+        source: registry::DependencySource {
+            inner: registry::SourceInner::Registry {
+                registry_url: server.uri(),
+            },
+        },
+        features: vec![DependencyFeature::Detailed(OneEntryMap {
+            key: "dx".into(),
+            value: DependencyCondition {
+                package_features: Some(vec!["root".into()]),
+            },
+        })],
+        pinned: true,
+        conditions: registry::DependencyCondition {
+            package_features: None,
+        },
+        is_alias_for: None,
+    };
+
+    let xd1 = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(1, 0, 0),
+            authors: vec!["Patryk Rogalski".into()],
+            license: "GLWTSPL".into(),
+            name: "xd".into(),
+            description: "".into(),
+        },
+        dependencies: [].into(),
+        dev_dependencies: registry::Dependencies::new(),
+        features: [("dx".into(), vec![])].into(),
+        profiles: HashMap::new(),
+    };
+
+    let dx2 = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(2, 0, 0),
+            authors: vec!["Patryk Rogalski".into()],
+            license: "GLWTSPL".into(),
+            name: "dx".into(),
+            description: "".into(),
+        },
+        dependencies: [("xd".into(), dx_xd_dep)].into(),
+        dev_dependencies: registry::Dependencies::new(),
+        features: [("root".into(), vec![])].into(),
+        profiles: HashMap::new(),
+    };
+
+    // Test 4
+    let b_a_dep = registry::Dependency {
+        version: vec![Version::new(1, 0, 0)],
+        source: registry::DependencySource {
+            inner: registry::SourceInner::Registry {
+                registry_url: server.uri(),
+            },
+        },
+        features: vec![DependencyFeature::Simple("f".into())],
+        pinned: true,
+        conditions: registry::DependencyCondition {
+            package_features: None,
+        },
+        is_alias_for: None,
+    };
+
+    let a1 = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(1, 0, 0),
+            authors: vec!["Patryk Rogalski".into()],
+            license: "GLWTSPL".into(),
+            name: "a".into(),
+            description: "".into(),
+        },
+        dependencies: [].into(),
+        dev_dependencies: registry::Dependencies::new(),
+        features: [("f".into(), vec![])].into(),
+        profiles: HashMap::new(),
+    };
+
+    let a2 = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(2, 0, 0),
+            authors: vec!["Patryk Rogalski".into()],
+            license: "GLWTSPL".into(),
+            name: "a".into(),
+            description: "".into(),
+        },
+        dependencies: [].into(),
+        dev_dependencies: registry::Dependencies::new(),
+        features: [].into(),
+        profiles: HashMap::new(),
+    };
+
+    let b1 = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(1, 0, 0),
+            authors: vec!["Patryk Rogalski".into()],
+            license: "GLWTSPL".into(),
+            name: "b".into(),
+            description: "".into(),
+        },
+        dependencies: [("a".into(), b_a_dep)].into(),
+        dev_dependencies: registry::Dependencies::new(),
+        features: [].into(),
+        profiles: HashMap::new(),
+    };
+
+    // Test 1
     Mock::given(method("GET"))
         .and(path("/packages/foo/1.0.0"))
         .respond_with(ResponseTemplate::new(200).set_body_json(&foo1))
@@ -170,6 +282,54 @@ async fn create_mock_server() -> MockServer {
         .mount(&server)
         .await;
 
+    // Test 2 & 3
+    Mock::given(method("GET"))
+        .and(path("/packages/xd/1.0.0"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&xd1))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/packages/dx/2.0.0"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(Duration::from_secs(1))
+                .set_body_json(&dx2),
+        )
+        .mount(&server)
+        .await;
+
+    // Test 4
+    Mock::given(method("GET"))
+        .and(path("/packages/a/1.0.0"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&a1))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/packages/a"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(Duration::from_millis(200))
+                .set_body_json(&types::MultiMetadata {
+                    packages_metadata: vec![a1, a2],
+                }),
+        )
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/packages/b"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(Duration::from_millis(100))
+                .set_body_json(&types::MultiMetadata {
+                    packages_metadata: vec![b1],
+                }),
+        )
+        .mount(&server)
+        .await;
+
     server
 }
 
@@ -194,8 +354,23 @@ impl GitAccess for MockGitAccess {
 }
 
 #[test]
-fn test() {
+fn test_not_pinned_registry() {
     run_tokio_test(private::not_pinned_registry);
+}
+
+#[test]
+fn test_pinned_registry() {
+    run_tokio_test(private::pinned_registry);
+}
+
+#[test]
+fn test_features() {
+    run_tokio_test(private::features);
+}
+
+#[test]
+fn test_pinned_request_while_pending_not_pinned() {
+    run_tokio_test(private::pinned_request_while_pending_not_pinned);
 }
 
 mod private {
@@ -220,7 +395,10 @@ mod private {
 
     use super::*;
 
-    /// Simple minimal test, root depends on foo 1.0.0 or 2.0.0, foo 1.0.0 depends on bar 3.0.0 or 4.0.0
+    /// Not pinned registry dependencies test.
+    /// Synopsis:
+    ///    * root depends on foo 1.0.0 or 2.0.0,
+    ///    * foo 1.0.0 depends on bar 3.0.0 or 4.0.0
     pub async fn not_pinned_registry(ctx: DuckCtx) {
         let server = create_mock_server().await;
         let qpctx = QpCtx::new(&ctx);
@@ -341,5 +519,214 @@ dependencies:
                     ),
                 ])
         )
+    }
+
+    /// Pinned registry dependencies test.
+    /// Synopsis:
+    ///    * root depends on xd exactly 1.0.0,
+    ///    * root depends on dx exactly 2.0.0,
+    ///    * dx depends exactly on xd 1.0.0
+    pub async fn pinned_registry(ctx: DuckCtx) {
+        let server = create_mock_server().await;
+        let qpctx = QpCtx::new(&ctx);
+        let url: Url = server.uri().parse().unwrap();
+        let fetcher = Fetcher::new(&ctx).unwrap();
+        let (_dir, root_path) = prepare_manifest(&format!(
+            r#"
+metadata:
+  name: root
+  version: '0.1.0'
+
+dependencies:
+  xd:
+    source:
+      registry_url: {}
+    version: '1'
+    pinned: true
+  dx:
+    source:
+      registry_url: {}
+    version: '2'
+    pinned: true
+"#,
+            &url, &url,
+        ));
+        let root_manifest = parse_manifest(&root_path, &qpctx).unwrap();
+        let git_access = Arc::new(Mutex::new(MockGitAccess()));
+        let gatherer = Gatherer::new(&qpctx, &fetcher, git_access);
+        let gathered_info = gatherer
+            .explore(
+                root_path.clone(),
+                root_manifest.manifest().clone(),
+                HashSet::new(),
+                SolverMode::Strict,
+            )
+            .await
+            .unwrap();
+        let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+            absolute_path: root_path.clone(),
+        });
+        let loc_xd = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: "xd".into(),
+        });
+        let loc_dx = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: "dx".into(),
+        });
+        assert!(
+            gathered_info.versions_for_location
+                == HashMap::from([
+                    (loc_root, HashSet::from([None])),
+                    (loc_xd, HashSet::from([Some(Version::new(1, 0, 0))])),
+                    (loc_dx, HashSet::from([Some(Version::new(2, 0, 0))])),
+                ])
+        );
+    }
+
+    /// Features propagation test.
+    /// Same scenario as in [`pinned_registry`], but additionally:
+    ///    * root has feature *my_feature*,
+    ///    * this feature forces dx to have feature *root*
+    ///    * this feature forces xd to have feature *dx*
+    pub async fn features(ctx: DuckCtx) {
+        let server = create_mock_server().await;
+        let qpctx = QpCtx::new(&ctx);
+        let url: Url = server.uri().parse().unwrap();
+        let fetcher = Fetcher::new(&ctx).unwrap();
+        let (_dir, root_path) = prepare_manifest(&format!(
+            r#"
+metadata:
+  name: root
+  version: '0.1.0'
+
+dependencies:
+  xd:
+    source:
+      registry_url: {}
+    version: '1'
+    pinned: true
+  dx:
+    source:
+      registry_url: {}
+    features:
+    - root:
+        package_features: [my_feature] 
+    version: '2'
+    pinned: true
+
+features:
+  my_feature: []
+"#,
+            &url, &url,
+        ));
+        let root_manifest = parse_manifest(&root_path, &qpctx).unwrap();
+        let git_access = Arc::new(Mutex::new(MockGitAccess()));
+        let gatherer = Gatherer::new(&qpctx, &fetcher, git_access);
+        let gathered_info = gatherer
+            .explore(
+                root_path.clone(),
+                root_manifest.manifest().clone(),
+                ["my_feature".into()].into(),
+                SolverMode::Strict,
+            )
+            .await
+            .unwrap();
+        let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+            absolute_path: root_path.clone(),
+        });
+        let loc_xd = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: "xd".into(),
+        });
+        let loc_dx = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: "dx".into(),
+        });
+        assert!(
+            gathered_info.possible_features
+                == HashMap::from([
+                    (
+                        ExpandedPackage {
+                            location: loc_root,
+                            version: None,
+                        },
+                        ["my_feature".into()].into()
+                    ),
+                    (
+                        ExpandedPackage {
+                            location: loc_xd,
+                            version: Some(Version::new(1, 0, 0)),
+                        },
+                        ["dx".into()].into()
+                    ),
+                    (
+                        ExpandedPackage {
+                            location: loc_dx,
+                            version: Some(Version::new(2, 0, 0)),
+                        },
+                        ["root".into()].into()
+                    ),
+                ])
+        );
+    }
+
+    pub async fn pinned_request_while_pending_not_pinned(ctx: DuckCtx) {
+        let server = create_mock_server().await;
+        let qpctx = QpCtx::new(&ctx);
+        let url: Url = server.uri().parse().unwrap();
+        let fetcher = Fetcher::new(&ctx).unwrap();
+        let (_dir, root_path) = prepare_manifest(&format!(
+            r#"
+metadata:
+  name: root
+  version: '0.1.0'
+
+dependencies:
+  a:
+    source:
+      registry_url: {}
+    version: 1 or 2
+  b:
+    source:
+      registry_url: {}
+    version: '1'
+"#,
+            &url, &url,
+        ));
+        let root_manifest = parse_manifest(&root_path, &qpctx).unwrap();
+        let git_access = Arc::new(Mutex::new(MockGitAccess()));
+        let gatherer = Gatherer::new(&qpctx, &fetcher, git_access);
+        let gathered_info = gatherer
+            .explore(
+                root_path.clone(),
+                root_manifest.manifest().clone(),
+                [].into(),
+                SolverMode::Strict,
+            )
+            .await
+            .unwrap();
+        let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+            absolute_path: root_path.clone(),
+        });
+        let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: "a".into(),
+        });
+        let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: "b".into(),
+        });
+        assert!(
+            gathered_info.versions_for_location
+                == HashMap::from([
+                    (loc_root, [None].into()),
+                    (
+                        loc_a,
+                        [Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))].into()
+                    ),
+                    (loc_b, [Some(Version::new(1, 0, 0))].into())
+                ])
+        );
     }
 }
