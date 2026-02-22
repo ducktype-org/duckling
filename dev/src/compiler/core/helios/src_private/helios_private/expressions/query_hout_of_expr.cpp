@@ -157,7 +157,8 @@ namespace compiler::helios::code {
 				variant_match(unescape_result) {
 					variant_case(base::UnescapedString, result) {
 						if (result.value.size() == 1) {
-							node = makeBox<LiteralCharExpr>(ctx, result.value.at(0));
+							node
+								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
 						} else {
 							ctx.logInt(
 								makeBox<InvalidCharacterLiteralError>(stmt->getSourcePosition())

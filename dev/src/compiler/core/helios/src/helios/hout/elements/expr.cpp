@@ -118,38 +118,46 @@ namespace compiler::helios::code {
 		return makeBox<LiteralBoolExpr>(expression_type, origin, value);
 	}
 
-	LiteralCharExpr::LiteralCharExpr(query::Context& ctx, char value):
-		  Expr(tsh::ExpressionType<>(
-			  tsh::SymbolType{
-				  ctx.query<tsh::QueryCharType>({}),
-				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Mutable,
-			  },
-			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-		  )),
+	LiteralCharExpr::LiteralCharExpr(query::Context& ctx, const ElementOrigin& origin, char value):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  tsh::getCharType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
+			  origin
+		  ),
 		  value(value) {}
 
 	void LiteralCharExpr::debugPrint(std::ostream& out) const { out << "'" << value << "'"; }
 
-	LiteralCharExpr::LiteralCharExpr(const tsh::ExpressionType<>& expression_type, const char value):
-		  Expr(expression_type),
+	LiteralCharExpr::LiteralCharExpr(
+		const tsh::ExpressionType<>& expression_type, const ElementOrigin& origin, const char value
+	):
+		  Expr(expression_type, origin),
 		  value(value) {}
 
-	LiteralStringExpr::LiteralStringExpr(query::Context& , ElementOrigin origin, const base::StrID value):
-		  Expr(tsh::ExpressionType<>(
-			  tsh::SymbolType{
-				  tsh::getStringType(),
-				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Mutable,
-			  },
-			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-		  ),
+	LiteralStringExpr::LiteralStringExpr(
+		query::Context&, ElementOrigin origin, const base::StrID value
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  tsh::getStringType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
 			  origin
 		  ),
 		  value(value) {}
 
 	Box<Expr> LiteralCharExpr::clone() const {
-		return makeBox<LiteralCharExpr>(expression_type, value);
+		return makeBox<LiteralCharExpr>(expression_type, origin, value);
 	}
 
 	LiteralStringExpr::LiteralStringExpr(
@@ -220,8 +228,10 @@ namespace compiler::helios::code {
 		return makeBox<IdentifierExpr>(expression_type, origin, symbol);
 	}
 
-	ReusableExpr::ReusableExpr(query::Context&, Box<Expr> inner, const bool first_use):
-		  Expr(inner->expression_type),
+	ReusableExpr::ReusableExpr(
+		query::Context&, const ElementOrigin& origin, Box<Expr> inner, const bool first_use
+	):
+		  Expr(inner->expression_type, origin),
 		  inner(std::move(inner)),
 		  first_use(first_use) {}
 
@@ -236,15 +246,17 @@ namespace compiler::helios::code {
 
 	Box<Expr> ReusableExpr::clone() const {
 		auto inner_cloned = SharedBox(inner->clone());
-		return makeBox<ReusableExpr>(inner_cloned, first_use);
+		return makeBox<ReusableExpr>(origin, inner_cloned, first_use);
 	}
 
 	Box<Expr> ReusableExpr::nextUse() const {
-		return makeBox<ReusableExpr>(inner, /*first_use=*/ false);
+		return makeBox<ReusableExpr>(origin, inner, /*first_use=*/false);
 	}
 
-	ReusableExpr::ReusableExpr(const SharedBox<Expr>& inner, const bool first_use):
-		  Expr(inner->expression_type),
+	ReusableExpr::ReusableExpr(
+		const ElementOrigin& origin, const SharedBox<Expr>& inner, const bool first_use
+	):
+		  Expr(inner->expression_type, origin),
 		  inner(inner),
 		  first_use(first_use) {}
 
@@ -719,12 +731,13 @@ namespace compiler::helios::code {
 		return makeBox<SequenceExpr>(expression_type, origin, std::move(expressions));
 	}
 
-	ChainComparisonExpr::ChainComparisonExpr(query::Context& ,
-		ElementOrigin              origin,
-		std::vector<Box<Expr>>     comparisons):
-		  Expr(tsh::ExpressionType<>(
-			  tsh::SymbolType{
-				  tsh::getBoolType(),
+	ChainComparisonExpr::ChainComparisonExpr(
+		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> comparisons
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  tsh::getBoolType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -739,7 +752,8 @@ namespace compiler::helios::code {
 	}
 
 	ChainComparisonExpr::ChainComparisonExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin                origin,
+		tsh::ExpressionType<>  expression_type,
+		ElementOrigin          origin,
 		std::vector<Box<Expr>> comparisons
 	):
 		  Expr(expression_type, origin),
@@ -760,9 +774,7 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>> comparisons;
 		comparisons.reserve(this->comparisons.size());
 		for (const auto& comp: this->comparisons) comparisons.push_back(comp->clone());
-		return makeBox<ChainComparisonExpr>(
-			expression_type, origin, std::move(comparisons
-		));
+		return makeBox<ChainComparisonExpr>(expression_type, origin, std::move(comparisons));
 	}
 
 	CastExpr::CastExpr(

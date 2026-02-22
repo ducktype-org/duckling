@@ -140,7 +140,7 @@ namespace compiler::helios::code {
 	struct LiteralCharExpr final: public Expr {
 		char value;
 
-		LiteralCharExpr(query::Context& ctx, char value);
+		LiteralCharExpr(query::Context& ctx, const ElementOrigin& origin, char value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -150,7 +150,9 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		LiteralCharExpr(const tsh::ExpressionType<>& expression_type, char value);
+		LiteralCharExpr(
+			const tsh::ExpressionType<>& expression_type, const ElementOrigin& origin, char value
+		);
 	};
 
 	/**
@@ -229,7 +231,9 @@ namespace compiler::helios::code {
 		SharedBox<Expr> inner;
 		bool            first_use;
 
-		ReusableExpr(query::Context& ctx, Box<Expr> inner, bool first_use = true);
+		ReusableExpr(
+			query::Context& ctx, const ElementOrigin& origin, Box<Expr> inner, bool first_use = true
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -241,7 +245,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		ReusableExpr(const SharedBox<Expr>& inner, bool first_use);
+		ReusableExpr(const ElementOrigin& origin, const SharedBox<Expr>& inner, bool first_use);
 	};
 
 	/**
@@ -571,8 +575,9 @@ namespace compiler::helios::code {
 		// A comparator can be a builtin operator or a user-defined function.
 		std::vector<Box<Expr>> comparisons;
 
-		ChainComparisonExpr(query::Context& ctx, ElementOrigin                origin,
-			std::vector<Box<Expr>> comparisons);
+		ChainComparisonExpr(
+			query::Context& ctx, ElementOrigin origin, std::vector<Box<Expr>> comparisons
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -583,7 +588,8 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		ChainComparisonExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin                origin,
+			tsh::ExpressionType<>  expression_type,
+			ElementOrigin          origin,
 			std::vector<Box<Expr>> comparisons
 		);
 	};
