@@ -196,31 +196,6 @@ namespace compiler::helios::code {
 			 * If a valid builtin exists (special characters only), returns it.
 			 * Otherwise, returns None.
 			 */
-			base::Optional<Box<Expr>> binaryBuiltin(
-				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
-			) {
-				auto result = findBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
-
-				match_optional(result) {
-					opt_some_move(value) {
-						auto [operation, lhs_coercion, rhs_coercion] = value;
-
-						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
-
-						return makeBox<BinaryOperatorExpr>(
-							ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
-						);
-					}
-					opt_none { return {}; }
-				}
-				return {};
-			}
-
-			/**
-			 * If a valid builtin exists (special characters only), returns it.
-			 * Otherwise, returns None.
-			 */
 			base::Optional<Box<Expr>> unaryBuiltin(lexer::Operator op, Box<Expr> expr) {
 				auto result = findUnaryBuiltin(ctx, op, expr.ref());
 				match_optional(result) {
@@ -241,9 +216,9 @@ namespace compiler::helios::code {
 			 * @param lhs The precomputed left-hand side argument
 			 * @param rhs The precomputed right-hand side argument
 			 */
-			void resolveBinaryOperator(
+			Box<Expr> resolveBinaryOperator(
 				pst::Access<pst::expr::BinaryOperator> stmt, Box<Expr> lhs, Box<Expr> rhs
-			) {
+			) const {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
 
@@ -259,11 +234,16 @@ namespace compiler::helios::code {
 				// Step 1. — special path for numeric promotions
 				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
 				    && isNumericOperator(stmt->getOperator())) {
-					auto builtin
-						= binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
-					if (builtin.has_value()) {
-						node = std::move(builtin).value();
-						return;
+					auto numeric_builtin_opt
+						= findNumericBinaryBuiltin(ctx, stmt->getOperator(), lhs.ref(), rhs.ref());
+
+					if_opt_some(numeric_builtin_opt, numeric_builtin) {
+						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
+						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+						return makeBox<BinaryOperatorExpr>(
+							operation, std::move(coerced_lhs), std::move(coerced_rhs)
+						);
 					}
 				}
 
@@ -277,7 +257,7 @@ namespace compiler::helios::code {
 				all_candidates.insert(
 					all_candidates.begin(), builtin_operators->cbegin(), builtin_operators->cend()
 				);
-				node = processBinaryOperatorCall(ctx, all_candidates, stmt).valueOrThrow();
+				return processBinaryOperatorCall(ctx, all_candidates, stmt).valueOrThrow();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
@@ -307,13 +287,14 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// Default case (typical operators, built-in or user-defined)
 				auto lhs_res = fromPST(ctx, stmt->getLeftOperand());
 				auto rhs_res = fromPST(ctx, stmt->getRightOperand());
 
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
-				resolveBinaryOperator(stmt, std::move(lhs), std::move(rhs));
+				node = resolveBinaryOperator(stmt, std::move(lhs), std::move(rhs));
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
@@ -534,6 +515,20 @@ namespace compiler::helios::code {
 						return;
 					else
 						result_exprs.push_back(std::move(result.valueOrThrow()));
+				}
+
+				// Comparison chain construction is unusual, because it reuses some of its
+				// arguments. Thus, we need to appropriately construct ReusableExpr instances,
+				// which we pass to operator resolution. The resolved expressions (binary operators
+				// or calls) are then passed to the final ChainComparisonExpr.
+
+				// The rhs argument of the previous comparison.
+				// Initialised to the lhs argument of the 1st comparison (think: rhs of 0th).
+				// It will be
+				auto prev_expr = std::move(result_exprs.at(0));
+
+				for (int op_id = 0; op_id < operator_count; op_id++) {
+
 				}
 
 				// @todo here we should:

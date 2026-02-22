@@ -211,8 +211,12 @@ namespace compiler::helios::code {
 	}
 
 	Box<Expr> ReusableExpr::clone() const {
-		SharedBox inner_cloned = inner->clone();
+		auto inner_cloned = SharedBox(inner->clone());
 		return makeBox<ReusableExpr>(inner_cloned, first_use);
+	}
+
+	Box<Expr> ReusableExpr::nextUse() const {
+		return makeBox<ReusableExpr>(inner, /*first_use=*/ false);
 	}
 
 	ReusableExpr::ReusableExpr(const SharedBox<Expr>& inner, const bool first_use):
@@ -638,9 +642,7 @@ namespace compiler::helios::code {
 		return makeBox<SequenceExpr>(expression_type, std::move(expressions));
 	}
 
-	ChainComparisonExpr::ChainComparisonExpr(
-		query::Context& ctx, std::vector<ComparisonTriple> comparisons
-	):
+	ChainComparisonExpr::ChainComparisonExpr(query::Context& ctx, std::vector<Box<Expr>> comparisons):
 		  Expr(tsh::ExpressionType<>(
 			  tsh::SymbolType{
 				  ctx.query<tsh::QueryBoolType>({}),
@@ -650,72 +652,32 @@ namespace compiler::helios::code {
 			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 		  )),
 		  comparisons{ std::move(comparisons) } {
-		CORE_ASSERT(comparisons.size() > 0, "ChainComparisonExpr must have at least one comparison");
+		CORE_ASSERT(
+			this->comparisons.size() > 0, "ChainComparisonExpr must have at least one comparison"
+		);
 	}
 
 	ChainComparisonExpr::ChainComparisonExpr(
-		tsh::ExpressionType<> expression_type, std::vector<ComparisonTriple> comparisons
+		tsh::ExpressionType<> expression_type, std::vector<Box<Expr>> comparisons
 	):
 		  Expr(expression_type),
 		  comparisons{ std::move(comparisons) } {}
 
 	void ChainComparisonExpr::debugPrint(std::ostream& out) const {
 		using namespace std::views;
-		auto comparison_to_string = [](const Comparator comp) {
-			variant_match(comp) {
-				variant_case(BuiltinBinary, builtin) {
-					using enum BuiltinBinary;
-					switch (builtin) {
-					case IntegerLt:
-					case FloatLt:
-						return "<";
-					case IntegerLteq:
-					case FloatLteq:
-						return "<=";
-					case IntegerGt:
-					case FloatGt:
-						return ">";
-					case IntegerGteq:
-					case FloatGteq:
-						return ">=";
-					case IntegerEq:
-					case FloatEq:
-					case MetaEq:
-						return "==";
-					case IntegerNeq:
-					case FloatNeq:
-					case MetaNeq:
-						return "!=";
-					default:
-						CORE_UNREACHABLE();
-					}
-				}
-				variant_case(SymID, user_defined) {
-					return name(user_defined).str().c_str();
-				}
-			}
-			CORE_UNREACHABLE();
-		};
 
 		std::string separator = "";
-		for (auto [lhs, comp, rhs]: comparisons) {
-			out << separator << " ";
-			lhs->debugPrint(out);
-			out << " " << comparison_to_string(comp) << " ";
-			rhs->debugPrint(out);
-			separator = "and";
+		for (auto& comp: comparisons) {
+			out << separator;
+			comp->debugPrint(out);
+			separator = " and ";
 		}
 	}
 
-	ChainComparisonExpr::ComparisonTriple ChainComparisonExpr::clone(const ComparisonTriple& comp) {
-		auto& [lhs, operation, rhs] = comp;
-		return { lhs->clone(), operation, rhs->clone() };
-	}
-
 	Box<Expr> ChainComparisonExpr::clone() const {
-		std::vector<ComparisonTriple> comparisons;
+		std::vector<Box<Expr>> comparisons;
 		comparisons.reserve(this->comparisons.size());
-		for (const auto& comp: this->comparisons) comparisons.push_back(clone(comp));
+		for (const auto& comp: this->comparisons) comparisons.push_back(comp->clone());
 		return makeBox<ChainComparisonExpr>(expression_type, std::move(comparisons));
 	}
 

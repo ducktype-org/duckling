@@ -214,12 +214,14 @@ namespace compiler::helios::code {
 		SharedBox<Expr> inner;
 		bool            first_use;
 
-		ReusableExpr(query::Context& ctx, Box<Expr> inner, bool first_use);
+		ReusableExpr(query::Context& ctx, Box<Expr> inner, bool first_use = true);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
 		[[nodiscard]] Box<Expr> clone() const final;
+
+		[[nodiscard]] Box<Expr> nextUse() const;
 
 	private:
 		FRIEND_MAKEBOX
@@ -512,11 +514,9 @@ namespace compiler::helios::code {
 	 */
 	struct ChainComparisonExpr final: public Expr {
 		// A comparator can be a builtin operator or a user-defined function.
-		using Comparator = std::variant<BuiltinBinary, SymID>;
-		using ComparisonTriple = std::tuple<Box<Expr>, Comparator, Box<Expr>>;
-		std::vector<ComparisonTriple> comparisons;
+		std::vector<Box<Expr>> comparisons;
 
-		ChainComparisonExpr(query::Context& ctx, std::vector<ComparisonTriple> comparisons);
+		ChainComparisonExpr(query::Context& ctx, std::vector<Box<Expr>> comparisons);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -526,10 +526,8 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		[[nodiscard]] static ComparisonTriple clone(const ComparisonTriple&);
-
 		ChainComparisonExpr(
-			tsh::ExpressionType<> expression_type, std::vector<ComparisonTriple> comparisons
+			tsh::ExpressionType<> expression_type, std::vector<Box<Expr>> comparisons
 		);
 	};
 

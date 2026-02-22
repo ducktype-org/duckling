@@ -13,8 +13,8 @@ namespace compiler::helios::houtgen {
 	) {
 		const auto op_name = name(operator_symbol);
 
-		auto lhs        = coercions->at(0).coerce(ctx, std::move(arguments.at(0)));
-		auto rhs        = coercions->at(1).coerce(ctx, std::move(arguments.at(1)));
+		auto       lhs        = coercions->at(0).coerce(ctx, std::move(arguments.at(0)));
+		auto       rhs        = coercions->at(1).coerce(ctx, std::move(arguments.at(1)));
 		const auto left_kind  = lhs->expression_type.getType().getKind();
 		const auto right_kind = rhs->expression_type.getType().getKind();
 		using enum tsh::Kind;
@@ -51,6 +51,19 @@ namespace compiler::helios::houtgen {
 		}
 
 		/// Character arithmetic ///
+		base::Map<base::StrID, code::BuiltinBinary> comparisons{
+			{ base::StrID("<"), code::BuiltinBinary::IntegerLt },
+			{ base::StrID("<="), code::BuiltinBinary::IntegerLteq },
+			{ base::StrID(">"), code::BuiltinBinary::IntegerGt },
+			{ base::StrID(">="), code::BuiltinBinary::IntegerGteq },
+			{ base::StrID("=="), code::BuiltinBinary::IntegerEq },
+			{ base::StrID("!="), code::BuiltinBinary::IntegerNeq },
+		};
+		if (comparisons.contains(op_name) && left_kind == Char && right_kind == Char) {
+			return makeBox<code::BinaryOperatorExpr>(
+				ctx, comparisons.at(op_name), std::move(lhs), std::move(rhs)
+			);
+		}
 		if (op_name == base::StrID("-") && left_kind == Char && right_kind == Char) {
 			return makeBox<code::BinaryOperatorExpr>(
 				ctx, code::BuiltinBinary::IntegerSub, std::move(lhs), std::move(rhs)

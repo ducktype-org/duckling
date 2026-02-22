@@ -69,7 +69,7 @@ namespace {
 }
 
 namespace compiler::helios::code {
-	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findNumericBuiltin(
+	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	) {
 		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs, rhs);
@@ -198,6 +198,12 @@ namespace compiler::helios::code {
 			tsh::ReferenceKind::Direct,
 			tsh::Mutability::Mutable,
 		};
+		ops->push_back(builtin_op(base::StrID("<"), { char_type, char_type }, bool_type));
+		ops->push_back(builtin_op(base::StrID("<="), { char_type, char_type }, bool_type));
+		ops->push_back(builtin_op(base::StrID(">"), { char_type, char_type }, bool_type));
+		ops->push_back(builtin_op(base::StrID(">="), { char_type, char_type }, bool_type));
+		ops->push_back(builtin_op(base::StrID("=="), { char_type, char_type }, bool_type));
+		ops->push_back(builtin_op(base::StrID("!="), { char_type, char_type }, bool_type));
 		ops->push_back(builtin_op(base::StrID("-"), { char_type, char_type }, u8_type));
 		ops->push_back(builtin_op(base::StrID("+"), { u8_type, char_type }, char_type));
 		ops->push_back(builtin_op(base::StrID("+"), { char_type, u8_type }, char_type));
