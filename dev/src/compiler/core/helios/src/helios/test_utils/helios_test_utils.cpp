@@ -83,7 +83,7 @@ namespace compiler::helios::test_utils {
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
 				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
-				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
+				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic()->clone());
 			}
 
 		public:
@@ -106,7 +106,7 @@ namespace compiler::helios::test_utils {
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
 				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
-				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
+				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic()->clone());
 			}
 
 		public:

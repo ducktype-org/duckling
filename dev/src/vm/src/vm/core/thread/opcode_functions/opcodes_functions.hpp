@@ -234,29 +234,21 @@ namespace vm {
 			frame->local_stack_head -= type->getSize();
 		}
 
-		static TypeCRef getVariantTypeFromPointer(VMThread& thread, Pointer variant_pointer) {
-			// We may be pointing to a table with structs, that contain variants somewhere inside.
-			// This functions is very tricky, but in case of variants we can locate them using the
-			// method below. Thanks to type_tag and
-			// @TODO: #1369 Remove this function
-			auto block_type = thread.process_memory.getBlockType(variant_pointer.getBlock());
-			if (block_type->getKind() == Type::Kind::Variant)
-				return block_type;
-			else
-				return block_type->getNonCompoundTypeAtOffsetRecursive(variant_pointer.getOffset())
-				    .value();
-		}
-
 		static
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
 			void
-			setVariantType(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id) {
+			setVariantType(
+				VMThread& thread,
+				Pointer   variant_pointer,
+				TypeID    wanted_type_id,
+				TypeID    variant_type_id
+			) {
 
-			auto wanted_type = thread.executing_program->getTypes().at(wanted_type_id);
+			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
+			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
 
-			auto variant_type          = getVariantTypeFromPointer(thread, variant_pointer);
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block
@@ -302,8 +294,13 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			Pointer
-			getVariantPtr(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id) {
-			auto variant_type = getVariantTypeFromPointer(thread, variant_pointer);
+			getVariantPtr(
+				VMThread& thread,
+				Pointer   variant_pointer,
+				TypeID    wanted_type_id,
+				TypeID    variant_type_id
+			) {
+			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
 			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(

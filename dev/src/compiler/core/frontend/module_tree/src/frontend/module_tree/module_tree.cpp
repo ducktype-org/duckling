@@ -6,6 +6,7 @@
 #include "queries.hpp"
 #include "source_file.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
 #include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -23,7 +24,7 @@
 
 namespace {
 	/**
-	 * @brief Map storting FileID of each parsed PST (by root element ID)
+	 * @brief Map storing FileID of each parsed PST (by root element ID)
 	 * @note: as of right now it is needed only for QueryPrimaryCodeScopeFor for acquiring
 	 * the root scope via extendQueryModuleIDOfPST.
 	 * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put
@@ -32,7 +33,8 @@ namespace {
 	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used
 	 * during PST construction/association; must be safe if PST is built concurrently.
 	 */
-	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
+	inline static concurrent::ConHashMap<pst::PstID, compiler::frontend::FileID>
+		root_element_file_back_map;
 
 	/**
 	 * StableHashMap that stores all ModuleTree instances.
@@ -508,12 +510,8 @@ namespace compiler::frontend {
 		module->updateModuleHash();
 
 		// Remove entry from root_element_file_back_map if exists
-		auto root_id = file->getPST()->getRootElement().illegalAccess();
-		if (root_id.has_value()) {
-			auto iter = root_element_file_back_map.find(root_id.value()->getID());
-			if (iter != root_element_file_back_map.end() && iter->second == file->getFileID())
-				root_element_file_back_map.erase(iter);
-		}
+		if (auto root_id = file->getPST()->getRootElement().illegalAccess(); root_id.has_value())
+			root_element_file_back_map.erase(root_id.value()->getID());
 
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(file);
@@ -927,38 +925,26 @@ namespace compiler::frontend {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 
 	/****************
-	 * QueryFilePST *
+	 * getFilePST *
 	 ****************/
-	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			Ref<SourceFile> file
-				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					key
-				);
-			auto pst = file->getPST();
-			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
-
-			// @todo modify it, when making proper helios errors
-			if (pst->getLogger()->bad()) {
-				std::cerr << "PARSING ERRORS: \n";
-				pst->getLogger()->dumpLog(true, std::cerr);
-				std::cerr << "\n\n";
-			}
-
-			return pst;
+	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id) {
+		Ref<SourceFile> file
+			= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+				file_id
+			);
+		auto pst              = file->getPST();
+		auto root_id          = pst->getRootElement().unlock(ctx)->getID();
+		auto maybe_put_result = root_element_file_back_map.maybePut(root_id, file_id);
+		if (!maybe_put_result) {
+			// If the key already exists, assert that it maps to the same value
+			CORE_ASSERT(
+				root_element_file_back_map.getCopy(root_id) == file_id,
+				"Root element ID already exists in back map with a different file ID"
+			);
 		}
 
-		// @note: unstable ref here is only possible, because
-		// PResult is already a reference
-		//
-		// In the `file->getPST();` there is already caching mechanism implemented
-		// which checks if the PST was compiled for the SourceFile.
-		// The LSP can invalidate the SourceFile when the file is changed, but LSP can't
-		// invalidate the query cache of this query, so we have to disable caching here.
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
+		return pst;
+	}
 
 	ModuleID extendQueryModuleIDOfPST(
 		[[maybe_unused]] query::Context& ctx, pst::AccessLocked<pst::LangElement> element
@@ -966,8 +952,9 @@ namespace compiler::frontend {
 		// get top-level:
 		while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
 
-		// this access depends of global state that might become a problem in incremental compilation:
-		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
+		// this access depends on the global state that might
+		// become a problem in incremental compilation:
+		auto file_id = root_element_file_back_map.getCopy(element.unlock(ctx)->getID());
 		return getFileRef(file_id)->getModule().unlock(ctx).getID();
 	}
 }

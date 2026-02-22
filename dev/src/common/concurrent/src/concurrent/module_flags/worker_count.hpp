@@ -2,11 +2,11 @@
 
 #include <base/types/ints.hpp>
 
-namespace concurrent {
+namespace concurrent::worker {
 	/**
 	 * Sets the (max) number of workers (i.e. threads) present in the system.
 	 * This function can only be called once and must be called before
-	 * most other functionaries of the concurrent module are used.
+	 * most other functionalities of the concurrent module are used.
 	 */
 	void setWorkerCount(u64 value);
 

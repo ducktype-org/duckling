@@ -27,6 +27,7 @@ add_library(HELIOS STATIC
 	src/helios/hout/hout.cpp
 	src/helios/hout/elements/stmt.cpp
 	src/helios/hout/elements/expr.cpp
+	src/helios/hout/origin.cpp
 	src/helios/mangler/mangler.cpp
 	src/helios/test_utils/helios_test_utils.cpp
 	src/helios/symbols/query_type_of_symbol.cpp

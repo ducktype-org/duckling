@@ -6,6 +6,8 @@ use std::sync::{Mutex, OnceLock};
 use git2::FetchOptions;
 use url::Url;
 
+use serde::{Deserialize, Serialize};
+
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, StrId, qp_bail};
 
@@ -42,6 +44,25 @@ impl InternedSource {
     }
 }
 
+impl Serialize for InternedSource {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.inner.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for InternedSource {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let source = Source::deserialize(deserializer)?;
+        Ok(source.into())
+    }
+}
+
 impl From<Source> for InternedSource {
     fn from(value: Source) -> Self {
         Self::new(value)
@@ -62,7 +83,7 @@ impl AsRef<Source> for InternedSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// General dependency source.
 pub enum Source {
     /// A package from a registry.
@@ -108,7 +129,7 @@ impl From<Git> for Source {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
     url: Url,
@@ -126,7 +147,7 @@ impl Registry {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// Represents a source of a local dependency, which lives on a disk.
 pub struct Local {
     absolute: PathBuf,
@@ -164,7 +185,7 @@ impl Local {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// Represents a source a dependency cloned from git.
 pub struct Git {
     url: Url,
@@ -220,7 +241,7 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// A type-safe approach for specifying a git tag or a branch.
 pub enum BranchOrTag {
     /// The default branch.

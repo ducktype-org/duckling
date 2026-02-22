@@ -1,6 +1,7 @@
 # Simple self-contained test for units as values and types.
 
 let a: () = ();
+let b: unitType = ();
 const unitType: type = ();
 
 fun foo(u: ()) -> () = {
@@ -10,6 +11,6 @@ fun foo(u: ()) -> () = {
 
 fun main() -> i64 = {
     foo(a);
-    # foo(unitType); # @TODO: #1742 not compiling
+    foo(b);
     return 0i64;
 }

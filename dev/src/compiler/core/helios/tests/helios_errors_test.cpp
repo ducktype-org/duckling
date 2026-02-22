@@ -57,7 +57,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			ctx.int_logger.clear();
 			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
-			assertTrue(result.hasFailed(), "Expected HOUT query to fail for module content.");
+			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 			assertTrue(ctx.int_logger.hasErrors(), "Expected errors to be logged.");
 
 			std::stringstream logged_messages;
@@ -229,6 +229,38 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				const unitType: type = ();
+
+				fun foo(u: ()) -> () = {
+				    builtin_output_i64(1);
+				    return u;
+				}
+				
+				fun main() -> i64 = {
+					foo(unitType);
+					return 0;
+				}
+			)",
+			{ "The given argument type `const type` cannot be converted to the expected type "
+		      "`()`" },
+			1
+		);
+
+
+		// ========================== Comp time errors ==========================
+
+		checkForErrorOnCompileModule(
+			R"(
+				const a: f64 = 1.0 / 0.0;
+				fun main() -> i64 = 0;
+			)",
+			{ "Division", "zero" },
+			1
+		);
+
+
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
@@ -256,7 +288,7 @@ private:
    					return 0;
 				}
 			)",
-			{ "cannot be evaluated at compile-time" },
+			{ "cannot be evaluated at compile-time", "const y = x" },
 			1
 		);
 
@@ -348,9 +380,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using enum tsh::IntegralAbstractType::Signedness;
-			const auto int32_type = ctx.query<tsh::QueryIntegralType>(
-				{ 32, tsh::IntegralAbstractType::Signedness::Signed }
-			);
+			const auto int32_type
+				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
 			auto st = tsh::SymbolType{
 				int32_type,
 				tsh::ReferenceKind::Direct,

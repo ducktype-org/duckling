@@ -39,7 +39,7 @@ def test_impl(
     tests_regex: str | None = None,
     exclude_regex: str | None = None,
     verbose: bool = False,
-    output_on_failure: bool = False,
+    output_on_failure: bool = True,
     stop_on_failure: bool = False,
     rerun_failed: bool = False,
     quiet: bool = False,

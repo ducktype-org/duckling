@@ -31,7 +31,7 @@ namespace query::utils {
 		struct IMPLEMENT_QUERY(DoWithContext, std::any) {
 			static auto provide(Context& ctx, const QKey& key) -> PResult { return key.value(ctx); }
 
-			QUERY_AUTO_NO_CACHE
+			QUERY_AUTO_CACHE_COPY
 		};
 
 		QUERY_IMPLEMENTATION_BOILERPLATE(DoWithContext)

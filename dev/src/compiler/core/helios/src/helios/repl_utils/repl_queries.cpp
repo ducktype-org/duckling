@@ -40,12 +40,12 @@ namespace compiler::repl {
 			auto hout_expr_result = ctx.query<helios::QueryHoutOfExpr>(expr_holder->getExpr());
 
 			CORE_ASSERT(
-				hout_expr_result.hasValue(),
+				hout_expr_result->hasValue(),
 				"Failed to convert expression to HOUT in REPL expression wrapper"
 			);
 
 
-			auto hout_expr   = std::move(hout_expr_result).valueOrPanic();
+			auto hout_expr   = hout_expr_result->valueOrPanic()->clone();
 			auto return_type = hout_expr->expression_type.getSymbolType();
 
 			CORE_DEV_LOG(REPL, "Expression return type: ", return_type.toString(), "\n");
@@ -57,11 +57,15 @@ namespace compiler::repl {
 			// to return values and manually convert them based on type in repl_dvm_helpers.cpp
 			if (return_type.toString() == "void") {
 				CORE_DEV_LOG(REPL, "Creating ExprStmt for void expression\n");
-				auto void_expr_stmt = base::makeBox<helios::code::ExprStmt>(std::move(hout_expr));
+				auto void_expr_stmt = base::makeBox<helios::code::ExprStmt>(
+					helios::code::generatedOrigin(), std::move(hout_expr)
+				);
 				code_block->statements.emplace_back(std::move(void_expr_stmt));
 			} else {
 				CORE_DEV_LOG(REPL, "Creating ReturnStmt for value expression\n");
-				auto return_stmt = base::makeBox<helios::code::ReturnStmt>(std::move(hout_expr));
+				auto return_stmt = base::makeBox<helios::code::ReturnStmt>(
+					helios::code::generatedOrigin(), std::move(hout_expr)
+				);
 				code_block->statements.emplace_back(std::move(return_stmt));
 			}
 
@@ -81,7 +85,7 @@ namespace compiler::repl {
 			auto decl = base::CRef<helios::HOUTFunctionDeclaration>(decl_ptr);
 
 			CORE_DEV_LOG(REPL, "QueryReplExpressionWrapper completed successfully\n");
-			return helios::HOUTFunction{ decl, code_block };
+			return { helios::code::generatedOrigin(), decl, code_block };
 		}
 
 		QUERY_AUTO_CACHE_COPY
