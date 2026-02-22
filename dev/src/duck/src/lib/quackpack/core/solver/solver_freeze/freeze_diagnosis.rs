@@ -63,7 +63,7 @@ impl SolverFreeze {
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
         new_root: ExpandedPackage,
     ) -> QuackResult<Self> {
-        // @TODO: #2076
+        // @TODO: #2076 Changing new_root may cause a bug.
         // Changing the old main_pkg to the new_root may seem bug-prone,
         // since the new_root might have been a dependency in the previous freeze.
         // There are two cases:
