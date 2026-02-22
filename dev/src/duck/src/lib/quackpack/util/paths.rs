@@ -1,7 +1,9 @@
-use rustvil::{fs::PathExt, os::env::Env};
 use std::path::{Path, PathBuf};
 
-use crate::QuackResult;
+use crate::{
+    QuackResult,
+    util_common::{env::Env, path_ops_ext::PathOpsExt},
+};
 
 const DUCK_HOME: &str = "DUCK_HOME";
 
@@ -22,5 +24,4 @@ pub fn duck_home_path(env: &Env, user_home: &Path) -> QuackResult<PathBuf> {
         })
         .expand_user()?
         .resolve()
-        .map_err(Into::into)
 }

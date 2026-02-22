@@ -26,7 +26,6 @@ class SourceFileTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		::compiler::frontend::use_module_modifier_remove = true;
 		TESTER_ADD_TEST(testSourceFileCreation);
 		TESTER_ADD_TEST(testSourceFileProperties);
 		TESTER_ADD_TEST(testPSTGeneration);
@@ -39,6 +38,9 @@ public:
 		TESTER_ADD_TEST(testSourceFileRemovalClearsLookups);
 		TESTER_ADD_TEST(testSourceFileDanglingReferenceDetection);
 	}
+
+protected:
+	void beforeAll() override { ::compiler::frontend::use_module_modifier_remove = true; }
 
 private:
 	void testSourceFileCreation() {

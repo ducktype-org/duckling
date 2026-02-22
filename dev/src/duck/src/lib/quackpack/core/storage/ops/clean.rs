@@ -1,10 +1,10 @@
-use rustvil::fs::{PathExt, ShouldBlock};
 use tracing::debug;
 
 use crate::quackpack::core::storage;
 
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId};
 use std::collections::HashSet;
 use std::fs::DirEntry;
@@ -29,7 +29,7 @@ pub fn delete_venv(ctx: &DuckCtx, venv: impl ToVenvId) -> QuackResult<()> {
         let mut would_block = false;
         locks::TrySyncLock::new(&storage, venv_id)
             .inspect_err(|err| {
-                if err.kind() == io::ErrorKind::WouldBlock {
+                if err.source().kind() == io::ErrorKind::WouldBlock {
                     would_block = true;
                 }
             })
@@ -50,7 +50,7 @@ pub fn delete_venv(ctx: &DuckCtx, venv: impl ToVenvId) -> QuackResult<()> {
                 venv_id
             )
         })?;
-    let _ = storage.venv_dir(venv_id).rmtree();
+    storage.venv_dir(venv_id).rmtree()?;
     Ok(())
 }
 

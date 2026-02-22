@@ -5,9 +5,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{DuckCtx, QuackResult, QuackResultContext, qp_bail};
+use crate::{
+    DuckCtx, QuackResult, QuackResultContext, qp_bail,
+    util_common::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
+};
 use clap::ArgMatches;
-use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
 
 use crate::duck::driver::{
@@ -135,5 +137,5 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
     );
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);
-    command.exec_replace().map(|_| ()).map_err(|x| x.into())
+    command.exec_replace().map(|_| ())
 }

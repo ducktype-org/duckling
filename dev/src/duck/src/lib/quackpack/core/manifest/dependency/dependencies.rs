@@ -29,6 +29,11 @@ impl Dependencies {
     pub fn all_dependencies(&self) -> &HashMap<StrId, Dependency> {
         &self.0
     }
+
+    /// Get a mutable iterator over all dependencies.
+    pub fn all_dependencies_mut(&mut self) -> &mut HashMap<StrId, Dependency> {
+        &mut self.0
+    }
 }
 
 impl TryFrom<registry::Dependencies> for Dependencies {

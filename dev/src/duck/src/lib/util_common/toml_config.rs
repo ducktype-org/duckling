@@ -4,13 +4,15 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use rustvil::fs::PathExt;
 use toml::{Table, Value, from_str};
 use tracing::debug;
 
 use super::DescriptionWithAnArticle;
 
-use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
+use crate::{
+    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
+    util_common::path_ops_ext::PathOpsExt,
+};
 use paste::item;
 use toml::value::{Array, Datetime};
 
@@ -81,7 +83,7 @@ impl TomlConfig {
         debug!("parsing TOML config at `{}`", path.display());
         let content = match path.as_path().read_to_string() {
             Ok(string) => string,
-            Err(e) if matches!(e.kind(), ErrorKind::NotFound) => {
+            Err(e) if matches!(e.source().kind(), ErrorKind::NotFound) => {
                 debug!(
                     "there is no config at `{}`, falling back to defaults...",
                     path.display()

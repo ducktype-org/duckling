@@ -9,12 +9,8 @@
 //! ├── global_venv/ <root of the global shared virtual environment>
 //! └── storage/ <root of the storage internal files>
 
-use crate::QuackResult;
+use crate::{QuackResult, util_common::env::Env};
 use paste::item;
-use rustvil::{
-    fs::{MkdirOptions, PathExt},
-    os::env::Env,
-};
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
@@ -48,11 +44,9 @@ macro_rules! ensure_file {
                 #[doc = $desc]
                 /// exists on a disk
                 pub fn [<ensure_ $name>](&self) -> QuackResult<&Path> {
-                    use $crate::QuackResultContext;
+                    use $crate::util_common::path_ops_ext::PathOpsExt;
                     let file = self.$name();
-                    let _ = file.touch().with_context(|| {
-                        format!("failed to create file `{}`", file.display())
-                    })?;
+                    let _ = file.touch()?;
                     Ok(file)
                 }
             )*
@@ -72,11 +66,9 @@ macro_rules! ensure_dir {
                 #[doc = $desc]
                 /// exists on a disk
                 pub fn [<ensure_ $name>](&self) -> QuackResult<&Path> {
-                    use $crate::QuackResultContext;
+                    use $crate::util_common::path_ops_ext::{PathOpsExt, MkdirOptions};
                     let file = self.$name();
-                    let _ = file.mkdir(MkdirOptions::WithParents).with_context(|| {
-                        format!("failed to create directory `{}`", file.display())
-                    })?;
+                    let _ = file.mkdir(MkdirOptions::WithParents)?;
                     Ok(file)
                 }
             )*
