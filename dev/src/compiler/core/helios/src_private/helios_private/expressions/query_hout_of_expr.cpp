@@ -270,7 +270,8 @@ namespace compiler::helios::code {
 				all_candidates.insert(
 					all_candidates.begin(), builtin_operators->cbegin(), builtin_operators->cend()
 				);
-				return processBinaryOperatorCall(ctx, all_candidates, stmt).valueOrThrow();
+				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
+				    .valueOrThrow();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
@@ -553,9 +554,7 @@ namespace compiler::helios::code {
 				// It will be
 				auto prev_expr = std::move(result_exprs.at(0));
 
-				for (int op_id = 0; op_id < operator_count; op_id++) {
-
-				}
+				for (int op_id = 0; op_id < operator_count; op_id++) {}
 
 				// @todo here we should:
 				// * lookup for user defined operators

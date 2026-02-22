@@ -17,7 +17,7 @@ namespace compiler::helios::code {
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
-	 * @param callable_expr The PST expression representing the callee being invoked.
+	 * @param callee_expr The PST expression representing the callee being invoked.
 	 * @param call_expr The PST call expression representing the function call. (the `(...)` part
 	 * and not the callee)
 	 */
@@ -37,11 +37,13 @@ namespace compiler::helios::code {
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
-	 * @param bin_op_expr The PST binary operator expression representing the function call.
+	 * @param lhs The preprocessed left-hand side argument of the operator call.
+	 * @param rhs The preprocessed right-hand side argument of the operator call.
 	 */
 	query::QResult<Box<Expr>> processBinaryOperatorCall(
-		query::Context&              ctx,
-		const std::vector<SymID>&    candidates,
-		pst::Access<pst::expr::BinaryOperator> bin_op_expr
+		query::Context&            ctx,
+		const std::vector<SymID>&  candidates,
+		Box<pst::ExprElement>      lhs,
+		Box<pst::ExprElement>      rhs
 	);
 }

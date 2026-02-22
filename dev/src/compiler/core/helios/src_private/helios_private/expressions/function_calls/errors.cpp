@@ -198,20 +198,20 @@ namespace compiler::helios::code {
 	}
 
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&     ctx,
-		CallSourcePositions source_positions,
-		const CallFailure&  failure_reason,
-		bool                is_for_candidate_function
+		query::Context&            ctx,
+		const CallSourcePositions& source_positions,
+		const CallFailure&         failure_reason,
+		bool                       is_for_candidate_function
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
 				return makeBox<PositionalAfterNamedArgumentError>(
-					source_positions.arguments.at(data.argument_index)
+					source_positions.args.at(data.argument_index)
 				);
 			}
 			variant_case(RepeatedNamedArgument, data) {
 				return makeBox<RepeatedNamedArgumentError>(
-					source_positions.arguments.at(data.argument_index)
+					source_positions.args.at(data.argument_index)
 				);
 			}
 			variant_case(FunctionMatchFailure, data) {
@@ -224,15 +224,15 @@ namespace compiler::helios::code {
 				};
 				variant_match(data) {
 					variant_case(TooManyCallArguments, data) {
-						auto first_arg_pos = source_positions.arguments.at(data.valid_arguments);
-						auto last_arg_pos = source_positions.arguments.at(data.total_arguments - 1);
+						auto first_arg_pos = source_positions.args.at(data.valid_arguments);
+						auto last_arg_pos  = source_positions.args.at(data.total_arguments - 1);
 						base::Optional<Box<InteractiveFunction>> function
 							= get_interactive_function(data.function);
 						auto pos = dia::SourcePosition::merge(first_arg_pos, last_arg_pos);
 						return makeBox<TooManyCallArgumentsError>(pos, std::move(function));
 					}
 					variant_case(UnknownNamedArgument, data) {
-						auto arg_pos = source_positions.arguments.at(data.argument_index);
+						auto arg_pos = source_positions.args.at(data.argument_index);
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<UnknownNamedArgumentError>(
@@ -240,7 +240,7 @@ namespace compiler::helios::code {
 						);
 					}
 					variant_case(TypeMismatch, data) {
-						auto arg_pos = source_positions.arguments.at(data.argument_index);
+						auto arg_pos = source_positions.args.at(data.argument_index);
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<ArgumentIncompatibleTypeError>(
@@ -261,16 +261,16 @@ namespace compiler::helios::code {
 								param_decl->getSourcePosition()
 							};
 							return makeBox<CallMissingArgumentError>(
-								source_positions.whole, param_position
+								source_positions.arg_group, param_position
 							);
 						}
 
 						return makeBox<CallMissingArgumentError>(
-							source_positions.whole, std::nullopt
+							source_positions.arg_group, std::nullopt
 						);
 					}
 					variant_case(NamedArgumentProvidedByPositional, data) {
-						auto arg_pos = source_positions.arguments.at(data.argument_index);
+						auto arg_pos = source_positions.args.at(data.argument_index);
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<NamedArgumentProvidedByPositionalError>(

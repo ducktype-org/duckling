@@ -1,17 +1,22 @@
 #include "builtin_operators.hpp"
 
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/expressions/function_calls/call_source_positions.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 namespace compiler::helios::houtgen {
 	Box<code::Expr> generateBuiltinOperatorExpression(
 		query::Context&                              ctx,
-		SymID                                        operator_symbol,
+		const CallSourcePositions&                   source_positions,
+		const SymID                                  operator_symbol,
 		std::vector<Box<code::Expr>>                 arguments,
 		const base::Optional<std::vector<Coercion>>& coercions
 	) {
-		const auto op_name = name(operator_symbol);
+		const auto op_name     = name(operator_symbol);
+		const auto call_origin = code::ElementOrigin(
+			dia::SourcePosition::merge(source_positions.callee, source_positions.arg_group), false
+		);
 
 		auto       lhs        = coercions->at(0).coerce(ctx, std::move(arguments.at(0)));
 		auto       rhs        = coercions->at(1).coerce(ctx, std::move(arguments.at(1)));
@@ -22,7 +27,7 @@ namespace compiler::helios::houtgen {
 		/// Integer modulo ///
 		if (op_name == base::StrID("%") && left_kind == Integral && right_kind == Integral) {
 			return makeBox<code::BinaryOperatorExpr>(
-				ctx, code::BuiltinBinary::IntegerMod, std::move(lhs), std::move(rhs)
+				ctx, call_origin, code::BuiltinBinary::IntegerMod, std::move(lhs), std::move(rhs)
 			);
 		}
 
@@ -33,7 +38,7 @@ namespace compiler::helios::houtgen {
 				{ base::StrID("!="), code::BuiltinBinary::MetaNeq },
 			};
 			return makeBox<code::BinaryOperatorExpr>(
-				ctx, name_to_op.at(op_name), std::move(lhs), std::move(rhs)
+				ctx, call_origin, name_to_op.at(op_name), std::move(lhs), std::move(rhs)
 			);
 		}
 
@@ -46,7 +51,7 @@ namespace compiler::helios::houtgen {
 				{ base::StrID("!="), code::BuiltinBinary::IntegerNeq },
 			};
 			return makeBox<code::BinaryOperatorExpr>(
-				ctx, name_to_op.at(op_name), std::move(lhs), std::move(rhs)
+				ctx, call_origin, name_to_op.at(op_name), std::move(lhs), std::move(rhs)
 			);
 		}
 
@@ -61,22 +66,22 @@ namespace compiler::helios::houtgen {
 		};
 		if (comparisons.contains(op_name) && left_kind == Char && right_kind == Char) {
 			return makeBox<code::BinaryOperatorExpr>(
-				ctx, comparisons.at(op_name), std::move(lhs), std::move(rhs)
+				ctx, call_origin, comparisons.at(op_name), std::move(lhs), std::move(rhs)
 			);
 		}
 		if (op_name == base::StrID("-") && left_kind == Char && right_kind == Char) {
 			return makeBox<code::BinaryOperatorExpr>(
-				ctx, code::BuiltinBinary::IntegerSub, std::move(lhs), std::move(rhs)
+				ctx, call_origin, code::BuiltinBinary::IntegerSub, std::move(lhs), std::move(rhs)
 			);
 		}
 		if (op_name == base::StrID("+") && left_kind == Integral && right_kind == Char) {
 			return makeBox<code::BinaryOperatorExpr>(
-				ctx, code::BuiltinBinary::IntegerAdd, std::move(lhs), std::move(rhs)
+				ctx, call_origin, code::BuiltinBinary::IntegerAdd, std::move(lhs), std::move(rhs)
 			);
 		}
 		if (op_name == base::StrID("+") && left_kind == Char && right_kind == Integral) {
 			return makeBox<code::BinaryOperatorExpr>(
-				ctx, code::BuiltinBinary::IntegerAdd, std::move(lhs), std::move(rhs)
+				ctx, call_origin, code::BuiltinBinary::IntegerAdd, std::move(lhs), std::move(rhs)
 			);
 		}
 

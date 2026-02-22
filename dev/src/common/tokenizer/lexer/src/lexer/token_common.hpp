@@ -1,5 +1,6 @@
 #pragma once
 
+#include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <string_id/string_id.hpp>
 
@@ -9,6 +10,9 @@ namespace lexer {
 	 */
 	struct Operator final {
 		const base::StrID value;
+
+		// Set in PSTAutomatic
+		dia::SourcePosition position = dia::SourcePosition::fakePosition();
 
 		Operator() = delete;
 

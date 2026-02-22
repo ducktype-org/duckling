@@ -5,9 +5,10 @@
  */
 #pragma once
 
+#include "call_source_positions.hpp"
+
 #include <diagnostic_interactive/message.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/parameter_list.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
@@ -95,22 +96,6 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Holds the source positions related to a call expression, used for diagnostics.
-	 */
-	struct CallSourcePositions {
-		/*
-		 * @brief The SourcePosition of the entire call expression.
-		 * E.g. the parentheses in a function call, or from the lhs to rhs arguments in bin op expr.
-		 */
-		dia::SourcePosition whole;
-
-		/**
-		 * @brief The source positions of the individual arguments.
-		 */
-		std::vector<dia::SourcePosition> arguments;
-	};
-
-	/**
 	 * @brief Creates a call error message based on the provided failure reason.
 	 * @param ctx The query context.
 	 * @param source_positions The source positions for diagnostic purposes.
@@ -120,16 +105,16 @@ namespace compiler::helios::code {
 	 * @return A detailed error message describing the call failure.
 	 */
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&     ctx,
-		CallSourcePositions source_positions,
-		const CallFailure&  failure_reason,
-		bool                is_for_candidate_function
+		query::Context&            ctx,
+		const CallSourcePositions& source_positions,
+		const CallFailure&         failure_reason,
+		bool                       is_for_candidate_function
 	);
 
 	/**
 	 * @brief Helper function that retrieves PST of the parameter list
 	 * from a function-like declaration. A function-like can be a function,
-	 * a `fundecl` or a class method. It used to exctract PST position of the
+	 * a `fundecl` or a class method. It used to extract PST position of the
 	 * parameters for error messages.
 	 */
 	pst::Access<pst::ParamList> getFunctionParamList(
