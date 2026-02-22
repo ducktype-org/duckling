@@ -124,7 +124,7 @@ namespace query::internal {
 		if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
 		try {
-			std::cerr << "Providing query " << QueryIntType::QUERY_DATA.name << " with worker " << concurrent::worker::Worker::getCurrentWorker().get() << " \n";
+			// std::cerr << "Providing query " << QueryIntType::QUERY_DATA.name << " with worker " << concurrent::worker::Worker::getCurrentWorker().get() << " \n";
 			return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
 		} catch (const QueryFailedException& qfe) {
 			CORE_DEV_LOG(

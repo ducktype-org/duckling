@@ -109,6 +109,8 @@ namespace {
 }
 
 namespace query::internal {
+	thread_local ActiveGraph QueryState::active_graph;
+
 	void QueryState::addGraphNode(NodeID node_id) {
 		CORE_ASSERT(!query_graph.node_deps->contains(node_id), "Node already exists in the graph");
 		query_graph.node_deps->put(node_id, QueryGraph::ChildrenData{});

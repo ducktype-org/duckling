@@ -29,9 +29,11 @@ namespace query::internal {
 
 		template<class T>
 		struct ChildrenDataHolderImpl;
-
+	
+	public: // TMP
 		using ChildrenDataHolder      = ChildrenDataHolderImpl<ChildrenData>;
 		using ConstChildrenDataHolder = ChildrenDataHolderImpl<const ChildrenData>;
+	private:
 
 		struct ChildrenData final {
 		private:

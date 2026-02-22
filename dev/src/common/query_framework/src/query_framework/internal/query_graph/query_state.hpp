@@ -131,6 +131,11 @@ namespace query::internal {
 		 */
 		void addDependency(NodeID from, NodeID to);
 
+		[[nodiscard]]
+		auto getDepsHolder(NodeID node_id) const {
+			return query_graph.node_deps->atMaybe(node_id).value()->getHolder();
+		}
+
 
 		/*********************************\
 		| Active query state interface:   |
@@ -328,7 +333,7 @@ namespace query::internal {
 		/**
 		 * The active graph that holds the currently active queries.
 		 */
-		ActiveGraph active_graph;
+		static thread_local ActiveGraph active_graph;
 
 		/**
 		 * The previous compilation data if any.

@@ -66,6 +66,7 @@ namespace query {
 		private:
 			internal::NodeID caller;
 			internal::NodeID callee;
+			internal::QueryGraph::ChildrenDataHolder deps_holder;
 
 
 		public:
@@ -73,8 +74,11 @@ namespace query {
 				Context& this_context, internal::NodeID caller, internal::NodeID callee
 			):
 				  caller(caller),
-				  callee(callee) {
-				main_query_state.addDependency(caller, callee);
+				  callee(callee),
+				  deps_holder(this_context.main_query_state.getDepsHolder(caller)) {
+
+				// main_query_state.addDependency(caller, callee);
+				deps_holder->push_back(callee);
 
 				// @TODO: #2026: Optimize it, we only need to add edge here, when the query is not ready.
 

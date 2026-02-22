@@ -47,6 +47,7 @@ namespace query::internal {
 	}
 
 	base::Optional<ActiveGraph::QueryCycle> ActiveGraph::cycleCheck(const NodeID node_id) const {
+
 		auto double_walk = [this](NodeID walk_zero) -> base::Optional<NodeID> {
 			auto walk_one = walk(walk_zero);
 			if (walk_one.empty()) return {};
