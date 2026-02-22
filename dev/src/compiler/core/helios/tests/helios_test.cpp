@@ -1761,8 +1761,6 @@ private:
 
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-
-		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
 	}
 
 	void testMangler() {
