@@ -199,7 +199,7 @@ namespace vm {
 			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);               \
 			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);               \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs OP rhs;                                                                   \
+			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
@@ -209,7 +209,7 @@ namespace vm {
 			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                     \
 			auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                            \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs OP rhs;                                                                   \
+			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
@@ -225,26 +225,26 @@ namespace vm {
 	}
 
 // @TODO: #1216 Check for over/under flows.
-#define DEFINE_INT_N_ARITHMETIC(SIZE)                \
-	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)     \
-	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)     \
-	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)     \
-	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %=)  \
-	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /=)  \
-	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)           \
-	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)    \
-	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %=) \
-	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /=)
+#define DEFINE_INT_N_ARITHMETIC(SIZE)               \
+	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)    \
+	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)    \
+	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %)  \
+	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /)  \
+	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)          \
+	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)   \
+	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %) \
+	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /)
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
 #define FLOAT_64_TYPE double
 #define FLOAT_32_TYPE float
-#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                          \
-	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)    \
-	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)    \
-	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)    \
-	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /=) \
+#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                         \
+	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)   \
+	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)   \
+	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)   \
+	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /) \
 	DEFINE_NEGATION_OP(fneg, SIZE, FLOAT_##SIZE##_TYPE)
 
 	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
