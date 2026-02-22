@@ -4,6 +4,8 @@
 #include "vm/api/data/status.hpp"
 
 #include <iostream>
+#include <istream>
+#include <ostream>
 #include <string>
 #include <variant>
 
@@ -44,15 +46,22 @@ DuckVMDebugCore DuckVMDebugCore::get(const fs::File& filepath, const std::vector
 	return { filepath, args };
 }
 
-DuckVMDebugCore::DuckVMDebugCore() {
+DuckVMDebugCore::DuckVMDebugCore()
+	: DuckVMDebugCore(std::cin, std::cout) 
+{}
+
+DuckVMDebugCore::DuckVMDebugCore(std::istream& vm_input_stream, std::ostream& vm_output_stream) {
 	if (pipe(event_pipe) < 0) throw std::runtime_error("Failed to create event pipe");
 	const auto process_pid_response = vm::api::spawn();
 	if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
-	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
+	if (!vm::api::attach(pid, vm_input_stream, vm_output_stream)) throw BeRDFailedToAttachStreamsException();
 }
+DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args)
+	: DuckVMDebugCore(filepath, std::cin, std::cout, args)
+{}
 
-DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args):
+DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, std::istream& vm_input_stream, std::ostream& vm_output_stream, const std::vector<std::string>& args):
 	  debug_args(args) {
 	if (pipe(event_pipe) < 0) throw std::runtime_error("Failed to create event pipe");
 	const auto process_pid_response = vm::api::spawn(event_pipe[1]);
@@ -60,7 +69,7 @@ DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std
 	pid = process_pid_response->pid;
 	if (!vm::api::loadFiles(pid, { filepath })) throw BeRDFailedToLoadFile();
 	std::cout << "File loaded\n";
-	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
+	if (!vm::api::attach(pid, vm_input_stream, vm_output_stream)) throw BeRDFailedToAttachStreamsException();
 }
 
 void DuckVMDebugCore::runVm() {
@@ -134,7 +143,8 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 		throw BeRDFailedToRunCodeException();
 }
 
-void DuckVMDebugCore::getStatus() {
+
+vm::api::ProcStatus DuckVMDebugCore::getStatus() {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value()) {
 		vm::api::ProcStatus status = response.value();
@@ -165,9 +175,12 @@ void DuckVMDebugCore::getStatus() {
 			std::cout << "Paused on line " << position.instr_number << " of function nr "
 					  << position.function_id << "\n";
 		}
+		return status;
 	} else {
 		const vm::api::ApiError& err = response.error();
 		std::cout << "error: " << vm::api::errorToString(err) << "\n";
+		// TODO: change it for sth better
+		return vm::api::Paused();
 	}
 }
 

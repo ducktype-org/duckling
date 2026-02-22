@@ -1,5 +1,8 @@
 #pragma once
 
+#include <istream>
+#include <ostream>
+#include <string>
 #include <vm/api/vm.hpp>
 
 /**
@@ -20,13 +23,15 @@ public:
 	DuckVMDebugCore& operator=(const DuckVMDebugCore&) = delete;
 
 	DuckVMDebugCore();
+	DuckVMDebugCore(std::istream& vm_input_stream, std::ostream& vm_output_stream);
 	DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args = {});
+	DuckVMDebugCore(const fs::File& filepath, std::istream& vm_input_stream, std::ostream& vm_output_stream, const std::vector<std::string>& args = {});
 
 	[[nodiscard]] int getEventPipeReadFD() const { return event_pipe[0]; }
 
 	void runVm();
 	void runFun(const std::string& string);
-	void getStatus();
+	vm::api::ProcStatus getStatus();
 	void step() const;
 	void resume() const;
 	void pause() const;

@@ -1,12 +1,15 @@
 #include "vm_debug_cli.hpp"
 
+#include <csignal>
+#include <fcntl.h>
 #include "vm/api/data/api_error.hpp"
 #include "vm/api/data/status.hpp"
 #include "vm/vm_debug_core.hpp"
-
 #include <iostream>
 #include <string>
 #include <variant>
+
+DuckVMDebugCli* DuckVMDebugCli::active_instance = nullptr;
 
 namespace {
 
@@ -27,6 +30,12 @@ void DuckVMDebugCli::run() {
 				 "+   BeRD has started   +\n"
 				 "++++++++++++++++++++++++\n";
 
+	event_fd = core.getEventPipeReadFD();
+	enterCommandMode();
+}
+
+void DuckVMDebugCli::enterCommandMode() {
+	setSigaction(true);
 	std::string line;
 	int         event_fd = core.getEventPipeReadFD();
 	while (true) {
@@ -59,12 +68,47 @@ void DuckVMDebugCli::run() {
 	}
 }
 
-void DuckVMDebugCli::handleEvent() {
-	std::cout << "VM says:\n";
-	core.getStatus();
+void DuckVMDebugCli::enterRunMode() {
+	setSigaction(false);
+	std::string line;
+	while (true) { 
+		fd_set fds; 
+		FD_ZERO(&fds); 
+		FD_SET(signal_pipe[0], &fds); 
+		FD_SET(event_fd, &fds); 
+		int maxfd = std::max(signal_pipe[0], event_fd); 
+		int ret = select(maxfd + 1, &fds, nullptr, nullptr, nullptr); 
+		if (ret < 0) { 
+			if (errno == EINTR) continue; 
+			throw std::runtime_error("select() failed"); 
+		}
+		// Ctrl-Z pressed
+		if (FD_ISSET(signal_pipe[0], &fds)) { 
+			uint8_t b;
+			read(signal_pipe[0], &b, 1);
+			core.pause();
+			setSigaction(true);
+			enterCommandMode();
+			return;
+		} // VM event arrived 
+		if (FD_ISSET(event_fd, &fds)) { 
+			uint8_t byte; 
+			read(event_fd, &byte, 1); 
+			if (!handleEvent()) enterCommandMode();
+			std::cout << "nie command";
+			continue; 
+		}
+	}
 }
 
-bool DuckVMDebugCli::handleLine(std::string line) {
+// returns true if debugger cli should be in runMode
+bool DuckVMDebugCli::handleEvent() {
+	std::cout << "VM says:\n";
+	auto status = core.getStatus();
+	return std::holds_alternative<vm::api::Running>(status) || std::holds_alternative<vm::api::WaitingForInput>(status);
+}
+
+bool DuckVMDebugCli::handleLine(std::string& line) {
 	std::string stripped_line = strip(line);
 	if (line.empty()) return true;
 	if (stripped_line == "exit" || stripped_line == "q" || stripped_line == "quit") {
@@ -73,13 +117,16 @@ bool DuckVMDebugCli::handleLine(std::string line) {
 	}
 	if (stripped_line == "s" || stripped_line == "step")
 		core.step();
-	else if (stripped_line == "run")
+	else if (stripped_line == "run") {
 		core.runVm();
-	else if (stripped_line.starts_with("run "))
+		enterRunMode();
+	} else if (stripped_line.starts_with("run ")) {
 		core.runFun(lstrip(lstrip(line).substr(3)));
-	else if (stripped_line == "resume" || stripped_line == "continue" || stripped_line == "c")
+		enterRunMode();
+	} else if (stripped_line == "resume" || stripped_line == "continue" || stripped_line == "c") {
 		core.resume();
-	else if (stripped_line == "pause")
+		enterRunMode();
+	} else if (stripped_line == "pause")
 		core.pause();
 	else if (stripped_line == "stop")
 		core.stop();
@@ -94,14 +141,61 @@ bool DuckVMDebugCli::handleLine(std::string line) {
 	return true;
 }
 
+void DuckVMDebugCli::setSigaction(bool to_normal) {
+	struct sigaction custom_tstp;
+	sigemptyset(&custom_tstp.sa_mask);
+	if (to_normal) 	custom_tstp.sa_handler = SIG_DFL;
+	else custom_tstp.sa_handler = staticHandleTstp;
+	custom_tstp.sa_flags = 0;
+
+	sigaction(SIGTSTP, &custom_tstp, nullptr);
+
+}
+
+void DuckVMDebugCli::handleTstp(int signo) {
+	uint8_t b = 1; 
+	write(signal_pipe[1], &b, 1);
+}
+
+void DuckVMDebugCli::staticHandleTstp(int signo) {
+    if (active_instance) {
+        active_instance->handleTstp(signo);
+    }
+}
+
 DuckVMDebugCli DuckVMDebugCli::get(const fs::File& filepath, const std::vector<std::string>& args) {
 	return { filepath, args };
 }
 
-DuckVMDebugCli::DuckVMDebugCli(): core(DuckVMDebugCore()) {}
+DuckVMDebugCli::DuckVMDebugCli()
+    : vm_input_stream(),
+      vm_output_stream(),
+      core(DuckVMDebugCore(std::cin, std::cout))
+{
+    active_instance = this;
 
-DuckVMDebugCli::DuckVMDebugCli(const fs::File& filepath, const std::vector<std::string>& args):
-	  core(DuckVMDebugCore(filepath, args)) {}
+    if (pipe(signal_pipe) < 0) {
+        throw std::runtime_error("Failed to create signal pipe");
+    }
+
+    fcntl(signal_pipe[0], F_SETFL, O_NONBLOCK);
+    fcntl(signal_pipe[1], F_SETFL, O_NONBLOCK);
+}
+DuckVMDebugCli::DuckVMDebugCli(const fs::File& filepath,
+                               const std::vector<std::string>& args)
+    : vm_input_stream(),
+      vm_output_stream(),
+      core(DuckVMDebugCore(filepath, std::cin, std::cout, args))
+{
+    active_instance = this;
+
+    if (pipe(signal_pipe) < 0) {
+        throw std::runtime_error("Failed to create signal pipe");
+    }
+
+    fcntl(signal_pipe[0], F_SETFL, O_NONBLOCK);
+    fcntl(signal_pipe[1], F_SETFL, O_NONBLOCK);
+}
 
 void DuckVMDebugCli::help() const {
 	std::cout << "BeRD Debugger Commands:\n"
