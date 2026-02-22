@@ -68,8 +68,14 @@ namespace tester {
 	protected:
 		using TestType = void (TestSuite::*)();
 
+		/**
+		 * Method called once just before running the first test in a suite.
+		 */
 		virtual void beforeAll() {}
 
+		/**
+		 * Method called once just after running the last test in a suite.
+		 */
 		virtual void afterAll() {}
 
 	private:
