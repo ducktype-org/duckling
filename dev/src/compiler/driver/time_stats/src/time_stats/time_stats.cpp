@@ -25,7 +25,7 @@ namespace time_stats {
 		 * @note This is intentionally thread local, as it is valid for each thread to track the
 		 * same category at the same time.
 		 */
-		constinit thread_local std::array<std::atomic<bool>, TIME_CATEGORIES_COUNT>
+		constinit thread_local std::array<bool, TIME_CATEGORIES_COUNT>
 			is_category_active{};
 	}
 
@@ -34,7 +34,8 @@ namespace time_stats {
 		  ended(false) {
 		if (not ENABLE_TIME_STATS) return;  // intentionally do nothing.
 
-		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(true);
+		bool was_active = is_category_active.at(std::to_underlying(category));
+		is_category_active.at(std::to_underlying(category)) = true;
 
 		CORE_ASSERT(
 			not was_active,
@@ -53,7 +54,8 @@ namespace time_stats {
 
 		measurement.endMeasurement();
 
-		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
+		bool was_active = is_category_active.at(std::to_underlying(category));
+		is_category_active.at(std::to_underlying(category)) = false;
 
 		CORE_ASSERT(
 			was_active,
@@ -75,7 +77,9 @@ namespace time_stats {
 
 		measurement.endMeasurement();
 
-		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
+		bool was_active = is_category_active.at(std::to_underlying(category));
+		is_category_active.at(std::to_underlying(category)) = false;
+		
 		CORE_ASSERT_NOEXCEPT(
 			was_active,
 			"Ending time tracking of inactive category ",

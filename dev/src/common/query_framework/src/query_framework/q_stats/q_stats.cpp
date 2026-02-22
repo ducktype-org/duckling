@@ -40,7 +40,9 @@ namespace query {
 		 * Get the statistics data for a specific query.
 		 */
 		Ref<QueryStatData> getQueryStatData(internal::QueryID query_id) {
-			data.maybePut(query_id, QueryStatsDataConstructionTag{});
+			auto maybe_inserted = data.maybePut(query_id, QueryStatsDataConstructionTag{});
+			if (maybe_inserted)
+				return maybe_inserted.toOpt().value();
 			return data.at(query_id);
 		}
 	}
