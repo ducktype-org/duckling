@@ -2,6 +2,7 @@
 
 #include <csignal>
 #include <fcntl.h>
+#include <poll.h>
 #include "vm/api/data/api_error.hpp"
 #include "vm/api/data/status.hpp"
 #include "vm/vm_debug_core.hpp"
@@ -30,73 +31,61 @@ void DuckVMDebugCli::run() {
 				 "+   BeRD has started   +\n"
 				 "++++++++++++++++++++++++\n";
 
-	event_fd = core.getEventPipeReadFD();
-	enterCommandMode();
-}
-
-void DuckVMDebugCli::enterCommandMode() {
 	setSigaction(true);
 	std::string line;
-	int         event_fd = core.getEventPipeReadFD();
+	int event_fd = core.getEventPipeReadFD();
+
+	struct pollfd fds[3] = {
+		{
+			.fd = STDIN_FILENO,
+			.events = POLLIN,
+			.revents = 0
+		},
+		// vm state(status) change
+		{
+			.fd = event_fd,
+			.events = POLLIN,
+			.revents = 0
+		},
+		// ctrl-Z handling
+		{
+			.fd = signal_pipe[0],
+			.events = POLLIN,
+			.revents = 0
+		}
+	};
+
+
 	while (true) {
-		fd_set fds;
-		FD_ZERO(&fds);
-		FD_SET(STDIN_FILENO, &fds);
-		FD_SET(event_fd, &fds);
-		int maxfd = std::max(STDIN_FILENO, event_fd);
-		std::cout << "\n>>> ";
-		std::cout.flush();
-		int ret = select(maxfd + 1, &fds, nullptr, nullptr, nullptr);
+		if (mode == Mode::Command) {
+			std::cout << "\n>>> ";
+			std::cout.flush();
+		}
+		int ret = poll(fds, std::size(fds), -1);
 		if (ret < 0) {
 			if (errno == EINTR) continue;
 			throw std::runtime_error("select() failed");
 		}
 		// VM event arrived
-		if (FD_ISSET(event_fd, &fds)) {
+		if (fds[1].revents & POLLIN) {
 			uint8_t byte;
 			read(event_fd, &byte, 1);
 			handleEvent();
-			continue;
 		}  // User typed something
-		if (FD_ISSET(STDIN_FILENO, &fds)) {
+		if (mode == Mode::Command && fds[0].revents & POLLIN) {
 			if (!std::getline(std::cin, line)) {
 				std::cout << "Exiting debugger\n";
 				break;
 			}
 			if (!handleLine(line)) break;
 		}
-	}
-}
-
-void DuckVMDebugCli::enterRunMode() {
-	setSigaction(false);
-	std::string line;
-	while (true) { 
-		fd_set fds; 
-		FD_ZERO(&fds); 
-		FD_SET(signal_pipe[0], &fds); 
-		FD_SET(event_fd, &fds); 
-		int maxfd = std::max(signal_pipe[0], event_fd); 
-		int ret = select(maxfd + 1, &fds, nullptr, nullptr, nullptr); 
-		if (ret < 0) { 
-			if (errno == EINTR) continue; 
-			throw std::runtime_error("select() failed"); 
+		if (mode == Mode::Run && fds[0].revents & POLLIN) {
+			// TODO: handle input of vm
 		}
-		// Ctrl-Z pressed
-		if (FD_ISSET(signal_pipe[0], &fds)) { 
+		if (fds[2].revents & POLLIN) { 
 			uint8_t b;
 			read(signal_pipe[0], &b, 1);
 			core.pause();
-			setSigaction(true);
-			enterCommandMode();
-			return;
-		} // VM event arrived 
-		if (FD_ISSET(event_fd, &fds)) { 
-			uint8_t byte; 
-			read(event_fd, &byte, 1); 
-			if (!handleEvent()) enterCommandMode();
-			std::cout << "nie command";
-			continue; 
 		}
 	}
 }
@@ -105,7 +94,18 @@ void DuckVMDebugCli::enterRunMode() {
 bool DuckVMDebugCli::handleEvent() {
 	std::cout << "VM says:\n";
 	auto status = core.getStatus();
+	changeMode(status);
 	return std::holds_alternative<vm::api::Running>(status) || std::holds_alternative<vm::api::WaitingForInput>(status);
+}
+
+void DuckVMDebugCli::changeMode(vm::api::ProcStatus status) {
+	if (mode == Mode::Command && std::holds_alternative<vm::api::Running>(status)) {
+		setSigaction(false);
+		mode = Mode::Run;
+	} else if (mode == Mode::Run && !(std::holds_alternative<vm::api::Running>(status) || std::holds_alternative<vm::api::WaitingForInput>(status))) {
+		setSigaction(true);
+		mode = Mode::Command;
+	}
 }
 
 bool DuckVMDebugCli::handleLine(std::string& line) {
@@ -117,16 +117,13 @@ bool DuckVMDebugCli::handleLine(std::string& line) {
 	}
 	if (stripped_line == "s" || stripped_line == "step")
 		core.step();
-	else if (stripped_line == "run") {
+	else if (stripped_line == "run")
 		core.runVm();
-		enterRunMode();
-	} else if (stripped_line.starts_with("run ")) {
+	else if (stripped_line.starts_with("run "))
 		core.runFun(lstrip(lstrip(line).substr(3)));
-		enterRunMode();
-	} else if (stripped_line == "resume" || stripped_line == "continue" || stripped_line == "c") {
+	else if (stripped_line == "resume" || stripped_line == "continue" || stripped_line == "c")
 		core.resume();
-		enterRunMode();
-	} else if (stripped_line == "pause")
+	else if (stripped_line == "pause")
 		core.pause();
 	else if (stripped_line == "stop")
 		core.stop();

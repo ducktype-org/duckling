@@ -23,6 +23,11 @@ public:
 	void run();
 
 private:
+	enum class Mode {
+		Run,
+		Command
+	};
+	Mode mode = Mode::Command;
 	static DuckVMDebugCli* active_instance;
 	std::stringstream vm_input_stream;
 	std::stringstream vm_output_stream;
@@ -38,8 +43,7 @@ private:
 	// returns true if debugger cli should be in runmode
 	bool handleEvent();
 	void help() const;
-	void enterCommandMode();
-	void enterRunMode();
+	void changeMode(vm::api::ProcStatus status);
 	void handleTstp(int signo);
 	static void staticHandleTstp(int signo);
 	void setSigaction(bool to_normal);
