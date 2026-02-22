@@ -33,7 +33,6 @@ void DuckVMDebugCli::run() {
 				 "+   BeRD has started   +\n"
 				 "++++++++++++++++++++++++\n";
 
-	setSigaction(true);
 	std::string line;
 	int         event_fd = core.getEventPipeReadFD();
 
@@ -84,18 +83,17 @@ void DuckVMDebugCli::handleEvent() {
 	changeMode(status);
 }
 
-void DuckVMDebugCli::changeMode(vm::api::ProcStatus status) {
-	if (mode == Mode::Command && std::holds_alternative<vm::api::Running>(status)) {
-		setSigaction(false);
-		mode = Mode::Run;
-	} else if (mode == Mode::Run
-	           && !(
-				   std::holds_alternative<vm::api::Running>(status)
-				   || std::holds_alternative<vm::api::WaitingForInput>(status)
-			   )) {
-		setSigaction(true);
-		mode = Mode::Command;
-	}
+void DuckVMDebugCli::changeMode(vm::api::ProcStatus& status) {
+	auto target = modeFromStatus(status);
+	if (mode != target) setSigaction(mode = target);
+}
+
+DuckVMDebugCli::Mode DuckVMDebugCli::modeFromStatus(vm::api::ProcStatus& status) {
+	if (std::holds_alternative<vm::api::Running>(status)
+	    || std::holds_alternative<vm::api::WaitingForInput>(status))
+		return Mode::Run;
+	else
+		return Mode::Command;
 }
 
 bool DuckVMDebugCli::handleLine(std::string& line) {
@@ -128,10 +126,10 @@ bool DuckVMDebugCli::handleLine(std::string& line) {
 	return true;
 }
 
-void DuckVMDebugCli::setSigaction(bool to_normal) {
+void DuckVMDebugCli::setSigaction(Mode& target) {
 	struct sigaction custom_tstp;
 	sigemptyset(&custom_tstp.sa_mask);
-	if (to_normal)
+	if (target == Mode::Command)
 		custom_tstp.sa_handler = SIG_DFL;
 	else
 		custom_tstp.sa_handler = staticHandleTstp;

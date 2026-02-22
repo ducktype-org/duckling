@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vm/api/data/status.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/vm_debug_core.hpp>
 
@@ -39,8 +40,9 @@ private:
 	bool        handleLine(std::string& line);
 	void        handleEvent();
 	void        help() const;
-	void        changeMode(vm::api::ProcStatus status);
+	void        changeMode(vm::api::ProcStatus& status);
+	Mode        modeFromStatus(vm::api::ProcStatus& status);
 	void        handleTstp(int signo);
 	static void staticHandleTstp(int signo);
-	void        setSigaction(bool to_normal);
+	void        setSigaction(Mode& target);
 };
