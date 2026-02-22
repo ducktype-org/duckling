@@ -95,30 +95,35 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief A variant type to capture calls of any kinds, including regular function calls and
-	 * operator calls. Will probably be extended with prefix and suffix operators in the future.
+	 * @brief Holds the source positions related to a call expression, used for diagnostics.
 	 */
-	using CallOrBinOpExpr
-		= std::variant<pst::Access<pst::expr::Call>, pst::Access<pst::expr::BinaryOperator>>;
+	struct CallSourcePositions {
+		/*
+		 * @brief The SourcePosition of the entire call expression.
+		 * E.g. the parentheses in a function call, or from the lhs to rhs arguments in bin op expr.
+		 */
+		dia::SourcePosition whole;
 
-	static dia::SourcePosition getSourcePosition(CallOrBinOpExpr call_expr) {
-		return VISIT(call_expr, e, return e->getSourcePosition());
-	}
+		/**
+		 * @brief The source positions of the individual arguments.
+		 */
+		std::vector<dia::SourcePosition> arguments;
+	};
 
 	/**
 	 * @brief Creates a call error message based on the provided failure reason.
 	 * @param ctx The query context.
-	 * @param call_expr The PST call expression.
+	 * @param source_positions The source positions for diagnostic purposes.
 	 * @param failure_reason The reason for the call failure.
 	 * @param is_for_candidate_function Whether the message is for a candidate function
 	 * (used in ambiguous matches) or for the main call error.
 	 * @return A detailed error message describing the call failure.
 	 */
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&    ctx,
-		CallOrBinOpExpr    call_expr,
-		const CallFailure& failure_reason,
-		bool               is_for_candidate_function
+		query::Context&     ctx,
+		CallSourcePositions source_positions,
+		const CallFailure&  failure_reason,
+		bool                is_for_candidate_function
 	);
 
 	/**
@@ -129,10 +134,6 @@ namespace compiler::helios::code {
 	 */
 	pst::Access<pst::ParamList> getFunctionParamList(
 		query::Context& ctx, pst::Access<pst::LangElement> function_decl
-	);
-
-	pst::Access<pst::LangElement> getNthCallArgument(
-		query::Context& ctx, CallOrBinOpExpr call_expr, usize argument_index
 	);
 
 	pst::Access<pst::LangElement> getNthDeclarationParameter(

@@ -186,27 +186,6 @@ namespace compiler::helios::code {
 		}
 	}
 
-	pst::Access<pst::LangElement> getNthCallArgument(
-		query::Context& ctx, CallOrBinOpExpr call_expr, usize argument_index
-	) {
-		variant_match(call_expr) {
-			variant_case(pst::Access<pst::expr::Call>, call) {
-				usize current_index = 0;
-				for (auto&& arg: *call->getArgs().unlock(ctx)) {
-					if (current_index == argument_index) return arg.unlock(ctx);
-					current_index++;
-				}
-				CORE_PANIC("Argument index out of bounds");
-			}
-			variant_case(pst::Access<pst::expr::BinaryOperator>, bin_op) {
-				if (argument_index == 0) return bin_op->getLeftOperand().unlock(ctx);
-				if (argument_index == 1) return bin_op->getRightOperand().unlock(ctx);
-				CORE_PANIC("Argument index out of bounds");
-			}
-		}
-		CORE_UNREACHABLE();
-	}
-
 	pst::Access<pst::LangElement> getNthDeclarationParameter(
 		query::Context& ctx, pst::Access<pst::LangElement> function_decl, usize parameter_index
 	) {
@@ -219,20 +198,21 @@ namespace compiler::helios::code {
 	}
 
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&    ctx,
-		CallOrBinOpExpr    call_expr,
-		const CallFailure& failure_reason,
-		bool               is_for_candidate_function
+		query::Context&     ctx,
+		CallSourcePositions source_positions,
+		const CallFailure&  failure_reason,
+		bool                is_for_candidate_function
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
-				auto arg_expr = getNthCallArgument(ctx, call_expr, data.argument_index);
-				return makeBox<PositionalAfterNamedArgumentError>(arg_expr->getSourcePosition());
+				return makeBox<PositionalAfterNamedArgumentError>(
+					source_positions.arguments.at(data.argument_index)
+				);
 			}
 			variant_case(RepeatedNamedArgument, data) {
-				auto source_pos
-					= getNthCallArgument(ctx, call_expr, data.argument_index)->getSourcePosition();
-				return makeBox<RepeatedNamedArgumentError>(source_pos);
+				return makeBox<RepeatedNamedArgumentError>(
+					source_positions.arguments.at(data.argument_index)
+				);
 			}
 			variant_case(FunctionMatchFailure, data) {
 				auto get_interactive_function
@@ -244,20 +224,15 @@ namespace compiler::helios::code {
 				};
 				variant_match(data) {
 					variant_case(TooManyCallArguments, data) {
-						auto first_arg_pos
-							= getNthCallArgument(ctx, call_expr, data.valid_arguments)
-						          ->getSourcePosition();
-						auto last_arg_pos
-							= getNthCallArgument(ctx, call_expr, data.total_arguments - 1)
-						          ->getSourcePosition();
+						auto first_arg_pos = source_positions.arguments.at(data.valid_arguments);
+						auto last_arg_pos = source_positions.arguments.at(data.total_arguments - 1);
 						base::Optional<Box<InteractiveFunction>> function
 							= get_interactive_function(data.function);
 						auto pos = dia::SourcePosition::merge(first_arg_pos, last_arg_pos);
 						return makeBox<TooManyCallArgumentsError>(pos, std::move(function));
 					}
 					variant_case(UnknownNamedArgument, data) {
-						auto arg_pos = getNthCallArgument(ctx, call_expr, data.argument_index)
-						                   ->getSourcePosition();
+						auto arg_pos = source_positions.arguments.at(data.argument_index);
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<UnknownNamedArgumentError>(
@@ -265,11 +240,11 @@ namespace compiler::helios::code {
 						);
 					}
 					variant_case(TypeMismatch, data) {
-						auto arg_expr = getNthCallArgument(ctx, call_expr, data.argument_index);
+						auto arg_pos = source_positions.arguments.at(data.argument_index);
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<ArgumentIncompatibleTypeError>(
-							arg_expr->getSourcePosition(),
+							arg_pos,
 							makeBox<InteractiveType>(ctx, data.expected_type),
 							makeBox<InteractiveType>(ctx, data.given_type),
 							std::move(function_name)
@@ -286,20 +261,20 @@ namespace compiler::helios::code {
 								param_decl->getSourcePosition()
 							};
 							return makeBox<CallMissingArgumentError>(
-								getSourcePosition(call_expr), param_position
+								source_positions.whole, param_position
 							);
 						}
 
 						return makeBox<CallMissingArgumentError>(
-							getSourcePosition(call_expr), std::nullopt
+							source_positions.whole, std::nullopt
 						);
 					}
 					variant_case(NamedArgumentProvidedByPositional, data) {
-						auto arg_expr = getNthCallArgument(ctx, call_expr, data.argument_index);
+						auto arg_pos = source_positions.arguments.at(data.argument_index);
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<NamedArgumentProvidedByPositionalError>(
-							arg_expr->getSourcePosition(), std::move(function_name)
+							arg_pos, std::move(function_name)
 						);
 					}
 				}
