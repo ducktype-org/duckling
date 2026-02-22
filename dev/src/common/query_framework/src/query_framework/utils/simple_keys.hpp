@@ -24,6 +24,10 @@ namespace query {
 	struct U64Key final {
 		u64 value;
 
+		U64Key() = delete;
+
+		U64Key(u64 value): value(value) {}
+
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
 			return value;
@@ -40,6 +44,10 @@ namespace query {
 	 */
 	struct BoolKey final {
 		bool value;
+
+		BoolKey() = delete;
+
+		BoolKey(bool value): value(value) {}
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
