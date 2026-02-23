@@ -277,9 +277,14 @@ namespace query::internal {
 		 * @return const reference to the metadata storage.
 		 */
 		[[nodiscard]]
-		const MetadataStorage& getMetadataStorage() const {
-			return metadata_storage;
-		}
+		base::CRef<MetadataStorage> getMetadataStorage() const;
+
+		/**
+		 * @brief Get the previous compilation metadata storage.
+		 * @return Optional reference to the previous metadata storage, empty if not set.
+		 */
+		[[nodiscard]]
+		base::Optional<base::CRef<MetadataStorage>> getPreviousMetadataStorage() const;
 
 	private:
 		friend struct ::query::Context;
@@ -304,6 +309,30 @@ namespace query::internal {
 			);
 
 			metadata_storage.addMetadata<MetadataT>(node_id, std::forward<Args>(args)...);
+		}
+
+		/**
+		 * @brief Add metadata to a node only if no metadata of this type exists.
+		 *
+		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
+		 * @tparam Args Argument types for constructing the metadata
+		 * @param node_id The NodeID to attach metadata to
+		 * @param args Arguments forwarded to MetadataT constructor
+		 * @return true if metadata was added, false if it already exists
+		 */
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, BaseMetadata>
+		bool addMetadataIfNotExistsInternal(NodeID node_id, Args&&... args) {
+			// Check that the query has preserve_in_graph = true
+			CORE_ASSERT(
+				node_id.q_id.getData().tags.preserve_in_graph,
+				"Cannot add metadata to query without preserve_in_graph = true. "
+				"Query: "
+					+ std::string(node_id.q_id.getData().name)
+			);
+			return metadata_storage.addMetadataIfNotExists<MetadataT>(
+				node_id, std::forward<Args>(args)...
+			);
 		}
 
 		/***************************\

@@ -4,6 +4,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
@@ -168,6 +169,13 @@ namespace query::internal {
 		previous->metadata.emplace(std::move(metadata));
 
 		lock.unlock();
+	}
+
+	base::CRef<MetadataStorage> QueryState::getMetadataStorage() const { return &metadata_storage; }
+
+	base::Optional<base::CRef<MetadataStorage>> QueryState::getPreviousMetadataStorage() const {
+		if (!previous.has_value() || !previous->metadata.has_value()) return {};
+		return base::CRef<MetadataStorage>(&previous->metadata.value());
 	}
 
 	QueryState::PrevColor QueryState::redGreenSweep(NodeID start_node) {

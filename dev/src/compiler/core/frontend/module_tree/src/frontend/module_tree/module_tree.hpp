@@ -94,17 +94,31 @@ namespace compiler::frontend {
 		/**
 		 * Accesses the source files of the module.
 		 * Does not contain Main module file (Main source file)
-		 * @return A const reference to a vector of SourceFile references
+		 * @return A lazy view that can be unlocked within a query context or accessed illegally
+		 * (outside queries).
 		 */
 		[[nodiscard]]
-		std::vector<FileAccessLocked> getSourceFiles() const;
+		SourceFilesAccessLocked getSourceFiles() const;
 
 		/**
 		 * Accesses the submodules located in this module.
-		 * @return A vector of ModuleAccessLocked representing all submodules.
+		 * @note Use this only if you need all submodules. For single submodule access, use
+		 * getSubmoduleByName().
+		 * @return A lazy view that can be unlocked within a query context or accessed illegally
+		 * (outside queries).
 		 */
 		[[nodiscard]]
-		std::vector<ModuleAccessLocked> getSubmodules() const;
+		SubmodulesAccessLocked getSubmodules() const;
+
+		/**
+		 * Access a single submodule edge by name.
+		 * Registers dependency via QueryModuleChildSideInput when unlocked.
+		 * Use this function in lookups when you need only a submodule with some name.
+		 * @param name Name of the submodule to access.
+		 * @return AccessLocked wrapper that may contain the submodule if it exists.
+		 */
+		[[nodiscard]]
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.

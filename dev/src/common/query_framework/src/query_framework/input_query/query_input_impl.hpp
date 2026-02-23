@@ -28,3 +28,43 @@
 	static_assert(query_type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent."); \
 	decltype(query_type::id) query_type::id                                                   \
 		= ::query::internal::registerQuery(query_type::QUERY_DATA);
+
+/**
+ * @brief Implement a side input query with custom provide logic.
+ *
+ * Use when you need to execute additional logic (e.g., adding metadata) when the side input
+ * is accessed. You must specify names for the context and key parameters explicitly.
+ *
+ * @note The provide will be called every query call so it can be called multiple times during
+ * compilation.
+ *
+ * @param query_type  The side input query type (declared with DECLARE_QUERY_SIDE_INPUT)
+ * @param ctx_name    Name for the query::Context& parameter (use it in provide_body)
+ * @param key_name    Name for the QKey parameter (use it in provide_body)
+ * @param provide_body Code block executed when side input is accessed
+ *
+ * Example:
+ * @code
+ * IMPLEMENT_QUERY_SIDE_INPUT_WITH_PROVIDE(QueryModuleChildSideInput, ctx, key, {
+ *     ctx.addMetadataIfNotExists<metadata_ModuleLookup>(key);
+ * });
+ * @endcode
+ */
+#define IMPLEMENT_QUERY_SIDE_INPUT_WITH_PROVIDE(query_type, ctx_name, key_name, provide_body)  \
+	auto query_type::internal_query(const query_type::QKey& key_name) -> query_type::QResult { \
+		auto node_id  = ::query::internal::makeNodeID<query_type>(key_name);                   \
+		auto ctx_name = ::query::internal::ContextAccess::make(node_id);                       \
+		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);               \
+		provide_body return ::query::internal::SideInputMockValue{};                           \
+	}                                                                                          \
+	static_assert(                                                                             \
+		not std::is_reference_v<query_type::QKey>,                                             \
+		"Query key type should not be a reference (use custom struct instead)"                 \
+	);                                                                                         \
+	static_assert(                                                                             \
+		::query::HasStablePerfectHash<query_type::QKey>,                                       \
+		"queryStablePerfectHash must be implemented for side inputs keys"                      \
+	);                                                                                         \
+	static_assert(query_type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");  \
+	decltype(query_type::id) query_type::id                                                    \
+		= ::query::internal::registerQuery(query_type::QUERY_DATA);

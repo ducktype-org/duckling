@@ -5,24 +5,108 @@
 
 #include <base/collections/optional.hpp>
 
+#include <hashing/component_hash.hpp>
 #include <query_framework/utils/query_hash.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::frontend {
 
-	struct KeyOf_ModuleSideInput {
-		ModuleID id;
+	/**
+	 * @brief Key for module side input query.
+	 * It stores the hash itself for the performance reasons
+	 * For more info see QueryModuleSideInput query.
+	 */
+	struct KeyOf_ModuleSideInput final {
+		query::QueryStableHash stable_hash;
 
 		[[nodiscard]]
 		query::QueryStableHash queryStablePerfectHash() const;
 		bool                   operator==(const KeyOf_ModuleSideInput&) const = default;
 	};
 
-	struct KeyOf_FileSideInput {
-		FileID id;
+	/**
+	 * @brief Key for file side input query.
+	 * It stores the hash itself for the performance reasons
+	 * For more info see QueryFileSideInput query.
+	 */
+	struct KeyOf_FileSideInput final {
+		query::QueryStableHash stable_hash;
 
 		[[nodiscard]]
 		query::QueryStableHash queryStablePerfectHash() const;
 		bool                   operator==(const KeyOf_FileSideInput&) const = default;
+	};
+
+	/**
+	 * @brief Key for source file count side input query.
+	 * It stores the hash itself for the performance reasons
+	 * For more info see QuerySourceFileCountSideInput query.
+	 */
+	struct KeyOf_SourceFileCountSideInput final {
+		query::QueryStableHash stable_hash;
+
+		[[nodiscard]]
+		query::QueryStableHash queryStablePerfectHash() const;
+		bool                   operator==(const KeyOf_SourceFileCountSideInput&) const = default;
+
+		/**
+		 * @brief Compute the stable hash for source file count side input.
+		 * @param module_id The module whose source files are being counted.
+		 * @param count Number of source files in the module.
+		 * @return KeyOf_SourceFileCountSideInput with computed hash.
+		 */
+		[[nodiscard]] static KeyOf_SourceFileCountSideInput computeHash(
+			ModuleID module_id, usize count
+		);
+	};
+
+	/**
+	 * @brief Key for submodule count side input query.
+	 * It stores the hash itself for the performance reasons
+	 * For more info see QuerySubmoduleCountSideInput query.
+	 */
+	struct KeyOf_SubmoduleCountSideInput final {
+		query::QueryStableHash stable_hash;
+
+		[[nodiscard]]
+		query::QueryStableHash queryStablePerfectHash() const;
+		bool                   operator==(const KeyOf_SubmoduleCountSideInput&) const = default;
+
+		/**
+		 * @brief Compute the stable hash for submodule count side input.
+		 * @param module_id The module whose submodules are being counted.
+		 * @param count Number of submodules in the module.
+		 * @return KeyOf_SubmoduleCountSideInput with computed hash.
+		 */
+		[[nodiscard]] static KeyOf_SubmoduleCountSideInput computeHash(
+			ModuleID module_id, usize count
+		);
+	};
+
+	/**
+	 * @brief Key for module child side input query.
+	 * It stores the parent module hash, child name and whether the child was found.
+	 * This is needed to be in the key to store the metadata, and recreate this input during driver
+	 * initialization. For more info see QueryModuleChildSideInput query.
+	 * @note This key is used as MetadataType and it's stored in metadata during the provide call.
+	 * That's why it implements the serialize/deserialize methods.
+	 * These methods are called during metadata serialization/deserialization.
+	 */
+	struct KeyOf_ModuleChildSideInput final {
+		hashing::ComponentHash::HashType parent_hash;  // hash of the parent module
+		base::StrID                      child_name;   // name of the child module
+		/// @brief Whether the child module exists in the parent module.
+		/// This field is part of the key so that dependencies can distinguish between successful
+		/// lookups (found = true) and failed lookups (found = false) for the same child name.
+		bool found;
+
+		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
+		bool operator==(const KeyOf_ModuleChildSideInput&) const = default;
+
+		[[nodiscard]] std::vector<std::byte> serialize() const;
+		static KeyOf_ModuleChildSideInput    deserialize(std::span<const std::byte> data);
+
+		void prettyPrint(std::ostream& os) const;
 	};
 
 	/**
@@ -78,5 +162,55 @@ namespace compiler::frontend {
 
 	using FileAccess       = Access<FileID>;
 	using FileAccessLocked = AccessLocked<FileID>;
+
+	/**
+	 * @brief This lock holds a vector of FileAccessLocked for each source file in a module
+	 * (excluding main SourceFile). This is needed to register the dependency on the number of
+	 * source files in the module.
+	 */
+	class SourceFilesAccessLocked final {
+		ModuleID                      module;
+		std::vector<FileAccessLocked> files;
+
+	public:
+		SourceFilesAccessLocked(ModuleID module, std::vector<FileAccessLocked> files);
+
+		[[nodiscard]] std::vector<FileAccessLocked> unlock(query::Context& ctx) const;
+		[[nodiscard]] std::vector<FileAccessLocked> illegalAccess() const;
+	};
+
+	/**
+	 * @brief This lock holds a vector of ModuleAccessLocked for each submodule.
+	 * This is needed to register the dependency on the number of submodules in the module.
+	 */
+	class SubmodulesAccessLocked final {
+		ModuleID                        module;
+		std::vector<ModuleAccessLocked> submodules;
+
+	public:
+		SubmodulesAccessLocked(ModuleID module, std::vector<ModuleAccessLocked> submodules);
+
+		[[nodiscard]] std::vector<ModuleAccessLocked> unlock(query::Context& ctx) const;
+		[[nodiscard]] std::vector<ModuleAccessLocked> illegalAccess() const;
+	};
+
+	class ModuleChildAccessLocked final {
+		ModuleID                 parent;
+		base::StrID              child_name;
+		base::Optional<ModuleID> child_id;
+
+	public:
+		explicit ModuleChildAccessLocked(
+			ModuleID parent, base::StrID child_name, base::Optional<ModuleID> child_id
+		):
+			  parent(parent),
+			  child_name(child_name),
+			  child_id(child_id) {}
+
+		[[nodiscard]]
+		base::Optional<ModuleAccessLocked> unlock(query::Context& ctx) const;
+		[[nodiscard]]
+		base::Optional<ModuleAccessLocked> illegalAccess() const;
+	};
 
 }
