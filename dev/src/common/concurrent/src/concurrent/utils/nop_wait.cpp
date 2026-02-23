@@ -1,7 +1,23 @@
 
 #include "nop_wait.hpp"
 
-#include <immintrin.h>  // for _mm_pause
+#if defined(__x86_64__) || defined(__i386__)
+	#include <immintrin.h>
+#elif defined(__aarch64__) || defined(__arm__)
+	#if defined(_MSC_VER)
+		// Microsoft Visual C++ on ARM
+		#include <intrin.h>
+		#define _mm_pause() __yield()
+	#else
+		// GCC & Clang on ARM
+		#define _mm_pause() __asm__ __volatile__("yield" ::: "memory")
+	#endif
+#else
+	// Fallback for other architectures
+	#define _mm_pause() \
+		do {            \
+		} while (0)
+#endif
 
 namespace concurrent {
 	/**
