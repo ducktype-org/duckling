@@ -17,48 +17,48 @@ namespace {
 				tp.definePrimitive(Bytes(primitive.size));
 			}
 			variant_case(vm::code::PointerType, pointer) {
-				tp.definePointer(types.at(pointer.inner)->getId());
+				tp.definePointer(types.at(pointer.inner)->getID());
 			}
 			variant_case(vm::code::FixedSizeTableType, fixed_size_table) {
 				tp.defineFixedSizeTable(
-					types.at(fixed_size_table.inner)->getId(), fixed_size_table.table_size
+					types.at(fixed_size_table.inner)->getID(), fixed_size_table.table_size
 				);
 			}
 			variant_case(vm::code::DynamicTableType, dynamic_table) {
-				tp.defineDynamicTable(types.at(dynamic_table.inner)->getId());
+				tp.defineDynamicTable(types.at(dynamic_table.inner)->getID());
 			}
 			variant_case(vm::code::DataType, data) {
 				std::vector<std::pair<base::StrID, type::TypeID>> field_definitions;
 				field_definitions.reserve(data.fields.size());
 				for (const auto& field: data.fields)
-					field_definitions.emplace_back(field.name, types.at(field.type)->getId());
+					field_definitions.emplace_back(field.name, types.at(field.type)->getID());
 				tp.defineData(field_definitions);
 			}
 			variant_case(vm::code::VariantType, variant) {
 				std::vector<vm::code::type::TypeID> variant_types;
 				variant_types.reserve(variant.variant_alternatives.size());
 				for (const auto& variant_type: variant.variant_alternatives)
-					variant_types.push_back(types.at(variant_type)->getId());
+					variant_types.push_back(types.at(variant_type)->getID());
 				tp.defineVariant(variant_types);
 			}
 			variant_case(vm::code::FunctionType, function) {
 				std::vector<vm::code::type::TypeID> parameter_types;
 				parameter_types.reserve(function.parameters.size());
 				for (const auto& param: function.parameters)
-					parameter_types.push_back(types.at(param)->getId());
-				tp.defineFunction(parameter_types, types.at(function.result)->getId());
+					parameter_types.push_back(types.at(param)->getID());
+				tp.defineFunction(parameter_types, types.at(function.result)->getID());
 			}
 			variant_case(vm::code::OpaqueType, opaque) { tp.defineOpaque(Bytes(opaque.size)); }
 			variant_case(vm::code::ClassType, clazz) {
 				std::vector<std::pair<base::StrID, vm::code::type::TypeID>> fields_definitions;
 				fields_definitions.reserve(clazz.fields.size());
 				for (const auto& field: clazz.fields)
-					fields_definitions.emplace_back(field.name, types.at(field.type)->getId());
+					fields_definitions.emplace_back(field.name, types.at(field.type)->getID());
 				tp.defineClass(
 					fields_definitions,
 					clazz.is_abstract,
 					clazz.extends
-						? base::Optional<vm::code::type::TypeID>(types.at(*clazz.extends)->getId())
+						? base::Optional<vm::code::type::TypeID>(types.at(*clazz.extends)->getID())
 						: base::Optional<vm::code::type::TypeID>(),
 					clazz.implements | std::views::transform([&](const auto& i) {
 						return types.at(i)->getId();

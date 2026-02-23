@@ -8,6 +8,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
 
+#include "vm/bytecode/validator/type.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -42,16 +43,16 @@ namespace {
 	template<typename T>
 	concept CallingInstruction = base::IsTupleMember<T, CallingInstructions>;
 
-	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
+	template<type::ConcreteType ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
 		const vm::code::type::concrete::Pointer& pointer,
-		const ObjIdNameMap<type::Type>&          tod_map,
+		const TypeMap&                           types_ctx,
 		Args&&... error_args
 	) {
-		const auto& pointed_type = tod_map.at(pointer.inner);
-		if (!std::holds_alternative<ExpectedT>(*pointed_type))
-			throw ErrorT(std::forward<Args>(error_args)...);
-		return std::get<ExpectedT>(*pointed_type);
+		const auto& pointed_type = types_ctx.at(pointer.inner);
+		return pointed_type->maybeGet<ExpectedT>().template expect<ErrorT>(
+			std::forward<Args>(error_args)...
+		);
 	}
 
 	template<class ErrorT = PointerTypeMismatchError, class... Args>
@@ -154,7 +155,7 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const TypeMap&                                   types;
+	const TypeMap&                                   types_ctx;
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
@@ -199,42 +200,48 @@ class FunctionValidator {
 	 * - The first argument on the stack should be pointer which points to the same type as the
 	 *   pointer passed as the `obj_ptr` (an argument to `virtual_call_lptr_method`).
 	 *   Since virtual_method map contains only the signatures of methods, the implementations of
-	 * them may declare a pointer to a different type (a pointer to a subclass). Validating just the
-	 * pointer type name like in normal function calls would simply don't work.
+	 * them may declare a pointer to a different type (only a pointer to SELF - subclass can differ).
+	 * Validating just the pointer type name like in normal function calls would simply don't work.
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better way.
 		base::StrID impl_name;
-		auto        it       = std::ranges::find_if(types, [&](const auto& type) {
-            if_opt_some(
-                type.getInheritanceMetadata(), inh_meta
-            ) return inh_meta->vtable.contains(instr.method.method_name);
-            return false;
-        });
-		auto        inh_meta = it->getInheritanceMetadata().value();
-		impl_name            = inh_meta->vtable[instr.method.method_name];
+		for (const auto& type: types_ctx) {
+			variant_match(type.getKind()) {
+				variant_case(type::concrete::Structure, structure) {
+					if_opt_some(structure.inheritance_metadata, inh_meta) {
+						if (inh_meta.vtable.contains(instr.method.method_name))
+							impl_name = inh_meta.vtable[instr.method.method_name];
+					}
+				}
+			}
+		}
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.method };
 		auto signature     = signatures.at(impl_name);
 		bool check_ret_val = signature.result_type.str != base::StrID("void");
 
+		// Too many parameters.
 		if (signature.parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
+		// Check individual parameter's types. The first parameter is special, because it should be
+		// a pointer to the same type as the pointer passed as `obj_ptr`.
 		for (auto param: signature.parameters | std::views::drop(1) | std::views::reverse) {
-			if (code::typeName(*local_stack.back().type) != param.str)
+			if (local_stack.back().type->getName() != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
 
-		auto type_name    = code::typeName(*local_stack.back().type);
-		auto ptr_on_stack = std::get<PointerType>(*tod_map.at(type_name));
-		auto ptr_in_call  = std::get<PointerType>(*local_stack.at(instr.object_ptr.var_name));
+		auto        type_name    = local_stack.back().type->getName();
+		const auto& ptr_on_stack = types_ctx.at(type_name)->get<type::concrete::Pointer>();
+		const auto& ptr_in_call
+			= local_stack.at(instr.object_ptr.var_name)->get<type::concrete::Pointer>();
 		if (ptr_in_call.inner != ptr_on_stack.inner)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && code::typeName(*local_stack.back().type) != signature.result_type.str)
+		if (check_ret_val && local_stack.back().type->getName() != signature.result_type.str)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -256,12 +263,12 @@ class FunctionValidator {
 		if (signature.parameters.size() + 1 != local_stack.size())
 			throw InvalidTailcallArgumentsError(generic_arg);
 
-		if (code::typeName(*local_stack.front().type) != signature.result_type.str)
+		if (local_stack.front().type->getName() != signature.result_type.str)
 			throw InvalidTailcallArgumentsError(generic_arg);
 		for (auto [param, stack_elem]: std::views::zip(
 				 signature.parameters, local_stack.getStackState() | std::views::drop(1)
 			 ))
-			if (code::typeName(*stack_elem.type) != param.str)
+			if (stack_elem.type->getName() != param.str)
 				throw InvalidTailcallArgumentsError(generic_arg);
 	}
 
@@ -279,9 +286,9 @@ class FunctionValidator {
 	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {                             \
 		if (!current_stack.contains(local->var_name)) throw UnknownLocalNameError(*local); \
 		CRef<type::Type> entry = current_stack.at(local->var_name);                        \
-		variant_match(*entry) {                                                            \
-			variant_case(PrimitiveType, primitive_type) {                                  \
-				if (primitive_type.size != (BIT_COUNT / 8))                                \
+		variant_match(entry->getKind()) {                                                  \
+			variant_case(type::concrete::Primitive, primitive_type) {                      \
+				if (static_cast<usize>(primitive_type.size) != (BIT_COUNT / 8))            \
 					throw InvalidArgumentSizeError(*local);                                \
 			}                                                                              \
 			variant_default { throw InvalidArgumentTypeError(*local); }                    \
@@ -291,10 +298,10 @@ class FunctionValidator {
 	variant_case(CRef<opargs::Global##BIT_COUNT>, global) {                                     \
 		if (!globals.contains(global->global_data_name)) throw UnknownGlobalNameError(*global); \
 		CRef<GlobalData> entry = globals.at(global->global_data_name);                          \
-		auto             type  = tod_map.at(entry->type);                                       \
-		variant_match(*type) {                                                                  \
-			variant_case(PrimitiveType, primitive_type) {                                       \
-				if (primitive_type.size != (BIT_COUNT / 8))                                     \
+		CRef<type::Type> type  = types_ctx.at(entry->type);                                     \
+		variant_match(type->getKind()) {                                                        \
+			variant_case(type::concrete::Primitive, primitive_type) {                           \
+				if (static_cast<usize>(primitive_type.size) != (BIT_COUNT / 8))                 \
 					throw InvalidArgumentSizeError(*global);                                    \
 			}                                                                                   \
 			variant_default { throw InvalidArgumentTypeError(*global); }                        \
@@ -309,16 +316,16 @@ class FunctionValidator {
 					if (!globals.contains(global->global_data_name))
 						throw UnknownGlobalNameError(*global);
 					CRef<GlobalData> entry = globals.at(global->global_data_name);
-					auto             type  = tod_map.at(entry->type);
-					if (!std::holds_alternative<PointerType>(*type))
+					CRef<type::Type> type  = types_ctx.at(entry->type);
+					if (type->is<type::concrete::Primitive>())
 						throw InvalidArgumentTypeError(*global);
 				}
 				variant_case(CRef<opargs::GlobalOpq>, global_opq) {
 					if (!globals.contains(global_opq->global_data_name))
 						throw UnknownGlobalNameError(*global_opq);
 					CRef<GlobalData> entry = globals.at(global_opq->global_data_name);
-					auto             type  = tod_map.at(entry->type);
-					if (!std::holds_alternative<OpaqueType>(*type))
+					CRef<type::Type> type  = types_ctx.at(entry->type);
+					if (!type->is<type::concrete::Opaque>())
 						throw InvalidArgumentTypeError(*global_opq);
 				}
 
@@ -330,7 +337,7 @@ class FunctionValidator {
 					if (!current_stack.contains(local->var_name))
 						throw UnknownLocalNameError(*local);
 					CRef<type::Type> type = current_stack.at(local->var_name);
-					if (!std::holds_alternative<PointerType>(*type))
+					if (!type->is<type::concrete::Pointer>())
 						throw InvalidArgumentTypeError(*local);
 				}
 				variant_case(CRef<opargs::StackLocalAny>, local) {
@@ -349,12 +356,11 @@ class FunctionValidator {
 					if (!current_stack.contains(local->var_name))
 						throw UnknownLocalNameError(*local);
 					CRef<type::Type> type = current_stack.at(local->var_name);
-					if (!std::holds_alternative<OpaqueType>(*type))
-						throw InvalidArgumentTypeError(*local);
+					if (!type->is<type::concrete::Opaque>()) throw InvalidArgumentTypeError(*local);
 				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
 				variant_case(CRef<opargs::Type>, type_value) {
-					if (!tod_map.contains(type_value->type_name))
+					if (!types_ctx.contains(type_value->type_name))
 						throw UnknownTypeError(*type_value);
 				}
 				variant_case(CRef<opargs::FunctionName>, function_value) {
@@ -374,15 +380,17 @@ class FunctionValidator {
 				variant_case(CRef<opargs::MethodName>, method_value) {
 					auto method_name = method_value->method_name;
 					bool valid       = false;
-					for (const auto& type: tod_map) {
+					for (const auto& type: types_ctx) {
 						std::visit(
 							[&](const auto& t) {
-								if constexpr (requires { t.virtual_methods; }) {
-									for (const auto& vmethod: t.virtual_methods)
-										if (vmethod.name == method_name) valid = true;
+								if constexpr (requires { t.inheritance_metadata; }) {
+									if_opt_some(t.inheritance_metadata, inh_meta) {
+										for (const auto& vmethod: inh_meta.available_methods)
+											if (vmethod.first == method_name) valid = true;
+									}
 								}
 							},
-							type
+							type.getKind()
 						);
 						if (valid) break;
 					}
@@ -403,16 +411,18 @@ class FunctionValidator {
 					if (!current_stack.contains(variant->var_name))
 						throw UnknownLocalNameError(*variant);
 					CRef<type::Type> type = current_stack.at(variant->var_name);
-					if (!std::holds_alternative<VariantType>(*type))
+					if (!type->is<type::concrete::Variant>())
 						throw InvalidArgumentTypeError(*variant);
 				}
 
 				variant_case(CRef<opargs::Field>, field) {
-					auto type = tod_map.at(field->type_name);
-					variant_match(*type) {
-						variant_case(DataType, ztruct) {
-							if (std::ranges::find(ztruct.fields, field->field_name, &Field::name)
-							    == ztruct.fields.end())
+					auto type = types_ctx.at(field->type_name);
+					variant_match(type->getKind()) {
+						variant_case(type::concrete::Structure, structure) {
+							if (std::ranges::find(
+									structure.fields, field->field_name, &type::concrete::Field::name
+								)
+							    == structure.fields.end())
 								throw UnknownFieldError(*field);
 						}
 						variant_default { throw InvalidArgumentTypeError(*field); }
@@ -427,46 +437,38 @@ class FunctionValidator {
 		}
 	}
 
+	/**
+	 * @brief Validates that all primitive arguments of the instruction are of the same type. Used
+	 * for instructions which require this, e.g. `mov_l8_l8` - both arguments must be of the same
+	 * primitive type - Invalid combination is (e.g. `i32` and `u32`).
+	 * @param instruction Instruction that is validated.
+	 */
 	void validateStackPrimitiveArgumentsSameType(
 		const Instruction& instruction, const LocalStack& current_stack
 	) const {
-		std::vector<PrimitiveType> primitive_args;
+		std::vector<type::TypeID> primitive_args;
 
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
-#define STACK_LOCAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                \
-	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {          \
-		CRef<type::Type> entry = current_stack.at(local->var_name);     \
-		variant_match(*entry) {                                         \
-			variant_case(PrimitiveType, primitive_type) {               \
-				primitive_args.push_back(primitive_type);               \
-			}                                                           \
-			variant_default { throw InvalidArgumentTypeError(*local); } \
-		}                                                               \
+#define STACK_LOCAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                      \
+	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {                \
+		primitive_args.push_back(current_stack.at(local->var_name)->getID()); \
 	}
-#define GLOBAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                      \
-	variant_case(CRef<opargs::Global##BIT_COUNT>, global) {              \
-		CRef<GlobalData> entry = globals.at(global->global_data_name);   \
-		auto             type  = tod_map.at(entry->type);                \
-		variant_match(*type) {                                           \
-			variant_case(PrimitiveType, primitive_type) {                \
-				primitive_args.push_back(primitive_type);                \
-			}                                                            \
-			variant_default { throw InvalidArgumentTypeError(*global); } \
-		}                                                                \
+
+#define GLOBAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                    \
+	variant_case(CRef<opargs::Global##BIT_COUNT>, global) {            \
+		CRef<GlobalData> entry = globals.at(global->global_data_name); \
+		primitive_args.push_back(types_ctx.at(entry->type)->getID());  \
 	}
 				FOR_EACH(STACK_LOCAL_CASE_PRIMITIVE_VALIDATION, 8, 16, 32, 64)
 				FOR_EACH(GLOBAL_CASE_PRIMITIVE_VALIDATION, 8, 16, 32, 64)
 				variant_default { continue; }
 			}
 		}
-		bool sizes_match = std::ranges::all_of(primitive_args, [&](auto x) {
-			return x.size == primitive_args.front().size;
+		bool ids_match = std::ranges::all_of(primitive_args, [&](auto x) {
+			return x == primitive_args.front();
 		});
-		bool names_match = std::ranges::all_of(primitive_args, [&](auto x) {
-			return x.name == primitive_args.front().name;
-		});
-		if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
+		if (!ids_match) throw ArgumentMismatchError(instruction);
 	}
 
 	/**
@@ -484,9 +486,10 @@ class FunctionValidator {
 			instr_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.type); }
 			instr_case(Op_alloc_lptr_type, instr) {
 				validateArgInstantiable(instr.type);
-				CRef<type::Type> variable = current_stack.at(instr.ptr.var_name);
-				PointerType      pointer  = std::get<PointerType>(*variable);
-				if (pointer.inner != instr.type.type_name) throw PointerTypeMismatchError(instr);
+				CRef<type::Type>        variable = current_stack.at(instr.ptr.var_name);
+				type::concrete::Pointer pointer  = variable->get<type::concrete::Pointer>();
+				if (types_ctx.at(pointer.inner)->getName() != instr.type.type_name)
+					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
 			instr_case(Op_cast_l8_type, instr) {
@@ -1077,49 +1080,53 @@ class FunctionValidator {
 
 			instr_case(Op_variantSetInner_lvnt_type, instr) {
 				const auto& variant_type
-					= std::get<VariantType>(*current_stack.at(instr.variant.var_name));
-				base::StrID                     wanted_type    = instr.inner_type.type_name;
-				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
-				if (!std::ranges::contains(possible_types, wanted_type))
+					= current_stack.at(instr.variant.var_name)->get<type::concrete::Variant>();
+				type::TypeID wanted_type = types_ctx.at(instr.inner_type.type_name)->getID();
+
+				const std::vector<type::TypeID>& alternatives = variant_type.alternatives;
+				if (!std::ranges::contains(alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case(Op_variantGetInner_lptr_lvnt_type, instr) {
 				const auto& variant_type
-					= std::get<VariantType>(*current_stack.at(instr.variant.var_name));
+					= current_stack.at(instr.variant.var_name)->get<type::concrete::Variant>();
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
-				base::StrID                     wanted_type    = pointer_type.inner;
-				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
-				if (!std::ranges::contains(possible_types, wanted_type))
+					= current_stack.at(instr.dst_ptr.var_name)->get<type::concrete::Pointer>();
+				auto                             wanted_type    = types_ctx.at(pointer_type.inner);
+				const std::vector<type::TypeID>& possible_types = variant_type.alternatives;
+				if (!std::ranges::contains(possible_types, wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
-				if (instr.expected_type != wanted_type) throw VariantTypeMismatchError(instr);
+				if (instr.expected_type != wanted_type->getName())
+					throw VariantTypeMismatchError(instr);
 			}
 			instr_case(Op_variantSetInner_lptr_type, instr) {
 				const auto& variant_pointer
-					= std::get<PointerType>(*current_stack.at(instr.variant_ptr.var_name));
+					= current_stack.at(instr.variant_ptr.var_name)->get<type::concrete::Pointer>();
 
 				const auto& variant_type
-					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
+					= expectPointerType<type::concrete::Variant>(variant_pointer, types_ctx, instr);
 
-				base::StrID wanted_type = instr.inner_type.type_name;
-				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
+				auto wanted_type = types_ctx.at(instr.inner_type.type_name);
+				if (!std::ranges::contains(variant_type.alternatives, wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case(Op_variantGetInner_lptr_lptr_type, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
-				base::StrID wanted_type = pointer_type.inner;
+					= current_stack.at(instr.dst_ptr.var_name)->get<type::concrete::Pointer>();
+				auto wanted_type = types_ctx.at(pointer_type.inner);
+
 
 				const auto& variant_pointer
-					= std::get<PointerType>(*current_stack.at(instr.variant_ptr.var_name));
+					= current_stack.at(instr.variant_ptr.var_name)->get<type::concrete::Pointer>();
 				const auto& variant_type
-					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
+					= expectPointerType<type::concrete::Variant>(variant_pointer, types_ctx, instr);
 
-				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
+				if (!std::ranges::contains(variant_type.alternatives, wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
-				if (instr.expected_type != wanted_type) throw VariantTypeMismatchError(instr);
+				if (instr.expected_type != wanted_type->getName())
+					throw VariantTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_label) {}
 			instr_case_novalue(Op_jmp_label) {}
@@ -1129,32 +1136,16 @@ class FunctionValidator {
 			instr_case_novalue(Op_call_builtinfunc) {}
 			instr_case_novalue(Op_call_cfunc) {}
 			instr_case(Op_virtual_call_lptr_method, instr) {
-				// For a method all to be valid, the called method has to be declared as a virtual
-				// method in this inheritable or it's superclasses or interfaces.
+				// For a method call to be valid it has to be present in the interface.
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.object_ptr.var_name));
+					= current_stack.at(instr.object_ptr.var_name)->get<type::concrete::Pointer>();
+				const auto& obj_type
+					= expectPointerType<type::concrete::Structure>(pointer_type, types_ctx, instr);
 				const auto& inh_meta
-					= type_metadata.at(pointer_type.inner)->getInheritanceMetadata();
+					= obj_type.inheritance_metadata.expect<InvalidVirtualCallError>(instr);
 
-				const auto& obj_type = type_metadata.at(pointer_type.inner);
-
-				bool                          valid                  = false;
-				std::function<void(TypeCRef)> check_for_superclasses = [&](TypeCRef inh_type) {
-					if (valid) return;
-					if_opt_some(inh_type->getInheritanceMetadata(), imd) {
-						if (imd->virtual_methods.contains(instr.method.method_name)) {
-							valid = true;
-							return;
-						}
-						for (const auto& iface: imd->implements) check_for_superclasses(iface);
-
-						if_opt_some(inh_type->getSuperClass(), super) {
-							check_for_superclasses(super);
-						}
-					}
-				};
-				check_for_superclasses(obj_type);
-				if (!inh_meta.has_value() || !valid) throw InvalidVirtualCallError(instr);
+				if (!inh_meta.available_methods.contains(instr.method.method_name))
+					throw InvalidVirtualCallError(instr);
 			}
 			instr_case_novalue(Op_ret_tailcall_func) {}
 			instr_case_novalue(Op_ret) {}
@@ -1165,22 +1156,22 @@ class FunctionValidator {
 			instr_case_novalue(Op_output_l32) {}
 			instr_case(Op_setVTable_lptr_type, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.object_ptr.var_name));
-				if (pointer_type.inner != instr.type.type_name)
+					= current_stack.at(instr.object_ptr.var_name)->get<type::concrete::Pointer>();
+				if (pointer_type.inner != types_ctx.at(instr.type.type_name)->getID())
 					throw VTableTypeMismatchError(instr);
 			}
 			instr_case(Op_resetVTable_lptr, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.object_ptr.var_name));
-				auto type_meta = type_metadata.at(pointer_type.inner);
-				if (!type_meta->getInheritanceMetadata().has_value())
-					throw NotAClassTypeError(instr);
+					= current_stack.at(instr.object_ptr.var_name)->get<type::concrete::Pointer>();
+				const auto& structure
+					= expectPointerType<type::concrete::Structure>(pointer_type, types_ctx, instr);
+				if (!structure.inheritance_metadata) throw NotAClassTypeError(instr);
 			}
 			instr_case_novalue(Op_downcast_lptr_lptr_type) {}
 			instr_case_novalue(Op_free_lptr) {}
 			instr_case(Op_store_lptr_lany, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
+					= current_stack.at(instr.dst_ptr.var_name)->get<type::concrete::Pointer>();
 				CRef<type::Type> other_type      = current_stack.at(instr.src.var_name);
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);

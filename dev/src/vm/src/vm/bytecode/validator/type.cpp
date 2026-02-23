@@ -239,7 +239,7 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 
 				// 2. Fill the data
 				std::vector<std::pair<base::StrID, type::TypeID>> fields;
-				concrete::InheritanceMetadata imd = { .super_types       = { getId() },
+				concrete::InheritanceMetadata imd = { .super_types       = { getID() },
 					                                  .implements        = implements,
 					                                  .available_methods = {},
 					                                  .vtable            = {},
@@ -283,7 +283,7 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 							opt_none {
 								fields.emplace_back(
 									base::StrID(".vtable"),
-									types.at(typeName(SpecialTypes::get().vtable_ptr))->getId()
+									types.at(typeName(SpecialTypes::get().vtable_ptr))->getID()
 								);
 							}
 						}
@@ -360,7 +360,7 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 
 [[nodiscard]] base::StrID type::Type::getName() const { return name; }
 
-[[nodiscard]] type::TypeID type::Type::getId() const { return id; }
+[[nodiscard]] type::TypeID type::Type::getID() const { return id; }
 
 bool type::Type::operator==(const Type& other) const { return other.id == id; }
 

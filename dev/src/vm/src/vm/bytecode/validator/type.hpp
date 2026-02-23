@@ -131,7 +131,7 @@ namespace vm::code::type {
 
 		struct Variant {
 			Bytes               type_tag_size;
-			std::vector<TypeID> alternatives;
+			std::vector<TypeID> alternatives;  /// Order matters, as it determines type tag values.
 		};
 
 		struct Function {
@@ -218,7 +218,7 @@ namespace vm::code::type {
 		/**********************/
 		[[nodiscard]] base::StrID getName() const;
 
-		[[nodiscard]] TypeID getId() const;
+		[[nodiscard]] TypeID getID() const;
 
 		template<ConcreteType T>
 		[[nodiscard]]
