@@ -330,7 +330,10 @@ private:
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
 		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
 
-		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(test_utils::getChain("InvalidExpr", root_scope).back()).hasFailed());
+		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
+						test_utils::getChain("InvalidExpr", root_scope).back()
+		)
+		                .hasFailed());
 
 		try {
 			test_utils::getConstValueAs<i64>("C", root_scope);
