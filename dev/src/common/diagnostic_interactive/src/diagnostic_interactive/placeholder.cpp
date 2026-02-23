@@ -36,17 +36,20 @@ namespace dia_int {
 	}
 
 	NotYetImplementedCodeError::NotYetImplementedCodeError(
-		std::string                 header_message,
-		dia::SourcePosition         source_position,
-		std::string                 description,
-		base::Optional<std::string> pointer_message_content
+		std::string                         header_message,
+		base::Optional<dia::SourcePosition> source_position,
+		std::string                         description,
+		base::Optional<std::string>         pointer_message_content
 	):
 		  MessageBase() {
 		addArgument<TextArgument>("header_message", std::move(header_message));
 		addArgument<TextArgument>("description", std::move(description));
 
-		addArgument<CodeArgument>("code", source_position);
-		addArgument<CodeLocationArgument>("code_location", source_position);
+		if_opt_some(source_position, pos) {
+			addArgument<CodeArgument>("code", pos);
+			addArgument<CodeLocationArgument>("code_location", pos);
+			addPointerMessage("cause", pos);
+		}
 
 		if_opt_some(pointer_message_content, val) {
 			addArgument<TextArgument>("pointer_message_content", std::move(val));
@@ -54,8 +57,6 @@ namespace dia_int {
 		if_opt_none(pointer_message_content) {
 			addArgument<TextArgument>("pointer_message_content", "");
 		}
-
-		addPointerMessage("cause", source_position);
 
 		if (logger::isCategoryEnabled(logger::DevLogCategories::NYIStacktraces)) {
 			addArgument<TextArgument>("stacktrace", base::getCurrentStackTrace());

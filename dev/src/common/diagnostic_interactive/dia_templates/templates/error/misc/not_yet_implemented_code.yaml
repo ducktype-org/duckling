@@ -20,10 +20,12 @@ params:
   
   code:
     description: "The code snippet where the not-yet-implemented feature is located."
+    optional: true
   
   code_location:
     description: "Location of the code snippet."
     component_type: "code_location"
+    optional: true
   
   pointer_message_content:
     description: "The pointer message indicating the cause location."
@@ -38,10 +40,15 @@ description:
   - param: "description"
   - "Stacktrace: "
   - param: "stacktrace"
-  - codeblock:
-      param: "code"
-    location:
-      param: "code_location"
+  - case:
+      is_param_provided: "code"
+    of:
+      true:
+        - codeblock:
+            param: "code"
+          location:
+            param: "code_location"
+      false: "The code location is not available."
 
 
 pointer_messages:
