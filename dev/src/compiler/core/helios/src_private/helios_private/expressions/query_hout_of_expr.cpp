@@ -444,9 +444,7 @@ namespace compiler::helios::code {
 						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
 							"supported yet.",
-							stmt->getSourcePosition(),
-							"",
-							"here"
+							stmt->getSourcePosition()
 						));
 						return;  // failed
 					}

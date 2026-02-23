@@ -750,9 +750,7 @@ namespace compiler::helios {
 
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Variable declarations without initial value are not supported yet.",
-						stmt->getSourcePosition(),
-						"",
-						"here"
+						stmt->getSourcePosition()
 					));
 
 					is_failed = true;
