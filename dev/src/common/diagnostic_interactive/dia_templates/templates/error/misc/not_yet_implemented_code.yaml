@@ -33,7 +33,7 @@ params:
 
 
 header_message:
-  - "NOT-YET-IMPLEMENTED Error occurred, because the feature is not implemented yet: "
+  - "[Feature not implemented] "
   - param: "header_message"
 
 
