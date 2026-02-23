@@ -301,7 +301,6 @@ private:
 	void defaultInitialization() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/default_init");
 		std::string ir          = llvm_module.dumpLLVMToString();
-		std::cout << ir << '\n';
 
 		// i32 = 0
 		assertTrue(
