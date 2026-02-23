@@ -51,11 +51,29 @@ namespace dia_int {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "misc",
-				     .name          = "placeholder_code" };
+				     .name          = "placeholder_code", };
 		}
 
 	public:
 		PlaceholderCodeError(
+			std::string                 header_message,
+			dia::SourcePosition         source_position,
+			std::string                 description             = "",
+			base::Optional<std::string> pointer_message_content = "here"
+		);
+	};
+
+
+	class NotYetImplementedCodeError final: public MessageBase {
+		Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "misc",
+				     .name          = "nyi_code", };
+		}
+
+	public:
+		NotYetImplementedCodeError(
 			std::string                 header_message,
 			dia::SourcePosition         source_position,
 			std::string                 description             = "",
