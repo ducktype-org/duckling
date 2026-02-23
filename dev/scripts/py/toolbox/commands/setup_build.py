@@ -115,6 +115,12 @@ from click import Choice, option, command
     help="Path to a custom Clang compiler for generating builtins. If not specified, auto-detected based on LLVM version.",
     default=None,
 )
+@option(
+    "--sanitizer",
+    help="Enable a sanitizer. Choices: asan (AddressSanitizer), tsan (ThreadSanitizer), ubsan (UndefinedBehaviorSanitizer).",
+    type=Choice(["asan", "tsan", "ubsan"], case_sensitive=False),
+    default=None,
+)
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
     setup_build_impl(*args, **kwargs)
