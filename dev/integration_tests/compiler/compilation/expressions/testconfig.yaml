@@ -41,14 +41,14 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n"
+          String: "1\n1\n"
         ExitCode: 0
   unit_simple_multiple_modules:
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "1\n"
+          String: "1\n1\n"
         ExitCode: 0
 
   casts:

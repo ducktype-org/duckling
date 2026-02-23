@@ -46,7 +46,10 @@ public:
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(sideInputsTest);
+	}
 
+protected:
+	void beforeAll() override {
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {

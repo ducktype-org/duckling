@@ -28,6 +28,7 @@ def setup_build_impl(
     disable_unity_compilation,
     enable_link_time_optimization,
     clang_for_builtins,
+    sanitizer,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -73,6 +74,8 @@ def setup_build_impl(
         f"-D DISABLE_UNITY_COMPILATION={'ON' if disable_unity_compilation else 'OFF'}",
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
     ]
+    if sanitizer:
+        cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")
     if coverage:
         cmd_parts.append(f"-D GCOV_VERSION={gcov_version}")
     if clang_for_builtins:

@@ -5,6 +5,7 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/errors.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -229,14 +230,23 @@ private:
 			1
 		);
 
+
 		checkForErrorOnCompileModule(
 			R"(
-				fun main() = {
-					var arr: i32[5];
-					arr["index"] = 1;
+				const unitType: type = ();
+
+				fun foo(u: ()) -> () = {
+				    builtin_output_i64(1);
+				    return u;
+				}
+				
+				fun main() -> i64 = {
+					foo(unitType);
+					return 0;
 				}
 			)",
-			{ "Type `string` cannot be converted to type `const i64`." },
+			{ "The given argument type `const type` cannot be converted to the expected type "
+		      "`()`" },
 			1
 		);
 
@@ -334,16 +344,43 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"(
+				fun main() = {
+					var arr: i32[5];
+					arr["index"] = 1;
+				}
+			)",
+			{ "Type `string` cannot be converted to type `const i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
 				const NOT_A_TYPE = 10;
 				const ARR = NOT_A_TYPE[5];
 			)",
 			{ "Index operator base must be indexable." },
 			1
 		);
+
+
+		// =========================== Not-yet-implemented errors ==========================
+		// Note: just remove the tests when the features are implemented.
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: i64 = 0;
+					x++;
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "Suffix" },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
-		using namespace helios;
+		using namespace compiler::helios;
 
 		auto [_, root_scope]
 			= test_utils::getModule(fs::File(path("test_modules/error_generating/bad_expr")));
@@ -351,12 +388,11 @@ private:
 
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
 		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		try {
-			test_utils::getConstValueAs<i64>("InvalidExpr", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (base::NotYetImplemented& err) {
-			// Since this branch was chosen, everything worked well.
-		}
+
+		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
+						test_utils::getChain("InvalidExpr", root_scope).back()
+		)
+		                .hasFailed());
 
 		try {
 			test_utils::getConstValueAs<i64>("InvalidSym", root_scope);

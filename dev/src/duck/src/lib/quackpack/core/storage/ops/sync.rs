@@ -1,7 +1,6 @@
 #![allow(unreachable_code)] // @TODO: #1962 Remove this
 use std::{path::PathBuf, time::SystemTime};
 
-use rustvil::fs::{PathExt, ShouldBlock};
 use tracing::debug;
 
 use crate::{
@@ -15,6 +14,7 @@ use crate::{
             venv_id::ToVenvId,
         },
     },
+    util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
 
 use crate::quackpack::core::storage;
@@ -44,7 +44,8 @@ pub fn sync(
     let user_exposed_freeze = load_external_freezefile(pkg_ctx, expose_freezefile)?;
     let id = pkg_ctx.to_venv_id();
 
-    let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)?;
+    let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)
+        .context("failed to acquire try sync lock")?;
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
 
     let venv = Venv::fix_and_load(&storage, id)?;
@@ -89,7 +90,13 @@ pub fn sync(
         let json = serde_json::to_string_pretty(&_freeze)?;
         freeze_name(pkg_ctx.package()).write(json)?;
     }
-    Ok((_sync_lock.to_compile_lock(&storage, id)?, venv, storage))
+    Ok((
+        _sync_lock
+            .to_compile_lock(&storage, id)
+            .context("failed to acquire compile lock")?,
+        venv,
+        storage,
+    ))
 }
 
 fn freeze_name(package: &Package) -> PathBuf {
@@ -107,9 +114,7 @@ fn load_external_freezefile(
     if !freeze_path.is_file() {
         return Ok(None);
     }
-    let content = freeze_path
-        .read_to_string()
-        .with_context(|| format!("while reading freezefile `{}`", freeze_path.display()))?;
+    let content = freeze_path.read_to_string()?;
 
     serde_json::from_str(&content)
         .with_context(|| format!("malformed freezefile `{}`", freeze_path.display()))
