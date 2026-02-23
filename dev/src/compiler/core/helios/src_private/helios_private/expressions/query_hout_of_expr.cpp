@@ -413,7 +413,7 @@ namespace compiler::helios::code {
 					"Suffix operators are not yet implemented in HOUT, since they don't exist yet.",
 					stmt->getSourcePosition()
 				));
-				return; // failed
+				return;  // failed
 			}
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
