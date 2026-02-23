@@ -845,8 +845,8 @@ namespace compiler::frontend {
 			"parseAllFilesInModuleTree called from within query!"
 		);
 
-		auto parse_all_files = [&](auto&& self, ModuleID module_id) -> void {
-			auto module_tree = GetModuleID_Functor::get(module_id);
+		auto parse_all_files = [&](auto&& self, ModuleID module_id_internal) -> void {
+			auto module_tree = GetModuleID_Functor::get(module_id_internal);
 			if (module_tree->hasMainSourceFile())
 				GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					module_tree->getMainSourceFile().illegalAccess().getID()
