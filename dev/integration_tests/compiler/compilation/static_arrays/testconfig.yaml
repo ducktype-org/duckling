@@ -43,3 +43,11 @@ Tests:
         Output:
           String: "1\n0\n0\n123\n"
         ExitCode: 0
+
+  empty_arrays:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "111\n222\n333\n"
+        ExitCode: 0

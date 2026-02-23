@@ -421,14 +421,14 @@ namespace compiler::helios::code {
 
 		/**
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
-		 * for example we have two call expr like a[i]() or b()()
+		 * for example we have two call expr like a[i]() or b()().
+		 * @note: For now this function is called only in the `foo()[i]` case. (where foo is a
+		 * function returning a static array).
 		 */
 		auto processPSTExpr(Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
 			if (call_expr->getType() == lexer::Token::Square)
 				return processSquareCall(std::move(current_expr), call_expr);
-
-			// @note this function is not run yet.
 
 			// @note: previous mock-implementation of this function
 			// was deleted in PR #1239. See it for reference.
@@ -657,10 +657,8 @@ namespace compiler::helios::code {
 		auto processArrayIndexing(
 			Box<Expr> current_expr, pst::AccessLocked<pst::ExprElement> index_pst
 		) -> query::QResult<ChainState> {
-			if (current_expr->expression_type.getSymbolType().getType().getKind()
-			        != tsh::Kind::StaticArray
-			    && current_expr->expression_type.getSymbolType().getType().getKind()
-			           != tsh::Kind::DynamicArray) {
+			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
+			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray) {
 				auto error_pos = current_expr->origin.getSourcePosition().copyValueOr(
 					index_pst.unlock(query_ctx)->getSourcePosition()
 				);
@@ -677,6 +675,8 @@ namespace compiler::helios::code {
 					query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
 				);
 
+			// @TODO: #1532 This i64 coercion should be handled by the `[]` operator taking an
+			// `u64` argument when operators are implemented properly.
 			// Index access. We assume [] takes in an i64 value.
 			auto i64_type = tsh::SymbolType<>{
 				tsh::getIntegralType(query_ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
@@ -723,10 +723,14 @@ namespace compiler::helios::code {
 
 			// If base is coercible to meta, this is an array type creation.
 			if (meta_coercion_res.isValid()) {
-				// Index access. We assume [] takes in an i64 value.
+				// @TODO: #1532 This u64 coercion should be handled by the `[]` operator taking an
+				// `u64` argument when operators are implemented properly.
+				// Index access. We assume [] takes in an u64 value.
 				auto i64_type = tsh::SymbolType<>{
 					tsh::getIntegralType(
-						query_ctx, 64, tsh::IntegralAbstractType::Signedness::Signed
+						query_ctx,
+						64,
+						tsh::IntegralAbstractType::Signedness::Unsigned
 					),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Immutable
