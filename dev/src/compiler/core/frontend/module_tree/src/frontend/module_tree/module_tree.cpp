@@ -842,7 +842,7 @@ namespace compiler::frontend {
 	void parseAllFilesInModuleTree(ModuleID module_id) {
 		CORE_ASSERT(
 			query::Context::getState().activeQueryCount() == 0,
-			"parseAllFilesInModuleTree called from within query!"
+			"parseAllFilesInModuleTree called from within a query!"
 		);
 
 		auto parse_all_files = [&](auto&& self, ModuleID module_id_internal) -> void {
