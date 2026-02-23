@@ -14,7 +14,7 @@ namespace system_command {
 		return *this;
 	}
 
-	i32 SystemCommand::execute(bool error_on_exit_code) {
+	i32 SystemCommand::execute(ExitCodeHandling on_exit_code) {
 		std::string out = program_name;
 		out += " ";
 
@@ -37,8 +37,18 @@ namespace system_command {
 		}
 		exit_code = WEXITSTATUS(exit_code);
 
-		if (error_on_exit_code && exit_code != 0)
-			CORE_PANIC(base::strConcat("Command ", out, " exited with code ", exit_code));
+		if (exit_code != 0) {
+			switch (on_exit_code) {
+				case ExitCodeHandling::Panic:
+					CORE_PANIC(base::strConcat("Command ", out, " exited with code ", exit_code));
+				case ExitCodeHandling::Warn:
+					CORE_USER_LOG("Command ", out, " exited with code ", exit_code, "\n");
+					break;
+				case ExitCodeHandling::Ignore:
+					break;
+			}
+
+		}
 
 		return exit_code;
 	}

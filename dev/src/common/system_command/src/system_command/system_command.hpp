@@ -40,13 +40,21 @@ namespace system_command {
 		SystemCommand& addArg(std::string arg);
 
 		/**
+		 * @brief Helper enum to specify how to handle non-zero exit codes from the command.
+		 */
+		enum class ExitCodeHandling {
+			Panic,
+			Ignore,
+			Warn,
+		};
+
+		/**
 		 * @brief Executes the command.
 		 * @warning Is not thread safe.
 		 *
-		 * @param error_on_exit_code if true, the command will panic if the exit code is not 0.
 		 * @return i32 exit code of the command.
 		 */
-		i32 execute(bool error_on_exit_code = true);
+		i32 execute(ExitCodeHandling on_exit_code = ExitCodeHandling::Panic);
 
 		~SystemCommand() = default;
 	};
