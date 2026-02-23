@@ -1,5 +1,7 @@
 #include "placeholder.hpp"
 
+#include <logger/logger.hpp>
+
 namespace dia_int {
 
 	PlaceholderHeaderError::PlaceholderHeaderError(
@@ -31,5 +33,31 @@ namespace dia_int {
 		}
 
 		addPointerMessage("cause", source_position);
+	}
+
+	NotYetImplementedCodeError::NotYetImplementedCodeError(
+		std::string                 header_message,
+		dia::SourcePosition         source_position,
+		std::string                 description,
+		base::Optional<std::string> pointer_message_content
+	):
+		  MessageBase() {
+		addArgument<TextArgument>("header_message", std::move(header_message));
+		addArgument<TextArgument>("description", std::move(description));
+
+		addArgument<CodeArgument>("code", source_position);
+		addArgument<CodeLocationArgument>("code_location", source_position);
+
+		if (logger::isCategoryEnabled(logger::DevLogCategories::NYIStacktraces)) {
+			addArgument<TextArgument>(
+				"stacktrace",
+				base::getCurrentStackTrace()
+			);
+		} else {
+			addArgument<TextArgument>(
+				"stacktrace",
+				"Enable the NYIStacktraces dev-logs category to see the stacktrace for this not-yet-implemented error."
+			);
+		}
 	}
 }

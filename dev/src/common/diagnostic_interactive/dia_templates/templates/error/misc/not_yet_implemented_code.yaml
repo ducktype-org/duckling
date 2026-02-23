@@ -14,6 +14,9 @@ params:
   
   description:
     description: "The detailed description of the not-yet-implemented error."
+
+  stacktrace:
+    description: "The stacktrace of the not-yet-implemented error or info how to enable it."
   
   code:
     description: "The code snippet where the not-yet-implemented feature is located."
@@ -33,6 +36,8 @@ header_message:
 
 description:
   - param: "description"
+  - "Stacktrace: "
+  - param: "stacktrace"
   - codeblock:
       param: "code"
     location:
