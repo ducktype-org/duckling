@@ -74,7 +74,7 @@ namespace compiler::helios::mangler {
 
 			const auto sym_id = std::get<SymID>(key.symbol_key);
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
-				variant_match(abi->valueOrThrow()) {
+				variant_match(*abi->valueOrThrow()) {
 					variant_case_novalue(CAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
 					variant_default { CORE_UNREACHABLE(); }
@@ -241,10 +241,10 @@ namespace compiler::helios::mangler {
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
-				ret += fun_decl.return_type.toString();
+				ret += fun_decl->return_type.getType().toString();
 
-				for (const auto& param: fun_decl.parameters) {
-					ret += param.type.toString();
+				for (const auto& param: fun_decl->parameters) {
+					ret += param.type.getType().toString();
 					ret += identifier(param.name.str());
 				}
 

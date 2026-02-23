@@ -51,7 +51,7 @@ namespace compiler::helios {
 					setFailed();
 				} else {
 					setTypeOfSymbol(tsh::deductions::declarationTypeFromProvidedType(
-						type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(), expected_mutability
+						type_ctv.valueOrThrow()->get<tsh::SymbolType<>>().value(), expected_mutability
 					));
 				}
 			}
@@ -75,7 +75,7 @@ namespace compiler::helios {
 						setFailed();
 						return;
 					}
-					const auto& expr_type = parsed->valueOrThrow()->expression_type;
+					const auto& expr_type = (*parsed->valueOrThrow())->expression_type;
 					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
 						expr_type, tsh::Mutability::Immutable
 					));
@@ -95,12 +95,12 @@ namespace compiler::helios {
 						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx), decl_mutability
 					);
 				} else if (stmt->getValue().has_value()) {
-					auto& parsed = ctx.query<QueryHoutOfExpr>(
+					auto parsed = ctx.query<QueryHoutOfExpr>(
 										  { stmt->getValue().value().unlock(ctx)->getExpr() }
 					)
 					                   ->valueOrThrow();
 
-					const auto& expr_type = parsed->expression_type;
+					const auto& expr_type = (*parsed)->expression_type;
 					setTypeOfSymbol(
 						tsh::deductions::declarationTypeFromInitializer(expr_type, decl_mutability)
 					);
@@ -142,13 +142,13 @@ namespace compiler::helios {
 
 		static auto handleFunction(Context& ctx, SymID sym) {
 			// @note: this crates false dependency of default parameter expressions
-			auto& declaration = ctx.query<QueryDeclOfFun>(sym)->valueOrThrow();
+			auto declaration = ctx.query<QueryDeclOfFun>(sym)->valueOrThrow();
 			std::vector<tsh::SymbolType<>> param_types{};
-			param_types.reserve(declaration.parameters.size());
-			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
+			param_types.reserve(declaration->parameters.size());
+			for (auto& param: declaration->parameters) param_types.emplace_back(param.type);
 
 			return tsh::SymbolType{
-				ctx.query<tsh::QueryFunctionType>({ param_types, declaration.return_type }),
+				ctx.query<tsh::QueryFunctionType>({ param_types, declaration->return_type }),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};

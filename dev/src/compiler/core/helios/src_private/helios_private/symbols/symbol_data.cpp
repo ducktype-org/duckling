@@ -41,8 +41,8 @@ namespace compiler::helios {
 					const auto class_type
 						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
 					          ->valueOrThrow()
-					          .getType()
-					          .as<tsh::ClassAbstractType>();
+					          ->getType()
+					          .template as<tsh::ClassAbstractType>();
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
 					auto class_fields = class_type.getInterface(ctx)->getFieldsView();
@@ -70,8 +70,8 @@ namespace compiler::helios {
 					const auto function_type
 						= ctx.query<QueryTypeOfSymbol>({ param.function_symbol })
 					          ->valueOrThrow()
-					          .getType()
-					          .as<tsh::FunctionAbstractType>();
+					          ->getType()
+					          .template as<tsh::FunctionAbstractType>();
 					auto param_symbol_type
 						= function_type.getParameterTypes().at(param.parameter_index);
 					return param_symbol_type.withMutability(tsh::Mutability::Immutable);

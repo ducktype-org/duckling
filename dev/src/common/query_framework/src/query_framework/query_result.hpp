@@ -92,12 +92,12 @@ namespace query {
 		/**
 		 * @brief Access the value as an optional.
 		 */
-		constexpr base::Optional<base::Ref<Value>> optValue() {
+		constexpr base::Optional<Ref<Value>> optValue() {
 			if (hasValue()) return &std::get<Value>(storage);
 			return {};
 		}
 
-		constexpr base::Optional<base::CRef<Value>> optValue() const {
+		constexpr base::Optional<CRef<Value>> optValue() const {
 			if (hasValue()) return &std::get<Value>(storage);
 			return {};
 		}
@@ -105,7 +105,7 @@ namespace query {
 		/**
 		 * @brief Access the value, panic on no value.
 		 */
-		constexpr base::CRef<Value> valueOrPanic() const& {
+		constexpr CRef<Value> valueOrPanic() const& {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
 			return &std::get<Value>(storage);
 		}
@@ -115,7 +115,7 @@ namespace query {
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr base::Ref<Value> valueOrPanic() & {
+		constexpr Ref<Value> valueOrPanic() & {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
 			return &std::get<Value>(storage);
 		}
@@ -128,7 +128,7 @@ namespace query {
 		/**
 		 * @brief Access the value, panic with given message on no value.
 		 */
-		constexpr base::CRef<Value> valueOrPanicMsg([[maybe_unused]] std::string_view message) const& {
+		constexpr CRef<Value> valueOrPanicMsg([[maybe_unused]] std::string_view message) const& {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return &std::get<Value>(storage);
 		}
@@ -138,7 +138,7 @@ namespace query {
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr base::Ref<Value> valueOrPanicMsg([[maybe_unused]] std::string_view message) & {
+		constexpr Ref<Value> valueOrPanicMsg([[maybe_unused]] std::string_view message) & {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return &std::get<Value>(storage);
 		}
@@ -153,7 +153,7 @@ namespace query {
 		 * This kind of exception can be caught by the query framework.
 		 * If you are not handling query exceptions, use valueOrPanic instead.
 		 */
-		constexpr base::CRef<Value> valueOrThrow() const& {
+		constexpr CRef<Value> valueOrThrow() const& {
 			if (!hasValue()) throwFailed("Result is empty.");
 			return &std::get<Value>(storage);
 		}
@@ -162,7 +162,7 @@ namespace query {
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr base::Ref<Value> valueOrThrow() & {
+		constexpr Ref<Value> valueOrThrow() & {
 			if (!hasValue()) throwFailed("Result is empty.");
 			return &std::get<Value>(storage);
 		}
@@ -201,7 +201,7 @@ namespace query {
 #define UNPACK_QRESULT(var, new_value)                    \
 	auto&& RES_VAR_NAME = new_value;                      \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
-	var RES_VAR_NAME.valueOrPanic()
+	var *RES_VAR_NAME.valueOrPanic()
 
 #define UNPACK_QRESULT_MOVE(var, new_value)               \
 	auto&& RES_VAR_NAME = new_value;                      \
@@ -224,7 +224,7 @@ namespace query {
 #define UNPACK_QRESULT_CREF_TO_BOX(var, new_value)         \
 	auto&& RES_VAR_NAME = new_value;                       \
 	if (RES_VAR_NAME->hasFailed()) return query::Failed(); \
-	var RES_VAR_NAME->valueOrPanic().ref()
+	var RES_VAR_NAME->valueOrPanic()->ref()
 
 
 /**
@@ -255,7 +255,7 @@ namespace query {
 	PUSH_DIAGNOSTIC                                                                   \
 	NO_SHADOW                                                                         \
 	if (bool _qres_perform_if = _internal_qresult.hasValue())                         \
-		for (auto&& _value_name = _internal_qresult.valueOrPanic(); _qres_perform_if; \
+		for (auto&& _value_name = *_internal_qresult.valueOrPanic(); _qres_perform_if; \
 		     _qres_perform_if   = false)                                              \
 	POP_DIAGNOSTIC
 

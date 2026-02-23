@@ -53,7 +53,7 @@ namespace compiler::helios::test_utils {
 
 			for (auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrPanic();
-				result.appendList(dealiased);
+				result.appendList(*dealiased);
 			}
 			first_symbol = false;
 		}
@@ -65,7 +65,7 @@ namespace compiler::helios::test_utils {
 	}
 
 	tsh::SymbolType<> getSymbolTypeOf(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back())->valueOrThrow();
+		return *query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back())->valueOrThrow();
 	}
 
 	tsh::AbstractType getTypeOf(const std::string_view chain, ScopeID scope) {
@@ -73,7 +73,7 @@ namespace compiler::helios::test_utils {
 	}
 
 	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
+		return *query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
 		    ->valueOrThrow();
 	}
 
@@ -83,7 +83,7 @@ namespace compiler::helios::test_utils {
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
 				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
-				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic()->clone());
+				expr_tree.emplace((*query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic())->clone());
 			}
 
 		public:
@@ -106,7 +106,7 @@ namespace compiler::helios::test_utils {
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
 				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
-				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic()->clone());
+				expr_tree.emplace((*query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic())->clone());
 			}
 
 		public:

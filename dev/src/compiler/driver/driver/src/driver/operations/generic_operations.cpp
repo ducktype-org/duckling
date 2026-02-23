@@ -101,7 +101,7 @@ namespace compiler::driver {
 				moduleLog(key, "Compilation failed");
 				return query::Failed();
 			}
-			CRef lir_data = &lir_data_result->valueOrThrow();
+			auto lir_data = lir_data_result->valueOrThrow();
 
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
@@ -191,7 +191,7 @@ namespace compiler::driver {
 			= [&](frontend::ModuleID module_id) -> void {
 			auto module_result = query::entryPoint<CompileModule>({ module_id, backend });
 			if (module_result.hasValue())
-				objects.emplace_back(module_result.valueOrPanic());
+				objects.emplace_back(*module_result.valueOrPanic());
 			else
 				result = base::BAD;
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
@@ -218,7 +218,7 @@ namespace compiler::driver {
 	std::expected<RunOutput, std::string> runModuleOnDVM(
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
-		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
+		auto lir_data            = ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
 		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
 
 		vm::PID pid{};

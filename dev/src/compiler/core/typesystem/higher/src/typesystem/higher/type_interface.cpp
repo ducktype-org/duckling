@@ -39,6 +39,6 @@ namespace compiler::tsh {
 	}
 
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
-		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->valueOrThrow();
+		return *ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->valueOrThrow();
 	}
 }

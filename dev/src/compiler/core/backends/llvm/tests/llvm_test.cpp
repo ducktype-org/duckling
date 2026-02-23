@@ -56,7 +56,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
-			auto& module_hout = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
+			auto& module_hout = *ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 			for (auto& hout_glob: module_hout.glob_data) {
 				if (!hout_glob.type.getType().carriesInformation(ctx)) continue;
@@ -64,7 +64,7 @@ private:
 				llvm_module.addGlobalToModule(lir_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
+						CRef mir_func = ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
 						mir_func->debugPrint(std::cerr);
 						std::cerr << "\n\n\n";
@@ -115,8 +115,8 @@ private:
 			}
 
 			for (auto& fun: module_hout.functions) {
-				CRef mir_fun
-					= &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+				auto mir_fun
+					= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
 				llvm_module.addFunctionToModule(ctx, lir_fun);
 			}

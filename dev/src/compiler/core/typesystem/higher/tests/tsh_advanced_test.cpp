@@ -26,7 +26,7 @@ private:
 		const AbstractType my_class_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_class_symbol)
 		          ->valueOrPanicMsg("Not expecting an ERROR here...")
-		          .getType();
+		          ->getType();
 
 
 		withContextDo([&](query::Context& ctx) {
@@ -41,8 +41,8 @@ private:
 			assertTrue(
 				my_class_interface->getElementsByName().size() == 4,
 				"There should be exactly four unique names."
+				
 			);
-
 			assertTrue(
 				my_class_interface->getElementsWithName(base::StrID("a")).size() == 1,
 				"There should be exactly one 'a' member."

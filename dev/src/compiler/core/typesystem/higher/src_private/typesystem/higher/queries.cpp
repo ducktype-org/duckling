@@ -16,10 +16,10 @@ namespace compiler::tsh {
 				= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow();
 
 			std::vector<InterfaceElement> elements;
-			elements.reserve(class_data.members.size() + class_data.methods.size());
+			elements.reserve(class_data->members.size() + class_data->methods.size());
 
 			u32 declaration_order = 0;
-			for (const compiler::helios::SymID field_sym: class_data.members) {
+			for (const compiler::helios::SymID field_sym: class_data->members) {
 				elements.push_back(InterfaceElement(
 					field_sym,
 					key.value->toAbstractType(),
@@ -30,7 +30,7 @@ namespace compiler::tsh {
 				declaration_order++;
 			}
 
-			for (const compiler::helios::SymID method_sym: class_data.methods) {
+			for (const compiler::helios::SymID method_sym: class_data->methods) {
 				elements.push_back(InterfaceElement(
 					method_sym,
 					key.value->toAbstractType(),

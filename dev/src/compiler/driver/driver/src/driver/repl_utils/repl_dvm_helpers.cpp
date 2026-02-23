@@ -22,11 +22,9 @@ namespace compiler::repl {
 	std::expected<void, std::string> compileAndLoad(
 		query::Context& ctx, const helios::HOUTUnit& hout_unit, vm::PID pid
 	) {
-		CRef lir_data
-			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit,
-		                                                           base::StrID("repl_module") })
-		           ->valueOrPanic();
-
+		auto lir_data = ctx.query<driver::CompileHOUTUnitToLIRModuleData>(
+                    driver::CompileHOUTUnitToLIRModuleDataKey{ &hout_unit, base::StrID("repl_module") }
+                )->valueOrPanic();
 		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data);
 
 		return vm::api::loadCode(pid, dvm_code_collection).transform_error(vm::api::errorToString);
@@ -38,7 +36,7 @@ namespace compiler::repl {
 	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
 		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
 	) {
-		auto type_str = return_type.toString();
+		auto type_str = return_type.getType().toString();
 
 		if (type_str == "void") {
 			auto run_result = vm::api::runFunction(pid, std::string(func_name), {})

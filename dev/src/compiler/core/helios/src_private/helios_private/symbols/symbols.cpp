@@ -619,10 +619,10 @@ namespace compiler::helios {
 				                    .params      = { .with_wildcards = false } }
 				);
 				CORE_ASSERT(
-					lookup_res.hasValue() && not lookup_res.valueOrThrow().empty(),
+					lookup_res.hasValue() && not lookup_res.valueOrThrow()->empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.valueOrThrow().back() });
+				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.valueOrThrow()->back() });
 				output(ret);
 			}
 
@@ -723,15 +723,15 @@ namespace compiler::helios {
 
 			// Get the coerced HOUT expression
 			const auto hout_qresult = getHoutOfExprWithExpectedType(
-				ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
+				ctx, pst->getValue().value().unlock(ctx)->getExpr(), *type
 			);
 			if (hout_qresult.hasFailed()) return query::Failed();
 
 			// Evaluate the HOUT expression at compile-time
 			auto ctv
-				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow()->ref() });
 			if (ctv.hasFailed()) return query::Failed();
-			return ctv.valueOrThrow();
+			return *ctv.valueOrThrow();
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -966,7 +966,7 @@ namespace compiler::helios {
 			);
 
 			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-			const auto& function_body   = fun_hout_result.body;
+			const auto& function_body   = fun_hout_result->body;
 
 			HoutFunctionCallCollector visitor;
 			for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);

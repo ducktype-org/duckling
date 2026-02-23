@@ -280,7 +280,7 @@ namespace compiler::helios::code {
 				);
 
 				node
-					= makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), sym_list.valueOrThrow().back());
+					= makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), sym_list.valueOrThrow()->back());
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
@@ -488,7 +488,7 @@ namespace compiler::helios::code {
 					if (result.hasFailed())
 						return;
 					else
-						result_exprs.push_back(std::move(result.valueOrThrow()));
+						result_exprs.push_back((*result.valueOrThrow())->clone());
 				}
 
 				// @todo here we should:
@@ -575,7 +575,7 @@ namespace compiler::helios {
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
-		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+		variant_match(coercion_qresult.valueOrThrow()->getVariant()) {
 			variant_case(Coercion, coercion) { return coercion.coerce(ctx, expr_hout->clone()); }
 			variant_case(InvalidCoercion, _) {
 				if (log_error.has_value()) {

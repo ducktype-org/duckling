@@ -45,7 +45,7 @@ namespace compiler::helios::houtgen {
 			body.reserve(1 + num_fields + 1);
 
 			// - Declare result variable.
-			const auto  result_symbol_type = ctor_decl.return_type;
+			const auto  result_symbol_type = ctor_decl->return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
 					 .name = base::StrID("result"),
 					 .generated_symbol_data
@@ -66,7 +66,7 @@ namespace compiler::helios::houtgen {
 						fields.at(i).getSymbol()
 					),
 					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), ctor_decl.parameters.at(i).helios_symbol
+						ctx, code::generatedOrigin(), ctor_decl->parameters.at(i).helios_symbol
 					)
 				));
 			}
@@ -79,7 +79,7 @@ namespace compiler::helios::houtgen {
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(
 				code::generatedOrigin(),
-				&ctor_decl,
+				ctor_decl,
 				std::make_shared<const code::CodeBlock>(code::CodeBlock{
 					.statements = std::move(body),
 				})

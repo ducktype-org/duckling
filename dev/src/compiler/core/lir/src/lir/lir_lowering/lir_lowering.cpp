@@ -49,7 +49,7 @@ namespace compiler::lir {
 		tsh::FunctionAbstractType type
 			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
 		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
-		          .getType();
+		          ->getType();
 
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
@@ -66,7 +66,7 @@ namespace compiler::lir {
 
 		return FunctionLiteral{
 			.mangled_name = mangled_name,
-			.abi          = symbol_abi,
+			.abi          = *symbol_abi,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
 			.return_type_layout = return_type,
@@ -678,9 +678,9 @@ namespace compiler::lir {
 				auto abi = [&]() -> helios::SymbolABI {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return ctx.query<helios::QuerySymbolABI>(name.id)->valueOrPanicMsg(
+							return *ctx.query<helios::QuerySymbolABI>(name.id)->valueOrPanicMsg(
 								"Handling errors in MIR is not supported yet"
-							);
+							).get();
 						}
 						variant_case(mir::GlobalVariableCTOR, name) { return helios::DefaultAbi{}; }
 					}

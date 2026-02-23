@@ -16,8 +16,8 @@ namespace compiler::tsh {
 	std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
 		std::stringstream res;
 		res << "(";
-		if (!types.empty()) res << types[0].toString();
-		for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
+		if (!types.empty()) res << types[0].getType().toString();
+		for (const auto& type: types | std::views::drop(1)) res << ", " << type.getType().toString();
 		res << ")";
 
 		return res.str();
@@ -118,7 +118,7 @@ namespace compiler::tsh {
 		  pure(pure),
 		  free(free) {
 		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
-		               + result_type.toString() + ")";
+		               + result_type.getType().toString() + ")";
 	}
 
 	bool FunctionAbstractTypeImpl::isImplicitlyCoercible(
@@ -165,7 +165,7 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {
-		return &ctx.query<QueryInterfaceOfClass>(this)->valueOrThrow();
+		return ctx.query<QueryInterfaceOfClass>(this)->valueOrThrow();
 	}
 
 	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context&) const {
@@ -254,7 +254,7 @@ namespace compiler::tsh {
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
-		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().base;
+		auto& base = (*ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow()).base;
 		if (base.has_value()) return { ClassAbstractType(base.value()) };
 		return {};
 	}
@@ -263,7 +263,7 @@ namespace compiler::tsh {
 		query::Context& ctx
 	) const {
 		auto& implements
-			= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().implements;
+			= (*ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow()).implements;
 		return { implements.begin(), implements.end() };
 	}
 
@@ -271,7 +271,7 @@ namespace compiler::tsh {
 		query::Context& ctx
 	) const {
 		auto& implements
-			= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().implements;
+			= (*ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow()).implements;
 		// @TODO: change cast type to InterfaceInfo when interface type is created.
 		constexpr auto TRANSFORMER = [](const AbstractType& interface) {
 			return ClassAbstractType(interface).getSymbol();

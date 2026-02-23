@@ -94,9 +94,9 @@ private:
 		LIRModuleResult result{ .module = module, .scope = scope };
 
 		withContextDo([&](query::Context& ctx) {
-			auto& unit = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			for (const auto& hout_func: unit.functions) {
-				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrPanic();
+			auto unit = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			for (const auto& hout_func: unit->functions) {
+				CRef mir_func = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrPanic();
 				auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 				assertTrue(
 					lir_func->validateBlockOrder().isOk(),
@@ -107,10 +107,10 @@ private:
 					std::make_tuple(hout_func, mir_func, lir_func)
 				);
 			}
-			for (const auto& hout_glob: unit.glob_data) {
+			for (const auto& hout_glob: unit->glob_data) {
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
+						CRef mir_func = ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						result.ctors.put(
@@ -351,12 +351,12 @@ private:
 
 	void simpleConstant() {
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
-		const auto& hout_unit
+		const auto hout_unit
 			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
+		assertTrue(hout_unit->glob_data.size() == 1, "Expected one global data FIB_10");
 
-		auto fib_const_global_data = hout_unit.glob_data.at(0);
+		auto fib_const_global_data = hout_unit->glob_data.at(0);
 		ASSERT_EQUAL(fib_const_global_data.original_name, base::StrID("FIB_10"));
 
 		withContextDo([&](query::Context& ctx) {

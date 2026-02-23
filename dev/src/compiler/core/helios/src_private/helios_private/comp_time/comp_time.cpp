@@ -78,11 +78,11 @@ namespace compiler::helios {
 				// Type Evaluation.
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->valueOrThrow();
+					result    = *type->valueOrThrow();
 				} else if (kind(expr.symbol) == SymbolKind::Const) {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
-					result                = const_val_result.valueOrThrow();
+					result                = *const_val_result.valueOrThrow();
 				} else {
 					match_optional(expr.origin.getSourcePosition()) {
 						opt_some(pos) {
@@ -228,8 +228,8 @@ namespace compiler::helios {
 							return query::Failed();
 						}
 					},
-					lhs_ctv.getStorage(),
-					rhs_ctv.getStorage()
+					lhs_ctv->getStorage(),
+					rhs_ctv->getStorage()
 				);
 			}
 
@@ -310,7 +310,7 @@ namespace compiler::helios {
 							);
 						}
 					},
-					ctv.getStorage()
+					ctv->getStorage()
 				);
 			}
 
@@ -323,7 +323,7 @@ namespace compiler::helios {
 
 				bool        condition_is_true = false;
 				const auto& cond_ctv          = cond_result.valueOrThrow();
-				match_optional(cond_ctv.get<bool>()) {
+				match_optional(cond_ctv->get<bool>()) {
 					opt_some(value) { condition_is_true = value; }
 					opt_none {
 						CORE_PANIC(
@@ -339,14 +339,14 @@ namespace compiler::helios {
 						result = query::Failed();
 						return;
 					}
-					result = sub_result.valueOrThrow();
+					result = *sub_result.valueOrThrow();
 				} else {
 					auto sub_result = evalHoutExpr(ctx, expr.if_false.ref());
 					if (sub_result.hasFailed()) {
 						result = query::Failed();
 						return;
 					}
-					result = sub_result.valueOrThrow();
+					result = *sub_result.valueOrThrow();
 				}
 			}
 
@@ -452,7 +452,7 @@ namespace compiler::helios {
 					}
 
 					auto next_value = next_expr.valueOrThrow();
-					if (!compare(prev_value, next_value, comp)) {
+					if (!compare(*prev_value, *next_value, comp)) {
 						result = CompileTimeValue{ false };
 						return;
 					}
@@ -468,7 +468,7 @@ namespace compiler::helios {
 					result = query::Failed();
 					return;
 				}
-				result = sub_result.valueOrThrow();
+				result = *sub_result.valueOrThrow();
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
@@ -480,7 +480,7 @@ namespace compiler::helios {
 						result = query::Failed();
 						return;
 					}
-					ctv_elements.emplace_back(ctv_element_result.valueOrThrow());
+					ctv_elements.emplace_back(*ctv_element_result.valueOrThrow());
 				}
 
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
@@ -504,7 +504,7 @@ namespace compiler::helios {
 					}
 
 					subtypes.emplace_back(
-						sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+						sub_type_ctv.valueOrThrow()->get<tsh::SymbolType<>>().value()
 					);
 				}
 
@@ -520,8 +520,8 @@ namespace compiler::helios {
 				if (sub_result.hasFailed()) {
 					result = query::Failed();
 					return;
-				}
-				result = sub_result.valueOrThrow();
+				}	
+				result = *sub_result.valueOrThrow();
 			}
 
 			void visitCastExpr(const code::CastExpr& cast) final {
@@ -532,7 +532,7 @@ namespace compiler::helios {
 					return;
 				}
 				const auto& ctv     = expr_to_cast.valueOrThrow();
-				const auto& numeric = ctv.get<NumericValue>();
+				const auto& numeric = ctv->get<NumericValue>();
 				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
 
 				auto maybe_new_numeric = numeric->castTo(cast.target_type);
@@ -543,7 +543,7 @@ namespace compiler::helios {
 					result = query::Failed();
 					return;
 				}
-				result = sub_result.valueOrThrow();
+				result = *sub_result.valueOrThrow();
 			}
 
 			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
@@ -594,7 +594,7 @@ namespace compiler::helios {
 				// Panics if the CTV cannot be lifted to a type.
 				// This is fine, because we assume that this has been checked beforehand by HOUT.
 				result
-					= CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
+					= CompileTimeValue(liftCTVToTypeRecursively(ctx, *ctv_to_lift.valueOrThrow()));
 			}
 		};
 
@@ -635,10 +635,10 @@ namespace compiler::helios {
 
 			for (const SymID& func_id: *dependencies) {
 				// @TODO: #826 Change this code to a single query once it gets implemented.
-				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
-				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();
+				auto hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
+				auto mir_func = ctx.query<mir::LowerToMIRFunction>({ &*hout_func })->valueOrThrow();
 
-				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
+				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &*mir_func });
 
 				// When lowering the top level function, we store it's mangled name to know
 				// which function to call in the VM.
@@ -682,11 +682,11 @@ namespace compiler::helios {
 
 			auto args_result = evaluateArguments(ctx, call_expr->arguments);
 			if (args_result.hasFailed()) return query::Failed();
-			auto ctv_arguments = std::move(args_result.valueOrThrow());
+			auto ctv_arguments = args_result.valueOrThrow();
 
 			auto lir_build_result = prepareLIRForDVM(ctx, function_sym_id);
 			if (lir_build_result.hasFailed()) return query::Failed();
-			const auto& [func_to_call_name, all_lir_functions] = lir_build_result.valueOrThrow();
+			const auto& [func_to_call_name, all_lir_functions] = *lir_build_result.valueOrThrow();
 
 
 			// Retrieve the functions return type.
@@ -699,7 +699,7 @@ namespace compiler::helios {
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result = executeInVm(
-				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
+				ctx, func_to_call_name, all_lir_functions, *ctv_arguments, func_type.getResultType()
 			);
 
 			if (!vm_eval_result) return query::Failed();
@@ -762,6 +762,6 @@ namespace compiler::helios {
 			}
 		);
 		if (hout_qresult.hasFailed()) return query::Failed();
-		return ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+		return ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow()->ref() });
 	}
 }

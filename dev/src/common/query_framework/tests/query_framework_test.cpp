@@ -461,7 +461,7 @@ DECLARE_QUERY(
 struct IMPLEMENT_QUERY(UsesQResultTest, UsesQResult_Result) {
 	static auto provide(Context&, QKey) -> PResult {
 		query::QResult<u64> res = query::Failed();
-		return res.valueOrThrow();
+		return *res.valueOrThrow();
 	}
 
 	QUERY_AUTO_CACHE_COPY
@@ -482,7 +482,7 @@ DECLARE_QUERY(
 struct IMPLEMENT_QUERY(UsesQResultNoCatchTest, UsesQResultNoCatch_Result) {
 	static auto provide(Context&, QKey) -> PResult {
 		query::QResult<u64> res = query::Failed();
-		return res.valueOrThrow();
+		return *res.valueOrThrow();
 	}
 
 	QUERY_AUTO_CACHE_COPY
@@ -503,7 +503,7 @@ DECLARE_QUERY(
 struct IMPLEMENT_QUERY(NoQResultTest, NoQResult_Result) {
 	static auto provide(Context&, QKey) -> PResult {
 		query::QResult<u64> res = query::Failed();
-		return res.valueOrThrow();
+		return *res.valueOrThrow();
 	}
 
 	QUERY_AUTO_CACHE_COPY
@@ -1009,9 +1009,9 @@ private:
 
 		query::QResult<int> hr1 = 1;
 		ASSERT_TRUE(hr1.hasValue());
-		ASSERT_EQUAL(1, hr1.valueOrPanic());
+		ASSERT_EQUAL(1, *hr1.valueOrPanic());
 
-		int                      temp_val = hr1.valueOrPanic();
+		int                      temp_val = *hr1.valueOrPanic();
 		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);

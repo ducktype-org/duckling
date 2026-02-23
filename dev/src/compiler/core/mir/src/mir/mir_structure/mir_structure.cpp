@@ -89,11 +89,11 @@ namespace compiler::mir {
 		os << "(";
 		std::string_view separator = "";
 		for (auto& type: this->parameter_types) {
-			os << separator << type.toString();
+			os << separator << type.getType().toString();
 			separator = ", ";
 		}
 		os << ")";
-		os << " -> " << this->return_type.toString() << "\n";
+		os << " -> " << this->return_type.getType().toString() << "\n";
 
 		for (auto& local: this->local_list) {
 			os << "    ";
@@ -126,8 +126,8 @@ namespace compiler::mir {
 		variant_match(instr_params) {
 			variant_case_novalue(NoInstrParameters) { /* nothing */ }
 			variant_case(CastParameters, params) {
-				os << "from:" << params.source_type.toString()
-				   << ", to:" << params.target_type.toString();
+				os << "from:" << params.source_type.getType().toString()
+				   << ", to:" << params.target_type.getType().toString();
 			}
 		}
 		os << "},";
@@ -180,7 +180,7 @@ namespace compiler::mir {
 		if (detailed) {
 			os << ": Helios Name: " << getName().strView();
 			os << ", Type: ";
-			os << type.toString();
+			os << type.getType().toString();
 			os << ", Lifetime Scope: " << scope.value()->id;
 			if (parameter_index.has_value()) os << ", Parameter Index: " << parameter_index.value();
 		}
@@ -191,7 +191,7 @@ namespace compiler::mir {
 		if (detailed) {
 			os << ": Unstable hash: " << helios_id.queryUnstablePerfectHash();
 			os << ", Type: ";
-			os << type.toString();
+			os << type.getType().toString();
 		}
 	}
 
@@ -222,7 +222,7 @@ namespace compiler::mir {
 			"Field access on ref/box type. A proper DerefExpr should be inserted in HOUT"
 		);
 		result.projection_chain.push_back(Projection::field(field));
-		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
+		result.type = *ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;
 	}
 
@@ -243,7 +243,7 @@ namespace compiler::mir {
 
 		if (detailed) {
 			os << ": Type: ";
-			os << type.toString();
+			os << type.getType().toString();
 		}
 	}
 

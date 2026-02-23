@@ -99,7 +99,7 @@ namespace compiler::mir {
 				  variant_case(FunctionSymID, fun_sym) {
 					  return ctx.query<helios::QueryTypeOfSymbol>(fun_sym.id)
 				          ->valueOrThrow()
-				          .getType();
+				          ->getType();
 				  }
 				  variant_default {
 					  CORE_PANIC(
@@ -175,7 +175,7 @@ namespace compiler::mir {
 	MIRLocalMutRef FunctionBuilder::addLocal(const helios::SymID helios_id) {
 		local_list.emplaceBack(MIRLocal{
 			helios_id,
-			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
+			*ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
 		});
 		return local_list.last();
 	}
@@ -187,7 +187,7 @@ namespace compiler::mir {
 		CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
 		local_list.emplaceBack(MIRLocal{
 			helios_id,
-			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
+			*ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
 			parameter_index,
 		});
 		return local_list.last();
