@@ -315,7 +315,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "NOT-YET-IMPLEMENTED", "Suffix" },
+			{ "Feature not implemented", "Suffix" },
 			1
 		);
 	}
