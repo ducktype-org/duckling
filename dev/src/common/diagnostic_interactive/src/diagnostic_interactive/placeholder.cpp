@@ -63,7 +63,7 @@ namespace dia_int {
 			addArgument<TextArgument>(
 				"stacktrace",
 				"Enable the NYIStacktraces dev-logs category to see the stacktrace for this "
-			    "not-yet-implemented error."
+				"not-yet-implemented error."
 			);
 		}
 	}
