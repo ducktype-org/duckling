@@ -297,7 +297,7 @@ private:
 		// ============================ Static Arrays ============================
 		checkForErrorOnCompileModule(
 			R"(
-				fun main(n: i64) = {
+				fun main(n: u64) = {
 					var arr: i32[n];
 				}
 			)",
@@ -309,7 +309,15 @@ private:
 			R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-			{ "Type `f32` cannot be converted to type `const i64`." },
+			{ "Type `f32` cannot be converted to type `const u64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const ARR_TYPE = i32[-2];
+			)",
+			{ "Type `i32` cannot be converted to type `const u64`." },
 			1
 		);
 

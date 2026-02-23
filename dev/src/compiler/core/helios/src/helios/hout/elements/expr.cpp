@@ -664,7 +664,7 @@ namespace compiler::helios::code {
 					  }
 				  }(),
 				  base->expression_type.getValueCategory(
-				  )  // Propagate the base category. Is the array is a
+				  )  // Propagate the base category. If the array is a
 	                 // Local/Global, then the indexed element is as well.
 			  ),
 			  origin
@@ -924,7 +924,7 @@ namespace compiler::helios::code {
 		  type(type) {}
 
 	void DefaultValueExpr::debugPrint(std::ostream& out) const {
-		out << "default_value<" << expression_type.getSymbolType().toString() << ">";
+		out << "default_value(" << expression_type.getSymbolType().toString() << ")";
 	}
 
 	Box<Expr> DefaultValueExpr::clone() const {

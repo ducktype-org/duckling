@@ -124,14 +124,11 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryStaticArrayType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher{};
+			addToHash(hasher, element_type);
+			addToHash(hasher, size);
+			return hasher.finalize();
 		}
 	};
 

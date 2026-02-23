@@ -82,7 +82,7 @@ namespace compiler::helios {
 			 *
 			 * If not for that sinking `int[2][3]` would be interpreted as a array with three
 			 * elements, each of them being a 2 element array. After this function runs, the type is
-			 * correctly interpreted as a 2 element array, with each of it's element being a 3
+			 * correctly interpreted as a 2 element array, with each of its element being a 3
 			 * element array.
 			 *
 			 * @return tsh::SymbolType<> A new type with the correctly nested dimension.
@@ -166,8 +166,7 @@ namespace compiler::helios {
 								"Expression cannot be evaluated at compile-time.",
 								base::strConcat(
 									"The code is unavailable because the expression is at "
-									"least "
-									"partially compiler generated.",
+									"least partially compiler generated.",
 									"The failure happened for the symbol `",
 									name(expr.symbol),
 									"`."

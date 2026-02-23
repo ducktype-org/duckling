@@ -292,7 +292,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
-	 * It contains of a base variable and a projection chain - field projections, index projections
+	 * It consists of a base variable and a projection chain - field projections, index projections
 	 * or deref projections (if any of the elements was a reference))
 	 *
 	 * For example:
@@ -326,9 +326,9 @@ namespace compiler::mir {
 		};
 
 		struct IndexProjection {
-			// SharedBox is needed because of the cyclic dependency:
+			// Box is needed because of the cyclic dependency:
 			// IndexProjection -> MIRValue -> MIRPlace -> MIRValue.
-			// We also want MIRPlace to be copyable, thus the Shared.
+			// We also want MIRPlace to be copyable, thus it's Shared.
 			SharedBox<MIRValue> index;
 			bool                operator==(const IndexProjection&) const = default;
 		};
@@ -420,7 +420,7 @@ namespace compiler::mir {
 		/**
 		 * @brief Adds an IndexProjection to the projection chain. Panics if trying to index into a
 		 * non-array type.
-		 * @return The extended MIRPlace with a IndexProjection.
+		 * @return The extended MIRPlace with an IndexProjection.
 		 */
 		[[nodiscard]] MIRPlace withIndex(const MIRValue& index) const;
 
