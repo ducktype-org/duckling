@@ -336,6 +336,13 @@ private:
 		                .hasFailed());
 
 		try {
+			test_utils::getConstValueAs<i64>("InvalidSym", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (query::internal::QueryFailedException& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
 			test_utils::getConstValueAs<i64>("C", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (query::internal::QueryFailedException& err) {
