@@ -48,7 +48,7 @@ namespace tester {
 
 	TestSuite::CritTestError::CritTestError(std::string_view message) {
 		// This temporarily prints an early stack trace, since
-		// we now ofter terminate, after CritTestError is thrown within the worker thread.
+		// we now often terminate, after CritTestError is thrown within the worker thread.
 		std::cerr << "Critical test failure. Stopping test execution.\n";
 		std::cerr << "Stack trace at the point of failure:\n";
 		std::cerr << base::getCurrentStackTrace();
