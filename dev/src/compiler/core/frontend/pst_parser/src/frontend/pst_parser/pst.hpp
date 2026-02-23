@@ -103,12 +103,12 @@ namespace pst {
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			internal::finalizeParsing(state_box.refMut());
 			imports = internal::extractState(std::move(state_box));
-			
+
 
 			// Note: hash calculation should work even on errors in PST.
 			// We let it be calculated to don't worry about hash beeing unavailable during the
-			// compiler initialization phase, but we generally stop the compilation when there are errors anyway.
-			// if it breaks consider wrapping the lines in `if (not hasErrors())` and
+			// compiler initialization phase, but we generally stop the compilation when there are
+			// errors anyway. if it breaks consider wrapping the lines in `if (not hasErrors())` and
 			// handling it differently.
 			calcElementPathHash();
 			calcHashes();

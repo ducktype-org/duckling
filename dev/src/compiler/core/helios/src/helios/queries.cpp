@@ -757,7 +757,7 @@ namespace compiler::helios {
 
 					is_failed = true;
 					return;
-					
+
 				} else {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(

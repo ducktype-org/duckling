@@ -39,15 +39,14 @@ namespace system_command {
 
 		if (exit_code != 0) {
 			switch (on_exit_code) {
-				case ExitCodeHandling::Panic:
-					CORE_PANIC(base::strConcat("Command ", out, " exited with code ", exit_code));
-				case ExitCodeHandling::Warn:
-					CORE_USER_LOG("Command ", out, " exited with code ", exit_code, "\n");
-					break;
-				case ExitCodeHandling::Ignore:
-					break;
+			case ExitCodeHandling::Panic:
+				CORE_PANIC(base::strConcat("Command ", out, " exited with code ", exit_code));
+			case ExitCodeHandling::Warn:
+				CORE_USER_LOG("Command ", out, " exited with code ", exit_code, "\n");
+				break;
+			case ExitCodeHandling::Ignore:
+				break;
 			}
-
 		}
 
 		return exit_code;
