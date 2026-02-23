@@ -177,8 +177,7 @@ namespace compiler::helios {
 			CORE_UNREACHABLE();
 
 		default:
-			CORE_PANIC(
-				"PST element scope kind for: ", element->elementType());
+			CORE_PANIC("PST element scope kind for: ", element->elementType());
 		}
 		CORE_UNREACHABLE();
 	}
