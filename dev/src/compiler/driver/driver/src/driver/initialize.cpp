@@ -12,6 +12,7 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -86,7 +87,12 @@ namespace compiler::driver {
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
-					auto                  inputs = collectAllPstElementHashesFromGlobalPackages();
+					// We need to parse all files before compilation to collect all PST element
+					// @TODO: #1974 this should be done concurrently
+					compiler::frontend::parseAllFilesInModuleTree(
+						global_state::getMainPackage().root_module
+					);
+					auto inputs = collectAllPstElementHashesFromGlobalPackages();
 					query::external::setPreviousGraphFromRawBytes(span, std::move(inputs));
 				}
 
@@ -103,6 +109,10 @@ namespace compiler::driver {
 
 		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
 			if (inc_options.enabled) {
+				CORE_ASSERT(
+					!global_state::getPackages().empty(),
+					"Main package must be set before handling incremental compilation"
+				);
 				driver::enable_incremental_compilation = true;
 				loadPreviousQueryGraphIfExists();
 			} else {

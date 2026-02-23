@@ -500,6 +500,16 @@ namespace compiler::frontend {
 	 */
 	ModuleID createModuleTree(const fs::File& file, std::string_view package_id);
 
+	/**
+	 * Parses all source files in the module tree and their submodules recursively, creating PSTs
+	 * for each file. This is used to ensure that all PSTs are created and cached before they are
+	 * needed in queries.
+	 * @param module_id The ModuleID of the root module to start parsing from
+	 * @note This function cannot be called from query
+	 * @TODO: #1974 Make this function parse files concurrently, currently
+	 */
+	void parseAllFilesInModuleTree(ModuleID module_id);
+
 	/*
 	 * Creates a completely new module tree with a random package ID from the given file.
 	 * @note This is used mostly for tests.
