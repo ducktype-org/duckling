@@ -22,6 +22,7 @@ params:
     description: "The code snippet where the not-yet-implemented feature is located."
     optional: true
   
+  # Note that code location must be provided when code argument is provided.
   code_location:
     description: "Location of the code snippet."
     component_type: "code_location"
