@@ -305,7 +305,7 @@ namespace compiler::helios {
 				// Parameters:
 				std::vector<code::Parameter> parameters;
 				for (auto param: *param_list.unlock(ctx)) {
-					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
+					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
 					auto  param_name   = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
@@ -735,7 +735,7 @@ namespace compiler::helios {
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt);
+				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
 
@@ -748,10 +748,14 @@ namespace compiler::helios {
 						return;
 					}
 
-					throw base::NotYetImplemented(
-						"Variable declarations without initial value are not supported in HOUT yet."
-						" We should add default initialization here."
-					);
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Variable declarations without initial value are not supported yet.",
+						stmt->getSourcePosition()
+					));
+
+					is_failed = true;
+					return;
+
 				} else {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(

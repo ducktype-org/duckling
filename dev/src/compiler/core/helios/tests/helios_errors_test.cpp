@@ -134,7 +134,7 @@ private:
 					b(1,2,3);
 				}
 			)",
-			{ "no functions found" },
+			{ "no matching functions" },
 			1
 		);
 
