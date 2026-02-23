@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vm/bytecode/validator/type.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
@@ -11,7 +12,13 @@ namespace vm::code::detail {
 	 * hierarchy),
 	 * @note Throws a builder error if the type context is invalid.
 	 */
-	void validateTypesIntegrity(const TypeContext& ctx);
+
+	/**
+	 * @brief Validates (newly added) types in the given TypeContext.
+	 * @param ctx TypeContext containing types to validate.
+	 * @param new_types A vector of TypeIDs of newly added types to validate. Only these types will be validated, but the whole TypeContext is needed to perform validation.
+	 */
+	void validateTypes(const TypeContext& ctx, const std::vector<type::TypeID>& new_types);
 
 	/**
 	 * @brief Validates a single type in the given context.
@@ -21,9 +28,9 @@ namespace vm::code::detail {
 	 * @note Assumes all cycles in the hierarchy (ctx) where detected (use validateTypesIntegrity()
 	 * first).
 	 */
-	void validateType(
-		const TypeOfData&                                type,
-		const TypeContext&                               ctx,
-		const base::HashMap<base::StrID, FuncSignature>& functions
-	);
+	// void validateType(
+	// 	const TypeOfData&                                type,
+	// 	const TypeContext&                               ctx,
+	// 	const base::HashMap<base::StrID, FuncSignature>& functions
+	// );
 }

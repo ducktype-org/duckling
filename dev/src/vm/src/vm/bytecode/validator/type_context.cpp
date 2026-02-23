@@ -1,9 +1,9 @@
 #include "type_context.hpp"
 
-#include "string_id/string_id.hpp"
+#include <string_id/string_id.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
-#include "vm/bytecode/validator/type.hpp"
+#include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/type.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 

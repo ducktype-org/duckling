@@ -2,7 +2,7 @@
 
 #include "type.hpp"
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>

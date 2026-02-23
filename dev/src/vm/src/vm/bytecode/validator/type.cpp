@@ -1,8 +1,14 @@
 #include "type.hpp"
 
-#include "base/collections/optional.hpp"
+#include "base/except/exceptions.hpp"
+#include <base/collections/optional.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/type_of_data.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <variant>
 
 using namespace vm::code;
 
@@ -14,7 +20,6 @@ void type::Type::definePrimitive(Bytes size) {
 
 	kind       = concrete::Primitive{ size };
 	this->size = type::TypeSize(size, 0);
-	if (name == "void") is_instantiable = false;
 }
 
 void type::Type::definePointer(type::TypeID inner) {
@@ -23,8 +28,6 @@ void type::Type::definePointer(type::TypeID inner) {
 
 	kind       = concrete::Pointer{ inner };
 	this->size = type::TypeSize::pointer();
-
-	finalizeInstantiability();
 }
 
 void type::Type::defineFixedSizeTable(type::TypeID inner, usize element_count) {
@@ -32,8 +35,6 @@ void type::Type::defineFixedSizeTable(type::TypeID inner, usize element_count) {
 	state = State::Defined;
 
 	kind = concrete::FixedSizeTable{ .inner = inner, .element_count = element_count };
-
-	finalizeInstantiability();
 }
 
 void type::Type::defineDynamicTable(type::TypeID inner) {
@@ -46,7 +47,6 @@ void type::Type::defineDynamicTable(type::TypeID inner) {
 	/// as this is a runtime property. Though it should never be accessed,
 	/// because dynamic table is only accessed by a pointer.
 	this->size = type::TypeSize(Bytes(0), 0);
-	finalizeInstantiability();
 }
 
 void type::Type::defineData(
@@ -58,7 +58,7 @@ void type::Type::defineData(
 	ObjIdNameMap<concrete::Field, concrete::Field::ID> fields;
 	for (const auto& field_def: fields_definitions)
 		fields.insert(
-			concrete::Field{ .offset = type::TypeSize(Bytes(0), 0),
+			concrete::Field{ .offset = type::TypeSize(Bytes(0), 0),  // Offsets are calculated later
 		                     .name   = field_def.first,
 		                     .type   = field_def.second },
 			field_def.first
@@ -70,7 +70,6 @@ void type::Type::defineData(
 	};
 
 	kind = structure;
-	finalizeInstantiability();
 }
 
 void type::Type::defineClass(
@@ -109,9 +108,6 @@ void type::Type::defineClass(
 			.is_abstract = is_abstract,
 		},
 	};
-
-
-	finalizeInstantiability();
 }
 
 void type::Type::defineInterface(
@@ -138,8 +134,6 @@ void type::Type::defineInterface(
 		                                 .available_methods = virtual_methods,
 		                                 .vtable            = vtable,
 		                                 .kind = concrete::InheritanceMetadata::InterfaceKind() };
-
-	finalizeInstantiability();
 }
 
 void type::Type::defineVariant(const std::vector<TypeID>& variant_types) {
@@ -164,7 +158,6 @@ void type::Type::defineFunction(const std::vector<TypeID>& parameters, TypeID re
 
 	kind       = concrete::Function{ .parameters = parameters, .result = result };
 	this->size = type::TypeSize::pointer();
-	finalizeInstantiability();
 }
 
 void type::Type::defineOpaque(Bytes size) {
@@ -173,7 +166,6 @@ void type::Type::defineOpaque(Bytes size) {
 
 	kind       = concrete::Opaque{ size };
 	this->size = type::TypeSize(size, 0);
-	finalizeInstantiability();
 }
 
 void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
@@ -216,12 +208,7 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 			// Finalize the alternatives and calculate the size of the variant.
 			// The process to calculate data_segment_size is not trivial,
 			// because technically it's the maximum of the sizes of the alternatives, but we also
-			// need to take into account different pointer sizes.
-			// E.g. Structure of size 32 bytes (4 * i64) should be able to fit 3 pointers on regular
-			// 64-bit architecture, but once pointer size is increased to 16 bytes, the pointers do
-			// not fit anymore. This means type::TypeSize is uncomparable.
-			// What we are doing instead is doing fieldMax on all alternatives, which performs
-			// std::max on each field.
+			// need to take into account different pointer sizes. More info in TypeSize's doc-comment.
 			type::TypeSize data_segment_size(Bytes(0), 0);
 			for (auto& alternative: variant.alternatives) {
 				auto alternative_type = types.at(alternative);
@@ -367,6 +354,7 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 		variant_default { CORE_PANIC("Finalization not implemented for this type kind"); }
 	}
 
+	finalizeInstantiability(types);
 	state = State::Finalized;
 }
 
@@ -378,11 +366,74 @@ bool type::Type::operator==(const Type& other) const { return other.id == id; }
 
 type::Type::Type(base::StrID name, TypeID id): name(name), id(id) {}
 
-void type::Type::finalizeInstantiability() {
-	throw base::NotYetImplemented("finalizeInstantiability is not implemented yet");
+void type::Type::finalizeInstantiability(ObjIdNameMap<type::Type>& types) {
+	// This method assumes all dependent types are already finalized, so we can query their
+	// instantiability.
+	variant_match(kind) {
+		variant_case(concrete::Primitive, primitive) {
+			if (name == "void") is_instantiable = false;
+		}
+		variant_case(concrete::Pointer, pointer) {
+			// Any pointer is instantiable.
+			is_instantiable = true;
+		}
+		variant_case(concrete::FixedSizeTable, fixed_size_table) {
+			auto inner_type = types.at(fixed_size_table.inner);
+			is_instantiable = inner_type->isInstantiable();
+		}
+		variant_case(concrete::DynamicTable, dynamic_table) { is_instantiable = false; }
+		variant_case(concrete::Structure, structure) {
+			is_instantiable = std::ranges::all_of(structure.fields, [&](const auto& field) {
+				auto field_type = types.at(field.type);
+				return field_type->isInstantiable();
+			});
+			const bool is_abstract
+				= structure.inheritance_metadata
+			          .map([](const auto& imd) {
+						  variant_match(imd.kind) {
+							  variant_case(concrete::InheritanceMetadata::ClassKind, class_kind) {
+								  return class_kind.is_abstract;
+							  }
+							  variant_case(
+								  concrete::InheritanceMetadata::InterfaceKind, interface_kind
+							  ) {
+								  return true;
+							  }
+						  }
+						  CORE_UNREACHABLE();
+					  })
+			          .copyValueOr(false);
+			is_instantiable &= !is_abstract;
+		}
+		variant_case(concrete::Variant, variant) {
+			is_instantiable
+				= std::ranges::all_of(variant.alternatives, [&](const auto& alternative) {
+					  auto alternative_type = types.at(alternative);
+					  return alternative_type->isInstantiable();
+				  });
+		}
+		variant_case(concrete::Function, function) { is_instantiable = true; }
+		variant_case(concrete::Opaque, opaque) {
+			// Opaque types are instantiable, because otherwise there would be no way to call a
+			// function that takes or returns an opaque. They are however immutable, because there
+			// are not operations on opaque types except copying and passing to functions.
+			is_instantiable = true;
+		}
+	}
 }
 
 [[nodiscard]] type::TypeSize type::Type::getSize() const {
 	CORE_ASSERT(state == State::Finalized, "Tried to get size of a type that was not finalized");
+	CORE_ASSERT(
+		!std::holds_alternative<concrete::DynamicTable>(kind), "Tried to get size of a dynamic table"
+	);
 	return size;
+}
+
+[[nodiscard]]
+bool vm::code::type::Type::isInstantiable() const {
+	CORE_ASSERT(
+		state == State::Finalized, "Tried to query instantiability of a type that was not finalized"
+	);
+	return is_instantiable;
 }

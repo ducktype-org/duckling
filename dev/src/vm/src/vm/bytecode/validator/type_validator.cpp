@@ -1,6 +1,6 @@
 #include "type_validator.hpp"
 
-#include "vm/bytecode/validator/type.hpp"
+#include <vm/bytecode/validator/type.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>

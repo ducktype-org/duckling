@@ -1,19 +1,18 @@
 #pragma once
 
-#include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
 
-#include "vm/bytecode/validator/type_size.hpp"
-#include "vm/utils/stable_obj_id_name_map.hpp"
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/type_size.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
-#include <cmath>
 #include <unordered_set>
 #include <variant>
 
@@ -48,8 +47,8 @@ namespace vm::code::type {
 		struct Field {
 			STRONG_TYPEDEF_ID_DIRECT_CREATION(ID);
 			type::TypeSize offset;
-			base::StrID name;
-			TypeID      type;
+			base::StrID    name;
+			TypeID         type;
 		};
 
 		/**
@@ -167,6 +166,9 @@ namespace vm::code::type {
 		enum class State { Declared, Defined, Finalizing, Finalized } state = State::Declared;
 
 	public:
+		/****************/
+		/* Constructors */
+		/****************/
 		static Type declareType(base::StrID name, TypeID id);
 
 		void definePrimitive(Bytes size);
@@ -209,6 +211,9 @@ namespace vm::code::type {
 		 */
 		void finalize(ObjIdNameMap<type::Type>& types);
 
+		/**********************/
+		/* General operations */
+		/**********************/
 		[[nodiscard]] base::StrID getName() const;
 
 		[[nodiscard]] TypeID getId() const;
@@ -262,8 +267,9 @@ namespace vm::code::type {
 		// base::Optional<TypeCRef> getSuperClass() const;
 		// [[nodiscard]]
 		// bool inheritsFrom(TypeCRef other) const;
-		// [[nodiscard]]
-		// bool isInstantiable() const;
+
+		[[nodiscard]]
+		bool isInstantiable() const;
 
 		// // function
 		// [[nodiscard]]
@@ -276,11 +282,17 @@ namespace vm::code::type {
 		// base::Optional<TypeCRef> getResultType() const;
 
 	private:
-		void finalizeInstantiability();
+		void finalizeInstantiability(ObjIdNameMap<type::Type>& types);
 
+		/**
+		 * @brief Whether this type is instantiable. This is false for types that cannot be
+		 * instantiated, like void and dynamic tables or abstract classes. This flag is true for
+		 * types that can be instantiated, like primitives, structures without un-instantiable
+		 * fields, etc.
+		 */
 		bool is_instantiable = true;
 
-		type::TypeSize size;
+		type::TypeSize size = type::TypeSize(Bytes(0), 0);
 
 		Type(base::StrID name, TypeID id);
 

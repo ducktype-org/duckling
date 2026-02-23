@@ -1,53 +1,73 @@
 #pragma once
 
-#include "base/types/bits_and_bytes.hpp"
+#include "base/except/exceptions.hpp"
+#include "base/types/ints.hpp"
+#include <base/types/bits_and_bytes.hpp>
 
 namespace vm::code::type {
 	/**
-	 * @brief TypeSize consists of a number of non-pointer bytes and a number of pointer fields.
-	 * This is useful for calculating the size of types, because we need to take into account
-	 * different pointer sizes on different architectures.
-	 * @note TypeSize is not directly comparable, because of the pointer size issue mentioned above.
-	 * E.g. Structure of size 32 bytes (4 * i64) should be able to fit 3 pointers on regular 64-bit
+	 * @brief TypeSize represents the size of a type in bytes. It takes into account the fact that
+	 * pointer sizes can be different on different architectures. This is useful for calculating the
+	 * size of structured types, like structures and variants, which can contain pointer fields.
+	 * @note If TypeSize were to be a tuple of (Bytes non_pointer_bytes, usize
+	 * number_of_pointer_fields) then it would be less usefull, because of the pointer size issue:
+	 * e.g. structure of size 32 bytes (4 * i64) should be able to fit 3 pointers on regular 64-bit
 	 * architecture, but once pointer size is increased to 16 bytes, the pointers do not fit
-	 * anymore. This means type::TypeSize is uncomparable.
+	 * anymore. This means type::TypeSize is uncomparable - we can't choose a "larger" size
+	 * directly. This is why TypeSize has two separate fields for size when pointer size is 8 bytes
+	 * and when pointer size is 16 bytes, so that we can at least we can perform `fieldMax` on two
+	 * TypeSizes, which is useful for calculating the size of structures (mainly variant's data
+	 * field size).
 	 */
-	struct TypeSize {
+	class TypeSize {
+	public:
 		constexpr TypeSize() = default;
 
 		constexpr TypeSize(Bytes non_pointer_bytes, usize number_pointer_fields):
-			  non_pointer_bytes(non_pointer_bytes),
-			  number_pointer_fields(number_pointer_fields) {}
+			  size_when_ptr_is_8_bytes(non_pointer_bytes + Bytes(number_pointer_fields) * 8),
+			  size_when_ptr_is_16_bytes(non_pointer_bytes + Bytes(number_pointer_fields) * 16) {}
 
-		[[nodiscard]] static constexpr TypeSize pointer() { return { Bytes(0), 1 }; }
+		static constexpr TypeSize pointer() { return {Bytes(0), 1}; }
 
-		Bytes non_pointer_bytes;
-		usize number_pointer_fields;
+		constexpr TypeSize(Bytes size_when_ptr_is_8_bytes, Bytes size_when_ptr_is_16_bytes):
+			  size_when_ptr_is_8_bytes(size_when_ptr_is_8_bytes),
+			  size_when_ptr_is_16_bytes(size_when_ptr_is_16_bytes) {}
 
 		TypeSize operator+(const TypeSize& other) const {
-			return { non_pointer_bytes + other.non_pointer_bytes,
-				     number_pointer_fields + other.number_pointer_fields };
+			return { size_when_ptr_is_8_bytes + other.size_when_ptr_is_8_bytes,
+				     size_when_ptr_is_16_bytes + other.size_when_ptr_is_16_bytes };
 		}
 
 		TypeSize operator+=(const TypeSize& other) {
-			non_pointer_bytes += other.non_pointer_bytes;
-			number_pointer_fields += other.number_pointer_fields;
+			size_when_ptr_is_8_bytes += other.size_when_ptr_is_8_bytes;
+			size_when_ptr_is_16_bytes += other.size_when_ptr_is_16_bytes;
 			return *this;
 		}
 
 		TypeSize operator*(usize multiplier) const {
-			return { non_pointer_bytes * multiplier, number_pointer_fields * multiplier };
+			return { size_when_ptr_is_8_bytes * multiplier, size_when_ptr_is_16_bytes * multiplier };
 		}
 
 		bool operator==(const TypeSize& other) const = default;
 
 		[[nodiscard]] TypeSize fieldMax(const TypeSize& other) const {
-			return { std::max(non_pointer_bytes, other.non_pointer_bytes),
-				     std::max(number_pointer_fields, other.number_pointer_fields) };
+			return { std::max(size_when_ptr_is_8_bytes, other.size_when_ptr_is_8_bytes),
+				     std::max(size_when_ptr_is_16_bytes, other.size_when_ptr_is_16_bytes) };
 		}
 
-		[[nodiscard]] Bytes getTotalSize(Bytes pointer_size) const {
-			return non_pointer_bytes + pointer_size * number_pointer_fields;
+		[[nodiscard]] Bytes assumePointerSize(Bytes pointer_size) const {
+			switch (usize(pointer_size)) {
+			case 8:
+				return size_when_ptr_is_8_bytes;
+			case 16:
+				return size_when_ptr_is_16_bytes;
+			default:
+				CORE_PANIC("Unsupported pointer size: ", pointer_size);
+			}
 		}
+
+	private:
+		Bytes size_when_ptr_is_8_bytes;
+		Bytes size_when_ptr_is_16_bytes;
 	};
 }
