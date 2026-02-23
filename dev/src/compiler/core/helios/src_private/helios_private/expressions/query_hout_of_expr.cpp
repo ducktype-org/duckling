@@ -440,7 +440,7 @@ namespace compiler::helios::code {
 					if (not inner_type.getType().carriesInformation(ctx)) {
 						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
-						    "supported yet.",
+							"supported yet.",
 							stmt->getSourcePosition(),
 							"",
 							"here"
