@@ -42,6 +42,7 @@ public:
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(defaultInitialization);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
@@ -294,6 +295,38 @@ private:
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+1,\s+i32\s+1)" }),
 			"Expected GEP for struct field access in array: points[1].y"
+		);
+	}
+
+	void defaultInitialization() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/default_init");
+		std::string ir          = llvm_module.dumpLLVMToString();
+		std::cout << ir << '\n';
+
+		// i32 = 0
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store\s+i32\s+0,\s+ptr\s+%\w+)" }),
+			"Expected default initialization of i32 with 0"
+		);
+
+		// f64 = 0.0
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store\s+double\s+0\.0+e\+00,\s+ptr\s+%\w+)" }),
+			"Expected default initialization of f64 with 0.000000e+00"
+		);
+
+		// Point = zeroinitializer @class.point
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store\s+%.+\s+zeroinitializer,\s+ptr\s+%\w+)" }),
+			"Expected default initialization of Point with zeroinitializer"
+		);
+
+		// i32[5] = zeroinitializer [5 x i32]
+		assertTrue(
+			std::regex_search(
+				ir, std::regex{ R"(store\s+\[5\s+x\s+i32\]\s+zeroinitializer,\s+ptr\s+%\w+)" }
+			),
+			"Expected default initialization of i32[5] with zeroinitializer"
 		);
 	}
 

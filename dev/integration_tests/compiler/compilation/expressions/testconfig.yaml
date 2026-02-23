@@ -142,6 +142,15 @@ Tests:
           String: ""
         ExitCode: 0
 
+  default_init:
+    Cases:
+      # @TODO: #2079 Add a DVM case when possible.
+      llvm:
+        backend: llvm
+        Output:
+          String: "0\n0\n0\n0\n0\n0\n"
+        ExitCode: 0
+
   strings:
     Cases:
       llvm:
