@@ -311,13 +311,12 @@ namespace compiler::helios::code {
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
+			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			const auto lookup_result
+				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
+
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				const auto scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-				const auto lookup_result = HInterface::ofScopeWithParents(scope).lookup(
-					query_ctx, ident->getName().value
-				);
-
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
@@ -327,12 +326,23 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case lexer::Token::Square: {
-				auto base_res = processPSTExpr(ident);
-				UNPACK_QRESULT_MOVE(auto base =, base_res);
+				auto single_sym_res = lookup_result->getAsSingle();
+				UNPACK_QRESULT_MOVE(const auto& single_sym =, single_sym_res);
 
-				auto square_call_res = processSquareCall(query_ctx, base.getExpr(), call_expr);
-				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
-				return ChainState::ofExpr(std::move(expr));
+				auto sym            = std::get<SymbolList>(single_sym).back();
+				auto base_state_res = processNamespaceOrValue(sym, pstOrigin(ident));
+				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
+
+				if (base_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, base_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"This symbol cannot be indexed.", call_expr->getSourcePosition()
+				));
+				return query::Failed();
 			}
 			default: {
 				throw base::NotYetImplemented(base::strConcat(
@@ -629,11 +639,11 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
+			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+			                         .lookup(query_ctx, expr_access->getName().value);
+
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
-				                         .lookup(query_ctx, expr_access->getName().value);
-
 				// @TODO: #1412 fix dealias
 				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
@@ -643,15 +653,25 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case lexer::Token::Square: {
-				// TODOP: Lookup thing.
-				auto access_res = processPSTExpr(namespace_like_symbol, expr_access);
-				UNPACK_QRESULT_MOVE(ChainState access_state =, access_res);
+				auto single_sym_res = lookup_result->getAsSingle();
+				UNPACK_QRESULT_MOVE(const auto& sym_variant =, single_sym_res);
+				auto whole_expr_origin
+					= current_state.getNamespaceLikePstOrigin().extended(expr_access);
+
+				auto sym       = std::get<SymbolList>(sym_variant).back();
+				auto state_res = processNamespaceOrValue(sym, whole_expr_origin);
+				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
+
 				if (access_state.isExpr()) {
 					auto square_call_res
 						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
 					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 					return ChainState::ofExpr(std::move(expr));
 				}
+
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Namespace cannot be indexed", call_expr->getSourcePosition()
+				));
 				return query::Failed();
 			}
 			default: {

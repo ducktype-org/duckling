@@ -60,3 +60,11 @@ Tests:
         Output:
           String: "123\n"
         ExitCode: 0
+
+  arrays_and_globals:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "100\n500\n10\n20\n"
+        ExitCode: 0

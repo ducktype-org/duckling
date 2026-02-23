@@ -32,11 +32,9 @@ namespace compiler::helios::code {
 				auto error_pos = current_expr->origin.getSourcePosition().copyValueOr(
 					index_pst.unlock(ctx)->getSourcePosition()
 				);
-				ctx.logInt(
-					makeBox<dia_int::PlaceholderCodeError>(
-						"Index operator base must be indexable.", error_pos
-					)
-				);
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Index operator base must be indexable.", error_pos
+				));
 				return query::Failed();
 			}
 
@@ -77,12 +75,9 @@ namespace compiler::helios::code {
 
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderCodeError>(
-					"Array index/size must be exactly one expression.",
-					call_expr->getSourcePosition()
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Array index/size must be exactly one expression.", call_expr->getSourcePosition()
+			));
 			return query::Failed();
 		}
 
