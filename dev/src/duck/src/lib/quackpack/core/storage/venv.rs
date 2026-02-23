@@ -98,22 +98,38 @@ impl VenvData {
     }
 
     pub fn load(path: &Path) -> QuackResult<Result<Self, CorruptedFileError>> {
+        debug!("loading venv data from `{}`", path.display());
         let content = path.read_to_string()?;
         let Some((data, checksum)) = content.rsplit_once("\n") else {
+            debug!("missing newline for venv data at `{}`", path.display());
             return Ok(Err(CorruptedFileError {}));
         };
-        let current_hash = hash::sha256_bytes(data);
-        if current_hash != checksum.as_bytes() {
+        let current_hash = hash::sha256_string(data);
+        if current_hash != checksum {
+            debug!(
+                "invalid checksum (current: `{}`, old: `{}`) for venv data at `{}`",
+                current_hash,
+                checksum,
+                path.display()
+            );
             return Ok(Err(CorruptedFileError {}));
         }
-        Ok(serde_json::from_str(data).map_err(|_| CorruptedFileError {}))
+        Ok(serde_json::from_str(data).map_err(|e| {
+            debug!(
+                "json error `{e}` while deserializing venv data at `{}`",
+                path.display()
+            );
+            CorruptedFileError {}
+        }))
     }
 
-    fn save_to(&self, path: &Path) -> QuackResult<()> {
+    pub fn save_to(&self, path: &Path) -> QuackResult<()> {
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
         let mut file = path.touch()?;
-        file.write_all(format!("{data}\n{checksum}").as_ref())?;
+        let full_data = format!("{data}\n{checksum}");
+        debug!("for data `{data}` calculated checksum `{checksum}`");
+        file.write_all(full_data.as_ref())?;
         file.flush()?;
         file.sync_data()?;
         Ok(())
@@ -135,7 +151,7 @@ impl VenvData {
         self.is_ephemeral
     }
 
-    pub fn set_is_ephemeral(&mut self, is_ephemeral: bool) {
+    pub fn set_ephemeral(&mut self, is_ephemeral: bool) {
         self.is_ephemeral = is_ephemeral;
     }
 
