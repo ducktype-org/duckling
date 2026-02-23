@@ -347,10 +347,6 @@ namespace compiler::helios {
 				pst_data
 			);
 		}
-		case pst::StmtKind::NonClassStmt: {
-			//... PR
-			break;
-		}
 		default:
 			break;
 		}
@@ -380,7 +376,7 @@ namespace compiler::helios {
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
 	}
 
-	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymbolData) {
+	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
@@ -395,13 +391,27 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
+			if (key.element.unlock(ctx)->getElementKind() == pst::ElementKind::NonClassStmt) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Non-class statements inside classes are not supported yet.",
+					key.element.unlock(ctx)->getSourcePosition(),
+					"",
+					"here"
+				));
+				return query::Failed();
+			}
+			else if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<query::QResult<SymbolData>> presult) -> QResult {
+			if (presult->hasFailed())
+				return query::Failed();
+			else
+				return SymID{ &presult->valueOrPanic() };
+		})
 
 	private:
 		/**
@@ -413,7 +423,11 @@ namespace compiler::helios {
 
 			std::vector<SymID> out;
 
-			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
+			for (auto& [key, cache_entry]: cache) {
+				if (cache_entry.data.hasFailed()) continue;
+
+				out.emplace_back(SymID{ &cache_entry.data.valueOrPanic() });
+			}
 			return out;
 		}
 

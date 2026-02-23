@@ -137,6 +137,9 @@ namespace compiler::helios {
 		// this has to be transparent, since ClassBlock scopes
 		// contain all symbols in AccessBlock's
 		case pst::ElementKind::ClassSpecifierBlock:
+			return ElementScopeKind::Transparent;
+
+		// @TODO: #2087 this is a mock, figure out proper handling of non-class statements
 		case pst::ElementKind::NonClassStmt:
 			return ElementScopeKind::Transparent;
 
@@ -387,7 +390,7 @@ namespace compiler::helios {
 			for (const auto& stmt: list) {
 				switch (stmt.unlock(ctx)->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 					symbols.emplace_back(sym_id);
 					break;
 				}
@@ -403,13 +406,13 @@ namespace compiler::helios {
 					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 						symbols.emplace_back(sym_id);
 					} else if (auto import_opt
 					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
 						// Import has DeclType::Transparent as it can intrude many different
 						// symbols. This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 						symbols.emplace_back(sym_id);
 					} else {
 						CORE_PANIC(
@@ -453,7 +456,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *fun->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -463,7 +466,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *meth->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -477,7 +480,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
