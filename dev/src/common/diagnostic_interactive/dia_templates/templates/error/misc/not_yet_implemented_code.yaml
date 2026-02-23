@@ -1,7 +1,7 @@
 metadata:
   type: "error"
   family: "misc"
-  name: "nyi_code"
+  name: "not_yet_implemented_code"
   code: "1"
   active_from: "0.0.1"
   active_until: "now"

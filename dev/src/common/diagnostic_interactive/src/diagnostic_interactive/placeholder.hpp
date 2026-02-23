@@ -83,7 +83,7 @@ namespace dia_int {
 				.template_type = "message",
 				.type          = "error",
 				.family        = "misc",
-				.name          = "nyi_code",
+				.name          = "not_yet_implemented_code",
 			};
 		}
 
