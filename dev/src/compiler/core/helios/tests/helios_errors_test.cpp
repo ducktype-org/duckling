@@ -317,7 +317,7 @@ private:
 			R"(
 				const ARR_TYPE = i32[-2];
 			)",
-			{ "Type `i32` cannot be converted to type `const u64`." },
+			{ "Value cannot be converted to type `const u64` at compile-time." },
 			1
 		);
 

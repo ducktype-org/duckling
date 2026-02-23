@@ -595,7 +595,6 @@ namespace compiler::helios {
 			}
 
 			void visitCastExpr(const code::CastExpr& cast) final {
-				// @note: We assume that if we got here, then the cast is valid.
 				auto expr_to_cast = evalHoutExpr(ctx, cast.source_expr.ref());
 				if (expr_to_cast.hasFailed()) {
 					result = query::Failed();
@@ -606,14 +605,21 @@ namespace compiler::helios {
 				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
 
 				auto maybe_new_numeric = numeric->castTo(cast.target_type);
-				auto sub_result        = maybe_new_numeric.has_value()
-				                           ? CompTimeEvalResult{ maybe_new_numeric.value() }
-				                           : query::Failed();
-				if (sub_result.hasFailed()) {
+
+				if (!maybe_new_numeric.has_value()) {
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						base::strConcat(
+							"Value cannot be converted to type `",
+							cast.target_type.toString(),
+							"` at compile-time."
+						),
+						cast.origin.getSourcePosition().value()
+					));
 					result = query::Failed();
 					return;
 				}
-				result = sub_result.valueOrThrow();
+
+				result = CompileTimeValue{ maybe_new_numeric.value() };
 			}
 
 			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
