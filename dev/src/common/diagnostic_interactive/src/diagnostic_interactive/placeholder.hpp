@@ -66,16 +66,14 @@ namespace dia_int {
 	};
 
 	/**
-	 * @brief A Placeholder Not-Yet-Implemented message with a header and code snippet.Used when the
-	 * developer wants to indicate that a feature is not yet implemented.
+	 * @brief A Placeholder Not-Yet-Implemented message with a header and code snippet. Used to
+	 * indicate that a feature is not yet implemented.
 	 *
-	 * This acts as an alternative to throwing `base::NotYetImplemented` exception or panic that
+	 * This acts as an alternative to throwing panics or `base::NotYetImplemented` exceptions that
 	 * provides better user experience and testing possibilities.
 	 *
 	 * @note This should be treated as any other error, and the query that logs this error should
 	 * generally return a failed result.
-	 *
-	 *
 	 */
 	class NotYetImplementedCodeError final: public MessageBase {
 		Metadata getMetadata() const final {
