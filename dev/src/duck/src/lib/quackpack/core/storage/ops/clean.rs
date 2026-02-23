@@ -15,7 +15,7 @@ use storage::{locks, paths};
 
 #[derive(Debug)]
 pub struct CleanOutput {
-    pub removed_vevns: Vec<StrId>,
+    pub removed_venvs: Vec<StrId>,
     pub removed_packages: Vec<PathBuf>,
 }
 
@@ -50,15 +50,22 @@ pub fn delete_venv(ctx: &DuckCtx, venv: impl ToVenvId) -> QuackResult<()> {
                 venv_id
             )
         })?;
+    if !storage.venv_dir(venv_id).is_dir() {
+        return Ok(());
+    }
     storage.venv_dir(venv_id).rmtree()?;
+    storage.compile_lock(venv_id).rm()?;
+    storage.sync_lock(venv_id).rm()?;
+    storage.data_lock(venv_id).rm()?;
     Ok(())
 }
 
 /// Remove orphaned packages and expired temporary virtual environments from storage.
 pub fn clean_storage(ctx: &DuckCtx) -> QuackResult<CleanOutput> {
+    debug!("cleaning storage");
     let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
     let storage = paths::Storage::new(ctx.duck_home());
-    let mut removed_vevns = vec![];
+    let mut removed_venvs = vec![];
     let _lock = locks::CleanLock::new(&storage).context("failed to acquire a clean lock")?;
     let mut all_deps = HashSet::new();
     let now = SystemTime::now();
@@ -66,22 +73,24 @@ pub fn clean_storage(ctx: &DuckCtx) -> QuackResult<CleanOutput> {
         let venvs = storage.iter_venvs()?;
         venvs.into_iter().collect::<Result<Vec<_>, _>>()?
     };
+    debug!("iterating over all venvs: `{venvs:?}`");
     for venv in venvs {
         clean_venv_from_storage(
             venv,
             &storage,
             temporary_lifetime,
             now,
-            &mut removed_vevns,
+            &mut removed_venvs,
             &mut all_deps,
         )?;
     }
     locks::cleanup_locks(&storage)?;
+    debug!("all stashed deps are `{all_deps:?}");
     let all_pkgs = storage.iter_pkgs()?.collect::<Result<Vec<_>, _>>()?;
     let pgks_to_remove = all_pkgs
         .into_iter()
         .flat_map(|pkg| {
-            let venv_id: StrId = pkg.file_name().to_string_lossy().into_owned().into();
+            let venv_id: StrId = pkg.file_name().into();
             if !all_deps.contains(&venv_id) {
                 Some(pkg.path())
             } else {
@@ -93,7 +102,7 @@ pub fn clean_storage(ctx: &DuckCtx) -> QuackResult<CleanOutput> {
         pkg.rmtree()?;
     }
     Ok(CleanOutput {
-        removed_vevns,
+        removed_venvs,
         removed_packages: pgks_to_remove,
     })
 }
@@ -103,13 +112,14 @@ fn clean_venv_from_storage(
     storage: &Storage,
     temporary_lifetime: Duration,
     now: SystemTime,
-    removed_vevns: &mut Vec<VenvId>,
+    removed_venvs: &mut Vec<VenvId>,
     all_deps: &mut HashSet<StrId>,
 ) -> QuackResult<()> {
-    let venv_id = dir.file_name().to_string_lossy().into_owned().into();
+    let venv_id = dir.file_name().into();
     let _lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
     let venv = Venv::fix_and_load(storage, venv_id)?;
     let Some(mut venv) = venv else {
+        debug!("failed to fix and load venv `{venv_id}`");
         return Ok(());
     };
     let mut requires_save = false;
@@ -122,7 +132,13 @@ fn clean_venv_from_storage(
     if data.last_access() > now {
         data.set_last_access(now);
         requires_save = true;
+        debug!("venv `{venv_id}` requires_save, because it's too old");
     }
+    debug!(
+        "venv's `{venv_id}` (ephemeral: {}) last access is `{:?}`, now is `{now:?}`",
+        data.is_ephemeral(),
+        data.last_access()
+    );
     if data.is_ephemeral() && data.last_access() + temporary_lifetime < now {
         debug!("removing venv `{venv_id}` from the shared storage");
         dir.path().rmtree().with_context(|| {
@@ -131,7 +147,7 @@ fn clean_venv_from_storage(
                 dir.path().display()
             )
         })?;
-        removed_vevns.push(venv_id);
+        removed_venvs.push(venv_id);
         return Ok(());
     }
     // We're done mutating data, let's make borrow checker happy.
