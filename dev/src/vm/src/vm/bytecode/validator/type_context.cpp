@@ -2,10 +2,11 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type.hpp>
+#include "vm/bytecode/validator/type_validator.hpp"
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/bytecode/validator/type.hpp>
 
 using namespace vm::code;
 
@@ -109,6 +110,13 @@ void vm::code::TypeContext::insertAndValidate(
 		}
 	}
 
+	// Validate
+	const std::vector<usize> new_types_id
+		= new_types
+	    | std::views::transform([&](const auto& type) { return types.at(typeName(type))->getId(); })
+	    | std::ranges::to<std::vector>();
+	detail::validateTypes(pod_types, new_types_id, function_signatures);
+
 	// Define
 	for (const auto& type: new_types) defineTypeFromData(types, *types.at(typeName(type)), type);
 
@@ -121,13 +129,4 @@ void vm::code::TypeContext::insertAndValidate(
 
 const TypeMap& TypeContext::getCurrentTypes() const { return types; }
 
-// void TypeContext::insertType(const TypeOfData& type) {
-// 	const auto name = typeName(type);
-// 	match_optional(pod_types.atMaybe(name)) {
-// 		opt_some(previous_type) {
-// 			if (type != *previous_type) throw DuplicatedTypeError(type, *previous_type);
-// 		}
-// 		opt_none { pod_types.insert(type, name); }
-// 	}
-// }
 const vm::ObjIdNameMap<TypeOfData>& vm::code::TypeContext::getPodTypes() const { return pod_types; }

@@ -87,14 +87,16 @@ namespace vm::code {
 		constexpr const static std::string_view ERR_MSG = "Missing function declaration for ";
 
 		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
-			  ValidationError(base::strConcat(
-				  ERR_MSG,
-				  is_ctor ? "constructor '" : "destructor '",
-				  func_name,
-				  "' of global variable '",
-				  global_name,
-				  "'"
-			  )) {}
+			  ValidationError(
+				  base::strConcat(
+					  ERR_MSG,
+					  is_ctor ? "constructor '" : "destructor '",
+					  func_name,
+					  "' of global variable '",
+					  global_name,
+					  "'"
+				  )
+			  ) {}
 	};
 
 	/**
@@ -116,9 +118,9 @@ namespace vm::code {
 		constexpr static const std::string_view ERR_MSG = "Cyclic dependency detected: ";
 		const base::StrID                       type_name;
 
-		CyclicDependencyError(const Type& type):
-			  ValidationError(base::strConcat(ERR_MSG, type.getName())),
-			  type_name(type.getName()) {}
+		CyclicDependencyError(const TypeOfData& type):
+			  ValidationError(base::strConcat(ERR_MSG, typeName(type))),
+			  type_name(typeName(type)) {}
 	};
 
 #define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \

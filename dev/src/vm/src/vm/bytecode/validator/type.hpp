@@ -151,6 +151,8 @@ namespace vm::code::type {
 	template<class T>
 	concept ConcreteType = base::IsOneOf<T, CONCRETE_TYPE_LIST>;
 
+	using ConcreteTypeVariant = std::variant<std::monostate, CONCRETE_TYPE_LIST>;
+
 	/**
 	 * @brief Representation of a type used for validation and lowering.
 	 * @note We still don't know a size of a type, because pointer size is different between safe
@@ -160,9 +162,9 @@ namespace vm::code::type {
 	 * content, and then finalized. Finalization is needed to detect cyclic dependencies between
 	 * types. During finalization we fill out some data like inheritance metadata for structures,
 	 * because it's more effective.
-	 * After finalization type is immutable. Type can be unfinalized.
+	 * After finalization type is immutable. Type cannot be unfinalized.
 	 */
-	class Type {
+	class Type: public ElementBase {
 		enum class State { Declared, Defined, Finalizing, Finalized } state = State::Declared;
 
 	public:
@@ -237,6 +239,10 @@ namespace vm::code::type {
 			return std::holds_alternative<T>(kind);
 		}
 
+		[[nodiscard]] ConcreteTypeVariant getKind() const;
+
+		[[nodiscard]] bool isInstantiable() const;
+
 		[[nodiscard]] type::TypeSize getSize() const;
 
 		bool operator==(const Type& other) const;
@@ -268,9 +274,6 @@ namespace vm::code::type {
 		// [[nodiscard]]
 		// bool inheritsFrom(TypeCRef other) const;
 
-		[[nodiscard]]
-		bool isInstantiable() const;
-
 		// // function
 		// [[nodiscard]]
 		// base::Optional<u64> getParameterCount() const;
@@ -299,7 +302,7 @@ namespace vm::code::type {
 		base::StrID name;
 		TypeID      id;
 
-		std::variant<std::monostate, CONCRETE_TYPE_LIST> kind;
+		ConcreteTypeVariant kind;
 	};
 
 }

@@ -186,7 +186,7 @@ class FunctionValidator {
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && typeName(*local_stack.back().type) != signature->result_type.str)
+		if (check_ret_val && local_stack.back().type->getName() != signature->result_type.str)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 

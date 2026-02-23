@@ -431,9 +431,11 @@ void type::Type::finalizeInstantiability(ObjIdNameMap<type::Type>& types) {
 }
 
 [[nodiscard]]
-bool vm::code::type::Type::isInstantiable() const {
+bool type::Type::isInstantiable() const {
 	CORE_ASSERT(
 		state == State::Finalized, "Tried to query instantiability of a type that was not finalized"
 	);
 	return is_instantiable;
 }
+
+[[nodiscard]] type::ConcreteTypeVariant type::Type::getKind() const { return kind; }
