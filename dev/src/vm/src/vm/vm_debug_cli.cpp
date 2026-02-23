@@ -89,7 +89,29 @@ bool DuckVMDebugCli::handleLine(std::string line) {
 		help();
 	else if (stripped_line == "mem" || stripped_line == "m")
 		core.printMemory();
-	else
+	else if (stripped_line == "stack") {
+		auto stack_frames = core.enumerateFrames();
+		std::cout << "Stack frames:\n";
+		for (const auto& frame: stack_frames) {
+			std::cout << "  Frame id: " << frame.frame_id
+					  << ", function: " << frame.function_name.strView()
+					  << ", variables reference: " << frame.variables_reference << "\n";
+		}
+	} else if (stripped_line.starts_with("vars ")) {
+		std::string_view vars_arg = stripped_line.substr(5);
+		try {
+			u64  variables_reference = std::stoull(std::string(vars_arg));
+			auto var_infos           = core.dereferenceVariablesReference(variables_reference);
+			std::cout << "Variables:\n";
+			for (const auto& var_info: var_infos) {
+				std::cout << "  Name: " << var_info.name.strView() << ", Value: " << var_info.value
+						  << ", Type: " << var_info.type
+						  << ", variables reference: " << var_info.variables_reference << "\n";
+			}
+		} catch (const std::exception& e) {
+			std::cout << "Invalid variables reference: \"" << vars_arg << "\"\n";
+		}
+	} else
 		std::cout << "Invalid input: \"" << line << "\"\n";
 	return true;
 }

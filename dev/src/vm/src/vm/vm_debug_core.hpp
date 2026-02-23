@@ -35,6 +35,51 @@ public:
 
 	void printMemory() const;
 
+	struct StackFrameHook {
+		u64 thread_id;
+		u64 frame_id;
+
+		bool operator==(const StackFrameHook&) const = default;
+	};
+
+	struct VariableHook {
+		vm::Pointer  pointer;
+		vm::TypeCRef type;
+
+		bool operator==(const VariableHook&) const = default;
+	};
+
+	struct VariablesReference {
+		struct Nothing {};
+
+		u64                                                 id;
+		std::variant<StackFrameHook, VariableHook, Nothing> vr;
+
+		bool operator==(const VariablesReference&) const = default;
+	};
+
+	std::vector<VariablesReference> enumerated_variables_references;
+
+	void clearEnumeratedVariablesReferences();
+
+	struct StackFrameInfo {
+		u64         frame_id;
+		base::StrID function_name;
+		u64         variables_reference;
+	};
+
+	std::vector<StackFrameInfo> enumerateFrames(u64 thread_id = 0);
+
+	struct VariableInfo {
+		base::StrID name;
+		std::string value;
+		std::string type;
+		u64         variables_reference;  // 0 if none
+	};
+
+	std::vector<VariableInfo> dereferenceVariablesReference(u64 variables_reference);
+
+
 private:
 	struct CallInfo {
 		std::string       func_name;
