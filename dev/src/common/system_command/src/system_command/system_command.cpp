@@ -42,7 +42,7 @@ namespace system_command {
 			case ExitCodeHandling::Panic:
 				CORE_PANIC(base::strConcat("Command ", out, " exited with code ", exit_code));
 			case ExitCodeHandling::Warn:
-				CORE_USER_LOG("Command ", out, " exited with code ", exit_code, "\n");
+				CORE_USER_LOG("Warning: Command ", out, " exited with code ", exit_code, "\n");
 				break;
 			case ExitCodeHandling::Ignore:
 				break;

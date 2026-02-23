@@ -392,6 +392,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (key.element.unlock(ctx)->getElementKind() == pst::ElementKind::NonClassStmt) {
+				// @TODO: #2087 remove this branch, when non-class statements will be properly supported.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Non-class statements inside classes are not supported yet.",
 					key.element.unlock(ctx)->getSourcePosition(),
