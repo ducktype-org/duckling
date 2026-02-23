@@ -399,8 +399,7 @@ namespace compiler::helios {
 					"here"
 				));
 				return query::Failed();
-			}
-			else if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
+			} else if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };

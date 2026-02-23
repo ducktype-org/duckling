@@ -15,7 +15,9 @@ private:
 		// https://en.wikipedia.org/wiki/True_and_false_(commands)
 		auto true_ec = system_command::SystemCommand("true").execute();
 		assertTrue(true_ec == 0, "true command should return 0");
-		auto false_ec = system_command::SystemCommand("false").execute(system_command::SystemCommand::ExitCodeHandling::Ignore);
+		auto false_ec = system_command::SystemCommand("false").execute(
+			system_command::SystemCommand::ExitCodeHandling::Ignore
+		);
 		assertTrue(false_ec == 1, "false command should return 1");
 
 		assertThrows<base::Panic>(
