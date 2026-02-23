@@ -438,10 +438,10 @@ struct IMPLEMENT_QUERY(StableHashTest, u64) {
 	}
 
 	static auto store(KHash key_hash, PResult res, query ::ACD acd) -> QResult {
-		cache.put(key_hash, {.data =  res, .acd =  acd });
+		cache.put(key_hash, { .data = res, .acd = acd });
 		return cache.at(key_hash)->data;
 	}
-	};
+};
 
 QUERY_IMPLEMENTATION_BOILERPLATE(StableHashTest);
 
@@ -756,7 +756,8 @@ private:
 	}
 
 	void testDeps() {
-		// PR to discuss: large part of this test no longer works, since we can't catch panics that happen inside worker threads.
+		// PR to discuss: large part of this test no longer works, since we can't catch panics that
+		// happen inside worker threads.
 		return;
 
 #if defined(BUILD_TYPE_DEV)
