@@ -407,12 +407,13 @@ namespace compiler::helios::code {
 				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
 			}
 
-			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
+			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
-				throw base::NotYetImplemented(
-					"Suffix operators are not yet implemented in HOUT, "
-					"since they don't exist yet"
-				);
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Suffix operators are not implemented yet in HOUT, since they don't exist yet.",
+					stmt->getSourcePosition()
+				));
+				return;  // failed
 			}
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {

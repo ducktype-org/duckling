@@ -1,0 +1,62 @@
+metadata:
+  type: "error"
+  family: "misc"
+  name: "not_yet_implemented_code"
+  code: "1"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+params:
+  header_message:
+    description: "The header message of the not-yet-implemented feature."
+  
+  description:
+    description: "The detailed description of the not-yet-implemented error."
+
+  stacktrace:
+    description: "The stacktrace of the not-yet-implemented error or info how to enable it."
+  
+  code:
+    description: "The code snippet where the not-yet-implemented feature is located."
+    optional: true
+  
+  # Note that code location must be provided when code argument is provided.
+  code_location:
+    description: "Location of the code snippet."
+    component_type: "code_location"
+    optional: true
+  
+  pointer_message_content:
+    description: "The pointer message indicating the cause location."
+
+
+header_message:
+  - "[Feature not implemented] "
+  - param: "header_message"
+
+
+description:
+  - param: "description"
+  - "Stacktrace: "
+  - param: "stacktrace"
+  - case:
+      is_param_provided: "code"
+    of:
+      true:
+        - codeblock:
+            param: "code"
+          location:
+            param: "code_location"
+      false: "\nThe code location is not available."
+
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content: 
+      param: "pointer_message_content"
+
+
