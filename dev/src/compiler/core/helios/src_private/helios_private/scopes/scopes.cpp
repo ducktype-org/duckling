@@ -137,6 +137,7 @@ namespace compiler::helios {
 		// this has to be transparent, since ClassBlock scopes
 		// contain all symbols in AccessBlock's
 		case pst::ElementKind::ClassSpecifierBlock:
+		case pst::ElementKind::NonClassStmt:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::If:
@@ -176,9 +177,8 @@ namespace compiler::helios {
 			CORE_UNREACHABLE();
 
 		default:
-			throw base::NotYetImplemented(
-				base::strConcat("PST element scope kind for: ", element->elementType())
-			);
+			CORE_PANIC(
+				"PST element scope kind for: ", element->elementType());
 		}
 		CORE_UNREACHABLE();
 	}

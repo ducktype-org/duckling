@@ -347,6 +347,10 @@ namespace compiler::helios {
 				pst_data
 			);
 		}
+		case pst::StmtKind::NonClassStmt: {
+ 			//... PR
+			break;
+		}
 		default:
 			break;
 		}
