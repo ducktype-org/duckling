@@ -30,7 +30,7 @@ params:
 
 
 header_message:
-  - "Error occurred, because the feature is not yet implemented: "
+  - "NOT-YET-IMPLEMENTED Error occurred, because the feature is not implemented yet: "
   - param: "header_message"
 
 

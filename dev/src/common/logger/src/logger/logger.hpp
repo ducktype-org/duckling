@@ -21,7 +21,7 @@ namespace logger {
 		Query,             ///< Logs related to query framework.
 		QueryStacktraces,  ///< Logs related to query framework stacktraces.
 		NYIStacktraces,    ///< Logs related to stacktraces appended to not yet implemented
-		                   ///< errors/diagnostics.
+						   ///< errors/diagnostics.
 		Command,           ///< Logs related to system commands.
 		Diagnostics,       ///< Logs related to the diagnostic messages.
 

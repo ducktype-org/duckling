@@ -410,7 +410,7 @@ namespace compiler::helios::code {
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Suffix operators are not yet implemented in HOUT, since they don't exist yet.",
+					"Suffix operators are not implemented yet in HOUT, since they don't exist yet.",
 					stmt->getSourcePosition()
 				));
 				return;  // failed

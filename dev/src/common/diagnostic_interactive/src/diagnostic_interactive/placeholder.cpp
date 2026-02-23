@@ -55,15 +55,15 @@ namespace dia_int {
 			addArgument<TextArgument>("pointer_message_content", "");
 		}
 
+		addPointerMessage("cause", source_position);
+
 		if (logger::isCategoryEnabled(logger::DevLogCategories::NYIStacktraces)) {
-			addArgument<TextArgument>(
-				"stacktrace",
-				base::getCurrentStackTrace()
-			);
+			addArgument<TextArgument>("stacktrace", base::getCurrentStackTrace());
 		} else {
 			addArgument<TextArgument>(
 				"stacktrace",
-				"Enable the NYIStacktraces dev-logs category to see the stacktrace for this not-yet-implemented error."
+				"Enable the NYIStacktraces dev-logs category to see the stacktrace for this "
+			    "not-yet-implemented error."
 			);
 		}
 	}
