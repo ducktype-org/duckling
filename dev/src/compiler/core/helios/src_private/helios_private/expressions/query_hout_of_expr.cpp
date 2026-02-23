@@ -436,6 +436,17 @@ namespace compiler::helios::code {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as
 					// the `unique`/`leaking` specifiers.
+
+					if (not inner_type.getType().carriesInformation(ctx)) {
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Taking reference of type that does not carry information is not supported yet.",
+							stmt->getSourcePosition(),
+							"",
+							"here"
+						));
+						return;  // failed
+					}
+
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
 				}
