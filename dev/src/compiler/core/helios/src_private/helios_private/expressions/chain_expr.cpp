@@ -16,9 +16,9 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
-#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
+#include <helios_private/expressions/function_calls/square_call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -329,7 +329,10 @@ namespace compiler::helios::code {
 			case lexer::Token::Square: {
 				auto base_res = processPSTExpr(ident);
 				UNPACK_QRESULT_MOVE(auto base =, base_res);
-				return processSquareCall(base.getExpr(), call_expr);
+
+				auto square_call_res = processSquareCall(query_ctx, base.getExpr(), call_expr);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
 				throw base::NotYetImplemented(base::strConcat(
@@ -386,7 +389,9 @@ namespace compiler::helios::code {
 				break;
 			}
 			case lexer::Token::Square: {
-				return processSquareCall(hout_expr->clone(), call_expr);
+				auto square_call_res = processSquareCall(query_ctx, hout_expr->clone(), call_expr);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
 				throw base::NotYetImplemented(base::strConcat(
@@ -455,7 +460,10 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case lexer::Token::Square: {
-				return processSquareCall(std::move(current_expr), call_expr);
+				auto square_call_res
+					= processSquareCall(query_ctx, std::move(current_expr), call_expr);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
 				throw base::NotYetImplemented(base::strConcat(
@@ -593,8 +601,12 @@ namespace compiler::helios::code {
 				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
 
-				if (access_state.isExpr())
-					return processSquareCall(access_state.getExpr(), call_expr);
+				if (access_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
 				return query::Failed();
 			}
 			default: {
@@ -634,8 +646,12 @@ namespace compiler::helios::code {
 				// TODOP: Lookup thing.
 				auto access_res = processPSTExpr(namespace_like_symbol, expr_access);
 				UNPACK_QRESULT_MOVE(ChainState access_state =, access_res);
-				if (access_state.isExpr())
-					return processSquareCall(access_state.getExpr(), call_expr);
+				if (access_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
 				return query::Failed();
 			}
 			default: {
@@ -678,110 +694,6 @@ namespace compiler::helios::code {
 				));
 				return query::Failed();
 			}
-		}
-
-		/**
-		 * @brief Process a square bracket call on an expression. Panics if the base expression
-		 * can't be indexed (is not an array).
-		 *
-		 * - The `[ix]` expects the base to be an array-like type and a direct type (inserts
-		 * DerefExpr if needed).
-		 * - The argument for the operator has to be implicitly coercible to `i64`.
-		 */
-		auto processArrayIndexing(
-			Box<Expr> current_expr, pst::AccessLocked<pst::ExprElement> index_pst
-		) -> query::QResult<ChainState> {
-			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
-			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray) {
-				auto error_pos = current_expr->origin.getSourcePosition().copyValueOr(
-					index_pst.unlock(query_ctx)->getSourcePosition()
-				);
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Index operator base must be indexable.", error_pos
-				));
-				return query::Failed();
-			}
-
-			// Base has to be direct for array access.
-			if (current_expr->expression_type.getSymbolType().getRefKind()
-			    != tsh::ReferenceKind::Direct)
-				current_expr = makeBox<DerefExpr>(
-					query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
-				);
-
-			// @TODO: #1532 This i64 coercion should be handled by the `[]` operator taking an
-			// `u64` argument when operators are implemented properly.
-			// Index access. We assume [] takes in an i64 value.
-			auto i64_type = tsh::SymbolType<>{
-				tsh::getIntegralType(query_ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable
-			};
-			auto index_res = getHoutOfExprWithExpectedType(query_ctx, index_pst, i64_type);
-			UNPACK_QRESULT_MOVE(Box<Expr> index_expr =, index_res);
-
-			return ChainState::ofExpr(makeBox<IndexExpr>(
-				query_ctx,
-				current_expr->origin.extended(index_pst.unlock(query_ctx)),
-				std::move(current_expr),
-				std::move(index_expr)
-			));
-		}
-
-		/**
-		 * @brief Helper function of @p processPSTExpr that processes a square bracket call. This
-		 * can either mean a array type creation or an index operator.
-		 */
-		auto processSquareCall(Box<Expr> base, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState> {
-			CORE_ASSERT(
-				call_expr->getType() == lexer::Token::Square,
-				"processSquareCall called on a different call type: ",
-				char(call_expr->getType())
-			);
-
-			auto args = call_expr->getArgs().unlock(query_ctx);
-			if (args->size() != 1) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Array index/size must be exactly one expression.",
-					call_expr->getSourcePosition()
-				));
-				return query::Failed();
-			}
-
-			auto arg_pst
-				= (*args->begin()).unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr();
-
-			auto meta_res = canCoerceToMeta(query_ctx, base->expression_type.getSymbolType());
-			UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
-
-			// If base is coercible to meta, this is an array type creation.
-			if (meta_coercion_res.isValid()) {
-				// @TODO: #1532 This u64 coercion should be handled by the `[]` operator taking an
-				// `u64` argument when operators are implemented properly.
-				// Index access. We assume [] takes in an u64 value.
-				auto i64_type = tsh::SymbolType<>{
-					tsh::getIntegralType(
-						query_ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-					),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable
-				};
-
-				auto arg_res = getHoutOfExprWithExpectedType(query_ctx, arg_pst, i64_type);
-				UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
-
-				auto total_origin = base->origin.extended(call_expr);
-				return ChainState::ofExpr(makeBox<IndexExpr>(
-					query_ctx,
-					total_origin,
-					meta_coercion_res.coerce(query_ctx, std::move(base)),
-					std::move(arg_expr)
-				));
-			}
-
-			// Index operator.
-			return processArrayIndexing(std::move(base), arg_pst);
 		}
 
 		// =============================== MAIN PROCESSING LOOP ===============================
