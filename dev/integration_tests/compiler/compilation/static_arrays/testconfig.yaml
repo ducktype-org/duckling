@@ -1,4 +1,5 @@
 # Tests for static array types
+# @TODO: #1916 Add DVM cases
 Tests:
   simple_arrays:
     Cases:
@@ -50,4 +51,12 @@ Tests:
         backend: llvm
         Output:
           String: "111\n222\n333\n"
+        ExitCode: 0
+
+  arrays_and_namespaces:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "123\n"
         ExitCode: 0

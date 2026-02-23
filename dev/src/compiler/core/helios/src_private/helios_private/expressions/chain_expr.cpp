@@ -728,9 +728,7 @@ namespace compiler::helios::code {
 				// Index access. We assume [] takes in an u64 value.
 				auto i64_type = tsh::SymbolType<>{
 					tsh::getIntegralType(
-						query_ctx,
-						64,
-						tsh::IntegralAbstractType::Signedness::Unsigned
+						query_ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 					),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Immutable
