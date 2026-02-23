@@ -748,10 +748,16 @@ namespace compiler::helios {
 						return;
 					}
 
-					throw base::NotYetImplemented(
-						"Variable declarations without initial value are not supported in HOUT yet."
-						" We should add default initialization here."
-					);
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Variable declarations without initial value are not supported yet.",
+						stmt->getSourcePosition(),
+						"",
+						"here"
+					));
+
+					is_failed = true;
+					return;
+					
 				} else {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(
