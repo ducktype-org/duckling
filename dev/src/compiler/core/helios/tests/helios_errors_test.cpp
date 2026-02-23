@@ -5,6 +5,7 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/errors.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -301,10 +302,26 @@ private:
 			{ "Immutable variables must have an initial value." },
 			1
 		);
+
+
+		// =========================== Not-yet-implemented errors ==========================
+		// Note: just remove the tests when the features are implemented.
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: i64 = 0;
+					x++;
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "Suffix" },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
-		using namespace helios;
+		using namespace compiler::helios;
 
 		auto [_, root_scope]
 			= test_utils::getModule(fs::File(path("test_modules/error_generating/bad_expr")));
@@ -312,12 +329,11 @@ private:
 
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
 		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		try {
-			test_utils::getConstValueAs<i64>("InvalidExpr", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (base::NotYetImplemented& err) {
-			// Since this branch was chosen, everything worked well.
-		}
+
+		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
+						test_utils::getChain("InvalidExpr", root_scope).back()
+		)
+		                .hasFailed());
 
 		try {
 			test_utils::getConstValueAs<i64>("InvalidSym", root_scope);
