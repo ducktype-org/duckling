@@ -2,13 +2,13 @@
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
@@ -168,15 +168,18 @@ namespace compiler::helios {
 		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
 			query::Context& ctx;
 			SymID           original_symbol;
-			
-			/** 
-			 * Variable used to distinguish between initial invocation of the visitor on the whole function body, and recursive invocations on nested functions. 
+
+			/**
+			 * Variable used to distinguish between initial invocation of the visitor on the whole
+			 * function body, and recursive invocations on nested functions.
 			 */
 			bool are_we_the_top_fuction;
 
 			std::set<tsh::SymbolType<>> out;
 
-			ReturnTypeCollector(query::Context& ctx, SymID symbol, bool are_we_the_top_fuction = false):
+			ReturnTypeCollector(
+				query::Context& ctx, SymID symbol, bool are_we_the_top_fuction = false
+			):
 				  ctx(ctx),
 				  original_symbol(symbol),
 				  are_we_the_top_fuction(are_we_the_top_fuction) {}
@@ -198,7 +201,8 @@ namespace compiler::helios {
 					// we are visiting a nested function, so we should not collect return types from it
 					return;
 				}
-				// the later uses of this visitor should know that they are visiting a nested function, so we set this variable to false
+				// the later uses of this visitor should know that they are visiting a nested
+				// function, so we set this variable to false
 				are_we_the_top_fuction = false;
 
 				auto fun_body = fun->getBody();
@@ -266,7 +270,8 @@ namespace compiler::helios {
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Function declared with no explicit return type and inconsistent return statements.",
+					"Function declared with no explicit return type and inconsistent return "
+				    "statements.",
 					fun->getSourcePosition()
 				));
 				return query::Failed();
