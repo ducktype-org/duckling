@@ -318,6 +318,74 @@ private:
 			{ "Feature not implemented", "Suffix" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						break;
+					}
+				}
+			)",
+			{ "Feature not implemented", "break" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						continue;
+					}
+				}
+			)",
+			{ "Feature not implemented", "continue" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					defer 1;
+				}
+			)",
+			{ "Feature not implemented", "defer" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						redo;
+					}
+				}
+			)",
+			{ "Feature not implemented", "redo" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					for (i in 0) { }
+				}
+			)",
+			{ "Feature not implemented", "for" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					fun foo() = 0;
+				}
+			)",
+			{ "Feature not implemented", "nested", "function" },
+			1
+		);
+
+
 	}
 
 	void testErrorBadExpr() {
