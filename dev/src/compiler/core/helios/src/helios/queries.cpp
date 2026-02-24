@@ -2,6 +2,7 @@
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -168,11 +169,18 @@ namespace compiler::helios {
 			query::Context& ctx;
 			SymID           original_symbol;
 
+			/**
+			 * Variable used to distinguish between initial invocation of the visitor on the whole
+			 * function body, and recursive invocations on nested functions.
+			 */
+			bool initial_invocation;
+
 			std::set<tsh::SymbolType<>> out;
 
-			ReturnTypeCollector(query::Context& ctx, SymID symbol):
+			ReturnTypeCollector(query::Context& ctx, SymID symbol, bool initial_invocation = false):
 				  ctx(ctx),
-				  original_symbol(symbol) {}
+				  original_symbol(symbol),
+				  initial_invocation(initial_invocation) {}
 
 			// @TODO: #1710 visits for all valid stmt-s
 
@@ -187,6 +195,16 @@ namespace compiler::helios {
 			}
 
 			void visitFun(pst::Access<pst::Fun> fun) final {
+				if (not initial_invocation) {
+					// we are visiting a nested function, so we should not collect return types from it
+					return;
+				}
+				// the later uses of this visitor should know that they are visiting a nested
+				// function, so we set this variable to false.
+				// We can keep it set to false, since we fill be here in the top level function only
+				// once.
+				initial_invocation = false;
+
 				auto fun_body = fun->getBody();
 
 				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
@@ -234,7 +252,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			ReturnTypeCollector return_collector(ctx, key);
+			ReturnTypeCollector return_collector(ctx, key, true);
 			auto                fun = stmt(ctx, key).value();
 			fun->acceptVisitor(return_collector);
 			switch (return_collector.out.size()) {
@@ -252,8 +270,8 @@ namespace compiler::helios {
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Function declared with no explicit return type and inconsistent "
-					"returns",
+					"Function declared with no explicit return type and inconsistent return "
+					"statements.",
 					fun->getSourcePosition()
 				));
 				return query::Failed();
@@ -773,6 +791,62 @@ namespace compiler::helios {
 			void visitConst(pst::Access<pst::Const>) override {
 				// Consts inside functions do not produce any HOUT statement.
 				// They are translated to HOUT global data instead.
+			}
+
+			void visitContinue(pst::Access<pst::Continue> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`continue` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitBreak(pst::Access<pst::Break> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`break` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitRedo(pst::Access<pst::Redo> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`redo` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitThrow(pst::Access<pst::Throw> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`throw` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitDefer(pst::Access<pst::Defer> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`defer` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitRestart(pst::Access<pst::Restart> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`restart` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitFor(pst::Access<pst::For> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`for` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitFun(pst::Access<pst::Fun> function) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Nested functions are not supported yet.", function->getSourcePosition()
+				));
+				is_failed = true;
 			}
 		};
 
