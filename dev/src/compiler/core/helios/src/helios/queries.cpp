@@ -173,16 +173,16 @@ namespace compiler::helios {
 			 * Variable used to distinguish between initial invocation of the visitor on the whole
 			 * function body, and recursive invocations on nested functions.
 			 */
-			bool are_we_the_top_fuction;
+			bool initial_invocation;
 
 			std::set<tsh::SymbolType<>> out;
 
 			ReturnTypeCollector(
-				query::Context& ctx, SymID symbol, bool are_we_the_top_fuction = false
+				query::Context& ctx, SymID symbol, bool initial_invocation = false
 			):
 				  ctx(ctx),
 				  original_symbol(symbol),
-				  are_we_the_top_fuction(are_we_the_top_fuction) {}
+				  initial_invocation(initial_invocation) {}
 
 			// @TODO: #1710 visits for all valid stmt-s
 
@@ -197,13 +197,14 @@ namespace compiler::helios {
 			}
 
 			void visitFun(pst::Access<pst::Fun> fun) final {
-				if (not are_we_the_top_fuction) {
+				if (not initial_invocation) {
 					// we are visiting a nested function, so we should not collect return types from it
 					return;
 				}
 				// the later uses of this visitor should know that they are visiting a nested
-				// function, so we set this variable to false
-				are_we_the_top_fuction = false;
+				// function, so we set this variable to false.
+				// We can keep it set to false, since we fill be here in the top level function only once.
+				initial_invocation = false;
 
 				auto fun_body = fun->getBody();
 
