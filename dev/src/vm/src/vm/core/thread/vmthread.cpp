@@ -681,7 +681,7 @@ namespace vm {
 			// Check if you can hold it longer - releasing policy
 			// If you can't hold it longer then
 			// 1. say
-			if (false) return;
+			if (!process.shouldReleaseGil()) return;
 			has_gil = false;
 			// 2. release gil
 			process.releaseGil();

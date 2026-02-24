@@ -99,9 +99,9 @@ namespace vm {
 		std::condition_variable pause_cv;
 
 		/**
-		 * @brief Do I have GIL? 
+		 * @brief Do I have GIL?
 		 */
-        bool has_gil = false;
+		bool has_gil = false;
 
 		/**
 		 * @brief Mutex responsible for setting the execution_request and execution_request_break
@@ -297,7 +297,7 @@ namespace vm {
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
 
-        void acquireGil();
-        void releaseGil();
+		void acquireGil();
+		void releaseGil();
 	};
 }

@@ -52,7 +52,9 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 		std::mutex                  gil;
-		i64                         next_mutex_id = 0;
+		i64                         next_mutex_id  = 0;
+		u64                         operations     = 0;
+		const static u64            GIL_OPERATIONS = 10'000;
 		std::map<i64, std::shared_ptr<std::mutex>>
 			mutex_map;  // TODO lepiej pewnie co innego niz mapa
 
@@ -174,6 +176,8 @@ namespace vm {
 
 		VMThread& getVMThreadByID(i64 thread_id);
 
+		VMThread& getEmptyThread();
+
 	public:
 		void setStatus(const api::ProcStatus& new_status) noexcept;
 
@@ -214,8 +218,10 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
-		void                        acquireGil();
-		void                        releaseGil();
+		void acquireGil();
+		void releaseGil();
+		bool shouldReleaseGil();
+
 		std::shared_ptr<std::mutex> getMutex(i64 mutex_id);
 		i64                         addMutex();
 		void                        removeMutex(i64);

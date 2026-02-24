@@ -55,9 +55,8 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-		vm_threads.emplace_back(*this);
-		VMThread& thread   = vm_threads.back();
-		bool      response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
+		VMThread&        thread = getEmptyThread();
+		bool response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
 
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 		i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
@@ -91,6 +90,7 @@ namespace vm {
 
 		opt_exec_thread->join();
 		opt_exec_thread.reset();
+
 
 		auto execution_status = thread.execution_response_queue.pop();
 		variant_match(execution_status) {
@@ -359,6 +359,14 @@ namespace vm {
 		return getMainVMThread();
 	}
 
+	VMThread& VMProcess::getEmptyThread() {
+		for (auto& thread: vm_threads)
+			if (!thread.exec_thread) return thread;
+
+		vm_threads.emplace_back(*this);
+		return vm_threads.back();
+	}
+
 	std::expected<api::Response, api::ApiError> VMProcess::attach(
 		std::istream& istream, std::ostream& ostream
 	) {
@@ -420,7 +428,16 @@ namespace vm {
 
 	void VMProcess::acquireGil() { gil.lock(); }
 
-	void VMProcess::releaseGil() { gil.unlock(); }
+	void VMProcess::releaseGil() {
+		operations = 0;
+		gil.unlock();
+	}
+
+	bool VMProcess::shouldReleaseGil() {
+		operations++;
+		if (operations >= GIL_OPERATIONS) return true;
+		return false;
+	}
 
 	std::shared_ptr<std::mutex> VMProcess::getMutex(i64 mutex_id) {
 		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
@@ -436,5 +453,4 @@ namespace vm {
 		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
 		mutex_map.erase(mutex_id);
 	}
-
 }
