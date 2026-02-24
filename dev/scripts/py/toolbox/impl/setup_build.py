@@ -30,7 +30,7 @@ def setup_build_impl(
     clang_for_builtins,
     enable_jit,
     llvm_linker,
-    opt_path
+    opt_path,
     sanitizer,
 ):
 
