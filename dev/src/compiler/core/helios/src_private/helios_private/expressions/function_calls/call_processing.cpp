@@ -438,7 +438,7 @@ namespace compiler::helios::code {
 		bool                              as_a_link
 	) {
 		if (coercible_matches.empty()) return;
-		// We have to differentiate between first candidate beacuse all the other candidates will
+		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
 		base::Optional<Box<CoercibleCandidateNote>> first_candidate_msg{};
 		for (const auto& match: coercible_matches) {

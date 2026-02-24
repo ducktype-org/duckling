@@ -643,14 +643,29 @@ private:
 			auto int_type = compiler::tsh::getIntegralType(ctx, 64, Signed);
 
 
-			// Build chain comparison expressions vector
-			std::vector<base::Box<Expr>> chain_exprs;
-			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
-			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
-			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3));
+			// Build chain comparison expressions vector (1 < 2 <= 3)
+			auto first_expr = makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1);
+			auto second_expr
+				= makeBox<ReusableExpr>(ctx, makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
+			auto second_expr_reused = second_expr->nextUse();
+			auto third_expr         = makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3);
 
-			std::vector<BuiltinBinary> chain_ops{ BuiltinBinary::IntegerLt,
-				                                  BuiltinBinary::IntegerLteq };
+			// Build the comparisons vector
+			std::vector<Box<Expr>> comparisons;
+			comparisons.emplace_back(makeBox<BinaryOperatorExpr>(
+				ctx,
+				generatedOrigin(),
+				BuiltinBinary::IntegerLt,
+				std::move(first_expr),
+				std::move(second_expr)
+			));
+			comparisons.emplace_back(makeBox<BinaryOperatorExpr>(
+				ctx,
+				generatedOrigin(),
+				BuiltinBinary::IntegerLteq,
+				std::move(second_expr_reused),
+				std::move(third_expr)
+			));
 
 			// Build tuple elements
 			std::vector<base::Box<Expr>> tuple_elements;
@@ -710,9 +725,7 @@ private:
 				ctx,
 				generatedOrigin(),
 				// Condition: ChainComparisonExpr (1 < 2 <= 3)
-				makeBox<ChainComparisonExpr>(
-					ctx, generatedOrigin(), std::move(chain_exprs), std::move(chain_ops)
-				),
+				makeBox<ChainComparisonExpr>(ctx, generatedOrigin(), std::move(comparisons)),
 				// If true: SequenceExpr with nested expressions including CallExpr
 				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)

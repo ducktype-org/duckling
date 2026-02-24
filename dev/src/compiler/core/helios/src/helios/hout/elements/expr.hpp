@@ -572,7 +572,9 @@ namespace compiler::helios::code {
 	 * @TODO: User defined comparison operators.
 	 */
 	struct ChainComparisonExpr final: public Expr {
-		// A comparator can be a builtin operator or a user-defined function.
+		// A list of all comparison expressions.
+		// E.g. in `a < b < c`, this will contain the expressions for `a < b` and `b < c`.
+		// Note that `b` will typically be reused in both comparisons, via ReusableExpr.
 		std::vector<Box<Expr>> comparisons;
 
 		ChainComparisonExpr(
