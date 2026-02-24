@@ -576,6 +576,7 @@ dependencies = [
  "clap_complete",
  "console",
  "dialoguer",
+ "flate2",
  "futures",
  "git2",
  "indicatif",

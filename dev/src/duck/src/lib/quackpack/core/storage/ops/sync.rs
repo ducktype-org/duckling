@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc, time::SystemTime};
 
 use async_scoped::TokioScope;
+use flate2::read::GzDecoder;
 use tar::Archive;
 use tokio::sync::Mutex;
 
@@ -127,7 +128,7 @@ pub fn sync(
     // @TODO: #1962 Skip this, if we have nothing to install.
     // Maybe we should bump `access_time` only in that case?
     let data = VenvData::new(
-        new_freeze.clone(),
+        new_freeze,
         venv_config.is_ephemeral()?,
         pkg_ctx.package().manifest_path().to_path_buf(),
         now,
@@ -136,7 +137,7 @@ pub fn sync(
     venv.save_to(&storage)?;
     drop(data_lock);
     if expose_freezefile && !options.frozen {
-        let json = serde_json::to_string_pretty(&new_freeze)?;
+        let json = serde_json::to_string_pretty(venv.data().freeze())?;
         freeze_name(pkg_ctx.package()).write(json)?;
     }
     Ok((
@@ -232,7 +233,8 @@ async fn fetch_source_code(
                 pkg_dir.rm()?;
             }
             let file = File::open(blob_path)?;
-            let mut archive = Archive::new(file);
+            let decompressed = GzDecoder::new(file);
+            let mut archive = Archive::new(decompressed);
             archive.unpack(pkg_dir.clone())?;
             storage.mark_as_stored(&pkg_id)?;
             pkg_dir.try_fsync_dir()?;
