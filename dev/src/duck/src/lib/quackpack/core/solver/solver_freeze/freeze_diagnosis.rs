@@ -61,23 +61,9 @@ impl SolverFreeze {
     pub fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
-        new_root: ExpandedPackage,
     ) -> QuackResult<Self> {
         self.retain_not_flawed_pkgs(manifests)?;
-
-        // If the previous freeze contained the new root as a dependency and it was retained,
-        // this means that the freeze is a correct freeze for the new_root and substituting root could even
-        // break the invariant of this function.
-        // Old root package freeze can be safely deleted, since assuming no cycles,
-        // no package should depend on it.
-        // The packages depending on the new root will be deleted from the freeze during the final trimming.
-        if self.package_freezes.contains_key(&new_root) && new_root != self.main_pkg {
-            self.package_freezes.remove(&self.main_pkg);
-            self.main_pkg = new_root;
-            Ok(self)
-        } else {
-            self.substitute_root_pkg(manifests, new_root)
-        }
+        self.substitute_root_pkg(manifests)
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`]
@@ -126,6 +112,11 @@ impl SolverFreeze {
                     is_every_dep_satisfied = false;
                     break;
                 };
+                // We get rid of packages which depend on the main package, as they are not needed.
+                if *realization == self.main_pkg {
+                    is_every_dep_satisfied = false;
+                    break;
+                }
                 let Some(realization_freeze) = self.package_freezes.get(realization) else {
                     is_every_dep_satisfied = false;
                     break;
@@ -231,14 +222,13 @@ impl SolverFreeze {
     fn substitute_root_pkg(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
-        new_root: ExpandedPackage,
     ) -> QuackResult<Self> {
         let main_pkg_freeze = self
             .package_freezes
             .get(&self.main_pkg)
             .context_internal("Main package was not put into package freezes")?;
         let main_manifest = manifests
-            .get(&new_root)
+            .get(&self.main_pkg)
             .context_internal("Main package manifest not provided")?;
         // Check which main package dependencies are still satisfied.
         let mut still_satisfied_root_deps = HashSet::new();
@@ -263,8 +253,7 @@ impl SolverFreeze {
             .package_freezes
             .remove(&self.main_pkg)
             .context_internal("Main package was not put into package freezes")?;
-        self.package_freezes.insert(new_root, main_pkg_freeze);
-        self.main_pkg = new_root;
+        self.package_freezes.insert(self.main_pkg, main_pkg_freeze);
         Ok(self)
     }
 }
@@ -368,7 +357,7 @@ features:
         };
         let new_freeze = prev_freeze
             .clone()
-            .find_maximal_correct_dep_solution(&manifests, exp_pkg_a)
+            .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         assert!(new_freeze == prev_freeze);
     }
@@ -441,7 +430,7 @@ metadata:
         };
         let new_freeze = prev_freeze
             .clone()
-            .find_maximal_correct_dep_solution(&manifests, exp_pkg_a)
+            .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         assert!(new_freeze.package_freezes.len() == 1);
@@ -532,7 +521,7 @@ metadata:
             main_pkg: exp_pkg_a,
         };
         let new_freeze = prev_freeze
-            .find_maximal_correct_dep_solution(&manifests, exp_pkg_a)
+            .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
@@ -650,7 +639,7 @@ metadata:
             main_pkg: exp_pkg_a,
         };
         let new_freeze = prev_freeze
-            .find_maximal_correct_dep_solution(&manifests, exp_pkg_a)
+            .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_d = new_freeze.package_freezes.get(&exp_pkg_d).unwrap();

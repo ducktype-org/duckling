@@ -123,7 +123,7 @@ impl<'duck> Solver<'duck, Prepared> {
         prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
         let maximal_valid_freeze = self
             .current_freeze
-            .find_maximal_correct_dep_solution(&prev_freeze_manifests, self.root_pkg)?;
+            .find_maximal_correct_dep_solution(&prev_freeze_manifests)?;
         let Some(root_freeze) = maximal_valid_freeze
             .package_freezes
             .get(&maximal_valid_freeze.main_pkg)
