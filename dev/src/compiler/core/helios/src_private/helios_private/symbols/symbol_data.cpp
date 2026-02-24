@@ -129,6 +129,21 @@ namespace compiler::helios {
 			}
 			CORE_UNREACHABLE();
 		}
+
+		[[nodiscard]]
+		base::Optional<ScopeID> GeneratedSymbolData::maybeScope() const {
+			variant_match(data) {
+				variant_case(ImplicitConstructor, ctor) { return {}; }
+				variant_case(Parameter, param) { return {}; }
+				variant_case(SelfParameter, param) {
+					return param.scope;
+				}
+				variant_case(Variable, var) { return {}; }
+				variant_case(ReplExpressionWrapper, repl) { return {}; }
+				variant_default { CORE_PANIC("Unhandled symbol kind"); }
+			}
+			CORE_UNREACHABLE();
+		}
 	}
 
 	SymbolData SymbolData::makePSTSymbolData(

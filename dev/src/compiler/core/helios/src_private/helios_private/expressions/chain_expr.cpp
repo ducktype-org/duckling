@@ -660,7 +660,6 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::IdentifierLiteral> ident)
 			-> query::QResult<ChainState> {
-			std::cout << "processPSTExpr on expr and identifier literal" << std::endl;
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, ident->getName().value);
@@ -670,8 +669,6 @@ namespace compiler::helios::code {
 			// the following if statement. This is temporary, as symbol ambiguity should be
 			// handled differently than through dynamic field access.
 			UNPACK_QRESULT_MOVE(const auto& looked_up_symbols =, looked_up_symbols_result);
-			std::cout << "Lookup completed" <<std::endl;
-
 
 			variant_match(looked_up_symbols) {
 				variant_case(SymbolList, result) {
@@ -801,7 +798,6 @@ namespace compiler::helios::code {
 			if (lookup_result->isEmpty()) return{}; // We did not find a matching field nor a method
 
 			// If we found any matching symbols we continue constructing chain from `self` context
-			std::cout << "\33[95mProcessing chain from self\33[0m" << std::endl;
 			this->current_state = std::move(self_expr);
 
 			if (isCurrentElement<pst::expr::IdentifierLiteral>()
@@ -810,7 +806,6 @@ namespace compiler::helios::code {
 				this->index += 2;
 				return error;
 			} else if (isCurrentElement<pst::expr::IdentifierLiteral>()) {
-				std::cout << "Step on identifier literal and no call" << std::endl;
 				auto error = step<pst::expr::IdentifierLiteral>();
 				this->index++;
 				return error;

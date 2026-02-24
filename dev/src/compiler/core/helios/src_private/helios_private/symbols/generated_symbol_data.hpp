@@ -87,5 +87,6 @@ namespace compiler::helios::houtgen {
 		base::Bit256      queryUnstablePerfectHash() const;
 		tsh::SymbolType<> getType(query::Context& ctx) const;
 		[[nodiscard]] ScopeID		      getScope() const;
+		[[nodiscard]] base::Optional<ScopeID> maybeScope() const;
 	};
 }
