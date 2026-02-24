@@ -139,6 +139,10 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassSpecifierBlock:
 			return ElementScopeKind::Transparent;
 
+		// @TODO: #2087 this is a mock, figure out proper handling of non-class statements
+		case pst::ElementKind::NonClassStmt:
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::If:
 		case pst::ElementKind::While:
 		case pst::ElementKind::For:
@@ -176,9 +180,7 @@ namespace compiler::helios {
 			CORE_UNREACHABLE();
 
 		default:
-			throw base::NotYetImplemented(
-				base::strConcat("PST element scope kind for: ", element->elementType())
-			);
+			CORE_PANIC("PST element scope kind for: ", element->elementType());
 		}
 		CORE_UNREACHABLE();
 	}
@@ -388,7 +390,7 @@ namespace compiler::helios {
 			for (const auto& stmt: list) {
 				switch (stmt.unlock(ctx)->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 					symbols.emplace_back(sym_id);
 					break;
 				}
@@ -404,13 +406,13 @@ namespace compiler::helios {
 					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 						symbols.emplace_back(sym_id);
 					} else if (auto import_opt
 					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
 						// Import has DeclType::Transparent as it can intrude many different
 						// symbols. This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 						symbols.emplace_back(sym_id);
 					} else {
 						CORE_PANIC(
@@ -454,7 +456,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *fun->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -464,7 +466,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *meth->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				out.emplace_back(ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
@@ -486,7 +488,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -501,6 +503,13 @@ namespace compiler::helios {
 			void visitWhile(pst::Access<pst::While>) override {
 				// Scope of "while →(...)← {}"
 				// @TODO: check if "While" defines any variables in its condition
+				// and add them here.
+				output(std::vector<SymID>{});
+			}
+
+			void visitFor(pst::Access<pst::For>) override {
+				// Scope of "for →(...)← {}"
+				// @TODO: #2096 add for loop variables to the scope
 				// and add them here.
 				output(std::vector<SymID>{});
 			}
