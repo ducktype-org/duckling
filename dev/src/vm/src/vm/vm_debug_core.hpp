@@ -78,6 +78,9 @@ public:
 	};
 
 	std::vector<VariableInfo> dereferenceVariablesReference(u64 variables_reference);
+	void                      editVariable(
+							 u64 variables_reference, const std::string& variable_name, const std::string& new_value
+						 );
 
 
 private:
