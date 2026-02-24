@@ -12,6 +12,7 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -79,19 +80,44 @@ namespace compiler::driver {
 			auto maybe_query_col = root->subCollectionAtMaybe(base::StrID("query"));
 
 			if (maybe_query_col.has_value()) {
-				auto query_col  = maybe_query_col.value();
+				auto query_col = maybe_query_col.value();
+
+				// Load previous query graph
 				auto maybe_blob = query_col->blobArtifactAtMaybe(base::StrID("query_graph"));
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
-					auto                  inputs = collectAllPstElementHashesFromGlobalPackages();
+					// We need to parse all files before compilation to collect all PST element
+					// @TODO: #1974 this should be done concurrently
+					compiler::frontend::parseAllFilesInModuleTree(
+						global_state::getMainPackage().root_module
+					);
+					auto inputs = collectAllPstElementHashesFromGlobalPackages();
 					query::external::setPreviousGraphFromRawBytes(span, std::move(inputs));
+				}
+
+				// Load previous metadata (must be after graph)
+				auto maybe_metadata_blob
+					= query_col->blobArtifactAtMaybe(base::StrID("query_metadata"));
+				if (maybe_metadata_blob.has_value()) {
+					auto                  view = maybe_metadata_blob.value()->getDataView();
+					std::span<const byte> span(view.getBegin(), view.size());
+					query::external::setPreviousMetadataFromRawBytes(span);
 				}
 			}
 		}
 
 		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
-			if (inc_options.enabled) loadPreviousQueryGraphIfExists();
+			if (inc_options.enabled) {
+				CORE_ASSERT(
+					!global_state::getPackages().empty(),
+					"Main package must be set before handling incremental compilation"
+				);
+				driver::enable_incremental_compilation = true;
+				loadPreviousQueryGraphIfExists();
+			} else {
+				driver::enable_incremental_compilation = false;
+			}
 		}
 
 		void handleBackendOptions(const global_state::BackendOptions& backend_options) {

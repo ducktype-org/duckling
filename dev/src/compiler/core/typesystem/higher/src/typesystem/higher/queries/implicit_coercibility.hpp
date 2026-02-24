@@ -33,6 +33,7 @@
 
 #include <base/collections/maps.hpp>
 
+#include <hashing/hash.hpp>
 #include <query_framework/query_int.hpp>
 
 // In the future, coercibility could work significantly differently.
@@ -66,20 +67,16 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryImplicitCoercibilityOnAbstractType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(source, target);
 		}
 	};
 
 	/**
 	 * @brief Query to check whether implicit coercion from one type described by AbstractType to
 	 * another is allowed.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryImplicitCoercibilityOnAbstractType,
@@ -113,20 +110,16 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryImplicitCoercibilityOnSymbolType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(source, target);
 		}
 	};
 
 	/**
 	 * @brief Query to check whether implicit coercion from one value described by SymbolType to
 	 * another is allowed.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryImplicitCoercibilityOnSymbolType,
@@ -160,20 +153,16 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryImplicitCoercibilityOnExpressionType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(source, target);
 		}
 	};
 
 	/**
 	 * @brief Query to check whether implicit coercion from one value described by ExpressionType to
 	 * another is allowed.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryImplicitCoercibilityOnExpressionType,

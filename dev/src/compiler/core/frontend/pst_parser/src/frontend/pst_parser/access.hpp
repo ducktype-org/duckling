@@ -5,8 +5,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
-#include <query_framework/context_fd.hpp>
-#include <query_framework/query_hash.hpp>
+#include <query_framework/context/context_fd.hpp>
+#include <query_framework/utils/query_hash.hpp>
 #include <token_parser_core/debug_print.hpp>
 
 namespace pst {
@@ -44,6 +44,9 @@ namespace pst {
 
 		template<typename T>
 		Access(Access<T>&& other): ref(std::move(other).ref) {}
+
+		template<typename E>
+		Access(const Access<E>& other) noexcept: ref(other.ref) {}
 
 		/**
 		 * @brief This should be fine for now, casting might end up as null which would be

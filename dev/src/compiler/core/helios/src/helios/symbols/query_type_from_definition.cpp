@@ -6,7 +6,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -47,7 +47,7 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
-			symbol_ref->getPSTData()->pst_element.unlock(ctx)->acceptVisitor(visitor);
+			symbol_ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
 			return visitor.definition_symbol_type.value();
 		}
 

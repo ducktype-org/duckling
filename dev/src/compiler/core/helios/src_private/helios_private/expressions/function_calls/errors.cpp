@@ -3,20 +3,21 @@
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios::code {
 	using namespace dia_int;
@@ -105,19 +106,15 @@ namespace compiler::helios::code {
 
 	public:
 		CallMissingArgumentError(
-			dia::SourcePosition         call_source_position,
-			dia::SourcePosition         declaration_source_position,
-			base::Optional<std::string> function_name
+			dia::SourcePosition                 call_position,
+			base::Optional<dia::SourcePosition> missing_arg_position_opt
 		):
-			  MessageWithCodeFragmentAndCause(declaration_source_position) {
-			addArgument<CodeArgument>("call_code", call_source_position);
-			addArgument<CodeLocationArgument>("call_code_location", call_source_position);
-			addPointerMessage({ "call_cause", call_source_position });
-
-			if (function_name.has_value())
-				addArgument<dia_int::TextArgument>(
-					"function_name", std::move(function_name.value())
-				);
+			  MessageWithCodeFragmentAndCause(call_position) {
+			if_opt_some(missing_arg_position_opt, missing_arg_position) {
+				addArgument<CodeArgument>("missing_arg_code", missing_arg_position);
+				addArgument<CodeLocationArgument>("missing_arg_code_location", missing_arg_position);
+				addPointerMessage({ "missing_arg", missing_arg_position });
+			}
 		}
 	};
 
@@ -164,10 +161,9 @@ namespace compiler::helios::code {
 		}
 	};
 
-	// all the other classes
-
-	// all other notes
-
+	/**
+	 * Documentation in the header file.
+	 */
 	pst::Access<pst::ParamList> getFunctionParamList(
 		query::Context& ctx, pst::Access<pst::LangElement> function_decl
 	) {
@@ -181,7 +177,9 @@ namespace compiler::helios::code {
 			return fun_decl->getParams().unlock(ctx);
 		}
 		case pst::ElementKind::ClassMethod: {
-			CORE_PANIC("Class methods not supported yet");
+			// @TODO: #1547 When class methods are being implemented think of the errors messages
+			auto class_method = function_decl.dynamicCast<pst::Method>().value();
+			return class_method->getParams().unlock(ctx);
 		}
 		default:
 			CORE_PANIC("Expected function or method declaration");
@@ -268,18 +266,22 @@ namespace compiler::helios::code {
 						);
 					}
 					variant_case(MissingCallArgument, data) {
-						auto decl = getSymRef(data.function)->getPSTData()->pst_element.unlock(ctx);
-						auto param_decl
-							= getNthDeclarationParameter(ctx, decl, data.parameter_index);
-
-						base::Optional<std::string> function_name_str{};
-						if (is_for_candidate_function)
-							function_name_str.emplace(name(data.function).str());
+						if_opt_some(
+							getSymRef(data.function)->getDataOpt<PstSymbolData>(), pst_data
+						) {
+							auto param_decl = getNthDeclarationParameter(
+								ctx, pst_data->getElement().unlock(ctx), data.parameter_index
+							);
+							base::Optional<dia::SourcePosition> param_position{
+								param_decl->getSourcePosition()
+							};
+							return makeBox<CallMissingArgumentError>(
+								call_expr->getSourcePosition(), param_position
+							);
+						}
 
 						return makeBox<CallMissingArgumentError>(
-							call_expr->getSourcePosition(),
-							param_decl->getSourcePosition(),
-							std::move(function_name_str)
+							call_expr->getSourcePosition(), std::nullopt
 						);
 					}
 					variant_case(NamedArgumentProvidedByPositional, data) {

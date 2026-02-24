@@ -116,6 +116,12 @@ from click import Choice, option, command, prompt
     default=None,
 )
 @option(
+    "--sanitizer",
+    help="Enable a sanitizer. Choices: asan (AddressSanitizer), tsan (ThreadSanitizer), ubsan (UndefinedBehaviorSanitizer).",
+    type=Choice(["asan", "tsan", "ubsan"], case_sensitive=False),
+    default=None,
+)
+@option(
     "--enable-jit",
     prompt="Enable JIT",
     help="Whether or not to enable JIT compilation.",
@@ -123,7 +129,6 @@ from click import Choice, option, command, prompt
     default=False,
     is_flag=True,
 )
-
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
 

@@ -48,7 +48,7 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContents(code);
+			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
 			return (not parsed.hasErrors()) == good;
 		}
 
@@ -68,7 +68,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -89,7 +89,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -122,7 +122,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
-				this->code, hashing::ComponentHash{}, context
+				this->code, pst::PSTType::Program, hashing::ComponentHash{}, context
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -219,22 +219,31 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::If, true> simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
 	Example<pst::If, true> simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
 
-	Example<pst::Import, true> simple_import{ "import std.math.sqrt as sqrt" };
+	Example<pst::Import, true>  simple_import{ "import std.math.sqrt as sqrt" };
+	Example<pst::Import, false> empty_import{ "import" };
+	Example<pst::Import, false> empty_nested_import{ "import ()" };
+	Example<pst::Import, false> empty_star_import{ "import .*" };
+	Example<pst::Import, true>  nested_import{ "import A.B.(C,)" };
+	Example<pst::Import, true>  nested_import2{ "import A.B.(C,(D, E),)" };
+	Example<pst::Import, false> missing_period_import{ "import A.B(C,(D, E),)" };
+	Example<pst::Import, false> empty_nested_ard_import{ "import A.B.(C,(D, E),,)" };
+	Example<pst::Import, true>  as_import{ "import A.B.C as D" };
+	Example<pst::Import, true>  hides_import{ "import A.B.* hides D , G, C" };
 
 	Example<pst::Namespace, true> simple_namespace{ "namespace name {}" };
 
 	Example<pst::RoundGroupExpr, true>  simple_round_group{ "(a + b)" };
 	Example<pst::RoundGroupExpr, false> bad_round_group{ "a + b" };
 
-	Example<pst::Stmt, true>  simple_stmt{ "x = a + b;" };
-	Example<pst::Stmt, true>  expand_stmt{ "expand \"return 0;\";" };
-	Example<pst::Stmt, false> bad_stmt{ "x = a + b" };
+	Example<pst::Stmt, true> simple_stmt{ "x = a + b;" };
+	Example<pst::Stmt, true> simple_stmt_implicit_return{ "x = a + b" };
+	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 
 	Example<pst::Using, true> simple_using{ "using std.math" };
 
-	Example<pst::Stmt, true>  public_specifier{ "public expand \"return 0;\";" };
+	Example<pst::Stmt, true>  public_specifier{ "public expand \"return 0;\"" };
 	Example<pst::Stmt, true>  private_specifier{ "private fun foo() = {}" };
 	Example<pst::Stmt, true>  protected_specifier{ "protected class x{}" };
 	Example<pst::Stmt, true>  public_block{ "public {class x{}}" };
@@ -316,6 +325,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, false> bad1_ternary{ "if if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad2_ternary{ "+ if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad3_ternary{ "if 5 else y" };
+
+	Example<pst::UniversalExprHolder, true> range_operator{ "x[1 .. 10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_to{ "x[.. 10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_from{ "x[1 ..]" };
+	// This is because it's lexed as two floats 1. and .10, not necessarily desired behaviour
+	Example<pst::UniversalExprHolder, false> range_operator_bad{ "x[1..10]" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
 	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };

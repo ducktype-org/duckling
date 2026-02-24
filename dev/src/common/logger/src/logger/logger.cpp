@@ -47,6 +47,7 @@ namespace logger {
 		HANDLE_CATEGORY_NAME(Artifacts)
 		HANDLE_CATEGORY_NAME(Query)
 		HANDLE_CATEGORY_NAME(QueryStacktraces)
+		HANDLE_CATEGORY_NAME(NYIStacktraces)
 		HANDLE_CATEGORY_NAME(Command)
 		HANDLE_CATEGORY_NAME(Diagnostics)
 		HANDLE_CATEGORY_NAME(Compiler)
@@ -55,6 +56,7 @@ namespace logger {
 		HANDLE_CATEGORY_NAME(Linker)
 		HANDLE_CATEGORY_NAME(DVM)
 		HANDLE_CATEGORY_NAME(DVMDetails)
+		HANDLE_CATEGORY_NAME(Incremental)
 		HANDLE_CATEGORY_NAME(REPL)
 		else std::cerr << "Warning: Unknown log category name: " << category_name << '\n';
 	}

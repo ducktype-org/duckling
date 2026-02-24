@@ -478,14 +478,13 @@ namespace vm {
 			    && global->ctor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->ctor_name.value()))
+					                        .atMaybe(global->ctor_name.value())
 					                        .expect(
 												"Called function does not exist: "
 												+ global->ctor_name.value().str()
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					const auto       exit_value     = executeFunction(start_function, func);
-					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}
@@ -525,8 +524,7 @@ namespace vm {
 												+ global->dtor_name.value().str()
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					const auto       exit_value     = executeFunction(start_function, func);
-					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}
@@ -621,6 +619,31 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
+	void VMThread::safeRun(
+		CRef<low::LowVMProgram> program,
+		const std::string&      func_name,
+		const RunArguments&     run_arguments
+	) {
+		try {
+			run(program, func_name, run_arguments);
+		} catch (const exceptions::VMRuntimeException& e) {
+			std::cerr << "VMThread has panicked: " << e.what() << "\n";
+			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+		}
+	}
+
+	void VMThread::runNoSpawn(
+		CRef<low::LowVMProgram> program,
+		const std::string&      func_name,
+		const RunArguments&     run_arguments
+	) {
+		// @TODO: #2040 Make this function check if anyone else is executing anything,
+		// or simplify the state checking, perhaps remove state from thread and move all the state
+		// to the process?
+		safeRun(program, func_name, run_arguments);
+		waitForRunningResponse();
+	}
+
 	bool VMThread::spawnThreadAndRun(
 		CRef<low::LowVMProgram> program,
 		const std::string&      func_name,
@@ -629,14 +652,7 @@ namespace vm {
 		if (exec_thread)  // There is already a thread running.
 			return false;
 
-		exec_thread = std::thread([this, program, func_name, run_arguments] {
-			try {
-				run(program, func_name, run_arguments);
-			} catch (const exceptions::VMRuntimeException& e) {
-				std::cerr << "VMThread has panicked: " << e.what() << "\n";
-				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-			}
-		});
+		exec_thread = std::thread(&VMThread::safeRun, this, program, func_name, run_arguments);
 		return waitForRunningResponse();
 	}
 
@@ -659,4 +675,5 @@ namespace vm {
 	bool VMThread::waitForRunningResponse() {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
+
 }

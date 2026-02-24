@@ -4,8 +4,8 @@
 
 #include <ctv/ctv.hpp>
 #include <helios/hout/hout_fd.hpp>
-#include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_abi.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -14,7 +14,7 @@
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/types/ok_bad.hpp>
 
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 #include <memory>
 #include <utility>
@@ -27,6 +27,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf, 
+	AllocBox,
+	// @TODO: #1894 This approach may be temporary and depends on how we handle destructors in the future.
+	FreeBox,
 
 	/**
 		@brief Placeholder.

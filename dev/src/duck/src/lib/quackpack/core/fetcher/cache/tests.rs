@@ -4,9 +4,8 @@ use super::*;
 use tempfile::{TempDir, tempdir};
 
 use crate::{
-    quackpack::core::{Version, fetcher::types::Package},
+    quackpack::core::{Version, fetcher::types::PackageWithUrl},
     quackpack::schemas::registry,
-    static_str_id,
 };
 
 fn create_sample_metadata() -> registry::Manifest {
@@ -42,9 +41,9 @@ fn create_sample_metadata() -> registry::Manifest {
     serde_json::from_str(JSON).expect("statically known json")
 }
 
-fn create_example_package() -> Package {
-    Package {
-        id: static_str_id!("quackpack"),
+fn create_example_package() -> PackageWithUrl {
+    PackageWithUrl {
+        id: "quackpack".into(),
         version: Version::new(1, 2, 3),
         url: Url::parse("https://localhost:9001").unwrap(),
     }

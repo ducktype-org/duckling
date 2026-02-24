@@ -186,9 +186,11 @@ namespace dia_int::state {
 	};
 
 	struct CodeLocation {
-		std::string file;
-		usize       line;
-		usize       column;
+		std::string         file;
+		u64                 line;
+		u64                 column;
+		base::Optional<u64> end_line;
+		base::Optional<u64> end_column;
 	};
 
 	class CodeBlockComponent final: public Component {

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "hash_algorithm_utils.hpp"
-#include "type_code.hpp"
 
 #include <base/comptime/type_traits.hpp>
 #include <base/types/bit256.hpp>
@@ -89,25 +88,15 @@ namespace hashing {
 	 * and can be converted to a string that represents the bytes in hex
 	 */
 	class DebugHash final {
-		enum class Type : std::uint8_t { Code, Other };
-		std::vector<std::tuple<std::vector<char>, usize, Type>> bytes;
+		std::vector<std::tuple<std::vector<char>, usize>> bytes;
 
 	public:
-		// Spans of bytes
-		constexpr void operator()(
-			internal::span_of_bytes auto span, Type type = Type::Other
-		) noexcept {
+		constexpr void operator()(internal::span_of_bytes auto span) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
-			for (auto&& c: span) vec.push_back(static_cast<char>(c));
-			bytes.emplace_back(std::move(vec), vec.size(), type);
-		}
 
-		// Type codes
-		template<base::IsInstantiationOfTypeValue<TypeCode> TypeC>
-		constexpr void operator()(TypeC hash) noexcept {
-			const auto arr = std::bit_cast<std::array<const std::byte, sizeof(TypeC)>, TypeC>(hash);
-			this->operator()(std::span{ arr.data(), arr.size() }, Type::Code);
+			for (auto&& c: span) vec.push_back(static_cast<char>(c));
+			bytes.emplace_back(std::move(vec), vec.size());
 		}
 
 		using result_type = std::string;
@@ -116,12 +105,11 @@ namespace hashing {
 			std::string ret;
 			usize       line = 0, pos = 0;
 
-			constexpr std::string_view yellow = "\033[1;33m";
-			constexpr std::string_view red    = "\033[1;31m";
-			constexpr std::string_view reset  = "\033[0m";
+			constexpr std::string_view RED   = "\033[1;31m";
+			constexpr std::string_view RESET = "\033[0m";
 
 			// Note: stringstream is not usable in constexpr
-			static constexpr auto append_line_number = [](std::string& str, usize num) {
+			static constexpr auto APPEND_LINE_NUMBER = [](std::string& str, usize num) {
 				str += "line ";
 				std::string num_str;
 				do {
@@ -132,22 +120,23 @@ namespace hashing {
 				str += num_str;
 				str += ":    ";
 			};
-			static constexpr auto append_byte_hex = [](std::string& str, std::byte b) {
-				constexpr static std::string_view hex = "0123456789ABCDEF";
-				str += hex[std::to_integer<unsigned>(b >> 4)];
-				str += hex[std::to_integer<unsigned>(b & std::byte{ 0xF })];
+			static constexpr auto APPEND_BYTE_HEX = [](std::string& str, std::byte b) {
+				constexpr static std::string_view HEX = "0123456789ABCDEF";
+				str += HEX[std::to_integer<unsigned>(b >> 4)];
+				str += HEX[std::to_integer<unsigned>(b & std::byte{ 0xF })];
 			};
 
-			for (auto&& [b, len, type]: bytes) {
+			for (auto&& [b, len]: bytes) {
 				for (usize i = pos, j = 0; j < len; ++i, ++j) {
 					if (i % 16 == 0) {
 						if (line != 0) ret += '\n';
-						append_line_number(ret, line++);
+						APPEND_LINE_NUMBER(ret, line++);
 					}
-					if (i == pos) ret += (type == Type::Code ? yellow : red);
-					append_byte_hex(ret, static_cast<std::byte>(b[j]));
+					if (i == pos) ret += RED;
+
+					APPEND_BYTE_HEX(ret, static_cast<std::byte>(b[j]));
 					ret += ' ';
-					if (i == pos) ret += reset;
+					if (i == pos) ret += RESET;
 				}
 				pos = (pos + len) % 16;
 			}

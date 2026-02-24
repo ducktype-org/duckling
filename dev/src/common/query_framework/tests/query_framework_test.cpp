@@ -3,17 +3,20 @@
 #include <base/misc/anycast.hpp>
 #include <base/types/ints.hpp>
 
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
+#include <query_framework/input_query/query_input.hpp>
+#include <query_framework/input_query/query_input_impl.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <query_framework/internal/query_metadata/metadata_storage.hpp>
 #include <query_framework/query_errors.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_input.hpp>
-#include <query_framework/query_input_impl.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_metadata/declare_metadata.hpp>
 #include <query_framework/query_result.hpp>
-#include <query_framework/simple_keys.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/utils/simple_keys.hpp>
 #include <tester/tester.hpp>
 
 #include <sstream>
@@ -268,7 +271,7 @@ namespace context_leak {
 	struct IMPLEMENT_QUERY(IdentityQuery, u64) {
 		static auto provide(Context&, QKey key) -> PResult { return key.value; }
 
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(IdentityQuery);
@@ -280,7 +283,7 @@ namespace context_leak {
 			return key.value;
 		}
 
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LeakQuery);
@@ -292,7 +295,7 @@ namespace context_leak {
 			return key.value;
 		}
 
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(UseLeakedContext);
@@ -322,7 +325,7 @@ DECLARE_QUERY(EmptyQuery, query::U64Key, u64, ({ .uses_qresult = false }));
 struct IMPLEMENT_QUERY(EmptyQuery, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key.value; }
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(EmptyQuery);
@@ -335,7 +338,7 @@ struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 		return key.value;
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallEmptyQueryNTimes);
@@ -348,7 +351,7 @@ struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 		return key.value;
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallSideInputNTimes);
@@ -461,7 +464,7 @@ struct IMPLEMENT_QUERY(UsesQResultTest, UsesQResult_Result) {
 		return res.valueOrThrow();
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(UsesQResultTest);
@@ -482,7 +485,7 @@ struct IMPLEMENT_QUERY(UsesQResultNoCatchTest, UsesQResultNoCatch_Result) {
 		return res.valueOrThrow();
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(UsesQResultNoCatchTest);
@@ -503,10 +506,184 @@ struct IMPLEMENT_QUERY(NoQResultTest, NoQResult_Result) {
 		return res.valueOrThrow();
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(NoQResultTest);
+
+// ========== Metadata Tests Setup ==========
+
+namespace metadata_tests {
+
+	/**
+	 * @brief Simple serializable type for testing DECLARE_METADATA macro.
+	 */
+	struct SerializableData {
+		u64         value1 = 0;
+		std::string value2;
+
+		SerializableData() = default;
+
+		SerializableData(u64 v1, std::string v2): value1(v1), value2(std::move(v2)) {}
+
+		[[nodiscard]]
+		std::vector<std::byte> serialize() const {
+			std::vector<std::byte> result;
+			// Simple serialization: value1 (8 bytes) + string length (8 bytes) + string data
+			auto* v1_ptr = reinterpret_cast<const std::byte*>(&value1);
+			result.insert(result.end(), v1_ptr, v1_ptr + sizeof(u64));
+
+			u64   str_len = value2.size();
+			auto* len_ptr = reinterpret_cast<const std::byte*>(&str_len);
+			result.insert(result.end(), len_ptr, len_ptr + sizeof(u64));
+
+			auto* str_ptr = reinterpret_cast<const std::byte*>(value2.data());
+			result.insert(result.end(), str_ptr, str_ptr + value2.size());
+
+			return result;
+		}
+
+		[[nodiscard]]
+		static SerializableData deserialize(std::span<const std::byte> data) {
+			SerializableData result;
+
+			auto* v1_ptr  = reinterpret_cast<const u64*>(data.data());
+			result.value1 = *v1_ptr;
+
+			auto* len_ptr = reinterpret_cast<const u64*>(data.data() + sizeof(u64));
+			u64   str_len = *len_ptr;
+
+			result.value2
+				= std::string(reinterpret_cast<const char*>(data.data() + 2 * sizeof(u64)), str_len);
+
+			return result;
+		}
+
+		bool operator==(const SerializableData& other) const {
+			return value1 == other.value1 && value2 == other.value2;
+		}
+	};
+
+	/**
+	 * @brief A simple wrapper around std::string with serialization support.
+	 */
+	struct StringWrapper {
+		std::string value;
+
+		StringWrapper() = default;
+
+		explicit StringWrapper(std::string v): value(std::move(v)) {}
+
+		[[nodiscard]]
+		std::vector<std::byte> serialize() const {
+			std::vector<std::byte> result;
+			u64                    str_len = value.size();
+			auto*                  len_ptr = reinterpret_cast<const std::byte*>(&str_len);
+			result.insert(result.end(), len_ptr, len_ptr + sizeof(u64));
+
+			auto* str_ptr = reinterpret_cast<const std::byte*>(value.data());
+			result.insert(result.end(), str_ptr, str_ptr + value.size());
+			return result;
+		}
+
+		[[nodiscard]]
+		static StringWrapper deserialize(std::span<const std::byte> data) {
+			StringWrapper result;
+			auto*         len_ptr = reinterpret_cast<const u64*>(data.data());
+			u64           str_len = *len_ptr;
+			result.value
+				= std::string(reinterpret_cast<const char*>(data.data() + sizeof(u64)), str_len);
+			return result;
+		}
+	};
+
+	// Declare metadata types using the macro
+	DECLARE_METADATA(TestMeta, SerializableData);
+
+	// SimpleMeta wraps u64 - trivially copyable, use DECLARE_METADATA_SIMPLE
+	DECLARE_METADATA_SIMPLE(SimpleMeta, u64);
+
+	// AnotherMeta wraps a string with serialization
+	DECLARE_METADATA(AnotherMeta, StringWrapper);
+
+	// StrID metadata for optimized string serialization
+	DECLARE_METADATA_STRID(SourceFile);
+
+}  // namespace metadata_tests
+
+// Query with preserve_in_graph = true for testing metadata
+DECLARE_QUERY(
+	MetadataTestQuery,
+	query::U64Key,
+	u64,
+	({
+		.preserve_in_graph = true,
+		.uses_qresult      = false,
+	})
+);
+
+struct IMPLEMENT_QUERY(MetadataTestQuery, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		// Add metadata when key.value > 0
+		if (key.value > 0) ctx.addMetadata<metadata_tests::metadata_SimpleMeta>(key.value * 10);
+		// Add multiple metadata of same type when key.value > 10
+		if (key.value > 10) ctx.addMetadata<metadata_tests::metadata_SimpleMeta>(key.value * 100);
+		return key.value;
+	}
+
+	QUERY_AUTO_CACHE_COPY
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(MetadataTestQuery);
+
+// Query without preserve_in_graph for testing the assertion
+DECLARE_QUERY(
+	NonPreservedQuery,
+	query::U64Key,
+	u64,
+	({
+		.preserve_in_graph = false,
+		.uses_qresult      = false,
+	})
+);
+
+struct IMPLEMENT_QUERY(NonPreservedQuery, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		// This should panic because preserve_in_graph = false
+		ctx.addMetadata<metadata_tests::metadata_SimpleMeta>(key.value);
+		return key.value;
+	}
+
+	QUERY_AUTO_CACHE_COPY
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(NonPreservedQuery);
+
+// Query that adds multiple types of metadata
+DECLARE_QUERY(
+	MultiMetadataQuery,
+	query::U64Key,
+	u64,
+	({
+		.preserve_in_graph = true,
+		.uses_qresult      = false,
+	})
+);
+
+struct IMPLEMENT_QUERY(MultiMetadataQuery, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		ctx.addMetadata<metadata_tests::metadata_SimpleMeta>(key.value);
+		ctx.addMetadata<metadata_tests::metadata_AnotherMeta>(metadata_tests::StringWrapper{
+			"value_" + std::to_string(key.value) });
+		ctx.addMetadata<metadata_tests::metadata_TestMeta>(metadata_tests::SerializableData{
+			key.value, "test" });
+		return key.value;
+	}
+
+	QUERY_AUTO_CACHE_COPY
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(MultiMetadataQuery);
 
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -535,10 +712,20 @@ public:
 		TESTER_ADD_TEST(testNoKeyCopy);
 		TESTER_ADD_TEST(stableHashTest);
 		TESTER_ADD_TEST(testQueryResultExceptionsHandling);
+		// Metadata tests
+		TESTER_ADD_TEST(testMetadataBasic);
+		TESTER_ADD_TEST(testMetadataMultipleValues);
+		TESTER_ADD_TEST(testMetadataMultipleTypes);
+		TESTER_ADD_TEST(testMetadataPreserveInGraphCheck);
+		TESTER_ADD_TEST(testMetadataSerialization);
 	}
 
 private:
 	void simpleTest() {
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0, "Active graph not empty at start"
+		);
+
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
@@ -547,6 +734,11 @@ private:
 		assertTrue(
 			*query::entryPoint<VectorReferenceQuery>({ 6 }) == std::vector<u64>{ 1, 2, 6 },
 			"Bad query output (6)"
+		);
+
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty after some computations"
 		);
 	}
 
@@ -613,22 +805,29 @@ private:
 
 	void entryPointSanityTest() {
 #if defined(BUILD_TYPE_DEV)
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty before some computations"
+		);
+
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CallingEntryPoint>({ 1 }); },
 			"Calling entry point from query did not panicked."
+		);
+
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty after some panics"
 		);
 #endif
 	}
 
 	template<class Query>
 	void resultLifetimeTest() {
-		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<Query>({ 0 });
-			ASSERT_TRUE(res1.validate());
-
-			auto res2 = ctx.query<Query>({ 0 });
-			ASSERT_TRUE(res2.validate());
-		});
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty before some computations"
+		);
 
 		withContextDo([&](query::Context& ctx) {
 			auto res1 = ctx.query<Query>({ 0 });
@@ -637,6 +836,24 @@ private:
 			auto res2 = ctx.query<Query>({ 0 });
 			ASSERT_TRUE(res2.validate());
 		});
+
+		withContextDo([&](query::Context& ctx) {
+			assertTrue(
+				query::Context::getState().activeQueryCount() == 1,
+				"Active graph should have one node here"
+			);
+
+			auto res1 = ctx.query<Query>({ 0 });
+			ASSERT_TRUE(res1.validate());
+
+			auto res2 = ctx.query<Query>({ 0 });
+			ASSERT_TRUE(res2.validate());
+		});
+
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty after some computations"
+		);
 	}
 
 	void withContextDoCompute() {
@@ -674,10 +891,20 @@ private:
 	}
 
 	void cycleDetectionTest() {
-		// note: this test will change when proper cycle handling will
+		// @TODO: #1888 this test will change when proper cycle handling will
 		// be introduced.
-		assertThrows<base::NotYetImplemented>(
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty before some computations"
+		);
+
+		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CyclicQuery1>({ 1 }); }, "Cycle detection did not throw."
+		);
+
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty after cycle detection"
 		);
 	}
 
@@ -849,6 +1076,222 @@ private:
 			},
 			"Panic not thrown as expected"
 		);
+	}
+
+	// ========== Metadata Tests ==========
+
+	void testMetadataBasic() {
+		using namespace metadata_tests;
+
+		// Call query that adds metadata
+		auto result = query::entryPoint<MetadataTestQuery>({ 5 });
+		ASSERT_EQUAL(result, 5);
+
+		// Retrieve the metadata
+		const auto& state   = query::Context::getState();
+		auto        node_id = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 5 });
+
+		auto metadata_vec = state.getMetadata<metadata_SimpleMeta>(node_id);
+		ASSERT_EQUAL(metadata_vec.size(), 1);
+		ASSERT_EQUAL(metadata_vec[0]->value, 50);  // key.value * 10 = 5 * 10 = 50
+	}
+
+	void testMetadataMultipleValues() {
+		using namespace metadata_tests;
+
+		// Call query that adds multiple metadata of same type (key > 10)
+		auto result = query::entryPoint<MetadataTestQuery>({ 15 });
+		ASSERT_EQUAL(result, 15);
+
+		const auto& state   = query::Context::getState();
+		auto        node_id = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 15 });
+
+		auto metadata_vec = state.getMetadata<metadata_SimpleMeta>(node_id);
+		ASSERT_EQUAL(metadata_vec.size(), 2);
+
+		// Check values: 15 * 10 = 150 and 15 * 100 = 1500
+		bool found_150  = false;
+		bool found_1500 = false;
+		for (const auto& meta: metadata_vec) {
+			if (meta->value == 150) found_150 = true;
+			if (meta->value == 1'500) found_1500 = true;
+		}
+		ASSERT_TRUE(found_150);
+		ASSERT_TRUE(found_1500);
+	}
+
+	void testMetadataMultipleTypes() {
+		using namespace metadata_tests;
+
+		// Call query that adds multiple types of metadata
+		auto result = query::entryPoint<MultiMetadataQuery>({ 42 });
+		ASSERT_EQUAL(result, 42);
+
+		const auto& state   = query::Context::getState();
+		auto        node_id = query::internal::makeNodeID<MultiMetadataQuery>(query::U64Key{ 42 });
+
+		// Check SimpleMeta
+		auto simple_vec = state.getMetadata<metadata_SimpleMeta>(node_id);
+		ASSERT_EQUAL(simple_vec.size(), 1);
+		ASSERT_EQUAL(simple_vec[0]->value, 42);
+
+		// Check AnotherMeta
+		auto another_vec = state.getMetadata<metadata_AnotherMeta>(node_id);
+		ASSERT_EQUAL(another_vec.size(), 1);
+		ASSERT_EQUAL(another_vec[0]->value.value, "value_42");
+
+		// Check TestMeta (with SerializableData)
+		auto test_vec = state.getMetadata<metadata_TestMeta>(node_id);
+		ASSERT_EQUAL(test_vec.size(), 1);
+		ASSERT_EQUAL(test_vec[0]->value.value1, 42);
+		ASSERT_EQUAL(test_vec[0]->value.value2, "test");
+
+		// Check that hasMetadata works
+		ASSERT_TRUE(state.hasMetadata<metadata_SimpleMeta>(node_id));
+		ASSERT_TRUE(state.hasMetadata<metadata_AnotherMeta>(node_id));
+		ASSERT_TRUE(state.hasMetadata<metadata_TestMeta>(node_id));
+
+		// Check getMetadataCount
+		ASSERT_EQUAL(state.getMetadataCount<metadata_SimpleMeta>(node_id), 1);
+		ASSERT_EQUAL(state.getMetadataCount<metadata_AnotherMeta>(node_id), 1);
+		ASSERT_EQUAL(state.getMetadataCount<metadata_TestMeta>(node_id), 1);
+	}
+
+	void testMetadataPreserveInGraphCheck() {
+#if defined(BUILD_TYPE_DEV)
+		// Calling NonPreservedQuery should panic because it tries to add metadata
+		// to a query without preserve_in_graph = true
+		assertThrows<base::Panic>(
+			[] { query::entryPoint<NonPreservedQuery>({ 1 }); },
+			"Adding metadata to non-preserved query should panic"
+		);
+#endif
+	}
+
+	void testMetadataSerialization() {
+		using namespace metadata_tests;
+
+		// Test SerializableData serialization/deserialization
+		SerializableData original{ 123, "hello world" };
+		auto             serialized   = original.serialize();
+		auto             deserialized = SerializableData::deserialize(serialized);
+
+		ASSERT_EQUAL(original.value1, deserialized.value1);
+		ASSERT_EQUAL(original.value2, deserialized.value2);
+
+		// Test metadata_TestMeta serialization
+		metadata_TestMeta meta{ original };
+		auto              meta_serialized   = meta.serialize();
+		auto              meta_deserialized = metadata_TestMeta::deserialize(meta_serialized);
+
+		ASSERT_EQUAL(meta.value.value1, meta_deserialized.value.value1);
+		ASSERT_EQUAL(meta.value.value2, meta_deserialized.value.value2);
+
+		// Test metadata storage directly
+		query::internal::MetadataStorage storage;
+		auto test_node = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 99'999 });
+
+		// Initially empty
+		auto empty_vec = storage.getMetadata<metadata_SimpleMeta>(test_node);
+		ASSERT_EQUAL(empty_vec.size(), 0);
+		ASSERT_TRUE(!storage.hasMetadata<metadata_SimpleMeta>(test_node));
+
+		// Add some metadata
+		storage.addMetadata<metadata_SimpleMeta>(test_node, u64{ 100 });
+		storage.addMetadata<metadata_SimpleMeta>(test_node, u64{ 200 });
+
+		auto vec = storage.getMetadata<metadata_SimpleMeta>(test_node);
+		ASSERT_EQUAL(vec.size(), 2);
+		ASSERT_TRUE(storage.hasMetadata<metadata_SimpleMeta>(test_node));
+		ASSERT_EQUAL(storage.getMetadataCount<metadata_SimpleMeta>(test_node), 2);
+
+		// Clear and verify
+		storage.clearNodeMetadata(test_node);
+		auto cleared_vec = storage.getMetadata<metadata_SimpleMeta>(test_node);
+		ASSERT_EQUAL(cleared_vec.size(), 0);
+
+		// =========================================================
+		// Test full MetadataStorage serialize/deserialize roundtrip
+		// =========================================================
+		query::internal::MetadataStorage storage2;
+
+		auto node1 = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 1 });
+		auto node2 = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 2 });
+		auto node3 = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 3 });
+
+		// Add various metadata types to different nodes
+		storage2.addMetadata<metadata_SimpleMeta>(node1, u64{ 111 });
+		storage2.addMetadata<metadata_SimpleMeta>(node1, u64{ 222 });
+		storage2.addMetadata<metadata_SimpleMeta>(node2, u64{ 333 });
+
+		storage2.addMetadata<metadata_TestMeta>(node1, SerializableData{ 42, "test string" });
+		storage2.addMetadata<metadata_TestMeta>(node3, SerializableData{ 99, "another string" });
+
+		storage2.addMetadata<metadata_AnotherMeta>(node2, StringWrapper{ "wrapped text" });
+
+		// Add StrID metadata (optimized string serialization)
+		storage2.addMetadata<metadata_SourceFile>(
+			node1, base::StrID{ std::string{ "src/main.duck" } }
+		);
+		storage2.addMetadata<metadata_SourceFile>(
+			node2, base::StrID{ std::string{ "src/main.duck" } }
+		);  // Same string - will be deduplicated
+		storage2.addMetadata<metadata_SourceFile>(
+			node3, base::StrID{ std::string{ "src/parser.duck" } }
+		);
+
+		// Serialize the entire storage
+		auto serialized_storage = storage2.serialize();
+		ASSERT_TRUE(serialized_storage.size() > 0);
+
+		// Deserialize into a new storage
+		auto restored = query::internal::MetadataStorage::deserialize(serialized_storage);
+
+		// Verify SimpleMeta on node1
+		auto restored_simple1 = restored.getMetadata<metadata_SimpleMeta>(node1);
+		ASSERT_EQUAL(restored_simple1.size(), 2);
+		ASSERT_EQUAL(restored_simple1[0]->value, u64{ 111 });
+		ASSERT_EQUAL(restored_simple1[1]->value, u64{ 222 });
+
+		// Verify SimpleMeta on node2
+		auto restored_simple2 = restored.getMetadata<metadata_SimpleMeta>(node2);
+		ASSERT_EQUAL(restored_simple2.size(), 1);
+		ASSERT_EQUAL(restored_simple2[0]->value, u64{ 333 });
+
+		// Verify TestMeta on node1
+		auto restored_test1 = restored.getMetadata<metadata_TestMeta>(node1);
+		ASSERT_EQUAL(restored_test1.size(), 1);
+		ASSERT_EQUAL(restored_test1[0]->value.value1, 42);
+		ASSERT_EQUAL(restored_test1[0]->value.value2, std::string{ "test string" });
+
+		// Verify TestMeta on node3
+		auto restored_test3 = restored.getMetadata<metadata_TestMeta>(node3);
+		ASSERT_EQUAL(restored_test3.size(), 1);
+		ASSERT_EQUAL(restored_test3[0]->value.value1, 99);
+		ASSERT_EQUAL(restored_test3[0]->value.value2, std::string{ "another string" });
+
+		// Verify AnotherMeta on node2
+		auto restored_another2 = restored.getMetadata<metadata_AnotherMeta>(node2);
+		ASSERT_EQUAL(restored_another2.size(), 1);
+		ASSERT_EQUAL(restored_another2[0]->value.value, std::string{ "wrapped text" });
+
+		// Verify StrID metadata (SourceFile)
+		auto restored_source1 = restored.getMetadata<metadata_SourceFile>(node1);
+		ASSERT_EQUAL(restored_source1.size(), 1);
+		ASSERT_EQUAL(restored_source1[0]->value.strView(), std::string_view{ "src/main.duck" });
+
+		auto restored_source2 = restored.getMetadata<metadata_SourceFile>(node2);
+		ASSERT_EQUAL(restored_source2.size(), 1);
+		ASSERT_EQUAL(restored_source2[0]->value.strView(), std::string_view{ "src/main.duck" });
+
+		auto restored_source3 = restored.getMetadata<metadata_SourceFile>(node3);
+		ASSERT_EQUAL(restored_source3.size(), 1);
+		ASSERT_EQUAL(restored_source3[0]->value.strView(), std::string_view{ "src/parser.duck" });
+
+		// Verify nodes that should have no metadata of certain types
+		ASSERT_TRUE(!restored.hasMetadata<metadata_SimpleMeta>(node3));
+		ASSERT_TRUE(!restored.hasMetadata<metadata_TestMeta>(node2));
+		ASSERT_TRUE(!restored.hasMetadata<metadata_AnotherMeta>(node1));
 	}
 };
 

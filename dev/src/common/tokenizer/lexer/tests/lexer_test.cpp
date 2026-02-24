@@ -11,10 +11,6 @@ class SimpleLexerTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
-
-		fs::File file(path("token_code.duck"));
-		td = lexer::tokenizeFile(file);
 		TESTER_ADD_TEST(testBasicStructure);
 		TESTER_ADD_TEST(testGroup0);
 		TESTER_ADD_TEST(testGroup1);
@@ -29,6 +25,14 @@ public:
 	}
 
 	~SimpleLexerTest() override = default;
+
+protected:
+	void beforeAll() override {
+		lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
+
+		fs::File file(path("token_code.duck"));
+		td = lexer::tokenizeFile(file);
+	}
 
 private:
 	constexpr static std::array<std::string_view, 9> GROUP_NAMES

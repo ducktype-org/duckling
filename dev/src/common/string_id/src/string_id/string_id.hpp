@@ -70,6 +70,10 @@ namespace base {
 		STRONG_TYPEDEF_ID(StrInnerID);
 	}
 
+	/**
+	 * @brief String-ID utility used widely as keys (artifacts, module names, symbols, etc.).
+	 * @note It is thread-safe.
+	 */
 	class StrID final {
 	public:
 		using InnerID = internal::StrInnerID;

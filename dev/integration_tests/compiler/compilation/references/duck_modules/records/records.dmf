@@ -3,7 +3,7 @@ class Wrapper { p: Point; }
 
 fun records1() -> () = {
     var w = Wrapper(Point(1, 2));
-    let ref_w = refof w;
+    let ref_w = &w;
 
     # Auto deref should get inserted.
     builtin_output_i64(ref_w.p.x); # 1
@@ -19,14 +19,14 @@ fun records2() -> () = {
     var x: i64 = 123;
     var y: i64 = 456;
 
-    var point = RefPoint(refof x, refof y);
-    var ref_point = refof point;
+    var point = RefPoint(&x, &y);
+    var ref_point = &point;
     
     builtin_output_i64(ref_point.x);
     builtin_output_i64(ref_point.y);
     
-    var wrapper = RefWrapper(refof point);
-    var ref_wrapper = refof wrapper;
+    var wrapper = RefWrapper(&point);
+    var ref_wrapper = &wrapper;
     
     ref_wrapper.p.x = 0;
     ref_wrapper.p.y = 1;
@@ -44,7 +44,7 @@ fun records3() -> () = {
     builtin_output_i64(my_point.x); # 10
     builtin_output_i64(my_point.y); # 20
 
-    point_by_ref(refof my_point);
+    point_by_ref(&my_point);
 
     builtin_output_i64(my_point.x); # 777
     builtin_output_i64(my_point.y); # 888

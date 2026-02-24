@@ -9,10 +9,10 @@
 // https://github.com/ducktype-org/duckling/pull/657#pullrequestreview-2732904586
 // https://github.com/ducktype-org/duckling/pull/657#pullrequestreview-2732904586
 
-#include "context_fd.hpp"                    // IWYU pragma: export
-#include "internal/query_graph/node_id.hpp"  // IWYU pragma: export
-#include "internal/query_data/query_id.hpp"  // IWYU pragma: export
-#include "simple_keys.hpp"                     // IWYU pragma: export
+#include <query_framework/context/context_fd.hpp>                    // IWYU pragma: export
+#include <query_framework/internal/query_graph/node_id.hpp>  // IWYU pragma: export
+#include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
+#include <query_framework/utils/simple_keys.hpp>                     // IWYU pragma: export
 
 #include <string_view>  // IWYU pragma: export
 #include <base/preproc/remove_parentheses.hpp>
@@ -42,7 +42,7 @@ namespace query::internal {
 		using QResult   = result_mp;                                                       \
                                                                                            \
 	private:                                                                               \
-		static auto internal_query(const QKey&, ::query::internal::NodeID) -> QResult;     \
+		static auto                       internal_query(const QKey&) -> QResult;          \
 		static ::query::internal::QueryID id;                                              \
 		friend struct ::query::Context;                                                    \
 		friend struct ::query::internal::EntryPointHelper;                                 \

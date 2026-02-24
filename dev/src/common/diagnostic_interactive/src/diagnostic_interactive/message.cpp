@@ -23,7 +23,7 @@ namespace dia_int {
 
 	Box<dia_args::Component> CodeLocationArgument::getValue(MessageBase&) {
 		return base::makeBox<dia_args::CodeLocationComponent>(
-			location.file, location.line, location.column
+			location.file, location.line, location.column, location.end_line, location.end_column
 		);
 	}
 

@@ -5,13 +5,13 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 #include <memory>
 #include <sstream>
@@ -27,7 +27,7 @@ namespace compiler::helios {
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {
-			out += func.debugPrint();
+			out += func->debugPrint();
 			out += "\n";
 		}
 
@@ -85,8 +85,12 @@ namespace compiler::helios {
 	}
 
 	HOUTFunction::HOUTFunction(
-		const CRef<HOUTFunctionDeclaration> other, const std::shared_ptr<const code::CodeBlock>& body
+
+		code::ElementOrigin                           origin,
+		const CRef<HOUTFunctionDeclaration>           other,
+		const std::shared_ptr<const code::CodeBlock>& body
 	):
+		  origin(origin),
 		  declaration(other),
 		  body(body) {}
 
@@ -110,9 +114,10 @@ namespace compiler::helios {
 	}
 
 	HOUTGlobalData::HOUTGlobalData(
-		const SymID symbol, query::Context& ctx, const HOUTGlobalDataType data_type
+		query::Context& ctx, const SymID symbol, const HOUTGlobalDataType data_type
 	):
 		  helios_symbol(symbol),
+		  origin(code::pstOrigin(stmt(ctx, symbol).value())),
 		  original_name(name(symbol)),
 		  data_type(data_type),
 		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {

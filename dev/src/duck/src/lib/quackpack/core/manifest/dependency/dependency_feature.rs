@@ -4,7 +4,7 @@ use crate::QuackError;
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::schemas::{OneEntryMap, registry};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Feature of a dependency with required conditions in order to be enabled.
 pub struct DependencyFeature {
     /// The feature name.

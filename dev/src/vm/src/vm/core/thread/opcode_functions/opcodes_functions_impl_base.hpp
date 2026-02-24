@@ -204,7 +204,7 @@ namespace vm {
 			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);               \
 			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);               \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs OP rhs;                                                                   \
+			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
@@ -214,7 +214,7 @@ namespace vm {
 			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                     \
 			auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                            \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs OP rhs;                                                                   \
+			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
@@ -230,26 +230,26 @@ namespace vm {
 	}
 
 // @TODO: #1216 Check for over/under flows.
-#define DEFINE_INT_N_ARITHMETIC(SIZE)                \
-	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)     \
-	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)     \
-	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)     \
-	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %=)  \
-	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /=)  \
-	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)           \
-	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)    \
-	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %=) \
-	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /=)
+#define DEFINE_INT_N_ARITHMETIC(SIZE)               \
+	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)    \
+	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)    \
+	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %)  \
+	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /)  \
+	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)          \
+	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)   \
+	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %) \
+	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /)
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
 #define FLOAT_64_TYPE double
 #define FLOAT_32_TYPE float
-#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                          \
-	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)    \
-	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)    \
-	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)    \
-	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /=) \
+#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                         \
+	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)   \
+	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)   \
+	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)   \
+	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /) \
 	DEFINE_NEGATION_OP(fneg, SIZE, FLOAT_##SIZE##_TYPE)
 
 	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
@@ -645,6 +645,10 @@ namespace vm {
 		CORE_PANIC("ext_type_l64 not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_type not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
@@ -767,9 +771,11 @@ namespace vm {
 		{
 			auto variant_block_index = frame->local_offset_to_block_idx[instr->arg0];
 			auto variant_block       = frame->block_stack[variant_block_index];
-			OpFuns::setVariantType(thread, Pointer(variant_block, 0), TypeID(instr->arg1));
+			auto alt_type_id         = TypeID(instr->arg1);
+			auto variant_type_id     = TypeID(instr[1].arg0);
+			OpFuns::setVariantType(thread, Pointer(variant_block, 0), alt_type_id, variant_type_id);
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lvnt)(FUNCTION_ARGS) {
@@ -777,9 +783,14 @@ namespace vm {
 			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
 			auto       variant_block       = frame->block_stack[variant_block_index];
+			auto       alt_type_id         = TypeID(instr[1].arg0);
+			auto       variant_type_id     = TypeID(instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
-				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), TypeID(instr[1].arg0))
+				dst,
+				OpFuns::getVariantPtr(
+					thread, Pointer(variant_block, 0), alt_type_id, variant_type_id
+				)
 			);
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
@@ -789,18 +800,22 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			OpFuns::setVariantType(thread, variant_pointer, TypeID(instr->arg1));
+			auto alt_type_id     = TypeID(instr->arg1);
+			auto variant_type_id = TypeID(instr[1].arg0);
+			OpFuns::setVariantType(thread, variant_pointer, alt_type_id, variant_type_id);
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto       alt_type_id     = TypeID(instr[1].arg0);
+			auto       variant_type_id = TypeID(instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
-				dst, OpFuns::getVariantPtr(thread, variant_pointer, TypeID(instr[1].arg0))
+				dst, OpFuns::getVariantPtr(thread, variant_pointer, alt_type_id, variant_type_id)
 			);
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
@@ -1110,12 +1125,12 @@ namespace vm {
 	DEFINE_INT_TO_FLOAT(64)
 
 
-#define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE)                                            \
+#define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                        \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {        \
 		{                                                                                     \
-			auto x       = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);  \
-			using IntT   = i##DST_SIZE;                                                       \
-			using FloatT = FLOAT_##SRC_SIZE##_TYPE;                                           \
+			using IntT   = DST_TYPE;                                                          \
+			using FloatT = SRC_TYPE;                                                          \
+			auto x       = readFromStack<FloatT>(local_stack, instr->arg1);                   \
 			IntT res;                                                                         \
 			if (std::isnan(x)) {                                                              \
 				res = IntT{ 0 };                                                              \
@@ -1130,18 +1145,17 @@ namespace vm {
 					res = static_cast<IntT>(x);                                               \
 				}                                                                             \
 			}                                                                                 \
-			writeToStack<i##DST_SIZE>(local_stack, instr->arg0, res);                         \
+			writeToStack<IntT>(local_stack, instr->arg0, res);                                \
 		}                                                                                     \
 		FUNCTION_CONT(1);                                                                     \
 	}
 
-#define DEFINE_FPTOUI_OP(NAME, DST_SIZE, SRC_SIZE)                                             \
+#define DEFINE_FPTOUI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                         \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {         \
 		{                                                                                      \
-			auto x = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);         \
-			/* Logic inlined from interp_fptoui_sat */                                         \
-			using UIntT  = u##DST_SIZE;                                                        \
-			using FloatT = FLOAT_##SRC_SIZE##_TYPE;                                            \
+			using UIntT  = DST_TYPE;                                                           \
+			using FloatT = SRC_TYPE;                                                           \
+			auto  x      = readFromStack<FloatT>(local_stack, instr->arg1);                    \
 			UIntT res;                                                                         \
 			if (std::isnan(x)) {                                                               \
 				res = UIntT{ 0 };                                                              \
@@ -1155,20 +1169,20 @@ namespace vm {
 					res = static_cast<UIntT>(x);                                               \
 				}                                                                              \
 			}                                                                                  \
-			writeToStack<u##DST_SIZE>(local_stack, instr->arg0, res);                          \
+			writeToStack<UIntT>(local_stack, instr->arg0, res);                                \
 		}                                                                                      \
 		FUNCTION_CONT(1);                                                                      \
 	}
 
-#define DEFINE_FLOAT_TO_INT(SRC_SIZE)      \
-	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE)  \
-	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE)  \
-	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE) \
-	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE) \
-	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE) \
-	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE) \
-	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE) \
-	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE)
+#define DEFINE_FLOAT_TO_INT(SRC_SIZE)                                            \
+	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE, std::int8_t, FLOAT_##SRC_SIZE##_TYPE)  \
+	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE, std::uint8_t, FLOAT_##SRC_SIZE##_TYPE) \
+	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE, i16, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE, u16, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE, i32, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE, u32, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE, i64, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE, u64, FLOAT_##SRC_SIZE##_TYPE)
 
 	DEFINE_FLOAT_TO_INT(32)
 	DEFINE_FLOAT_TO_INT(64)

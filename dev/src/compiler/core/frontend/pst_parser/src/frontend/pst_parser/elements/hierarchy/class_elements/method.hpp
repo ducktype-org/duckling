@@ -33,18 +33,15 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]] tpc::Identifier getNameIdentifier() const { return name; }
+
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
 			return params.give();
 		}
 
-		/**
-		 * @note Optional of MCRef here is intentional
-		 */
 		[[nodiscard]]
-		base::Optional<AccessLocked<ExprHolder>> getRet() const {
-			return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
-		}
+		base::Optional<AccessLocked<ExprHolder>> getRet() const;
 
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getBody() const {

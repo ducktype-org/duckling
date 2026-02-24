@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 
 #include <query_framework/query_result.hpp>
