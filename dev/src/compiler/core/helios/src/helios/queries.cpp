@@ -1,7 +1,5 @@
 #include "queries.hpp"
 
-#include "frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -11,6 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
@@ -79,7 +78,7 @@ namespace compiler::helios {
 					}
 					if (kind(sym) == SymbolKind::Class) {
 						appendClassConstructors(out.functions, sym, ctx);
-						if (appendClassMethods(out.functions, sym, ctx)) {
+						if (appendClassMethodsWithFail(out.functions, sym, ctx)) {
 							is_failed = true;
 							continue;
 						}
@@ -126,7 +125,7 @@ namespace compiler::helios {
 		 *
 		 * @return Whether any method queries failed.
 		 */
-		static bool appendClassMethods(
+		static bool appendClassMethodsWithFail(
 			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
 		) {
 			CORE_ASSERT(
@@ -408,7 +407,6 @@ namespace compiler::helios {
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				// TODO: HERE!!!
 				// Handle self parameter and method flags when they are implemented.
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 

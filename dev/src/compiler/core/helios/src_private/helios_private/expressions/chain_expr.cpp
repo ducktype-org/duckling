@@ -551,7 +551,7 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState> {
 			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 				"Acces to namespace should be done via `pst::expr::Access`, not "
-			    "pst::expr::IdentifierLiteral",
+				"pst::expr::IdentifierLiteral",
 				ident->getSourcePosition()
 			));
 			return query::Failed();
@@ -564,7 +564,7 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState> {
 			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 				"Acces to namespace should be done via `pst::expr::Access`, not "
-			    "pst::expr::IdentifierLiteral",
+				"pst::expr::IdentifierLiteral",
 				ident->getSourcePosition()
 			));
 			return query::Failed();
