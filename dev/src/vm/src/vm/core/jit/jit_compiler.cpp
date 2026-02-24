@@ -64,7 +64,6 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
-	std::cerr << "called compileJit\n";
 	auto  lljit_ptr = llvmGetLljit();
 	auto& lljit     = *lljit_ptr;
 
@@ -109,10 +108,8 @@ vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
 
 	for (const vm::MicroInstruction& mi: func_data.bc) {
 		auto num = static_cast<uint64_t>(vm::getInstructionOpcode(mi));
-		std::cerr << "Looking up opcode " << num << ' ' << vm::low::OPCODE_NAMES[num] << '\n';
 		llvm::Function* opfun      = llvmGetFun(vm::getInstructionOpcode(mi));
 		std::string     opfun_name = opfun->getName().str();
-		std::cerr << "opfun name: " << opfun_name << '\n';
 
 		llvm::Function* callee = new_module->getFunction(opfun_name);
 		if (!callee) {
@@ -129,9 +126,7 @@ vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
 	llvm::orc::ThreadSafeModule tsm(std::move(new_module), std::move(ctx));
 	if (auto err = lljit.addIRModule(std::move(tsm)))
 		llvm::logAllUnhandledErrors(std::move(err), llvm::errs(), "Error adding module to JIT: ");
-	std::cerr << "Invoking LLVM compilation\n";
 	auto addr_or_err = lljit.lookup(base::toString(func_data.name));
-	std::cerr << "Finished LLVM compilation\n";
 	if (!addr_or_err) {
 		llvm::handleAllErrors(addr_or_err.takeError(), [&](const llvm::ErrorInfoBase& EIB) {
 			llvm::errs() << "JIT lookup failed: " << EIB.message() << '\n';
@@ -142,8 +137,6 @@ vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
 	llvm::orc::ExecutorAddr addr = *addr_or_err;
 
 	auto compiled_fn = addr.toPtr<vm::JitOpFun>();
-
-	std::cerr << "End of jitting\n";
 
 	return compiled_fn;
 }

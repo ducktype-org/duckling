@@ -90,9 +90,6 @@ void llvmInit() {
 		if (!F.isDeclaration()) {
 			//  Here I assume that demangling works for opcodes. Maybe use itaniumDemangle?
 			auto demangled = llvm::demangle(F.getName().str());
-			// if (demangled.starts_with("vm::OpFuns::op_debug")) {
-			// 	std::cerr << "WHAT\n";
-			// }
 			// One opcode doesn't have op prefix but it is marked to be deleted.
 			if (demangled.starts_with("vm::OpFuns::op_")
 			    and !demangled.starts_with("vm::OpFuns::op_debug")) {
@@ -103,8 +100,6 @@ void llvmInit() {
 					// CORE_PANIC("Duplicate opcode function name: ", name);
 				} else {
 					// Sanity check, that instructions sizes make sense.
-					std::cerr << "found " << name << " number: " << static_cast<uint64_t>(opcode)
-							  << " with " << F.getInstructionCount() << " instructions\n";
 					func_map[opcode] = &F;
 				}
 			}
@@ -113,7 +108,6 @@ void llvmInit() {
 	CORE_ASSERT(!func_map.empty(), "Opfuns not found!");
 
 	exit_on_err(lljit_instance->addIRModule(ThreadSafeModule(std::move(g_module), std::move(g_context))));
-	std::cerr << "JIT initialised successfully\n";
 }
 
 llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun) {

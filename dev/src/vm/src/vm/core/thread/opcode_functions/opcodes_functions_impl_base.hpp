@@ -365,8 +365,6 @@ namespace vm {
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
-			std::cerr << "Inside jit_call_entrypoint\n";
-
 			struct JitData {
 				JitOpFun* func_ptr          = nullptr;
 				uint      until_compilation = 1;
@@ -387,12 +385,9 @@ namespace vm {
 
 			if (my_data.func_ptr) {
 				// is already compiled
-				std::cerr << "Attempting JITted function call\n";
 				run_compiled();
-				std::cerr << "JITed function returned\n";
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
-				std::cerr << "Calling a function with the interpreter\n";
 				--my_data.until_compilation;
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
@@ -400,9 +395,7 @@ namespace vm {
 				const low::LowFuncData& current_function
 					= thread.executing_program->getFunctions()[func_id];
 
-				std::cerr << "Calling compileJit\n";
 				JitOpFun* compiled = compileJit(current_function);
-				std::cerr << "Returned from compileJit\n";
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;

@@ -354,7 +354,6 @@ namespace vm {
 			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
-		std::cerr << "Executing opcode: " << #opcode_name << '\n';                                  \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                            \
