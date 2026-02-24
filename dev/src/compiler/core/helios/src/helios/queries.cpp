@@ -177,9 +177,7 @@ namespace compiler::helios {
 
 			std::set<tsh::SymbolType<>> out;
 
-			ReturnTypeCollector(
-				query::Context& ctx, SymID symbol, bool initial_invocation = false
-			):
+			ReturnTypeCollector(query::Context& ctx, SymID symbol, bool initial_invocation = false):
 				  ctx(ctx),
 				  original_symbol(symbol),
 				  initial_invocation(initial_invocation) {}
@@ -203,7 +201,8 @@ namespace compiler::helios {
 				}
 				// the later uses of this visitor should know that they are visiting a nested
 				// function, so we set this variable to false.
-				// We can keep it set to false, since we fill be here in the top level function only once.
+				// We can keep it set to false, since we fill be here in the top level function only
+				// once.
 				initial_invocation = false;
 
 				auto fun_body = fun->getBody();
