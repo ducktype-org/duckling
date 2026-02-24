@@ -82,6 +82,7 @@ namespace compiler::helios {
 							is_failed = true;
 							continue;
 						}
+					}
 				}
 			}
 
@@ -145,16 +146,12 @@ namespace compiler::helios {
 			for (const auto& method: methods) {
 				auto method_sym  = method.getSymbol();
 				auto hout_method = ctx.query<QueryCodeOfFun>(method_sym);
-				out_functions.emplace_back(&hout_method->valueOrPanic());
-			}
 				if (hout_method->hasFailed()) {
 					is_failed = true;
 					continue;
 				} else {
 					out_functions.emplace_back(&hout_method->valueOrPanic());
 				}
-			}
-				out_functions.emplace_back(&hout_method->valueOrPanic());
 			}
 			return is_failed;
 		}
