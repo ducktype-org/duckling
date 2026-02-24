@@ -168,12 +168,18 @@ namespace compiler::helios {
 		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
 			query::Context& ctx;
 			SymID           original_symbol;
+			
+			/** 
+			 * Variable used to distinguish between initial invocation of the visitor on the whole function body, and recursive invocations on nested functions. 
+			 */
+			bool are_we_the_top_fuction;
 
 			std::set<tsh::SymbolType<>> out;
 
-			ReturnTypeCollector(query::Context& ctx, SymID symbol):
+			ReturnTypeCollector(query::Context& ctx, SymID symbol, bool are_we_the_top_fuction = false):
 				  ctx(ctx),
-				  original_symbol(symbol) {}
+				  original_symbol(symbol),
+				  are_we_the_top_fuction(are_we_the_top_fuction) {}
 
 			// @TODO: #1710 visits for all valid stmt-s
 
@@ -188,6 +194,11 @@ namespace compiler::helios {
 			}
 
 			void visitFun(pst::Access<pst::Fun> fun) final {
+				if (not are_we_the_top_fuction) {
+					// we are visiting a nested function, so we should not collect return types from it
+					return;
+				}
+
 				auto fun_body = fun->getBody();
 
 				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
@@ -235,7 +246,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			ReturnTypeCollector return_collector(ctx, key);
+			ReturnTypeCollector return_collector(ctx, key, true);
 			auto                fun = stmt(ctx, key).value();
 			fun->acceptVisitor(return_collector);
 			switch (return_collector.out.size()) {
