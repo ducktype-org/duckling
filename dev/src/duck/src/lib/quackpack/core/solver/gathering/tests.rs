@@ -533,7 +533,7 @@ dependencies:
                 == packages
         );
         for (_, features) in gathered_info.possible_features {
-            assert!(features == HashSet::new());
+            assert!(features.is_empty());
         }
         assert!(
             gathered_info.location_resolver

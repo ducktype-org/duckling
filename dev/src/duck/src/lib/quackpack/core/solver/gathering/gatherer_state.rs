@@ -353,7 +353,7 @@ impl GathererState {
             .keys()
             .map(|pkg| pkg.location)
             .collect();
-        if expanded_locs.iter().len() == 1
+        if expanded_locs.len() == 1
             && let Some(expanded_loc) = expanded_locs.into_iter().next()
         {
             self.location_resolver

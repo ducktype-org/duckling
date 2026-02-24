@@ -8,6 +8,7 @@ use crate::{
         core::{
             Package, PackageCtx, PackageLoader, Solver, SolverMode,
             fetcher::Fetcher,
+            solver_freeze::SolverFreeze,
             storage::{
                 git_access::StorageGitAccess,
                 locks::CompileLock,
@@ -40,7 +41,7 @@ pub struct SyncOptions {
 pub fn sync(
     ctx: &DuckCtx,
     pkg_ctx: &PackageCtx,
-    _options: SyncOptions,
+    options: SyncOptions,
 ) -> QuackResult<(CompileLock, Venv, Storage)> {
     let storage = Storage::new(ctx.duck_home());
     let fetcher = Fetcher::new(ctx)?;
@@ -59,7 +60,10 @@ pub fn sync(
     let input_freeze = user_exposed_freeze
         .as_ref()
         .or(venv.as_ref().map(|venv| venv.data().freeze()));
-    let solver_freeze = input_freeze.try_into()?;
+    let solver_freeze = match input_freeze {
+        Some(freeze) => freeze.try_into()?,
+        None => SolverFreeze::empty_with_random_root()?,
+    };
     let solver = Solver::new(pkg_ctx, &fetcher, solver_freeze, SolverMode::Strict);
     let (_, results) = TokioScope::scope_and_block(move |spawner| {
         spawner.spawn(async move {
@@ -69,9 +73,9 @@ pub fn sync(
     });
 
     let result = unpack_tokio_scoped_vector(results)?;
-    let new_freeze = extract_single_item_from_vec(result)??;
-    let freeze = new_freeze.0.generate_storage_freeze(&new_freeze.1)?;
-    if !_options.overwrite
+    let (new_solver_freeze, manifests) = extract_single_item_from_vec(result)??;
+    let new_freeze = new_solver_freeze.generate_storage_freeze(&manifests)?;
+    if !options.overwrite
         && let Some(venv) = venv
         && pkg_ctx.package().manifest_path() != venv.data().last_location()
         && venv.data().last_location().exists()
@@ -92,7 +96,7 @@ pub fn sync(
     // @TODO: #1962 Skip this, if we have nothing to install.
     // Maybe we should bump `access_time` only in that case?
     let data = VenvData::new(
-        freeze.clone(),
+        new_freeze.clone(),
         venv_config.is_ephemeral()?,
         pkg_ctx.package().manifest_path().to_path_buf(),
         now,
@@ -100,8 +104,8 @@ pub fn sync(
     let venv = Venv::new(id, data);
     venv.save_to(&storage)?;
     drop(data_lock);
-    if expose_freezefile && !_options.frozen {
-        let json = serde_json::to_string_pretty(&freeze)?;
+    if expose_freezefile && !options.frozen {
+        let json = serde_json::to_string_pretty(&new_freeze)?;
         freeze_name(pkg_ctx.package()).write(json)?;
     }
     Ok((

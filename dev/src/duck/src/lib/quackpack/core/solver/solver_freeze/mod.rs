@@ -9,7 +9,7 @@ use std::{
 use rand::distr::{SampleString, StandardUniform};
 
 use crate::{
-    QuackError, QuackResult, QuackResultContext, StrId,
+    QuackError, QuackResult, QuackResultContext, StrId, qp_bail_internal,
     quackpack::core::{
         FeatureName, Manifest,
         storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
@@ -44,17 +44,10 @@ impl Default for SolverPackageFreeze {
     }
 }
 
-impl TryFrom<Option<&VenvFreeze>> for SolverFreeze {
+impl TryFrom<&VenvFreeze> for SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
     type Error = QuackError;
-    fn try_from(value: Option<&VenvFreeze>) -> QuackResult<Self> {
-        let Some(value) = value else {
-            let main_pkg = not_existing_local_package(&HashMap::new());
-            return Ok(Self {
-                main_pkg,
-                package_freezes: [(main_pkg, SolverPackageFreeze::default())].into(),
-            });
-        };
+    fn try_from(value: &VenvFreeze) -> QuackResult<Self> {
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = ExpandedPackage {
@@ -91,7 +84,7 @@ impl TryFrom<Option<&VenvFreeze>> for SolverFreeze {
         // We make the location of the main package a nonexistent one, to not mess up any freeze entries of local dependencies.
         // This assumes that there are no cyclic local dependencies.
         // The main_pkg will be corrected nonetheless.
-        let main_pkg = not_existing_local_package(&pkg_freezes);
+        let main_pkg = not_existing_local_package(&pkg_freezes)?;
         let mut main_dependencies = HashMap::new();
         for dep in value.root().dependencies() {
             let realization = expanded_pkgs_by_name
@@ -116,11 +109,10 @@ impl TryFrom<Option<&VenvFreeze>> for SolverFreeze {
 
 fn not_existing_local_package(
     pkg_freezes: &HashMap<ExpandedPackage, SolverPackageFreeze>,
-) -> ExpandedPackage {
-    loop {
+) -> QuackResult<ExpandedPackage> {
+    for _ in 0..100 {
         let random_str = StandardUniform.sample_string(&mut rand::rng(), 16);
-        let mut path = PathBuf::new();
-        path.push(random_str);
+        let path = PathBuf::new().join(random_str);
         let pkg = ExpandedPackage {
             location: InternedExpandedLocation::new(ExpandedLocation::Local {
                 absolute_path: path,
@@ -128,12 +120,20 @@ fn not_existing_local_package(
             version: None,
         };
         if !pkg_freezes.contains_key(&pkg) {
-            return pkg;
+            return Ok(pkg);
         }
     }
+    qp_bail_internal!("Failed to generate a fresh package")
 }
 
 impl SolverFreeze {
+    pub fn empty_with_random_root() -> QuackResult<Self> {
+        Ok(Self {
+            main_pkg: not_existing_local_package(&HashMap::new())?,
+            package_freezes: HashMap::new(),
+        })
+    }
+
     pub fn generate_storage_freeze(
         self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
@@ -145,41 +145,41 @@ impl SolverFreeze {
             .context_internal("No main freeze")?
             .clone();
         for (pkg, freeze) in self.package_freezes {
-            let package_man = manifests.get(&pkg).context_internal("No main manifest")?;
+            let package_manifest = manifests.get(&pkg).context_internal("No main manifest")?;
             let mut dependencies = vec![];
             for (_, realization) in freeze.dependencies_realization {
-                let realization_man = manifests
+                let realization_manifest = manifests
                     .get(&realization)
                     .context_internal("No manifest for realization")?;
                 dependencies.push(FreezeDep::new(
-                    realization_man.root_description().name(),
-                    realization_man.root_description().version(),
+                    realization_manifest.root_description().name(),
+                    realization_manifest.root_description().version(),
                 ));
             }
             pkg_freezes.push(FreezePackage::new(
-                package_man.root_description().name(),
-                package_man.root_description().version(),
+                package_manifest.root_description().name(),
+                package_manifest.root_description().version(),
                 freeze.features.into_iter().collect(),
                 dependencies,
                 pkg.location,
             ));
         }
         let mut root_deps = vec![];
-        let root_man = manifests
+        let root_manifest = manifests
             .get(&self.main_pkg)
             .context_internal("No main manifest")?;
         for (_, realization) in root_freeze.dependencies_realization {
-            let realization_man = manifests
+            let realization_manifest = manifests
                 .get(&realization)
                 .context_internal("No manifest for realization")?;
             root_deps.push(FreezeDep::new(
-                realization_man.root_description().name(),
-                realization_man.root_description().version(),
+                realization_manifest.root_description().name(),
+                realization_manifest.root_description().version(),
             ));
         }
         let root = RootPackage::new(
-            root_man.root_description().name(),
-            root_man.root_description().version(),
+            root_manifest.root_description().name(),
+            root_manifest.root_description().version(),
             root_freeze.features.into_iter().collect(),
             root_deps,
         );

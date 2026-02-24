@@ -63,19 +63,30 @@ impl SolverFreeze {
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
         new_root: ExpandedPackage,
     ) -> QuackResult<Self> {
-        // @TODO: #2076 Changing new_root may cause a bug.
-        // Changing the old main_pkg to the new_root may seem bug-prone,
-        // since the new_root might have been a dependency in the previous freeze.
-        // There are two cases:
-        // 1. The new_root is taken into still_satisfied_pkgs.
-        //    Then the only issue is that, after the change we might not deduce that its dependencies are all satisfied,
-        //    which is slightly (the solver engine will solve the problem quickly) inefficient, but not a bug.
-        //    The packages that depended on the new_root and belong to still_satisfied_pkgs are tehcnically not satisfied,
-        //    so this is a bug to be addressed (though they will get removed as unnecessary).
-        // 2. The new_root is not taken into still_satisfied_pkgs.
-        //    This does not change whether its dependencies are still satisfied, and since we prohibit cycles,
-        //    packages depending on the new_root should not be in the freeze nonetheless.
-        // The main thing is that we use the new_root's new manifest, so everything is correct.
+        self.retain_not_flawed_pkgs(manifests)?;
+
+        // If the previous freeze contained the new root as a dependency and it was retained,
+        // this means that the freeze is a correct freeze for the new_root and substituting root could even
+        // break the invariant of this function.
+        // Old root package freeze can be safely deleted, since assuming no cycles,
+        // no package should depend on it.
+        // The packages depending on the new root will be deleted from the freeze during the final trimming.
+        if self.package_freezes.contains_key(&new_root) && new_root != self.main_pkg {
+            self.package_freezes.remove(&self.main_pkg);
+            self.main_pkg = new_root;
+            Ok(self)
+        } else {
+            self.substitute_root_pkg(manifests, new_root)
+        }
+    }
+
+    /// Helper for [`Self::find_maximal_correct_dep_solution`]
+    /// Retains freezes of the old root package and all the packages which have dependencies
+    /// transitively satisfied.
+    fn retain_not_flawed_pkgs(
+        &mut self,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
+    ) -> QuackResult<()> {
         let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests)?;
         let reversed_graph = self.reversed_dependency_graph();
         let mut visited = HashSet::new();
@@ -91,40 +102,7 @@ impl SolverFreeze {
         }
         self.package_freezes
             .retain(|pkg, _| *pkg == self.main_pkg || still_satisfied_pkgs.contains(pkg));
-
-        let main_pkg_freeze = self
-            .package_freezes
-            .get(&self.main_pkg)
-            .context_internal("Main package was not put into package freezes")?;
-        let main_manifest = manifests
-            .get(&new_root)
-            .context_internal("Main package manifest not provided")?;
-        // Check which main package dependencies are still satisfied.
-        let mut still_satisfied_root_deps = HashSet::new();
-        for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
-            if let Some(dependency) = main_manifest.dependencies().get_dependency(*alias)
-                && let Some(realization_freeze) = self.package_freezes.get(realization)
-                && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
-            {
-                still_satisfied_root_deps.insert(*alias);
-            }
-        }
-        // Leave only still satisfied dependencies.
-        let main_pkg_freeze = self
-            .package_freezes
-            .get_mut(&self.main_pkg)
-            .context_internal("Main package was not put into package freezes")?;
-        main_pkg_freeze
-            .dependencies_realization
-            .retain(|alias, _| still_satisfied_root_deps.contains(alias));
-        // Change the previous main package to the new root package.
-        let main_pkg_freeze = self
-            .package_freezes
-            .remove(&self.main_pkg)
-            .context_internal("Main package was not put into package freezes")?;
-        self.package_freezes.insert(new_root, main_pkg_freeze);
-        self.main_pkg = new_root;
-        Ok(self)
+        Ok(())
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
@@ -214,7 +192,7 @@ impl SolverFreeze {
             .is_superset(&HashSet::from_iter(forced_child_features)))
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_not_flawed_pkgs`].
     /// Expands the notion of a flawed package in a dfs-like manner, by applying a rule that
     /// if for some package and its dependency, the realization is flawed, the package is as well.
     fn flawed_pkgs_dfs(
@@ -235,7 +213,7 @@ impl SolverFreeze {
         }
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_not_flawed_pkgs`].
     /// Generates the graph used by [`Self::flawed_pkgs_dfs`].
     fn reversed_dependency_graph(&self) -> HashMap<ExpandedPackage, Vec<ExpandedPackage>> {
         let mut reversed_graph: HashMap<ExpandedPackage, Vec<ExpandedPackage>> = HashMap::new();
@@ -245,6 +223,49 @@ impl SolverFreeze {
             }
         }
         reversed_graph
+    }
+
+    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// In the freeze, removes the old root and substitutes its package freeze as the new root's package freeze.
+    /// Keeps only still satisfied realizations from the old root's package freeze.
+    fn substitute_root_pkg(
+        mut self,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
+        new_root: ExpandedPackage,
+    ) -> QuackResult<Self> {
+        let main_pkg_freeze = self
+            .package_freezes
+            .get(&self.main_pkg)
+            .context_internal("Main package was not put into package freezes")?;
+        let main_manifest = manifests
+            .get(&new_root)
+            .context_internal("Main package manifest not provided")?;
+        // Check which main package dependencies are still satisfied.
+        let mut still_satisfied_root_deps = HashSet::new();
+        for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
+            if let Some(dependency) = main_manifest.dependencies().get_dependency(*alias)
+                && let Some(realization_freeze) = self.package_freezes.get(realization)
+                && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
+            {
+                still_satisfied_root_deps.insert(*alias);
+            }
+        }
+        // Leave only still satisfied dependencies.
+        let main_pkg_freeze = self
+            .package_freezes
+            .get_mut(&self.main_pkg)
+            .context_internal("Main package was not put into package freezes")?;
+        main_pkg_freeze
+            .dependencies_realization
+            .retain(|alias, _| still_satisfied_root_deps.contains(alias));
+        // Change the previous main package to the new root package.
+        let main_pkg_freeze = self
+            .package_freezes
+            .remove(&self.main_pkg)
+            .context_internal("Main package was not put into package freezes")?;
+        self.package_freezes.insert(new_root, main_pkg_freeze);
+        self.main_pkg = new_root;
+        Ok(self)
     }
 }
 
@@ -424,7 +445,7 @@ metadata:
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         assert!(new_freeze.package_freezes.len() == 1);
-        assert!(freeze_a.dependencies_realization == HashMap::new());
+        assert!(freeze_a.dependencies_realization.is_empty());
         assert!(freeze_a.features == HashSet::from([FeatureName::new("foo")]));
     }
 
@@ -516,8 +537,8 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
         assert!(new_freeze.package_freezes.len() == 2);
-        assert!(freeze_a.dependencies_realization == HashMap::new());
-        assert!(freeze_c.dependencies_realization == HashMap::new());
+        assert!(freeze_a.dependencies_realization.is_empty());
+        assert!(freeze_c.dependencies_realization.is_empty());
     }
 
     #[test]
@@ -634,7 +655,7 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_d = new_freeze.package_freezes.get(&exp_pkg_d).unwrap();
         assert!(new_freeze.package_freezes.len() == 2);
-        assert!(freeze_a.dependencies_realization == HashMap::new());
-        assert!(freeze_d.dependencies_realization == HashMap::new());
+        assert!(freeze_a.dependencies_realization.is_empty());
+        assert!(freeze_d.dependencies_realization.is_empty());
     }
 }
