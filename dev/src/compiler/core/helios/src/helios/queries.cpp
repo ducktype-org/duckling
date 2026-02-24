@@ -198,6 +198,8 @@ namespace compiler::helios {
 					// we are visiting a nested function, so we should not collect return types from it
 					return;
 				}
+				// the later uses of this visitor should know that they are visiting a nested function, so we set this variable to false
+				are_we_the_top_fuction = false;
 
 				auto fun_body = fun->getBody();
 
