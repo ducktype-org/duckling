@@ -170,6 +170,9 @@ fn test_no_longer_working_dependency() {
 }
 
 mod private {
+    use std::sync::Arc;
+
+    use tokio::sync::Mutex;
     use url::Url;
 
     use crate::{
@@ -260,7 +263,10 @@ dependencies:
         };
 
         let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Strict);
-        solver = solver.prepare_solving(MockGitAccess()).await.unwrap();
+        solver = solver
+            .prepare_solving(Arc::new(Mutex::new(MockGitAccess())))
+            .await
+            .unwrap();
         let new_freeze = solver.solve().unwrap().0;
         assert!(new_freeze.main_pkg == root_pkg);
         assert!(
@@ -372,7 +378,10 @@ dependencies:
         };
 
         let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Strict);
-        solver = solver.prepare_solving(MockGitAccess()).await.unwrap();
+        solver = solver
+            .prepare_solving(Arc::new(Mutex::new(MockGitAccess())))
+            .await
+            .unwrap();
         let new_freeze = solver.solve().unwrap().0;
         assert!(new_freeze.main_pkg == root_pkg);
         assert!(
@@ -470,7 +479,10 @@ dependencies:
         };
 
         let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Merciful);
-        solver = solver.prepare_solving(MockGitAccess()).await.unwrap();
+        solver = solver
+            .prepare_solving(Arc::new(Mutex::new(MockGitAccess())))
+            .await
+            .unwrap();
         let new_freeze = solver.solve().unwrap().0;
         assert!(new_freeze.main_pkg == root_pkg);
         assert!(

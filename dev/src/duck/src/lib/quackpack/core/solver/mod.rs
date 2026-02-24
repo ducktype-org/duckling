@@ -109,12 +109,11 @@ impl<'duck> Solver<'duck, Prepared> {
     }
 
     /// Prepares the [`Solver`] for running the engine by constructing [`SolverInput`].
-    pub async fn prepare_solving<Access: GitAccess>(
+    pub async fn prepare_solving<GitAccessImpl: GitAccess>(
         mut self,
-        git_access: Access,
+        git_access: Arc<Mutex<GitAccessImpl>>,
     ) -> QuackResult<Solver<'duck, Prepared>> {
-        let access = Arc::new(Mutex::new(git_access));
-        let gatherer = Gatherer::new(self.qp_ctx, self.fetcher, access);
+        let gatherer = Gatherer::new(self.qp_ctx, self.fetcher, git_access);
 
         let mut root_manifest = self.root_package_ctx.package().manifest().clone();
         let mut prev_freeze_manifests = self
