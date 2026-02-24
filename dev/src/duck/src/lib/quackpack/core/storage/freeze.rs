@@ -47,7 +47,7 @@ impl VenvFreeze {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq)]
 pub struct RootPackage {
     name: StrId,
     version: Version,
@@ -115,7 +115,7 @@ impl RootPackage {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct FreezePackage {
     name: StrId,
     version: Version,
@@ -214,7 +214,7 @@ impl From<FreezePackage> for PackageId {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Copy, Clone, Hash, PartialEq, Eq)]
 /// Dependency deserialized from format `<name> <version>`
 pub struct FreezeDep {
     name: StrId,
