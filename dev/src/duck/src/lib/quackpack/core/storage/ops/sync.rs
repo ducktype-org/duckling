@@ -21,7 +21,7 @@ use crate::{
                 venv::{Venv, VenvData},
                 venv_id::ToVenvId,
             },
-            types_common::{ExpandedLocation, ExpandedPackage},
+            types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
         },
         util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
     },
@@ -68,9 +68,15 @@ pub fn sync(
     let input_freeze = user_exposed_freeze
         .as_ref()
         .or(venv.as_ref().map(|venv| venv.data().freeze()));
+    let root_pkg = ExpandedPackage {
+        location: InternedExpandedLocation::new(ExpandedLocation::Local {
+            absolute_path: pkg_ctx.package().root_directory().to_path_buf(),
+        }),
+        version: None,
+    };
     let solver_freeze = match input_freeze {
-        Some(freeze) => freeze.try_into()?,
-        None => SolverFreeze::empty_with_random_root()?,
+        Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
+        None => SolverFreeze::empty_with_root(root_pkg)?,
     };
     let solver = Solver::new(pkg_ctx, &fetcher, solver_freeze, SolverMode::Strict);
     let fetcher_lock = ctx

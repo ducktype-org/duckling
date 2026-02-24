@@ -1,19 +1,14 @@
 mod freeze_diagnosis;
 mod new_freeze_generation;
 
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
-
-use rand::distr::{SampleString, StandardUniform};
+use std::collections::{HashMap, HashSet};
 
 use crate::{
-    QuackError, QuackResult, QuackResultContext, StrId, qp_bail_internal,
+    QuackResult, QuackResultContext, StrId,
     quackpack::core::{
         FeatureName, Manifest,
         storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
-        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
+        types_common::ExpandedPackage,
     },
 };
 
@@ -44,10 +39,9 @@ impl Default for SolverPackageFreeze {
     }
 }
 
-impl TryFrom<&VenvFreeze> for SolverFreeze {
+impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
-    type Error = QuackError;
-    fn try_from(value: &VenvFreeze) -> QuackResult<Self> {
+    pub fn try_from_venv_freeze(root: ExpandedPackage, value: &VenvFreeze) -> QuackResult<Self> {
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = ExpandedPackage {
@@ -81,19 +75,17 @@ impl TryFrom<&VenvFreeze> for SolverFreeze {
             );
         }
 
-        // We make the location of the main package a nonexistent one, to not mess up any freeze entries of local dependencies.
-        // This assumes that there are no cyclic local dependencies.
-        // The main_pkg will be corrected nonetheless.
-        let main_pkg = not_existing_local_package(&pkg_freezes)?;
         let mut main_dependencies = HashMap::new();
         for dep in value.root().dependencies() {
             let realization = expanded_pkgs_by_name
                 .get(&dep.name())
                 .context_internal("No package with given name")?;
-            main_dependencies.insert(dep.name(), *realization);
+            if *realization != root {
+                main_dependencies.insert(dep.name(), *realization);
+            }
         }
         pkg_freezes.insert(
-            main_pkg,
+            root,
             SolverPackageFreeze {
                 dependencies_realization: main_dependencies,
                 features: value.root().features().iter().copied().collect(),
@@ -101,36 +93,17 @@ impl TryFrom<&VenvFreeze> for SolverFreeze {
         );
 
         Ok(Self {
-            main_pkg,
+            main_pkg: root,
             package_freezes: pkg_freezes,
         })
     }
 }
 
-fn not_existing_local_package(
-    pkg_freezes: &HashMap<ExpandedPackage, SolverPackageFreeze>,
-) -> QuackResult<ExpandedPackage> {
-    for _ in 0..100 {
-        let random_str = StandardUniform.sample_string(&mut rand::rng(), 16);
-        let path = PathBuf::new().join(random_str);
-        let pkg = ExpandedPackage {
-            location: InternedExpandedLocation::new(ExpandedLocation::Local {
-                absolute_path: path,
-            }),
-            version: None,
-        };
-        if !pkg_freezes.contains_key(&pkg) {
-            return Ok(pkg);
-        }
-    }
-    qp_bail_internal!("Failed to generate a fresh package")
-}
-
 impl SolverFreeze {
-    pub fn empty_with_random_root() -> QuackResult<Self> {
+    pub fn empty_with_root(root: ExpandedPackage) -> QuackResult<Self> {
         Ok(Self {
-            main_pkg: not_existing_local_package(&HashMap::new())?,
-            package_freezes: HashMap::new(),
+            main_pkg: root,
+            package_freezes: [(root, SolverPackageFreeze::default())].into(),
         })
     }
 
@@ -192,8 +165,15 @@ impl SolverFreeze {
 
 #[cfg(test)]
 mod test {
+    use std::path::PathBuf;
+
     use crate::{
-        DuckCtx, QpCtx, quackpack::core::parse_manifest, util_common::path_ops_ext::PathOpsExt,
+        DuckCtx, QpCtx,
+        quackpack::core::{
+            parse_manifest,
+            types_common::{ExpandedLocation, InternedExpandedLocation},
+        },
+        util_common::path_ops_ext::PathOpsExt,
     };
     use tempfile::{TempDir, tempdir};
     use url::Url;
@@ -243,14 +223,20 @@ mod test {
                 FreezeDep::new("b".into(), 2.into()),
             ],
         );
+        let root_pkg = ExpandedPackage {
+            location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                absolute_path: PathBuf::new(),
+            }),
+            version: None,
+        };
         let storage_freeze = VenvFreeze::new(root, vec![freeze_pkg_a, freeze_pkg_b]);
-        let solver_freeze: SolverFreeze = (&storage_freeze).try_into().unwrap();
-        let solver_tmp_root = solver_freeze.main_pkg;
+        let solver_freeze = SolverFreeze::try_from_venv_freeze(root_pkg, &storage_freeze).unwrap();
+        assert!(solver_freeze.main_pkg == root_pkg);
         assert!(
             solver_freeze.package_freezes
                 == HashMap::from([
                     (
-                        solver_tmp_root,
+                        root_pkg,
                         SolverPackageFreeze {
                             dependencies_realization: [("a".into(), pkg_a), ("b".into(), pkg_b)]
                                 .into(),
