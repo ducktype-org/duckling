@@ -18,10 +18,10 @@ public:
 
 	static DuckVMDebugCore get(const fs::File& filepath, const std::vector<std::string>& args = {});
 
-	DuckVMDebugCore(DuckVMDebugCore&&)                 = delete;
-	DuckVMDebugCore& operator=(DuckVMDebugCore&&)      = delete;
-	DuckVMDebugCore(const DuckVMDebugCore&)            = delete;
-	DuckVMDebugCore& operator=(const DuckVMDebugCore&) = delete;
+	// DuckVMDebugCore(DuckVMDebugCore&&)                 = delete;
+	// DuckVMDebugCore& operator=(DuckVMDebugCore&&)      = delete;
+	// DuckVMDebugCore(const DuckVMDebugCore&)            = delete;
+	// DuckVMDebugCore& operator=(const DuckVMDebugCore&) = delete;
 
 	DuckVMDebugCore();
 	DuckVMDebugCore(std::istream& vm_input_stream, std::ostream& vm_output_stream);

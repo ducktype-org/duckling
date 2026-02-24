@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ostream>
 #include "vm/api/data/status.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/vm_debug_core.hpp>
@@ -28,10 +29,11 @@ private:
 	Mode                   mode = Mode::Command;
 	static DuckVMDebugCli* active_instance;
 	std::stringstream      vm_input_stream;
-	std::stringstream      vm_output_stream;
+	std::ostream*          vm_output_stream;
 	DuckVMDebugCore        core;
 	int                    event_fd;
 	int                    signal_pipe[2];
+	int                    output_pipe[2];
 
 	DuckVMDebugCli();
 	DuckVMDebugCli(const fs::File& filepath, const std::vector<std::string>& args = {});

@@ -49,7 +49,7 @@ namespace vm {
 		void writeOutput(const T& v) {
 			{
 				auto lck = lock();
-				output_stream << v;
+				output_stream << v << std::flush;
 			}
 			output_empty_cv.notify_all();
 		}
