@@ -1,11 +1,13 @@
 #include "symbol_data.hpp"
-#include "base/except/exceptions.hpp"
+
 #include "helios/scope_id.hpp"
 
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include "base/except/exceptions.hpp"
 
 namespace compiler::helios {
 	namespace houtgen {
@@ -31,9 +33,12 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(return_type, counter);
 		}
 
-		GeneratedSymbolData::GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, SelfParameter, Variable, ReplExpressionWrapper>& data
-		):
+		GeneratedSymbolData::GeneratedSymbolData(const std::variant<
+												 ImplicitConstructor,
+												 Parameter,
+												 SelfParameter,
+												 Variable,
+												 ReplExpressionWrapper>& data):
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
@@ -84,13 +89,11 @@ namespace compiler::helios {
 					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
 				}
 				variant_case(SelfParameter, param) {
-					const auto function_type
-						= ctx.query<QueryTypeOfSymbol>({ param.method_symbol })
-					          ->valueOrThrow()
-					          .getType()
-					          .as<tsh::FunctionAbstractType>();
-					auto param_symbol_type
-						= function_type.getParameterTypes().at(0);
+					const auto function_type = ctx.query<QueryTypeOfSymbol>({ param.method_symbol })
+					                               ->valueOrThrow()
+					                               .getType()
+					                               .as<tsh::FunctionAbstractType>();
+					auto param_symbol_type = function_type.getParameterTypes().at(0);
 					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
 				}
 				variant_case(Variable, var) { return var.type; }
@@ -117,9 +120,7 @@ namespace compiler::helios {
 				variant_case(Parameter, param) {
 					CORE_PANIC("Can't get scope of generated parameter yet.");
 				}
-				variant_case(SelfParameter, param) {
-					return param.scope;
-				}
+				variant_case(SelfParameter, param) { return param.scope; }
 				variant_case(Variable, var) {
 					CORE_PANIC("Can't get scope of generated variable yet.");
 				}
@@ -135,9 +136,7 @@ namespace compiler::helios {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) { return {}; }
 				variant_case(Parameter, param) { return {}; }
-				variant_case(SelfParameter, param) {
-					return param.scope;
-				}
+				variant_case(SelfParameter, param) { return param.scope; }
 				variant_case(Variable, var) { return {}; }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
 				variant_default { CORE_PANIC("Unhandled symbol kind"); }

@@ -140,7 +140,7 @@ namespace compiler::helios {
 			                            .as<tsh::ClassAbstractType>();
 
 			auto methods = class_type.getInterface(ctx)->getMethodsView();
-			
+
 
 			bool is_failed = false;
 

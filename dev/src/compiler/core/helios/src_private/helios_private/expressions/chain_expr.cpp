@@ -33,8 +33,8 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/query_errors.hpp>
 #include <query_framework/context/context.hpp>
+#include <query_framework/query_errors.hpp>
 #include <query_framework/query_result.hpp>
 #include <string_id/string_id.hpp>
 #include <token_parser_core/common_elements.hpp>
@@ -549,11 +549,12 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(SymID, pst::Access<pst::expr::IdentifierLiteral> ident)
 			-> query::QResult<ChainState> {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Acces to namespace should be done via `pst::expr::Access`, not pst::expr::IdentifierLiteral",
-					ident->getSourcePosition()
-				));
-				return query::Failed();
+			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Acces to namespace should be done via `pst::expr::Access`, not "
+			    "pst::expr::IdentifierLiteral",
+				ident->getSourcePosition()
+			));
+			return query::Failed();
 		}
 
 		/**
@@ -561,11 +562,12 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(SymID, pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call>)
 			-> query::QResult<ChainState> {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Acces to namespace should be done via `pst::expr::Access`, not pst::expr::IdentifierLiteral",
-					ident->getSourcePosition()
-				));
-				return query::Failed();
+			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Acces to namespace should be done via `pst::expr::Access`, not "
+			    "pst::expr::IdentifierLiteral",
+				ident->getSourcePosition()
+			));
+			return query::Failed();
 		}
 
 		/**
@@ -603,12 +605,13 @@ namespace compiler::helios::code {
 		 * This may result in a method. Method
 		 * parameter overload is possible.
 		 *
-		 * This occurs when the identifier is a member of a class and the chain is inside a method body.
+		 * This occurs when the identifier is a member of a class and the chain is inside a method
+		 * body.
 		 */
 		auto processPSTExpr(
-			base::Box<Expr>                current_expr,
+			base::Box<Expr>                           current_expr,
 			pst::Access<pst::expr::IdentifierLiteral> ident,
-			pst::Access<pst::expr::Call>   call_expr
+			pst::Access<pst::expr::Call>              call_expr
 		) -> query::QResult<ChainState> {
 			// TODO: HERE!!!
 
@@ -620,9 +623,8 @@ namespace compiler::helios::code {
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto expr_result = processFunctionCall(
-				query_ctx, callees, ident, call_expr, std::move(current_expr)
-			);
+			auto expr_result
+				= processFunctionCall(query_ctx, callees, ident, call_expr, std::move(current_expr));
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 
 			return ChainState::ofExpr(std::move(expr));
@@ -656,10 +658,12 @@ namespace compiler::helios::code {
 		 * and the current state is an expression (not a namespace e.x.).
 		 * Should check if accessed field is a namespace or not.
 		 *
-		 * This occurs when the identifier is a member of a class and the chain is inside a method body.
+		 * This occurs when the identifier is a member of a class and the chain is inside a method
+		 * body.
 		 */
-		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::IdentifierLiteral> ident)
-			-> query::QResult<ChainState> {
+		auto processPSTExpr(
+			base::Box<Expr> current_expr, pst::Access<pst::expr::IdentifierLiteral> ident
+		) -> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, ident->getName().value);
@@ -779,29 +783,35 @@ namespace compiler::helios::code {
 		}
 
 		base::Optional<query::Failed> processSelfSymbolInMethod() {
-			if (!isCurrentElement<pst::expr::IdentifierLiteral>()) return {}; // We are not accessing a field nor a method
+			if (!isCurrentElement<pst::expr::IdentifierLiteral>())
+				return {};  // We are not accessing a field nor a method
 
 			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ original_expr });
 			auto res = HInterface::ofScopeWithParents(scope).lookup(query_ctx, base::StrID("self"));
-			
-			if (res->isEmpty()) return {}; // No self element, we are not in a method
+
+			if (res->isEmpty()) return {};  // No self element, we are not in a method
 
 			CORE_ASSERT(res->leaves.size() == 1, "Expected exactly one self symbol in method scope");
 			auto self_element = res->leaves.front();
-			auto self_expr = ChainState::ofExpr(makeBox<IdentifierExpr>(query_ctx, pstOrigin(original_expr), self_element));
+			auto self_expr    = ChainState::ofExpr(
+                makeBox<IdentifierExpr>(query_ctx, pstOrigin(original_expr), self_element)
+            );
 			auto self_type = self_expr.expr->expression_type.getType();
-			auto current_element_value = currentElem().value().dynamicCast<pst::expr::IdentifierLiteral>().value();
+			auto current_element_value
+				= currentElem().value().dynamicCast<pst::expr::IdentifierLiteral>().value();
 
-			auto lookup_result = HInterface::ofTypeInstance(self_type)
-			                         .lookup(query_ctx, current_element_value->getName().value);
+			auto lookup_result = HInterface::ofTypeInstance(self_type).lookup(
+				query_ctx, current_element_value->getName().value
+			);
 
-			if (lookup_result->isEmpty()) return{}; // We did not find a matching field nor a method
+			if (lookup_result->isEmpty())
+				return {};  // We did not find a matching field nor a method
 
 			// If we found any matching symbols we continue constructing chain from `self` context
 			this->current_state = std::move(self_expr);
 
 			if (isCurrentElement<pst::expr::IdentifierLiteral>()
-				&& isNextElement<pst::expr::Call>()) {
+			    && isNextElement<pst::expr::Call>()) {
 				auto error = step<pst::expr::IdentifierLiteral, pst::expr::Call>();
 				this->index += 2;
 				return error;
@@ -931,11 +941,11 @@ namespace compiler::helios::code {
 
 			if (this->current_state.isEmpty()) {
 				if (isCurrentElement<pst::expr::IdentifierLiteral>()
-					&& isNextElement<pst::expr::Call>()) {
+				    && isNextElement<pst::expr::Call>()) {
 					error = firstStep<pst::expr::IdentifierLiteral, pst::expr::Call>();
 					this->index += 2;
 				} else if (isCurrentElement<pst::expr::KeywordLiteral>()
-						&& isNextElement<pst::expr::Call>()) {
+				           && isNextElement<pst::expr::Call>()) {
 					error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
 					this->index += 2;
 				} else if (isCurrentElement<pst::expr::IdentifierLiteral>()) {
