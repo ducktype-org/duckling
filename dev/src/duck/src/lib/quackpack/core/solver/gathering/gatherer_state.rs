@@ -42,8 +42,7 @@ impl PackageData {
             let location = Location::from(dependency);
             let location = InternedLocation::new(location);
             let features: HashSet<FeatureName> = HashSet::from_iter(
-                dependency
-                    .enabled_features(Vec::from_iter(self.requested_features.iter().copied())),
+                dependency.enabled_features(self.requested_features.iter().copied()),
             );
             if dependency.is_pinned() {
                 let version = dependency

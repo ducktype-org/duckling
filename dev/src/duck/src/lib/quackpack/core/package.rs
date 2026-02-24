@@ -1,4 +1,7 @@
-use crate::quackpack::{core::Manifest, schemas::manifest::Manifest as ManifestSchema};
+use crate::quackpack::{
+    core::{Manifest, storage::freeze::FreezeDep},
+    schemas::manifest::Manifest as ManifestSchema,
+};
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -19,6 +22,7 @@ impl Package {
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
+        let artifacts_dir = root.join(".duck_build");
         Self {
             inner: Arc::new(PackageInner {
                 original_content,
@@ -26,6 +30,7 @@ impl Package {
                 manifest,
                 root,
                 manifest_path,
+                artifacts_dir,
             }),
         }
     }
@@ -53,6 +58,17 @@ impl Package {
     pub fn manifest_path(&self) -> &Path {
         &self.inner.manifest_path
     }
+
+    pub fn artifacts_dir(&self) -> &Path {
+        &self.inner.artifacts_dir
+    }
+
+    pub fn as_freeze_dep(&self) -> FreezeDep {
+        FreezeDep::new(
+            self.manifest().root_description().name(),
+            self.manifest().root_description().version(),
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -62,6 +78,7 @@ struct PackageInner {
     manifest: Manifest,
     root: PathBuf,
     manifest_path: PathBuf,
+    artifacts_dir: PathBuf,
 }
 
 #[cfg(test)]

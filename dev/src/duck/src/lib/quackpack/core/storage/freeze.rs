@@ -6,7 +6,10 @@ use crate::{
     QuackError, QuackResultContext, StrId, qp_bail,
     quackpack::core::{
         FeatureName, Version,
-        storage::package_id::{GitId, LocalId, PackageId, RegistryId},
+        storage::{
+            package_id::{GitId, LocalId, PackageId, RegistryId},
+            venv::VenvData,
+        },
         types_common::{ExpandedLocation, InternedExpandedLocation},
     },
 };
@@ -67,6 +70,13 @@ impl RootPackage {
             version,
             features,
             dependencies,
+        }
+    }
+
+    pub fn as_freeze_dep(&self) -> FreezeDep {
+        FreezeDep {
+            name: self.name(),
+            version: self.version(),
         }
     }
 
@@ -138,6 +148,13 @@ impl FreezePackage {
             features,
             dependencies,
             source,
+        }
+    }
+
+    pub fn as_freeze_dep(&self) -> FreezeDep {
+        FreezeDep {
+            name: self.name(),
+            version: self.version(),
         }
     }
 

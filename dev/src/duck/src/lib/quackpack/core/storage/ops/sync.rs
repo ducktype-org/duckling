@@ -15,7 +15,7 @@ use crate::{
             solver_freeze::SolverFreeze,
             storage::{
                 git_access::StorageGitAccess,
-                locks::CompileLock,
+                locks::{CompileLock, TrySyncLock},
                 package_id::{GitId, PackageId, RegistryId},
                 paths::Storage,
                 venv::{Venv, VenvData},
@@ -50,7 +50,7 @@ pub fn sync(
     ctx: &DuckCtx,
     pkg_ctx: &PackageCtx,
     options: SyncOptions,
-) -> QuackResult<(CompileLock, Venv, Storage)> {
+) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     let storage = Storage::new(ctx.duck_home());
     let fetcher = Fetcher::new(ctx)?;
     let git_access = Arc::new(Mutex::new(StorageGitAccess::new(&storage, HashMap::new())));
@@ -146,13 +146,7 @@ pub fn sync(
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
         freeze_name(pkg_ctx.package()).write(json)?;
     }
-    Ok((
-        _sync_lock
-            .to_compile_lock(&storage, id)
-            .context("failed to acquire compile lock")?,
-        venv,
-        storage,
-    ))
+    Ok((_sync_lock, venv, storage))
 }
 
 fn freeze_name(package: &Package) -> PathBuf {

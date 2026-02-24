@@ -91,12 +91,16 @@ impl Dependency {
     }
 
     /// Get an iterator over features that are enabled for the given features.
-    // NOTE: We take `Vec`, because it has trivially a copyable iterator (iterator over a slice).
-    pub fn enabled_features(&self, enabled_features: Vec<FeatureName>) -> Vec<FeatureName> {
+    pub fn enabled_features<I>(&self, enabled_features: I) -> Vec<FeatureName>
+    where
+        I: IntoIterator<Item = FeatureName>,
+        <I as IntoIterator>::IntoIter: Clone,
+    {
+        let iter = enabled_features.into_iter();
         self.features
             .iter()
             .filter_map(|feature| {
-                if feature.is_enabled_for(enabled_features.iter().copied()) {
+                if feature.is_enabled_for(iter.clone()) {
                     Some(feature.name())
                 } else {
                     None
