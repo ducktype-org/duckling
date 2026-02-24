@@ -8,7 +8,7 @@ class ClassWithMember {
     member: FirstClass = FirstClass(3, 4.0);
     
     fun getMemberA() -> i64 = {
-        return member.getA();
+        return member.a;
     }
 }
 

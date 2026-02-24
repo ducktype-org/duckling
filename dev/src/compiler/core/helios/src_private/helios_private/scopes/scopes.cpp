@@ -469,9 +469,9 @@ namespace compiler::helios {
 				out.emplace_back(ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Parameter{
-						.function_symbol = ctx.query<QuerySymbolOfSTMT>(meth),
-						.parameter_index = 0 } },
+					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::SelfParameter{
+						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth),
+						.scope = key } },
 				}));
 
 				output(std::move(out));

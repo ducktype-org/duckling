@@ -33,6 +33,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include <query_framework/query_errors.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 #include <string_id/string_id.hpp>
@@ -544,9 +545,33 @@ namespace compiler::helios::code {
 		}
 
 		/**
+		 * This should not happen.
+		 */
+		auto processPSTExpr(SymID, pst::Access<pst::expr::IdentifierLiteral> ident)
+			-> query::QResult<ChainState> {
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Acces to namespace should be done via `pst::expr::Access`, not pst::expr::IdentifierLiteral",
+					ident->getSourcePosition()
+				));
+				return query::Failed();
+		}
+
+		/**
+		 * This should not happen.
+		 */
+		auto processPSTExpr(SymID, pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call>)
+			-> query::QResult<ChainState> {
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Acces to namespace should be done via `pst::expr::Access`, not pst::expr::IdentifierLiteral",
+					ident->getSourcePosition()
+				));
+				return query::Failed();
+		}
+
+		/**
 		 * Case when we have an access expression followed by a call expression,
 		 * and current state is an expression, for example "my_expr.foo()".
-		   This may result in a method. Method
+		 * This may result in a method. Method
 		 * parameter overload is possible.
 		 */
 		auto processPSTExpr(
@@ -573,6 +598,37 @@ namespace compiler::helios::code {
 		}
 
 		/**
+		 * Case when we have an identifier literal followed by a call expression,
+		 * and current state is an expression, for example "my_expr.foo()".
+		 * This may result in a method. Method
+		 * parameter overload is possible.
+		 *
+		 * This occurs when the identifier is a member of a class and the chain is inside a method body.
+		 */
+		auto processPSTExpr(
+			base::Box<Expr>                current_expr,
+			pst::Access<pst::expr::IdentifierLiteral> ident,
+			pst::Access<pst::expr::Call>   call_expr
+		) -> query::QResult<ChainState> {
+			// TODO: HERE!!!
+
+			auto current_expr_type = current_expr->expression_type.getType();
+			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
+			                         .lookup(query_ctx, ident->getName().value);
+
+			// @TODO: #1412 fix dealias
+			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+			auto expr_result = processFunctionCall(
+				query_ctx, callees, ident, call_expr, std::move(current_expr)
+			);
+			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+
+			return ChainState::ofExpr(std::move(expr));
+		}
+
+		/**
 		 * Case when we have an access expression followed by a call expression,
 		 * and current state is a namespace, for example "my_ns.foo()".
 		 * This may result in function overload.
@@ -592,6 +648,92 @@ namespace compiler::helios::code {
 			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr, {});
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 			return ChainState::ofExpr(std::move(expr));
+		}
+
+		/**
+		 * Case when we have an identifier literal not followed by a call expression,
+		 * for example "not_namespace.y", "x.y.c"
+		 * and the current state is an expression (not a namespace e.x.).
+		 * Should check if accessed field is a namespace or not.
+		 *
+		 * This occurs when the identifier is a member of a class and the chain is inside a method body.
+		 */
+		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::IdentifierLiteral> ident)
+			-> query::QResult<ChainState> {
+			std::cout << "processPSTExpr on expr and identifier literal" << std::endl;
+			auto current_expr_type = current_expr->expression_type.getType();
+			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
+			                         .lookup(query_ctx, ident->getName().value);
+
+			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
+			// Note that if multiple symbols were found, it results in an error and enters
+			// the following if statement. This is temporary, as symbol ambiguity should be
+			// handled differently than through dynamic field access.
+			UNPACK_QRESULT_MOVE(const auto& looked_up_symbols =, looked_up_symbols_result);
+			std::cout << "Lookup completed" <<std::endl;
+
+
+			variant_match(looked_up_symbols) {
+				variant_case(SymbolList, result) {
+					// @TODO: #1412 handle dealias expressions:
+					auto sym = result.back();
+
+					if (kind(sym) == SymbolKind::Field) {
+						// Insert a deref if source of field access is not a direct type.
+						if (current_expr->expression_type.getSymbolType().getRefKind()
+						    != tsh::ReferenceKind::Direct) {
+							current_expr = makeBox<DerefExpr>(
+								query_ctx,
+								current_expr->origin.generatedFrom(),
+								std::move(current_expr)
+							);
+						}
+						auto node = makeBox<AccessExpr>(
+							query_ctx,
+							current_expr->origin.extended(ident),
+							std::move(current_expr),
+							sym
+						);
+						return ChainState::ofExpr(std::move(node));
+					} else if (kind(sym) == SymbolKind::Namespace) {
+						result_sequence.push_back(std::move(current_expr));
+						return ChainState::ofNamespaceLike(sym, pstOrigin(ident));
+					} else if (kind(sym) == SymbolKind::Method) {
+						throw base::NotYetImplemented(
+							"Handling of access to method without a call is not implemented yet"
+						);
+					}
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						base::strConcat(
+							"Unsupported symbol kind in type lookup for symbol: ",
+							prettyDebugPrint(sym, query_ctx)
+						),
+						ident->getName().position
+					));
+					// @TODO: #1412 Support lookup of other kinds of symbols in classes.
+					return query::Failed();
+				}
+				variant_case_novalue(errors::Ambiguity) {
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Accessed value is ambiguous.", ident->getName().position
+					));
+					return query::Failed();
+				}
+				variant_case_novalue(errors::SymbolNotFound) {
+					// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator
+					// overloads. Ex.: obj.a fails to look up 'a', but it can still call
+					// obj.selectDynamic("a"). See Scala's Dynamic:
+					// https://www.scala-lang.org/api/current/scala/Dynamic.html
+
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Accessed value not found.", ident->getName().position
+					));
+					return query::Failed();
+				}
+
+				variant_default { CORE_PANIC("Unexpected result type from lookup"); }
+			}
+			CORE_UNREACHABLE();
 		}
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
@@ -639,11 +781,46 @@ namespace compiler::helios::code {
 			return res->leaves.front();
 		}
 
-		auto processSelfSymbolInMethod(SymID self_sym_id, ElementOrigin origin)
-			-> query::QResult<ChainState> {
-			auto expr = makeBox<IdentifierExpr>(query_ctx, origin, self_sym_id);
+		base::Optional<query::Failed> processSelfSymbolInMethod() {
+			if (!isCurrentElement<pst::expr::IdentifierLiteral>()) return {}; // We are not accessing a field nor a method
 
-			return ChainState::ofExpr(std::move(expr));
+			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ original_expr });
+			auto res = HInterface::ofScopeWithParents(scope).lookup(query_ctx, base::StrID("self"));
+			
+			if (res->isEmpty()) return {}; // No self element, we are not in a method
+
+			CORE_ASSERT(res->leaves.size() == 1, "Expected exactly one self symbol in method scope");
+			auto self_element = res->leaves.front();
+			auto self_expr = ChainState::ofExpr(makeBox<IdentifierExpr>(query_ctx, pstOrigin(original_expr), self_element));
+			auto self_type = self_expr.expr->expression_type.getType();
+			auto current_element_value = currentElem().value().dynamicCast<pst::expr::IdentifierLiteral>().value();
+
+			auto lookup_result = HInterface::ofTypeInstance(self_type)
+			                         .lookup(query_ctx, current_element_value->getName().value);
+
+			if (lookup_result->isEmpty()) return{}; // We did not find a matching field nor a method
+
+			// If we found any matching symbols we continue constructing chain from `self` context
+			std::cout << "\33[95mProcessing chain from self\33[0m" << std::endl;
+			this->current_state = std::move(self_expr);
+
+			if (isCurrentElement<pst::expr::IdentifierLiteral>()
+				&& isNextElement<pst::expr::Call>()) {
+				auto error = step<pst::expr::IdentifierLiteral, pst::expr::Call>();
+				this->index += 2;
+				return error;
+			} else if (isCurrentElement<pst::expr::IdentifierLiteral>()) {
+				std::cout << "Step on identifier literal and no call" << std::endl;
+				auto error = step<pst::expr::IdentifierLiteral>();
+				this->index++;
+				return error;
+			}
+
+			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Expected identifier literal in chain expression",
+				currentElem().value()->getSourcePosition()
+			));
+			return query::Failed();
 		}
 
 		// =============================== MAIN PROCESSING LOOP ===============================
@@ -708,13 +885,6 @@ namespace compiler::helios::code {
 			);
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
-			auto self = getSelfSymbolInMethod(current_element_value);
-			if (self.has_value()) {
-				auto self_expr
-					= processSelfSymbolInMethod(self.value(), pstOrigin(current_element_value));
-				UNPACK_QRESULT_MOVE(this->current_state =, std::move(self_expr));
-			}
-
 			auto res = processPSTExpr(current_element_value);
 			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
@@ -731,13 +901,6 @@ namespace compiler::helios::code {
 			);
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
-
-			auto self = getSelfSymbolInMethod(current_element_value);
-			if (self.has_value()) {
-				auto self_expr
-					= processSelfSymbolInMethod(self.value(), pstOrigin(current_element_value));
-				UNPACK_QRESULT_MOVE(this->current_state =, std::move(self_expr));
-			}
 
 			auto res = processPSTExpr(current_element_value, next_element_value);
 			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
@@ -767,20 +930,26 @@ namespace compiler::helios::code {
 			base::Optional<query::Failed> error{};
 
 			this->index = 0;
-			if (isCurrentElement<pst::expr::IdentifierLiteral>()
-			    && isNextElement<pst::expr::Call>()) {
-				error = firstStep<pst::expr::IdentifierLiteral, pst::expr::Call>();
-				this->index += 2;
-			} else if (isCurrentElement<pst::expr::KeywordLiteral>()
-			           && isNextElement<pst::expr::Call>()) {
-				error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
-				this->index += 2;
-			} else if (isCurrentElement<pst::expr::IdentifierLiteral>()) {
-				error = firstStep<pst::expr::IdentifierLiteral>();
-				this->index++;
-			} else {
-				error = firstStep<pst::ExprElement>();
-				this->index++;
+
+			error = processSelfSymbolInMethod();
+			if (error.has_value()) return query::Failed();
+
+			if (this->current_state.isEmpty()) {
+				if (isCurrentElement<pst::expr::IdentifierLiteral>()
+					&& isNextElement<pst::expr::Call>()) {
+					error = firstStep<pst::expr::IdentifierLiteral, pst::expr::Call>();
+					this->index += 2;
+				} else if (isCurrentElement<pst::expr::KeywordLiteral>()
+						&& isNextElement<pst::expr::Call>()) {
+					error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
+					this->index += 2;
+				} else if (isCurrentElement<pst::expr::IdentifierLiteral>()) {
+					error = firstStep<pst::expr::IdentifierLiteral>();
+					this->index++;
+				} else {
+					error = firstStep<pst::ExprElement>();
+					this->index++;
+				}
 			}
 
 			while (not error.has_value() && this->index < chain_elements.size()) {

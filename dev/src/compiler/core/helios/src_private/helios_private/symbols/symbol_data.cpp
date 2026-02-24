@@ -112,19 +112,19 @@ namespace compiler::helios {
 		ScopeID GeneratedSymbolData::getScope() const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) {
-					base::NotYetImplemented("Can't get scope of implicit constructor yet.");
+					CORE_PANIC("Can't get scope of implicit constructor yet.");
 				}
 				variant_case(Parameter, param) {
-					base::NotYetImplemented("Can't get scope of generated variable yet.");
+					CORE_PANIC("Can't get scope of generated parameter yet.");
 				}
 				variant_case(SelfParameter, param) {
 					return param.scope;
 				}
 				variant_case(Variable, var) {
-					base::NotYetImplemented("Can't get scope of generated variable yet.");
+					CORE_PANIC("Can't get scope of generated variable yet.");
 				}
 				variant_case(ReplExpressionWrapper, repl) {
-					base::NotYetImplemented("Can't get scope of repl expr wrapper yet.");
+					CORE_PANIC("Can't get scope of repl expr wrapper yet.");
 				}
 			}
 			CORE_UNREACHABLE();

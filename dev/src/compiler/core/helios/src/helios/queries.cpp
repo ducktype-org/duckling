@@ -78,9 +78,7 @@ namespace compiler::helios {
 					}
 					if (kind(sym) == SymbolKind::Class) {
 						appendClassConstructors(out.functions, sym, ctx);
-						appendClassMethods(out.functions, sym, ctx);
-					}
-						if (!appendClassMethods(out.functions, sym, ctx)) {
+						if (appendClassMethods(out.functions, sym, ctx)) {
 							is_failed = true;
 							continue;
 						}
