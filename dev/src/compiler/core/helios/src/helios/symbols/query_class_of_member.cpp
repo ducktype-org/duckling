@@ -18,7 +18,7 @@ namespace compiler::helios {
 			          ->getParent()
 			          .value()
 			          .unlock(ctx);
-			auto class_symbol = ctx.query<QuerySymbolOfSTMT>(pst_element);
+			auto class_symbol = ctx.query<QuerySymbolOfSTMT>(pst_element).valueOrThrow();
 
 			return class_symbol;
 		}

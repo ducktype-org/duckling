@@ -472,7 +472,7 @@ namespace compiler::helios {
 					.name = base::StrID("self"),
 					.generated_symbol_data
 					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::SelfParameter{
-						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth),
+						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
 						.scope = key } },
 				}));
 
