@@ -271,7 +271,7 @@ namespace compiler::helios {
 				// there are multiple candidates and return type deduction is inconclusive
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"Function declared with no explicit return type and inconsistent return "
-				    "statements.",
+					"statements.",
 					fun->getSourcePosition()
 				));
 				return query::Failed();

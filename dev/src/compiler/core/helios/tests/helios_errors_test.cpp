@@ -384,8 +384,6 @@ private:
 			{ "Feature not implemented", "nested", "function" },
 			1
 		);
-
-
 	}
 
 	void testErrorBadExpr() {
