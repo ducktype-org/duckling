@@ -215,7 +215,7 @@ private:
 					}
 				}
 			)",
-			{ "no explicit return type and inconsistent returns" },
+			{ "no explicit return type and inconsistent return statements" },
 			1
 		);
 
@@ -381,7 +381,7 @@ private:
 					fun foo() = 0;
 				}
 			)",
-			{ "Feature not implemented", "nested", "function" },
+			{ "Feature not implemented", "Nested", "function" },
 			1
 		);
 	}
