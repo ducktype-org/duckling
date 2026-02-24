@@ -8,6 +8,7 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
+#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
@@ -252,8 +253,7 @@ namespace compiler::helios {
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Function declared with no explicit return type and inconsistent "
-					"returns",
+					"Function declared with no explicit return type and inconsistent return statements.",
 					fun->getSourcePosition()
 				));
 				return query::Failed();
@@ -773,6 +773,62 @@ namespace compiler::helios {
 			void visitConst(pst::Access<pst::Const>) override {
 				// Consts inside functions do not produce any HOUT statement.
 				// They are translated to HOUT global data instead.
+			}
+
+			void visitContinue(pst::Access<pst::Continue> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`continue` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitBreak(pst::Access<pst::Break> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`break` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitRedo(pst::Access<pst::Redo> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`redo` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitThrow(pst::Access<pst::Throw> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`throw` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitDefer(pst::Access<pst::Defer> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`defer` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitRestart(pst::Access<pst::Restart> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`restart` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitFor(pst::Access<pst::For> stmt) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`for` statements are not supported yet.", stmt->getSourcePosition()
+				));
+				is_failed = true;
+			}
+
+			void visitFun(pst::Access<pst::Fun> function) override {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Nested functions are not supported yet.", function->getSourcePosition()
+				));
+				is_failed = true;
 			}
 		};
 
