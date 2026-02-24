@@ -274,16 +274,6 @@ namespace compiler::helios::code {
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
 				node = fromIdentifierLiteral(ctx, stmt).valueOrThrow();
-				return;
-				// note: this is a mock, it should be unified with ChainExpr
-				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-
-				const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-					stmt->getName().position, ctx, stmt->getName().value
-				);
-
-				node
-					= makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), sym_list.valueOrThrow().back());
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {

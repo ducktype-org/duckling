@@ -1,14 +1,13 @@
 #include "query_class_of_member.hpp"
 
-#include "helios/symbols/symbol_kind.hpp"
-
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
