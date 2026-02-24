@@ -23,10 +23,6 @@ class LLVMBackendTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		global_state::setters::setBackendOptions({
-			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
-		});
-
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleansTest);
@@ -44,6 +40,13 @@ public:
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
+	}
+
+protected:
+	void beforeAll() override {
+		global_state::setters::setBackendOptions({
+			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
+		});
 	}
 
 private:
