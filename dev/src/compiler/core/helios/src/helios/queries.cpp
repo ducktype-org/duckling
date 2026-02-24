@@ -80,6 +80,10 @@ namespace compiler::helios {
 						appendClassConstructors(out.functions, sym, ctx);
 						appendClassMethods(out.functions, sym, ctx);
 					}
+						if (!appendClassMethods(out.functions, sym, ctx)) {
+							is_failed = true;
+							continue;
+						}
 				}
 			}
 
@@ -119,8 +123,10 @@ namespace compiler::helios {
 		 * @param out_functions The vector of functions to be modified.
 		 * @param class_sym The symbol of the class, whose methods are to be appended.
 		 * @param ctx The query context.
+		 *
+		 * @return Whether any method queries failed.
 		 */
-		static void appendClassMethods(
+		static bool appendClassMethods(
 			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
 		) {
 			CORE_ASSERT(
@@ -134,12 +140,25 @@ namespace compiler::helios {
 			                            .as<tsh::ClassAbstractType>();
 
 			auto methods = class_type.getInterface(ctx)->getMethodsView();
+			
+
+			bool is_failed = false;
 
 			for (const auto& method: methods) {
 				auto method_sym  = method.getSymbol();
 				auto hout_method = ctx.query<QueryCodeOfFun>(method_sym);
 				out_functions.emplace_back(&hout_method->valueOrPanic());
 			}
+				if (hout_method->hasFailed()) {
+					is_failed = true;
+					continue;
+				} else {
+					out_functions.emplace_back(&hout_method->valueOrPanic());
+				}
+			}
+				out_functions.emplace_back(&hout_method->valueOrPanic());
+			}
+			return is_failed;
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -385,12 +404,13 @@ namespace compiler::helios {
 				                            ->valueOrThrow()
 				                            .getType()
 				                            .as<tsh::ClassAbstractType>();
+				const auto self_scope = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 
 				const SymID self_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Parameter{
-						.function_symbol = this->original_symbol, .parameter_index = 0 } },
+					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::SelfParameter{
+						.method_symbol = this->original_symbol, .scope = self_scope } },
 				});
 
 				this->out->parameters.insert(

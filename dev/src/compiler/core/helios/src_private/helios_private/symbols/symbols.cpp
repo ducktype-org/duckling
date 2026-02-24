@@ -107,13 +107,13 @@ namespace compiler::helios {
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->getPSTData()->scope; }
+	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
 
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
 			variant_case_novalue(builtin::BuiltinFunctionData) { return base::Optional<ScopeID>{}; }
-			variant_case_novalue(houtgen::GeneratedSymbolData) { return base::Optional<ScopeID>{}; }
+			variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();

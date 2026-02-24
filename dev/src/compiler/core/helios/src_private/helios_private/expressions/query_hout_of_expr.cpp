@@ -2,6 +2,7 @@
 
 #include "coercions.hpp"
 #include "errors.hpp"
+#include "frontend/pst_parser/elements/hierarchy/expressions/chain_expr.hpp"
 #include "numeric_literals.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
@@ -272,6 +273,8 @@ namespace compiler::helios::code {
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
+				node = fromIdentifierLiteral(ctx, stmt).valueOrThrow();
+				return;
 				// note: this is a mock, it should be unified with ChainExpr
 				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 

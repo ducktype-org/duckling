@@ -5,6 +5,7 @@
 #include <helios/hout/elements/expr.hpp>
 
 #include <query_framework/query_result.hpp>
+#include "frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp"
 
 namespace compiler::helios::code {
 	/**
@@ -12,5 +13,12 @@ namespace compiler::helios::code {
 	 */
 	query::QResult<Box<code::Expr>> fromChainExpr(
 		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
+	);
+
+	/**
+	 * @brief Converts a PST IdentifierLiteral to a HOUT Expr.
+	 */
+	query::QResult<Box<code::Expr>> fromIdentifierLiteral(
+		query::Context& ctx, pst::AccessLocked<pst::expr::IdentifierLiteral> expr
 	);
 }

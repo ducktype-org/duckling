@@ -5,6 +5,7 @@
 
 #include "chain_expr.hpp"
 
+#include "frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp"
 #include "helios/hout/origin.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
@@ -184,7 +185,7 @@ namespace compiler::helios::code {
 		/**
 		 * The original PST chain expression that is being processed.
 		 */
-		pst::Access<pst::expr::ChainExpr> original_chain_expr;
+		pst::Access<pst::ExprElement> original_expr;
 
 		/**
 		 * The temporary buffor for the currently built value from left to current place of
@@ -612,7 +613,8 @@ namespace compiler::helios::code {
 			case SymbolKind::Variable:
 			case SymbolKind::Parameter:
 			case SymbolKind::Const:
-			case SymbolKind::Class: {
+			case SymbolKind::Class:
+			case SymbolKind::Field: {
 				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
 				return ChainState::ofExpr(std::move(expr));
 			}
@@ -745,10 +747,16 @@ namespace compiler::helios::code {
 	public:
 		ChainExprConstruction(query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr):
 			  query_ctx(ctx),
-			  original_chain_expr(expr) {
+			  original_expr(expr) {
 			this->chain_elements.emplace_back(expr->getAtom());
 			auto chain = expr->getChain();
 			std::ranges::copy(chain, std::back_inserter(this->chain_elements));
+		}
+
+		ChainExprConstruction(query::Context& ctx, pst::Access<pst::expr::IdentifierLiteral> expr):
+			  query_ctx(ctx),
+			  original_expr(expr) {
+			this->chain_elements.emplace_back(expr);
 		}
 
 		/**
@@ -767,6 +775,9 @@ namespace compiler::helios::code {
 			           && isNextElement<pst::expr::Call>()) {
 				error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
 				this->index += 2;
+			} else if (isCurrentElement<pst::expr::IdentifierLiteral>()) {
+				error = firstStep<pst::expr::IdentifierLiteral>();
+				this->index++;
 			} else {
 				error = firstStep<pst::ExprElement>();
 				this->index++;
@@ -819,7 +830,7 @@ namespace compiler::helios::code {
 
 			// If we have multiple expressions, we need to create a chain expression
 			auto chain_expr = makeBox<SequenceExpr>(
-				query_ctx, pstOrigin(original_chain_expr), std::move(result_sequence)
+				query_ctx, pstOrigin(original_expr), std::move(result_sequence)
 			);
 			return chain_expr;
 		}
@@ -827,6 +838,13 @@ namespace compiler::helios::code {
 
 	ExprConstructionResult fromChainExpr(
 		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
+	) {
+		ChainExprConstruction construction(ctx, expr.unlock(ctx));
+		return construction.run();
+	}
+
+	ExprConstructionResult fromIdentifierLiteral(
+		query::Context& ctx, pst::AccessLocked<pst::expr::IdentifierLiteral> expr
 	) {
 		ChainExprConstruction construction(ctx, expr.unlock(ctx));
 		return construction.run();

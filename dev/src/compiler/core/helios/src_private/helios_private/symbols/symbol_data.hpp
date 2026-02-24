@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/except/exceptions.hpp"
 #include "builtin_symbol_data.hpp"
 #include "generated_symbol_data.hpp"
 #include "pst_symbol_data.hpp"
@@ -76,6 +77,19 @@ namespace compiler::helios {
 		static SymbolData makeGeneratedSymbol(
 			base::StrID name, houtgen::GeneratedSymbolData generated_data
 		);
+
+		[[nodiscard]]
+		ScopeID getScope() const {
+			variant_match(other) {
+				variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
+				variant_case_novalue(builtin::BuiltinFunctionData) {
+					base::NotYetImplemented("Can't get scope of builtin function.");
+				}
+				variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
+				variant_default { CORE_UNREACHABLE(); }
+			}
+			CORE_UNREACHABLE();
+		}
 
 		template<class T>
 		[[nodiscard]]
