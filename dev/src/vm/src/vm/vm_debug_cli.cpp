@@ -1,7 +1,9 @@
 #include "vm_debug_cli.hpp"
 
+#include <ext/stdio_filebuf.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <unistd.h>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
@@ -11,10 +13,6 @@
 #include <iostream>
 #include <string>
 #include <variant>
-#include <ext/stdio_filebuf.h>
-#include <unistd.h>
-
-using __gnu_cxx::stdio_filebuf;
 
 DuckVMDebugCli* DuckVMDebugCli::active_instance = nullptr;
 
@@ -45,7 +43,7 @@ void DuckVMDebugCli::run() {
 		                     { .fd = event_fd, .events = POLLIN, .revents = 0 },
 		                     // ctrl-Z handling
 		                     { .fd = signal_pipe[0], .events = POLLIN, .revents = 0 },
-							 // vm output
+		                     // vm output
 		                     { .fd = output_pipe[0], .events = POLLIN, .revents = 0 } };
 
 
@@ -85,10 +83,10 @@ void DuckVMDebugCli::run() {
 			std::cout << "\nVM wrote:\n";
 			while (true) {
 				ssize_t n = read(output_pipe[0], buf, sizeof(buf));
-				if (n > 0) { 
-					std::cout << std::string(buf, static_cast<std::size_t>(n)); 
-				}
-				else break;
+				if (n > 0)
+					std::cout << std::string(buf, static_cast<std::size_t>(n));
+				else
+					break;
 			}
 			std::cout << "\n\n";
 		}
@@ -169,9 +167,7 @@ DuckVMDebugCli DuckVMDebugCli::get(const fs::File& filepath, const std::vector<s
 	return { filepath, args };
 }
 
-DuckVMDebugCli::DuckVMDebugCli():
-	  vm_input_stream(),
-	  core(DuckVMDebugCore(std::cin, std::cout)) {
+DuckVMDebugCli::DuckVMDebugCli(): vm_input_stream(), core(DuckVMDebugCore(std::cin, std::cout)) {
 	active_instance = this;
 
 	if (pipe(signal_pipe) < 0) throw std::runtime_error("Failed to create signal pipe");
@@ -180,8 +176,7 @@ DuckVMDebugCli::DuckVMDebugCli():
 	fcntl(signal_pipe[1], F_SETFL, O_NONBLOCK);
 }
 
-DuckVMDebugCli::DuckVMDebugCli(const fs::File& filepath, const std::vector<std::string>& args)
- {
+DuckVMDebugCli::DuckVMDebugCli(const fs::File& filepath, const std::vector<std::string>& args) {
 	active_instance = this;
 
 	if (pipe(signal_pipe) < 0) throw std::runtime_error("Failed to create signal pipe");
@@ -194,9 +189,9 @@ DuckVMDebugCli::DuckVMDebugCli(const fs::File& filepath, const std::vector<std::
 	fcntl(output_pipe[0], F_SETFL, O_NONBLOCK);
 	fcntl(output_pipe[1], F_SETFL, O_NONBLOCK);
 
-	auto * file_buf = new stdio_filebuf<char> (output_pipe[1], std::ios::out);
+	auto* file_buf = new __gnu_cxx::stdio_filebuf<char>(output_pipe[1], std::ios::out);
 
-	vm_output_stream = (new std::ostream (file_buf));
+	vm_output_stream = (new std::ostream(file_buf));
 
 	core = DuckVMDebugCore(filepath, std::cin, *vm_output_stream, args);
 }

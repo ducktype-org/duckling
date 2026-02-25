@@ -1,9 +1,10 @@
 #pragma once
 
-#include <ostream>
 #include "vm/api/data/status.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/vm_debug_core.hpp>
+
+#include <ostream>
 
 /**
  * @file vm_debug_cli.hpp
