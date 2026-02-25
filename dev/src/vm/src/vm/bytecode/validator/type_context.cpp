@@ -2,7 +2,7 @@
 
 #include <string_id/string_id.hpp>
 
-#include "vm/bytecode/validator/type_validator.hpp"
+#include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
@@ -61,10 +61,10 @@ namespace {
 						? base::Optional<vm::code::type::TypeID>(types.at(*clazz.extends)->getID())
 						: base::Optional<vm::code::type::TypeID>(),
 					clazz.implements | std::views::transform([&](const auto& i) {
-						return types.at(i)->getId();
+						return types.at(i)->getID();
 					}) | std::ranges::to<std::vector>(),
 					clazz.virtual_methods | std::views::transform([&](const auto& method) {
-						return std::make_pair(method.name, types.at(method.type)->getId());
+						return std::make_pair(method.name, types.at(method.type)->getID());
 					}) | std::ranges::to<std::vector>(),
 					clazz.implementations | std::views::transform([&](const auto& impl) {
 						return std::make_pair(
@@ -76,10 +76,10 @@ namespace {
 			variant_case(vm::code::InterfaceType, interface) {
 				tp.defineInterface(
 					interface.implements | std::views::transform([&](const auto& i) {
-						return types.at(i)->getId();
+						return types.at(i)->getID();
 					}) | std::ranges::to<std::vector>(),
 					interface.virtual_methods | std::views::transform([&](const auto& method) {
-						return std::make_pair(method.name, types.at(method.type)->getId());
+						return std::make_pair(method.name, types.at(method.type)->getID());
 					}) | std::ranges::to<std::vector>(),
 					interface.implementations | std::views::transform([&](const auto& impl) {
 						return std::make_pair(
@@ -113,7 +113,7 @@ void vm::code::TypeContext::insertAndValidate(
 	// Validate
 	const std::vector<usize> new_types_id
 		= new_types
-	    | std::views::transform([&](const auto& type) { return types.at(typeName(type))->getId(); })
+	    | std::views::transform([&](const auto& type) { return types.at(typeName(type))->getID(); })
 	    | std::ranges::to<std::vector>();
 	detail::validateTypes(pod_types, new_types_id, function_signatures);
 

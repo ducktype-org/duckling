@@ -1,7 +1,7 @@
 #pragma once
 
-#include "base/except/exceptions.hpp"
-#include "base/types/ints.hpp"
+#include <base/except/exceptions.hpp>
+#include <base/types/ints.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 namespace vm::code::type {

@@ -1,7 +1,7 @@
 #include "type_validator.hpp"
 
-#include "vm/bytecode/type_of_data.hpp"
-#include "vm/utils/stable_obj_id_name_map.hpp"
+#include <vm/bytecode/type_of_data.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type.hpp>

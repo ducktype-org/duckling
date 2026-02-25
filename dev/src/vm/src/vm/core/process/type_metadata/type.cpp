@@ -162,7 +162,8 @@ namespace vm {
 
 	void Type::finalize() {
 		// @TODO: #1971 Delete these checks
-		if (state == State::Finalizing) throw code::CyclicDependencyError(*this);
+		if (state == State::Finalizing)
+			CORE_PANIC("Cyclic dependency detected during type finalization");
 		if (state == State::Finalized) return;
 		state = State::Finalizing;
 		defer(state = State::Finalized);

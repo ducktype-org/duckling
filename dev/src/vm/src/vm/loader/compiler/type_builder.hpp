@@ -2,16 +2,17 @@
 
 #include <base/pointers/box.hpp>
 
+#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code::detail {
 	/**
-	 * @brief Builds TypeMetadata from TypeContext without validation. Assumes that
-	 * provided types are validated.
+	 * @brief Builds TypeMetadata from TypeContext. TypeContext is by definition valid,
+	 * so this function assumes that and doesn't perform any checks.
 	 */
-	Box<TypeMetadata> buildTypeMetadata(const ObjIdNameMap<TypeOfData>& types);
+	Box<TypeMetadata> buildTypeMetadata(const TypeContext& types);
 
 	/**
 	 * @brief Expands the existing `type_metadata` with new_types.
@@ -28,5 +29,5 @@ namespace vm::code::detail {
 	 * @note Assumes that the newly added types won't invalidate the state. Assumes types are
 	 * validated.
 	 */
-	void rebuildTypeMetadata(Ref<TypeMetadata> type_metadata, const ObjIdNameMap<TypeOfData>& types);
+	void rebuildTypeMetadata(Ref<TypeMetadata> type_metadata, const TypeContext& types);
 }

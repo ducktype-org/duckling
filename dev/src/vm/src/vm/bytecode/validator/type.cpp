@@ -1,6 +1,6 @@
 #include "type.hpp"
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 #include <base/collections/optional.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -44,8 +44,8 @@ void type::Type::defineDynamicTable(type::TypeID inner) {
 	kind = concrete::DynamicTable{ .inner = inner };
 
 	/// @note Size of dynamicTable is unknown at this point,
-	/// as this is a runtime property. Though it should never be accessed,
-	/// because dynamic table is only accessed by a pointer.
+	/// as this is a runtime property, so size should never be queried,
+	/// through this object. Dynamic table is only accessed by a pointer.
 	this->size = type::TypeSize(Bytes(0), 0);
 }
 
@@ -251,24 +251,24 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 							opt_some(superclass_id) {
 								auto superclass = types.at(superclass_id);
 								CORE_ASSERT(
-									superclass->is<concrete::Structure>(),
+									superclass->isKind<concrete::Structure>(),
 									"Superclass must be a structure"
 								);
 								const auto& super_structure
-									= superclass->get<concrete::Structure>();
+									= superclass->getKindAs<concrete::Structure>();
 								const auto& super_imd = super_structure.inheritance_metadata.expect(
 									"Superclass must have inheritance metadata"
 								);
 
 								// Fields. Superclass fields are inserted before subclass fields.
 								for (const auto& field:
-								     superclass->get<concrete::Structure>().fields)
+								     superclass->getKindAs<concrete::Structure>().fields)
 									fields.emplace_back(field.name, field.type);
 								// Super types
 								imd.super_types.insert(
-									superclass->get<concrete::Structure>()
+									superclass->getKindAs<concrete::Structure>()
 										.inheritance_metadata->super_types.begin(),
-									superclass->get<concrete::Structure>()
+									superclass->getKindAs<concrete::Structure>()
 										.inheritance_metadata->super_types.end()
 								);
 								// Virtual methods
@@ -294,9 +294,10 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 					for (auto& i: implements) {
 						auto interface = types.at(i);
 						CORE_ASSERT(
-							interface->is<concrete::Structure>(), "Interface must be a structure"
+							interface->isKind<concrete::Structure>(), "Interface must be a structure"
 						);
-						const auto& interface_structure = interface->get<concrete::Structure>();
+						const auto& interface_structure
+							= interface->getKindAs<concrete::Structure>();
 						const auto& interface_imd = interface_structure.inheritance_metadata.expect(
 							"Interface must have inheritance metadata"
 						);
@@ -363,6 +364,8 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 [[nodiscard]] type::TypeID type::Type::getID() const { return id; }
 
 bool type::Type::operator==(const Type& other) const { return other.id == id; }
+
+bool vm::code::type::Type::operator==(const TypeID& other_id) const { return id == other_id; }
 
 type::Type::Type(base::StrID name, TypeID id): name(name), id(id) {}
 

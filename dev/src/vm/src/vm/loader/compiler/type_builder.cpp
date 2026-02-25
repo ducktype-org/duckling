@@ -1,225 +1,184 @@
 #include "type_builder.hpp"
 
-#include <vm/bytecode/validator/type.hpp>
+#include <base/except/exceptions.hpp>
+
+#include <vm/bytecode/validator/type_context.hpp>
+#include <vm/core/process/type_metadata/inheritance_metadata.hpp>
 #include <vm/bytecode/builtin_types.hpp>
-#include <vm/bytecode/validator/type_utils.hpp>
+#include <vm/bytecode/validator/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <ranges>
 
 namespace {
-	using namespace vm::code::detail;
-
-	/**
-	 * @brief Recursively builds a vtable layout for an InheritableType.
-	 */
-	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
-	void buildVTableRecursive(
-		const InheritableType&                   inh,
-		const ErrorContextType&                  error_context_inh,
-		base::HashMap<base::StrID, base::StrID>& vtable,
-		vm::TypeMetadata&                        metadata,
-		const vm::ObjIdNameMap<TypeOfData>&      types
-	) {
-		for (const auto& impl: inh.implementations) vtable.put(impl.name, impl.type);
-		for (const auto& interface_name: inh.implements) {
-			const auto& interface = [&]() -> const InterfaceType& {
-				const auto& tod = *types.at(interface_name);
-				return std::get<InterfaceType>(tod);
-			}();
-			buildVTableRecursive(interface, error_context_inh, vtable, metadata, types);
-		}
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			if (inh.extends) {
-				const auto& super_class = [&]() -> const ClassType& {
-					const auto& tod = *types.at(*inh.extends);
-					return std::get<ClassType>(tod);
-				}();
-				buildVTableRecursive(super_class, error_context_inh, vtable, metadata, types);
-			}
-		}
-	}
-
-	/**
-	 * @brief Builds a vector of fields (FieldVector) for an InheritableType. Collects all
-	 * fields from superclasses.
-	 * TODO: This is wrong, because it duplicates fields from superclasses in case of multiple levels of inheritance.
-	 */
-	template<InheritableTypeConcept InheritableType>
-	FieldVector buildFieldVector(
-		const InheritableType&              inh,
-		vm::TypeMetadata&                   metadata,
-		const vm::ObjIdNameMap<TypeOfData>& types
-	) {
-		auto to_low_type = [&](const TypeOfData& tod) {
-			return metadata.at(VISIT(tod, type, return type.name));
-		};
-		FieldVector fields{ { base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) } };
-
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			std::function<void(const vm::code::ClassType&)> collect_class_fields_recursive
-				= [&](const vm::code::ClassType& clazz) {
-					  if (clazz.extends) {
-						  const auto& super_class = [&]() -> const ClassType& {
-							  const auto& tod = *types.at(*clazz.extends);
-							  return std::get<ClassType>(tod);
-						  }();
-						  collect_class_fields_recursive(super_class);
-					  }
-
-					  for (const Field& field_code: clazz.fields)
-						  fields.emplace_back(field_code.name, metadata.at(field_code.type));
-				  };
-			collect_class_fields_recursive(inh);
-		}
-		return fields;
-	}
-
 	/**
 	 * @brief Builds inheritance metadata for a given inheritable. Builds a field vector and a
 	 * vtable.
 	 */
-	template<InheritableTypeConcept InheritableType>
-	vm::InheritanceMetadata buildInheritanceMetadata(
-		const InheritableType&              inh,
-		vm::TypeMetadata&                   metadata,
-		const vm::ObjIdNameMap<TypeOfData>& types
+	base::Optional<vm::InheritanceMetadata> buildInheritanceMetadata(
+		vm::TypeMetadata&                          type_metadata,
+		const vm::code::type::Type&                type,
+		const vm::code::type::concrete::Structure& structure
 	) {
-		vm::TypeCRef tp    = metadata.at(inh.name);
-		auto get_type_cref = [&](base::StrID name) -> vm::TypeCRef { return metadata.at(name); };
-		auto implements    = inh.implements | std::views::transform(get_type_cref)
-		                | std::ranges::to<std::vector>();
+		match_optional(structure.inheritance_metadata) {
+			opt_some(prev_imd) {
+				vm::TypeCRef tp            = type_metadata.at(type.getName());
+				auto         get_type_cref = [&](vm::code::type::TypeID type_id) -> vm::TypeCRef {
+                    return type_metadata.at(vm::TypeID(type_id));
+				};
+				auto implements = prev_imd.implements | std::views::transform(get_type_cref)
+				                | std::ranges::to<std::vector>();
 
-		base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
-		for (auto& method: inh.virtual_methods)
-			virtual_methods.put(method.name, get_type_cref(method.type));
+				base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
+				for (auto& method: prev_imd.available_methods)
+					virtual_methods.put(method.first, get_type_cref(method.second));
 
-		base::HashMap<base::StrID, base::StrID> vtable;
-		buildVTableRecursive(inh, inh, vtable, metadata, types);
+				base::HashMap<base::StrID, base::StrID> vtable;
+				for (auto& impl: prev_imd.vtable) vtable.put(impl.first, impl.second);
 
-		vm::InheritanceMetadata::Kind kind;
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			kind = vm::InheritanceMetadata::Class{
-				.is_abstract = inh.is_abstract,
-				.extends     = inh.extends.map(get_type_cref),
-			};
-		} else {
-			kind = vm::InheritanceMetadata::Interface{};
+				vm::InheritanceMetadata::Kind kind;
+				variant_match(prev_imd.kind) {
+					variant_case(
+						vm::code::type::concrete::InheritanceMetadata::ClassKind, class_kind
+					) {
+						kind = vm::InheritanceMetadata::Class{
+							.is_abstract = class_kind.is_abstract,
+							.extends     = class_kind.extends.map(get_type_cref),
+						};
+					}
+					variant_case(
+						vm::code::type::concrete::InheritanceMetadata::InterfaceKind, interface_kind
+					) {
+						kind = vm::InheritanceMetadata::Interface{};
+					}
+					variant_default { CORE_PANIC("Unhandled inheritance metadata kind"); }
+				}
+
+				return vm::InheritanceMetadata{
+					tp, kind, std::move(implements), std::move(virtual_methods), std::move(vtable),
+				};
+			}
+			opt_none { return {}; }
 		}
-
-		return {
-			tp, kind, std::move(implements), std::move(virtual_methods), std::move(vtable),
-		};
+		CORE_UNREACHABLE();
 	}
 
 	/**
 	 * @brief Declare types from a list in the given type_metadata.
 	 */
-	void declareTypes(Ref<vm::TypeMetadata> type_metadata, const std::vector<TypeOfData>& types) {
-		for (const auto& type: types) type_metadata->addType(vm::Type::declareType(typeName(type)));
+	void declareTypes(
+		Ref<vm::TypeMetadata> type_metadata, const std::vector<CRef<vm::code::type::Type>>& types
+	) {
+		for (const auto& type: types)
+			type_metadata->addType(vm::Type::declareType(type->getName()));
 	}
 
 	/**
 	 * @brief Define types from the list in the given type_metadata.
 	 */
 	void defineTypes(
-		Ref<vm::TypeMetadata>               type_metadata,
-		const vm::ObjIdNameMap<TypeOfData>& types,
-		const std::vector<TypeOfData>&      new_types
+		Ref<vm::TypeMetadata>                      type_metadata,
+		const vm::code::TypeMap&                   types_ctx,
+		const std::vector<vm::code::type::TypeID>& new_types
 	) {
-		for (const auto& type: new_types) {
-			variant_match(type) {
-				variant_case(PrimitiveType, data) {
-					type_metadata->at(data.name)->definePrimitive(data.size);
+		for (const auto& type_id: new_types) {
+			const auto& type             = types_ctx.at(type_id);
+			const auto& type_at_metadata = type_metadata->at(type->getName());
+			variant_match(type->getKind()) {
+				variant_case(vm::code::type::concrete::Primitive, data) {
+					type_at_metadata->definePrimitive(static_cast<usize>(data.size));
 				}
-				variant_case(PointerType, data) {
-					type_metadata->at(data.name)->definePointer(type_metadata->at(data.inner));
+				variant_case(vm::code::type::concrete::Pointer, data) {
+					// Note the interesting cast from type::TypeID to vm::TypeID.
+					// This is by convention, they have to be the same.
+					type_at_metadata->definePointer(type_metadata->at(vm::TypeID(data.inner)));
 				}
-				variant_case(FixedSizeTableType, data) {
-					type_metadata->at(data.name)->defineFixedSizeTable(
-						type_metadata->at(data.inner), data.table_size
+				variant_case(vm::code::type::concrete::FixedSizeTable, data) {
+					type_at_metadata->defineFixedSizeTable(
+						type_metadata->at(vm::TypeID(data.inner)), data.element_count
 					);
 				}
-				variant_case(DynamicTableType, data) {
-					type_metadata->at(data.name)->defineDynamicTable(type_metadata->at(data.inner));
+				variant_case(vm::code::type::concrete::DynamicTable, data) {
+					type_at_metadata->defineDynamicTable(type_metadata->at(vm::TypeID(data.inner)));
 				}
-				variant_case(DataType, data) {
-					FieldVector fields;
+				variant_case(vm::code::type::concrete::Structure, data) {
+					std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
-						fields.emplace_back(field.name, type_metadata->at(field.type));
-					type_metadata->at(data.name)->defineData(fields, {});
+						fields.emplace_back(field.name, type_metadata->at(vm::TypeID(field.type)));
+					base::Optional<vm::InheritanceMetadata> inh_metadata
+						= buildInheritanceMetadata(*type_metadata, *type, data);
+					type_at_metadata->defineData(fields, inh_metadata);
 				}
-				variant_case(VariantType, data) {
+				variant_case(vm::code::type::concrete::Variant, data) {
 					std::vector<vm::TypeRef> variants;
-					variants.reserve(data.variant_alternatives.size());
-					for (auto& variant: data.variant_alternatives)
-						variants.emplace_back(type_metadata->at(variant));
-					type_metadata->at(data.name)->defineVariant(variants);
+					variants.reserve(data.alternatives.size());
+					for (auto& variant: data.alternatives)
+						variants.emplace_back(type_metadata->at(vm::TypeID(variant)));
+					type_at_metadata->defineVariant(variants);
 				}
-				variant_case(FunctionType, data) {
+				variant_case(vm::code::type::concrete::Function, data) {
 					std::vector<vm::TypeCRef> parameters;
 					parameters.reserve(data.parameters.size());
 					for (auto& param: data.parameters)
-						parameters.emplace_back(type_metadata->at(param));
-					type_metadata->at(data.name)->defineFunction(
-						parameters, type_metadata->at(data.result)
+						parameters.emplace_back(type_metadata->at(vm::TypeID(param)));
+					type_at_metadata->defineFunction(
+						parameters, type_metadata->at(vm::TypeID(data.result))
 					);
 				}
-				variant_case(OpaqueType, opaque) {
-					type_metadata->at(opaque.name)->defineOpaque(opaque.size);
+				variant_case(vm::code::type::concrete::Opaque, opaque) {
+					type_at_metadata->defineOpaque(static_cast<usize>(opaque.size));
 				}
-				variant_case(ClassType, clazz) {
-					vm::TypeRef             tp     = type_metadata->at(clazz.name);
-					FieldVector             fields = buildFieldVector(clazz, *type_metadata, types);
-					vm::InheritanceMetadata inh_metadata
-						= buildInheritanceMetadata(clazz, *type_metadata, types);
-					tp->defineData(fields, std::move(inh_metadata));
-				}
-				variant_case(InterfaceType, interface) {
-					vm::TypeRef tp     = type_metadata->at(interface.name);
-					FieldVector fields = buildFieldVector(interface, *type_metadata, types);
-					vm::InheritanceMetadata inh_metadata
-						= buildInheritanceMetadata(interface, *type_metadata, types);
-					tp->defineData(fields, std::move(inh_metadata));
-				}
-				variant_default {
-					CORE_PANIC("Unhandled type during type building: ", typeToString(type));
-				}
+				variant_default { CORE_PANIC("Unhandled type during type building"); }
 			}
 		}
 	}
 }
 
-Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const ObjIdNameMap<TypeOfData>& types) {
+Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& types) {
 	Box<vm::TypeMetadata> type_metadata = makeBox<vm::TypeMetadata>();
 
-	auto types_vec = types | std::ranges::to<std::vector<TypeOfData>>();
+	std::vector<CRef<type::Type>> types_vec
+		= types.getCurrentTypes()
+	    | std::views::transform([](const auto& type) { return CRef(&type); })
+	    | std::ranges::to<std::vector>();
 
 	// Declare all types first.
 	declareTypes(type_metadata.refMut(), types_vec);
 
 	// Well-define every type.
-	defineTypes(type_metadata.refMut(), types, types_vec);
+	defineTypes(
+		type_metadata.refMut(),
+		types.getCurrentTypes(),
+		types_vec | std::views::transform([](const auto& type) { return type->getID(); })
+			| std::ranges::to<std::vector>()
+	);
 
 	type_metadata->finalize();
 	return type_metadata;
 }
 
 void vm::code::detail::rebuildTypeMetadata(
-	Ref<vm::TypeMetadata> type_metadata, const ObjIdNameMap<TypeOfData>& types
+	Ref<vm::TypeMetadata> type_metadata, const TypeContext& types
 ) {
-	auto new_types = types | std::views::drop(type_metadata->size())
-	               | std::ranges::to<std::vector<TypeOfData>>();
+	std::vector<CRef<type::Type>> types_vec
+		= types.getCurrentTypes() | std::views::drop(type_metadata->size())
+	    | std::views::transform([](const auto& type) { return CRef(&type); })
+	    | std::ranges::to<std::vector>();
 
 	// Reopen type metadata for addition.
 	type_metadata->unfinalize();
 
 	// Declare new types.
-	declareTypes(type_metadata, new_types);
+	declareTypes(type_metadata, types_vec);
 	// Well define new types.
-	defineTypes(type_metadata, types, new_types);
+	defineTypes(
+		type_metadata,
+		types.getCurrentTypes(),
+		types_vec | std::views::transform([](const auto& type) { return type->getID(); })
+			| std::ranges::to<std::vector>()
+	);
 
 	type_metadata->finalize();
 }

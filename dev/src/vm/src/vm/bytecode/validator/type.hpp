@@ -17,26 +17,43 @@
 #include <variant>
 
 namespace vm::code::type {
-	// @TODO: Can this become a Ref<Type>?
-	// @TODO: #1306 Maybe it can become Ref<Type>?
+	/**
+	 * @brief TypeID is a unique identifier of a type. It is used to refer to types. It is an index
+	 * in the TypeContext's type map.
+	 * @note It's done this way to allow copying of types without worrying about pointer/reference
+	 * references to types can be invalidated when the TypeContext is e.g. copied.
+	 * @TODO: #1306 Maybe it can become Ref<Type>?
+	 */
 	using TypeID = usize;
 
 	namespace concrete {
+		/**
+		 * @brief Primitive type representation.
+		 */
 		struct Primitive {
 			Bytes size;
 		};
 
+		/**
+		 * @brief Pointer type representation.
+		 */
 		struct Pointer {
 			TypeID inner;
 
 			Pointer(TypeID inner): inner(inner) {}
 		};
 
+		/**
+		 * @brief Fixed-size table type representation.
+		 */
 		struct FixedSizeTable {
 			TypeID inner;
 			usize  element_count;
 		};
 
+		/**
+		 * @brief Dynamic table type representation.
+		 */
 		struct DynamicTable {
 			TypeID inner;
 		};
@@ -129,16 +146,26 @@ namespace vm::code::type {
 			base::Optional<InheritanceMetadata> inheritance_metadata;
 		};
 
+		/**
+		 * @brief Variant type representation.
+		 */
 		struct Variant {
 			Bytes               type_tag_size;
 			std::vector<TypeID> alternatives;  /// Order matters, as it determines type tag values.
 		};
 
+		/**
+		 * @brief Function type representation.
+		 */
 		struct Function {
 			std::vector<TypeID> parameters;
 			TypeID              result;
 		};
 
+		/**
+		 * @brief Opaque type representation. This is used for types whose actual content is not
+		 * known, like external types.
+		 */
 		struct Opaque {
 			Bytes size;
 		};
@@ -164,7 +191,7 @@ namespace vm::code::type {
 	 * because it's more effective.
 	 * After finalization type is immutable. Type cannot be unfinalized.
 	 */
-	class Type: public ElementBase {
+	class Type {
 		enum class State { Declared, Defined, Finalizing, Finalized } state = State::Declared;
 
 	public:
@@ -222,20 +249,20 @@ namespace vm::code::type {
 
 		template<ConcreteType T>
 		[[nodiscard]]
-		const T& get() const {
+		const T& getKindAs() const {
 			return std::get<T>(kind);
 		}
 
 		template<ConcreteType T>
 		[[nodiscard]]
-		const base::Optional<Ref<T>> maybeGet() const {
-			if (!is<T>()) return {};
+		base::Optional<CRef<T>> maybeGetKindAs() const {
+			if (!isKind<T>()) return {};
 			return &std::get<T>(kind);
 		}
 
 		template<ConcreteType T>
 		[[nodiscard]]
-		bool is() const {
+		bool isKind() const {
 			return std::holds_alternative<T>(kind);
 		}
 
@@ -247,42 +274,7 @@ namespace vm::code::type {
 
 		bool operator==(const Type& other) const;
 
-		// /**
-		//  * Get inner type of pointer, fixed size or dynamic table
-		//  * @return Some(inner type) for pointer, fixed size or dynamic table. none otherwise
-		//  */
-		// base::Optional<TypeCRef> getInnerType() const;
-
-		// [[nodiscard]]
-		// bool isTriviallyCopyable() const;
-
-		// // data
-		// [[nodiscard]]
-		// base::Optional<Bytes> getFieldOffsetByName(base::StrID field_name) const;
-		// [[nodiscard]]
-		// base::Optional<base::CRef<std::vector<kind::DataField>>> getFields() const;
-
-		// // variant
-		// base::Optional<usize>                 getTypeTagSizeBytes() const;
-		// base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
-
-		// // inheritance
-		// [[nodiscard]]
-		// base::Optional<base::CRef<InheritanceMetadata>> getInheritanceMetadata() const;
-		// [[nodiscard]]
-		// base::Optional<TypeCRef> getSuperClass() const;
-		// [[nodiscard]]
-		// bool inheritsFrom(TypeCRef other) const;
-
-		// // function
-		// [[nodiscard]]
-		// base::Optional<u64> getParameterCount() const;
-		// [[nodiscard]]
-		// base::Optional<u64> getParametersSize() const;
-		// [[nodiscard]]
-		// base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
-		// [[nodiscard]]
-		// base::Optional<TypeCRef> getResultType() const;
+		bool operator==(const TypeID& other_id) const;
 
 	private:
 		void finalizeInstantiability(ObjIdNameMap<type::Type>& types);

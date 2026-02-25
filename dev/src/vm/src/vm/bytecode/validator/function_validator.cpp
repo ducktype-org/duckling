@@ -8,7 +8,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include "vm/bytecode/validator/type.hpp"
+#include <vm/bytecode/validator/type.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -50,23 +50,25 @@ namespace {
 		Args&&... error_args
 	) {
 		const auto& pointed_type = types_ctx.at(pointer.inner);
-		return pointed_type->maybeGet<ExpectedT>().template expect<ErrorT>(
+		return *pointed_type->maybeGetKindAs<ExpectedT>().template expect<ErrorT>(
 			std::forward<Args>(error_args)...
 		);
 	}
 
 	template<class ErrorT = PointerTypeMismatchError, class... Args>
 	void validateStructFieldType(
-		const DataType&      ztruct,
-		const opargs::Field& field_arg,
-		base::StrID          expected_field_type,
+		const type::Type&                type,
+		const type::concrete::Structure& as_struct,
+		const opargs::Field&             field_arg,
+		type::TypeID                     expected_field_type,
 		Args&&... error_args
 	) {
-		if (ztruct.name != field_arg.type_name)
+		if (type.getName() != field_arg.type_name)
 			throw StructTypeMismatchError(std::forward<Args>(error_args)...);
 
-		base::StrID field_name = field_arg.field_name;
-		Field       field      = *std::ranges::find(ztruct.fields, field_name, &Field::name);
+		base::StrID           field_name = field_arg.field_name;
+		type::concrete::Field field
+			= *std::ranges::find(as_struct.fields, field_name, &type::concrete::Field::name);
 
 		if (field.type != expected_field_type) throw ErrorT(std::forward<Args>(error_args)...);
 	}
@@ -89,7 +91,7 @@ class LocalStack {
 
 	// the following are CRefs instead of const& to allow copy/move.
 
-	CRef<ObjIdNameMap<type::Type>>               tod_map;
+	CRef<ObjIdNameMap<type::Type>>               types_ctx;
 	base::HashMap<base::StrID, CRef<type::Type>> local_name_to_type;
 
 public:
@@ -98,8 +100,8 @@ public:
 	LocalStack& operator=(const LocalStack&) = default;
 	LocalStack& operator=(LocalStack&&)      = default;
 
-	LocalStack(const FuncSignature& signature, const ObjIdNameMap<type::Type>& tod_map):
-		  tod_map(&tod_map) {
+	LocalStack(const FuncSignature& signature, const ObjIdNameMap<type::Type>& types_ctx):
+		  types_ctx(&types_ctx) {
 		push(base::StrID("ret_val"), signature.result_type.str);
 		for (auto [idx, param]: std::views::enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
@@ -108,7 +110,7 @@ public:
 	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }
 
 	void push(const opargs::StackLocalAny& local, const opargs::Type& type) {
-		auto tp = tod_map->at(type.type_name);
+		auto tp = types_ctx->at(type.type_name);
 
 		if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
 
@@ -138,7 +140,7 @@ public:
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
 		auto  local_name = VISIT(local, l, return l.var_name);
 		auto& curr_type  = local_name_to_type.at(local_name);
-		auto  new_type   = tod_map->at(type.type_name);
+		auto  new_type   = types_ctx->at(type.type_name);
 		curr_type        = new_type;
 		for (auto& entry: stack_state)
 			if (entry.local_name == local_name) entry.type = new_type;
@@ -234,9 +236,9 @@ class FunctionValidator {
 		}
 
 		auto        type_name    = local_stack.back().type->getName();
-		const auto& ptr_on_stack = types_ctx.at(type_name)->get<type::concrete::Pointer>();
+		const auto& ptr_on_stack = types_ctx.at(type_name)->getKindAs<type::concrete::Pointer>();
 		const auto& ptr_in_call
-			= local_stack.at(instr.object_ptr.var_name)->get<type::concrete::Pointer>();
+			= local_stack.at(instr.object_ptr.var_name)->getKindAs<type::concrete::Pointer>();
 		if (ptr_in_call.inner != ptr_on_stack.inner)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
@@ -317,7 +319,7 @@ class FunctionValidator {
 						throw UnknownGlobalNameError(*global);
 					CRef<GlobalData> entry = globals.at(global->global_data_name);
 					CRef<type::Type> type  = types_ctx.at(entry->type);
-					if (type->is<type::concrete::Primitive>())
+					if (type->isKind<type::concrete::Primitive>())
 						throw InvalidArgumentTypeError(*global);
 				}
 				variant_case(CRef<opargs::GlobalOpq>, global_opq) {
@@ -325,7 +327,7 @@ class FunctionValidator {
 						throw UnknownGlobalNameError(*global_opq);
 					CRef<GlobalData> entry = globals.at(global_opq->global_data_name);
 					CRef<type::Type> type  = types_ctx.at(entry->type);
-					if (!type->is<type::concrete::Opaque>())
+					if (!type->isKind<type::concrete::Opaque>())
 						throw InvalidArgumentTypeError(*global_opq);
 				}
 
@@ -337,7 +339,7 @@ class FunctionValidator {
 					if (!current_stack.contains(local->var_name))
 						throw UnknownLocalNameError(*local);
 					CRef<type::Type> type = current_stack.at(local->var_name);
-					if (!type->is<type::concrete::Pointer>())
+					if (!type->isKind<type::concrete::Pointer>())
 						throw InvalidArgumentTypeError(*local);
 				}
 				variant_case(CRef<opargs::StackLocalAny>, local) {
@@ -356,7 +358,8 @@ class FunctionValidator {
 					if (!current_stack.contains(local->var_name))
 						throw UnknownLocalNameError(*local);
 					CRef<type::Type> type = current_stack.at(local->var_name);
-					if (!type->is<type::concrete::Opaque>()) throw InvalidArgumentTypeError(*local);
+					if (!type->isKind<type::concrete::Opaque>())
+						throw InvalidArgumentTypeError(*local);
 				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
 				variant_case(CRef<opargs::Type>, type_value) {
@@ -411,7 +414,7 @@ class FunctionValidator {
 					if (!current_stack.contains(variant->var_name))
 						throw UnknownLocalNameError(*variant);
 					CRef<type::Type> type = current_stack.at(variant->var_name);
-					if (!type->is<type::concrete::Variant>())
+					if (!type->isKind<type::concrete::Variant>())
 						throw InvalidArgumentTypeError(*variant);
 				}
 
@@ -487,7 +490,7 @@ class FunctionValidator {
 			instr_case(Op_alloc_lptr_type, instr) {
 				validateArgInstantiable(instr.type);
 				CRef<type::Type>        variable = current_stack.at(instr.ptr.var_name);
-				type::concrete::Pointer pointer  = variable->get<type::concrete::Pointer>();
+				type::concrete::Pointer pointer  = variable->getKindAs<type::concrete::Pointer>();
 				if (types_ctx.at(pointer.inner)->getName() != instr.type.type_name)
 					throw PointerTypeMismatchError(instr);
 			}
@@ -1080,7 +1083,7 @@ class FunctionValidator {
 
 			instr_case(Op_variantSetInner_lvnt_type, instr) {
 				const auto& variant_type
-					= current_stack.at(instr.variant.var_name)->get<type::concrete::Variant>();
+					= current_stack.at(instr.variant.var_name)->getKindAs<type::concrete::Variant>();
 				type::TypeID wanted_type = types_ctx.at(instr.inner_type.type_name)->getID();
 
 				const std::vector<type::TypeID>& alternatives = variant_type.alternatives;
@@ -1089,9 +1092,9 @@ class FunctionValidator {
 			}
 			instr_case(Op_variantGetInner_lptr_lvnt_type, instr) {
 				const auto& variant_type
-					= current_stack.at(instr.variant.var_name)->get<type::concrete::Variant>();
+					= current_stack.at(instr.variant.var_name)->getKindAs<type::concrete::Variant>();
 				const auto& pointer_type
-					= current_stack.at(instr.dst_ptr.var_name)->get<type::concrete::Pointer>();
+					= current_stack.at(instr.dst_ptr.var_name)->getKindAs<type::concrete::Pointer>();
 				auto                             wanted_type    = types_ctx.at(pointer_type.inner);
 				const std::vector<type::TypeID>& possible_types = variant_type.alternatives;
 				if (!std::ranges::contains(possible_types, wanted_type->getID()))
@@ -1101,8 +1104,8 @@ class FunctionValidator {
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case(Op_variantSetInner_lptr_type, instr) {
-				const auto& variant_pointer
-					= current_stack.at(instr.variant_ptr.var_name)->get<type::concrete::Pointer>();
+				const auto& variant_pointer = current_stack.at(instr.variant_ptr.var_name)
+				                                  ->getKindAs<type::concrete::Pointer>();
 
 				const auto& variant_type
 					= expectPointerType<type::concrete::Variant>(variant_pointer, types_ctx, instr);
@@ -1113,12 +1116,12 @@ class FunctionValidator {
 			}
 			instr_case(Op_variantGetInner_lptr_lptr_type, instr) {
 				const auto& pointer_type
-					= current_stack.at(instr.dst_ptr.var_name)->get<type::concrete::Pointer>();
+					= current_stack.at(instr.dst_ptr.var_name)->getKindAs<type::concrete::Pointer>();
 				auto wanted_type = types_ctx.at(pointer_type.inner);
 
 
-				const auto& variant_pointer
-					= current_stack.at(instr.variant_ptr.var_name)->get<type::concrete::Pointer>();
+				const auto& variant_pointer = current_stack.at(instr.variant_ptr.var_name)
+				                                  ->getKindAs<type::concrete::Pointer>();
 				const auto& variant_type
 					= expectPointerType<type::concrete::Variant>(variant_pointer, types_ctx, instr);
 
@@ -1137,8 +1140,8 @@ class FunctionValidator {
 			instr_case_novalue(Op_call_cfunc) {}
 			instr_case(Op_virtual_call_lptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
-				const auto& pointer_type
-					= current_stack.at(instr.object_ptr.var_name)->get<type::concrete::Pointer>();
+				const auto& pointer_type = current_stack.at(instr.object_ptr.var_name)
+				                               ->getKindAs<type::concrete::Pointer>();
 				const auto& obj_type
 					= expectPointerType<type::concrete::Structure>(pointer_type, types_ctx, instr);
 				const auto& inh_meta
@@ -1155,14 +1158,14 @@ class FunctionValidator {
 			instr_case_novalue(Op_input_l32) {}
 			instr_case_novalue(Op_output_l32) {}
 			instr_case(Op_setVTable_lptr_type, instr) {
-				const auto& pointer_type
-					= current_stack.at(instr.object_ptr.var_name)->get<type::concrete::Pointer>();
+				const auto& pointer_type = current_stack.at(instr.object_ptr.var_name)
+				                               ->getKindAs<type::concrete::Pointer>();
 				if (pointer_type.inner != types_ctx.at(instr.type.type_name)->getID())
 					throw VTableTypeMismatchError(instr);
 			}
 			instr_case(Op_resetVTable_lptr, instr) {
-				const auto& pointer_type
-					= current_stack.at(instr.object_ptr.var_name)->get<type::concrete::Pointer>();
+				const auto& pointer_type = current_stack.at(instr.object_ptr.var_name)
+				                               ->getKindAs<type::concrete::Pointer>();
 				const auto& structure
 					= expectPointerType<type::concrete::Structure>(pointer_type, types_ctx, instr);
 				if (!structure.inheritance_metadata) throw NotAClassTypeError(instr);
@@ -1171,73 +1174,88 @@ class FunctionValidator {
 			instr_case_novalue(Op_free_lptr) {}
 			instr_case(Op_store_lptr_lany, instr) {
 				const auto& pointer_type
-					= current_stack.at(instr.dst_ptr.var_name)->get<type::concrete::Pointer>();
-				CRef<type::Type> other_type      = current_stack.at(instr.src.var_name);
-				base::StrID      other_type_name = typeName(*other_type);
-				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+					= current_stack.at(instr.dst_ptr.var_name)->getKindAs<type::concrete::Pointer>();
+				CRef<type::Type> other_type = current_stack.at(instr.src.var_name);
+				if (pointer_type.inner != other_type->getID())
+					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_load_lany_lptr, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.src_ptr.var_name));
-				CRef<type::Type> other_type      = current_stack.at(instr.dst.var_name);
-				base::StrID      other_type_name = typeName(*other_type);
-				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+					= current_stack.at(instr.src_ptr.var_name)->getKindAs<type::concrete::Pointer>();
+				CRef<type::Type> other_type = current_stack.at(instr.dst.var_name);
+				if (pointer_type.inner != other_type->getID())
+					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_ref_lptr_lany, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
-				CRef<type::Type> other_type      = current_stack.at(instr.src.var_name);
-				base::StrID      other_type_name = typeName(*other_type);
-				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+					= current_stack.at(instr.dst_ptr.var_name)->getKindAs<type::concrete::Pointer>();
+				CRef<type::Type> other_type = current_stack.at(instr.src.var_name);
+				if (pointer_type.inner != other_type->getID())
+					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_structLea_lptr_lptr_field, instr) {
 				const auto& destination
-					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
+					= current_stack.at(instr.dst_ptr.var_name)->getKindAs<type::concrete::Pointer>();
 
-				const auto& ztruct_pointer
-					= std::get<PointerType>(*current_stack.at(instr.src_data_ptr.var_name));
-				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+				const auto& ztruct_pointer = current_stack.at(instr.src_data_ptr.var_name)
+				                                 ->getKindAs<type::concrete::Pointer>();
+				const auto& ztruct
+					= expectPointerType<type::concrete::Structure>(ztruct_pointer, types_ctx, instr);
 
-				validateStructFieldType(ztruct, instr.field, destination.inner, instr);
+				validateStructFieldType(
+					*types_ctx.at(ztruct_pointer.inner), ztruct, instr.field, destination.inner, instr
+				);
 			}
 			instr_case(Op_structLoad_lany_lptr_field, instr) {
 				const auto& destination = current_stack.at(instr.dst.var_name);
 
-				const auto& ztruct_pointer
-					= std::get<PointerType>(*current_stack.at(instr.src_data_ptr.var_name));
-				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+				const auto& ztruct_pointer = current_stack.at(instr.src_data_ptr.var_name)
+				                                 ->getKindAs<type::concrete::Pointer>();
+				const auto& ztruct
+					= expectPointerType<type::concrete::Structure>(ztruct_pointer, types_ctx, instr);
 
-				validateStructFieldType(ztruct, instr.field, typeName(*destination), instr);
+				validateStructFieldType(
+					*types_ctx.at(ztruct_pointer.inner),
+					ztruct,
+					instr.field,
+					destination->getID(),
+					instr
+				);
 			}
 			instr_case(Op_structStore_lptr_lany_field, instr) {
 				const auto& source = current_stack.at(instr.src.var_name);
 
-				const auto& ztruct_pointer
-					= std::get<PointerType>(*current_stack.at(instr.dst_data_ptr.var_name));
-				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+				const auto& ztruct_pointer = current_stack.at(instr.dst_data_ptr.var_name)
+				                                 ->getKindAs<type::concrete::Pointer>();
+				const auto& ztruct
+					= expectPointerType<type::concrete::Structure>(ztruct_pointer, types_ctx, instr);
 
-				validateStructFieldType(ztruct, instr.field, typeName(*source), instr);
+				validateStructFieldType(
+					*types_ctx.at(ztruct_pointer.inner), ztruct, instr.field, source->getID(), instr
+				);
 			}
 			instr_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
-					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
+					= current_stack.at(instr.dst_ptr.var_name)->getKindAs<type::concrete::Pointer>();
 
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.src_table_ptr.var_name));
-				const auto& table_type
-					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
+				const auto& table_pointer = current_stack.at(instr.src_table_ptr.var_name)
+				                                ->getKindAs<type::concrete::Pointer>();
+				const auto& table_type = expectPointerType<type::concrete::FixedSizeTable>(
+					table_pointer, types_ctx, instr
+				);
 
 				if (destination.inner != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
 			instr_case(Op_dynTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
-					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
+					= current_stack.at(instr.dst_ptr.var_name)->getKindAs<type::concrete::Pointer>();
 
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.src_table_ptr.var_name));
-				const auto& table_type
-					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+				const auto& table_pointer = current_stack.at(instr.src_table_ptr.var_name)
+				                                ->getKindAs<type::concrete::Pointer>();
+				const auto& table_type = expectPointerType<type::concrete::DynamicTable>(
+					table_pointer, types_ctx, instr
+				);
 
 				if (destination.inner != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
@@ -1245,60 +1263,66 @@ class FunctionValidator {
 			instr_case(Op_fixedSizeTableLoad_lany_lptr_l64, instr) {
 				const auto& destination = current_stack.at(instr.dst.var_name);
 
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.src_table_ptr.var_name));
-				const auto& table_type
-					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
+				const auto& table_pointer = current_stack.at(instr.src_table_ptr.var_name)
+				                                ->getKindAs<type::concrete::Pointer>();
+				const auto& table_type = expectPointerType<type::concrete::FixedSizeTable>(
+					table_pointer, types_ctx, instr
+				);
 
-				if (typeName(*destination) != table_type.inner)
+				if (destination->getID() != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
 			instr_case(Op_dynTableLoad_lany_lptr_l64, instr) {
-				const auto& destination = current_stack.at(instr.dst.var_name);
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.src_table_ptr.var_name));
-				const auto& table_type
-					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
-				if (typeName(*destination) != table_type.inner)
+				const auto& destination   = current_stack.at(instr.dst.var_name);
+				const auto& table_pointer = current_stack.at(instr.src_table_ptr.var_name)
+				                                ->getKindAs<type::concrete::Pointer>();
+				const auto& table_type = expectPointerType<type::concrete::DynamicTable>(
+					table_pointer, types_ctx, instr
+				);
+				if (destination->getID() != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
 			instr_case(Op_fixedSizeTableStore_lptr_lany_l64, instr) {
 				const auto& source = current_stack.at(instr.src.var_name);
 
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.dst_table_ptr.var_name));
-				const auto& table_type
-					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
+				const auto& table_pointer = current_stack.at(instr.dst_table_ptr.var_name)
+				                                ->getKindAs<type::concrete::Pointer>();
+				const auto& table_type = expectPointerType<type::concrete::FixedSizeTable>(
+					table_pointer, types_ctx, instr
+				);
 
-				if (table_type.inner != typeName(*source))
+				if (table_type.inner != source->getID())
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
 			instr_case(Op_dynTableStore_lptr_lany_l64, instr) {
-				const auto& source = current_stack.at(instr.src.var_name);
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.dst_table_ptr.var_name));
-				const auto& table_type
-					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+				const auto& source        = current_stack.at(instr.src.var_name);
+				const auto& table_pointer = current_stack.at(instr.dst_table_ptr.var_name)
+				                                ->getKindAs<type::concrete::Pointer>();
+				const auto& table_type = expectPointerType<type::concrete::DynamicTable>(
+					table_pointer, types_ctx, instr
+				);
 
-				if (table_type.inner != typeName(*source))
-					throw DynamicTableTypeMismatchError(instr);
+				if (table_type.inner != source->getID()) throw DynamicTableTypeMismatchError(instr);
 			}
 			instr_case(Op_dynTableReAlloc_lptr_type_l64, instr) {
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.dst_table_ptr.var_name));
-				const auto& table_type
-					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+				const auto& table_pointer = current_stack.at(instr.dst_table_ptr.var_name)
+				                                ->getKindAs<type::concrete::Pointer>();
+				const auto& table_type = expectPointerType<type::concrete::DynamicTable>(
+					table_pointer, types_ctx, instr
+				);
 
-				base::StrID wanted_type = instr.table_type.type_name;
-				if (wanted_type != table_type.name)
+				type::TypeID wanted_type = types_ctx.at(instr.table_type.type_name)->getID();
+				if (wanted_type != table_type.inner)
 					throw InvalidArgumentTypeError(instr.table_type);
 			}
 			instr_case(Op_strOutput_lptr, instr) {
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.string_ptr.var_name));
-				const auto& table_type
-					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
-				if (table_type.inner != "byte") throw DynamicTableTypeMismatchError(instr);
+				const auto& table_pointer = current_stack.at(instr.string_ptr.var_name)
+				                                ->getKindAs<type::concrete::Pointer>();
+				const auto& table_type = expectPointerType<type::concrete::DynamicTable>(
+					table_pointer, types_ctx, instr
+				);
+				if (types_ctx.at(table_type.inner)->getName() != "byte")
+					throw DynamicTableTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_nop) {}
 			instr_case_novalue(Op_exit) {}
@@ -1313,7 +1337,7 @@ class FunctionValidator {
 	 * real data, not an abstract class or an interface.
 	 */
 	void validateArgInstantiable(const opargs::Type& arg) const {
-		auto type = type_metadata.at(arg.type_name);
+		auto type = types_ctx.at(arg.type_name);
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
@@ -1323,10 +1347,19 @@ class FunctionValidator {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 
-		auto dst_type = type_metadata.at(getTypeKind<PointerType>(*dst_ptr_tod)->inner);
-		auto src_type = type_metadata.at(getTypeKind<PointerType>(*src_ptr_tod)->inner);
+		auto dst_type = types_ctx.at(dst_ptr_tod->getKindAs<type::concrete::Pointer>().inner);
+		auto src_type = types_ctx.at(src_ptr_tod->getKindAs<type::concrete::Pointer>().inner);
 
-		if (!src_type->inheritsFrom(dst_type)) throw InvalidUpcastError(instruction);
+		const bool inherits = src_type->maybeGetKindAs<type::concrete::Structure>()
+		                          .flatMap([](CRef<type::concrete::Structure> src_struct) {
+									  return src_struct->inheritance_metadata;
+								  })
+		                          .map([dst_type](const type::concrete::InheritanceMetadata& imd) {
+									  return imd.super_types.contains(dst_type->getID());
+								  })
+		                          .copyValueOr(false);
+
+		if (!inherits) throw InvalidUpcastError(instruction);
 	}
 
 	void validatePrimitiveCast(
@@ -1336,13 +1369,15 @@ class FunctionValidator {
 		const LocalStack&                 current_stack
 	) const {
 		// These are guaranteed to exist by `validateArgTypes`.
-		auto curr_type      = current_stack.at(VISIT(local, l, return l.var_name));
-		auto new_type       = tod_map.at(type.type_name);
-		auto curr_primitive = getTypeKind<PrimitiveType>(*curr_type).value();
+		const auto  curr_type      = current_stack.at(VISIT(local, l, return l.var_name));
+		const auto  new_type       = types_ctx.at(type.type_name);
+		const auto& curr_primitive = curr_type->getKindAs<type::concrete::Primitive>();
 
-		auto new_primitive
-			= getTypeKind<PrimitiveType>(*new_type).expect<NonPrimitiveCastError>(type);
-		if (curr_primitive.size != new_primitive.size) throw CastSizeMismatchError(instruction);
+		const auto& new_primitive
+			= new_type->maybeGetKindAs<type::concrete::Primitive>().expect<NonPrimitiveCastError>(
+				type
+			);
+		if (curr_primitive.size != new_primitive->size) throw CastSizeMismatchError(instruction);
 	}
 
 	void validateFunctionEnd() const {
@@ -1379,7 +1414,7 @@ class FunctionValidator {
 	}
 
 	void traverseControlFlowGraph() {
-		LocalStack local_stack(function.signature, tod_map, type_metadata);
+		LocalStack local_stack(function.signature, types_ctx);
 		visited_instructions.resize(function.body.size());
 		std::vector<std::tuple<usize, LocalStack>> dfs_stack{
 			{ function.body.size(), local_stack }  // sentinel
@@ -1468,22 +1503,22 @@ class FunctionValidator {
 
 	void validateSignature() {
 		for (const auto& param_type: function.signature.parameters) {
-			if (!tod_map.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
+			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
 		}
-		if (!tod_map.contains(function.signature.result_type.str))
+		if (!types_ctx.contains(function.signature.result_type.str))
 			throw UnknownTypeError(opargs::Type{ function.signature.result_type.str });
 	}
 
 public:
 	FunctionValidator(
-		const ObjIdNameMap<type::Type>&                  tod_map,
+		const ObjIdNameMap<type::Type>&                  types_ctx,
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const Function&                                  function
 	):
-		  tod_map(tod_map),
+		  types_ctx(types_ctx),
 		  globals(globals),
 		  signatures(signatures),
 		  ext_c_signatures(ext_c_signatures),
