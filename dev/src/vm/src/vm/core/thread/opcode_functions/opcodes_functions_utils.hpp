@@ -85,9 +85,15 @@ inline static void writeToView(base::ModRawView view, const T& value) {
  * with `0` being the current instruction.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i)                                                                     \
-	IF_TC({ thread.acquireGil(); MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
-	IF_NOT_TC({ thread.acquireGil(); instr += i; })
+#define OPFUN_CONT(i)                                                              \
+	IF_TC({                                                                        \
+		thread.acquireGil();                                                       \
+		MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); \
+	})                                                                             \
+	IF_NOT_TC({                                                                    \
+		thread.acquireGil();                                                       \
+		instr += i;                                                                \
+	})
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
 /**
