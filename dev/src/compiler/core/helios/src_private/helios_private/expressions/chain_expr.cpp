@@ -580,8 +580,6 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
-			// TODO: HERE!!!
-
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, expr_access->getName().value);
@@ -612,8 +610,6 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::IdentifierLiteral> ident,
 			pst::Access<pst::expr::Call>              call_expr
 		) -> query::QResult<ChainState> {
-			// TODO: HERE!!!
-
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, ident->getName().value);
@@ -804,7 +800,7 @@ namespace compiler::helios::code {
 			);
 
 			if (lookup_result->isEmpty())
-				return {};  // We did not find a matching field nor a method
+				return {};  // We did not find a matching field nor a method inside class
 
 			// If we found any matching symbols we continue constructing chain from `self` context
 			this->current_state = std::move(self_expr);
