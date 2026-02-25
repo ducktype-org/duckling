@@ -663,6 +663,7 @@ namespace compiler::helios::code {
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
 				  }(),
+				  // @TODO: #1549 Value category usage may not be correct here.
 				  base->expression_type.getValueCategory(
 				  )  // Propagate the base category. If the array is a
 	                 // Local/Global, then the indexed element is as well.
@@ -889,7 +890,7 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType().getPointeeSymbolType(
 				  ),  // Remove the ref / box specifier.
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+				  tsh::ValueCategory(tsh::PrimaryCategory::Local)
 			  ),
 			  origin
 		  ),

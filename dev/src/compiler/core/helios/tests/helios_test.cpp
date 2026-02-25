@@ -66,6 +66,7 @@ public:
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testReferences);
 		TESTER_ADD_TEST(testBoxes);
+		TESTER_ADD_TEST(testReferenceKindCollapsing);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testExprClone);
 		TESTER_ADD_TEST(testSimpleHOUT);
@@ -1404,6 +1405,62 @@ private:
 
 			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(deref_expr->inner.get());
 			ASSERT_TRUE(ident_expr != nullptr);
+		}
+	}
+
+	void testReferenceKindCollapsing() {
+		auto [module, top_scope]
+			= getModule(fs::File(path("test_modules/reference_kind_collapsing")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions.at(0);
+		auto& body     = *function->body;
+		using namespace compiler::helios::code;
+
+		auto i32_type
+			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
+		auto ref_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+		auto box_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+
+		auto get_var_stmt = [&](usize index) -> const VariableStmt& {
+			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[index].get());
+			ASSERT_TRUE(var_stmt != nullptr);
+			return *var_stmt;
+		};
+
+		// var ref_ref_a: ref i32 = &ref_a; (Ref -> Ref)
+		{
+			const auto& var_stmt = get_var_stmt(3);
+			ASSERT_EQUAL(var_stmt.type, ref_i32);
+			// `&ref_a` should just copy the pointer, which is a simple assignment.
+			// The explicit `&` creates a RefOfExpr, and type system collapses the type.
+			auto* ref_of = dynamic_cast<const RefOfExpr*>(var_stmt.initial_value->get());
+			ASSERT_TRUE(ref_of != nullptr);
+		}
+		// var ref_box_a: ref i32 = &box_a; (Box -> Ref)
+		{
+			const auto& var_stmt = get_var_stmt(4);
+			ASSERT_EQUAL(var_stmt.type, ref_i32);
+			auto* ref_of = dynamic_cast<const RefOfExpr*>(var_stmt.initial_value->get());
+			ASSERT_TRUE(ref_of != nullptr);
+		}
+		// var box_ref_a: box i32 = ref_a; (Ref -> Box)
+		{
+			const auto& var_stmt = get_var_stmt(5);
+			ASSERT_EQUAL(var_stmt.type, box_i32);
+			// This should create a copy. `BoxOfExpr(DerefExpr(...))`
+			auto* box_of = dynamic_cast<const BoxOfExpr*>(var_stmt.initial_value->get());
+			ASSERT_TRUE(box_of != nullptr);
+			auto* deref = dynamic_cast<const DerefExpr*>(box_of->inner.get());
+			ASSERT_TRUE(deref != nullptr);
+		}
+		// var box_box_a: box i32 = box_a; (Box -> Box)
+		{
+			const auto& var_stmt = get_var_stmt(6);
+			ASSERT_EQUAL(var_stmt.type, box_i32);
+			// This is just a move, should be a noop
+			auto* ident = dynamic_cast<const IdentifierExpr*>(var_stmt.initial_value->get());
+			ASSERT_TRUE(ident != nullptr);
 		}
 	}
 
