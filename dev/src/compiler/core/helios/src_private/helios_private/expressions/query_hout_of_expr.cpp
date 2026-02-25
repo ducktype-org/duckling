@@ -449,6 +449,14 @@ namespace compiler::helios::code {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as the
 					// `unique`/`leaking` specifiers.
+					auto primary_category = inner->expression_type.getValueCategory().getCategory();
+					if (primary_category == tsh::PrimaryCategory::Literal
+					    || primary_category == tsh::PrimaryCategory::Temporary) {
+						ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Tried to reference a temporary", stmt->getSourcePosition()
+						));
+						return;
+					}
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
 				}
