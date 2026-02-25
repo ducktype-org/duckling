@@ -1759,10 +1759,13 @@ private:
 	void testMethodCalls() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/method_calls")));
 
-		auto& hout
-			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-
 		// TODO: Fill this
+
+		std::vector<CRef<compiler::helios::HOUTUnit>> units
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
+		          .valueOrPanic();
+		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		               // that it is successful
 	}
 
 	void testMangler() {
