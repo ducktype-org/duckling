@@ -146,7 +146,8 @@ namespace vm {
 				return std::unexpected(api::ApiError{ api::JoinError{} });
 			}
 
-			// @TODO: make two different "stop" functions, one that throws error if program panicked
+			// @TODO: #1220 make two different "stop" functions, one that throws error if program
+			// panicked
 			if (!response)
 				return std::unexpected(api::ApiError{
 					api::OtherError{ "unexpected status response" } });
@@ -343,8 +344,8 @@ namespace vm {
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
 		  loaded_program(loader.getProgram()) {
-        vm_threads.emplace_back(*this);
-    }
+		vm_threads.emplace_back(*this);
+	}
 
 	ProcIO& VMProcess::getIO() { return io; }
 

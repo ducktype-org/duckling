@@ -56,7 +56,7 @@ namespace vm {
 		u64                         operations     = 0;
 		const static u64            GIL_OPERATIONS = 10'000;
 		std::map<i64, std::shared_ptr<std::mutex>>
-			mutex_map;  // TODO lepiej pewnie co innego niz mapa
+			mutex_map;  // @TODO: #2109 lepiej pewnie co innego niz mapa
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
