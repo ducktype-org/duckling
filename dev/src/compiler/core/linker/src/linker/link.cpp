@@ -16,8 +16,8 @@ namespace compiler::linker {
 		time_stats::TrackCategoryTime linking_time(time_stats::TimeCategories::Linking);
 
 		// Link the object file.
-		// Use the default system linker if the linker is not set - for Ubuntu it is advised to use gcc.
-		// Related research links:
+		// Use the default system linker if the linker is not set - for Ubuntu it is advised to use
+		// gcc. Related research links:
 		// https://www.reddit.com/r/ProgrammingLanguages/comments/kji3k3/comment/ggx1ftq/
 		// https://github.com/rust-lang/rust/issues/71519
 		// https://github.com/rust-lang/rust/blob/c62239aeb3ba7781a6d7f7055523c1e8c22b409c/compiler/rustc_codegen_ssa/src/back/link.rs#L1442
