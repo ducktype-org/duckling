@@ -99,6 +99,8 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 ) {
 	compiler::linker::LinkingOptions linking_options;
 
+	linking_options.linker_path = parsing_result.getValue<std::string>("linker");
+
 	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
 		linking_options.additional_link_options = lib_path.value();
 
@@ -328,6 +330,11 @@ clah::Clah getClahForMain() {
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("link-options"))
 	                     .addLongName("additional-link-options")
 	                     .addShortDesc("Additional link options.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("linker"))
+	                     .addLongName("linker")
+	                     .addShortDesc("Path to the linker executable.")
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
