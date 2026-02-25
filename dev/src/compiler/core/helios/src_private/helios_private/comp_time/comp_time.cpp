@@ -72,9 +72,12 @@ namespace compiler::helios {
 
 			void visitCallExpr(const code::CallExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitAccessExpr(const code::AccessExpr&) final {
+			void visitAccessExpr(const code::AccessExpr& expr) final {
 				// @TODO: #1922 Implement that.
-				throw base::NotYetImplemented("Access expression in comp time");
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Evaluating access expressions at compile time.", expr.origin.getSourcePosition()
+				));
+				result = query::Failed();
 			}
 
 			/**
@@ -136,13 +139,22 @@ namespace compiler::helios {
 
 					// Base is meta, but index isn't integral. This is an error.
 					// @TODO: #1919 In the future meta index expression on meta could create a List[T].
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Evaluating index expressions with a meta base and non-integral "
+						"argument at compile time",
+						expr.origin.getSourcePosition()
+					));
 
 					result = query::Failed();
 					return;
 				}
 
 				// @TODO: #1922 If base is not meta, this is a normal index expression. Implement that.
-				throw base::NotYetImplemented("Index expression in comp time");
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Evaluating index expressions with non-meta base at compile time.",
+					expr.origin.getSourcePosition()
+				));
+				result = query::Failed();
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
@@ -273,9 +285,12 @@ namespace compiler::helios {
 										result = static_cast<ResultT>(std::pow(lhs_val, rhs_val));
 										break;
 									default:
-										throw base::NotYetImplemented(
-											"Evaluation of other binary operators in compile time"
-										);
+										ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+											"Evaluation of this binary operator at compile "
+											"time",
+											expr.origin.getSourcePosition()
+										));
+										return query::Failed();
 									}
 
 									return CompileTimeValue{ NumericValue{ result } };
@@ -291,8 +306,12 @@ namespace compiler::helios {
 							case code::BuiltinBinary::BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
 							default:
-								throw base::NotYetImplemented("Other binary operators for bool type"
-							    );
+								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+									"Evaluation of this binary operator at compile "
+									"time",
+									expr.origin.getSourcePosition()
+								));
+								return query::Failed();
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -340,10 +359,12 @@ namespace compiler::helios {
 								);
 
 							default:
-								throw base::NotYetImplemented(
-									"Evaluation of other unary operators for arithmetic types "
-									"is not implemented yet"
-								);
+								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+									"Evaluation of this unary operator at compile "
+									"time",
+									expr.origin.getSourcePosition()
+								));
+								return query::Failed();
 							}
 						} else if constexpr (std::is_same_v<T, bool>) {
 							switch (expr.operation) {
@@ -368,17 +389,20 @@ namespace compiler::helios {
 									val.withMutability(tsh::Mutability::Immutable)
 								};
 							default:
-								throw base::NotYetImplemented(
-									"Evaluation of other unary operators for tsh::SymbolType<> is "
-									"not "
-									"implemented yet"
-								);
+								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+									"Evaluation of this unary operator at compile "
+									"time",
+									expr.origin.getSourcePosition()
+								));
+								return query::Failed();
 							}
 						} else {
-							throw base::NotYetImplemented(
-								"Evaluation of unary operators for other types is not implemented "
-								"yet"
-							);
+							ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+								"Evaluation of this unary operator at compile "
+								"time",
+								expr.origin.getSourcePosition()
+							));
+							return query::Failed();
 						}
 					},
 					ctv.getStorage()
@@ -648,7 +672,15 @@ namespace compiler::helios {
 					break;
 				}
 				default:
-					throw base::NotYetImplemented("Default value in comp time");
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Default value evaluation at compile time for type: '",
+							expr.type.toString(),
+							"'."
+						),
+						expr.origin.getSourcePosition()
+					));
+					result = query::Failed();
 				}
 			}
 
@@ -701,7 +733,8 @@ namespace compiler::helios {
 		/**
 		 * @brief A POD to encapsulate the results of `prepareLIRForDVM`.
 		 * - `func_to_call` - a mangled name of the function we evaluate.
-		 * - `functions` -
+		 * - `functions` 	- a vector of all LIR functions to compile and load to DVM in order to
+		 * 					  evaluate `func_to_call`
 		 */
 		struct LIRBuildResult {
 			std::string func_to_call;  // Mangled name of the function we evaluate.
@@ -832,7 +865,13 @@ namespace compiler::helios {
 				variant_case(CouldNotShortPath, _) {
 					// If TreeEval failed, try to evaluate with VM.
 					const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
-					if (!call_expr) return query::Failed();
+					if (!call_expr) {
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Evaluation of this expression in DVM at compile time",
+							expr->origin.getSourcePosition()
+						));
+						return query::Failed();
+					}
 					return evaluateFunctionWithVm(ctx, call_expr);
 				}
 				variant_default { CORE_PANIC("Unexpected TreeEvalResult variant."); }
