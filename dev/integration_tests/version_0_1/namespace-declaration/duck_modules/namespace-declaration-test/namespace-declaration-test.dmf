@@ -1,0 +1,21 @@
+namespace Math {
+    var counter: i64 = 0;
+
+    fun increment() -> i64 = {
+        counter = counter + 1;
+        return counter;
+    }
+
+    fun add(a: i64, b: i64) -> i64 = a + b;
+}
+
+fun main() -> i64 = {
+    # Test namespace variable and function
+    builtin_output_i64(Math.increment()); # Expect 1
+    builtin_output_i64(Math.increment()); # Expect 2
+
+    # Test namespace function with arguments
+    builtin_output_i64(Math.add(10, 20)); # Expect 30
+
+    return 0;
+}

@@ -3,11 +3,20 @@
 # NOTE: No preexisting tests found for this feature.
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  alias-test:
+    Description: Tests for alias declarations in a namespace.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "50\n"
+        ExitCode: 0
+
+  using-test:
+    Description: Tests for using declarations to import functions.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "30\n"
+        ExitCode: 0

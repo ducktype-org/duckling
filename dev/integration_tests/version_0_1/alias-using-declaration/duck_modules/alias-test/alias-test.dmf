@@ -1,0 +1,16 @@
+namespace outer {
+    namespace inner {
+        namespace core {
+            fun veryLongFunctionName() -> bool = {
+                builtin_output_i64(1i64);
+                return true;
+            }
+        }
+    }
+}
+
+alias f = outer.inner.core.veryLongFunctionName;
+if (f()) {
+    builtin_output_i64(2);
+}
+

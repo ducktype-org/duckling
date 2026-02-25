@@ -1,4 +1,4 @@
 SubDirs:
-    - compiler
-    - duck
+    # - compiler
+    # - duck
     - version_0_1
