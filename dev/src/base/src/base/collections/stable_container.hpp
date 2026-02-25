@@ -178,6 +178,9 @@ namespace base {
 		ConstIterator end() const { return Base::end(); }
 	};
 
+	/**
+	 * \parallel Must be thread-safe for parallel compilation.
+	 */
 	template<class Data>
 	class StableVector: private internal::BaseStableVector<Data> {
 		using Base = internal::BaseStableVector<Data>;

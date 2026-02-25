@@ -2,7 +2,7 @@
 
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/lower/queries.hpp>
@@ -29,7 +29,7 @@ namespace compiler::lir {
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
-		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
+		auto bool_type   = tsh::getBoolType();
 		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
 
 		return LIRLocal{ bool_layout };

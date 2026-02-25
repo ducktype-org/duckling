@@ -11,11 +11,11 @@
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/external/api.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
@@ -46,7 +46,10 @@ public:
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(sideInputsTest);
+	}
 
+protected:
+	void beforeAll() override {
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {
@@ -129,10 +132,10 @@ private:
 		// ================================================================================
 		// Sanity check: this test must run before any other tests
 		// ================================================================================
-		auto ctx_state          = query::internal::ContextAccess::getState();
-		auto initial_graph_view = ctx_state->getGraphMutable();
+		auto  ctx_state          = query::internal::ContextAccess::getState();
+		auto& initial_graph_view = ctx_state->getGraph();
 		assertTrue(
-			initial_graph_view->getAllNodes().empty(),
+			initial_graph_view.getAllNodes().empty(),
 			"graphConsistencyAfterOptimizationTest must run before other driver tests to keep the"
 			" compilation graph clean"
 		);
@@ -199,7 +202,11 @@ private:
 			driver::compileEntirePackage(
 				package_info,
 				driver::BackendType::LLVM,
-				{ .external_static_libraries = {}, .link_c_standard_library = true }
+				{
+					.linker_path             = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				}
 			);
 		}
 
@@ -208,11 +215,11 @@ private:
 		// ================================================================================
 
 		// Get the graph before optimization
-		auto graph_before_opt = query::internal::ContextAccess::getState()->getGraphMutable();
+		auto& graph_before_opt = query::internal::ContextAccess::getState()->getGraph();
 
 		// Collect preserved nodes BEFORE optimization (note that Input nodes are included)
 		std::vector<query::internal::NodeID> preserved_nodes_before;
-		for (const auto& node: graph_before_opt->getAllNodes())
+		for (const auto& node: graph_before_opt.getAllNodes())
 			if (is_preserved(node)) preserved_nodes_before.push_back(node);
 
 		// Collect preserved dependencies (transitively) for each preserved node BEFORE optimization
@@ -221,12 +228,12 @@ private:
 			preserved_deps_before;
 		for (const auto& preserved_node: preserved_nodes_before) {
 			preserved_deps_before.put(
-				preserved_node, collect_preserved_dependencies(*graph_before_opt, preserved_node)
+				preserved_node, collect_preserved_dependencies(graph_before_opt, preserved_node)
 			);
 		}
 
-		const auto nodes_before_opt = graph_before_opt->getAllNodes().size();
-		const auto edges_before_opt = count_edges(*graph_before_opt);
+		const auto nodes_before_opt = graph_before_opt.getAllNodes().size();
+		const auto edges_before_opt = count_edges(graph_before_opt);
 		std::cout << "[DriverTest] Graph before optimization: nodes=" << nodes_before_opt
 				  << " edges=" << edges_before_opt << '\n';
 
@@ -406,9 +413,9 @@ private:
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
 			                    .valueOrPanic();
 
-			ASSERT_TRUE(module_o.FILE.exists());
+			ASSERT_TRUE(module_o.file.exists());
 
-			fs::FileManager::deleteFile(module_o.FILE);
+			fs::FileManager::deleteFile(module_o.file);
 		});
 	}
 
@@ -472,7 +479,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 
 		auto exe_path = artifacts_path / "package_llvm.exe";
@@ -484,7 +495,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::DVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 	}
 
@@ -498,18 +513,18 @@ private:
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
 			                    .valueOrPanic();
 
-			assertTrue(module_o.FILE.exists(), "Object file does not exist");
+			assertTrue(module_o.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_o.FILE.getFilePath().getPath());
+			std::filesystem::remove(module_o.file.getFilePath().getPath());
 		});
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module_dbc = ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM })
 			                      .valueOrPanic();
-			assertTrue(module_dbc.FILE.exists(), "Object file does not exist");
+			assertTrue(module_dbc.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_dbc.FILE.getFilePath().getPath());
+			std::filesystem::remove(module_dbc.file.getFilePath().getPath());
 
 			auto run_result = driver::runModuleOnDVM(ctx, module);
 			ASSERT_TRUE(run_result.has_value());
@@ -579,7 +594,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 
 		// Get root module ID
@@ -615,13 +634,13 @@ private:
 			= get_submodule(submodules, base::StrID("empty_sub_module")).illegalAccess().getID();
 
 		// Get Query Graph
-		auto graph = query::internal::ContextAccess::getState()->getGraphMutable();
+		auto& graph = query::internal::ContextAccess::getState()->getGraph();
 
 		// Find QueryModuleHOUT node
 		auto hout_node_id = query::internal::makeNodeID<helios::QueryModuleHOUT>(root_id);
 
 		// Check dependencies
-		auto dependencies = graph->getNodeDeps(hout_node_id);
+		auto dependencies = graph.getNodeDeps(hout_node_id);
 
 		// Construct expected SideInput query ID
 		auto expected_module_side_input_id

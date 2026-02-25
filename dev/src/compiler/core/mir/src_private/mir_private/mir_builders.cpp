@@ -1,12 +1,12 @@
 #include "mir_builders.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::mir {
 	[[nodiscard]]
@@ -223,7 +223,7 @@ namespace compiler::mir {
 	[[nodiscard]]
 	MIRLocalMutRef FunctionBuilder::addNoLifetimeBoolTmp() {
 		auto type = tsh::SymbolType<>(
-			ctx.query<tsh::QueryBoolType>({}), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
+			tsh::getBoolType(), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
 		);
 		return addNoLifetimeTmp(type);
 	}

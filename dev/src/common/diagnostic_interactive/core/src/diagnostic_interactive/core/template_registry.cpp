@@ -12,6 +12,8 @@
 
 #include <filesystem/file.hpp>
 
+#include <mutex>
+
 namespace dia_int {
 
 	// --------------------------------------------------------------------------------
@@ -80,23 +82,34 @@ namespace dia_int {
 	// --------------------------------------------------------------------------------
 
 	MBox<TemplateRegistrySingleton> TemplateRegistrySingleton::instance;
+	std::mutex                      TemplateRegistrySingleton::instance_mutex;
 
 	TemplateRegistrySingleton& TemplateRegistrySingleton::getInstance() {
+		std::scoped_lock lock(instance_mutex);
 		if (!instance.toOpt().has_value())
 			throw TemplateEvaluationException("TemplateRegistry instance not initialized.");
 		return *instance.toOpt().value();
 	}
 
-	void TemplateRegistrySingleton::setInstance(Box<TemplateRegistryProvider> provider) {
+	void TemplateRegistrySingleton::setInstance(Box<TemplateRegistryProvider>&& provider) {
+		std::scoped_lock lock(instance_mutex);
+		if (instance.toOpt().empty())
+			instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
+	}
+
+	void TemplateRegistrySingleton::setNewInstance(Box<TemplateRegistryProvider>&& provider) {
+		std::scoped_lock lock(instance_mutex);
 		instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
 	}
 
 	template_file::DiagnosticTemplate& TemplateRegistrySingleton::loadTemplate(
 		const dia_args::Metadata& metadata
 	) {
-		std::string key = metadata.type + "/" + metadata.family + "/" + metadata.name;
+		std::scoped_lock lock(instance_mutex);
+		std::string      key = metadata.type + "/" + metadata.family + "/" + metadata.name;
 
 		if (auto cached = cache.atMaybe(key); cached.has_value()) return *cached.value();
+
 
 		auto str_content_opt = provider->loadTemplate(key);
 		if (!str_content_opt.has_value()) {
@@ -123,7 +136,7 @@ namespace dia_int {
 			}
 
 			cache.put(key, std::move(diagnostic_template));
-			return cache[key];
+			return *cache.at(key);
 		} catch (const ParsingTemplateFileError& e) {
 			throw TemplateEvaluationException(
 				base::strConcat("Error parsing template '", key, "': ", e.what())

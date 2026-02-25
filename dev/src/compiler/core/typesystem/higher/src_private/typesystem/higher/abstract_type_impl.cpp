@@ -3,7 +3,7 @@
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 #include <utility>
 

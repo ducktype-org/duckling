@@ -1,0 +1,215 @@
+use std::collections::{HashMap, HashSet};
+
+use crate::{
+    QuackResult, QuackResultContext,
+    quackpack::core::{
+        Dependency, Version,
+        types_common::{
+            ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
+        },
+        version::CompatibilityCheck,
+    },
+};
+
+pub fn get_possible_realisations(
+    dependency_description: &Dependency,
+    versions_for_location: &HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
+    location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
+) -> QuackResult<Vec<ExpandedPackage>> {
+    if dependency_description.is_pinned() {
+        let version = dependency_description
+            .desc()
+            .versions()
+            .first()
+            .context_internal("Pinned dependency should have exactly one version specified")?;
+        let only_package = Package {
+            location: InternedLocation::new(Location::from(dependency_description)),
+            version: Some(*version),
+        }
+        .resolve(location_resolver);
+        Ok(only_package.iter().cloned().collect())
+    } else {
+        let Some(location) = location_resolver.get(&InternedLocation::new(Location::from(
+            dependency_description,
+        ))) else {
+            return Ok(vec![]);
+        };
+        let baseline_versions = if location.is_local() || location.is_git() {
+            vec![None]
+        } else {
+            dependency_description
+                .desc()
+                .versions()
+                .iter()
+                .copied()
+                .map(Some)
+                .collect()
+        };
+        let Some(possible_versions) = versions_for_location.get(location) else {
+            return Ok(vec![]);
+        };
+        let good_versions: Vec<Option<Version>> = possible_versions
+            .iter()
+            .filter(|version| {
+                baseline_versions
+                    .iter()
+                    .any(|baseline| baseline.can_be_upgraded_to(*version))
+            })
+            .copied()
+            .collect();
+        Ok(good_versions
+            .into_iter()
+            .map(|version| ExpandedPackage {
+                location: *location,
+                version,
+            })
+            .collect())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{
+        collections::{HashMap, HashSet},
+        path::PathBuf,
+    };
+
+    use tempfile::{TempDir, tempdir};
+    use url::Url;
+
+    use crate::{
+        DuckCtx, QpCtx, StrId,
+        quackpack::core::{
+            Version, parse_manifest,
+            types_common::{
+                ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
+                Location,
+            },
+            util::get_possible_realisations,
+        },
+        util_common::path_ops_ext::PathOpsExt,
+    };
+
+    fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
+        let dir = tempdir().unwrap();
+        let manifest = dir.path().join("x");
+        manifest.touch().unwrap();
+        manifest.write(contents).unwrap();
+        (dir, manifest)
+    }
+
+    #[test]
+    fn pinned() {
+        let (_dir, manifest_path) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: 1
+
+dependencies:
+  b:
+    version: 1.0.3
+    pinned: true
+"#,
+        );
+        let ctx = DuckCtx::default();
+        let pkg = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap();
+        let manifest = pkg.manifest();
+        let dependency = manifest
+            .dependencies()
+            .all_dependencies()
+            .get(&StrId::new("b"))
+            .unwrap();
+        let location_b = InternedLocation::new(Location::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let location_resolver = HashMap::from([(location_b, exp_location_b)]);
+        let versions_for_location = HashMap::from([(
+            exp_location_b,
+            HashSet::from([
+                Some(Version::new(0, 0, 1)),
+                Some(Version::new(1, 0, 0)),
+                Some(Version::new(1, 0, 3)),
+                Some(Version::new(1, 0, 5)),
+                Some(Version::new(1, 3, 3)),
+                Some(Version::new(2, 0, 3)),
+            ]),
+        )]);
+        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+            .unwrap();
+        assert_eq!(
+            res,
+            vec![ExpandedPackage {
+                location: exp_location_b,
+                version: Some(Version::new(1, 0, 3))
+            }]
+        );
+    }
+
+    #[test]
+    fn not_pinned() {
+        let (_dir, manifest_path) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: 1
+
+dependencies:
+  b:
+    version: 1.0.3
+"#,
+        );
+        let ctx = DuckCtx::default();
+        let pkg = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap();
+        let manifest = pkg.manifest();
+        let dependency = manifest
+            .dependencies()
+            .all_dependencies()
+            .get(&StrId::new("b"))
+            .unwrap();
+        let location_b = InternedLocation::new(Location::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let location_resolver = HashMap::from([(location_b, exp_location_b)]);
+        let versions_for_location = HashMap::from([(
+            exp_location_b,
+            HashSet::from([
+                Some(Version::new(0, 0, 1)),
+                Some(Version::new(1, 0, 0)),
+                Some(Version::new(1, 0, 3)),
+                Some(Version::new(1, 0, 5)),
+                Some(Version::new(1, 3, 3)),
+                Some(Version::new(2, 0, 3)),
+            ]),
+        )]);
+        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+            .unwrap();
+        assert_eq!(
+            HashSet::from_iter(res),
+            HashSet::from([
+                ExpandedPackage {
+                    location: exp_location_b,
+                    version: Some(Version::new(1, 0, 3))
+                },
+                ExpandedPackage {
+                    location: exp_location_b,
+                    version: Some(Version::new(1, 0, 5))
+                },
+                ExpandedPackage {
+                    location: exp_location_b,
+                    version: Some(Version::new(1, 3, 3))
+                }
+            ])
+        );
+    }
+}

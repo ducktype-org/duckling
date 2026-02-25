@@ -4,7 +4,7 @@
 
 namespace pst {
 	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(
-		LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
+		LangParserState& state, BlockOrderType code_block_order_type
 	) {
 		auto out = makeBox<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {

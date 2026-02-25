@@ -1,3 +1,8 @@
+/**
+ * @file compile_llvm.cpp
+ * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
+ */
+
 #include "compile_llvm.hpp"
 
 #include "builtins_registry.hpp"
@@ -11,18 +16,16 @@
 
 namespace compiler::driver {
 
-	backend_llvm::Module compileLIRModuleToLLVM(
-		query::Context& ctx, const LIRModuleData& lir_module
-	) {
+	backend_llvm::Module compileLIRModuleToLLVM(query::Context& ctx, CRef<LIRModuleData> lir_module) {
 		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
-		backend_llvm::Module mod(lir_module.module_id);
+		backend_llvm::Module mod(lir_module->module_id);
 
 		std::vector<CRef<lir::Function>> ctors;
 		std::vector<CRef<lir::Function>> dtors;
 
 
-		for (const auto& global: lir_module.globals) {
+		for (const auto& global: lir_module->globals) {
 			mod.addGlobalToModule(global.lir_global);
 			// Add global constructors and destructors if they exist
 			if (global.global_ctor.has_value()) {
@@ -41,7 +44,7 @@ namespace compiler::driver {
 				ctors,
 				helios::mangler::getSpecialMangledName<
 					helios::mangler::ManglingSymbolKind::ModuleConstructor>(
-					ctx, helios::mangler::special_symbol_keys::LIRModuleID{ lir_module.module_id }
+					ctx, helios::mangler::special_symbol_keys::LIRModuleID{ lir_module->module_id }
 				)
 			);
 			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
@@ -55,13 +58,13 @@ namespace compiler::driver {
                 reversed_dtors,
                 helios::mangler::getSpecialMangledName<
 												helios::mangler::ManglingSymbolKind::ModuleDestructor>(
-                    ctx, helios::mangler::special_symbol_keys::LIRModuleID{ lir_module.module_id }
+                    ctx, helios::mangler::special_symbol_keys::LIRModuleID{ lir_module->module_id }
                 )
             );
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}
 
-		for (const auto& lir_function: lir_module.functions)
+		for (const auto& lir_function: lir_module->functions)
 			mod.addFunctionToModule(ctx, lir_function);
 
 		CORE_ASSERT(mod.verify().isOk(), "LLVM module verification failed");
@@ -74,7 +77,7 @@ namespace compiler::driver {
 			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID("builtins_llvm.o"));
 		auto mod = backend_llvm::Module::fromLLVMBC(getBuiltinsX8664LinuxGnuBCSpan());
 		mod.compile(
-			builtin_obj_file.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
+			builtin_obj_file.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 		);
 		return builtin_obj_file;
 	}

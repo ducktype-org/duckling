@@ -6,7 +6,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 namespace compiler::helios {
 
@@ -67,8 +67,8 @@ namespace compiler::helios {
 	) {
 		auto hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-		if (!hout_expr.hasValue()) return {};
+		if (!hout_expr->hasValue()) return {};
 
-		return querySymIDOfHOUTExpr(ctx, hout_expr.valueOrThrow().ref());
+		return querySymIDOfHOUTExpr(ctx, hout_expr->valueOrThrow().ref());
 	}
 }

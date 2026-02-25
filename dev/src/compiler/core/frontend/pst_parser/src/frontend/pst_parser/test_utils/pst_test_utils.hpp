@@ -20,7 +20,7 @@ namespace pst {
 	 * Should probably be used for tests only. Might be slow, due to dynamic_cast's.
 	 */
 	template<class T>
-	std::vector<AccessLocked<T>> viewAllSubTreeElementsFillter(AccessLocked<pst::LangElement> root) {
+	std::vector<AccessLocked<T>> viewAllSubTreeElementsFilter(AccessLocked<pst::LangElement> root) {
 		auto                         all = viewAllSubTreeElements(root);
 		std::vector<AccessLocked<T>> result;
 		for (auto el: all) {

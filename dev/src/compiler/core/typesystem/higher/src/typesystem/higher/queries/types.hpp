@@ -1,3 +1,9 @@
+/**
+ * This file contains the queries and functions that create types.
+ * Some of those functions are queries and some are simple getters,
+ * the division depends mostly on whether we want a query cache or not.
+ */
+
 #pragma once
 
 #include "../symbol_type.hpp"
@@ -5,102 +11,95 @@
 
 #include <base/collections/maps.hpp>
 
+#include <hashing/add_to_hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
 #include <query_framework/query_int.hpp>
-#include <query_framework/simple_keys.hpp>
+
+#include <algorithm>
 
 namespace compiler::tsh {
 	/**
-	 * @brief Query to get the Unit type.
+	 * @brief Simple getter to create and get the Unit type.
 	 */
-	DECLARE_QUERY(QueryUnitType, query::EmptyKey, UnitAbstractType, ({ .uses_qresult = false }))
+	UnitAbstractType getUnitType();
 
 	/**
-	 * @brief Query to get the Void type.
+	 * @brief Simple getter to create and get the Void type.
 	 */
-	DECLARE_QUERY(QueryVoidType, query::EmptyKey, VoidAbstractType, ({ .uses_qresult = false }))
+	VoidAbstractType getVoidType();
 
 	/**
-	 * @brief Query to get the Byte type.
+	 * @brief Simple getter to create and get the Byte type.
 	 */
-	DECLARE_QUERY(QueryByteType, query::EmptyKey, ByteAbstractType, ({ .uses_qresult = false }))
+	ByteAbstractType getByteType();
 
 	/**
-	 * @brief Query to get the Bool type.
+	 * @brief Simple getter to create and get the Bool type.
 	 */
-	DECLARE_QUERY(QueryBoolType, query::EmptyKey, BoolAbstractType, ({ .uses_qresult = false }))
+	BoolAbstractType getBoolType();
 
 	/**
-	 * @brief Query to get the Char type.
+	 * @brief Simple getter to create and get the Char type.
 	 */
-	DECLARE_QUERY(QueryCharType, query::EmptyKey, CharAbstractType, ({ .uses_qresult = false }))
+	CharAbstractType getCharType();
 
 	/**
-	 * @brief Key for QueryIntegralType.
+	 * @brief Simple getter to create and get integral types.
 	 */
-	struct KeyFor_QueryIntegralType final {
-		/**
-		 * @brief The size of the Integral type. Pick from { 8, 16, 32, 64, 128 }.
-		 */
-		usize size;
+	IntegralAbstractType getIntegralType(
+		query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness
+	);
 
-		/**
-		 * @brief Whether the Integral type is signed or not.
-		 */
-		IntegralAbstractType::Signedness signedness;
-
-		// These constructor definitions are to force giving at least the first argument.
-		KeyFor_QueryIntegralType() = delete;
-
-		KeyFor_QueryIntegralType(
-			const usize                            size,
-			const IntegralAbstractType::Signedness signedness
-			= IntegralAbstractType::Signedness::Signed
-		):
-			  size(size),
-			  signedness(signedness) {}
-
-		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			return size + (signedness == IntegralAbstractType::Signedness::Signed);
-		}
-	};
 
 	/**
-	 * @brief Query to get an Integral type.
+	 * @brief Simple getter to create and get floating point types.
 	 */
-	DECLARE_QUERY(
-		QueryIntegralType,
-		KeyFor_QueryIntegralType,
-		IntegralAbstractType,
-		({ .uses_qresult = false })
-	)
+	FloatAbstractType getFloatType(query::Context& ctx, u64 size);
 
 	/**
-	 * @brief Query to get a Float (floating point) type.
+	 * @brief Simple getter to create and get raw pointer types.
 	 */
-	DECLARE_QUERY(QueryFloatType, query::U64Key, FloatAbstractType, ({ .uses_qresult = false }))
+	RawPointerAbstractType getRawPointerType(bool mutable_pointer);
 
 	/**
-	 * @brief Query to get a RawPointer type.
-	 * The boolean key denotes whether the raw pointer points to mutable data.
+	 * @brief Simple getter to create and get string type.
 	 */
-	DECLARE_QUERY(
-		QueryRawPointerType, query::BoolKey, RawPointerAbstractType, ({ .uses_qresult = false })
-	)
+	StringAbstractType getStringType();
+
+	/**
+	 * @brief Simple getter to create and get namespace type.
+	 */
+	NamespaceAbstractType getNamespaceType();
+
+	/**
+	 * @brief Simple getter to create and get meta type.
+	 */
+	MetaAbstractType getMetaType();
+
+	/**
+	 * @brief Simple getter to create and get module type.
+	 */
+	ModuleAbstractType getModuleType();
+
+	/**
+	 * @brief Simple getter to create and get import type.
+	 */
+	ImportAbstractType getImportType();
+
 
 	/**
 	 * @brief Query to get a typed Pointer type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
 
-	/**
-	 * @brief Query to get the String type.
-	 */
-	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the DynamicArray type.
 	 * The AbstractType of the elements of the array is given as a key.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType, ({ .uses_qresult = false })
@@ -117,17 +116,17 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryTupleType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher{};
+			// Note that tuple components are ordered.
+			for (const auto& component: components) addToHash(hasher, component);
+			return hasher.finalize();
 		}
 	};
 
+	/**
+	 * \query_thread_safe_if_cache
+	 */
 	DECLARE_QUERY(
 		QueryTupleType, KeyFor_QueryTupleType, TupleAbstractType, ({ .uses_qresult = false })
 	)
@@ -143,17 +142,24 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryVariantType, u64> hashes{};
+		base::Bit256 queryUnstablePerfectHash() const {
+			// Note that a variant's component types are *not* ordered, so we have to order them.
+			// Let's just hash the components, order them, and then hash the ordered list of hashes.
+			std::vector<base::Bit256> hashes{};
+			hashes.reserve(underlying_types.size());
+			for (const auto& underlying_type: underlying_types)
+				hashes.push_back(underlying_type.queryUnstablePerfectHash());
+			std::ranges::sort(hashes, [](const auto& a, const auto& b) { return a < b; });
 
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+			hashing::SHA256 hasher{};
+			for (const auto& hash: hashes) addToHash(hasher, hash);
+			return hasher.finalize();
 		}
 	};
 
+	/**
+	 * \query_thread_safe_if_cache
+	 */
 	DECLARE_QUERY(
 		QueryVariantType, KeyFor_QueryVariantType, VariantAbstractType, ({ .uses_qresult = false })
 	)
@@ -191,19 +197,20 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryFunctionType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher{};
+			for (const auto& param_type: parameter_types) addToHash(hasher, param_type);
+			addToHash(hasher, result_type);
+			addToHash(hasher, pure);
+			addToHash(hasher, free);
+			return hasher.finalize();
 		}
 	};
 
 	/**
 	 * @brief Query to get the Function type.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryFunctionType,
@@ -214,30 +221,12 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get the Class type.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryClassType, compiler::helios::SymID, ClassAbstractType, ({ .uses_qresult = false })
 	)
 
-	/**
-	 * @brief Query to get the Meta type.
-	 */
-	DECLARE_QUERY(QueryMetaType, query::EmptyKey, MetaAbstractType, ({ .uses_qresult = false }))
 
-	/**
-	 * @brief Query to get the Namespace type.
-	 */
-	DECLARE_QUERY(
-		QueryNamespaceType, query::EmptyKey, NamespaceAbstractType, ({ .uses_qresult = false })
-	)
-
-	/**
-	 * @brief Query to get the Module type.
-	 */
-	DECLARE_QUERY(QueryModuleType, query::EmptyKey, ModuleAbstractType, ({ .uses_qresult = false }))
-
-	/**
-	 * @brief Query to get the Import type.
-	 */
-	DECLARE_QUERY(QueryImportType, query::EmptyKey, ImportAbstractType, ({ .uses_qresult = false }))
 }

@@ -7,7 +7,7 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -16,7 +16,7 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -71,11 +71,11 @@ namespace compiler::helios {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
 					);
-					if (parsed.hasFailed()) {
+					if (parsed->hasFailed()) {
 						setFailed();
 						return;
 					}
-					const auto& expr_type = parsed.valueOrThrow()->expression_type;
+					const auto& expr_type = parsed->valueOrThrow()->expression_type;
 					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
 						expr_type, tsh::Mutability::Immutable
 					));
@@ -95,10 +95,10 @@ namespace compiler::helios {
 						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx), decl_mutability
 					);
 				} else if (stmt->getValue().has_value()) {
-					auto parsed = ctx.query<QueryHoutOfExpr>(
-										 { stmt->getValue().value().unlock(ctx)->getExpr() }
+					auto& parsed = ctx.query<QueryHoutOfExpr>(
+										  { stmt->getValue().value().unlock(ctx)->getExpr() }
 					)
-					                  .valueOrThrow();
+					                   ->valueOrThrow();
 
 					const auto& expr_type = parsed->expression_type;
 					setTypeOfSymbol(
@@ -121,15 +121,15 @@ namespace compiler::helios {
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryMetaType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getMetaType());
 			}
 
 			void visitNamespace(pst::Access<pst::Namespace>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryNamespaceType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getNamespaceType());
 			}
 
 			void visitImport(pst::Access<pst::Import>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryImportType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getImportType());
 			}
 
 			void visitParam(pst::Access<pst::Param> param) final {
@@ -165,7 +165,7 @@ namespace compiler::helios {
 						return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
-					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
+					pst_data.getElement().unlock(ctx)->acceptVisitor(visitor);
 
 					return visitor.symbol_type_qresult;
 				}

@@ -20,7 +20,6 @@ use crate::quackpack::schemas::manifest::DependencyFeature as FeatureSchema;
 use crate::quackpack::schemas::manifest::DependencySource;
 use crate::util_common::error::QuackResultContext;
 
-use crate::static_str_id;
 use crate::{QpCtx, QuackResult, quackpack::core::Dependencies};
 
 /// Parse [`Dependencies`] from the [`DependenciesSchema`].
@@ -57,7 +56,7 @@ fn parse_single_dependency(
     scope: &mut Scope,
 ) -> QuackResult<Dependency> {
     trace!("parsing a dependency");
-    scope.push(static_str_id!("source"));
+    scope.push("source".into());
     let source = source::parse(schema, package_root, ctx, scope)?;
     scope.pop();
 
@@ -69,13 +68,13 @@ fn parse_single_dependency(
     let desc = DependencyDescription::new(manifest_name, versions, source.into())
         .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
 
-    scope.push(static_str_id!("features"));
+    scope.push("features".into());
     let features = parse_features(schema.features.as_ref(), scope)?;
     scope.pop();
     let pinned = schema.pinned.unwrap_or(false);
     let real_name = parse_real_name(schema).unwrap_or(manifest_name);
 
-    scope.push(static_str_id!("conditions"));
+    scope.push("conditions".into());
     let conditions = schema
         .conditions
         .as_ref()
@@ -107,7 +106,7 @@ fn parse_features(
                 } = detailed_feature.0;
                 let name = name.into();
                 scope.push(name);
-                scope.push(static_str_id!("conditions"));
+                scope.push("conditions".into());
                 result.push(DependencyFeature::new(
                     name,
                     Some(parse_conditions(conditions, scope)?),

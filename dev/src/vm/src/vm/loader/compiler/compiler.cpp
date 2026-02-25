@@ -34,9 +34,9 @@ namespace vm::loader::compiler {
 			variant_case(vm::opargs::Immediate, imm) return imm.value;
 
 			// Every used local variable is guaranteed to exist by static verification.
-#define HANDLE_LOCAL(TYPE)                                                     \
-	variant_case(vm::opargs::TYPE, local_type) {                               \
-		return static_cast<u64>(ctx.local_offset_map.at(local_type.var_name)); \
+#define HANDLE_LOCAL(TYPE)                                                      \
+	variant_case(vm::opargs::TYPE, local_type) {                                \
+		return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset); \
 	}
 			FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
@@ -112,14 +112,14 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
-		base::HashMap<base::StrID, usize> offsets;
-		std::vector<usize>                type_size_stack;
-		usize                             curr_stack_size = 0;
-		usize                             max_stack_size  = 0;
+		decltype(ctx.locals_map) result;
+		std::vector<usize>       type_size_stack;
+		usize                    curr_stack_size = 0;
+		usize                    max_stack_size  = 0;
 
 		auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
-			if_opt_some(offsets.atMaybe(local.var_name), offset) {
-				if (*offset != curr_stack_size) {
+			if_opt_some(result.atMaybe(local.var_name), entry) {
+				if (entry->offset != curr_stack_size) {
 					CORE_PANIC(
 						"DuplicatedLocalNameError - used a variable again at a different offset "
 						"which wasn't detected by the function validator"
@@ -127,9 +127,10 @@ namespace vm::loader::compiler {
 				}
 			}
 
-			offsets.put(local.var_name, curr_stack_size);
-			auto type_size = low_program.types->at(type.type_name)->getSize();
-			type_size_stack.push_back(type_size);
+			auto type_ref = low_program.types->at(type.type_name);
+			result.put(local.var_name, { .offset = curr_stack_size, .type = type_ref });
+			auto type_size = type_ref->getSize();
+			type_size_stack.push_back(type_ref->getSize());
 			if (type.type_name == "void") return;
 			curr_stack_size += type_size;
 			max_stack_size = std::max(max_stack_size, curr_stack_size);
@@ -253,7 +254,7 @@ namespace vm::loader::compiler {
 			}
 		}
 
-		ctx.local_offset_map = std::move(offsets);
+		ctx.locals_map       = std::move(result);
 		ctx.local_stack_size = max_stack_size;
 	}
 

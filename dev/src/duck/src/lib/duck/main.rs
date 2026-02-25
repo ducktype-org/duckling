@@ -19,7 +19,7 @@ pub fn main() {
     }
 }
 
-fn setup_logger() {
+pub fn setup_logger() {
     use tracing_subscriber::{
         EnvFilter, Layer,
         fmt::{layer, time::Uptime},

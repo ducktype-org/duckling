@@ -32,9 +32,9 @@
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <printer/stream_printer.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
 
@@ -99,8 +99,10 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 ) {
 	compiler::linker::LinkingOptions linking_options;
 
-	if (auto lib_path = parsing_result.getValue<fs::FilePath>("external-static-library"))
-		linking_options.external_static_libraries.push_back(lib_path.value());
+	linking_options.linker_path = parsing_result.getValue<std::string>("linker");
+
+	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
+		linking_options.additional_link_options = lib_path.value();
 
 	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
 
@@ -183,7 +185,8 @@ clah::Clah getClahForMain() {
 
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
-					auto pst = pst::PST(file_to_parse);
+					// @TODO: #1879 Currently defaults to program
+					auto pst = pst::PST(file_to_parse, pst::PSTType::Program);
 
 					int exit_code = 0;
 
@@ -223,7 +226,7 @@ clah::Clah getClahForMain() {
 		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
-									   std::cout << hout_unit.debugPrint(ctx);
+									   std::cout << hout_unit->debugPrint(ctx);
 							   });
 
 							   return exit_code;
@@ -324,9 +327,14 @@ clah::Clah getClahForMain() {
 	                     .addLongName("print-graph")
 	                     .addShortDesc("Print the query graph after the compilation.")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("library"))
-	                     .addLongName("external-static-library")
-	                     .addShortDesc("Path to a static library to link against.")
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("link-options"))
+	                     .addLongName("additional-link-options")
+	                     .addShortDesc("Additional link options.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("linker"))
+	                     .addLongName("linker")
+	                     .addShortDesc("Path to the linker executable.")
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()

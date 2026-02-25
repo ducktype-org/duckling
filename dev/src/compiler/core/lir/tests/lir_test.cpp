@@ -6,7 +6,7 @@
 
 
 #include <helios/queries.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -15,9 +15,9 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::tsh;
@@ -103,8 +103,8 @@ private:
 					base::strConcat("Could not validate LIR function ", lir_func->mangled_name)
 				);
 				result.funcs.put(
-					hout_func.declaration->original_name,
-					std::make_tuple(CRef(&hout_func), mir_func, lir_func)
+					hout_func->declaration->original_name,
+					std::make_tuple(hout_func, mir_func, lir_func)
 				);
 			}
 			for (const auto& hout_glob: unit.glob_data) {
@@ -145,16 +145,16 @@ private:
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
@@ -269,8 +269,8 @@ private:
 					found_a = true;
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
@@ -351,8 +351,8 @@ private:
 
 	void simpleConstant() {
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
-		auto hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
+		const auto& hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
 
@@ -453,7 +453,7 @@ private:
 		auto module = getLIROfModule(path("modules/meta_functions"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto                  meta_type_entity = ctx.query<tsh::QueryMetaType>({});
+			auto                  meta_type_entity = tsh::getMetaType();
 			CRef<tsl::TypeLayout> meta_layout
 				= ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity);
 
@@ -532,12 +532,11 @@ private:
 			bool found_result_f32 = false;
 			bool found_some_i16   = false;
 
-			auto bool_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryBoolType>({}));
-			auto f32_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryFloatType>({ 32 }));
-			auto i16_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryIntegralType>({ 16 }));
+			auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType());
+			auto f32_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32));
+			auto i16_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(
+                getIntegralType(ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+            );
 
 			for (const auto& local: proc_data_lir->local_list) {
 				if (!local.helios_id.has_value()) continue;

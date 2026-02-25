@@ -10,7 +10,7 @@ pub use conditions::*;
 pub use dependencies::*;
 pub use dependency_feature::*;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// High level abstraction on a package's dependency.
 pub struct Dependency {
     /// The dependency description.
@@ -78,6 +78,16 @@ impl Dependency {
         self.conditions
             .as_ref()
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
+    }
+
+    pub fn enableing_features(&self) -> &[FeatureName] {
+        let Some(conditions) = &self.conditions else {
+            return &[];
+        };
+        let Some(features) = conditions.required_root_package_features() else {
+            return &[];
+        };
+        features
     }
 
     /// Get an iterator over features that are enabled for the given features.

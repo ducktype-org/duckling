@@ -12,7 +12,7 @@ namespace pst {
 		do {
 			bool            is_id = state[0].isIdentifier();
 			tpc::Identifier next;
-			state.parse(out).one(&next, true);
+			state.parse(out).one(&next);
 			if (is_id) out->names.push_back(next);
 			// If not special meaning, assume wrong type
 			else if (!state[0].is(lang_def::NamedOperator::Period)
