@@ -213,33 +213,17 @@ namespace pst {
 	}
 
 	/**
-	 * @brief Context needed in class parsing
-	 *
-	 * includes:
-	 *  - name - class name
-	 */
-	struct ClassContext {
-		base::StrID name;
-	};
-
-	/**
 	 * @brief Statements specific to the inside of a class
 	 */
 	class ClassStmt: public Stmt {
 	protected:
-		ClassContext context;
-
-		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, ClassContext ctx):
-			  Stmt(kind, pos),
-			  context(std::move(ctx)) {}
+		ClassStmt(StmtKind kind, const dia::SourcePosition& pos): Stmt(kind, pos) {}
 
 	protected:
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 	public:
-		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
-
-		const ClassContext& getContext() { return { context }; }
+		static MBox<ClassStmt> parse(LangParserState& state);
 
 		[[nodiscard]]
 		std::string elementType() const override {

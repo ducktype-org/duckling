@@ -5,9 +5,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Constructor> Constructor::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeBox<Constructor>(position, ctx);
+		auto out      = makeBox<Constructor>(position);
 
 		state.parse(out).eatOne();
 

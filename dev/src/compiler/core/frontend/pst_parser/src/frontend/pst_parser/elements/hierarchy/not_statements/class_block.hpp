@@ -31,7 +31,7 @@ namespace pst {
 			this->element_kind = ElementKind::ClassBlock;
 		}
 
-		static MBox<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
+		static MBox<ClassBlock> parse(LangParserState& state);
 
 		~ClassBlock() override = default;
 		void     dprint(std::ostream& out) const final;

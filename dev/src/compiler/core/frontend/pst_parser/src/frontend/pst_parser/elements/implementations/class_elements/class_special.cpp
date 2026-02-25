@@ -7,13 +7,13 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<ClassSpecial> ClassSpecial::parse(LangParserState& state, const ClassContext& ctx) {
-		if (state[1].isBracketGroup(Token::Round)) return Constructor::parse(state, ctx);
+	MBox<ClassSpecial> ClassSpecial::parse(LangParserState& state) {
+		if (state[1].isBracketGroup(Token::Round)) return Constructor::parse(state);
 
-		if (state[2].isStr(base::StrID{ "destroy" })) return Destructor::parse(state, ctx);
-		if (state[2].is(Keyword::Copy)) return CopyConstructor::parse(state, ctx);
+		if (state[2].isStr(base::StrID{ "destroy" })) return Destructor::parse(state);
+		if (state[2].is(Keyword::Copy)) return CopyConstructor::parse(state);
 
-		return Constructor::parse(state, ctx);
+		return Constructor::parse(state);
 	}
 
 	LangElement::HashAlg& ClassSpecial::addElementDataToStableHash(HashAlg& partial_hash) const {

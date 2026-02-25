@@ -4,9 +4,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeBox<CopyConstructor>(position, ctx);
+		auto out      = makeBox<CopyConstructor>(position);
 
 		state.parse(out).eatOne();
 

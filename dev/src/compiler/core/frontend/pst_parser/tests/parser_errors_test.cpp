@@ -106,23 +106,19 @@ class PSTErrorTests: public tester::TestSuite {
 
 	template<std::derived_from<pst::ClassStmt> Element, bool good = true, typename Parser = Element>
 	struct ClassStmtExample: public GenExample {
-		pst::ClassContext context;
+		base::StrID class_name;
 
-		ClassStmtExample(std::string code, pst::ClassContext&& ctx):
-			  GenExample(std::move(code)),
-			  context(std::move(ctx)) {}
-
-		ClassStmtExample(std::string code):
-			  GenExample(std::move(code)),
-			  context{ .name = base::StrID("unnamed") } {}
+		ClassStmtExample(std::string code): GenExample(std::move(code)), class_name("unnamed") {}
 
 		ClassStmtExample(std::string code, const std::string& class_name):
 			  GenExample(std::move(code)),
-			  context{ .name = base::StrID(class_name.c_str()) } {}
+			  class_name(base::StrID(class_name.c_str())) {}
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
-				this->code, pst::PSTType::Program, hashing::ComponentHash{}, context
+				this->code,
+				makeBox<pst::LangParserContext>(class_name, pst::BlockOrderType::Unordered),
+				hashing::ComponentHash{}
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -132,7 +128,7 @@ class PSTErrorTests: public tester::TestSuite {
 			std::stringstream ss;
 			ss << "Unexpected behaviour while parsing: `" << this->code << "` as ";
 			ss << base::typeName<Element>();
-			ss << " in class `" << context.name.str() << "`";
+			ss << " in class `" << class_name.str() << "`";
 			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
 			return ss.str();
 		}

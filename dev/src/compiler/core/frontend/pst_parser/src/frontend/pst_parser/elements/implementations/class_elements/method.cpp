@@ -4,9 +4,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Method> Method::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Method> Method::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeBox<Method>(position, ctx);
+		auto out      = makeBox<Method>(position);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 

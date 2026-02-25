@@ -9,13 +9,11 @@ namespace pst {
 		return partial_hash;
 	}
 
-	MBox<ClassSpecifierBlock> ClassSpecifierBlock::parse(
-		LangParserState& state, const ClassContext& ctx
-	) {
+	MBox<ClassSpecifierBlock> ClassSpecifierBlock::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeBox<ClassSpecifierBlock>(position, ctx);
+		auto out      = makeBox<ClassSpecifierBlock>(position);
 
-		state.parse(out).with(&out->block, ClassBlock::parse, out->getContext());
+		state.parse(out).one(&out->block);
 
 		PST_RETURN out;
 	}

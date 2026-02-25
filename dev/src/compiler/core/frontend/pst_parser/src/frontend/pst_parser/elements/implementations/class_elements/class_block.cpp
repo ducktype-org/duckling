@@ -3,7 +3,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<ClassBlock> ClassBlock::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<ClassBlock> ClassBlock::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeBox<ClassBlock>(position);
 
@@ -16,7 +16,7 @@ namespace pst {
 
 		PST_WHILE(state.notEmpty()) {
 			MBox<ClassStmt> stmt;
-			state.parse(out).with(&stmt, ClassStmt::parse, ctx);
+			state.parse(out).with(&stmt, ClassStmt::parse);
 			if (stmt) {
 				out->statements.emplace_back(nullptr);
 				state.parse(out).assign(&out->statements.back(), std::move(stmt));

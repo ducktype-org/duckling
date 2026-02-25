@@ -3,9 +3,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<NonClassStmt> NonClassStmt::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<NonClassStmt> NonClassStmt::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeBox<NonClassStmt>(position, ctx);
+		auto out      = makeBox<NonClassStmt>(position);
 
 		Keyword as_keyword = state[0].asKeyword();
 		CORE_ASSERT(

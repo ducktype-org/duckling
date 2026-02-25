@@ -3,9 +3,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Field> Field::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeBox<Field>(position, ctx);
+		auto out      = makeBox<Field>(position);
 
 		if (state[0].is(Keyword::Let)) {
 			out->is_mutable = false;
