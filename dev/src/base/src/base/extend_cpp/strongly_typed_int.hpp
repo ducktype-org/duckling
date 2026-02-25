@@ -43,19 +43,19 @@
 /**
  * @brief This is helper macro, do not use directly
  */
-#define STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(op)               \
+#define STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(op, inner_op)     \
 	inline constexpr SELF_T& operator op(const SELF_T & rhs) noexcept { \
-		value op rhs.value;                                             \
+		value = static_cast<BASE_T>(value inner_op rhs.value);          \
 		return *this;                                                   \
 	}
 
 /**
  * @brief This is helper macro, do not use directly
  */
-#define STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(op)        \
-	inline constexpr SELF_T& operator op(const BASE_T & rhs) noexcept { \
-		value op rhs;                                                   \
-		return *this;                                                   \
+#define STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(op, inner_op) \
+	inline constexpr SELF_T& operator op(const BASE_T & rhs) noexcept {    \
+		value = static_cast<BASE_T>(value inner_op rhs);                   \
+		return *this;                                                      \
 	}
 
 
@@ -112,18 +112,19 @@
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(>=, bool)                                            \
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(+, SELF_T)                                           \
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(-, SELF_T)                                           \
-		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=)                                          \
-		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(-=)                                          \
+		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=, +)                                       \
+		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(-=, -)                                       \
 		IF(DIMENSIONAL,                                                                            \
 		   STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(*, SELF_T)                                 \
 		       STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(/, SELF_T)                             \
-		           STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(*=)                        \
-		               STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(/=),                   \
+		           STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(*=, *)                     \
+		               STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(/=, /),                \
 		   STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(*, SELF_T)                                        \
 		       STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(/, SELF_T)                                    \
-		           STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(*=)                               \
-		               STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=)                           \
-		                   STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(%=))                      \
+		           STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(%, SELF_T)                                \
+		               STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(*=, *)                        \
+		                   STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=, /)                    \
+		                       STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(%=, %))               \
 	};                                                                                             \
                                                                                                    \
 	static_assert(                                                                                 \

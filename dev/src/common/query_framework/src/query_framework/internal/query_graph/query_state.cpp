@@ -177,7 +177,7 @@ namespace query::internal {
 		std::scoped_lock lock(red_green_sweep_mutex);
 
 		// measure time spent in red-green sweep:
-		timer::AddToTime _(&total_red_green_sweep_time);
+		timer::AddToTimeAtomic _(&total_red_green_sweep_time);
 
 		// No previous compilation graph -> cannot decide incremental reuse, mark as needs recompute
 		if (!previous.has_value()) return PrevColor::Red;
@@ -310,7 +310,7 @@ namespace query::internal {
 		std::scoped_lock lock(merge_mutex);
 
 		// measure time spent in graph merges:
-		timer::AddToTime _(&total_graph_merge_time);
+		timer::AddToTimeAtomic _(&total_graph_merge_time);
 
 
 		// NodeID with unstable hash might have diferent ID and graph in previous graph

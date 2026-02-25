@@ -103,10 +103,15 @@ namespace pst {
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			internal::finalizeParsing(state_box.refMut());
 			imports = internal::extractState(std::move(state_box));
-			if (not hasErrors()) {
-				calcElementPathHash();
-				calcHashes();
-			}
+
+
+			// Note: hash calculation should work even on errors in PST.
+			// We let it be calculated to don't worry about hash beeing unavailable during the
+			// compiler initialization phase, but we generally stop the compilation when there are
+			// errors anyway. if it breaks consider wrapping the lines in `if (not hasErrors())` and
+			// handling it differently.
+			calcElementPathHash();
+			calcHashes();
 		}
 
 		static Box<LangParserContext> makeParserContext(PSTContext&& pst_ctx) {
@@ -171,6 +176,19 @@ namespace pst {
 			if (auto ref = element.internalMut()) ref->calcHashRecursive();
 		}
 
+		/**
+		 * @brief Calculates the total signature (Hash of the whole pst) and signs all of the
+		 * elements with it (Adds it to their hash).
+		 */
+		void signGenerated() {
+			if (auto ref = element.internalMut()) {
+				LangElement::HashAlg partial_hash{};
+				ref->calcSignature(partial_hash);
+				auto hash = partial_hash.finalize();
+				ref->signGenerated(hash);
+			}
+		}
+
 	public:
 		/**
 		 * @brief Construct a new Pst from tokenized file
@@ -223,7 +241,7 @@ namespace pst {
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {}
 		) {
-			return PST(pos, contents, std::move(parsing_ctx), std::move(hash_ctx));
+			return fromExpandWithArgs(pos, contents, std::move(parsing_ctx), hash_ctx);
 		}
 
 		template<typename... Args>
@@ -234,9 +252,11 @@ namespace pst {
 			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
 		) requires ParseAble<Args...> {
-			return PST(
+			auto out = PST(
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
+			out.signGenerated();
+			return out;
 		}
 
 		[[nodiscard]]

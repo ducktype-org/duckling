@@ -16,3 +16,6 @@ pub mod paths;
 pub mod venv;
 pub use ops::*;
 pub mod venv_id;
+
+#[cfg(test)]
+mod tests;

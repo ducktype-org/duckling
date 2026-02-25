@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 pub struct VenvFreeze {
     root: RootPackage,
     dependencies: Vec<FreezePackage>,
@@ -47,7 +47,7 @@ impl VenvFreeze {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 pub struct RootPackage {
     name: StrId,
     version: Version,
@@ -115,7 +115,7 @@ impl RootPackage {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Hash, Eq)]
 pub struct FreezePackage {
     name: StrId,
     version: Version,
@@ -194,17 +194,15 @@ impl FreezePackage {
     }
 
     pub fn to_package_id(&self) -> PackageId {
-        match *self.source() {
-            ExpandedLocation::Registry(ref registry) => PackageId::Registry(RegistryId::new(
-                self.name(),
-                self.version(),
-                registry.url.clone(),
-            )),
-            ExpandedLocation::Git(ref git) => {
-                PackageId::Git(GitId::new(git.url.clone(), git.commit))
+        match self.source().as_ref() {
+            ExpandedLocation::Registry { url, .. } => {
+                PackageId::Registry(RegistryId::new(self.name(), self.version(), url.clone()))
             }
-            ExpandedLocation::Local(ref local) => {
-                PackageId::Local(LocalId::new(local.absolute_path.clone()))
+            ExpandedLocation::Git { url, commit } => {
+                PackageId::Git(GitId::new(url.clone(), *commit))
+            }
+            ExpandedLocation::Local { absolute_path } => {
+                PackageId::Local(LocalId::new(absolute_path.clone()))
             }
         }
     }
@@ -216,7 +214,7 @@ impl From<FreezePackage> for PackageId {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy, Hash, Eq, PartialEq)]
 /// Dependency deserialized from format `<name> <version>`
 pub struct FreezeDep {
     name: StrId,

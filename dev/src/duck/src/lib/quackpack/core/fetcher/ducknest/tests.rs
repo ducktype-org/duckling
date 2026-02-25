@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::quackpack::core::fetcher::types;
+use crate::util_common::path_ops_ext::PathOpsExt;
 
 use super::*;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
-use rustvil::fs::PathExt;
 use tempfile::tempdir;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
