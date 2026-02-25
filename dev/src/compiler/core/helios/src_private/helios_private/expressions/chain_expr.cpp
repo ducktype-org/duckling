@@ -33,6 +33,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include "query_framework/query_errors.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
@@ -294,8 +295,13 @@ namespace compiler::helios::code {
 				          ->valueOrThrow();
 				return std::vector{ ctor.declaration->original_symbol };
 			}
-			default:
-				CORE_PANIC("Not implemented yet (", name(symbol), ")");
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat("Round Call '()' operator on symbol: ", name(symbol)),
+					stmt(query_ctx, symbol).value()->getSourcePosition()
+				));
+				return query::Failed();
+			}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -346,9 +352,13 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 			default: {
-				throw base::NotYetImplemented(base::strConcat(
-					"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
 				));
+				return query::Failed();
 			}
 			}
 		}
@@ -405,9 +415,13 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
-				throw base::NotYetImplemented(base::strConcat(
-					"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
 				));
+				return query::Failed();
 			}
 
 			return query::Failed();
@@ -477,9 +491,13 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default: {
-				throw base::NotYetImplemented(base::strConcat(
-					"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
 				));
+				return query::Failed();
 			}
 			}
 		}
@@ -540,9 +558,12 @@ namespace compiler::helios::code {
 						result_sequence.push_back(std::move(current_expr));
 						return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
 					} else if (kind(sym) == SymbolKind::Method) {
-						throw base::NotYetImplemented(
+						query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Handling of access to method without a call is not implemented yet"
-						);
+							"argument at compile time",
+							current_expr->origin.getSourcePosition()
+						));
+						return query::Failed();
 					}
 					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 						base::strConcat(
@@ -621,9 +642,13 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 			default: {
-				throw base::NotYetImplemented(base::strConcat(
-					"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
 				));
+				return query::Failed();
 			}
 			}
 		}
@@ -679,9 +704,13 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 			default: {
-				throw base::NotYetImplemented(base::strConcat(
-					"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
 				));
+				return query::Failed();
 			}
 			}
 		}
