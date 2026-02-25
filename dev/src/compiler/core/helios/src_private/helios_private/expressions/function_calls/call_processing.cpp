@@ -565,8 +565,8 @@ namespace compiler::helios::code {
 						));
 						return query::Failed();
 					}
-					named_arguments.emplace_back(arg_name, arg_expr->clone());
 				}
+				named_arguments.emplace_back(arg_name, arg_expr->clone());
 			} else {
 				if (!named_arguments.empty()) {
 					auto error = PositionalAfterNamedArgument{ arg_index };
