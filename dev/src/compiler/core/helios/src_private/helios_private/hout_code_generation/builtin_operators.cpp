@@ -18,8 +18,11 @@ namespace compiler::helios::houtgen {
 			dia::SourcePosition::merge(source_positions.callee, source_positions.arg_group), false
 		);
 
-		auto       lhs        = coercions->at(0).coerce(ctx, std::move(arguments.at(0)));
-		auto       rhs        = coercions->at(1).coerce(ctx, std::move(arguments.at(1)));
+		auto lhs = coercions ? coercions->at(0).coerce(ctx, std::move(arguments.at(0)))
+		                     : std::move(arguments.at(0));
+		auto rhs = coercions ? coercions->at(1).coerce(ctx, std::move(arguments.at(1)))
+		                     : std::move(arguments.at(1));
+
 		const auto left_kind  = lhs->expression_type.getType().getKind();
 		const auto right_kind = rhs->expression_type.getType().getKind();
 		using enum tsh::Kind;

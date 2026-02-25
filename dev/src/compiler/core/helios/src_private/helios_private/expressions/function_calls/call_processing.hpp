@@ -11,8 +11,8 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
 	 * the given call expression and creates callexpr from it. The function is selected based on
-	 * argument types and named arguments. If no function or multiple functions match the call, an
-	 * error is returned.
+	 * argument types and named arguments, but not the name, so all provided candidates must have
+	 * the expected name. If no function or multiple functions match the call, an error is returned.
 	 *
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *
@@ -30,9 +30,9 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
-	 * the given operator expression and creates callexpr from it. The function is selected based on
-	 * argument types only. If no function or multiple functions match the call, an
-	 * error is returned.
+	 * the given argument expressions and creates callexpr from it. The function is selected based
+	 * on argument types only, not the name, so all provided candidates must have the expected name.
+	 * If no function or multiple functions match the call, an error is returned.
 	 *
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *

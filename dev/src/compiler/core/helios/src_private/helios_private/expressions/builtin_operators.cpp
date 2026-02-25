@@ -86,7 +86,7 @@ namespace compiler::helios::code {
 				  { { base::StrID("-"), tsh::Kind::Integral }, BuiltinBinary::IntegerSub },
 				  { { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
-				  { { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
+				  { { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerPow },
 
 				  /// Integer comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
@@ -133,7 +133,7 @@ namespace compiler::helios::code {
 		const auto bool_type = tsh::SymbolType<>{
 			tsh::getBoolType(),
 			tsh::ReferenceKind::Direct,
-			tsh::Mutability::Mutable,
+			tsh::Mutability::Immutable,
 		};
 		const auto builtin_op = [&ctx](
 									const base::StrID              name,
@@ -161,7 +161,7 @@ namespace compiler::helios::code {
 				const auto int_type = tsh::SymbolType<>{
 					tsh::getIntegralType(ctx, size, signedness ),
 					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
+					tsh::Mutability::Immutable,
 				};
 				ops->push_back(builtin_op(base::StrID("%"), { int_type, int_type }, int_type));
 			}
@@ -172,7 +172,7 @@ namespace compiler::helios::code {
 			const auto meta_type = tsh::SymbolType<>{
 				tsh::getMetaType(),
 				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
+				tsh::Mutability::Immutable,
 			};
 			ops->push_back(builtin_op(name, { meta_type, meta_type }, bool_type));
 		}
@@ -191,12 +191,12 @@ namespace compiler::helios::code {
 		const auto u8_type = tsh::SymbolType<>{
 			tsh::getIntegralType(ctx, 8, Signedness::Unsigned),
 			tsh::ReferenceKind::Direct,
-			tsh::Mutability::Mutable,
+			tsh::Mutability::Immutable,
 		};
 		const auto char_type = tsh::SymbolType<>{
 			tsh::getCharType(),
 			tsh::ReferenceKind::Direct,
-			tsh::Mutability::Mutable,
+			tsh::Mutability::Immutable,
 		};
 		ops->push_back(builtin_op(base::StrID("<"), { char_type, char_type }, bool_type));
 		ops->push_back(builtin_op(base::StrID("<="), { char_type, char_type }, bool_type));

@@ -411,11 +411,27 @@ namespace compiler::helios::code {
 		if (exact_matches.empty()) return;
 		// We have to differentiate between first candidate beacuse all the other candidates will
 		// be attached to it.
-		base::Optional<Box<ExactCandidateNote>> first_candidate_msg{};
+		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
 		for (const auto& match: exact_matches) {
-			auto decl = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
-			auto candidate_note
-				= makeBox<ExactCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
+			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+				match_optional(getSymRef(match.function)->getPSTDataOpt()) {
+					opt_some(pst_data) {
+						auto decl = pst_data->getElement().unlock(ctx);
+						return makeBox<ExactCandidateNote>(
+							getFunctionParamList(ctx, decl)->getSourcePosition()
+						);
+					}
+					opt_none {
+						const auto type
+							= ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
+						return makeBox<dia_int::PlaceholderHeaderNote>(
+							"Found exact candidate.",
+							"Candidate is compiler-generated, with type " + type.toString() + "."
+						);
+					}
+				}
+				CORE_UNREACHABLE();
+			}();
 
 			if (not first_candidate_msg.has_value())
 				first_candidate_msg.emplace(std::move(candidate_note));
@@ -550,6 +566,10 @@ namespace compiler::helios::code {
 	 * positional and named arguments. Performs diagnostic logging in case of resolution failure.
 	 * Returns the symbol of the function that should be called, the ArgumentOrigins for the
 	 * arguments and the coercions which should be applied to them (if any).
+	 *
+	 * @note Does *NOT* take into account the name of each candidate. Resolution is performed solely
+	 * based on how well the arguments match the parameters from the declaration.
+	 *
 	 * @return The function symbol, the argument origins, and the coercions.
 	 */
 	query::QResult<OverloadResolutionResult> doOverloadResolution(

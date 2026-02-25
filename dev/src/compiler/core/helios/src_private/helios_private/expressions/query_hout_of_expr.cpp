@@ -10,6 +10,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/expressions/builtin_operators.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
@@ -256,11 +257,7 @@ namespace compiler::helios::code {
 						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
 						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
 						return makeBox<BinaryOperatorExpr>(
-							ctx,
-							new_origin,
-							operation,
-							std::move(coerced_lhs),
-							std::move(coerced_rhs)
+							ctx, new_origin, operation, std::move(coerced_lhs), std::move(coerced_rhs)
 						);
 					}
 				}
@@ -269,11 +266,10 @@ namespace compiler::helios::code {
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
 				// @TODO: #1412 fix dealias
-				auto       all_candidates    = lookup_result->leaves;
-				const auto builtin_operators = getRegularBinaryBuiltinSymbols(ctx);
-				all_candidates.insert(
-					all_candidates.begin(), builtin_operators->cbegin(), builtin_operators->cend()
-				);
+				auto all_candidates = lookup_result->leaves;
+				for (const auto builtin_operator: *getRegularBinaryBuiltinSymbols(ctx))
+					if (name(builtin_operator) == op.value)
+						all_candidates.push_back(builtin_operator);
 				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
 				    .valueOrThrow();
 			}
