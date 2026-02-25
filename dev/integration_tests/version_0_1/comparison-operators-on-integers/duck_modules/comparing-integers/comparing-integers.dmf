@@ -1,0 +1,55 @@
+fun main() -> i64 = {
+    var a: i64 = 5;
+    var b: i64 = 10;
+    var c: i64 = 5;
+
+    # Test equality
+    if (a == c) {
+        builtin_output_i64(1); # Should execute
+    }
+    if (a == b) {
+        builtin_output_i64(2); # Should not execute
+    }
+
+    # Test inequality
+    if (a != b) {
+        builtin_output_i64(3); # Should execute
+    }
+    if (a != c) {
+        builtin_output_i64(4); # Should not execute
+    }
+
+    # Test less than
+    if (a < b) {
+        builtin_output_i64(5); # Should execute
+    }
+    if (b < a) {
+        builtin_output_i64(6); # Should not execute
+    }
+
+    # Test greater than
+    if (b > a) {
+        builtin_output_i64(7); # Should execute
+    }
+    if (a > b) {
+        builtin_output_i64(8); # Should not execute
+    }
+
+    # Test less than or equal
+    if (a <= c) {
+        builtin_output_i64(9); # Should execute
+    }
+    if (b <= a) {
+        builtin_output_i64(10); # Should not execute
+    }
+
+    # Test greater than or equal
+    if (b >= a) {
+        builtin_output_i64(11); # Should execute
+    }
+    if (a >= b) {
+        builtin_output_i64(12); # Should not execute
+    }
+
+    return 0;
+}

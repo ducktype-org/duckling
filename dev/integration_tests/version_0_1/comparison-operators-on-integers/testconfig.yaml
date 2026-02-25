@@ -3,11 +3,11 @@
 # NOTE: No preexisting tests found for this feature.
 
 Tests:
-  dummy-test:
+  comparing-integers:
     Description: Minimal working dummy test.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "1\n3\n5\n7\n9\n11\n"
+        ExitCode: 0
