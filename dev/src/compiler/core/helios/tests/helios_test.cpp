@@ -140,6 +140,17 @@ private:
 		};
 	}
 
+	/**
+	 * Shorthand to create a reference to mutable symbol type from an abstract type.
+	 */
+	static compiler::tsh::SymbolType<> ref_st(const compiler::tsh::AbstractType abstract_type) {
+		return compiler::tsh::SymbolType{
+			abstract_type,
+			compiler::tsh::ReferenceKind::Ref,
+			Mutable,
+		};
+	}
+
 	void testConstants() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
@@ -1761,7 +1772,32 @@ private:
 	void testMethodCalls() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/method_calls")));
 
-		// TODO: Fill this
+		auto example_class = getChain("ExampleClass", scope).back();
+		auto example_class_info = query::entryPoint<compiler::helios::QueryClassSymbolData>(example_class)->valueOrThrow();
+		auto example_class_abstract_type = query::entryPoint<compiler::helios::QueryTypeFromDefinition>(example_class)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<compiler::tsh::ClassAbstractType>();
+		ASSERT_EQUAL(3, example_class_info.methods.size());
+		
+		for (auto &method: example_class_info.methods) {
+			auto method_hout = query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+			ASSERT_EQUAL(ref_st(example_class_abstract_type), method_hout.declaration->parameters.at(0).type);
+		}
+
+		auto wrapper_class = getChain("Wrapper", scope).back();
+		auto wrapper_class_info = query::entryPoint<compiler::helios::QueryClassSymbolData>(wrapper_class)->valueOrThrow();
+		auto wrapper_class_abstract_type = query::entryPoint<compiler::helios::QueryTypeFromDefinition>(wrapper_class)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<compiler::tsh::ClassAbstractType>();
+		std::cout << "\nTesting Wrapper class methods: " << wrapper_class_info.methods.size() << std::endl;
+		ASSERT_EQUAL(2, wrapper_class_info.methods.size());
+
+		for (auto &method: wrapper_class_info.methods) {
+			auto method_hout = query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+			ASSERT_EQUAL(ref_st(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type);
+		}
 
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
