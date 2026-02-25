@@ -11,7 +11,9 @@ use tempfile::TempDir;
 use tokio::sync::Mutex;
 
 use crate::{
-    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
+    QpCtx, QuackResult, QuackResultContext, StrId,
+    duck::util::indent::indent,
+    qp_bail_internal,
     quackpack::{
         core::{
             BranchOrTag, FeatureName, Git, Manifest, PackageLoader, SolverMode,
@@ -107,7 +109,8 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                 SolverMode::Merciful => {
                     for e in errors {
                         self.ctx.error_console().info(format!(
-                            "Error {e} surpressed due to the Merciful mode of the solver"
+                            "Error\n{}\nsuppressed due to the Merciful mode of the solver",
+                            indent(&format!("{e}"), 6)
                         ));
                     }
                 }

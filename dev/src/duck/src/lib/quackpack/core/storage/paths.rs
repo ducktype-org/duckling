@@ -49,7 +49,7 @@ const PKGS_DIR_NAME: &str = "pkg";
 
 const OK_FILENAME: &str = ".ok";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Provides paths of the storage components, hiding the implementation details of the directory layout.
 pub struct Storage {
     packages_dir: PathBuf,
