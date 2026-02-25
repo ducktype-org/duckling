@@ -440,26 +440,42 @@ namespace compiler::helios::code {
 		if (coercible_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<CoercibleCandidateNote>> first_candidate_msg{};
-		for (const auto& match: coercible_matches) {
-			auto decl           = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
-			auto candidate_note = makeBox<CoercibleCandidateNote>(
-				getFunctionParamList(ctx, decl)->getSourcePosition()
-			);
-			for (usize i{ 0 }; i < match.coercions.size(); i++) {
-				auto& coercion = match.coercions[i];
-				if (not coercion.isEmptyCoercion()) {
-					auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
-						coercion.to.toString(), coercion.validated_from.toString()
-					);
-					auto pm_message_id = dia_int::MessageBase::getUniqueID();
-					candidate_note->addLinkedMessage(pm_message_id, std::move(pm));
-					auto param_decl = getNthDeclarationParameter(ctx, decl, i);
-					candidate_note->addPointerMessage(
-						"coercion", param_decl->getSourcePosition(), pm_message_id
-					);
+		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
+		for (const auto& [function, _, coercions]: coercible_matches) {
+			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
+				match_optional(getSymRef(function)->getPSTDataOpt()) {
+					opt_some(pst_data) {
+						auto decl   = pst_data->getElement().unlock(ctx);
+						auto result = makeBox<CoercibleCandidateNote>(
+							getFunctionParamList(ctx, decl)->getSourcePosition()
+						);
+						for (usize i{ 0 }; i < coercions.size(); i++) {
+							auto& coercion = coercions[i];
+							if (not coercion.isEmptyCoercion()) {
+								auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
+									coercion.to.toString(), coercion.validated_from.toString()
+								);
+								auto pm_message_id = dia_int::MessageBase::getUniqueID();
+								result->addLinkedMessage(pm_message_id, std::move(pm));
+								auto param_decl = getNthDeclarationParameter(ctx, decl, i);
+								result->addPointerMessage(
+									"coercion", param_decl->getSourcePosition(), pm_message_id
+								);
+							}
+						}
+						return result;
+					}
+					opt_none {
+						const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
+						return makeBox<dia_int::PlaceholderHeaderNote>(
+							"Found coercible candidate.",
+							"Candidate is compiler-generated, with type " + type.toString() + "."
+						);
+					}
 				}
-			}
+				CORE_UNREACHABLE();
+			}();
 
 			if (not first_candidate_msg.has_value())
 				first_candidate_msg.emplace(std::move(candidate_note));
@@ -485,15 +501,32 @@ namespace compiler::helios::code {
 		if (failed_matches.empty()) return;
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<FailedCandidateNote>> first_candidate_msg{};
-		for (const auto& match: failed_matches) {
-			auto decl = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
-			auto candidate_note
-				= makeBox<FailedCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
+		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
 
-			candidate_note->addAttachedMessage(
-				createDetailedCallErrorMessage(ctx, source_positions, match.reason, true)
-			);
+		for (const auto& [function, reason]: failed_matches) {
+			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
+				match_optional(getSymRef(function)->getPSTDataOpt()) {
+					opt_some(pst_data) {
+						const auto decl   = pst_data->getElement().unlock(ctx);
+						auto       result = makeBox<FailedCandidateNote>(
+                            getFunctionParamList(ctx, decl)->getSourcePosition()
+                        );
+						result->addAttachedMessage(
+							createDetailedCallErrorMessage(ctx, source_positions, reason, true)
+						);
+						return result;
+					}
+					opt_none {
+						const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
+						return makeBox<dia_int::PlaceholderHeaderNote>(
+							"Candidate failed to match.",
+							"Candidate is compiler-generated, with type " + type.toString() + "."
+						);
+					}
+				}
+				CORE_UNREACHABLE();
+			}();
 
 			if (first_candidate_msg.empty())
 				first_candidate_msg.emplace(std::move(candidate_note));

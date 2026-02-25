@@ -197,9 +197,9 @@ namespace compiler::helios::code {
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
 				// In particular, `%` is not included, as it work on integers only.
-				const std::set numeric_ops
+				const std::set<std::string> numeric_ops
 					= { "+", "-", "*", "/", "**", "<", "<=", ">", ">=", "==", "!=" };
-				return numeric_ops.contains(op.str().c_str());
+				return numeric_ops.contains(op.str());
 			}
 
 			/**
@@ -249,6 +249,7 @@ namespace compiler::helios::code {
 				    && isNumericOperator(op)) {
 					auto numeric_builtin_opt
 						= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+					auto new_origin = lhs->origin.extended(rhs->origin);
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
 						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
@@ -256,7 +257,7 @@ namespace compiler::helios::code {
 						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
 						return makeBox<BinaryOperatorExpr>(
 							ctx,
-							lhs->origin.extended(rhs->origin),
+							new_origin,
 							operation,
 							std::move(coerced_lhs),
 							std::move(coerced_rhs)
