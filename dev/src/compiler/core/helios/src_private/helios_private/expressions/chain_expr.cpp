@@ -33,7 +33,6 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
-#include "query_framework/query_errors.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
