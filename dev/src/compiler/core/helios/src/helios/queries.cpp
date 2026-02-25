@@ -429,7 +429,7 @@ namespace compiler::helios {
 						.name          = name(self_symbol),
 						.type          = tsh::SymbolType{
 							class_type,
-							tsh::ReferenceKind::Direct, // @TODO: Ref?
+							tsh::ReferenceKind::Ref,
 							tsh::Mutability::Mutable,
 						},
 						.initial_value = std::nullopt,

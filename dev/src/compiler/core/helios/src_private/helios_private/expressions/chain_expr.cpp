@@ -588,8 +588,9 @@ namespace compiler::helios::code {
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
+			auto ref_to_self = makeBox<RefOfExpr>(query_ctx, pstOrigin(original_expr), std::move(current_expr));
 			auto expr_result = processFunctionCall(
-				query_ctx, callees, expr_access, call_expr, std::move(current_expr)
+				query_ctx, callees, expr_access, call_expr, std::move(ref_to_self)
 			);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 

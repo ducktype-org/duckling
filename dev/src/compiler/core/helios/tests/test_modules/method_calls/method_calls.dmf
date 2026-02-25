@@ -17,11 +17,17 @@ fun main() -> i64 = {
     var v1 = obj1.exampleField;
     var v2 = obj2.getField();
 
+    builtin_output_i64(v1);
+    builtin_output_i64(v2);
+
     obj1.setField(2);
     obj2.setField(3);
 
-    var v2 = obj1.getField();
-    var v3 = obj2.exampleField;
+    var v3 = obj1.getField();
+    var v4 = obj2.exampleField;
+
+    builtin_output_i64(v3);
+    builtin_output_i64(v4);
 
     return 0;
 }
