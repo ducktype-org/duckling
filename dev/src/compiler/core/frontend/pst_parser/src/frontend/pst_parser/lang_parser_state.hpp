@@ -89,12 +89,14 @@ namespace pst {
 		void setFallback(u64 length);
 
 		/**
-		 * @brief Sets a soft fallback that tries to find a sensible end using the condition in case of error.
+		 * @brief Sets a soft fallback that tries to find a sensible end using the condition in case
+		 * of error.
 		 */
 		void setSoftFallback(std::function<TokenStreamCondition>);
 
 		/**
-		 * @brief Exits a soft fallback that tries to find a sensible end using the condition in case of error.
+		 * @brief Exits a soft fallback that tries to find a sensible end using the condition in
+		 * case of error.
 		 */
 		void exitSoftFallback();
 

@@ -46,10 +46,11 @@ namespace tpc {
 
 	void ParserState::goUp() {
 		CORE_ASSERT(
-			!fallback_stack.empty() && std::holds_alternative<Fallback>(fallback_stack.back()) && std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
+			!fallback_stack.empty() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
-		auto& fallback = std::get<Fallback>(fallback_stack.back());
+		auto& fallback  = std::get<Fallback>(fallback_stack.back());
 		current_stream  = std::move(fallback.saved_stream);
 		current_context = std::move(fallback.saved_context);
 		fallback_stack.pop_back();
@@ -57,11 +58,12 @@ namespace tpc {
 
 	void ParserState::goUpAndSkip() {
 		CORE_ASSERT(
-			!fallback_stack.empty() && std::holds_alternative<Fallback>(fallback_stack.back()) && std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
+			!fallback_stack.empty() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
-		auto& fallback = std::get<Fallback>(fallback_stack.back());
-		u64 fwd         = fallback.post_jump;
+		auto& fallback  = std::get<Fallback>(fallback_stack.back());
+		u64   fwd       = fallback.post_jump;
 		current_stream  = std::move(fallback.saved_stream);
 		current_context = std::move(fallback.saved_context);
 		fallback_stack.pop_back();

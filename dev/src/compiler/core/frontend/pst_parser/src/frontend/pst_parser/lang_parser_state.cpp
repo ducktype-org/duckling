@@ -9,7 +9,8 @@ namespace pst {
 
 	void LangParserState::goUp() {
 		CORE_ASSERT(
-			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back()) && std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
+			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
 		auto& fallback = std::get<Fallback>(fallback_stack.back());
@@ -22,7 +23,8 @@ namespace pst {
 
 	void LangParserState::goUpAndSkip() {
 		CORE_ASSERT(
-			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back()) && std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
+			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
 		auto& fallback = std::get<Fallback>(fallback_stack.back());
@@ -37,9 +39,8 @@ namespace pst {
 
 	void LangParserState::setSoftFallback(std::function<TokenStreamCondition> jump_on_error) {
 		auto new_stream = ctokens().getSubstream(ctokens().size());
-		fallback_stack.emplace_back(SoftFallback{
-		                                      .saved_context = std::move(current_context),
-		                                      .fail_jump     = std::move(jump_on_error) });
+		fallback_stack.emplace_back(SoftFallback{ .saved_context = std::move(current_context),
+		                                          .fail_jump     = std::move(jump_on_error) });
 		current_stream = makeBox<TokenStream>(std::move(new_stream));
 		variant_match(std::get<SoftFallback>(fallback_stack.back()).saved_context) {
 			variant_case(CRef<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref; }
@@ -62,7 +63,8 @@ namespace pst {
 
 	void LangParserState::exitFallback() {
 		CORE_ASSERT(
-			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back()) && std::get<Fallback>(fallback_stack.back()).type == SubStreamType::NonRecursive,
+			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::NonRecursive,
 			"No fallback token stream to go up from"
 		);
 		auto& fallback = std::get<Fallback>(fallback_stack.back());
@@ -80,16 +82,13 @@ namespace pst {
 			fallback_stack.size() && std::holds_alternative<SoftFallback>(fallback_stack.back()),
 			"No fallback token stream to go up from"
 		);
-		auto& fallback = std::get<SoftFallback>(fallback_stack.back());
-		auto fun = std::move(fallback.fail_jump);
+		auto& fallback  = std::get<SoftFallback>(fallback_stack.back());
+		auto  fun       = std::move(fallback.fail_jump);
 		current_context = std::move(fallback.saved_context);
 		fallback_stack.pop_back();
-		if (isSkipping()) {
-			while (!ctokens()[0].is(lexer::Token::Type::Sentinel)
-			       && !fun(ctokens(), 0)) {
+		if (isSkipping())
+			while (!ctokens()[0].is(lexer::Token::Type::Sentinel) && !fun(ctokens(), 0))
 				tokens().skip();
-			}
-		}
 		skip_till_fallback = false;
 	}
 

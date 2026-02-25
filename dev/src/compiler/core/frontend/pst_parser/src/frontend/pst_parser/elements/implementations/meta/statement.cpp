@@ -12,14 +12,13 @@ namespace pst {
 	namespace internal {
 		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
 
-
 		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
 			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				|| state[fwd - 1].is(Special::Semicolon)
-				|| keywordFlags(state[fwd].asKeyword())
-				        .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-				|| keywordFlags(state[fwd].asKeyword())
-				        .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+			    || state[fwd - 1].is(Special::Semicolon)
+			    || keywordFlags(state[fwd].asKeyword())
+			           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+			    || keywordFlags(state[fwd].asKeyword())
+			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 		}
 
 		template<class T>
@@ -67,39 +66,45 @@ namespace pst {
 			}
 		};
 
-		template<class T> 
+		template<class T>
 		struct StmtFinder {
 			/**
-		 	* @brief Calculates the heuristic for where a given statement ends. Can be overriden when needed.
-		 	*/
+			 * @brief Calculates the heuristic for where a given statement ends. Can be overriden
+			 * when needed.
+			 */
 			static u64 findStatementLength(LangParserState& state) {
 				return 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
 			}
 		};
 
-		template<class T> concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
+		template<class T>
+		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
 
-		template<class T> requires FunctionLike<T> 
-		struct StmtFinder<T> {
+		template<class T>
+		requires FunctionLike<T> struct StmtFinder<T> {
 		private:
 			static bool isAssignOrEnd(const TokenStream& stream, i64 fwd) {
-				return StmtClassifiers<T>::isStmtEnd(stream, fwd) || stream[fwd].is(NamedOperator::Assign); 
+				return StmtClassifiers<T>::isStmtEnd(stream, fwd)
+				    || stream[fwd].is(NamedOperator::Assign);
 			}
 
 			static bool isInnerExprEnd(const TokenStream& stream, i64 fwd) {
-				return StmtClassifiers<ExprStmt>::isStmtEnd(stream, fwd); 
+				return StmtClassifiers<ExprStmt>::isStmtEnd(stream, fwd);
 			}
+
 		public:
 			/**
-		 	* @brief For function like definitions we have to consider code block vs an expression.
-		 	*/
+			 * @brief For function like definitions we have to consider code block vs an expression.
+			 */
 			static u64 findStatementLength(LangParserState& state) {
 				u64 initial_length = 1 + state.ctokens().countUntil<isAssignOrEnd>(1);
-				if (!state[base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign)) {
+				if (!state[base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign))
 					return initial_length;
-				}
 				initial_length++;
-				if (Conditions::isBlockGroup(state.ctokens(), base::safeIntConv<i64>(initial_length))) return initial_length + 1;
+				if (Conditions::isBlockGroup(
+						state.ctokens(), base::safeIntConv<i64>(initial_length)
+					))
+					return initial_length + 1;
 				return initial_length + state.ctokens().countUntil<isInnerExprEnd>(initial_length);
 			}
 		};
@@ -129,10 +134,12 @@ namespace pst {
 			PST_RETURN out;
 		}
 
-		template<class T> concept FlowControlLike = std::same_as<T, If> || std::same_as<T, For> || std::same_as<T, While>;
+		template<class T>
+		concept FlowControlLike
+			= std::same_as<T, If> || std::same_as<T, For> || std::same_as<T, While>;
 
-		template<std::derived_from<Stmt> T> requires FlowControlLike<T> 
-		MBox<T> parseStmt(LangParserState& state) {
+		template<std::derived_from<Stmt> T>
+		requires FlowControlLike<T> MBox<T> parseStmt(LangParserState& state) {
 			state.setSoftFallback(isStatementBegin);
 
 			MBox<T> out = T::parse(state);
