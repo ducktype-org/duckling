@@ -30,14 +30,14 @@ namespace vm::code::type {
 		/**
 		 * @brief Primitive type representation.
 		 */
-		struct Primitive {
+		struct Primitive final {
 			Bytes size;
 		};
 
 		/**
 		 * @brief Pointer type representation.
 		 */
-		struct Pointer {
+		struct Pointer final {
 			TypeID inner;
 
 			Pointer(TypeID inner): inner(inner) {}
@@ -46,7 +46,7 @@ namespace vm::code::type {
 		/**
 		 * @brief Fixed-size table type representation.
 		 */
-		struct FixedSizeTable {
+		struct FixedSizeTable final {
 			TypeID inner;
 			usize  element_count;
 		};
@@ -54,14 +54,14 @@ namespace vm::code::type {
 		/**
 		 * @brief Dynamic table type representation.
 		 */
-		struct DynamicTable {
+		struct DynamicTable final {
 			TypeID inner;
 		};
 
 		/**
 		 * @brief A field inside a Structure type.
 		 */
-		struct Field {
+		struct Field final {
 			STRONG_TYPEDEF_ID_DIRECT_CREATION(ID);
 			type::TypeSize offset;
 			base::StrID    name;
@@ -72,7 +72,7 @@ namespace vm::code::type {
 		 * @brief Inheritance metadata for a Structure type. Contains information related to
 		 * inheritance, like super types, implemented interfaces, virtual methods and vtable.
 		 */
-		struct InheritanceMetadata {
+		struct InheritanceMetadata final {
 			/**
 			 * @brief All the types this type directly or indirectly inherits from.
 			 * This is cached for easier and faster lookup during validation and lowering.
@@ -105,7 +105,7 @@ namespace vm::code::type {
 			 * @brief Class kind. If this type is a class, contains information about its superclass
 			 * and whether it's abstract.
 			 */
-			struct ClassKind {
+			struct ClassKind final {
 				/**
 				 * @brief A super-class. Only one super-class allowed
 				 */
@@ -120,7 +120,7 @@ namespace vm::code::type {
 			/**
 			 * @brief Interface kind. If this type is an interface, then no additional data is needed.
 			 */
-			struct InterfaceKind {};
+			struct InterfaceKind final {};
 
 			std::variant<InterfaceKind, ClassKind> kind;
 		};
@@ -129,7 +129,7 @@ namespace vm::code::type {
 		 * @brief Struct/Class (data) type representation.
 		 * If declared as a class contains a vtable field at the front of field vector.
 		 */
-		struct Structure {
+		struct Structure final {
 			/**
 			 * @brief Vector of fields. Order matters, as it determines field offsets.
 			 * If this type is a class, the first field is always vtable pointer. Interfaces do not
@@ -149,7 +149,7 @@ namespace vm::code::type {
 		/**
 		 * @brief Variant type representation.
 		 */
-		struct Variant {
+		struct Variant final {
 			Bytes               type_tag_size;
 			std::vector<TypeID> alternatives;  /// Order matters, as it determines type tag values.
 		};
@@ -157,7 +157,7 @@ namespace vm::code::type {
 		/**
 		 * @brief Function type representation.
 		 */
-		struct Function {
+		struct Function final {
 			std::vector<TypeID> parameters;
 			TypeID              result;
 		};
@@ -166,7 +166,7 @@ namespace vm::code::type {
 		 * @brief Opaque type representation. This is used for types whose actual content is not
 		 * known, like external types.
 		 */
-		struct Opaque {
+		struct Opaque final {
 			Bytes size;
 		};
 	}
@@ -191,7 +191,7 @@ namespace vm::code::type {
 	 * because it's more effective.
 	 * After finalization type is immutable. Type cannot be unfinalized.
 	 */
-	class Type {
+	class Type final {
 		enum class State { Declared, Defined, Finalizing, Finalized } state = State::Declared;
 
 	public:
@@ -240,9 +240,14 @@ namespace vm::code::type {
 		 */
 		void finalize(ObjIdNameMap<type::Type>& types);
 
+		void finalizeStructureInheritanceMetadata(
+			ObjIdNameMap<type::Type>& types, concrete::Structure& structure
+		);
+
 		/**********************/
 		/* General operations */
 		/**********************/
+
 		[[nodiscard]] base::StrID getName() const;
 
 		[[nodiscard]] TypeID getID() const;

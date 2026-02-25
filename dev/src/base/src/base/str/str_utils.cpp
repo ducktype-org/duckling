@@ -69,7 +69,7 @@ base::UnescapeResult base::unescapeString(const std::string_view raw) {
 			case '0':  result += '\0'; break; // Null character
 
 			default:
-				return UnknownEscapeSequence{strConcat("\\", raw[i + 1])};
+				return std::unexpected(UnknownEscapeSequence{strConcat("\\", raw[i + 1])});
 			}
 			// clang-format on
 			i++;  // Skip the escaped character

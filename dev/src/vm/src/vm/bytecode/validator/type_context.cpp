@@ -100,6 +100,7 @@ void vm::code::TypeContext::insertAndValidate(
 	const base::HashMap<base::StrID, FuncSignature>& function_signatures
 ) {
 	// Simple check for duplicates and forward declarations.
+	std::vector<CRef<TypeOfData>> really_new_types;
 	for (const auto& type: new_types) {
 		const auto name = typeName(type);
 		if (pod_types.contains(name)) {
@@ -107,22 +108,25 @@ void vm::code::TypeContext::insertAndValidate(
 		} else {
 			pod_types.insert(type, name);
 			types.insert(vm::code::type::Type::declareType(name, types.size()), name);
+			really_new_types.emplace_back(&type);
 		}
 	}
 
 	// Validate
-	const std::vector<usize> new_types_id
-		= new_types
-	    | std::views::transform([&](const auto& type) { return types.at(typeName(type))->getID(); })
-	    | std::ranges::to<std::vector>();
+	const std::vector<type::TypeID> new_types_id = really_new_types
+	                                             | std::views::transform([&](const auto& type) {
+													   return types.at(typeName(*type))->getID();
+												   })
+	                                             | std::ranges::to<std::vector>();
 	detail::validateTypes(pod_types, new_types_id, function_signatures);
 
 	// Define
-	for (const auto& type: new_types) defineTypeFromData(types, *types.at(typeName(type)), type);
+	for (const auto& type: really_new_types)
+		defineTypeFromData(types, *types.at(typeName(*type)), *type);
 
 	// Finalize
-	for (const auto& type: new_types) {
-		auto& tp = *types.at(typeName(type));
+	for (const auto& type: really_new_types) {
+		auto& tp = *types.at(typeName(*type));
 		tp.finalize(types);
 	}
 }

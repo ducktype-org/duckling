@@ -145,13 +145,13 @@ namespace vm::loader::compiler {
 			// @todo: https://github.com/ducktype-org/duckling/issues/962
 			auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
 				if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-					return (*inh_meta).virtual_methods.contains(method_name);
+					return (*inh_meta).available_methods.contains(method_name);
 				}
 				return false;
 			});
 			if (it != low_program.types->end()) {
 				auto inh_meta = it->getInheritanceMetadata().value();
-				return inh_meta->virtual_methods[method_name]->getParameterCount();
+				return inh_meta->available_methods[method_name]->getParameterCount();
 			}
 			CORE_UNREACHABLE();
 		};

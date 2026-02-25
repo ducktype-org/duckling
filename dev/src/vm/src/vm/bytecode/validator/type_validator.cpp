@@ -1,5 +1,6 @@
 #include "type_validator.hpp"
 
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
@@ -454,6 +455,40 @@ namespace {
 		for (const auto& [_t, _id, name]: types_ctx.allData()) helper(*types_ctx.at(name));
 	}
 
+	/**
+	 * @brief Checks if a method name is deterministic, i.e. that there are no two methods with the
+	 * same name in the whole program. This is needed to ensure that method lookup by name works
+	 * correctly.
+	 */
+	void validateMethodNameIsDeterministic(const vm::ObjIdNameMap<TypeOfData>& types_ctx) {
+		// Maps method name to type name of the signature.
+		// All we need is to check the type names,
+		// because implementations must have as the first parameter a pointer to the object type,
+		// so this guarantees that they also come from the same tree.
+		base::HashMap<base::StrID, base::StrID> method_signatures;
+		for (const auto& [_t, _id, name]: types_ctx.allData()) {
+			const auto& type = *types_ctx.at(name);
+			variant_match(type) {
+				variant_case(ClassType, clazz) {
+					for (const auto& vmethod: clazz.virtual_methods) {
+						if (auto method_signature = method_signatures.atMaybe(vmethod.name);
+						    method_signature && **method_signature != vmethod.type)
+							throw DuplicatedMethodNameError(type, vmethod.name);
+						method_signatures.put(vmethod.name, vmethod.type);
+					}
+				}
+				variant_case(InterfaceType, interface) {
+					for (const auto& vmethod: interface.virtual_methods) {
+						if (auto method_signature = method_signatures.atMaybe(vmethod.name);
+						    method_signature && **method_signature != vmethod.type)
+							throw DuplicatedMethodNameError(type, vmethod.name);
+						method_signatures.put(vmethod.name, vmethod.type);
+					}
+				}
+			}
+		}
+	}
+
 	void validateTypeIntegrity(const vm::ObjIdNameMap<TypeOfData>& types_ctx) {
 		validateDefinitionsAcyclic(types_ctx);
 		validateHierarchyAcyclic(types_ctx);
@@ -468,4 +503,6 @@ void vm::code::detail::validateTypes(
 ) {
 	validateTypeIntegrity(types_ctx);
 	for (usize type_id: new_types_id) validateType(*types_ctx.at(type_id), types_ctx, functions);
+
+	validateMethodNameIsDeterministic(types_ctx);
 }

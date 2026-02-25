@@ -106,10 +106,10 @@ auto VmTestSuite::runTestOnVmGetResult(
 
 	EXPECT_VOID(vm::api::join(pid));
 
-	if_opt_some(optional_output, output) {
+	if_opt_some(optional_output, wanted_output) {
 		auto program_output = vm::api::output(pid);
 		EXPECT_VOID(program_output);
-		ASSERT_EQUAL_PRINT(output, program_output->output);
+		ASSERT_EQUAL_PRINT(wanted_output, program_output->output);
 	}
 	const auto exit_value = vm::api::getExitValue(pid).transform([&](Ref<vm::VmValue> value) {
 		ASSERT_TRUE(value->type->getName().str() == "i64");

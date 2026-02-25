@@ -23,12 +23,16 @@ namespace {
 	) {
 		match_optional(structure.inheritance_metadata) {
 			opt_some(prev_imd) {
-				vm::TypeCRef tp            = type_metadata.at(type.getName());
-				auto         get_type_cref = [&](vm::code::type::TypeID type_id) -> vm::TypeCRef {
-                    return type_metadata.at(vm::TypeID(type_id));
+				vm::TypeCRef tp = type_metadata.at(type.getName());
+
+				auto get_typeid = [&](vm::code::type::TypeID type_id) -> vm::TypeID {
+					return vm::TypeID(type_id);
+				};
+				auto get_type_cref = [&](vm::code::type::TypeID type_id) -> vm::TypeCRef {
+					return type_metadata.at(get_typeid(type_id));
 				};
 				auto implements = prev_imd.implements | std::views::transform(get_type_cref)
-				                | std::ranges::to<std::vector>();
+				                | std::ranges::to<std::unordered_set>();
 
 				base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
 				for (auto& method: prev_imd.available_methods)

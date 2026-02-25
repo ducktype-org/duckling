@@ -126,16 +126,15 @@ namespace compiler::helios::code {
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
 				const auto escaped_string  = stmt->getValue().value.strView();
 				const auto unescape_result = base::unescapeString(escaped_string);
-				variant_match(unescape_result) {
-					variant_case(base::UnescapedString, result) {
+				match_optional(unescape_result) {
+					opt_some(result) {
 						node = makeBox<LiteralStringExpr>(ctx, base::StrID(result.value));
 					}
-					variant_case(base::UnknownEscapeSequence, error) {
+					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
 							stmt->getSourcePosition(), error.value
 						));
 					}
-					variant_default CORE_UNREACHABLE();
 				}
 			}
 

@@ -206,31 +206,30 @@ class FunctionValidator {
 	 * Validating just the pointer type name like in normal function calls would simply don't work.
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
-		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better way.
-		base::StrID impl_name;
-		for (const auto& type: types_ctx) {
-			variant_match(type.getKind()) {
-				variant_case(type::concrete::Structure, structure) {
-					if_opt_some(structure.inheritance_metadata, inh_meta) {
-						if (inh_meta.vtable.contains(instr.method.method_name))
-							impl_name = inh_meta.vtable[instr.method.method_name];
-					}
-				}
-			}
-		}
+		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better
+		// way. EDIT: After type::Type was added, it's simpler but still could be improved.
+		type::concrete::Function method_signature = [&] {
+			const auto&  ptr       = local_stack.at(instr.object_ptr.var_name);
+			type::TypeID inner_id  = ptr->getKindAs<type::concrete::Pointer>().inner;
+			const auto&  structure = types_ctx.at(inner_id)->getKindAs<type::concrete::Structure>();
+			const auto&  imd       = structure.inheritance_metadata.value();
+			auto         method_type   = imd.available_methods[instr.method.method_name];
+			auto         function_type = types_ctx.at(method_type);
+			return function_type->getKindAs<type::concrete::Function>();
+		}();
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.method };
-		auto signature     = signatures.at(impl_name);
-		bool check_ret_val = signature.result_type.str != base::StrID("void");
+		bool check_ret_val = types_ctx.at(method_signature.result)->getName() != "void";
 
 		// Too many parameters.
-		if (signature.parameters.size() > local_stack.size() + check_ret_val)
+		if (method_signature.parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
 		// Check individual parameter's types. The first parameter is special, because it should be
 		// a pointer to the same type as the pointer passed as `obj_ptr`.
-		for (auto param: signature.parameters | std::views::drop(1) | std::views::reverse) {
-			if (local_stack.back().type->getName() != param.str)
+		for (auto param_id:
+		     method_signature.parameters | std::views::drop(1) | std::views::reverse) {
+			if (local_stack.back().type->getID() != param_id)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
@@ -243,7 +242,7 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && local_stack.back().type->getName() != signature.result_type.str)
+		if (check_ret_val && local_stack.back().type->getID() != method_signature.result)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -1142,10 +1141,12 @@ class FunctionValidator {
 				// For a method call to be valid it has to be present in the interface.
 				const auto& pointer_type = current_stack.at(instr.object_ptr.var_name)
 				                               ->getKindAs<type::concrete::Pointer>();
+				const auto& inner_pointer_type = types_ctx.at(pointer_type.inner);
 				const auto& obj_type
-					= expectPointerType<type::concrete::Structure>(pointer_type, types_ctx, instr);
+					= inner_pointer_type->maybeGetKindAs<type::concrete::Structure>()
+				          .expect<InvalidVirtualCallError>(instr);
 				const auto& inh_meta
-					= obj_type.inheritance_metadata.expect<InvalidVirtualCallError>(instr);
+					= obj_type->inheritance_metadata.expect<InvalidVirtualCallError>(instr);
 
 				if (!inh_meta.available_methods.contains(instr.method.method_name))
 					throw InvalidVirtualCallError(instr);
@@ -1307,12 +1308,10 @@ class FunctionValidator {
 			instr_case(Op_dynTableReAlloc_lptr_type_l64, instr) {
 				const auto& table_pointer = current_stack.at(instr.dst_table_ptr.var_name)
 				                                ->getKindAs<type::concrete::Pointer>();
-				const auto& table_type = expectPointerType<type::concrete::DynamicTable>(
-					table_pointer, types_ctx, instr
-				);
+				expectPointerType<type::concrete::DynamicTable>(table_pointer, types_ctx, instr);
 
-				type::TypeID wanted_type = types_ctx.at(instr.table_type.type_name)->getID();
-				if (wanted_type != table_type.inner)
+				type::TypeID allocated_type = types_ctx.at(instr.table_type.type_name)->getID();
+				if (allocated_type != table_pointer.inner)
 					throw InvalidArgumentTypeError(instr.table_type);
 			}
 			instr_case(Op_strOutput_lptr, instr) {
@@ -1349,16 +1348,26 @@ class FunctionValidator {
 		auto dst_type = types_ctx.at(dst_ptr_tod->getKindAs<type::concrete::Pointer>().inner);
 		auto src_type = types_ctx.at(src_ptr_tod->getKindAs<type::concrete::Pointer>().inner);
 
-		const bool inherits = src_type->maybeGetKindAs<type::concrete::Structure>()
-		                          .flatMap([](CRef<type::concrete::Structure> src_struct) {
-									  return src_struct->inheritance_metadata;
-								  })
-		                          .map([dst_type](const type::concrete::InheritanceMetadata& imd) {
-									  return imd.super_types.contains(dst_type->getID());
-								  })
-		                          .copyValueOr(false);
+		const bool inherits
+			= src_type->maybeGetKindAs<type::concrete::Structure>()
+		          .flatMap([](CRef<type::concrete::Structure> src_struct) {
+					  return src_struct->inheritance_metadata;
+				  })
+		          .map([dst_type](const type::concrete::InheritanceMetadata& src_imd) {
+					  return src_imd.super_types.contains(dst_type->getID());
+				  })
+		          .copyValueOr(false);
 
-		if (!inherits) throw InvalidUpcastError(instruction);
+		if (!inherits) {
+			std::cout << "Source type: " << src_type->getName().strView() << "\n";
+			std::cout << "Source super types:\n";
+			if (auto src_struct = src_type->maybeGetKindAs<type::concrete::Structure>())
+				for (auto super_type_id: src_struct.value()->inheritance_metadata->super_types)
+					std::cout << "  " << types_ctx.at(super_type_id)->getName().strView() << "\n";
+			std::cout << "Destination type: " << dst_type->getName().strView() << "\n";
+
+			throw InvalidUpcastError(instruction);
+		}
 	}
 
 	void validatePrimitiveCast(

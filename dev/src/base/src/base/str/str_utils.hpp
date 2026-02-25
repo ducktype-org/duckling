@@ -8,6 +8,7 @@
  * - `strConcat`
  * - `strSplit`
  * - `strReplaceAll`
+ * - `unescapeString`
  *
  * ### Usage
  * @include str_utils_example.cpp
@@ -21,6 +22,7 @@
 
 #include <unicode/unistr.h>
 
+#include <expected>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -175,7 +177,7 @@ namespace base {
 		std::string value;
 	};
 
-	using UnescapeResult = std::variant<UnescapedString, UnknownEscapeSequence>;
+	using UnescapeResult = std::expected<UnescapedString, UnknownEscapeSequence>;
 
 	/**
 	 * @brief Unescapes a string containing C-style escape sequences.

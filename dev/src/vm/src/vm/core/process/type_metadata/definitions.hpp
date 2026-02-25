@@ -17,3 +17,12 @@ namespace vm {
 
 ID_STD_HASH(vm::TypeID);
 ID_STD_HASH(vm::GlobalDataID);
+
+namespace std {
+	template<>
+	struct hash<vm::TypeCRef> {
+		size_t operator()(const vm::TypeCRef& type_ref) const noexcept {
+			return usize(type_ref.get());
+		}
+	};
+}

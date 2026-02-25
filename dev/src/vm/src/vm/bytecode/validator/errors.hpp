@@ -283,6 +283,11 @@ namespace vm::code {
 		"This interface/class tried implementing the same interface twice: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		DuplicatedMethodNameError,
+		"Every method must have a deterministic signature, but this method name is used for "
+		"different signatures: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidExtendsError, "This class can extend only existing classes other than itself: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
