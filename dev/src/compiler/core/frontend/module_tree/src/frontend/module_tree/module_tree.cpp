@@ -839,6 +839,30 @@ namespace compiler::frontend {
 		return ModuleTreeBuilder::create(file, package_id)->getModuleID();
 	}
 
+	void parseAllFilesInModuleTree(ModuleID module_id) {
+		CORE_ASSERT(
+			query::Context::getState().activeQueryCount() == 0,
+			"parseAllFilesInModuleTree called from within a query!"
+		);
+
+		auto parse_all_files = [&](auto&& self, ModuleID module_id_internal) -> void {
+			auto module_tree = GetModuleID_Functor::get(module_id_internal);
+			if (module_tree->hasMainSourceFile())
+				GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					module_tree->getMainSourceFile().illegalAccess().getID()
+				)
+					->getPST();
+			for (const auto& file: module_tree->getSourceFiles())
+				GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					file.illegalAccess().getID()
+				)
+					->getPST();
+			for (const auto& submodule: module_tree->getSubmodules())
+				self(self, submodule.illegalAccess().getID());
+		};
+		parse_all_files(parse_all_files, module_id);
+	}
+
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {
 		return ModuleTreeBuilder::createWithRandomPackageID(file)->getModuleID();
 	}

@@ -128,9 +128,9 @@ dependencies:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
-        let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
+        let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
-            exp_location_b.clone(),
+            exp_location_b,
             HashSet::from([
                 Some(Version::new(0, 0, 1)),
                 Some(Version::new(1, 0, 0)),
@@ -140,9 +140,8 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res =
-            get_possible_realisations(&dependency, &versions_for_location, &location_resolver)
-                .unwrap();
+        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+            .unwrap();
         assert_eq!(
             res,
             vec![ExpandedPackage {
@@ -181,9 +180,9 @@ dependencies:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
-        let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
+        let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
-            exp_location_b.clone(),
+            exp_location_b,
             HashSet::from([
                 Some(Version::new(0, 0, 1)),
                 Some(Version::new(1, 0, 0)),
@@ -193,22 +192,21 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res =
-            get_possible_realisations(&dependency, &versions_for_location, &location_resolver)
-                .unwrap();
+        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+            .unwrap();
         assert_eq!(
             HashSet::from_iter(res),
             HashSet::from([
                 ExpandedPackage {
-                    location: exp_location_b.clone(),
+                    location: exp_location_b,
                     version: Some(Version::new(1, 0, 3))
                 },
                 ExpandedPackage {
-                    location: exp_location_b.clone(),
+                    location: exp_location_b,
                     version: Some(Version::new(1, 0, 5))
                 },
                 ExpandedPackage {
-                    location: exp_location_b.clone(),
+                    location: exp_location_b,
                     version: Some(Version::new(1, 3, 3))
                 }
             ])

@@ -26,7 +26,8 @@ namespace compiler::linker {
 	 * In the future it will be changed to a query, to automatically support caching.
 	 * @note: we can add additional object/library files here when needed.
 	 */
-	void link(
+	[[nodiscard]]
+	base::OkBad link(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
 		const LinkingOptions&                       options

@@ -10,7 +10,7 @@ add_library(DiagnosticInteractive STATIC
         src/diagnostic_interactive/placeholder.cpp
         src/diagnostic_interactive/module_flags/module_flags.cpp
 )
-make_module(DiagnosticInteractive USES  TerminalUI DiagnosticInteractiveCore Diagnostic )
+make_module(DiagnosticInteractive USES  TerminalUI DiagnosticInteractiveCore Diagnostic Logger)
 
 
 add_example(diagnostic_arguments_evaluator examples/diagnostic_arguments_evaluator.cpp USES DiagnosticInteractive)

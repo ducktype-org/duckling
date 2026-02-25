@@ -300,11 +300,11 @@ metadata:
             freeze_a.dependencies_realization
                 == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
-        assert!(freeze_c.dependencies_realization == HashMap::new());
-        assert!(freeze_c.features == HashSet::new());
+        assert!(freeze_c.dependencies_realization.is_empty());
+        assert!(freeze_c.features.is_empty());
     }
 
     #[test]
@@ -404,8 +404,8 @@ metadata:
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         assert!(!new_freeze.package_freezes.contains_key(&exp_pkg_c));
         assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
     }
 
@@ -511,10 +511,10 @@ metadata:
             freeze_a.dependencies_realization
                 == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
-        assert!(freeze_c.dependencies_realization == HashMap::new());
-        assert!(freeze_c.features == HashSet::new());
+        assert!(freeze_c.dependencies_realization.is_empty());
+        assert!(freeze_c.features.is_empty());
     }
 }
