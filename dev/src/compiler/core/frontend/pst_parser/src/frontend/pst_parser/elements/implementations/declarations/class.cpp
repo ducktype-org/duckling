@@ -22,6 +22,7 @@ namespace pst {
 		if (state.parse(out).tryEat(Keyword::Implements)) state.parse(out).one(&out->implements);
 
 		state.setContextClassName(out->name);
+		state.setConstextBlockOrdering(BlockOrderType::Unordered);
 		state.parse(out).one(&out->body);
 
 		PST_RETURN out;

@@ -4,6 +4,11 @@
 
 namespace pst {
 	MBox<ClassBlock> ClassBlock::parse(LangParserState& state) {
+		CORE_ASSERT(
+			state.getContext()->block_order == BlockOrderType::Unordered,
+			"Class block should have unordered order type"
+		);
+
 		auto position = state.getPosition();
 		auto out      = makeBox<ClassBlock>(position);
 
