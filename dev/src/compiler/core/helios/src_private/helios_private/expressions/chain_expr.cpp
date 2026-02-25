@@ -643,6 +643,12 @@ namespace compiler::helios::code {
 			}
 		}
 
+		/**
+		 * @brief When we have a field symbol found in lookup,
+		 * that is not preceded by an access expression, for example "field"
+		 * this functions finds the "self" argument
+		 * and creates an access expression.
+		 */
 		auto processFieldNoSelf(
 			query::Context&               ctx,
 			const SymID&                  field_symbol,
@@ -667,7 +673,10 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief This function ...
+		 * @brief This function processes a function or method call when there is no "self" argument
+		 * to find, for example "foo()". If the candidates are methods, it tries to find "self"
+		 * argument and fails if it is not found. If the candidates are functions, it processes the
+		 * call as a normal function call.
 		 *
 		 * @return query::QResult<base::Box<Expr>>
 		 */
