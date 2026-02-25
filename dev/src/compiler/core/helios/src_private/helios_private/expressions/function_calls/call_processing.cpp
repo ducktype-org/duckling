@@ -130,8 +130,10 @@ namespace compiler::helios::code {
 					positional_arguments.push_back(arg->clone());
 			}
 		} else {
-			for (const auto& arg: explicit_positional_arguments)
+			for (const auto& arg: explicit_positional_arguments) {
+				positional_arguments.reserve(explicit_positional_arguments.size());
 				positional_arguments.push_back(arg->clone());
+			}
 		}
 
 		if (positional_arguments.size() > decl.parameters.size())

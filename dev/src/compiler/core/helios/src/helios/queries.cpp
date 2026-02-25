@@ -407,7 +407,6 @@ namespace compiler::helios {
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				// Handle self parameter and method flags when they are implemented.
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 
 				const auto class_symbol = *ctx.query<QueryClassOfMember>(original_symbol);
@@ -430,7 +429,7 @@ namespace compiler::helios {
 						.name          = name(self_symbol),
 						.type          = tsh::SymbolType{
 							class_type,
-							tsh::ReferenceKind::Direct,
+							tsh::ReferenceKind::Direct, // @TODO: Ref?
 							tsh::Mutability::Mutable,
 						},
 						.initial_value = std::nullopt,
