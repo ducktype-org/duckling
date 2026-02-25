@@ -11,6 +11,7 @@
 
 #include <base/collections/maps.hpp>
 
+#include "hashing/hash.hpp"
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <query_framework/query_int.hpp>
@@ -125,10 +126,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			hashing::SHA256 hasher{};
-			addToHash(hasher, element_type);
-			addToHash(hasher, size);
-			return hasher.finalize();
+			return hashing::justHash<hashing::SHA256>(element_type, size);
 		}
 	};
 
