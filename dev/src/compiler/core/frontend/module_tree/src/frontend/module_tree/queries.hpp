@@ -139,4 +139,20 @@ namespace compiler::frontend {
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context&, ModuleID from, const std::vector<base::StrID>& path
 	);
+
+	/**
+	 * @brief Query the source text of each top-level statement in a module.
+	 *
+	 * Iterates the TopLevel PST of the given module and slices the original source text
+	 * using each statement's SourcePosition character range. Returns one string per
+	 * top-level statement in source order.
+	 *
+	 * \query_thread_safe_if_cache (uses possibly shared PST)
+	 */
+	DECLARE_QUERY(
+		QueryModuleStatementSources,
+		ModuleID,
+		CRef<std::vector<std::string>>,
+		({ .uses_qresult = false })
+	)
 }

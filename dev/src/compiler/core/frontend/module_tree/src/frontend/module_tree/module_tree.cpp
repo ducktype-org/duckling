@@ -7,6 +7,7 @@
 #include "source_file.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -954,6 +955,31 @@ namespace compiler::frontend {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
+
+	/********************************
+	 * QueryModuleStatementSources *
+	 ********************************/
+	struct IMPLEMENT_QUERY(QueryModuleStatementSources, std::vector<std::string>) {
+		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			auto main_file = ctx.query<QueryMainSourceFile>(key);
+			auto pst       = getFilePST(ctx, main_file);
+			auto root      = pst->getRootElement().unlock(ctx);
+
+			std::vector<std::string> sources;
+			for (auto stmt_locked: root->getStatements()) {
+				auto stmt = stmt_locked.unlock(ctx);
+				auto pos  = stmt->getSourcePosition();
+				sources.emplace_back(
+					pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString()
+				);
+			}
+			return sources;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleStatementSources);
 
 	/****************
 	 * getFilePST *
