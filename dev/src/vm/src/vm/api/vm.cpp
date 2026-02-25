@@ -159,8 +159,9 @@ namespace vm::api {
 
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })
-		    )
+		    .doRequest(
+				SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })
+			)
 		    .transform(ignoreResponse);
 	}
 
