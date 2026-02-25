@@ -12,6 +12,16 @@ namespace pst {
 	namespace internal {
 		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
 
+
+		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
+			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				|| state[fwd - 1].is(Special::Semicolon)
+				|| keywordFlags(state[fwd].asKeyword())
+				        .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+				|| keywordFlags(state[fwd].asKeyword())
+				        .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+		}
+
 		template<class T>
 		struct StmtClassifiers {
 			/**
@@ -54,75 +64,6 @@ namespace pst {
 				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
-			}
-		};
-
-		/**
-		 * @brief A heuristic to check is a bracket group is 
-		 *
-		 * @note This has to be complicated because of ternary expressions.
-		 */
-		bool isFlowBlockGroup(const TokenStream& stream, i64 fwd) {
-			if (Conditions::isBlockGroup(stream, fwd)) {
-				if (stream[fwd - 2].is(Keyword::For) || stream[fwd - 2].is(Keyword::While)) {
-					return true;
-				}
-				if (stream[fwd - 2].isIdentifier()) {
-					if (stream[fwd - 3].is(Keyword::For) || stream[fwd - 3].is(Keyword::While)) {
-						return true;
-					}
-					if (stream[fwd - 1].isBracketGroup(Token::Round) && stream[fwd - 3].is(Keyword::If)) {
-						return true;
-					}
-				}
-				if (stream[fwd - 1].isBracketGroup(Token::Round) && stream[fwd - 2].is(Keyword::If)) {
-					return true;
-				}
-				if (stream[fwd - 1].is(Keyword::Else)) {
-					if (stream[fwd - 2].is(Special::Semicolon)) {
-						return true;
-					}
-					if (Conditions::isBlockGroup(stream, fwd - 3)) {
-						const i64 rel = fwd - 3;
-						if (stream[rel - 2].isIdentifier()) {
-							if (stream[rel - 3].is(Keyword::For) || stream[rel - 3].is(Keyword::While)) {
-								return true;
-							}
-							if (stream[rel - 1].isBracketGroup(Token::Round) && stream[rel - 3].is(Keyword::If)) {
-								return true;
-							}
-						}
-						if (stream[rel - 1].isBracketGroup(Token::Round) && stream[rel - 2].is(Keyword::If)) {
-							return true;
-						}
-					}
-				}
-			}
-			return false;
-		}
-
-		template<>
-		struct StmtClassifiers<If> {
-			/**
-			 * @brief Function that checks heuristically for a potential end of an if statement.
-			 *
-			 * This function has to be very careful because there are a lot of weird cases for ifs.
-			 */
-			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
-				if (state[fwd].is(Special::AtSign) || keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier))
-					return true;
-				if (!state[fwd].is(Keyword::Else))
-					if (state[fwd - 1].is(Special::Semicolon))
-						return true;
-				if (isFlowBlockGroup(state, fwd - 1))
-					return true;
-				if (state[fwd - 3].is(Keyword::If) || (state[fwd - 4].is(Keyword::If)) || state[fwd - 2].is(Keyword::Else))
-					if (Conditions::isBlockGroup(state, fwd - 1))
-						return true;
-				if (!state[fwd - 2].is(Keyword::If) && !state[fwd - 1].is(Keyword::Else))
-					if (keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart))
-						return true;
-				return false;
 			}
 		};
 
@@ -184,6 +125,19 @@ namespace pst {
 			}
 
 			exitFallback(state);
+
+			PST_RETURN out;
+		}
+
+		template<class T> concept FlowControlLike = std::same_as<T, If> || std::same_as<T, For> || std::same_as<T, While>;
+
+		template<std::derived_from<Stmt> T> requires FlowControlLike<T> 
+		MBox<T> parseStmt(LangParserState& state) {
+			state.setSoftFallback(isStatementBegin);
+
+			MBox<T> out = T::parse(state);
+
+			state.exitSoftFallback();
 
 			PST_RETURN out;
 		}
