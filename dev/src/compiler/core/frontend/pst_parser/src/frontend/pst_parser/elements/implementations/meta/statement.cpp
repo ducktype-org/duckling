@@ -105,7 +105,10 @@ namespace pst {
 						state.ctokens(), base::safeIntConv<i64>(initial_length)
 					))
 					return initial_length + 1;
-				return initial_length + state.ctokens().countUntil<isInnerExprEnd>(initial_length);
+				return initial_length
+				     + state.ctokens().countUntil<isInnerExprEnd>(
+						 base::safeIntConv<u64>(initial_length)
+					 );
 			}
 		};
 
