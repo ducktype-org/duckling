@@ -30,6 +30,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <typesystem/higher/mutability.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
@@ -491,15 +492,16 @@ private:
 
 		ASSERT_EQUAL(c_member_type, st(first_class_abstract_type));
 
-		// @TODO: #1547 uncomment this test
-		// auto c_member_a_symbol =  getChain("c_member_a", root_scope).back();
-		// auto c_member_a_type =
-		// query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
-		//                          ->valueOrThrow();
-		// ASSERT_EQUAL(
-		// 	c_member_a_type,
-		// 	st(query::entryPoint<compiler::tsh::QueryIntegralType>({64, Signed}))
-		// );
+		auto c_member_a_symbol = getChain("c_member_a", root_scope).back();
+		auto c_member_a_type
+			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
+		          ->valueOrThrow();
+		auto expected_type = compiler::tsh::SymbolType{
+			getIntegralTypeNoContext(64, Signed),
+			compiler::tsh::ReferenceKind::Direct,
+			Immutable,
+		};
+		ASSERT_EQUAL(c_member_a_type, expected_type);
 
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
