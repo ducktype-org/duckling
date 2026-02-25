@@ -30,9 +30,6 @@ namespace pst {
 	 *
 	 * Program - Top level is unordered
 	 * Script - Top level is ordered
-	 *
-	 * Currently doesn't change anything
-	 * @TODO: #1891 Will add the behaviour
 	 */
 	enum class PSTType {
 		Program,
