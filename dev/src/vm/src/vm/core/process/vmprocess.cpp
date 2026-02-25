@@ -342,7 +342,9 @@ namespace vm {
 	VMProcess::VMProcess(const PID my_pid):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
-		  loaded_program(loader.getProgram()) {}
+		  loaded_program(loader.getProgram()) {
+        vm_threads.emplace_back(*this);
+    }
 
 	ProcIO& VMProcess::getIO() { return io; }
 
