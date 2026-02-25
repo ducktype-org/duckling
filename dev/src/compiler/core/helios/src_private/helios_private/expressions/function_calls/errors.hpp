@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include "helios/hout/origin.hpp"
+
 #include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -45,10 +47,6 @@ namespace compiler::helios::code {
 		SymID       function;
 	};
 
-	struct MissingSelfArgumentInMethodCall final {
-		SymID method;
-	};
-
 	struct TypeMismatch final {
 		tsh::SymbolType<> given_type;
 		tsh::SymbolType<> expected_type;
@@ -67,8 +65,7 @@ namespace compiler::helios::code {
 		NamedArgumentProvidedByPositional,
 		UnknownNamedArgument,
 		TypeMismatch,
-		MissingCallArgument,
-		MissingSelfArgumentInMethodCall>;
+		MissingCallArgument>;
 
 	using CallFailure
 		= std::variant<PositionalAfterNamedArgument, RepeatedNamedArgument, FunctionMatchFailure>;
@@ -108,28 +105,11 @@ namespace compiler::helios::code {
 	 * @return A detailed error message describing the call failure.
 	 */
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&              ctx,
-		pst::Access<pst::expr::Call> call_expr,
-		const CallFailure&           failure_reason,
-		bool                         is_for_candidate_function
-	);
-
-	/**
-	 * @brief Helper function that retrieves PST of the parameter list
-	 * from a function-like declaration. A function-like can be a function,
-	 * a `fundecl` or a class method. It used to exctract PST position of the
-	 * parameters for error messages.
-	 */
-	pst::Access<pst::ParamList> getFunctionParamList(
-		query::Context& ctx, pst::Access<pst::LangElement> function_decl
-	);
-
-	pst::Access<pst::LangElement> getNthCallArgument(
-		query::Context& ctx, pst::Access<pst::expr::Call> call_expr, usize argument_index
-	);
-
-	pst::Access<pst::LangElement> getNthDeclarationParameter(
-		query::Context& ctx, pst::Access<pst::LangElement> function_decl, usize parameter_index
+		query::Context&            ctx,
+		ElementOrigin              whole_call_origin,
+		std::vector<ElementOrigin> arguments_origin,
+		const CallFailure&         failure_reason,
+		bool                       is_for_candidate_function
 	);
 
 	class CoercibleCandidateCoercionPointerMessage final: public dia_int::MessageBase {

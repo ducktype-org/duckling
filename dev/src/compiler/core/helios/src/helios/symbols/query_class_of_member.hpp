@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -15,5 +16,5 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryClassOfMember, SymID, CRef<SymID>, ({ .uses_qresult = false }));
+	DECLARE_QUERY(QueryClassOfMember, SymID, CRef<query::QResult<tsh::ClassAbstractType>>, ({}));
 }

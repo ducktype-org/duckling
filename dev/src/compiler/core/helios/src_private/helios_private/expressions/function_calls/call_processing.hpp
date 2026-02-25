@@ -9,29 +9,38 @@
 
 namespace compiler::helios::code {
 
-	/**
-	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
-	 * the given call expression and creates callexpr from it. The function is selected based on
-	 * argument types and named arguments. If no function or multiple functions match the call, an
-	 * error is returned.
-	 *
-	 * @note takes actual symbols that might be called, does not perform any lookup.
-	 *
-	 * @note Method calls are supported by providing the "self" argument as @p self_symbol. If the
-	 * candidate is a method but @p self_symbol is not provided, the candidate will be considered as
-	 * not matching the call and the error will be logged.
-	 *
-	 * @param candidates Contains all candidate functions that could be called.
-	 * @param callable_expr The PST expression representing the callee being invoked.
-	 * @param call_expr The PST call expression representing the function call. (the `(...)` part
-	 * and not the callee)
-	 * @param self_symbol An expression representing the "self" argument in case of method call.
-	 */
 	query::QResult<Box<CallExpr>> processFunctionCall(
 		query::Context&               ctx,
 		const std::vector<SymID>&     candidates,
-		pst::Access<pst::ExprElement> callee_expr,
+		pst::Access<pst::LangElement> callee_element,
+		pst::Access<pst::expr::Call>  call_expr
+	);
+
+	query::QResult<Box<CallExpr>> processMethodCall(
+		query::Context&               ctx,
+		const std::vector<SymID>&     candidates,
+		pst::Access<pst::LangElement> callee_element,
 		pst::Access<pst::expr::Call>  call_expr,
-		base::Optional<Box<Expr>>     self_symbol
+		Box<Expr>                     self_arg
+	);
+
+	struct CallArguments {
+		std::vector<Box<Expr>>                          positional_arguments;
+		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
+	};
+
+	struct CallPstOrigin {
+		ElementOrigin whole_call_origin;  // for example `namespace.object.method(arg1, arg2)`
+		ElementOrigin callee_origin;      // only the `method` part of the previous example
+		std::vector<ElementOrigin>
+			arguments_origin;  // whole arguments, with the name if it is a named argument, for
+		                       // example `arg1`, `arg2` or `name: arg3`
+	};
+
+	query::QResult<Box<CallExpr>> callOverloadResolution(
+		query::Context&           ctx,
+		const std::vector<SymID>& candidates,
+		CallArguments             call_arguments,
+		const CallPstOrigin&      pst_origin
 	);
 }

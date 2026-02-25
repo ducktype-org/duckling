@@ -351,6 +351,7 @@ namespace compiler::helios {
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
+				code::ElementOrigin origin = code::generatedOrigin();
 
 				// Set return type if provided.
 				if (ret.has_value()) {
@@ -361,10 +362,13 @@ namespace compiler::helios {
 						return;
 					}
 					ret_type = ret_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+					origin   = code::multiplePstOrigin({ param_list.unlock(ctx),
+					                                     ret.value().unlock(ctx) });
 				}
 				// Deduce return type if not provided.
 				else {
 					ret_type = ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
+					origin   = code::pstOrigin(param_list.unlock(ctx));
 				}
 
 				// Parameters:
@@ -377,7 +381,13 @@ namespace compiler::helios {
 
 					auto value = param.unlock(ctx)->getValue();
 					if (value.empty()) {
-						parameters.emplace_back(param_name, param_type, std::nullopt, param_symbol);
+						parameters.emplace_back(
+							param_name,
+							param_type,
+							std::nullopt,
+							param_symbol,
+							code::pstOrigin(param.unlock(ctx))
+						);
 					} else {
 						auto initial_value
 							= getHoutOfExprWithExpectedType(
@@ -386,12 +396,18 @@ namespace compiler::helios {
 						          .valueOrThrow();
 
 						parameters.emplace_back(
-							param_name, param_type, std::move(initial_value), param_symbol
+							param_name,
+							param_type,
+							std::move(initial_value),
+							param_symbol,
+							code::pstOrigin(param.unlock(ctx))
 						);
 					}
 				}
 
-				HOUTFunctionDeclaration output(original_symbol, ret_type, std::move(parameters));
+				HOUTFunctionDeclaration output(
+					original_symbol, ret_type, std::move(parameters), origin
+				);
 
 				this->out.emplace(std::move(output));
 			}
@@ -409,11 +425,8 @@ namespace compiler::helios {
 			void visitMethod(pst::Access<pst::Method> stmt) final {
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 
-				const auto class_symbol = *ctx.query<QueryClassOfMember>(original_symbol);
-				const auto class_type   = ctx.query<QueryTypeFromDefinition>(class_symbol)
-				                            ->valueOrThrow()
-				                            .getType()
-				                            .as<tsh::ClassAbstractType>();
+				const auto class_type
+					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
 				const auto self_scope = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 
 				const SymID self_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
@@ -434,6 +447,7 @@ namespace compiler::helios {
 						},
 						.initial_value = std::nullopt,
 						.helios_symbol = self_symbol,
+						.origin = code::generatedOrigin()
 					}
 				);
 			}
@@ -506,7 +520,8 @@ namespace compiler::helios {
 					name(argument_symbol),
 					field.getType(ctx),
 					std::move(init_expr_coerced_opt),
-					argument_symbol
+					argument_symbol,
+					code::pstOrigin(field_pst_data).generatedFrom()
 				);
 				argument_index++;
 			}
@@ -529,9 +544,7 @@ namespace compiler::helios {
 
 			// Return the declaration.
 			return HOUTFunctionDeclaration{
-				ctor_symbol,
-				result_symbol_type,
-				std::move(parameters),
+				ctor_symbol, result_symbol_type, std::move(parameters), code::generatedOrigin()
 			};
 		}
 
@@ -575,13 +588,15 @@ namespace compiler::helios {
 								},
 							});
 							parameters.emplace_back(
-								name(param_symbol), param_type, std::nullopt, param_symbol
+								name(param_symbol),
+								param_type,
+								std::nullopt,
+								param_symbol,
+								code::generatedOrigin()
 							);
 						}
 						return HOUTFunctionDeclaration{
-							key,
-							return_type,
-							std::move(parameters),
+							key, return_type, std::move(parameters), code::generatedOrigin()
 						};
 					}
 					variant_default { CORE_UNREACHABLE(); }

@@ -1,5 +1,7 @@
 #include "repl_queries.hpp"
 
+#include "helios/hout/origin.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -80,7 +82,10 @@ namespace compiler::repl {
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");
 			auto decl_ptr = new helios::HOUTFunctionDeclaration(
-				synthetic_symbol, return_type, std::vector<helios::code::Parameter>{}
+				synthetic_symbol,
+				return_type,
+				std::vector<helios::code::Parameter>{},
+				helios::code::generatedOrigin()
 			);
 			auto decl = base::CRef<helios::HOUTFunctionDeclaration>(decl_ptr);
 

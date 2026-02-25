@@ -35,12 +35,16 @@ namespace compiler::helios {
 	}
 
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
-		const SymID symbol, const tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
+		const SymID                  symbol,
+		const tsh::SymbolType<>      ret_type,
+		std::vector<code::Parameter> parameters,
+		code::ElementOrigin          origin
 	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
-		  parameters(std::move(parameters)) {
+		  parameters(std::move(parameters)),
+		  origin(origin) {
 		CORE_ASSERT(
 			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
 				or kind(symbol) == SymbolKind::Method,
