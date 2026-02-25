@@ -1,16 +1,20 @@
 #pragma once
 
 #include "../meta.hpp"
+#include "../../../lang_parser_context.hpp"
 
 namespace pst {
 	/**
 	 * @brief Simple expand macro
 	 */
 	class Expand final: public Stmt {
+		Box<LangParserContext> context;
 		NAMED_CHILD(value, CommaExprHolder);
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Expand, ElementKind::Expand);
+		Expand(const dia::SourcePosition& position, CRef<LangParserContext> context): Stmt(StmtKind::Expand, position), context(makeBox<LangParserContext>(context)) {
+			this->element_kind = ElementKind::Expand;
+		}
 		static MBox<Expand> parse(LangParserState& state);
 
 		~Expand() final = default;
@@ -22,6 +26,11 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<CommaExprHolder> getValue() const {
 			return value.give();
+		}
+
+		[[nodiscard]]
+		CRef<LangParserContext> getContext() const {
+			return context.ref();
 		}
 
 		[[nodiscard]]
