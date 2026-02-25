@@ -9,8 +9,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<SpecifierBlock>(position);
 
-		// @TODO: #1535 Figure out ordering with context
-		state.parse(out).withDef(&out->block, BlockOrderType::Unordered);
+		state.parse(out).withDef(&out->block);
 
 		PST_RETURN out;
 	}

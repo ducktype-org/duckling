@@ -39,7 +39,8 @@ namespace pst {
 			state.parse(out).goUpAndSkip();
 		}
 
-		state.parse(out).withDef(&out->body, BlockOrderType::Ordered);
+		state.setConstextBlockOrdering(BlockOrderType::Ordered);
+		state.parse(out).one(&out->body);
 
 		PST_RETURN out;
 	}

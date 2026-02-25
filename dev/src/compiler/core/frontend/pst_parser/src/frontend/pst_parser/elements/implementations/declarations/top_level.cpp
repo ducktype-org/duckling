@@ -4,7 +4,16 @@
 
 namespace pst {
 	MBox<TopLevel> TopLevel::parse(LangParserState& state) {
+		auto order_type = state.getContext()->block_order;
+
+		CORE_ASSERT(
+			order_type != BlockOrderType::Undefined, "Parsing with an undefined ordering type"
+		);
+
 		auto out = makeBox<TopLevel>(state.getPosition());
+
+		out->type = order_type;
+
 		PST_WHILE(state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
@@ -42,7 +51,13 @@ namespace pst {
 	}
 
 	void TopLevel::calcElementPathHashRecursive() {
-		calcOrderedListChildPath(statements, getElementPathHash());
+		auto path = getElementPathHash();
+		if (type == BlockOrderType::Ordered) {
+			auto ordered = hashing::ComponentHash(path, "ordered");
+			calcIndexedListChildPath<Stmt>({ statements }, ordered);
+		} else if (type == BlockOrderType::Unordered) {
+			calcOrderedListChildPath(statements, path);
+		}
 	}
 
 	void TopLevel::acceptVisitor(PstVisitor&) const { CORE_PANIC("Visitng TopLevel statement"); }

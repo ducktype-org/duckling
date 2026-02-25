@@ -8,6 +8,7 @@ namespace pst {
 	 */
 	class TopLevel final: public Decl {
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
+		BlockOrderType                             type = BlockOrderType::Undefined;
 
 		/**
 		 * This is the division of statements inside the block based on their symbol declaration

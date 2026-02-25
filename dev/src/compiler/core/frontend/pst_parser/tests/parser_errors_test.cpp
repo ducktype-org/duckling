@@ -68,7 +68,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -89,7 +89,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
 			return (not parsed.hasErrors()) == good;
 		}

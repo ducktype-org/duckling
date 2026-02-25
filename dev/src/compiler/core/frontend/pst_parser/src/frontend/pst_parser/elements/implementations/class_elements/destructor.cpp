@@ -18,7 +18,8 @@ namespace pst {
 		if (state.notEmpty()) state.logInt(makeBox<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
-		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+		state.setConstextBlockOrdering(BlockOrderType::Ordered);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		PST_RETURN out;
 	}

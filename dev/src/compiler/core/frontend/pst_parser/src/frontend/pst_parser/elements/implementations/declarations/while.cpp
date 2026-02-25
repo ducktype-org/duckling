@@ -11,9 +11,8 @@ namespace pst {
 
 		if (!assertStmtChoice<While>(state, state[0].is(Keyword::While))) return nullptr;
 
-		state.parse(out)
-			.all(Keyword::While, &out->optional_name, &out->condition)
-			.withDef(&out->body, BlockOrderType::Ordered);
+		state.setConstextBlockOrdering(BlockOrderType::Ordered);
+		state.parse(out).all(Keyword::While, &out->optional_name, &out->condition, &out->body);
 
 		PST_RETURN out;
 	}

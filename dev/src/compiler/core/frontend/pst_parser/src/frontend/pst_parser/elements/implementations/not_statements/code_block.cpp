@@ -7,7 +7,9 @@
 namespace pst {
 
 
-	MBox<CodeBlock> CodeBlock::parse(LangParserState& state, BlockOrderType order_type) {
+	MBox<CodeBlock> CodeBlock::parse(LangParserState& state) {
+		auto order_type = state.getContext()->block_order;
+
 		CORE_ASSERT(
 			order_type != BlockOrderType::Undefined, "Parsing with an undefined ordering type"
 		);

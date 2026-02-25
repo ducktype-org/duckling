@@ -22,9 +22,7 @@ namespace pst {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
 		}
 
-		static MBox<CodeBlockOrStmt> parse(
-			LangParserState& state, BlockOrderType code_block_order_type
-		);
+		static MBox<CodeBlockOrStmt> parse(LangParserState& state);
 		~CodeBlockOrStmt() final = default;
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;

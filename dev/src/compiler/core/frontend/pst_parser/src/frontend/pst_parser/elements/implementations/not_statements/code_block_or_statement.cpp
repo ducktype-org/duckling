@@ -3,13 +3,11 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(
-		LangParserState& state, BlockOrderType code_block_order_type
-	) {
+	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(LangParserState& state) {
 		auto out = makeBox<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
 			MBox<CodeBlock> block;
-			state.parse(out).with(&block, CodeBlock::parse, fwdVal(code_block_order_type));
+			state.parse(out).one(&block);
 			if (!block) return nullptr;
 			state.parse(out).assign(&out->code_block, std::move(block));
 		} else {

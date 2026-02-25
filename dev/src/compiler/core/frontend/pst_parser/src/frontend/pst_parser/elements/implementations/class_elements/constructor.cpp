@@ -21,7 +21,9 @@ namespace pst {
 
 		state.parse(out).one(&out->params);
 		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).all(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+
+		state.setConstextBlockOrdering(BlockOrderType::Ordered);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		PST_RETURN out;
 	}
