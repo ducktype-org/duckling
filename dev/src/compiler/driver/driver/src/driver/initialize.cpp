@@ -87,8 +87,8 @@ namespace compiler::driver {
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
+					// TODOP
 					// We need to parse all files before compilation to collect all PST element
-					// @TODO: #1974 this should be done concurrently
 					compiler::frontend::parseAllFilesInModuleTree(
 						global_state::getMainPackage().root_module
 					);
@@ -138,6 +138,7 @@ namespace compiler::driver {
 		CORE_ASSERT(!is_initialized, "Compiler is already initialized!");
 		is_initialized = true;
 
+		concurrent::worker::setWorkerCount(9);
 		variant_match(options.mode) {
 			variant_case(CompilerModeOfOperationAndOptions::BareMode, bare_options) {
 				handleDebugOptions(bare_options.debug_options);
@@ -149,6 +150,15 @@ namespace compiler::driver {
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 				handlePackageOptions(package_compilation_options.main_package_info);
+
+				// No matter if we're in the incremental or --no-incremental setting we always parse
+				// all the files first concurrently.
+				if (not global_state::getPackages().empty()) {
+					compiler::frontend::parseAllFilesInModuleTree(
+						global_state::getMainPackage().root_module
+					);
+				}
+
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}

@@ -506,7 +506,6 @@ namespace compiler::frontend {
 	 * This function should be called before collecting Inputs from the previous compilation graph.
 	 * @param module_id The ModuleID of the root module to start parsing from
 	 * @note This function cannot be called from query
-	 * @TODO: #1974 Make this function parse files concurrently.
 	 */
 	void parseAllFilesInModuleTree(ModuleID module_id);
 

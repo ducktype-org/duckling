@@ -34,7 +34,7 @@ public:
 		TESTER_ADD_TEST(testComponentHashComputation);
 		TESTER_ADD_TEST(testMultipleSourceFiles);
 		TESTER_ADD_TEST(testFileModifiedUpdatesContent);
-		TESTER_ADD_TEST(testGetSourceFilesfromFile);
+		TESTER_ADD_TEST(testGetSourceFilesFromFile);
 		TESTER_ADD_TEST(testSourceFileRemovalClearsLookups);
 		TESTER_ADD_TEST(testSourceFileDanglingReferenceDetection);
 	}
@@ -122,19 +122,19 @@ private:
 			auto source_file2 = SourceFile::create(temp_file2, dummy_module->getModuleID());
 
 			// Test getCachedContentIllegalAcess() on SourceFile objects
-			auto cached_content1 = source_file1->getCachedContentIllegalAcess();
-			auto cached_content2 = source_file2->getCachedContentIllegalAcess();
+			auto cached_content1 = source_file1->getCachedContentIllegalAccess();
+			auto cached_content2 = source_file2->getCachedContentIllegalAccess();
 
 			ASSERT_EQUAL(content1, cached_content1.view().stringView());
 			ASSERT_EQUAL(content2, cached_content2.view().stringView());
 
 			// Test that content is actually cached (call again)
-			auto cached_content1_again = source_file1->getCachedContentIllegalAcess();
+			auto cached_content1_again = source_file1->getCachedContentIllegalAccess();
 			ASSERT_EQUAL(content1, cached_content1_again.view().stringView());
 
 			// Test with same file path - create new SourceFile with same path
 			auto same_file_source    = SourceFile::create(temp_file1, dummy_module->getModuleID());
-			auto cached_content_same = same_file_source->getCachedContentIllegalAcess();
+			auto cached_content_same = same_file_source->getCachedContentIllegalAccess();
 			ASSERT_EQUAL(content1, cached_content_same.view().stringView());
 
 		} catch (const std::exception& e) {
@@ -269,7 +269,7 @@ private:
 
 		// Check initial cached content
 		ASSERT_EQUAL(
-			"original content", source_file->getCachedContentIllegalAcess().view().stringView()
+			"original content", source_file->getCachedContentIllegalAccess().view().stringView()
 		);
 
 		// Modify file content
@@ -280,22 +280,22 @@ private:
 		std::cerr << "After modification, temp_file content: "
 				  << temp_file.getContent().view().stringView() << '\n';
 		std::cerr << "After modification, sourcefile content: "
-				  << source_file->getCachedContentIllegalAcess().view().stringView() << '\n';
+				  << source_file->getCachedContentIllegalAccess().view().stringView() << '\n';
 		// SourceFile should have updated cached content
-		ASSERT_EQUAL("new content", source_file->getCachedContentIllegalAcess().view().stringView());
+		ASSERT_EQUAL("new content", source_file->getCachedContentIllegalAccess().view().stringView());
 
 		fs::FileManager::deleteFile(temp_file);
 	}
 
-	void testGetSourceFilesfromFile() {
+	void testGetSourceFilesFromFile() {
 		auto temp_file     = fs::FileManager::createRandomTempFile("abc");
 		auto dummy_module1 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		auto dummy_module2 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		// Create two SourceFiles for the same fs::File but different modules
 		auto source_file1 = SourceFile::create(temp_file, dummy_module1->getModuleID());
 		auto source_file2 = SourceFile::create(temp_file, dummy_module2->getModuleID());
-		// Should both be returned by getSourceFilesfromFile
-		auto files_vec = SourceFile::getSourceFilesfromFile(temp_file);
+		// Should both be returned by getSourceFilesFromFile
+		auto files_vec = SourceFile::getSourceFilesFromFile(temp_file);
 		assertTrue(
 			std::ranges::find(files_vec, source_file1) != files_vec.end(),
 			"source_file1 should be found"
@@ -323,12 +323,12 @@ private:
 		ASSERT_EQUAL(1, module->getSourceFiles().size());
 		auto sf_ref = getRef(module->getSourceFiles().front());
 
-		auto before = SourceFile::getSourceFilesfromFile(source_path);
+		auto before = SourceFile::getSourceFilesFromFile(source_path);
 		ASSERT_EQUAL(1, before.size());
 
 		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
 		ASSERT_TRUE(module->getSourceFiles().size() == 0);
-		auto after = SourceFile::getSourceFilesfromFile(source_path);
+		auto after = SourceFile::getSourceFilesFromFile(source_path);
 		ASSERT_TRUE(after.empty());
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);

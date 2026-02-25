@@ -1,5 +1,7 @@
 #include "source_file.hpp"
 
+#include "concurrent/base/collections/hash_map.hpp"
+
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -11,22 +13,23 @@
 #include <filesystem/file.hpp>
 
 namespace {
-
 	// Content cache for each file path (used for deduplication and fast access)
-	using ContentMap = base::HashMap<std::filesystem::path, base::SharedView>;
+	using ContentMap = concurrent::ConHashMap<std::filesystem::path, base::SharedView>;
 	ContentMap to_content;
 
 	/**
 	 * StableHashMap that stores all SourceFile instances.
 	 */
-	base::StableHashMap<usize, compiler::frontend::SourceFile> files;
-	usize                                                      next_storage_key = 0;
+	concurrent::ConHashMap<usize, compiler::frontend::SourceFile> files;
+	std::atomic<usize>                                            next_storage_key = 0;
 
 	/*
 	 * Map that stores all SourceFile instances by their file path.
-	 * it is used for function getSourceFilesfromFile()
+	 * it is used for function getSourceFilesFromFile()
 	 */
-	base::HashMap<std::filesystem::path, std::vector<base::Ref<compiler::frontend::SourceFile>>>
+	concurrent::ConHashMap<
+		std::filesystem::path,
+		std::vector<base::Ref<compiler::frontend::SourceFile>>>
 		files_map;
 
 }
@@ -34,6 +37,7 @@ namespace {
 namespace compiler::frontend {
 
 	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
+		  state_lock(base::makeBox<concurrent::AtomicFlagSpinlock>()),
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
@@ -44,22 +48,24 @@ namespace compiler::frontend {
 	Ref<SourceFile> SourceFile::create(fs::File file, ModuleID linked_module) {
 		auto abs_path = file.getFilePath().absolute().getPath();
 
-		if (!files_map.contains(abs_path))
-			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
-		const auto storage_key = next_storage_key++;
+		const auto storage_key = next_storage_key.fetch_add(1);
 		auto       inserted    = files.put(storage_key, SourceFile(std::move(file), linked_module));
 		Ref<SourceFile> created_ref(&inserted->value);
 		created_ref->storage_handle = storage_key;
 		created_ref->file_id        = FileID(created_ref);
-		files_map.at(abs_path).emplace_back(created_ref);
+
+		files_map.maybePutAndUpdate(
+			abs_path,
+			std::vector<base::Ref<SourceFile>>{ created_ref },
+			[&](Ref<std::vector<base::Ref<SourceFile>>> entries) { entries->push_back(created_ref); }
+		);
 
 		return created_ref;
 	}
 
-	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesfromFile(const fs::File& file) {
+	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesFromFile(const fs::File& file) {
 		auto abs_path = file.getFilePath().absolute().getPath();
-		if (files_map.contains(abs_path)) return files_map.at(abs_path);
-		return {};
+		return files_map.atMaybeCopy(abs_path).copyValueOr(std::vector<base::Ref<SourceFile>>{});
 	}
 
 	void SourceFile::update() {
@@ -80,6 +86,8 @@ namespace compiler::frontend {
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
+		std::lock_guard lock(*state_lock);
+
 		// If component hash changed, reset parse tree
 		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
@@ -90,24 +98,27 @@ namespace compiler::frontend {
 		}
 	}
 
-	base::SharedView SourceFile::getCachedContentIllegalAcess() {
+	base::SharedView SourceFile::getCachedContentIllegalAccess() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
-		if (to_content.contains(abs_path)) {
-			CORE_ASSERT(
-				to_content.at(abs_path).view() == file.getContent().view(),
-				base::strConcat(
-					"SourceFile with path '",
-					abs_path.string(),
-					"' already exists with different content. "
-					"Delete the existing SourceFile first or call "
-					"update handler from the ModuleModifier."
-				)
-			);
-		} else {
-			to_content.put(abs_path, file.getContent());
-		}
-		auto it = to_content.find(abs_path);
-		if (it != to_content.end()) return it->second;
+
+		to_content.maybePut(abs_path, file.getContent());
+
+		IF_BUILD_TYPE_DEV({
+			auto content = to_content.atMaybeCopy(abs_path);
+			if (content.has_value()) {
+				CORE_ASSERT(
+					to_content.at(abs_path)->view() == file.getContent().view(),
+					base::strConcat(
+						"SourceFile with path '",
+						abs_path.string(),
+						"' already exists with different content. "
+						"Delete the existing SourceFile first or call "
+						"update handler from the ModuleModifier."
+					)
+				);
+			}
+		});
+
 		// This should not happen since content is cached in constructor
 		CORE_PANIC("SourceFile content not found in cache for: " + abs_path.string());
 	}
@@ -117,22 +128,29 @@ namespace compiler::frontend {
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
 
-		if (files_map.contains(abs_path)) {
-			auto&      entries = files_map.at(abs_path);
-			const auto removal = std::ranges::remove_if(
-				entries.begin(),
-				entries.end(),
-				[source_file](const base::Ref<SourceFile>& candidate) {
-					return candidate == source_file;
-				}
-			);
-			entries.erase(removal.begin(), removal.end());
-
-			if (entries.empty()) {
-				files_map.erase(abs_path);
-				to_content.erase(abs_path);
+		files_map.maybePutAndUpdate(
+			abs_path, {}, [&](Ref<std::vector<base::Ref<SourceFile>>> entries) {
+				std::erase(*entries, source_file);
 			}
-		}
+		);
+
+
+		// if (files_map.contains(abs_path)) {
+		// 	auto&      entries = files_map.at(abs_path);
+		// 	const auto removal = std::ranges::remove_if(
+		// 		entries.begin(),
+		// 		entries.end(),
+		// 		[source_file](const base::Ref<SourceFile>& candidate) {
+		// 			return candidate == source_file;
+		// 		}
+		// 	);
+		// 	entries.erase(removal.begin(), removal.end());
+
+		// 	if (entries.empty()) {
+		// 		files_map.erase(abs_path);
+		// 		to_content.erase(abs_path);
+		// 	}
+		// }
 
 		CORE_ASSERT(
 			source_file->storage_handle.has_value(),

@@ -1,6 +1,8 @@
 #include "module_tree.hpp"
 
 #include "access.hpp"
+#include "concurrent/module_flags/worker_count.hpp"
+#include "concurrent/worker/worker_manager.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
 #include "queries.hpp"
@@ -179,7 +181,7 @@ namespace compiler::frontend {
 		// If ModuleHash is invalid, then children are also invalid
 		if (!m_path_component_hash.has_value()) {
 			// m_hash should not have value if path component hash is invalid
-			// The are calculaten in the same function: updateModuleHash()
+			// The are calculated in the same function: updateModuleHash()
 			CORE_ASSERT(!m_hash.has_value(), "Module hash have value!");
 
 			// assert if children are invalid too
@@ -556,7 +558,7 @@ namespace compiler::frontend {
 		);
 
 		// we need to detect cycles as someone could accidentally create one
-		// for example if module A is parent of B in oryginal module tree
+		// for example if module A is parent of B in original module tree
 		// and function addSubmodule(B, A) is called
 		// we would have a cycle A -> B -> A
 		// this is a programer error, because cycle is not possible in standard module tree from
@@ -753,7 +755,7 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// Chenge the parent of all submodules to the parent of the removed module
+		// Change the parent of all submodules to the parent of the removed module
 		for (auto& [_, submodule]: module->m_submodules) {
 			if (parent.has_value()) {
 				parent.value()->m_submodules.put(submodule->getName(), submodule);
@@ -822,7 +824,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
+		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesFromFile(file);
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
 		for (auto& source_file: source_files) source_file->update();
 	}
@@ -845,22 +847,39 @@ namespace compiler::frontend {
 			"parseAllFilesInModuleTree called from within a query!"
 		);
 
-		auto parse_all_files = [&](auto&& self, ModuleID module_id_internal) -> void {
-			auto module_tree = GetModuleID_Functor::get(module_id_internal);
+
+		std::vector<FileID> files_to_parse;
+
+		std::function<void(ModuleID)> collect_files = [&](ModuleID mid) {
+			auto module_tree = GetModuleID_Functor::get(mid);
 			if (module_tree->hasMainSourceFile())
-				GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					module_tree->getMainSourceFile().illegalAccess().getID()
-				)
-					->getPST();
+				files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
 			for (const auto& file: module_tree->getSourceFiles())
-				GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					file.illegalAccess().getID()
-				)
-					->getPST();
+				files_to_parse.push_back(file.illegalAccess().getID());
 			for (const auto& submodule: module_tree->getSubmodules())
-				self(self, submodule.illegalAccess().getID());
+				collect_files(submodule.illegalAccess().getID());
 		};
-		parse_all_files(parse_all_files, module_id);
+		collect_files(module_id);
+
+		if (files_to_parse.empty()) return;
+
+		std::atomic<usize> tasks_left = files_to_parse.size();
+		auto&              manager    = concurrent::worker::WorkerManager::get();
+
+		for (const auto& file_id: files_to_parse) {
+			manager.scheduleTaskOnAnyWorker([file_id, &tasks_left](concurrent::worker::WRef) {
+				auto file_ref
+					= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+						file_id
+					);
+				std::cout << "Parsing\n";
+				file_ref->getPST();
+				std::cout << "Parsed\n";
+
+				tasks_left.fetch_sub(1, std::memory_order_release);
+			});
+		}
+		while (tasks_left.load(std::memory_order_acquire) > 0) std::this_thread::yield();
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {

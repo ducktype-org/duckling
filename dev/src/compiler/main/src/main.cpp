@@ -35,6 +35,7 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
+#include "concurrent/module_flags/worker_count.hpp"
 
 #include <iostream>
 
@@ -264,7 +265,7 @@ clah::Clah getClahForMain() {
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
                         base::generateRandomString(32)
                     );
-
+					
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
