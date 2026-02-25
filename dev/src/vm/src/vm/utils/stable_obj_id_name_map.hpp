@@ -200,6 +200,7 @@ namespace vm {
 		ObjIdNameMap& operator=(const ObjIdNameMap&) & = default;
 
 		using Base::contains, Base::begin, Base::end, Base::size, Base::insert, Base::atMaybe,
-			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData, Base::clear;
+			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData,
+			Base::clear;
 	};
 }

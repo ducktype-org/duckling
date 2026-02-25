@@ -3,8 +3,6 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
-// TODO: Remove this file
-
 namespace vm::code::detail {
 	using namespace vm::code;
 	using FieldVector = std::vector<std::pair<base::StrID, vm::TypeRef>>;

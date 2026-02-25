@@ -23,8 +23,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
-	const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
 	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;
@@ -95,9 +94,6 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 ) {
 	if (new_functions.empty()) return;
 
-	// @TODO: #1306 Fix
-	// auto type_metadata = detail::buildTypeMetadata(type_context);
-
 	for (const auto& new_func: new_functions) {
 		if (ext_c_function_map.contains(new_func.name))
 			throw DuplicatedExtCFunctionError(new_func, *ext_c_function_map.at(new_func.name));
@@ -107,20 +103,19 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 		for (const auto& type: std::views::concat(
 				 new_func.signature.parameters, std::views::single(new_func.signature.result_type)
 			 ))
-			if (auto tp = type_metadata->atMaybe(type)) {
-				if (!tp.value()->isTriviallyCopyable())
-					throw ExtCArgumentTypeNotTriviallyCopyable(*tp);
+			if (auto tp = type_context.getCurrentTypes().atMaybe(type)) {
+				if (!tp.value()->isPodType()) throw ExtCArgumentTypeNotTriviallyCopyable(*tp);
 			} else
 				throw UnknownTypeError(opargs::Type(type));
 #else
-		if (auto tp = type_metadata->atMaybe(new_func.signature.result_type)) {
-			if (!tp.value()->isTriviallyCopyable()) throw ExtCArgumentTypeNotTriviallyCopyable(*tp);
+		if (auto tp = type_context.getCurrentTypes().atMaybe(new_func.signature.result_type)) {
+			if (!tp.value()->isPodType()) throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 		} else
 			throw UnknownTypeError(opargs::Type(new_func.signature.result_type));
 		for (const auto& type: new_func.signature.parameters)
-			if (auto tp = type_metadata->atMaybe(type)) {
-				if (!tp.value()->isTriviallyCopyable())
-					throw ExtCArgumentTypeNotTriviallyCopyable(*tp);
+			if (auto tp = type_context.getCurrentTypes().atMaybe(type)) {
+				if (!tp.value()->isPodType())
+					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 			} else
 				throw UnknownTypeError(opargs::Type(type));
 #endif

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <base/except/exceptions.hpp>
-#include <base/types/ints.hpp>
 #include <base/types/bits_and_bytes.hpp>
+#include <base/types/ints.hpp>
 
 namespace vm::code::type {
 	/**
@@ -27,7 +27,7 @@ namespace vm::code::type {
 			  size_when_ptr_is_8_bytes(non_pointer_bytes + Bytes(number_pointer_fields) * 8),
 			  size_when_ptr_is_16_bytes(non_pointer_bytes + Bytes(number_pointer_fields) * 16) {}
 
-		static constexpr TypeSize pointer() { return {Bytes(0), 1}; }
+		static constexpr TypeSize pointer() { return { Bytes(0), 1 }; }
 
 		constexpr TypeSize(Bytes size_when_ptr_is_8_bytes, Bytes size_when_ptr_is_16_bytes):
 			  size_when_ptr_is_8_bytes(size_when_ptr_is_8_bytes),

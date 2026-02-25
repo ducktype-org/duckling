@@ -353,11 +353,7 @@ namespace vm {
 			variant_case(kind::FixedSizeTable, table) {
 				return table.inner_type->isTriviallyCopyable();
 			}
-			variant_case(kind::Variant, variant) {
-				for (const auto& tp: variant.alternatives)
-					if (!tp->isTriviallyCopyable()) return false;
-				return true;
-			}
+			variant_case(kind::Variant, variant) { return false; }
 			variant_case(kind::Function, function) { return false; }
 			variant_case(kind::Pointer, pointer) { return false; }
 			variant_case(kind::Opaque, opaque) { return true; }

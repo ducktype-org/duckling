@@ -2,11 +2,11 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type.hpp>
+#include <vm/bytecode/validator/type_validator.hpp>
 
 using namespace vm::code;
 

@@ -8,11 +8,11 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include <vm/bytecode/validator/type.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/bytecode/validator/type.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -1341,9 +1341,8 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(
-		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
-	) const {
+	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
+		const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 

@@ -276,6 +276,8 @@ namespace vm::code::type {
 
 		bool operator==(const TypeID& other_id) const;
 
+		[[nodiscard]] bool isPodType() const;
+
 	private:
 		void finalizeInstantiability(ObjIdNameMap<type::Type>& types);
 
@@ -286,6 +288,13 @@ namespace vm::code::type {
 		 * fields, etc.
 		 */
 		bool is_instantiable = true;
+
+		/**
+		 * @brief Whether this type is trivially copyable/POD(plain old data). This is true for
+		 * types that can be copied with a simple memory copy, like primitives, opaques and
+		 * fixed-size tables of trivially copyable types.
+		 */
+		bool is_pod = true;
 
 		type::TypeSize size = type::TypeSize(Bytes(0), 0);
 

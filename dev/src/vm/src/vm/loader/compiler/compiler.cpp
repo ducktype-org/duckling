@@ -319,7 +319,7 @@ namespace vm::loader::compiler {
 		// Update method ID to name maps, since new methods may have appeared after new types where
 		// added.
 		for (const auto& new_type: new_types) {
-			auto type_from_metadata = low_program.types->at(typeName(new_type));
+			auto type_from_metadata = low_program.types->at(new_type.getName());
 			if_opt_some(type_from_metadata->getInheritanceMetadata(), metadata) {
 				//@todo: https://github.com/ducktype-org/duckling/issues/962
 				for (auto& [name, impl]: metadata->vtable) {

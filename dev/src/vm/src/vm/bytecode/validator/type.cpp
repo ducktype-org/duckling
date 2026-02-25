@@ -1,7 +1,7 @@
 #include "type.hpp"
 
-#include <base/except/exceptions.hpp>
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -186,22 +186,27 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 		variant_case(concrete::FixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
-			this->size = inner_type->getSize() * fixed_size_table.element_count;
+			this->size   = inner_type->getSize() * fixed_size_table.element_count;
+			this->is_pod = inner_type->isPodType();
 		}
 		variant_case(concrete::Pointer, pointer) {
 			// Pointer size is not known at this point, because it can be different in safe and fast
 			// modes. We just need to finalize the inner type, to make sure there are no cyclic
 			// dependencies.
 			types.at(pointer.inner)->finalize(types);
+			this->is_pod = types.at(pointer.inner)->isPodType();
 		}
 		variant_case(concrete::Opaque, opaque) {
 			// Opaque type size is known, so we don't need to do anything here.
+			this->is_pod = true;
 		}
 		variant_case(concrete::Function, function) {
 			// Function type size is known, so we don't need to do anything here.
+			this->is_pod = false;
 		}
 		variant_case(concrete::Primitive, primitive) {
 			// Primitive type size is known, so we don't need to do anything here.
+			this->is_pod = true;
 		}
 
 		variant_case(concrete::Variant, variant) {
@@ -215,7 +220,8 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 				alternative_type->finalize(types);
 				data_segment_size = data_segment_size.fieldMax(alternative_type->getSize());
 			}
-			this->size = type::TypeSize(Bytes(variant.type_tag_size), 0) + data_segment_size;
+			this->size   = type::TypeSize(Bytes(variant.type_tag_size), 0) + data_segment_size;
+			this->is_pod = false;
 		}
 
 		variant_case(concrete::Structure, structure) {
@@ -348,7 +354,11 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 				field.offset = offset;
 				offset += field_type->getSize();
 			}
-			this->size = offset;
+			this->size   = offset;
+			this->is_pod = std::ranges::all_of(structure.fields, [&](const auto& field) {
+				auto field_type = types.at(field.type);
+				return field_type->isPodType();
+			});
 		}
 
 
@@ -442,3 +452,5 @@ bool type::Type::isInstantiable() const {
 }
 
 [[nodiscard]] type::ConcreteTypeVariant type::Type::getKind() const { return kind; }
+
+[[nodiscard]] bool vm::code::type::Type::isPodType() const { return is_pod; }
