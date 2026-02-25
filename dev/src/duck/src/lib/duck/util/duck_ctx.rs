@@ -1,14 +1,13 @@
 use std::{
-    env::current_dir,
+    env::{current_dir, home_dir},
     path::{Path, PathBuf},
 };
-
-use rustvil::{config_files::home, os::env::Env};
 
 use crate::{
     QuackResult, QuackResultContext,
     duck::util::{duck_cfg::DuckCfg, duck_home::DuckHome, terminal::Terminal},
     quackpack::util::paths::duck_home_path,
+    util_common::env::Env,
 };
 
 #[derive(Debug)]
@@ -27,7 +26,7 @@ impl DuckCtx {
         let env = Env::default();
         let console = Terminal::stdout();
         let error_console = Terminal::stderr();
-        let user_home = home().context("while trying to get user home directory")?;
+        let user_home = home_dir().context("while trying to get user home directory")?;
         let duck_home = DuckHome::new(
             duck_home_path(&env, &user_home).context("while trying to get duck home directory")?,
             &env,
@@ -98,7 +97,7 @@ impl DuckCtx {
 impl Default for DuckCtx {
     fn default() -> Self {
         let env = Default::default();
-        let user_home = home().unwrap();
+        let user_home = home_dir().unwrap();
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home).unwrap(), &env);
         Self {
             console: Terminal::stdout(),

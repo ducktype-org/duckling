@@ -23,10 +23,6 @@ class LLVMBackendTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		global_state::setters::setBackendOptions({
-			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
-		});
-
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleansTest);
@@ -40,9 +36,17 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(referencesTest);
+		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
+	}
+
+protected:
+	void beforeAll() override {
+		global_state::setters::setBackendOptions({
+			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
+		});
 	}
 
 private:
@@ -55,7 +59,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
-			auto module_hout = ctx.query<helios::QueryModuleHOUT>(module).valueOrPanic();
+			auto& module_hout = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 			for (auto& hout_glob: module_hout.glob_data) {
 				if (!hout_glob.type.getType().carriesInformation(ctx)) continue;
@@ -216,6 +220,38 @@ private:
 			search_range = matches.suffix();
 		}
 		assertTrue(ptr_loads == 17, "Too few pointer loads");
+	}
+
+	void boxesTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/boxes");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// @TODO: #1894 This test is far to simple. Make it better once it's possible.
+		auto count_matches = [&](const std::string& text) {
+			std::smatch matches;
+			int         count        = 0;
+			std::string search_range = ir;
+			std::regex  ptr_load_regex{ text };
+			while (std::regex_search(search_range, matches, ptr_load_regex)) {
+				count++;
+				search_range = matches.suffix();
+			}
+			return count;
+		};
+
+		std::regex alloc_re(R"(call ptr @builtin_alloc\(i64 4\))");
+		assertTrue(
+			std::regex_search(ir, alloc_re), "Expected @builtin_alloc with size 4 for 'box i32'"
+		);
+		std::regex store_re(R"(store i32 42, ptr)");
+		assertTrue(std::regex_search(ir, store_re), "Expected 'store i32 42' for box init");
+		std::regex dealloc_re(R"(call void @builtin_dealloc\(ptr)");
+		assertTrue(std::regex_search(ir, dealloc_re), "Expected @builtin_dealloc");
+
+		int alloc_count   = count_matches(R"(call ptr @builtin_alloc)");
+		int dealloc_count = count_matches(R"(call void @builtin_dealloc)");
+		ASSERT_EQUAL_PRINT(alloc_count, dealloc_count);
+		ASSERT_EQUAL_PRINT(alloc_count, 1);
 	}
 
 	void floatingPointTest() {

@@ -66,7 +66,7 @@ private:
 	void test8() { assertTrue(false, "oops!"); }
 };
 
-// If the main is same as bellow you can just write:
+// If the main is same as below you can just write:
 // TESTER_COMMON_MAIN("/common/tester/examples/");
 
 int main() {

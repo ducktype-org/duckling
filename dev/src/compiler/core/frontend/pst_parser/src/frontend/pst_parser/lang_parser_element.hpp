@@ -222,7 +222,9 @@ namespace pst {
 	protected:
 		/**
 		 * @brief Map from stable hash to lang element for all created elements.
-		 * @note Used to view dependent tokens of node in the query graph.
+		 * @note Used to view dependent tokens of node in the query graph and for HELIOS PST origin.
+		 * @TODO: #1974 When dealing with parallelization of elements parsing be careful with this
+		 * map.
 		 */
 		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
 
@@ -336,6 +338,17 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		HashAlg calcStableHash() const;
+
+		/**
+		 * @brief Calculates the signature of the whole PST sub-tree. Assumes the hashes are already
+		 * calculated.
+		 */
+		void calcSignature(LangElement::HashAlg& partial_hash) const;
+
+		/**
+		 * @brief Signs the hashes of the whole PST sub-tree with given signature.
+		 */
+		void signGenerated(LangElement::HashType& signature);
 
 		/**
 		 * @brief Used to add additional data that is generic to multiple elements for example in

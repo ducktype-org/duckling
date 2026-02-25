@@ -8,7 +8,8 @@ namespace pst {
 		return ListParsingTemplate::parseList<
 			ImplementsElementExprHolder,
 			ImplementsList,
-			true,
+			true,   // empty list not allowed
+			false,  // trailing separator not allowed
 			lexer::Token::BracketType::None,
 			internal::Conditions::isComma,
 			internal::Conditions::isBlockGroup,

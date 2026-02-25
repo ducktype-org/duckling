@@ -35,6 +35,7 @@ namespace lang_def {
 		Class,
 		Namespace,
 		Import,
+		Hides,
 		As,
 		Using,
 		Alias,
@@ -199,6 +200,7 @@ namespace lang_def {
 		NotAnOperator,
 
 		Period,
+		Range,
 		PeriodQuestion,
 		PeriodStar,
 		Colon,
@@ -208,8 +210,8 @@ namespace lang_def {
 		SingleArrow,
 		DoubleArrow,
 
-		Pipe,  // | for variants and bitwise or.
-		BitAnd,
+		Pipe,       // | for variants and bitwise or.
+		Ampersand,  // & for references and bitwise and.
 		BitXor,
 
 		LeftShift,

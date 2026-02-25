@@ -398,6 +398,27 @@ namespace compiler::mir {
 		}
 
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
+			const auto& inner_type = expr.inner->expression_type.getSymbolType();
+
+			// If a reference of box is taken, no `AddressOf` instruction is inserted.
+			if (inner_type.getRefKind() == tsh::ReferenceKind::Box) {
+				output(lowerSubExpr(*expr.inner, continuation));
+			} else {
+				auto       hole          = continuation->addHole();
+				auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
+				const auto res_inner     = lowered_inner.getResult(function);
+				const auto result_type   = expr.expression_type.getSymbolType();
+
+				noValueOutput(
+					lowered_inner.begin,
+					hole,
+					Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
+					result_type
+				);
+			}
+		}
+
+		void visitBoxOfExpr(const hc::BoxOfExpr& expr) override {
 			auto       hole          = continuation->addHole();
 			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			const auto res_inner     = lowered_inner.getResult(function);
@@ -406,7 +427,7 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered_inner.begin,
 				hole,
-				Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
+				Instruction(Operation::AllocBox, {}, { res_inner }, {}, expr_scope),
 				result_type
 			);
 		}
@@ -443,7 +464,7 @@ namespace compiler::mir {
 		) {
 			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
 				tsh::SymbolType<> unit_sym_type{
-					function.getContext().query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -462,9 +483,11 @@ namespace compiler::mir {
 				}
 				std::ranges::reverse(element_types);
 
-				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
-					                           tsh::ReferenceKind::Direct,
-					                           tsh::Mutability::Mutable };
+				tsh::SymbolType<> result_type{
+					tsh::getMetaType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
 
 				return ExprLowerRes(
 					current,

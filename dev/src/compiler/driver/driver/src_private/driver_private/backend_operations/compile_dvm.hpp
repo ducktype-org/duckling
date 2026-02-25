@@ -10,5 +10,5 @@ namespace compiler::driver {
 	/**
 	 * @brief Compiles the LIRModuleData to DVM CodeCollection.
 	 */
-	vm::code::CodeCollection compileLIRModuleToDVM(const LIRModuleData& lir_module);
+	vm::code::CodeCollection compileLIRModuleToDVM(CRef<LIRModuleData> lir_module);
 }

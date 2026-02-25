@@ -219,7 +219,16 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::If, true> simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
 	Example<pst::If, true> simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
 
-	Example<pst::Import, true> simple_import{ "import std.math.sqrt as sqrt" };
+	Example<pst::Import, true>  simple_import{ "import std.math.sqrt as sqrt" };
+	Example<pst::Import, false> empty_import{ "import" };
+	Example<pst::Import, false> empty_nested_import{ "import ()" };
+	Example<pst::Import, false> empty_star_import{ "import .*" };
+	Example<pst::Import, true>  nested_import{ "import A.B.(C,)" };
+	Example<pst::Import, true>  nested_import2{ "import A.B.(C,(D, E),)" };
+	Example<pst::Import, false> missing_period_import{ "import A.B(C,(D, E),)" };
+	Example<pst::Import, false> empty_nested_ard_import{ "import A.B.(C,(D, E),,)" };
+	Example<pst::Import, true>  as_import{ "import A.B.C as D" };
+	Example<pst::Import, true>  hides_import{ "import A.B.* hides D , G, C" };
 
 	Example<pst::Namespace, true> simple_namespace{ "namespace name {}" };
 
@@ -316,6 +325,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, false> bad1_ternary{ "if if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad2_ternary{ "+ if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad3_ternary{ "if 5 else y" };
+
+	Example<pst::UniversalExprHolder, true> range_operator{ "x[1 .. 10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_to{ "x[.. 10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_from{ "x[1 ..]" };
+	// This is because it's lexed as two floats 1. and .10, not necessarily desired behaviour
+	Example<pst::UniversalExprHolder, false> range_operator_bad{ "x[1..10]" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
 	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };

@@ -14,6 +14,11 @@ namespace pst {
 		TopLevel,
 		Import,
 
+		// Import Chains
+		ImportIdentifierAs,
+		ImportStarHides,
+		ImportNested,
+
 		StmtSpecifier,
 
 		CodeBlock,
@@ -80,6 +85,7 @@ namespace pst {
 		FlowPatternList,
 		DottedName,
 		CallArgument,
+		NestedImportList,
 
 		// patterns:
 		FlowPattern,

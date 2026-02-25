@@ -55,21 +55,17 @@ namespace tester {
 		  config(std::move(config)) {}
 
 	void TestSuite::assertTrue(bool v, std::string_view err, bool critical) {
-		if (!v) {
-			curr_global_res->success = false;
-			message(err);
-			if (critical) throw CritTestError();
-		}
+		if (!v) fail(err, critical);
 	}
 
 	void TestSuite::assertFalse(bool v, std::string_view err, bool critical) {
 		assertTrue(!v, err, critical);
 	}
 
-	void TestSuite::fail(std::string_view err) {
+	void TestSuite::fail(std::string_view err, bool critical) {
 		curr_global_res->success = false;
 		message(err);
-		throw CritTestError();
+		if (critical) throw CritTestError();
 	}
 
 	void TestSuite::message(std::string_view mess) {
@@ -140,9 +136,7 @@ namespace tester {
 		} catch (const CritTestError& e) {
 		} catch (const base::Panic& panic) {
 			curr_global_res->success = false;
-			message("Unexpected Panic occurred in:");
-			message(panic.getPosition());
-			message("Error:");
+			message("Unexpected Panic:");
 			message(panic.what());
 		} catch (const base::LogicError& logic_error) {
 			curr_global_res->success = false;
@@ -190,9 +184,11 @@ namespace tester {
 			std::to_string(tests.size()),
 			" tests.\n",
 		} });
+		beforeAll();
 	}
 
 	void TestSuite::epilog(usize passed, usize failed, double time) {
+		afterAll();
 		stream_printer.print({ {
 			"\n",
 			std::string(fullEqualSignL(name.length() + 2), '='),
