@@ -142,11 +142,9 @@ namespace compiler::helios::code {
 						);
 					}
 					opt_err(error) {
-						ctx.logInt(
-							makeBox<UnknownEscapeSequenceError>(
-								stmt->getSourcePosition(), error.value
-							)
-						);
+						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+							stmt->getSourcePosition(), error.value
+						));
 					}
 				}
 			}
@@ -251,14 +249,12 @@ namespace compiler::helios::code {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.logInt(
-						makeBox<code::UndefinedBinaryOperatorError>(
-							stmt->getSourcePosition(),
-							stmt->getOperator().str(),
-							makeBox<InteractiveType>(ctx, lhs_type),
-							makeBox<InteractiveType>(ctx, rhs_type)
-						)
-					);
+					ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
+						stmt->getSourcePosition(),
+						stmt->getOperator().str(),
+						makeBox<InteractiveType>(ctx, lhs_type),
+						makeBox<InteractiveType>(ctx, rhs_type)
+					));
 					// failed
 				}
 			}
@@ -412,13 +408,11 @@ namespace compiler::helios::code {
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
-				ctx.logInt(
-					makeBox<dia_int::NotYetImplementedCodeError>(
-						"Suffix operators are not implemented yet in HOUT, since they don't exist "
-				        "yet.",
-						stmt->getSourcePosition()
-					)
-				);
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Suffix operators are not implemented yet in HOUT, since they don't exist "
+					"yet.",
+					stmt->getSourcePosition()
+				));
 				return;  // failed
 			}
 
@@ -447,13 +441,11 @@ namespace compiler::helios::code {
 					// This is a temporary check to prevent us from taking reference of types that
 					// do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
-						ctx.logInt(
-							makeBox<dia_int::NotYetImplementedCodeError>(
-								"Taking reference of type that does not carry information is not "
-								"supported yet.",
-								stmt->getSourcePosition()
-							)
-						);
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Taking reference of type that does not carry information is not "
+							"supported yet.",
+							stmt->getSourcePosition()
+						));
 						return;  // failed
 					}
 
@@ -466,13 +458,11 @@ namespace compiler::helios::code {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.logInt(
-						makeBox<UndefinedUnaryOperatorError>(
-							stmt->getSourcePosition(),
-							stmt->getOperator().str(),
-							makeBox<InteractiveType>(ctx, inner_type)
-						)
-					);
+					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
+						stmt->getSourcePosition(),
+						stmt->getOperator().str(),
+						makeBox<InteractiveType>(ctx, inner_type)
+					));
 					// failed
 				}
 			}
@@ -543,14 +533,12 @@ namespace compiler::helios::code {
 							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
 						operators.push_back(op);
 					} else {
-						ctx.logInt(
-							makeBox<code::UndefinedBinaryOperatorError>(
-								stmt->getSourcePosition(),
-								pst_operators.at(i).str(),
-								makeBox<InteractiveType>(ctx, lhs_type),
-								makeBox<InteractiveType>(ctx, rhs_type)
-							)
-						);
+						ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
+							stmt->getSourcePosition(),
+							pst_operators.at(i).str(),
+							makeBox<InteractiveType>(ctx, lhs_type),
+							makeBox<InteractiveType>(ctx, rhs_type)
+						));
 
 						return;
 					}
@@ -607,13 +595,11 @@ namespace compiler::helios {
 				if (log_error.has_value()) {
 					(*log_error)(ctx);
 				} else {
-					ctx.logInt(
-						makeBox<IncompatibleTypesError>(
-							pst_expr.element.unlock(ctx)->getSourcePosition(),
-							makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
-							makeBox<InteractiveType>(ctx, expected_type)
-						)
-					);
+					ctx.logInt(makeBox<IncompatibleTypesError>(
+						pst_expr.element.unlock(ctx)->getSourcePosition(),
+						makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
+						makeBox<InteractiveType>(ctx, expected_type)
+					));
 				}
 				return query::Failed();
 			}
