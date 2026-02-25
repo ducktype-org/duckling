@@ -31,13 +31,13 @@ namespace compiler::helios {
 				// --- From Reference ---
 				if (to_kind == tsh::ReferenceKind::Direct) {
 					// var x: T = ref_T; -> Dereference the rhs.
-					// @TODO: #2000: Call a copy constructor here in the future.
+					// @TODO: #2000 Call a copy constructor here in the future.
 					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
 				} else if (to_kind == tsh::ReferenceKind::Box) {
 					// var x: box T = ref_T; -> Creating a box from a ref, requires to perform a
 					// copy of the inner ref value. Since we can't just take ownership from a
 					// reference, thus we first dereference the rhs.
-					// @TODO: #2000: Call a copy constructor here in the future.
+					// @TODO: #2000 Call a copy constructor here in the future.
 					auto dereferenced = makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
 					return makeBox<code::BoxOfExpr>(ctx, origin, std::move(dereferenced));
 				}
@@ -45,7 +45,7 @@ namespace compiler::helios {
 				// --- From Box ---
 				if (to_kind == tsh::ReferenceKind::Direct)
 					// var x: T = box_T; -> Dereference the rhs.
-					// @TODO: #2000: Call a copy constructor here in the future.
+					// @TODO: #2000 Call a copy constructor here in the future.
 					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
 				else if (to_kind == tsh::ReferenceKind::Ref)
 					// Should be explicit: var x: ref T = &box_T;
