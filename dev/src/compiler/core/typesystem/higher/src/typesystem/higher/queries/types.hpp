@@ -11,7 +11,6 @@
 
 #include <base/collections/maps.hpp>
 
-#include "hashing/hash.hpp"
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <query_framework/query_int.hpp>

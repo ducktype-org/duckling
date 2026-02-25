@@ -53,11 +53,6 @@ namespace compiler::frontend {
 		created_ref->file_id        = FileID(created_ref);
 		files_map.at(abs_path).emplace_back(created_ref);
 
-		// Parse the file immediately
-		// Thanks to that the file is parsed before any concurrent query operations
-		// @TODO: #1974 change this
-		created_ref->getPST();
-
 		return created_ref;
 	}
 
