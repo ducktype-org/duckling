@@ -4,6 +4,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
@@ -121,8 +122,8 @@ namespace query::internal {
 
 	void QueryState::addDependency(NodeID from, NodeID to) { query_graph.addDependency(from, to); }
 
-	base::Optional<base::CRef<QueryGraph>> QueryState::getPreviousGraph() const {
-		if (!previous.has_value()) return base::Optional<base::CRef<QueryGraph>>{};
+	base::Optional<CRef<QueryGraph>> QueryState::getPreviousGraph() const {
+		if (!previous.has_value()) return base::Optional<CRef<QueryGraph>>{};
 		return &previous.value().graph;
 	}
 
@@ -139,7 +140,7 @@ namespace query::internal {
 		previous->node_colors->put(node, color);
 	}
 
-	base::CRef<concurrent::ConHashMap<NodeID, QueryState::PrevColor>> QueryState::getPreviousNodeColors(
+	CRef<concurrent::ConHashMap<NodeID, QueryState::PrevColor>> QueryState::getPreviousNodeColors(
 	) const {
 		CORE_ASSERT(
 			previous.has_value(), "PreviousCompilation is not set when accessing node colors"
@@ -168,6 +169,13 @@ namespace query::internal {
 		previous->metadata.emplace(std::move(metadata));
 
 		lock.unlock();
+	}
+
+	CRef<MetadataStorage> QueryState::getMetadataStorage() const { return &metadata_storage; }
+
+	base::Optional<CRef<MetadataStorage>> QueryState::getPreviousMetadataStorage() const {
+		if (!previous.has_value() || !previous->metadata.has_value()) return {};
+		return CRef<MetadataStorage>(&previous->metadata.value());
 	}
 
 	QueryState::PrevColor QueryState::redGreenSweep(NodeID start_node) {
