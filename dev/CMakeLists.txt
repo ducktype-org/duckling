@@ -58,4 +58,3 @@ add_subdirectory(src/playground)
 add_subdirectory(scripts/cmake)
 
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureDocs.cmake)
-
