@@ -82,7 +82,7 @@ clah::Clah getVmClah() {
 
 int main(int argc, const char** argv) {
 	init::InitObject _;
-	auto clah = getVmClah();
+	auto             clah = getVmClah();
 
 	try {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);

@@ -1,27 +1,27 @@
 #ifdef ENABLE_JIT
 
-#include "opcode_definitions.hpp"
+	#include "opcode_definitions.hpp"
 
-#include "jit_init.hpp"
+	#include "jit_init.hpp"
 
-#include <llvm_helpers/llvm_helpers.hpp>
+	#include <llvm_helpers/llvm_helpers.hpp>
 
-#include <vm/core/thread/low_program/opcodes.hpp>
+	#include <vm/core/thread/low_program/opcodes.hpp>
 
-#include <cstddef>
-#include <cstring>
+	#include <cstddef>
+	#include <cstring>
 
 LLVM_INCLUDE_BEGIN()
-#include <llvm/Bitcode/BitcodeReader.h>
-#include <llvm/Demangle/Demangle.h>
-#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Support/Error.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/TargetSelect.h>
+	#include <llvm/Bitcode/BitcodeReader.h>
+	#include <llvm/Demangle/Demangle.h>
+	#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
+	#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+	#include <llvm/IR/Function.h>
+	#include <llvm/IR/LLVMContext.h>
+	#include <llvm/IR/Module.h>
+	#include <llvm/Support/Error.h>
+	#include <llvm/Support/MemoryBuffer.h>
+	#include <llvm/Support/TargetSelect.h>
 LLVM_INCLUDE_END()
 
 using namespace llvm;
@@ -30,11 +30,11 @@ using namespace llvm::orc;
 // char[] is better than std::array, because we don't know the size.
 // NOLINTBEGIN
 inline constexpr char OPCODES[] = {
-#ifdef USE_TAIL_CALLS
-	#embed "src/vm/common_tc.bc"
-#else
-	#embed "src/vm/common_sc.bc"
-#endif
+	#ifdef USE_TAIL_CALLS
+		#embed "src/vm/common_tc.bc"
+	#else
+		#embed "src/vm/common_sc.bc"
+	#endif
 };
 // NOLINTEND
 
@@ -93,16 +93,18 @@ void llvmInit() {
 			auto demangled = llvm::demangle(F.getName().str());
 			if (demangled.starts_with("vm::OpFuns::op_")
 			    and !demangled.starts_with("vm::OpFuns::op_debug")) {
-				auto name   = extractFunctionName(demangled);
-				name        = name.substr(3);  // delete op_
-				auto opcode = getOpcode(name);
+				auto name        = extractFunctionName(demangled);
+				name             = name.substr(3);  // delete op_
+				auto opcode      = getOpcode(name);
 				func_map[opcode] = &F;
 			}
 		}
 	}
 	CORE_ASSERT(!func_map.empty(), "Opfuns not found!");
 
-	exit_on_err(lljit_instance->addIRModule(ThreadSafeModule(std::move(g_module), std::move(g_context))));
+	exit_on_err(
+		lljit_instance->addIRModule(ThreadSafeModule(std::move(g_module), std::move(g_context)))
+	);
 }
 
 llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun) {
