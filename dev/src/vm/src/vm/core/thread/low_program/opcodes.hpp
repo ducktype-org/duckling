@@ -33,10 +33,18 @@ namespace vm::low {
 #undef HANDLE_MICRO_INSTR
 	};
 
-	constexpr const char* OPCODE_NAMES[] = {
+constexpr usize MICRO_INSTR_COUNT() {
+    usize count = 0;
+    #define HANDLE_MICRO_INSTR(instr) ++count;
+    #include "micro_instruction_definitions.hpp"
+    #undef HANDLE_MICRO_INSTR
+    return count;
+}
+
+constexpr std::array<const char*, MICRO_INSTR_COUNT()> OPCODE_NAMES = {{
 #define HANDLE_MICRO_INSTR(opcode) #opcode,
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
-	};
+	}};
 
 }
