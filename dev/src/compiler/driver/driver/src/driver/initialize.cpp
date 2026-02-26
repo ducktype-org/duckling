@@ -72,10 +72,9 @@ namespace compiler::driver {
 			global_state::setters::addMainPackage(root_module);
 
 			// We need to parse all files before compilation to collect all PST element
-			// @TODO: #1974 this should be done concurrently nad onlt if prev graph exists nad incremental compilation is enabled
-			compiler::frontend::parseAllFilesInModuleTree(
-				root_module
-			);
+			// @TODO: #1974 this should be done concurrently nad onlt if prev graph exists nad
+			// incremental compilation is enabled
+			compiler::frontend::parseAllFilesInModuleTree(root_module);
 		}
 
 		/**
@@ -119,7 +118,8 @@ namespace compiler::driver {
 				std::span<const byte> span(view.getBegin(), view.size());
 				query::external::setPreviousMetadataFromRawBytes(span);
 
-				// @TODO: #1974 We should parse PST concurrently here, before collectInputDataFromGlobalPackages()
+				// @TODO: #1974 We should parse PST concurrently here, before
+				// collectInputDataFromGlobalPackages()
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
