@@ -26,18 +26,18 @@
  */
 
 #ifndef HANDLE_INSTR
-	#define DEFAULT_HANDLE_INSTR
-	#define HANDLE_INSTR(instr)
+#define DEFAULT_HANDLE_INSTR
+#define HANDLE_INSTR(instr)
 #endif
 
 #ifndef HANDLE_INSTR_ARGS
-	#define DEFAULT_HANDLE_INSTR_ARGS
-	#define HANDLE_INSTR_ARGS(instr, ...) HANDLE_INSTR(instr)
+#define DEFAULT_HANDLE_INSTR_ARGS
+#define HANDLE_INSTR_ARGS(instr, ...) HANDLE_INSTR(instr)
 #endif
 
 #ifndef DEF_INSTR
-	#define DEFAULT_DEF_INSTR
-	#define DEF_INSTR(...) HANDLE_INSTR_ARGS(__VA_ARGS__)
+#define DEFAULT_DEF_INSTR
+#define DEF_INSTR(...) HANDLE_INSTR_ARGS(__VA_ARGS__)
 #endif
 
 
@@ -634,16 +634,16 @@ DEF_INSTR(breakpoint)
 DEF_INSTR(initFromVmValue)
 
 #ifdef DEFAULT_HANDLE_INSTR
-	#undef DEFAULT_HANDLE_INSTR
-	#undef HANDLE_INSTR
+#undef DEFAULT_HANDLE_INSTR
+#undef HANDLE_INSTR
 #endif
 
 #ifdef DEFAULT_HANDLE_INSTR_ARGS
-	#undef DEFAULT_HANDLE_INSTR_ARGS
-	#undef HANDLE_INSTR_ARGS
+#undef DEFAULT_HANDLE_INSTR_ARGS
+#undef HANDLE_INSTR_ARGS
 #endif
 
 #ifdef DEFAULT_DEF_INSTR
-	#undef DEFAULT_DEF_INSTR
-	#undef DEF_INSTR
+#undef DEFAULT_DEF_INSTR
+#undef DEF_INSTR
 #endif
