@@ -33,23 +33,6 @@ namespace vm::loader {
 		LoaderLogger(LoaderLogger&&)                 = default;
 		LoaderLogger& operator=(LoaderLogger&&)      = default;
 
-		template<class Function>
-		void logMap(
-			const IsElementVariant auto& elem,
-			const Function&              callback,
-			std::string_view             header_message,
-			std::string_view             description             = "",
-			base::Optional<std::string>  pointer_message_content = "here"
-		) {
-			logMap(
-				VISIT(elem, e, return static_cast<const code::ElementBase&>(e)),
-				callback,
-				header_message,
-				description,
-				std::move(pointer_message_content)
-			);
-		}
-
 		/**
 		 * @brief A more specialized version of error logging than `log`. It allows for attaching
 		 * notes to error messages by calling a callback with an error message as parameter.
@@ -84,27 +67,6 @@ namespace vm::loader {
 		void addNote(
 			Box<dia_int::PlaceholderCodeError>& error,
 			const code::ElementBase&            elem,
-			std::string_view                    header_message,
-			std::string_view                    description             = "",
-			base::Optional<std::string>         pointer_message_content = "here"
-		) {
-			match_optional(elem.bytecode_pos) {
-				opt_none errors.emplace_back(header_message);
-				opt_some(pos) {
-					error->addAttachedMessage(makeBox<dia_int::PlaceholderCodeNote>(
-						std::string(header_message),
-						pos,
-						std::string(description),
-						std::move(pointer_message_content)
-					));
-				}
-			}
-		}
-
-		template<class ElemT>
-		requires requires(const ElemT& elem) { elem.bytecode_pos; } void addNote(
-			Box<dia_int::PlaceholderCodeError>& error,
-			const ElemT&                        elem,
 			std::string_view                    header_message,
 			std::string_view                    description             = "",
 			base::Optional<std::string>         pointer_message_content = "here"
@@ -158,25 +120,6 @@ namespace vm::loader {
 			);
 		}
 
-		void log(
-			const IsElementVariant auto& elem,
-			std::string_view             header_message,
-			std::string_view             description             = "",
-			base::Optional<std::string>  pointer_message_content = "here"
-		) {
-			logMap(
-				elem,
-				[](const Box<dia_int::PlaceholderCodeError>&) {},
-				header_message,
-				description,
-				std::move(pointer_message_content)
-			);
-		}
-
-		/**
-		 * @brief Simple error where no source position is available (ex. no main function in the
-		 * file).
-		 */
 		void logSimple(std::string err) { errors.emplace_back(std::move(err)); }
 
 		void dump(std::ostream& stream) {

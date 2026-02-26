@@ -128,7 +128,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 						);
 					});
 			},
-			base::strConcat("A validation error occurred: ", e.what())
+			e.what()
 		);
 	} catch (code::DuplicatedFunctionError& e) {
 		log.logMap(
@@ -142,7 +142,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 		log.logMap(
 			e.new_element,
 			[&](auto& err) { log.addNote(err, e.previous_element, "Previous declaration here."); },
-			base::strConcat("This global data is duplicated: ", e.new_element.name.str)
+			"Global variable with this name already exists."
 		);
 	} catch (code::DuplicatedTypeError& e) {
 		log.logMap(
@@ -150,12 +150,11 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 			[&](auto& err) {
 				log.addNote(err, e.previous_element, "Previous type declaration here.");
 			},
-			base::strConcat("Duplicated type: ", code::typeName(e.new_element))
+			"Type with this name already exists."
 		);
 	} catch (code::ValidationError& e) {
 		match_optional(e.maybeElement()) {
-			opt_some(elem)
-				log.log(*elem, base::strConcat("A validation error occurred: ", e.what()));
+			opt_some(elem) log.log(*elem, e.what());
 			opt_none log.logSimple(e.what());
 		}
 	}

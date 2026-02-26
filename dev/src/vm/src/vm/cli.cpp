@@ -1,5 +1,7 @@
 #include "cli.hpp"
 
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
+
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/api/api.hpp>
@@ -24,6 +26,7 @@ int cli() {
 }
 
 int cli(const fs::File& filepath, const std::vector<std::string>& args) {
+	dia_int::configureImmediatePrint(&std::cerr);
 	vm::PID pid{};
 
 	std::expected<i64, std::string> result
@@ -49,8 +52,6 @@ int cli(const fs::File& filepath, const std::vector<std::string>& args) {
 
 	if (result.has_value())
 		return base::safeIntConv<int>(result.value());
-	else {
-		std::cerr << result.error();
+	else
 		return 1;
-	}
 }

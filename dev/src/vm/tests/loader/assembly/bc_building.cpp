@@ -33,7 +33,7 @@ private:
 		loadInvalidDbc(
 			"repeated_types.dbc",
 			{
-				"Duplicated type: ",
+				"Type with this name already exists.",
 				"Previous type declaration here.",
 			}
 		);
