@@ -149,6 +149,8 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 }
 
 vm::api::ProcStatus DuckVMDebugCore::getStatus() {
+	clearEnumeratedVariablesReferences();
+
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value()) {
 		vm::api::ProcStatus status = response.value();
@@ -268,6 +270,8 @@ void DuckVMDebugCore::printMemory() const {
 			}
 			base::ModRawView var_data_view = response_pd.value().data;
 
+			std::cout << " (mem addr btw: " << var_data_view.getBegin() << ") ";
+
 
 			switch (var.type->getKind()) {
 			case vm::Type::Kind::None:
@@ -308,6 +312,268 @@ void DuckVMDebugCore::printMemory() const {
 				std::cout << std::dec << "\n";
 				break;
 			}
+		}
+	}
+}
+
+void DuckVMDebugCore::clearEnumeratedVariablesReferences() {
+	enumerated_variables_references.clear();
+	enumerated_variables_references.push_back(VariablesReference{
+		.id = 0, .vr = VariablesReference::Nothing{} });
+}
+
+std::vector<DuckVMDebugCore::StackFrameInfo> DuckVMDebugCore::enumerateFrames(u64 thread_id) {
+	auto response_nosf = vm::api::debuggerGetNumberOfStackFrames(pid);
+	if (!response_nosf.has_value()) {
+		std::cerr << "get number of stack frames error";
+		return {};
+	}
+
+	u64 number_of_stack_frames = response_nosf.value().number_of_stack_frames;
+	std::vector<StackFrameInfo> frames_info;
+	for (u64 frame_index = 0; frame_index < number_of_stack_frames; frame_index++) {
+		auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, frame_index);
+		if (!response_sfv.has_value()) {
+			std::cerr << "get number of stack frames error";
+			return {};
+		}
+
+		// check if we already have reference to this frame
+		auto it = std::find_if(
+			enumerated_variables_references.begin(),
+			enumerated_variables_references.end(),
+			[thread_id, frame_index](const VariablesReference& vr) {
+				return std::holds_alternative<StackFrameHook>(vr.vr)
+			        && std::get<StackFrameHook>(vr.vr).thread_id == thread_id
+			        && std::get<StackFrameHook>(vr.vr).frame_id == frame_index;
+			}
+		);
+
+		if (it != enumerated_variables_references.end()) {
+			frames_info.push_back(StackFrameInfo{ .frame_id = frame_index,
+			                                      .function_name
+			                                      = response_sfv.value().function_name,
+			                                      .variables_reference = it->id });
+		} else {
+			u64 variables_reference
+				= enumerated_variables_references.size();  // TODO: rethink numerating
+
+			frames_info.push_back(StackFrameInfo{ .frame_id = frame_index,
+			                                      .function_name
+			                                      = response_sfv.value().function_name,
+			                                      .variables_reference = variables_reference });
+
+			enumerated_variables_references.push_back(VariablesReference{
+				.id = variables_reference,
+				.vr = StackFrameHook{ .thread_id = thread_id, .frame_id = frame_index } });
+		}
+	}
+	return frames_info;
+}
+
+std::string valueToString(const vm::PID pid, const vm::Pointer pointer, const vm::TypeCRef type) {
+	auto response_pd = vm::api::debuggerGetPointerData(pid, pointer, type->getSize());
+	if (!response_pd.has_value()) {
+		std::cerr << "get pointer data error";
+		return "<error>";
+	}
+	base::ModRawView var_data_view = response_pd.value().data;
+
+	switch (type->getKind()) {
+	case vm::Type::Kind::None:
+		return "<none>";
+	case vm::Type::Kind::Primitive: {
+		if (var_data_view.size() == 1) {
+			u8 value = vm::safeReadPointerBytes<u8>(var_data_view.getBegin());
+			return std::to_string((u16) value);
+		}
+		if (var_data_view.size() == 2) {
+			u16 value = vm::safeReadPointerBytes<u16>(var_data_view.getBegin());
+			return std::to_string(value);
+		}
+		if (var_data_view.size() == 4) {
+			u32 value = vm::safeReadPointerBytes<u32>(var_data_view.getBegin());
+			return std::to_string(value);
+		}
+		if (var_data_view.size() == 8) {
+			u64 value = vm::safeReadPointerBytes<u64>(var_data_view.getBegin());
+			return std::to_string(value);
+		}
+		return "<unsupported primitive type>";
+	};
+	case vm::Type::Kind::Pointer: {
+		vm::Pointer value = vm::safeReadPointerBytes<vm::Pointer>(var_data_view.getBegin());
+		if (value.isNull()) return "null";
+	}
+		return "<pointer>";
+	default:
+		return "<unsupported value>";  // TODO: implement toString for other types
+	}
+}
+
+std::vector<DuckVMDebugCore::VariableInfo> DuckVMDebugCore::dereferenceVariablesReference(
+	u64 variables_reference
+) {
+	auto it = std::find_if(
+		enumerated_variables_references.begin(),
+		enumerated_variables_references.end(),
+		[variables_reference](const VariablesReference& vr) { return vr.id == variables_reference; }
+	);
+
+	if (it == enumerated_variables_references.end())
+		throw std::runtime_error("Invalid variables reference");
+
+	std::vector<VariableInfo> variables_info;
+
+	auto var_vars_ref = [&](vm::api::response::StackFrameVars::FrameVar var) -> u64 {
+		u64 var_ref = 0;
+
+		switch (var.type->getKind()) {
+		case vm::Type::Kind::None:
+		case vm::Type::Kind::Primitive:
+		case vm::Type::Kind::Opaque:
+		case vm::Type::Kind::Function:
+			break;
+		case vm::Type::Kind::Pointer:
+		case vm::Type::Kind::FixedSizeTable:
+		case vm::Type::Kind::DynamicTable:
+		case vm::Type::Kind::Data:
+		case vm::Type::Kind::Variant:
+			// check if we already have reference to this variable
+			auto existing_vr = std::find_if(
+				enumerated_variables_references.begin(),
+				enumerated_variables_references.end(),
+				[&var](const VariablesReference& vr) {
+					return std::holds_alternative<VariableHook>(vr.vr)
+				        && std::get<VariableHook>(vr.vr).pointer == var.pointer
+				        && std::get<VariableHook>(vr.vr).type == var.type;
+				}
+			);
+
+			if (existing_vr == enumerated_variables_references.end()) {
+				var_ref = enumerated_variables_references.size();  // TODO: rethink numerating
+				enumerated_variables_references.push_back(VariablesReference{
+					.id = var_ref, .vr = VariableHook{ .pointer = var.pointer, .type = var.type } });
+				std::cerr << "Created new variables reference " << var_ref
+						  << " for variable at offset 0x" << std::hex << var.offset << std::dec
+						  << " of type " << var.type->getName().strView() << "\n";
+			} else {
+				var_ref = existing_vr->id;
+				std::cerr << "Reusing existing variables reference " << var_ref
+						  << " for variable at offset 0x" << std::hex << var.offset << std::dec
+						  << " of type " << var.type->getName().strView() << "\n";
+			}
+			break;
+		}
+
+		return var_ref;
+	};
+
+	variant_match(it->vr) {
+		variant_case(StackFrameHook, hook) {
+			auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, hook.frame_id);
+			if (!response_sfv.has_value()) {
+				std::cerr << "get stack frame vars error";
+				return {};
+			}
+
+			for (auto& var: response_sfv.value().frame_vars) {
+				variables_info.push_back(VariableInfo{
+					.name                = base::StrID("var" + std::to_string(var.offset)),
+					.value               = valueToString(pid, var.pointer, var.type),
+					.type                = var.type->getName().str(),
+					.variables_reference = var_vars_ref(var),
+				});
+			}
+		}
+		variant_case(VariableHook, hook) {
+			throw std::runtime_error("Dereferencing variable hook is not implemented yet");
+		}
+		variant_case_novalue(VariablesReference::Nothing) {
+			std::cerr << "This variables reference does not refer to anything\n";
+			return {};
+		}
+	}
+
+	return variables_info;
+}
+
+void DuckVMDebugCore::editVariable(
+	u64 variables_reference, const std::string& variable_name, const std::string& new_value
+) {
+	// find variable
+	auto it = std::find_if(
+		enumerated_variables_references.begin(),
+		enumerated_variables_references.end(),
+		[variables_reference](const VariablesReference& vr) { return vr.id == variables_reference; }
+	);
+	if (it == enumerated_variables_references.end())
+		throw std::runtime_error("Invalid variables reference");
+
+	variant_match(it->vr) {
+		variant_case(StackFrameHook, hook) {
+			// find variable with given name in this frame
+			auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, hook.frame_id);
+			if (!response_sfv.has_value()) {
+				std::cerr << "get stack frame vars error";
+				return;
+			}
+			auto var_it = std::find_if(
+				response_sfv.value().frame_vars.begin(),
+				response_sfv.value().frame_vars.end(),
+				[&variable_name](const vm::api::response::StackFrameVars::FrameVar& var) {
+					return ("var" + std::to_string(var.offset)) == variable_name;
+				}
+			);
+			if (var_it == response_sfv.value().frame_vars.end()) {
+				std::cerr << "Variable with name '" << variable_name
+						  << "' not found in this frame\n";
+				return;
+			}
+
+			// currently only supports editing primitive types by rewriting their bytes
+			auto& var = *var_it;
+			if (var.type->getKind() != vm::Type::Kind::Primitive) {
+				std::cerr << "Editing variable of type '" << var.type->getName().strView()
+						  << "' is not supported yet\n";
+				return;
+			}
+
+			// get memory view write new value bytes to VM memory
+			auto response_pd
+				= vm::api::debuggerGetPointerData(pid, var.pointer, var.type->getSize());
+			if (!response_pd.has_value()) {
+				std::cerr << "get pointer data error";
+				return;
+			}
+			base::ModRawView var_data_view = response_pd.value().data;
+
+			// parse new value according to variable type
+			try {
+				if (var.type->getSize() == 1) {
+					u8 value = static_cast<u8>(std::stoul(new_value));
+					std::memcpy(var_data_view.getBegin(), &value, 1);
+				} else if (var.type->getSize() == 2) {
+					u16 value = static_cast<u16>(std::stoul(new_value));
+					std::memcpy(var_data_view.getBegin(), &value, 2);
+				} else if (var.type->getSize() == 4) {
+					u32 value = static_cast<u32>(std::stoul(new_value));
+					std::memcpy(var_data_view.getBegin(), &value, 4);
+				} else if (var.type->getSize() == 8) {
+					u64 value = static_cast<u64>(std::stoull(new_value));
+					std::memcpy(var_data_view.getBegin(), &value, 8);
+				} else {
+					std::cerr << "Unsupported primitive type size: " << var.type->getSize() << "\n";
+					return;
+				}
+			} catch (const std::exception& e) {
+				std::cerr << "Failed to parse new value: " << e.what() << "\n";
+				return;
+			}
+		}
+		variant_default {
+			std::cerr << "Editing variable hook is not implemented yet\n";
+			return;
 		}
 	}
 }

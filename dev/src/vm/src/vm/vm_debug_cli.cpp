@@ -137,7 +137,48 @@ bool DuckVMDebugCli::handleLine(std::string& line) {
 		help();
 	else if (stripped_line == "mem" || stripped_line == "m")
 		core.printMemory();
-	else
+	else if (stripped_line == "stack") {
+		auto stack_frames = core.enumerateFrames();
+		std::cout << "Stack frames:\n";
+		for (const auto& frame: stack_frames) {
+			std::cout << "  Frame id: " << frame.frame_id
+					  << ", function: " << frame.function_name.strView()
+					  << ", variables reference: " << frame.variables_reference << "\n";
+		}
+	} else if (stripped_line.starts_with("vars ")) {
+		std::string_view vars_arg = stripped_line.substr(5);
+		try {
+			u64  variables_reference = std::stoull(std::string(vars_arg));
+			auto var_infos           = core.dereferenceVariablesReference(variables_reference);
+			std::cout << "Variables:\n";
+			for (const auto& var_info: var_infos) {
+				std::cout << "  Name: " << var_info.name.strView() << ", Value: " << var_info.value
+						  << ", Type: " << var_info.type
+						  << ", variables reference: " << var_info.variables_reference << "\n";
+			}
+		} catch (const std::exception& e) {
+			std::cout << "Invalid variables reference: \"" << vars_arg << "\"\n";
+		}
+	} else if (stripped_line.starts_with("set ")) {
+		std::string_view set_arg      = stripped_line.substr(4);
+		size_t           first_space  = set_arg.find(' ');
+		size_t           second_space = set_arg.find(' ', first_space + 1);
+		if (first_space == std::string_view::npos || second_space == std::string_view::npos) {
+			std::cout << "Invalid set command format. Use: set <variables_reference> "
+			             "<variable_name> <new_value>\n";
+			return true;
+		}
+		try {
+			u64 variables_reference = std::stoull(std::string(set_arg.substr(0, first_space)));
+			std::string variable_name
+				= std::string(set_arg.substr(first_space + 1, second_space - first_space - 1));
+			std::string new_value = std::string(set_arg.substr(second_space + 1));
+			core.editVariable(variables_reference, variable_name, new_value);
+		} catch (const std::exception& e) {
+			std::cout << "Invalid set command format. Use: set <variables_reference> "
+			             "<variable_name> <new_value>\n";
+		}
+	} else
 		std::cout << "Invalid input: \"" << line << "\"\n";
 	return true;
 }
