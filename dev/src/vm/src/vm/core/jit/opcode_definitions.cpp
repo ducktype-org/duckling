@@ -1,3 +1,5 @@
+#ifdef ENABLE_JIT
+
 #include "opcode_definitions.hpp"
 
 #include "jit_init.hpp"
@@ -110,3 +112,5 @@ llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun) {
 }
 
 llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }
+
+#endif
