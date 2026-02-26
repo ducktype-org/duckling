@@ -29,11 +29,11 @@ namespace pst::expr {
 
 		i64 fwd = toNextLink(state);
 		if (state[fwd].is(Token::Type::Sentinel))
-			return Lower::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+			return Lower::parse(state);
 
 		auto out = makeBox<ChainExpr>(state.getPosition());
 
-		state.parse(out).with(&out->atom, Lower::parse, +fwd);
+		state.parse(out).autoFallbackLen(fwd).with(&out->atom, Lower::parse);
 
 		PST_WHILE(state.ctokens().size() > 0) {
 			fwd = toNextLink(state);
