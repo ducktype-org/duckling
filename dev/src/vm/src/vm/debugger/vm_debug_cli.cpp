@@ -37,6 +37,33 @@ namespace vm::debugger {
 					"+   BeRD has started   +\n"
 					"++++++++++++++++++++++++\n";
 
+		core.onVmStateChange.addHandler([this](vm::api::ProcStatus status) {
+			std::cout << "\n[VM state changed]\n";
+			std::cout << "The program is ";
+			std::visit(
+				[](auto&& arg) -> void {
+					using T = std::decay_t<decltype(arg)>;
+					std::cout << TypeParseTraits<T>::NAME.data() << "\n";
+				},
+				status
+			);
+			changeMode(status);
+		});
+
+		core.onVmExecutionPaused.addHandler([this](vm::api::response::CodePosition position) {
+			std::cout << "\n[VM execution paused]\n";
+			std::cout << "Paused on line " << position.instr_number << " of function '"
+					<< position.function_name.strView() << "'\n";
+		});
+
+		core.onVmExecutionCompleted.addHandler([this](vm::api::ExitValue exit_value) {
+			std::cout << "\n[VM execution completed]\n";
+			if (exit_value->type->getName() != base::StrID("i64"))
+				std::cout << "Program exited with non-i64 value\n";
+			else
+				std::cout << "Program exited with value: " << exit_value->readBytes<i64>() << "\n";
+		});
+
 		std::string line;
 		int         event_fd = core.getEventPipeReadFD();
 
@@ -54,17 +81,21 @@ namespace vm::debugger {
 				std::cout << "\n>>> ";
 				std::cout.flush();
 			}
+
 			int ret = poll(fds, std::size(fds), -1);
 			if (ret < 0) {
 				if (errno == EINTR) continue;
 				throw std::runtime_error("select() failed");
 			}
+
 			// VM event arrived
 			if (fds[1].revents & POLLIN) {
 				uint8_t byte;
 				read(event_fd, &byte, 1);
-				handleEvent();
-			}  // User typed something
+				core.getStatus();
+			}
+			
+			// User typed something
 			if (mode == Mode::Command && fds[0].revents & POLLIN) {
 				if (!std::getline(std::cin, line)) {
 					std::cout << "Exiting debugger\n";
@@ -72,14 +103,17 @@ namespace vm::debugger {
 				}
 				if (!handleLine(line)) break;
 			}
+
 			if (mode == Mode::Run && fds[0].revents & POLLIN) {
 				// TODO: handle input of vm
 			}
+
 			if (fds[2].revents & POLLIN) {
 				uint8_t b;
 				read(signal_pipe[0], &b, 1);
 				core.pause();
 			}
+
 			if (fds[3].revents & POLLIN) {
 				char buf[256];
 				std::cout << "\nVM wrote:\n";
@@ -95,15 +129,13 @@ namespace vm::debugger {
 		}
 	}
 
-	void DuckVMDebugCli::handleEvent() {
-		std::cout << "VM says:\n";
-		auto status = core.getStatus();
-		changeMode(status);
-	}
-
 	void DuckVMDebugCli::changeMode(vm::api::ProcStatus& status) {
 		auto target = modeFromStatus(status);
-		if (mode != target) setSigaction(mode = target);
+		
+		if (mode != target) {
+			mode = target;
+			setSigaction(mode == Mode::Run);
+		}
 	}
 
 	DuckVMDebugCli::Mode DuckVMDebugCli::modeFromStatus(vm::api::ProcStatus& status) {
@@ -185,13 +217,12 @@ namespace vm::debugger {
 		return true;
 	}
 
-	void DuckVMDebugCli::setSigaction(Mode& target) {
+	void DuckVMDebugCli::setSigaction(bool enable) {
 		struct sigaction custom_tstp;
+
 		sigemptyset(&custom_tstp.sa_mask);
-		if (target == Mode::Command)
-			custom_tstp.sa_handler = SIG_DFL;
-		else
-			custom_tstp.sa_handler = staticHandleTstp;
+
+		custom_tstp.sa_handler = enable ? staticHandleTstp : SIG_DFL;
 		custom_tstp.sa_flags = 0;
 
 		sigaction(SIGTSTP, &custom_tstp, nullptr);

@@ -156,14 +156,8 @@ namespace vm::debugger {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value()) {
 			vm::api::ProcStatus status = response.value();
-			std::cout << "The program is ";
-			std::visit(
-				[](auto&& arg) -> void {
-					using T = std::decay_t<decltype(arg)>;
-					std::cout << TypeParseTraits<T>::NAME.data() << "\n";
-				},
-				status
-			);
+
+			onVmStateChange.handleEvent(status);
 
 			if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
 				freeArguments(arguments);
@@ -171,17 +165,15 @@ namespace vm::debugger {
 
 				auto exitval = std::get<vm::api::ExecutionCompleted>(response.value()).exit_value;
 
-				if (exitval->type->getName() != base::StrID("i64")) throw BeRDWrongTypeException();
-
-				std::cout << "Ret: " << exitval->readBytes<i64>() << "\n";
+				onVmExecutionCompleted.handleEvent(exitval);
 			}
 			if (std::holds_alternative<vm::api::Paused>(response.value())) {
 				auto position_response = vm::api::getCurrentPosition(pid);
 				if (!position_response.has_value())
 					throw std::runtime_error("Failed to get current position");
 				vm::api::response::CodePosition position = position_response.value();
-				std::cout << "Paused on line " << position.instr_number << " of function nr "
-						<< position.function_id << "\n";
+
+				onVmExecutionPaused.handleEvent(position);
 			}
 			return status;
 		} else {

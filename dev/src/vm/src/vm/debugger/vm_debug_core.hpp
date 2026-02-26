@@ -1,5 +1,7 @@
 #pragma once
 
+#include <poll.h>
+
 #include <vm/api/vm.hpp>
 
 #include <istream>
@@ -13,6 +15,21 @@
 
 
 namespace vm::debugger {
+
+	template <typename... Args>
+	class EventHandle {
+		std::vector<std::function<void(Args...)>> handlers;
+
+	public:
+		void addHandler(std::function<void(Args...)> handler) { handlers.push_back(handler); }
+		void handleEvent(Args... args) {
+			for (const auto& handler : handlers) {
+				handler(args...);
+			}
+		}
+	};
+
+
 	class DuckVMDebugCore {
 	public:
 		using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
@@ -32,6 +49,10 @@ namespace vm::debugger {
 		OwnedArgumentList        arguments;
 
 	public:
+		EventHandle<vm::api::ProcStatus> onVmStateChange;
+		EventHandle<vm::api::response::CodePosition> onVmExecutionPaused;
+		EventHandle<vm::api::ExitValue> onVmExecutionCompleted;
+
 		static DuckVMDebugCore get(const fs::File& filepath, const std::vector<std::string>& args = {});
 
 		// DuckVMDebugCore(DuckVMDebugCore&&)                 = delete;

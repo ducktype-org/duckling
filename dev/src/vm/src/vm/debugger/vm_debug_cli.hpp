@@ -35,7 +35,7 @@ namespace vm::debugger {
 		Mode        modeFromStatus(vm::api::ProcStatus& status);
 		void        handleTstp(int signo);
 		static void staticHandleTstp(int signo);
-		void        setSigaction(Mode& target);
+		void        setSigaction(bool enable);
 
 	public:
 		using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
