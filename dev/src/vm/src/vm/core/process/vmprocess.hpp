@@ -15,8 +15,7 @@
 
 #include <condition_variable>
 #include <deque>
-#include <expected>
-#include <map>
+#include <expected>	
 #include <shared_mutex>
 #include <string>
 #include <variant>
@@ -55,7 +54,8 @@ namespace vm {
 		i64                         next_mutex_id  = 0;
 		u64                         operations     = 0;
 		const static u64            GIL_OPERATIONS = 10'000;
-		std::map<i64, std::shared_ptr<std::mutex>>
+
+		base::HashMap<i64, SharedBox<std::mutex>>
 			mutex_map;  // @TODO: #2109 Find better structure then map for storing mutexes.
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
@@ -222,7 +222,7 @@ namespace vm {
 		void releaseGil();
 		bool shouldReleaseGil();
 
-		std::shared_ptr<std::mutex> getMutex(i64 mutex_id);
+		SharedBox<std::mutex> 		getMutex(i64 mutex_id);
 		i64                         addMutex();
 		void                        removeMutex(i64);
 	};
