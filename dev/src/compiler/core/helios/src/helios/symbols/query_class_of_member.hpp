@@ -8,6 +8,9 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
+	// @TODO: #2111 This is a temporary solution. Refactor class members symbol data to be able to
+	// access the class directly from the symbol data, without having to go through the scope and
+	// PST element.
 	/**
 	 * @brief Query the class of a member symbol.
 	 * Panics if the given PST element is not a class member.

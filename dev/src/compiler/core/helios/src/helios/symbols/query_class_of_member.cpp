@@ -14,6 +14,9 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
+	// @TODO: #2111 This is a temporary solution. Refactor class members symbol data to be able to
+	// access the class directly from the symbol data, without having to go through the scope and
+	// PST element.
 	struct IMPLEMENT_QUERY(QueryClassOfMember, query::QResult<tsh::ClassAbstractType>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
