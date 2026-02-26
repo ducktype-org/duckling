@@ -1,6 +1,7 @@
 use crate::{QuackError, QuackResult, util_common::error::QuackMessage};
 
 /// Represents a type with a list of surpressed errors, which occured during some computation.
+#[derive(Debug)]
 pub struct GathererComputation<T>(pub T, pub Vec<QuackError>);
 /// Represents a type with a list of surpressed errors or a critical, not surpressed error.
 pub type GathererResult<T> = QuackResult<GathererComputation<T>>;

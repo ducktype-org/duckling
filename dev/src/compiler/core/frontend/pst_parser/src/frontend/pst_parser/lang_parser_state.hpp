@@ -33,12 +33,9 @@ namespace pst {
 
 	public:
 		LangParserState(
-			tpc::TokenStream&&       tokens,
-			Box<LangParserContext>&& ctx,
-			Ref<dia::Logger>         err,
-			Ref<dia_int::Logger>     int_err
+			tpc::TokenStream&& tokens, Box<LangParserContext>&& ctx, Ref<dia_int::Logger> int_err
 		):
-			  tpc::ParserState(std::move(tokens), std::move(ctx), err, int_err) {}
+			  tpc::ParserState(std::move(tokens), std::move(ctx), int_err) {}
 
 		/**
 		 * @brief Informs whether new errors and some parsing should be skipped till fallback is
@@ -132,15 +129,6 @@ namespace pst {
 			);
 			skipped_entries_depth--;
 			return skipped_entries_depth == 0;
-		}
-
-		void fail([[maybe_unused]] i64 rel_pos, [[maybe_unused]] const std::string& message)
-			override {
-			CORE_PANIC("old fail is unsupported for language parsing");
-		}
-
-		void log(Box<dia::Message>) override {
-			CORE_PANIC("old logger is unsupported for language parsing");
 		}
 
 		/**

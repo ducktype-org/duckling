@@ -348,16 +348,16 @@ impl GathererState {
         let requests = requests.clone();
         *state = QueryState::Done;
 
-        let expanded_locs: Vec<InternedExpandedLocation> = not_pinned_result
+        let expanded_locs: HashSet<InternedExpandedLocation> = not_pinned_result
             .fetched_manifests
             .keys()
             .map(|pkg| pkg.location)
             .collect();
-        if let Some(expanded_loc) = expanded_locs.first()
-            && expanded_locs.len() == 1
+        if expanded_locs.len() == 1
+            && let Some(expanded_loc) = expanded_locs.into_iter().next()
         {
             self.location_resolver
-                .insert(not_pinned_result.origin_location, *expanded_loc);
+                .insert(not_pinned_result.origin_location, expanded_loc);
             self.insert_manifests(not_pinned_result.fetched_manifests);
             self.complete_requests(requests)
         } else {
@@ -392,6 +392,10 @@ impl GathererState {
         manifests: impl IntoIterator<Item = (ExpandedPackage, Box<Manifest>)>,
     ) {
         for (pkg, manifest) in manifests.into_iter() {
+            self.versions_for_location
+                .entry(pkg.location)
+                .or_default()
+                .insert(pkg.version);
             self.pkgs_data.entry(pkg).or_insert_with(|| PackageData {
                 manifest,
                 requested_features: HashSet::new(),
@@ -514,14 +518,18 @@ impl GathererState {
         for feature in nonexistent_features.iter() {
             requested_features.remove(feature);
         }
-        if !nonexistent_features.is_empty() || !pkg_data.referenced_by_requests {
-            pkg_data.referenced_by_requests = true;
+        if !nonexistent_features.is_empty() {
             return Ok(GathererComputation::only_error(qp_err!(
                 "Package {pkg:?} does not have features {nonexistent_features:?}"
             )));
         }
-        pkg_data.requested_features.extend(requested_features);
-        pkg_data.dep_requests()
+        if !requested_features.is_empty() || !pkg_data.referenced_by_requests {
+            pkg_data.referenced_by_requests = true;
+            pkg_data.requested_features.extend(requested_features);
+            pkg_data.dep_requests()
+        } else {
+            Ok(GathererComputation::empty())
+        }
     }
 
     pub fn into_gathered_info(mut self) -> QuackResult<GatheredInfo> {
