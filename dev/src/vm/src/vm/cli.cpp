@@ -26,7 +26,6 @@ int cli() {
 }
 
 int cli(const fs::File& filepath, const std::vector<std::string>& args) {
-	dia_int::configureImmediatePrint(&std::cerr);
 	vm::PID pid{};
 
 	std::expected<i64, std::string> result
@@ -52,6 +51,8 @@ int cli(const fs::File& filepath, const std::vector<std::string>& args) {
 
 	if (result.has_value())
 		return base::safeIntConv<int>(result.value());
-	else
+	else {
+		std::cerr << result.error();
 		return 1;
+	}
 }
