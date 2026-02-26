@@ -44,7 +44,7 @@ private:
 		parseInvalidDbc(
 			"invalid_opcode.dbc",
 			{
-				"Given OpCode does not exist: mov_l46_imm",
+				"OpCode 'mov_l46_imm' does not exist.",
 			}
 		);
 	}

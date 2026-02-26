@@ -1,7 +1,5 @@
 #include "cli.hpp"
 
-#include <diagnostic_interactive/module_flags/module_flags.hpp>
-
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/api/api.hpp>

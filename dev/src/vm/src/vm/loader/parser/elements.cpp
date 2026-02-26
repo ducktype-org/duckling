@@ -420,7 +420,7 @@ namespace vm::loader::parser {
 					return out;
 				} else if (!logged) {
 					state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						base::strConcat("Given OpCode does not exist: ", identifier1.value),
+						base::strConcat("OpCode '", identifier1.value, "' does not exist."),
 						state.getPosition(-1)
 					));
 					logged = true;
@@ -475,7 +475,7 @@ namespace vm::loader::parser {
 				state.parse().one(lang_def::Special::Comma);
 			} else {
 				state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Expected comma or }.", state.getPosition()
+					"Expected comma or `}` after here.", state.getPosition()
 				));
 				state.tokens().skip();
 			}
@@ -560,7 +560,7 @@ namespace vm::loader::parser {
 			lexer::Token value = state.tokens().next();
 			if (!value.isNumLiteralGroup()) {
 				state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Expected a numeric literal after here. ", state.getPosition()
+					"Expected a numeric literal after here.", state.getPosition()
 				));
 			} else {
 				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
@@ -643,7 +643,7 @@ namespace vm::loader::parser {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
 					state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Expected comma or }.", state.getPosition()
+						"Expected comma or `}` after here.", state.getPosition()
 					));
 					state.tokens().skip();
 				}
@@ -674,7 +674,7 @@ namespace vm::loader::parser {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
 					state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Expected comma or }.", state.getPosition()
+						"Expected comma or `}` after here.", state.getPosition()
 					));
 					state.tokens().skip();
 				}
@@ -752,7 +752,7 @@ namespace vm::loader::parser {
 							break;
 						default:
 							state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-								"Encountered incorrect keyword.", state.getPosition()
+								"Unexpected keyword.", state.getPosition()
 							));
 							break;
 						}
@@ -780,7 +780,7 @@ namespace vm::loader::parser {
 							state.parse().one(lang_def::Special::Comma);
 						} else {
 							state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-								"Expected comma or }.", state.getPosition()
+								"Expected comma or `}` after here.", state.getPosition()
 							));
 							state.tokens().skip();
 						}
@@ -809,7 +809,7 @@ namespace vm::loader::parser {
 				}
 				default: {
 					state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Encountered incorrect keyword.", state.getPosition()
+						"Unexpected keyword.", state.getPosition()
 					));
 					return nullptr;
 				}
@@ -847,9 +847,9 @@ namespace vm::loader::parser {
 			break;
 		}
 		default: {
-			state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Expected variant of type.", state.getPosition()
-			));
+			state.logInt(
+				makeBox<dia_int::PlaceholderCodeError>("Expected a type.", state.getPosition())
+			);
 			break;
 		}
 		}
