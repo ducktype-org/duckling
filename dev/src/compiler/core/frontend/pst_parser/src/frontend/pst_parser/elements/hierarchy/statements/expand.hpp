@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../meta.hpp"
 #include "../../../lang_parser_context.hpp"
+#include "../meta.hpp"
 
 namespace pst {
 	/**
@@ -12,9 +12,12 @@ namespace pst {
 		NAMED_CHILD(value, CommaExprHolder);
 
 	public:
-		Expand(const dia::SourcePosition& position, CRef<LangParserContext> context): Stmt(StmtKind::Expand, position), context(makeBox<LangParserContext>(context)) {
+		Expand(const dia::SourcePosition& position, CRef<LangParserContext> context):
+			  Stmt(StmtKind::Expand, position),
+			  context(makeBox<LangParserContext>(context)) {
 			this->element_kind = ElementKind::Expand;
 		}
+
 		static MBox<Expand> parse(LangParserState& state);
 
 		~Expand() final = default;
