@@ -172,7 +172,7 @@ function(add_vm_variant suffix compile_def)
     
         set(exec_name "VM_${suffix}")
         add_executable(${exec_name} $<TARGET_OBJECTS:MainVM>)
-        target_link_libraries(${exec_name} PRIVATE ${lib_vm_name} "-Wl,--export-dynamic")
+        target_link_libraries(${exec_name} PRIVATE ${lib_vm_name})
     endif()
 
 endfunction()
