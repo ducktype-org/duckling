@@ -212,5 +212,4 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		base::Optional<ModuleAccessLocked> illegalAccess() const;
 	};
-
 }

@@ -716,7 +716,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 
 		// ================================================================================
