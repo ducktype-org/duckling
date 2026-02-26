@@ -17,7 +17,7 @@ namespace pst::expr {
 		explicit GeneralPrefix(const dia::SourcePosition& pos, Operator op):
 			  PrefixOperator(pos, op, 400) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~GeneralPrefix() override = default;
 	};

@@ -41,7 +41,7 @@ namespace pst::expr {
 
 		static MBox<ExprElement> parseRecursive(LangParserState& state, const BuilderExpr& expr);
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~GeneralBinary() override = default;
 	};

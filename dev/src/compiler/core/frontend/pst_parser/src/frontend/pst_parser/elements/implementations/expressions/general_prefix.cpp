@@ -4,15 +4,15 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> GeneralPrefix::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> GeneralPrefix::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
-		if (!state[0].isPrefixOperator()) return Lower::parse(state, length);
+		if (!state[0].isPrefixOperator()) return Lower::parse(state, state.ctokens().size());
 
 		auto out = makeBox<GeneralPrefix>(state.getPosition(), state[0].getValue());
 
 		state.parse(out).eatOne();
-		state.parse(out).with(&out->expr, parse, length - 1);
+		state.parse(out).with(&out->expr, parse);
 
 		PST_RETURN out;
 	}

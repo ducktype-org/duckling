@@ -11,7 +11,7 @@ namespace pst::expr {
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
-		if (!state[0].is(Keyword::Not)) return Lower::parse(state, length);
+		if (!state[0].is(Keyword::Not)) return Lower::parse(state);
 
 		auto out = makeBox<LogicNot>(pos);
 
