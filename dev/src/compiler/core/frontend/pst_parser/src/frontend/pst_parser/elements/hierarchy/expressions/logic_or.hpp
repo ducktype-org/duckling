@@ -15,7 +15,7 @@ namespace pst::expr {
 		explicit LogicOr(const dia::SourcePosition& position):
 			  BinaryOperator(position, lang_def::keywordToStr(lang_def::Keyword::Or), 760) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~LogicOr() override = default;
 	};

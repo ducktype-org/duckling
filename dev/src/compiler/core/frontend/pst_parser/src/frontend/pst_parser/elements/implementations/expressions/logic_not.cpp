@@ -4,8 +4,10 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> LogicNot::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> LogicNot::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		u64 length = state.ctokens().size();
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
@@ -14,7 +16,7 @@ namespace pst::expr {
 		auto out = makeBox<LogicNot>(pos);
 
 		state.parse(out).one(Keyword::Not);
-		state.parse(out).with(&out->expr, Self::parse, length - 1);
+		state.parse(out).with(&out->expr, Self::parse);
 
 		PST_RETURN out;
 	}

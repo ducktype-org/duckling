@@ -57,7 +57,7 @@ namespace pst::expr {
 				}
 			}
 		}
-		if (!if_found) return Lower::parse(state, length);
+		if (!if_found) return Lower::parse(state);
 		if (if_found && !else_found) {
 			state.logInt(makeBox<PartialTernaryError>(pos));
 			return nullptr;
@@ -66,15 +66,13 @@ namespace pst::expr {
 		auto out = makeBox<Ternary>(pos);
 
 		state.parse(out).one(Keyword::If);
-		state.parse(out).with(&out->condition, Lower::parse, then_fwd - 1);
+		state.parse(out).autoFallbackLen(then_fwd - 1).with(&out->condition, Lower::parse);
 
 		state.parse(out).one(Keyword::Then);
-		state.parse(out).with(&out->if_true, Lower::parse, else_fwd - then_fwd - 1);
+		state.parse(out).autoFallbackLen(else_fwd - then_fwd - 1).with(&out->if_true, Lower::parse);
 
 		state.parse(out).one(Keyword::Else);
-		state.parse(out).with(
-			&out->if_false, Lower::parse, base::safeIntConv<i64>(length) - else_fwd - 1
-		);
+		state.parse(out).autoFallbackLen(length - else_fwd - 1).with(&out->if_false, Lower::parse);
 		PST_RETURN out;
 	}
 
