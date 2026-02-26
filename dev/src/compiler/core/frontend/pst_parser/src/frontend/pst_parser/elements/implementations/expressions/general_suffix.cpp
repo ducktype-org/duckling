@@ -11,7 +11,9 @@ namespace pst::expr {
 
 		u64 length = state.ctokens().size();
 
-		auto out = makeBox<GeneralSuffix>(state.getPosition(), state[base::safeIntConv<i64>(length) - 1].getValue());
+		auto out = makeBox<GeneralSuffix>(
+			state.getPosition(), state[base::safeIntConv<i64>(length) - 1].getValue()
+		);
 
 		state.parse(out).autoFallbackLen(length - 1).with(&out->expr, parseRecursive, iter - 1);
 

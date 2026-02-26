@@ -12,8 +12,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> Atom::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> Atom::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		if (state[0].isKeyword()) {
 			return KeywordLiteral::parse(state, length);
@@ -33,7 +35,6 @@ namespace pst::expr {
 			state.logInt(makeBox<NoAtomError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
-			fastForward(state, length);
 			return nullptr;
 		}
 	}

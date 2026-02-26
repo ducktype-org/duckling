@@ -6,7 +6,11 @@
 namespace pst::expr {
 	i64 ComparisonChain::skipToOp(const LangParserState& state, i64 base) {
 		i64 fwd = base;
-		PST_WHILE(!state[fwd].is(Token::Type::Sentinel) && !ExprClassify::isComparison(state.ctokens(), fwd)) fwd++;
+		PST_WHILE(
+			!state[fwd].is(Token::Type::Sentinel)
+			&& !ExprClassify::isComparison(state.ctokens(), fwd)
+		)
+		fwd++;
 		return fwd;
 	}
 
@@ -14,7 +18,7 @@ namespace pst::expr {
 		if (!checkNonEmpty(state)) return nullptr;
 
 		u64 length = state.ctokens().size();
-		
+
 		i64 fwd = skipToOp(state, 0);
 		if (fwd == length) return Lower::parse(state);
 
