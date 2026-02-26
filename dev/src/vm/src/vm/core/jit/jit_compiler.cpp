@@ -107,7 +107,6 @@ vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
 	v_thread->setName("thread");
 
 	for (const vm::MicroInstruction& mi: func_data.bc) {
-		auto num = static_cast<uint64_t>(vm::getInstructionOpcode(mi));
 		llvm::Function* opfun      = llvmGetFun(vm::getInstructionOpcode(mi));
 		std::string     opfun_name = opfun->getName().str();
 
