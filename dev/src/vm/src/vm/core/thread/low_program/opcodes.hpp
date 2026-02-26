@@ -33,7 +33,7 @@ namespace vm::low {
 #undef HANDLE_MICRO_INSTR
 	};
 
-constexpr usize MICRO_INSTR_COUNT() {
+constexpr usize microInstrCount() {
     usize count = 0;
     #define HANDLE_MICRO_INSTR(instr) ++count;
     #include "micro_instruction_definitions.hpp"
@@ -41,7 +41,7 @@ constexpr usize MICRO_INSTR_COUNT() {
     return count;
 }
 
-constexpr std::array<const char*, MICRO_INSTR_COUNT()> OPCODE_NAMES = {{
+constexpr std::array<const char*, microInstrCount()> OPCODE_NAMES = {{
 #define HANDLE_MICRO_INSTR(opcode) #opcode,
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
