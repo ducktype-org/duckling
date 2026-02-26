@@ -88,6 +88,16 @@ namespace query::internal {
 			CORE_PANIC("getStrIDValue() called on non-StrID metadata type");
 			CORE_UNREACHABLE();
 		}
+
+		/**
+		 * @brief Pretty print the metadata for debugging.
+		 * @param os The output stream to print to.
+		 */
+		virtual void prettyPrint(std::ostream& os) const {
+			// Print that pretty print is not implemented for this type
+			os << "BaseMetadata (type: " << getTypeID().strView()
+			   << ") - prettyPrint not implemented.\n";
+		}
 	};
 
 	/**
@@ -171,6 +181,40 @@ namespace query::internal {
 		}
 
 		/**
+		 * @brief Add a metadata instance to a node only if no metadata of this type exists.
+		 *
+		 * Use this method when you know that for a given node you want only one metadata
+		 * instance of this type, but the same code path might be executed multiple times
+		 *
+		 * This is more efficient than checking hasMetadata() + addMetadata() separately,
+		 * and ensures atomicity of the check-and-add operation.
+		 *
+		 * @tparam MetadataT The metadata type (must derive from BaseMetadata and have TYPE_ID)
+		 * @tparam Args Argument types for constructing the metadata
+		 * @param node_id The NodeID to attach metadata to
+		 * @param args Arguments forwarded to MetadataT constructor
+		 * @return true if metadata was added, false if metadata of this type already exists
+		 */
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, BaseMetadata>
+		bool addMetadataIfNotExists(NodeID node_id, Args&&... args) {
+			TypeID type_id = MetadataT::TYPE_ID;
+
+			// Check if metadata of this type already exists
+			auto node_it = storage.atMaybe(node_id);
+			if (node_it.has_value()) {
+				auto& node_map = *node_it.value();
+				auto  type_it  = node_map.atMaybe(type_id);
+				if (type_it.has_value() && !type_it.value()->empty())
+					return false;  // Metadata already exists
+			}
+
+			// Add the metadata
+			addMetadata<MetadataT>(node_id, std::forward<Args>(args)...);
+			return true;
+		}
+
+		/**
 		 * @brief Get all metadata of a specific type for a node.
 		 *
 		 * @tparam MetadataT The metadata type to retrieve
@@ -198,6 +242,48 @@ namespace query::internal {
 				// Safe downcast - we know the type matches because we used type id as key
 				const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
 				result.push_back(CRef<MetadataT>(typed_ptr));
+			}
+
+			return result;
+		}
+
+		/**
+		 * @brief Structure to hold metadata with its associated NodeID.
+		 * @tparam MetadataT The metadata type.
+		 */
+		template<typename MetadataT>
+		struct MetadataInfo final {
+			NodeID          node_id;
+			CRef<MetadataT> value;
+		};
+
+		/**
+		 * @brief Get all metadata of a specific type from all nodes.
+		 *
+		 * Efficiently iterates through all nodes once, collecting metadata of the given type.
+		 *
+		 * @tparam MetadataT The metadata type to retrieve
+		 * @return std::vector<MetadataInfo<MetadataT>> Metadata with associated NodeIDs.
+		 *         Returns empty vector if no metadata of this type exists.
+		 */
+		template<typename MetadataT>
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
+		std::vector<MetadataInfo<MetadataT>> getMetadataFromAllNodes() const {
+			std::vector<MetadataInfo<MetadataT>> result;
+			TypeID                               type_id = MetadataT::TYPE_ID;
+
+			// Single pass through all nodes
+			for (const auto& [node_id, node_map]: storage) {
+				auto type_it = node_map.atMaybe(type_id);
+				if (!type_it.has_value()) continue;
+
+				const auto& type_vec = *type_it.value();
+				for (const auto& metadata_ptr: type_vec) {
+					// Safe downcast - we know the type matches because we used type id as key
+					const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
+					result.push_back(MetadataInfo<MetadataT>{
+						.node_id = node_id, .value = CRef<MetadataT>(typed_ptr) });
+				}
 			}
 
 			return result;
@@ -320,6 +406,12 @@ namespace query::internal {
 		 * @return MetadataStorage The deserialized storage
 		 */
 		static MetadataStorage deserialize(std::span<const std::byte> data);
+
+		/**
+		 * @brief Pretty print the metadata storage for debugging.
+		 * @param os The output stream to print to.
+		 */
+		void prettyPrint(std::ostream& os) const;
 	};
 
 }  // namespace query
