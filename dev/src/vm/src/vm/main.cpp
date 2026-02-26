@@ -1,6 +1,6 @@
 #include "cli.hpp"
+#include "debugger/vm_debug_cli.hpp"
 #include "server.hpp"
-#include "vm_debug_cli.hpp"
 #include "vm_repl.hpp"
 
 #include <clah/clah.hpp>
@@ -85,7 +85,7 @@ clah::Clah getVmClah() {
 							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
 								   args.push_back(*options.getExtra<std::string>(argc));
 
-							   DuckVMDebugCli::get(file, args).run();
+							   vm::debugger::DuckVMDebugCli::get(file, args).run();
 							   return 0;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
