@@ -45,6 +45,6 @@ namespace vm::low {
 #define HANDLE_MICRO_INSTR(opcode) #opcode,
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
-	} };
+	}};
 
 }
