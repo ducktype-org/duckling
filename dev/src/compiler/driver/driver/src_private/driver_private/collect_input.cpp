@@ -78,9 +78,9 @@ namespace compiler::driver {
 	 * - Module side inputs for all modules in the package.
 	 * - File side inputs for all source files in the package.
 	 * - PST access side inputs for all PST elements in the package.
-	 * - Source file count and submodule count side inputs for all modules.
+	 * - Source file count and submodule count side inputsW for all modules.
 	 * - Module child side inputs for all module lookups performed in the previous compilation, that
-	 * are still valid in the current module tree.
+	 * 	 are still valid in the current module tree.
 	 */
 	static void collectFromModule(
 		const LookupsMap&                                  lookups_map,

@@ -16,7 +16,7 @@ namespace compiler::frontend {
 	IMPLEMENT_QUERY_SIDE_INPUT(QuerySourceFileCountSideInput);
 	IMPLEMENT_QUERY_SIDE_INPUT(QuerySubmoduleCountSideInput);
 
-	IMPLEMENT_QUERY_SIDE_INPUT_WITH_PROVIDE(QueryModuleChildSideInput, ctx, key, {
+	IMPLEMENT_QUERY_SIDE_INPUT_WITH_LOGIC(QueryModuleChildSideInput, ctx, key, {
 		ctx.addMetadataIfNotExists<metadata_ModuleLookup>(key);
 	});
 
@@ -134,6 +134,15 @@ namespace compiler::frontend {
 
 		KeyOf_ModuleChildSideInput lookup_data;
 		usize                      offset = 0;
+
+		// @TODO: #1942
+		// ...
+		// It would be better to have this be done in more controlled manner,
+		// such that, if the HashType changes it will still work or produce a compilation error.
+		// I would assume this could just call some kind of deser::deserialize(...)
+		// which would propagate the call to appropriate case or give a compilation error that the
+		// given type is not deserializable. This applies in more general way to this whole function.
+
 		std::memcpy(&lookup_data.parent_hash, data.data(), sizeof(hashing::ComponentHash::HashType));
 		offset += sizeof(hashing::ComponentHash::HashType);
 		usize len = 0;

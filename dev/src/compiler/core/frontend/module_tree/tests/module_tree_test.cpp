@@ -41,7 +41,9 @@ namespace {
 		throw std::out_of_range("Submodule not found");
 	}
 
-	ModuleAccessLocked getSubmodule(const SubmodulesAccessLocked& submodules, base::StrID name) {
+	ModuleAccessLocked getSubmoduleIllegal(
+		const SubmodulesAccessLocked& submodules, base::StrID name
+	) {
 		return getSubmodule(submodules.illegalAccess(), name);
 	}
 }
@@ -766,7 +768,7 @@ private:
 		// Ensure submodule hashes differ from parent and from each other
 		auto sub1   = getSubmodule(mt1->getSubmodules().illegalAccess(), base::StrID("sub1"));
 		auto sub2   = getSubmodule(mt1->getSubmodules().illegalAccess(), base::StrID("sub2"));
-		auto subsub = getSubmodule(getRef(sub1)->getSubmodules(), base::StrID("subsub"));
+		auto subsub = getSubmoduleIllegal(getRef(sub1)->getSubmodules(), base::StrID("subsub"));
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(

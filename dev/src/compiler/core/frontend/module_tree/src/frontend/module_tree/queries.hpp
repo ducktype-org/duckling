@@ -72,13 +72,6 @@ namespace compiler::frontend {
 
 
 	/**
-	 * @brief Returns the parse tree of a source file.
-	 * \parallel reads file content and creates PST; PST creation must be thread-safe;
-	 */
-	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id);
-
-
-	/**
 	 * @brief Side input query for module dependency.
 	 * Key is ModuleID.
 	 * It registers a dependency on the module when some query needs to access it.
@@ -112,6 +105,12 @@ namespace compiler::frontend {
 	 * @note This metadata is added during the provide call of QueryModuleChildSideInput query
 	 */
 	DECLARE_METADATA(ModuleLookup, KeyOf_ModuleChildSideInput);
+
+	/**
+	 * @brief Returns the parse tree of a source file.
+	 * \parallel reads file content and creates PST; PST creation must be thread-safe;
+	 */
+	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id);
 
 	/**
 	 * @brief Returns ModuleID

@@ -44,10 +44,8 @@ namespace compiler::frontend {
 		}
 
 		// second step: follow children
-		base::Optional<ModuleAccessLocked> maybe_child2;
-
 		for (usize i = 1; i < path.size() and current_module.has_value(); i++) {
-			maybe_child2
+			auto maybe_child2
 				= getModuleRef(current_module.value())->getSubmoduleByName(path.at(i)).unlock(ctx);
 			if (maybe_child2.has_value())
 				current_module = maybe_child2.value().unlock(ctx).getID();
