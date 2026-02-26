@@ -99,7 +99,7 @@ namespace vm {
 		std::condition_variable pause_cv;
 
 		/**
-		 * @brief Do I have GIL?
+		 * @brief True if a thread currently occupies GIL.
 		 */
 		bool has_gil = false;
 
