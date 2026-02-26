@@ -7,8 +7,6 @@
 
 	#include <vm/core/thread/low_program/instruction.hpp>
 
-	#include <iostream>
-
 LLVM_INCLUDE_BEGIN()
 
 	#include <llvm/ExecutionEngine/Orc/LLJIT.h>

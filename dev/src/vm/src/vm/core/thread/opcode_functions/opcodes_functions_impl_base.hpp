@@ -47,7 +47,6 @@
 #include <vm/utils/interpret.hpp>
 
 #include <cmath>
-#include <iostream>
 #include <limits>
 #include <type_traits>
 
