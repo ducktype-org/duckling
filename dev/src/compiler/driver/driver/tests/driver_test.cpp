@@ -202,7 +202,11 @@ private:
 			driver::compileEntirePackage(
 				package_info,
 				driver::BackendType::LLVM,
-				{ .external_static_libraries = {}, .link_c_standard_library = true }
+				{
+					.linker_path             = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				}
 			);
 		}
 
@@ -475,7 +479,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 
 		auto exe_path = artifacts_path / "package_llvm.exe";
@@ -487,7 +495,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::DVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 	}
 
@@ -582,7 +594,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 
 		// Get root module ID
