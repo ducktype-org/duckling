@@ -86,6 +86,7 @@ namespace compiler::helios::code {
 				  { { base::StrID("-"), tsh::Kind::Integral }, BuiltinBinary::IntegerSub },
 				  { { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
+				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
 				  { { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerPow },
 
 				  /// Integer comparisons ///
@@ -101,6 +102,7 @@ namespace compiler::helios::code {
 				  { { base::StrID("-"), tsh::Kind::Float }, BuiltinBinary::FloatSub },
 				  { { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
 				  { { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
+				  { { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
 				  { { base::StrID("**"), tsh::Kind::Float }, BuiltinBinary::FloatPow },
 
 				  /// Floating point comparisons ///
@@ -152,20 +154,6 @@ namespace compiler::helios::code {
 		};
 
 		ops = std::vector<SymID>{};
-
-		/// Integer modulo ///
-		const std::vector<usize> sizes{ 8, 16, 32, 64, 128 };
-		const std::vector        signednesses{ Signedness::Signed, Signedness::Unsigned };
-		for (auto size: sizes) {
-			for (auto signedness: signednesses) {
-				const auto int_type = tsh::SymbolType<>{
-					tsh::getIntegralType(ctx, size, signedness ),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable,
-				};
-				ops->push_back(builtin_op(base::StrID("%"), { int_type, int_type }, int_type));
-			}
-		}
 
 		/// Meta comparisons ///
 		for (const auto name: std::vector{ base::StrID("=="), base::StrID("!=") }) {

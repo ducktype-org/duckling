@@ -27,13 +27,6 @@ namespace compiler::helios::houtgen {
 		const auto right_kind = rhs->expression_type.getType().getKind();
 		using enum tsh::Kind;
 
-		/// Integer modulo ///
-		if (op_name == base::StrID("%") && left_kind == Integral && right_kind == Integral) {
-			return makeBox<code::BinaryOperatorExpr>(
-				ctx, call_origin, code::BuiltinBinary::IntegerMod, std::move(lhs), std::move(rhs)
-			);
-		}
-
 		/// Meta comparison ///
 		if (left_kind == Meta && right_kind == Meta) {
 			static const base::Map<base::StrID, code::BuiltinBinary> name_to_op{

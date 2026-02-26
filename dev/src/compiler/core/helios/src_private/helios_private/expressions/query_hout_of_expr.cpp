@@ -197,9 +197,8 @@ namespace compiler::helios::code {
 
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
-				// In particular, `%` is not included, as it work on integers only.
 				const std::set<std::string> numeric_ops
-					= { "+", "-", "*", "/", "**", "<", "<=", ">", ">=", "==", "!=" };
+					= { "+", "-", "*", "/", "%", "**", "<", "<=", ">", ">=", "==", "!=" };
 				return numeric_ops.contains(op.str());
 			}
 
@@ -270,7 +269,6 @@ namespace compiler::helios::code {
 				for (const auto builtin_operator: *getRegularBinaryBuiltinSymbols(ctx))
 					if (name(builtin_operator) == op.value)
 						all_candidates.push_back(builtin_operator);
-				auto is_mod = op.value == "%";
 				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
 				    .valueOrThrow();
 			}
