@@ -9,12 +9,6 @@ constexpr char object_file[] = {
     suffix(,)
 };
 
-constexpr char test [] = {
-#embed "data" \
-    suffix(,)
-0
-};
-
 struct LLVM_nm_data {
 	const char* name;
 	const char* type;
@@ -23,12 +17,10 @@ struct LLVM_nm_data {
 };
 
 LLVM_nm_data llvm_nm_data[] {
-#include "data.nm"
+#include "data-nm"
 };
 
 int main() {
-    std::cerr << test << sizeof(object_file) << std::endl;
-
     for (char c : object_file) {
         std::cerr << std::hex << (int)(unsigned char)c << ' ';
     }
