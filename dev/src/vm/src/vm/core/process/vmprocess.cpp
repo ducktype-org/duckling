@@ -442,13 +442,13 @@ namespace vm {
 		return false;
 	}
 
-	std::shared_ptr<std::mutex> VMProcess::getMutex(i64 mutex_id) {
+	SharedBox<std::mutex> VMProcess::getMutex(i64 mutex_id) {
 		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
 		return mutex_map.at(mutex_id);
 	}
 
 	i64 VMProcess::addMutex() {
-		mutex_map[next_mutex_id] = std::make_shared<std::mutex>();
+		mutex_map[next_mutex_id] = base::makeSharedBox<std::mutex>();
 		return next_mutex_id++;
 	}
 
