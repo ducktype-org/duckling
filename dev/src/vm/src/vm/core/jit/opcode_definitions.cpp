@@ -61,8 +61,6 @@ namespace {
 	}
 }
 
-// Pewnie powinien przyjmowac context w argumencie, ale na razie ta funkcje idzie do api i ma byc
-// niezalenza od llvm
 void llvmInit() {
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
@@ -88,20 +86,13 @@ void llvmInit() {
 
 	for (auto& F: g_module->functions()) {
 		if (!F.isDeclaration()) {
-			//  Here I assume that demangling works for opcodes. Maybe use itaniumDemangle?
 			auto demangled = llvm::demangle(F.getName().str());
-			// One opcode doesn't have op prefix but it is marked to be deleted.
 			if (demangled.starts_with("vm::OpFuns::op_")
 			    and !demangled.starts_with("vm::OpFuns::op_debug")) {
 				auto name   = extractFunctionName(demangled);
 				name        = name.substr(3);  // delete op_
 				auto opcode = getOpcode(name);
-				if (func_map.contains(opcode)) {
-					// CORE_PANIC("Duplicate opcode function name: ", name);
-				} else {
-					// Sanity check, that instructions sizes make sense.
-					func_map[opcode] = &F;
-				}
+				func_map[opcode] = &F;
 			}
 		}
 	}

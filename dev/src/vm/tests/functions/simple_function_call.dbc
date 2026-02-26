@@ -1,26 +1,23 @@
-	function check {i64} -> void {
-		output_l64          arg0;
-		init_lany_type a, i64;
-		mov_l64_imm a, 10;
-		mul_l64_imm a, 2;
-		sub_l64_imm a, 1;
-		mov_l64_l64 a, a;
-		deinit;
-		deinit;
-		ret;
-	}
+# Tests a simple function call.
+# input = n
+# output = n
 
-	function main { i64, ptr_argv } -> i64 {
-		# ret_val -> main ret_val
-		# arg0 -> argc
-		# arg1 -> *argv
+function check { i64 } -> void {
+	output_l64          arg0;
+	ret;
+}
 
-		init_lany_type 		check_arg0, i64;
-		input_l64           check_arg0;
-		call_func          	check;
+function main { i64, ptr_argv } -> i64 {
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
-		mov_l64_imm			ret_val, 42;
-		deinit; # *argv
-		deinit; # argc
-		ret;
-	}
+	init_lany_type 		check_arg0, i64;
+	input_l64           check_arg0;
+	call_func          	check;
+
+	mov_l64_imm			ret_val, 42;
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}
