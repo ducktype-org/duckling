@@ -859,12 +859,12 @@ namespace compiler::frontend {
 					module_tree->getMainSourceFile().illegalAccess().getID()
 				)
 					->getPST();
-			for (const auto& file: module_tree->getSourceFiles())
+			for (const auto& file: module_tree->getSourceFiles().illegalAccess())
 				GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					file.illegalAccess().getID()
 				)
 					->getPST();
-			for (const auto& submodule: module_tree->getSubmodules())
+			for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
 				self(self, submodule.illegalAccess().getID());
 		};
 		parse_all_files(parse_all_files, module_id);

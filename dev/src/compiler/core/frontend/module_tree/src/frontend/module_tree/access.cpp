@@ -135,7 +135,7 @@ namespace compiler::frontend {
 		KeyOf_ModuleChildSideInput lookup_data;
 		usize                      offset = 0;
 
-		// @TODO: #1942
+		// @TODO: #1942 fix this
 		// ...
 		// It would be better to have this be done in more controlled manner,
 		// such that, if the HashType changes it will still work or produce a compilation error.
