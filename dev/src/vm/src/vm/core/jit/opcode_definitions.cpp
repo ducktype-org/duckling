@@ -26,6 +26,8 @@ LLVM_INCLUDE_END()
 using namespace llvm;
 using namespace llvm::orc;
 
+// char[] is better than std::array, because we don't know the size.
+// NOLINTBEGIN
 inline constexpr char OPCODES[] = {
 #ifdef USE_TAIL_CALLS
 	#embed "src/vm/common_tc.bc"
@@ -33,6 +35,7 @@ inline constexpr char OPCODES[] = {
 	#embed "src/vm/common_sc.bc"
 #endif
 };
+// NOLINTEND
 
 static std::unique_ptr<LLVMContext>                              g_context;
 static std::unique_ptr<Module>                                   g_module;
