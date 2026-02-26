@@ -36,16 +36,23 @@ function(process_to_binary source_file)
     find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
     find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
 
+    set(flto "")
+    if(ENABLE_LINK_TIME_OPTIMIZATION)
+        set(flto "-flto")
+    endif()
 
     add_custom_command(
         OUTPUT ${linked_out}
-        COMMAND ${CMAKE_LINKER} -r -Bsymbolic-functions $<TARGET_OBJECTS:${source_file_stem} -o ${linked_out}
+        COMMAND ${CMAKE_CXX_COMPILER} -r ${flto} -Bsymbolic-functions $<TARGET_OBJECTS:${source_file_stem}-compiled> -o ${linked_out}
         DEPENDS ${source_file_stem}-compiled
     )
     add_custom_command(
         OUTPUT ${nm_out}
-        COMMAND nmer ${LLVM_NM}
-        DEPENDS ${source_file_stem}-compiled
+        COMMAND
+            sh -c
+            "\"${LLVM_NM}\" -S --demangle --format=posix \"${linked_out}\" | awk 'NF >= 4 { print \"{ .name =\\\"\" $1 \"\\\", .type = \\\"\" $2 \"\\\", .place = 0x\" $3 \", .size = 0x\" $4 \"},\" }' > \"${nm_out}\""
+        DEPENDS ${linked_out}
+        VERBATIM
     )
     add_custom_command(
         OUTPUT ${text_out}
