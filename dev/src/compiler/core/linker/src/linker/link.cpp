@@ -34,7 +34,7 @@ namespace compiler::linker {
 		command.addArg("-o");
 		command.addArg(output.file.getFilePath().native());
 
-		CORE_USER_LOG("[?/?] Linking executable: ", output.file.getFilePath().name(), "\n");
+		CORE_USER_LOG("Linking executable: ", output.file.getFilePath().name(), "\n");
 
 		command.execute();
 	}

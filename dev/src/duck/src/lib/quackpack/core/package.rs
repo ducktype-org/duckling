@@ -1,7 +1,4 @@
-use crate::{
-    DuckCtx,
-    quackpack::{core::Manifest, schemas::manifest::Manifest as ManifestSchema},
-};
+use crate::quackpack::{core::Manifest, schemas::manifest::Manifest as ManifestSchema};
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -21,7 +18,6 @@ impl Package {
         manifest: Manifest,
         root: PathBuf,
         manifest_path: PathBuf,
-        warnings: Vec<String>,
     ) -> Self {
         Self {
             inner: Arc::new(PackageInner {
@@ -30,7 +26,6 @@ impl Package {
                 manifest,
                 root,
                 manifest_path,
-                warnings,
             }),
         }
     }
@@ -58,12 +53,6 @@ impl Package {
     pub fn manifest_path(&self) -> &Path {
         &self.inner.manifest_path
     }
-
-    pub fn emit_warnings(&self, ctx: &DuckCtx) {
-        for warning in self.inner.warnings.iter() {
-            ctx.error_console().warning(warning);
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -73,7 +62,6 @@ struct PackageInner {
     manifest: Manifest,
     root: PathBuf,
     manifest_path: PathBuf,
-    warnings: Vec<String>,
 }
 
 #[cfg(test)]

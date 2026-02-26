@@ -332,7 +332,6 @@ fn parent_features_to_consider<'a>(
 mod test {
     use std::path::PathBuf;
 
-    use rustvil::fs::PathExt;
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
@@ -342,6 +341,7 @@ mod test {
             parse_manifest,
             types_common::{ExpandedLocation, Location},
         },
+        util_common::path_ops_ext::PathOpsExt,
     };
 
     use super::*;

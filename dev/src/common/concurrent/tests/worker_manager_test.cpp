@@ -19,12 +19,13 @@ class WorkerManagerTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		setWorkerCount(4);
 		TESTER_ADD_TEST(basicFunctionalityTest);
 		TESTER_ADD_TEST(taskPoolFibonacciTest);
 	}
 
 protected:
+	void beforeAll() override { setWorkerCount(4); }
+
 	void fail(std::string_view err, bool critical = true) override {
 		concurrent::runOrTimeout(WorkerManager::get().testPrivateAccessReloadState, [&] {
 			message(

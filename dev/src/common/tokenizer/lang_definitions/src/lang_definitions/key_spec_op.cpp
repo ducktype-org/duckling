@@ -95,6 +95,7 @@ namespace lang_def {
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
 			{ Keyword::As, "as", KeywordFlags() },
+			{ Keyword::Hides, "hides", KeywordFlags() },
 			{ Keyword::In, "in", KeywordFlags() },
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
 

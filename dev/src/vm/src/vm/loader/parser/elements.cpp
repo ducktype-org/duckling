@@ -153,8 +153,8 @@ namespace vm::loader::parser {
 				number.remove_prefix(2);
 			}
 
-			T           result;
-			usize       pos = 0;
+			T           result = 0;
+			usize       pos    = 0;
 			std::string str(number);
 			try {
 				if (!suffix.empty()) {  // Type specifier exists.
