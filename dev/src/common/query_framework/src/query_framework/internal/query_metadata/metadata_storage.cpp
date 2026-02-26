@@ -255,4 +255,20 @@ namespace query::internal {
 		return storage;
 	}
 
+	void MetadataStorage::prettyPrint(std::ostream& os) const {
+		os << "MetadataStorage with " << storage.size() << " nodes:\n";
+		for (const auto& [node_id, type_map]: storage) {
+			os << "  NodeID(q_id=" << node_id.q_id.getData().name << ", hash=" << node_id.hash.val
+			   << "):\n";
+			for (const auto& [type_id, metadata_vec]: type_map) {
+				os << "    TypeID: " << type_id.strView() << " (" << metadata_vec.size()
+				   << " instances)\n";
+				for (const auto& metadata: metadata_vec) {
+					os << "      - ";
+					metadata->prettyPrint(os);
+				}
+			}
+		}
+	}
+
 }  // namespace query

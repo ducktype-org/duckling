@@ -499,6 +499,13 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
+			void visitFor(pst::Access<pst::For>) override {
+				// Scope of "for →(...)← {}"
+				// @TODO: #2096 add for loop variables to the scope
+				// and add them here.
+				output(std::vector<SymID>{});
+			}
+
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
 				output(std::vector<SymID>{});
 			}

@@ -215,7 +215,7 @@ private:
 					}
 				}
 			)",
-			{ "no explicit return type and inconsistent returns" },
+			{ "no explicit return type and inconsistent return statements" },
 			1
 		);
 
@@ -229,6 +229,7 @@ private:
 			{ "Left side of assignment can't be immutable." },
 			1
 		);
+
 
 		checkForErrorOnCompileModule(
 			R"(
@@ -303,6 +304,64 @@ private:
 			1
 		);
 
+		// ============================ Static Arrays ============================
+		checkForErrorOnCompileModule(
+			R"(
+				fun main(n: u64) = {
+					var arr: i32[n];
+				}
+			)",
+			{ "Expression cannot be evaluated at compile-time." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const ARR_TYPE = i32[10.5];
+			)",
+			{ "Type `f32` cannot be converted to type `const u64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const ARR_TYPE = i32[-2];
+			)",
+			{ "Value cannot be converted to type `const u64` at compile-time." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var arr: i32[5];
+					var x = arr[1, 2];
+				}
+			)",
+			{ "Array index/size must be exactly one expression" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var arr: i32[5];
+					arr["index"] = 1;
+				}
+			)",
+			{ "Type `string` cannot be converted to type `const i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const NOT_A_TYPE = 10;
+				const ARR = NOT_A_TYPE[5];
+			)",
+			{ "Index operator base must be indexable." },
+			1
+		);
+
 
 		// =========================== Not-yet-implemented errors ==========================
 		// Note: just remove the tests when the features are implemented.
@@ -316,6 +375,72 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "Suffix" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						break;
+					}
+				}
+			)",
+			{ "Feature not implemented", "break" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						continue;
+					}
+				}
+			)",
+			{ "Feature not implemented", "continue" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					defer 1;
+				}
+			)",
+			{ "Feature not implemented", "defer" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						redo;
+					}
+				}
+			)",
+			{ "Feature not implemented", "redo" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					for (i in 0) { }
+				}
+			)",
+			{ "Feature not implemented", "for" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					fun foo() = 0;
+				}
+			)",
+			{ "Feature not implemented", "Nested", "function" },
 			1
 		);
 	}
