@@ -235,15 +235,25 @@ namespace compiler::helios::code {
 
 	void ReusableExpr::debugPrint(std::ostream& out) const {
 		if (first_use) {
-			out << "[tmp " << inner->getID().asInt() << "] ";
+			out << "[tmp " << inner->getID().asInt() << "](";
 			inner->debugPrint(out);
+			out << ")";
 		} else {
 			out << "[reuse " << inner->getID().asInt() << "]";
 		}
 	}
 
 	Box<Expr> ReusableExpr::clone() const {
-		auto inner_cloned = SharedBox(inner->clone());
+		// @TODO: #??? Remove this static map and find a better way to track reused subexpressions.
+		static base::HashMap<HOUTExprID, SharedBox<Expr>> inner_id_to_cloned;
+
+		auto inner_cloned = [&] -> SharedBox<Expr> {
+			auto inner_id = inner->getID();
+			if (!inner_id_to_cloned.contains(inner_id))
+				inner_id_to_cloned.put(inner_id, inner->clone());
+			return inner_id_to_cloned.at(inner_id);
+		}();
+
 		return makeBox<ReusableExpr>(inner_cloned, first_use);
 	}
 

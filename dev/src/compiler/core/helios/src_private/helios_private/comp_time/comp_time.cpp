@@ -159,43 +159,50 @@ namespace compiler::helios {
 									LhsNumT rhs_val = maybe_rhs_val.value();
 
 									using ResultT = LhsNumT;
-									ResultT result;
+									CompileTimeValue result;
+									auto set_bool_result = [&result](const bool bool_result) {
+										result = CompileTimeValue{ bool_result };
+									};
+									auto set_num_result = [&result](const ResultT num_result) {
+										result = CompileTimeValue{ NumericValue{ num_result } };
+									};
+
 									switch (expr.operation) {
 									case IntegerLt:
 									case FloatLt:
-										result = lhs_val < rhs_val;
+										set_bool_result(lhs_val < rhs_val);
 										break;
 									case IntegerLteq:
 									case FloatLteq:
-										result = lhs_val <= rhs_val;
+										set_bool_result(lhs_val <= rhs_val);
 										break;
 									case IntegerGt:
 									case FloatGt:
-										result = lhs_val > rhs_val;
+										set_bool_result(lhs_val > rhs_val);
 										break;
 									case IntegerGteq:
 									case FloatGteq:
-										result = lhs_val >= rhs_val;
+										set_bool_result(lhs_val >= rhs_val);
 										break;
 									case IntegerEq:
 									case FloatEq:
-										result = lhs_val == rhs_val;
+										set_bool_result(lhs_val == rhs_val);
 										break;
 									case IntegerNeq:
 									case FloatNeq:
-										result = lhs_val != rhs_val;
+										set_bool_result(lhs_val != rhs_val);
 										break;
 									case IntegerAdd:
 									case FloatAdd:
-										result = lhs_val + rhs_val;
+										set_num_result(lhs_val + rhs_val);
 										break;
 									case IntegerSub:
 									case FloatSub:
-										result = lhs_val - rhs_val;
+										set_num_result(lhs_val - rhs_val);
 										break;
 									case IntegerMul:
 									case FloatMul:
-										result = lhs_val * rhs_val;
+										set_num_result(lhs_val * rhs_val);
 										break;
 									case IntegerDiv:
 									case FloatDiv:
@@ -207,7 +214,7 @@ namespace compiler::helios {
 											));
 											return query::Failed();
 										}
-										result = lhs_val / rhs_val;
+										set_num_result(lhs_val / rhs_val);
 										break;
 									case IntegerMod:
 									case FloatMod:
@@ -220,13 +227,15 @@ namespace compiler::helios {
 											return query::Failed();
 										}
 										if constexpr (std::is_integral_v<ResultT>)
-											result = lhs_val % rhs_val;
+											set_num_result(lhs_val % rhs_val);
 										else
-											result = std::fmod(lhs_val, rhs_val);
+											set_num_result(std::fmod(lhs_val, rhs_val));
 										break;
 									case IntegerPow:
 									case FloatPow:
-										result = static_cast<ResultT>(std::pow(lhs_val, rhs_val));
+										set_num_result(
+											static_cast<ResultT>(std::pow(lhs_val, rhs_val))
+										);
 										break;
 									default:
 										throw base::NotYetImplemented(
@@ -234,7 +243,7 @@ namespace compiler::helios {
 										);
 									}
 
-									return CompileTimeValue{ NumericValue{ result } };
+									return result;
 								},
 								lhs.getStorage()
 							);
@@ -242,10 +251,14 @@ namespace compiler::helios {
 					                         && std::is_same_v<RhsT, bool>) {
 							using enum code::BuiltinBinary;
 							switch (expr.operation) {
-							case code::BuiltinBinary::BooleanAnd:
+							case BooleanAnd:
 								return CompileTimeValue{ lhs && rhs };
-							case code::BuiltinBinary::BooleanOr:
+							case BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
+							case IntegerEq:
+								return CompileTimeValue{ lhs == rhs };
+							case IntegerNeq:
+								return CompileTimeValue{ lhs != rhs };
 							default:
 								throw base::NotYetImplemented("Other binary operators for bool type"
 							    );
@@ -652,7 +665,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates a HOUT expression using TreeEval.
 		 * @return The calculated result represented by CompileTimeValue, a CouldNotShortPath
-		 * error if the expresion was to complicated for tree eval or a Failed error.
+		 * error if the expression was too complicated for tree eval or a Failed error.
 		 */
 		static auto evaluateWithTreeEval(query::Context& ctx, CRef<code::Expr> expr)
 			-> TreeEvalResult {

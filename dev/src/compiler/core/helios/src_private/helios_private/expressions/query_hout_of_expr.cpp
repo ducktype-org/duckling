@@ -270,6 +270,7 @@ namespace compiler::helios::code {
 				for (const auto builtin_operator: *getRegularBinaryBuiltinSymbols(ctx))
 					if (name(builtin_operator) == op.value)
 						all_candidates.push_back(builtin_operator);
+				auto is_mod = op.value == "%";
 				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
 				    .valueOrThrow();
 			}
