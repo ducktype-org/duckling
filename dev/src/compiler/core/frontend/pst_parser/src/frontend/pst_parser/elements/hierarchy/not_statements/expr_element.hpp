@@ -20,6 +20,11 @@ namespace pst {
 		 */
 		static bool checkLength(LangParserState& state, i64 length);
 
+		/**
+		 * @brief Sanity check of non-emptyness length.
+		 */
+		static bool checkNonEmpty(LangParserState& state);
+
 		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
 			  NotStmt(position),
 			  PRECEDENCE(precedence) {

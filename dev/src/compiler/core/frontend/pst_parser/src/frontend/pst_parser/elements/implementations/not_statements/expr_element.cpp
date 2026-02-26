@@ -20,4 +20,13 @@ namespace pst {
 			CORE_PANIC("Internal error too long expression\n");
 		return true;
 	}
+
+	bool ExprElement::checkNonEmpty(LangParserState& state) {
+		if (state.ctokens().size() == 0) {
+			// Empty expression error
+			state.logInt(makeBox<EmptyExprError>(state.getPosition()));
+			return false;
+		}
+		return true;
+	}
 }

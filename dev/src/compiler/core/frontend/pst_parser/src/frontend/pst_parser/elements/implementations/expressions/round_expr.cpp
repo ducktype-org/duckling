@@ -21,7 +21,7 @@ namespace pst::expr {
 		auto out = makeBox<RoundExpr>(state.getPosition());
 
 		state.parse(out).goDown();
-		state.parse(out).with(&out->expr, Comma::parse, (i64) state.ctokens().size());
+		state.parse(out).with(&out->expr, Comma::parse);
 		state.parse(out).goUpAndSkip();
 
 		PST_RETURN out;
