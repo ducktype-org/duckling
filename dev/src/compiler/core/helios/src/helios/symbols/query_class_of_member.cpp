@@ -23,11 +23,7 @@ namespace compiler::helios {
 			);
 			auto scope_id = scope(key);
 			auto pst_element
-				= pst::LangElement::getByStableHash(scope_id.ref->related_pst_element_hash.value())
-			          .unlock(ctx)
-			          ->getParent()
-			          .value()
-			          .unlock(ctx);
+				= scope_id.ref->relatedPSTElement()->unlock(ctx)->getParent().value().unlock(ctx);
 			auto class_symbol = ctx.query<QuerySymbolOfSTMT>(pst_element).valueOrThrow();
 			auto class_type   = ctx.query<QueryTypeFromDefinition>(class_symbol)
 			                      ->valueOrThrow()

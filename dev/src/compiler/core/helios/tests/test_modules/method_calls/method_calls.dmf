@@ -24,6 +24,14 @@ class Wrapper {
     fun getInnerViaAccess() -> i64 = {
         return innerField.exampleField;
     }
+
+    fun getInner() -> ExampleClass {
+        return innerField;
+    }
+
+    fun setInner(inner: ref ExampleClass) = {
+        innerField = inner;
+    }
 }
 
 fun main() -> i64 = {

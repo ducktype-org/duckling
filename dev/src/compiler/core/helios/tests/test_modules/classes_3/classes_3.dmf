@@ -15,5 +15,5 @@ class ClassWithMember {
 var c          = ClassWithMember(FirstClass(5, f32(6.0)));
 var c_member   = c.member;
 
-let c_member_a = c.getMemberA();
+var c_member_a = c.getMemberA();
 
