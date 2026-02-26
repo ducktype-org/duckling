@@ -429,7 +429,7 @@ metadata:
         let main_pkg = (exp_pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
-        assert!(output.new_features == HashMap::new());
+        assert!(output.new_features.is_empty());
         assert!(
             output.new_edges
                 == HashMap::from([(

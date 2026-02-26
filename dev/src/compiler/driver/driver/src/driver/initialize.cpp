@@ -12,6 +12,7 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -69,6 +70,12 @@ namespace compiler::driver {
 				package_info.package_path, package_info.package_name
 			);
 			global_state::setters::addMainPackage(root_module);
+
+			// We need to parse all files before compilation to collect all PST element
+			// @TODO: #1974 this should be done concurrently nad onlt if prev graph exists nad incremental compilation is enabled
+			compiler::frontend::parseAllFilesInModuleTree(
+				root_module
+			);
 		}
 
 		/**
@@ -112,6 +119,8 @@ namespace compiler::driver {
 				std::span<const byte> span(view.getBegin(), view.size());
 				query::external::setPreviousMetadataFromRawBytes(span);
 
+				// @TODO: #1974 We should parse PST concurrently here, before collectInputDataFromGlobalPackages()
+
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
 				// contains information about which nodes are inputs and their associated hashes.
@@ -121,6 +130,10 @@ namespace compiler::driver {
 
 		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
 			if (inc_options.enabled) {
+				CORE_ASSERT(
+					!global_state::getPackages().empty(),
+					"Main package must be set before handling incremental compilation"
+				);
 				driver::enable_incremental_compilation = true;
 				loadPreviousQueryGraphIfExists();
 			} else {
