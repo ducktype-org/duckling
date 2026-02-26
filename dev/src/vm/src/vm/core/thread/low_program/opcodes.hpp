@@ -41,10 +41,10 @@ namespace vm::low {
 		return count;
 	}
 
-	constexpr std::array<const char*, microInstrCount()> OPCODE_NAMES = { {
+	constexpr std::array<const char*, microInstrCount()> OPCODE_NAMES = {
 #define HANDLE_MICRO_INSTR(opcode) #opcode,
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
-	}};
+	};
 
 }
