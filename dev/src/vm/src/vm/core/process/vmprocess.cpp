@@ -146,7 +146,8 @@ namespace vm {
 				return std::unexpected(api::ApiError{ api::JoinError{} });
 			}
 
-			// @TODO: #1222 make two different "stop" functions, one that throws error if program panicked
+			// @TODO: #1222 make two different "stop" functions, one that throws error if program
+			// panicked
 			if (!response)
 				return std::unexpected(api::ApiError{
 					api::OtherError{ "unexpected status response" } });
