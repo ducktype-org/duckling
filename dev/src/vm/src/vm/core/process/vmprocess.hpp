@@ -15,7 +15,7 @@
 
 #include <condition_variable>
 #include <deque>
-#include <expected>	
+#include <expected>
 #include <shared_mutex>
 #include <string>
 #include <variant>
@@ -222,8 +222,8 @@ namespace vm {
 		void releaseGil();
 		bool shouldReleaseGil();
 
-		SharedBox<std::mutex> 		getMutex(i64 mutex_id);
-		i64                         addMutex();
-		void                        removeMutex(i64);
+		SharedBox<std::mutex> getMutex(i64 mutex_id);
+		i64                   addMutex();
+		void                  removeMutex(i64);
 	};
 }
