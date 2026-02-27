@@ -337,7 +337,7 @@ namespace vm {
 	Ref<VmValue> VMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
-		acquireGil();
+		keepOrAcquireGil();
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
@@ -676,7 +676,7 @@ namespace vm {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
 
-	void VMThread::acquireGil() {
+	void VMThread::keepOrAcquireGil() {
 		if (has_gil) {
 			// Check if you can hold it longer - releasing policy
 			// If you can't hold it longer then
