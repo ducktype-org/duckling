@@ -2,8 +2,10 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> ExprNumericValue::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> ExprNumericValue::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = state.ctokens().size()
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
