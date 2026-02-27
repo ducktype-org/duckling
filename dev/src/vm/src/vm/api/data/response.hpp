@@ -1,8 +1,8 @@
 #pragma once
 
 #include "status.hpp"
+#include "thread_id.hpp"
 
-#include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/pointers/box.hpp>
 
 #include <vm/core/process/type_metadata/type.hpp>
@@ -54,8 +54,6 @@ namespace vm::api {
 		};
 
 		using Boolean = bool;
-
-		STRONG_TYPEDEF_INT(ThreadID, i64);
 	}
 
 	using Response = std::variant<
@@ -66,6 +64,6 @@ namespace vm::api {
 		response::CodePosition,
 		response::VmValue,
 		response::Boolean,
-		response::ThreadID,
+		ThreadID,
 		ExitValue>;
 }

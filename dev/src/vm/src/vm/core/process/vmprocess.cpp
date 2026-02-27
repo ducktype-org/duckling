@@ -60,7 +60,7 @@ namespace vm {
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 		i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
 
-		return api::Response(api::response::ThreadID{ id });
+		return api::Response(api::ThreadID{ id });
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::runFunctionAwait(
@@ -79,7 +79,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::join(api::response::ThreadID thread_id) {
+	std::expected<api::Response, api::ApiError> VMProcess::join(api::ThreadID thread_id) {
 		// @TODO: check status
 		auto& thread = getVMThreadByID(thread_id);
 
@@ -346,11 +346,11 @@ namespace vm {
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
-	VMThread& VMProcess::getVMThreadByID(api::response::ThreadID thread_id) {
-		if (thread_id == api::response::ThreadID{ 0 }) return getMainVMThread();
+	VMThread& VMProcess::getVMThreadByID(api::ThreadID thread_id) {
+		if (thread_id == api::ThreadID{ 0 }) return getMainVMThread();
 		for (auto& thread: vm_threads) {
 			if (thread.exec_thread) {
-				api::response::ThreadID id = static_cast<api::response::ThreadID>(
+				api::ThreadID id = static_cast<api::ThreadID>(
 					std::hash<std::thread::id>{}(thread.exec_thread->get_id())
 				);
 				if (id == thread_id) return thread;

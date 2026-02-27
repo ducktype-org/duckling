@@ -110,7 +110,7 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
 		thread.releaseGil();
-		vm::api::join(thread.process.getPID(), api::response::ThreadID{ thread_id });
+		vm::api::join(thread.process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
 		return 0;
 	}

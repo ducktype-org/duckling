@@ -27,11 +27,11 @@ namespace vm::api {
 		};
 
 		struct Pause {
-			response::ThreadID thread_id;
+			ThreadID thread_id;
 		};
 
 		struct Resume {
-			response::ThreadID thread_id;
+			ThreadID thread_id;
 		};
 
 		struct Stop {};
@@ -46,7 +46,7 @@ namespace vm::api {
 		};
 
 		struct Join {
-			response::ThreadID thread_id;
+			ThreadID thread_id;
 		};
 
 		struct RunFunctionAwait {
