@@ -40,7 +40,7 @@ namespace compiler::driver {
 		 */
 		struct ExecutionOptions final {
 			/**
-			 * Number of workers to use for parallel tasks run on the worker manager (mainly for
+			 * Number of workers to use for concurrent tasks run on the worker manager (mainly for
 			 * query).
 			 */
 			u64 worker_count = 1;

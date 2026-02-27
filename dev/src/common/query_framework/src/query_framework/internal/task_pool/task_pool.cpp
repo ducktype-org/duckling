@@ -58,8 +58,6 @@ namespace query::internal {
 		});
 	}
 
-	void TaskPool::execute() { CORE_UNREACHABLE(); }
-
 	void TaskPool::query(const Task& task) {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->query is performing a lot of operations even in such case

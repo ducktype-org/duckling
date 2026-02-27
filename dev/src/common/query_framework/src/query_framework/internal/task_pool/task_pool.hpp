@@ -86,13 +86,6 @@ namespace query::internal {
 		void addTask(Task&& tasks);
 
 		/**
-		 * @brief Start execution of all tasks in the pool.
-		 * Distributes initial tasks: one to each worker and the rest to the global pool.
-		 * Is non-blocking, returns immediately after scheduling the initial tasks.
-		 */
-		void execute();
-
-		/**
 		 * @brief Wait for all tasks in the pool to complete.
 		 * Should be called after execute().
 		 */
@@ -230,7 +223,7 @@ namespace query::internal {
 		base::HashMap<WRef, std::deque<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
-		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
+		/// @TODO: #1988 #2035 hash map per query id? Or even stronger, lock free data structure.
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
 
 		/// Condition variable for signaling task completion.
