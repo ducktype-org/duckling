@@ -12,4 +12,4 @@ namespace vm {
 	using JitOpFun = void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::VMThread*);
 }
 
-vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data);
+vm::JitOpFun* compileLLVM(const vm::low::LowFuncData& func_data);

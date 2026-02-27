@@ -21,7 +21,7 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
+vm::JitOpFun* compileLLVM(const vm::low::LowFuncData& func_data) {
 	auto  lljit_ptr = llvmGetLljit();
 	auto& lljit     = *lljit_ptr;
 
