@@ -29,6 +29,7 @@ using namespace llvm::orc;
 
 // char[] is better than std::array, because we don't know the size.
 // NOLINTBEGIN
+PUSH_DIAGNOSTIC ALLOW_EXTENSIONS
 inline constexpr char OPCODES[] = {
 	#ifdef USE_TAIL_CALLS
 		#embed "src/vm/common_tc.bc"
@@ -36,6 +37,7 @@ inline constexpr char OPCODES[] = {
 		#embed "src/vm/common_sc.bc"
 	#endif
 };
+POP_DIAGNOSTIC
 // NOLINTEND
 
 static std::unique_ptr<LLVMContext>                              g_context;
