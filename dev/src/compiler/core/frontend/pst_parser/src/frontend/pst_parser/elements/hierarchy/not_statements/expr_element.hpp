@@ -10,15 +10,6 @@ namespace pst {
 		const i64 PRECEDENCE;
 
 	protected:
-		/**
-		 * @brief Skips tokens, used to preserve position in case of error.
-		 */
-		static void fastForward(LangParserState& state, i64 length);
-
-		/**
-		 * @brief Sanity check of length.
-		 */
-		static bool checkLength(LangParserState& state, i64 length);
 
 		/**
 		 * @brief Sanity check of non-emptyness length.

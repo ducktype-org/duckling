@@ -13,7 +13,6 @@ namespace pst::expr {
 		if (!state[0].is(lexer::Token::Type::NumLiteralGroup)) {
 			// This should (probably) never happen with how it's called by the parser
 			state.logInt(makeBox<BadValueError>(pos));
-			fastForward(state, length);
 			return nullptr;
 		}
 
@@ -22,7 +21,6 @@ namespace pst::expr {
 
 		if (length > 1) {
 			state.logInt(makeBox<MoreThanValueError>(pos));
-			fastForward(state, length);
 		}
 
 		PST_RETURN out;
