@@ -192,10 +192,21 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> detach();
 
+		/**
+		 * @brief Returns first thread in thread queue.
+		 */
 		VMThread& getMainVMThread();
 
+		/**
+		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
+         * then it returns main thread 
+		 */
 		VMThread& getVMThreadByID(i64 thread_id);
 
+		/**
+		 * @brief Returns reference to either existing empty thread or
+         * creates new thread without worker and returns it 
+		 */
 		VMThread& getEmptyThread();
 
 	public:
@@ -238,12 +249,38 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
+
+        /**
+        * @brief Acquires GIL. If you leave this function you always have right to interpret DVM code.
+        */
 		void acquireGil();
+
+        /**
+        * @brief Releases GIL. If you leave this function you no longr can interpret DVM code.
+        * It also zeroes operations counter, for the next person to take GIL.
+        */
 		void releaseGil();
+
+        /**
+        * @brief Decides whether current thread should give up GIL based on set GIL policy.
+        In the future it will have seprarte interace, for now it is simple counter.
+        */
 		bool shouldReleaseGil();
 
+        
+        /**
+        * @brief Getter for mutexes in the pool.
+        */
 		SharedBox<std::mutex> getMutex(i64 mutex_id);
+
+        /**
+        * @brief Adds new mutex into pool.
+        */
 		i64                   addMutex();
+
+        /**
+        * @brief Removes mutex from pool.
+        */
 		void                  removeMutex(i64);
 	};
 }
