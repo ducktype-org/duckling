@@ -1,4 +1,4 @@
-__attribute__((visibility("hidden"), always_inline)) inline static int foo(int x) {
+__attribute__((visibility("hidden"))) inline static int foo(int x) {
 	if (x <= 1)
         return 1;
 	else

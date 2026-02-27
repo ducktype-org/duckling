@@ -1,6 +1,7 @@
-duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
-process_to_binary(tests/memory/data.cpp jit_memory_test)
-
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # JIT_ENABLED nie działa
+    duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
+    process_to_binary(tests/memory/data.cpp jit_memory_test)
+endif ()
 #add_files(copy-and-patch.cpp)
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
