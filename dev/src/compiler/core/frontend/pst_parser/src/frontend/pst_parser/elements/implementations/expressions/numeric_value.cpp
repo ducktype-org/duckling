@@ -19,9 +19,7 @@ namespace pst::expr {
 		auto out = makeBox<ExprNumericValue>(state.getPosition());
 		state.parse(out).one(&out->value);
 
-		if (length > 1) {
-			state.logInt(makeBox<MoreThanValueError>(pos));
-		}
+		if (length > 1) state.logInt(makeBox<MoreThanValueError>(pos));
 
 		PST_RETURN out;
 	}

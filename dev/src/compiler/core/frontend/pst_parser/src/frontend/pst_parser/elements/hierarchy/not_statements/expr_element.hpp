@@ -10,7 +10,6 @@ namespace pst {
 		const i64 PRECEDENCE;
 
 	protected:
-
 		/**
 		 * @brief Sanity check of non-emptyness length.
 		 */
