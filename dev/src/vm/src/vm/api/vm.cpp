@@ -34,7 +34,7 @@ namespace vm::api {
 
 	std::expected<response::CodePosition, ApiError> pause(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Pause{ response::ThreadID { 0 } }))
+		    .doRequest(SupervisorRequest(pid, request::Pause{ response::ThreadID{ 0 } }))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
@@ -46,7 +46,7 @@ namespace vm::api {
 
 	std::expected<void, ApiError> resume(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Resume{ response::ThreadID { 0 } }))
+		    .doRequest(SupervisorRequest(pid, request::Resume{ response::ThreadID{ 0 } }))
 		    .transform(ignoreResponse);
 	}
 
@@ -116,7 +116,7 @@ namespace vm::api {
 
 	std::expected<void, ApiError> join(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Join{ response::ThreadID { 0 } }))
+		    .doRequest(SupervisorRequest(pid, request::Join{ response::ThreadID{ 0 } }))
 		    .transform(ignoreResponse);
 	}
 

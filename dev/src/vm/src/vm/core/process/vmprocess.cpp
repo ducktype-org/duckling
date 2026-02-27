@@ -350,8 +350,9 @@ namespace vm {
 		if (thread_id == api::response::ThreadID{ 0 }) return getMainVMThread();
 		for (auto& thread: vm_threads) {
 			if (thread.exec_thread) {
-				api::response::ThreadID id
-					= static_cast<api::response::ThreadID>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
+				api::response::ThreadID id = static_cast<api::response::ThreadID>(
+					std::hash<std::thread::id>{}(thread.exec_thread->get_id())
+				);
 				if (id == thread_id) return thread;
 			}
 		}
