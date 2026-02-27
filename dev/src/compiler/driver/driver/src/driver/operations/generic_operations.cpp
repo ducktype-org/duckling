@@ -230,7 +230,12 @@ namespace compiler::driver {
 
 			objects.push_back(emitBuiltinLLVMObjectFile());
 
-			linker::link(output_file, objects, linking_options);
+			auto linking_result = linker::link(output_file, objects, linking_options);
+
+			if (linking_result.isBad()) {
+				CORE_USER_LOG("Linking failed!\n");
+				return base::BAD;
+			}
 		}
 
 		return result;

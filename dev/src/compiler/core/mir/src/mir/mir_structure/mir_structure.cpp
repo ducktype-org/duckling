@@ -228,6 +228,27 @@ namespace compiler::mir {
 		return result;
 	}
 
+	MIRPlace MIRPlace::withIndex(const MIRValue& index) const {
+		MIRPlace result = *this;
+
+		auto base_type = type.getType();
+
+		auto element_type = [&]() -> tsh::SymbolType<> {
+			switch (base_type.getKind()) {
+			case tsh::Kind::DynamicArray:
+				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
+			case tsh::Kind::StaticArray:
+				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
+			default:
+				CORE_PANIC("Cannot index into type: ", type.toString());
+			}
+		}();
+
+		result.projection_chain.push_back(Projection::index(index));
+		result.type = element_type;
+		return result;
+	}
+
 	void MIRPlace::debugPrint(std::ostream& os, bool detailed) const {
 		variant_match(base) {
 			variant_case(MIRLocalRef, local) { local->debugPrint(os, detailed); }
@@ -238,6 +259,11 @@ namespace compiler::mir {
 			variant_match(proj.storage) {
 				variant_case(FieldProjection, field) {
 					os << "." << name(field.field_id).strView();
+				}
+				variant_case(IndexProjection, index) {
+					os << "[";
+					index.index->debugPrint(os);
+					os << "]";
 				}
 				variant_case_novalue(DerefProjection) { os << ".*"; }
 			}

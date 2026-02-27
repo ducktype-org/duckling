@@ -19,6 +19,7 @@
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 
@@ -46,6 +47,7 @@ public:
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(sideInputsTest);
+		TESTER_ADD_TEST(moduleChildSideInputsTest);
 	}
 
 protected:
@@ -137,7 +139,8 @@ private:
 		auto& initial_graph_view = ctx_state->getGraph();
 		assertTrue(
 			initial_graph_view.getAllNodes().empty(),
-			"graphConsistencyAfterOptimizationTest must run before other driver tests to keep the"
+			"graphConsistencyAfterOptimizationTest must run before other driver tests to keep "
+			"the"
 			" compilation graph clean"
 		);
 
@@ -203,7 +206,11 @@ private:
 			driver::compileEntirePackage(
 				package_info,
 				driver::BackendType::LLVM,
-				{ .external_static_libraries = {}, .link_c_standard_library = true }
+				{
+					.linker_path             = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				}
 			);
 		}
 
@@ -219,8 +226,8 @@ private:
 		for (const auto& node: graph_before_opt.getAllNodes())
 			if (is_preserved(node)) preserved_nodes_before.push_back(node);
 
-		// Collect preserved dependencies (transitively) for each preserved node BEFORE optimization
-		// This also includes input dependencies
+		// Collect preserved dependencies (transitively) for each preserved node BEFORE
+		// optimization This also includes input dependencies
 		base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>>
 			preserved_deps_before;
 		for (const auto& preserved_node: preserved_nodes_before) {
@@ -249,22 +256,21 @@ private:
 		auto all_nodes = opt_graph.getAllNodes();
 
 		// ================================================================================
-		// CHECK 1: Graph consistency - all children referenced in the graph must exist as keys in
-		// the graph
+		// CHECK 1: Graph consistency - all children referenced in the graph must exist as keys
+		// in the graph
 		// ================================================================================
 		for (const auto& node: all_nodes) {
 			auto& deps = opt_graph.getDirectDependencies(node);
 			for (const auto& child: deps) {
 				assertTrue(
 					opt_graph.nodeExists(child),
-					base::strConcat(
-						"Graph inconsistency: child node referenced but does not exist as key in "
-						"graph"
-					)
+					base::strConcat("Graph inconsistency: child node referenced but does not "
+				                    "exist as key in "
+				                    "graph")
 				);
 			}
-			// We also check that deps do not contain duplicates as they can be accidentally added
-			// during optimization
+			// We also check that deps do not contain duplicates as they can be accidentally
+			// added during optimization
 			auto deps_sorted = deps;
 			std::ranges::sort(deps_sorted, [](auto& l, auto& r) { return l < r; });
 			auto dup_it = std::ranges::adjacent_find(deps_sorted);
@@ -304,8 +310,8 @@ private:
 
 		// ================================================================================
 		// CHECK 3: All non-preserved nodes must have MORE than one child (cannot have 0 or 1
-		// children) This is because nodes with 0 or 1 children should be trimmed/collapsed during
-		// optimization, as they can be easily optimized
+		// children) This is because nodes with 0 or 1 children should be trimmed/collapsed
+		// during optimization, as they can be easily optimized
 		// ================================================================================
 		for (const auto& node: all_nodes) {
 			if (is_preserved(node)) { continue; }  // Skip preserved nodes
@@ -476,7 +482,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 
 		auto exe_path = artifacts_path / "package_llvm.exe";
@@ -488,7 +498,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::DVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 	}
 
@@ -583,7 +597,11 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
 		);
 
 		// Get root module ID
@@ -591,7 +609,7 @@ private:
 
 		// Find submodule ID
 		auto root_ref   = frontend::getModuleRef(root_id);
-		auto submodules = root_ref->getSubmodules();
+		auto submodules = root_ref->getSubmodules().illegalAccess();
 		auto get_ref    = [](frontend::AccessLocked<frontend::ModuleID> access) {
             return compiler::frontend::GetModuleID_Functor::
                 getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
@@ -630,19 +648,21 @@ private:
 		// Construct expected SideInput query ID
 		auto expected_module_side_input_id
 			= query::internal::makeNodeID<frontend::QueryModuleSideInput>(
-				frontend::KeyOf_ModuleSideInput{ submodule_id }
+				frontend::KeyOf_ModuleSideInput{ frontend::ModuleTree::getModuleHash(submodule_id) }
 			);
 
 		auto submodule_file_id
 			= frontend::getModuleRef(submodule_id)->getMainSourceFile().illegalAccess().getID();
 		auto expected_file_side_input_id
 			= query::internal::makeNodeID<frontend::QueryFileSideInput>(
-				frontend::KeyOf_FileSideInput{ submodule_file_id }
+				frontend::KeyOf_FileSideInput{
+					frontend::getFileRef(submodule_file_id)->getComponentHash().hash }
 			);
 
 		auto unexpected_module_side_input_id
 			= query::internal::makeNodeID<frontend::QueryModuleSideInput>(
-				frontend::KeyOf_ModuleSideInput{ empty_sub_module_id }
+				frontend::KeyOf_ModuleSideInput{
+					frontend::ModuleTree::getModuleHash(empty_sub_module_id) }
 			);
 
 		auto empty_sub_module_file_id = frontend::getModuleRef(empty_sub_module_id)
@@ -651,7 +671,8 @@ private:
 		                                    .getID();
 		auto unexpected_file_side_input_id
 			= query::internal::makeNodeID<frontend::QueryFileSideInput>(
-				frontend::KeyOf_FileSideInput{ empty_sub_module_file_id }
+				frontend::KeyOf_FileSideInput{
+					frontend::getFileRef(empty_sub_module_file_id)->getComponentHash().hash }
 			);
 
 		bool found_module            = false;
@@ -668,13 +689,290 @@ private:
 
 		ASSERT_TRUE(found_module);
 		ASSERT_TRUE(found_file);
-		// found_unexpected_module id found because we are getting the submodules of the root module
-		// to find the submodule. In the feature we might want to lookup for submodules with specyfic
-		// name without getting all submodules first. It will reduce the number of dependencies.
-		ASSERT_TRUE(found_unexpected_module);
+		// We should not depend on unrelated submodules when resolving imports by name.
+		ASSERT_TRUE(!found_unexpected_module);
 		// but we do not depend of the module file, because we are reading only correct
 		// "submodule.dmf" file.
 		ASSERT_TRUE(!found_unexpected_file);
+	}
+
+	/**
+	 * @brief Tests the correctness of ModuleChildSideInput, SourceFileCountSideInput,
+	 *        and SubmoduleCountSideInput dependencies in the query graph.
+	 *
+	 * This test compiles the imports_complicated module structure and verifies that:
+	 * 1. Each module depends on the correct ModuleChildSideInputs based on its imports
+	 * 2. Each module depends on SourceFileCountSideInput only for its own source files
+	 * 3. No module depends on SubmoduleCountSideInput (currently not used)
+	 */
+	void moduleChildSideInputsTest() {
+		using namespace compiler;
+
+		global_state::PackageInfo package_info{
+			.root_module = frontend::createModuleTree(
+				fs::File(path("modules/imports_complicated")), "imports_complicated_test"
+			),
+		};
+
+		driver::compileEntirePackage(
+			package_info,
+			driver::BackendType::LLVM,
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
+		);
+
+		// ================================================================================
+		// Helper lambdas
+		// ================================================================================
+
+		auto root_id  = package_info.root_module;
+		auto root_ref = frontend::getModuleRef(root_id);
+
+		// Helper to get mutable module reference
+		auto get_ref = [](frontend::AccessLocked<frontend::ModuleID> access) {
+			return compiler::frontend::GetModuleID_Functor::
+				getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					access.illegalAccess().getID()
+				);
+		};
+
+		// Helper to find a submodule by name
+		auto get_submodule = [&](const std::vector<frontend::ModuleAccessLocked>& subs,
+		                         base::StrID name) -> frontend::ModuleAccessLocked {
+			for (const auto& sub: subs)
+				if (get_ref(sub)->getName() == name) return sub;
+			throw std::out_of_range("Submodule not found: " + std::string(name.strView()));
+		};
+
+		// Helper to get all transitive dependencies of a module's HOUT node
+		auto get_module_deps = [&](frontend::ModuleID module_id) {
+			const auto& graph   = query::internal::ContextAccess::getState()->getGraph();
+			auto        hout_id = query::internal::makeNodeID<helios::QueryModuleHOUT>(module_id);
+			return graph.getNodeDeps(hout_id);
+		};
+
+		// Helper to check if module depends on a specific ModuleChildSideInput
+		auto has_child_side_input_dep = [&](const std::vector<query::internal::NodeID>& deps,
+		                                    frontend::ModuleID parent_module,
+		                                    base::StrID        child_name,
+		                                    bool               found) -> bool {
+			auto expected_id = query::internal::makeNodeID<frontend::QueryModuleChildSideInput>(
+				frontend::KeyOf_ModuleChildSideInput{
+					.parent_hash = frontend::ModuleTree::getModuleHash(parent_module),
+					.child_name  = child_name,
+					.found       = found }
+			);
+			return std::ranges::find(deps, expected_id) != deps.end();
+		};
+
+		// Helper to count how many ModuleChildSideInput dependencies a module has
+		auto count_child_side_inputs
+			= [](const std::vector<query::internal::NodeID>& deps) -> usize {
+			usize count = 0;
+			for (const auto& dep: deps)
+				if (dep.q_id.asInt() == frontend::QueryModuleChildSideInput::getID().asInt())
+					count++;
+			return count;
+		};
+
+		// Helper to check if module depends on SourceFileCountSideInput for a specific module
+		auto has_source_file_count_dep = [&](const std::vector<query::internal::NodeID>& deps,
+		                                     frontend::ModuleID module_id) -> bool {
+			auto hasher = frontend::ModuleTree::getPathComponentHash(module_id).partial;
+			auto files  = frontend::getModuleRef(module_id)->getSourceFiles().illegalAccess();
+			hashing::addToHash(hasher, static_cast<u64>(files.size()));
+			auto expected_id = query::internal::makeNodeID<frontend::QuerySourceFileCountSideInput>(
+				frontend::KeyOf_SourceFileCountSideInput{ hasher.finalize() }
+			);
+			return std::ranges::find(deps, expected_id) != deps.end();
+		};
+
+		// Helper to count how many SourceFileCountSideInput dependencies exist
+		auto count_source_file_count_inputs
+			= [](const std::vector<query::internal::NodeID>& deps) -> usize {
+			usize count = 0;
+			for (const auto& dep: deps)
+				if (dep.q_id.asInt() == frontend::QuerySourceFileCountSideInput::getID().asInt())
+					count++;
+			return count;
+		};
+
+		// Helper to count how many SubmoduleCountSideInput dependencies exist
+		auto count_submodule_count_inputs
+			= [](const std::vector<query::internal::NodeID>& deps) -> usize {
+			usize count = 0;
+			for (const auto& dep: deps)
+				if (dep.q_id.asInt() == frontend::QuerySubmoduleCountSideInput::getID().asInt())
+					count++;
+			return count;
+		};
+
+		// ================================================================================
+		// Build module ID map
+		// ================================================================================
+
+		// Root: imports_complicated
+		auto imports_complicated_id = root_id;
+
+		// Level 1: foo, bar
+		auto foo_subs = root_ref->getSubmodules().illegalAccess();
+		auto foo_id   = get_submodule(foo_subs, base::StrID("foo")).illegalAccess().getID();
+		auto bar_id   = get_submodule(foo_subs, base::StrID("bar")).illegalAccess().getID();
+
+		// Level 2 under foo: A, B
+		auto foo_ref      = frontend::getModuleRef(foo_id);
+		auto foo_children = foo_ref->getSubmodules().illegalAccess();
+		auto a_id         = get_submodule(foo_children, base::StrID("A")).illegalAccess().getID();
+		auto b_id         = get_submodule(foo_children, base::StrID("B")).illegalAccess().getID();
+
+		// Level 2 under bar: C, D
+		auto bar_ref      = frontend::getModuleRef(bar_id);
+		auto bar_children = bar_ref->getSubmodules().illegalAccess();
+		auto c_id         = get_submodule(bar_children, base::StrID("C")).illegalAccess().getID();
+		auto d_id         = get_submodule(bar_children, base::StrID("D")).illegalAccess().getID();
+
+		// ================================================================================
+		// Get dependencies for each module
+		// ================================================================================
+
+		auto b_deps                   = get_module_deps(b_id);
+		auto foo_deps                 = get_module_deps(foo_id);
+		auto a_deps                   = get_module_deps(a_id);
+		auto imports_complicated_deps = get_module_deps(imports_complicated_id);
+		auto bar_deps                 = get_module_deps(bar_id);
+		auto c_deps                   = get_module_deps(c_id);
+		auto d_deps                   = get_module_deps(d_id);
+
+		// ================================================================================
+		// Test Module B's ChildSideInput dependencies
+		// B.dmf imports: imports_complicated.bar.D
+		// Expected: B -> imports_complicated (false), imports_complicated -> bar (true), bar ->
+		// D (true)
+		// ================================================================================
+
+		ASSERT_TRUE(has_child_side_input_dep(b_deps, b_id, base::StrID("imports_complicated"), false)
+		);
+		ASSERT_TRUE(
+			has_child_side_input_dep(b_deps, imports_complicated_id, base::StrID("bar"), true)
+		);
+		ASSERT_TRUE(has_child_side_input_dep(b_deps, bar_id, base::StrID("D"), true));
+		ASSERT_EQUAL_PRINT(3, count_child_side_inputs(b_deps));
+
+		// ================================================================================
+		// Test Module foo's ChildSideInput dependencies
+		// foo.dmf imports: imports_complicated.bar, A, B
+		// Expected: foo -> A (true), foo -> B (true), foo -> imports_complicated (false),
+		//           imports_complicated -> bar (true), B -> imports_complicated (false),
+		//           bar -> D (true), bar -> C (true)
+		// ================================================================================
+
+		ASSERT_TRUE(has_child_side_input_dep(foo_deps, foo_id, base::StrID("A"), true));
+		ASSERT_TRUE(has_child_side_input_dep(foo_deps, foo_id, base::StrID("B"), true));
+		ASSERT_TRUE(
+			has_child_side_input_dep(foo_deps, foo_id, base::StrID("imports_complicated"), false)
+		);
+		ASSERT_TRUE(
+			has_child_side_input_dep(foo_deps, imports_complicated_id, base::StrID("bar"), true)
+		);
+		// From B's transitive imports
+		ASSERT_TRUE(
+			has_child_side_input_dep(foo_deps, b_id, base::StrID("imports_complicated"), false)
+		);
+		ASSERT_TRUE(has_child_side_input_dep(foo_deps, bar_id, base::StrID("D"), true));
+		ASSERT_TRUE(has_child_side_input_dep(foo_deps, bar_id, base::StrID("C"), true));
+		ASSERT_EQUAL_PRINT(7, count_child_side_inputs(foo_deps));
+
+		// ================================================================================
+		// Test Module A's ChildSideInput dependencies
+		// A.dmf imports: foo
+		// Expected: A -> foo (false) and nothing else
+		// ================================================================================
+
+		ASSERT_TRUE(has_child_side_input_dep(a_deps, a_id, base::StrID("foo"), false));
+		ASSERT_EQUAL_PRINT(1, count_child_side_inputs(a_deps));
+
+		// ================================================================================
+		// Test Module imports_complicated's ChildSideInput dependencies
+		// imports_complicated.dmf imports: bar
+		// Expected: imports_complicated -> bar (true), bar -> C (true)
+		// ================================================================================
+
+		ASSERT_TRUE(has_child_side_input_dep(
+			imports_complicated_deps, imports_complicated_id, base::StrID("bar"), true
+		));
+		ASSERT_TRUE(
+			has_child_side_input_dep(imports_complicated_deps, bar_id, base::StrID("C"), true)
+		);
+		ASSERT_EQUAL_PRINT(2, count_child_side_inputs(imports_complicated_deps));
+
+		// ================================================================================
+		// Test Module bar's ChildSideInput dependencies
+		// bar.dmf imports: C
+		// Expected: bar -> C (true) only
+		// ================================================================================
+
+		ASSERT_TRUE(has_child_side_input_dep(bar_deps, bar_id, base::StrID("C"), true));
+		ASSERT_EQUAL_PRINT(1, count_child_side_inputs(bar_deps));
+		// ================================================================================
+		// Test Module C's ChildSideInput dependencies
+		// C.dmf has no imports
+		// Expected: no ChildSideInput dependencies
+		// ================================================================================
+
+		ASSERT_EQUAL_PRINT(0, count_child_side_inputs(c_deps));
+
+		// ================================================================================
+		// Test Module D's ChildSideInput dependencies
+		// D.dmf has no imports
+		// Expected: no ChildSideInput dependencies
+		// ================================================================================
+
+		ASSERT_EQUAL_PRINT(0, count_child_side_inputs(d_deps));
+
+		// ================================================================================
+		// Test SourceFileCountSideInput dependencies
+		// Each module should depend on SourceFileCountSideInput only for its own source files
+		// ================================================================================
+
+		// Note: We check that each module depends on its own source file count
+		// The getSourceFiles() returns additional source files (not the main .dmf file)
+		// Most modules here only have a main file, so source files count is 0
+
+		// We verify the dependency exists for each module's own files
+		ASSERT_TRUE(has_source_file_count_dep(b_deps, b_id));
+		ASSERT_TRUE(has_source_file_count_dep(foo_deps, foo_id));
+		ASSERT_TRUE(has_source_file_count_dep(a_deps, a_id));
+		ASSERT_TRUE(has_source_file_count_dep(imports_complicated_deps, imports_complicated_id));
+		ASSERT_TRUE(has_source_file_count_dep(bar_deps, bar_id));
+		ASSERT_TRUE(has_source_file_count_dep(c_deps, c_id));
+		ASSERT_TRUE(has_source_file_count_dep(d_deps, d_id));
+
+		// Each module should have exactly 1 SourceFileCountSideInput dependency (only its own)
+		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(b_deps));
+		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(foo_deps));
+		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(a_deps));
+		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(imports_complicated_deps));
+		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(bar_deps));
+		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(c_deps));
+		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(d_deps));
+
+		// ================================================================================
+		// Test SubmoduleCountSideInput dependencies
+		// Currently, no module should depend on SubmoduleCountSideInput.
+		// If this changes in the future (e.g., when iterating over all submodules),
+		// please update this test accordingly.
+		// ================================================================================
+
+		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(b_deps));
+		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(foo_deps));
+		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(a_deps));
+		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(imports_complicated_deps));
+		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(bar_deps));
+		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(c_deps));
+		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(d_deps));
 	}
 };
 

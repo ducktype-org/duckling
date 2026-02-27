@@ -5,6 +5,7 @@
 #include "numeric_literals.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
@@ -433,9 +434,29 @@ namespace compiler::helios::code {
 
 				if (stmt->getOperator()
 				    == lang_def::operatorToStr(lang_def::NamedOperator::Ampersand)) {
+					// @TODO: #1956 remove the check bellow.
+					// This is a temporary check to prevent us from taking reference of types that
+					// do not carry information.
+					if (not inner_type.getType().carriesInformation(ctx)) {
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Taking reference of type that does not carry information is not "
+							"supported yet.",
+							stmt->getSourcePosition()
+						));
+						return;  // failed
+					}
+
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
-					// This should change to take value category into consideration as well as
-					// the `unique`/`leaking` specifiers.
+					// This should change to take value category into consideration as well as the
+					// `unique`/`leaking` specifiers.
+					auto primary_category = inner->expression_type.getValueCategory().getCategory();
+					if (primary_category == tsh::PrimaryCategory::Literal
+					    || primary_category == tsh::PrimaryCategory::Temporary) {
+						ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Tried to reference a temporary", stmt->getSourcePosition()
+						));
+						return;
+					}
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
 				}

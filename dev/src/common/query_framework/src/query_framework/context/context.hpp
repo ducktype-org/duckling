@@ -248,7 +248,41 @@ namespace query {
 		void addMetadata(Args&&... args) {
 			assertActive();
 
+			// Check that the query has preserve_in_graph = true
+			CORE_ASSERT(
+				my_node.q_id.getData().tags.preserve_in_graph,
+				"Cannot add metadata to query without preserve_in_graph = true. "
+				"Query: "
+					+ std::string(my_node.q_id.getData().name)
+			);
+
 			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);
+		}
+
+		/**
+		 * @brief Add metadata to the current query node only if no metadata of this type exists.
+		 *
+		 * Use this method when you know that for the current node only one metadata
+		 * instance of a given type should exist, but the same code path might be executed multiple
+		 * times (e.g., during incremental re-computation of the node that has been merged from
+		 * previous compilation).
+		 *
+		 * This is useful for metadata that acts as a "flag" or "singleton" per node,
+		 * where duplicate entries would be redundant.
+		 *
+		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
+		 * @tparam Args Argument types for constructing the metadata
+		 * @param args Arguments forwarded to MetadataT constructor
+		 * @return true if metadata was added, false if metadata of this type already exists
+		 */
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, internal::BaseMetadata>
+		bool addMetadataIfNotExists(Args&&... args) {
+			assertActive();
+
+			return main_query_state.addMetadataIfNotExistsInternal<MetadataT>(
+				my_node, std::forward<Args>(args)...
+			);
 		}
 
 		/**

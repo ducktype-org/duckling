@@ -312,6 +312,36 @@ namespace compiler::tsl {
 		}
 	};
 
+	class StaticArrayTypeLayout final: public TypeLayoutABC {
+		CRef<TypeLayout> element_layout;
+		usize            element_count;
+
+		StaticArrayTypeLayout(tsh::StaticArrayAbstractType static_array_type, query::Context& ctx);
+
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
+
+		/**
+		 * @return The layout of each element of the static array.
+		 */
+		[[nodiscard]]
+		CRef<TypeLayout> getElementLayout() const {
+			return element_layout;
+		}
+
+		/**
+		 * @return The number of elements in the static array.
+		 */
+		[[nodiscard]]
+		usize getElementCount() const {
+			return element_count;
+		}
+	};
+
 	/**
 	 * @brief Layout of a variant type.
 	 */
@@ -663,6 +693,7 @@ namespace compiler::tsl {
 		TupleTypeLayout,
 		StringTypeLayout,
 		DynamicArrayTypeLayout,
+		StaticArrayTypeLayout,
 		ClassTypeLayout,
 		FunctionalTypeLayout,
 		PointerTypeLayout>;
