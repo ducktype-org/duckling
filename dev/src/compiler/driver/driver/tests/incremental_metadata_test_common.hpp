@@ -37,10 +37,10 @@ struct IMPLEMENT_QUERY(MetadataPersistenceTestQuery, u64) {
 		u64 key_val = key.value;
 
 		// Add simple metadata
-		ctx.addMetadata<metadata_TestCounter>(key_val * 10);
+		ctx.addMetadataIfNotExists<metadata_TestCounter>(key_val * 10);
 
 		// Add StrID metadata
-		ctx.addMetadata<metadata_TestSourceFile>(base::StrID{
+		ctx.addMetadataIfNotExists<metadata_TestSourceFile>(base::StrID{
 			std::string{ "test/source_" } + std::to_string(key_val) + ".duck" });
 
 		return key_val;

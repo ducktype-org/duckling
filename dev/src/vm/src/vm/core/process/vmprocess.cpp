@@ -46,8 +46,7 @@ namespace vm {
 		} else {
 			std::stringstream ss;
 			code_result.error().dump(ss);
-			std::cerr << ss.str() << '\n';
-			return std::unexpected(api::LoadProgramError{ "Error in loader: \n" + ss.str() });
+			return std::unexpected(api::LoadProgramError{ ss.str() });
 		}
 	}
 

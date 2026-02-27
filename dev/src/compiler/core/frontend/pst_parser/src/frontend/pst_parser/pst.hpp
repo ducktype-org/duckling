@@ -15,10 +15,7 @@ namespace pst {
 	// Used to not include full state definition
 	namespace internal {
 		Box<LangParserState> makeState(
-			tpc::TokenStream&&,
-			Box<LangParserContext>&&,
-			Ref<dia::Logger>     logger,
-			Ref<dia_int::Logger> int_logger
+			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia_int::Logger> int_logger
 		);
 		std::vector<ImportType> extractState(Box<LangParserState>);
 
@@ -97,7 +94,6 @@ namespace pst {
                     token_data.tokens.size()
                 ),
                 std::move(parsing_ctx),
-                file->getLogger(),
                 file->getIntLogger()
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
