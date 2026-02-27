@@ -32,7 +32,7 @@
 		_Pragma("GCC diagnostic ignored \"-Wshadow=local\"") \
 			_Pragma("GCC diagnostic ignored \"-Wshadow=compatible-local\"")
 	#define UNHANDLED_ENUM _Pragma("GCC diagnostic error \"-Wswitch\"")
-	#define ALLOW_EXTENSIONS                                     \
+	#define ALLOW_EXTENSIONS                                   \
 		_Pragma("GCC diagnostic ignored \"-Wc23-extensions\"") \
 			_Pragma("GCC diagnostic ignored \"-Wc++26-extensions\"")
 	#define POP_DIAGNOSTIC _Pragma("GCC diagnostic pop")
