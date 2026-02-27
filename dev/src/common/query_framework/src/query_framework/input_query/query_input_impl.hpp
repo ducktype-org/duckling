@@ -19,7 +19,7 @@
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);                \
 		return ::query::internal::SideInputMockValue{};                                         \
 	}                                                                                           \
-	auto query_type::internal_load(base::Bit256) -> query_type::QResult { CORE_UNREACHABLE(); } \
+	auto query_type::internal_load(::query::QueryStableHash) -> query_type::QResult { CORE_UNREACHABLE(); } \
 	static_assert(                                                                              \
 		not std::is_reference_v<query_type::QKey>,                                              \
 		"Query key type should not be a reference (use custom struct instead)"                  \

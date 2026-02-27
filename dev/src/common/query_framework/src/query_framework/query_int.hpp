@@ -43,7 +43,7 @@ namespace query::internal {
                                                                                            \
 	private:                                                                               \
 		static auto                       internal_query(const QKey&) -> QResult;          \
-		static auto                       internal_load(base::Bit256 hash) -> QResult;     \
+		static auto                       internal_load(::query::QueryStableHash hash) -> QResult;     \
 		static ::query::internal::QueryID id;                                              \
 		friend struct ::query::Context;                                                    \
 		friend struct ::query::internal::EntryPointHelper;                                 \
