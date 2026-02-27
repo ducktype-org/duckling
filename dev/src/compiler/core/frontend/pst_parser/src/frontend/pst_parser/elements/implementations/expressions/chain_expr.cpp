@@ -48,7 +48,6 @@ namespace pst::expr {
 				state.logInt(makeBox<BadChainExprError>(
 					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())
 				));
-				fastForward(state, fwd);
 			}
 			if (extension) {
 				out->chain.emplace_back(nullptr);

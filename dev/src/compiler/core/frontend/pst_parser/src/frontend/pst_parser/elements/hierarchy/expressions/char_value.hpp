@@ -19,7 +19,7 @@ namespace pst::expr {
 			  ExprElement(position, 0),
 			  string(value) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~ExprCharValue() override = default;
 		void     dprint(std::ostream& out) const final;

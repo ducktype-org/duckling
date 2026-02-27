@@ -4,15 +4,16 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> ExprStrValue::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> ExprStrValue::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
 		if (!state[0].isString()) {
 			// This should (probably) never happen with how it's called by the parser
 			state.logInt(makeBox<BadStrValueError>(pos));
-			fastForward(state, length);
 			return nullptr;
 		}
 
@@ -21,7 +22,6 @@ namespace pst::expr {
 
 		if (length > 1) {
 			state.logInt(makeBox<MoreThanStrValueError>(pos));
-			fastForward(state, length);
 		}
 
 		PST_RETURN out;
