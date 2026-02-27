@@ -26,7 +26,7 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<ProcStatus>);
 	}
 
-	std::expected<response::CodePosition, ApiError> pause(PID pid, i64 thread_id) {
+	std::expected<response::CodePosition, ApiError> pause(PID pid, ThreadID thread_id) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Pause{ thread_id }))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
@@ -34,11 +34,11 @@ namespace vm::api {
 
 	std::expected<response::CodePosition, ApiError> pause(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Pause{ 0 }))
+		    .doRequest(SupervisorRequest(pid, request::Pause{ ThreadID{ 0 } }))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<void, ApiError> resume(PID pid, i64 thread_id) {
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Resume{ thread_id }))
 		    .transform(ignoreResponse);
@@ -46,7 +46,7 @@ namespace vm::api {
 
 	std::expected<void, ApiError> resume(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Resume{ 0 }))
+		    .doRequest(SupervisorRequest(pid, request::Resume{ ThreadID{ 0 } }))
 		    .transform(ignoreResponse);
 	}
 
@@ -86,7 +86,7 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<response::ThreadID, ApiError> runFunction(
+	std::expected<ThreadID, ApiError> runFunction(
 		PID pid, const std::string& function_name, const FunctionRunArguments& args
 	) {
 		return Supervisor::get()
@@ -94,11 +94,11 @@ namespace vm::api {
 				pid, request::RunFunction{ .func_name = function_name, .func_args = args }
 			))
 		    .and_then([](const Response& response) {
-				return mapOrWrongResponse<response::ThreadID>(response);
+				return mapOrWrongResponse<ThreadID>(response);
 			});
 	}
 
-	std::expected<void, ApiError> join(PID pid, i64 thread_id) {
+	std::expected<void, ApiError> join(PID pid, ThreadID thread_id) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Join{ thread_id }))
 		    .transform(ignoreResponse);
@@ -116,7 +116,7 @@ namespace vm::api {
 
 	std::expected<void, ApiError> join(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Join{ 0 }))
+		    .doRequest(SupervisorRequest(pid, request::Join{ ThreadID{ 0 } }))
 		    .transform(ignoreResponse);
 	}
 

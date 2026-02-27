@@ -1,6 +1,7 @@
 #pragma once
 
 #include "status.hpp"
+#include "thread_id.hpp"
 
 #include <base/pointers/box.hpp>
 
@@ -53,8 +54,6 @@ namespace vm::api {
 		};
 
 		using Boolean = bool;
-
-		using ThreadID = i64;
 	}
 
 	using Response = std::variant<
@@ -65,6 +64,6 @@ namespace vm::api {
 		response::CodePosition,
 		response::VmValue,
 		response::Boolean,
-		response::ThreadID,
+		ThreadID,
 		ExitValue>;
 }
