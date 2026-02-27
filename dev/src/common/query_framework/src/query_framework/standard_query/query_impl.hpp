@@ -222,7 +222,7 @@ namespace query::internal {
 	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                     \
 		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
 	}                                                                                                                                  \
-	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                                          \
+	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                              \
 		return type::load(type::KHash(hash)).value().data;                                                                             \
 	}                                                                                                                                  \
 	static_assert(                                                                                                                     \

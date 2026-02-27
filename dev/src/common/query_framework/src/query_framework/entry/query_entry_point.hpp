@@ -22,7 +22,10 @@ namespace query {
 		struct EntryPointHelper final {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
-				static_assert(!QueryType::QUERY_DATA.isInputQuery(), "entryPoint cannot be used to call input queries");
+				static_assert(
+					!QueryType::QUERY_DATA.isInputQuery(),
+					"entryPoint cannot be used to call input queries"
+				);
 
 				auto node_id = makeNodeID<QueryType>(key);
 
