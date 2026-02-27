@@ -28,8 +28,7 @@ namespace pst::expr {
 		if (!checkNonEmpty(state)) return nullptr;
 
 		i64 fwd = toNextLink(state);
-		if (state[fwd].is(Token::Type::Sentinel))
-			return Lower::parse(state);
+		if (state[fwd].is(Token::Type::Sentinel)) return Lower::parse(state);
 
 		auto out = makeBox<ChainExpr>(state.getPosition());
 

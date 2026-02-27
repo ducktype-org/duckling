@@ -20,9 +20,7 @@ namespace pst::expr {
 		auto out = makeBox<ExprCharValue>(pos, state[0].getValue());
 		state.parse(out).eatOne();
 
-		if (length > 1) {
-			state.logInt(makeBox<MoreThanCharValueError>(pos));
-		}
+		if (length > 1) state.logInt(makeBox<MoreThanCharValueError>(pos));
 
 		PST_RETURN out;
 	}

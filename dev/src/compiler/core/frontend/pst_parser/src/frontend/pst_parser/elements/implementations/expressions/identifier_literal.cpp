@@ -11,7 +11,8 @@ namespace pst::expr {
 
 		state.parse(out).one(&out->name);
 
-		if (state.ctokens().size() > 1 && state[0].is(NamedOperator::Colon) && state[1].isBracketGroup(Token::Curly))
+		if (state.ctokens().size() > 1 && state[0].is(NamedOperator::Colon)
+		    && state[1].isBracketGroup(Token::Curly))
 			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse, 2L);
 
 		PST_RETURN out;
