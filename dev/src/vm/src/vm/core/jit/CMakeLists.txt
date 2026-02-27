@@ -1,6 +1,6 @@
 include(CMakePrintHelpers)
 
-function(process_to_binary source_file)
+function(process_to_binary source_file destination_file)
     get_filename_component(
         source_file_abs "${source_file}"
         ABSOLUTE BASE_DIR
@@ -59,8 +59,21 @@ function(process_to_binary source_file)
         COMMAND ${LLVM_OBJCOPY} -O binary --only-section=.text ${linked_out} ${text_out} 
         DEPENDS ${linked_out}
     )
-    set(jit_text_out "${text_out}" PARENT_SCOPE)
-    set(jit_nm_out   "${nm_out}"   PARENT_SCOPE)
+
+    set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
+    set_source_files_properties("${text_out}" PROPERTIES GENERATED TRUE)
+
+    target_include_directories(${destination_file} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+    target_compile_options(${destination_file} PRIVATE "--embed-dir=${CMAKE_CURRENT_BINARY_DIR}")
+
+    target_sources(
+        ${destination_file} 
+        PRIVATE "${nm_out}" "${text_out}"
+    )
 endfunction()
 
 add_subdirectory(copy-and-patch)
+
+set(vm_common_sources ${vm_common_sources} PARENT_SCOPE)
+set(vm_config_dependent_sources ${vm_config_dependent_sources} PARENT_SCOPE)
+set(jit_dependency ${jit_dependency} PARENT_SCOPE)

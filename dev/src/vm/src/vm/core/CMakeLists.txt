@@ -1,3 +1,5 @@
+add_subdirectory(jit)
+
 add_files(
 		supervisor/supervisor.cpp
 		process/vmprocess.cpp
@@ -26,5 +28,3 @@ add_files(
 )
 
 set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)
-
-add_subdirectory(jit)
