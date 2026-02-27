@@ -82,7 +82,7 @@ namespace vm {
 
 	std::expected<api::Response, api::ApiError> VMProcess::join(i64 thread_id) {
 		// @TODO: check status
-		auto& thread = thread_id == 0 ? getMainVMThread() : getVMThreadByID(thread_id);
+		auto& thread = getVMThreadByID(thread_id);
 
 		auto& opt_exec_thread = thread.exec_thread;
 		if (!opt_exec_thread || !opt_exec_thread->joinable())
@@ -194,18 +194,14 @@ namespace vm {
 			}
 
 			variant_case(api::request::Pause, pause_request) {
-				auto& thread   = pause_request.thread_id == 0
-				                   ? getMainVMThread()
-				                   : getVMThreadByID(pause_request.thread_id);
+				auto& thread   = getVMThreadByID(pause_request.thread_id);
 				auto  response = thread.pause();
 				if (!response) return std::unexpected(api::ApiError{ api::PauseError{} });
 				return getVMThreadByID(pause_request.thread_id).getCurrentPosition();
 			}
 
 			variant_case(api::request::Resume, resume_request) {
-				auto& thread   = resume_request.thread_id == 0
-				                   ? getMainVMThread()
-				                   : getVMThreadByID(resume_request.thread_id);
+				auto& thread   = getVMThreadByID(resume_request.thread_id);
 				auto  response = thread.resume();
 				if (!response) return std::unexpected(api::ApiError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
@@ -352,6 +348,7 @@ namespace vm {
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
 	VMThread& VMProcess::getVMThreadByID(i64 thread_id) {
+        if(thread_id == 0) return getMainVMThread();
 		for (auto& thread: vm_threads) {
 			if (thread.exec_thread) {
 				i64 id
