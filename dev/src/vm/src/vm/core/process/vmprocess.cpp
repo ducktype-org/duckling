@@ -347,7 +347,7 @@ namespace vm {
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
 	VMThread& VMProcess::getVMThreadByID(i64 thread_id) {
-        if(thread_id == 0) return getMainVMThread();
+		if (thread_id == 0) return getMainVMThread();
 		for (auto& thread: vm_threads) {
 			if (thread.exec_thread) {
 				i64 id
