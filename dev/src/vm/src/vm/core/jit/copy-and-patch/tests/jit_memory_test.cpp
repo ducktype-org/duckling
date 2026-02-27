@@ -3,7 +3,9 @@
 
 #include <string>
 #include <cstring>
+#include <base/preproc/diagnostics.hpp>
 
+PUSH_DIAGNOSTIC ALLOW_EXTENSIONS
 constexpr char object_file[] = {
 #embed "data-text" \
     suffix(,)
@@ -19,6 +21,7 @@ struct LLVM_nm_data {
 LLVM_nm_data llvm_nm_data[] {
 #include "data-nm"
 };
+POP_DIAGNOSTIC
 
 int main() {
     for (char c : object_file) {

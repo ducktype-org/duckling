@@ -64,8 +64,11 @@ function(process_to_binary source_file destination_file)
     set_source_files_properties("${text_out}" PROPERTIES GENERATED TRUE)
 
     target_include_directories(${destination_file} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-    target_compile_options(${destination_file} PRIVATE "--embed-dir=${CMAKE_CURRENT_BINARY_DIR}")
 
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${destination_file} PRIVATE "--embed-dir=${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+    
     target_sources(
         ${destination_file} 
         PRIVATE "${nm_out}" "${text_out}"
