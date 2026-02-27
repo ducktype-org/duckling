@@ -114,7 +114,7 @@ namespace vm {
 		/**
 		 * @brief Joins the executing thread.
 		 */
-		std::expected<api::Response, api::ApiError> join(i64 thread_id);
+		std::expected<api::Response, api::ApiError> join(api::response::ThreadID thread_id);
 
 		/**
 		 * @brief Stops the executing thread (by joining it).
@@ -174,7 +174,7 @@ namespace vm {
 
 		VMThread& getMainVMThread();
 
-		VMThread& getVMThreadByID(i64 thread_id);
+		VMThread& getVMThreadByID(api::response::ThreadID thread_id);
 
 		VMThread& getEmptyThread();
 

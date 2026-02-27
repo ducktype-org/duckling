@@ -79,7 +79,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::join(i64 thread_id) {
+	std::expected<api::Response, api::ApiError> VMProcess::join(api::response::ThreadID thread_id) {
 		// @TODO: check status
 		auto& thread = getVMThreadByID(thread_id);
 
@@ -346,12 +346,12 @@ namespace vm {
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
-	VMThread& VMProcess::getVMThreadByID(i64 thread_id) {
-		if (thread_id == 0) return getMainVMThread();
+	VMThread& VMProcess::getVMThreadByID(api::response::ThreadID thread_id) {
+		if (thread_id == api::response::ThreadID{ 0 }) return getMainVMThread();
 		for (auto& thread: vm_threads) {
 			if (thread.exec_thread) {
-				i64 id
-					= static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
+				api::response::ThreadID id
+					= static_cast<api::response::ThreadID>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
 				if (id == thread_id) return thread;
 			}
 		}

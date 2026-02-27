@@ -8,6 +8,7 @@
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/thread/vmvalue.hpp>
+#include <vm/api/data/response.hpp>
 
 #include <json/json.hpp>
 
@@ -26,11 +27,11 @@ namespace vm::api {
 		};
 
 		struct Pause {
-			i64 thread_id;
+			response::ThreadID thread_id;
 		};
 
 		struct Resume {
-			i64 thread_id;
+			response::ThreadID thread_id;
 		};
 
 		struct Stop {};
@@ -45,7 +46,7 @@ namespace vm::api {
 		};
 
 		struct Join {
-			i64 thread_id;
+			response::ThreadID thread_id;
 		};
 
 		struct RunFunctionAwait {

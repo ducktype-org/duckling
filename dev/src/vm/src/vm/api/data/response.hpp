@@ -2,6 +2,7 @@
 
 #include "status.hpp"
 
+#include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/pointers/box.hpp>
 
 #include <vm/core/process/type_metadata/type.hpp>
@@ -54,7 +55,7 @@ namespace vm::api {
 
 		using Boolean = bool;
 
-		using ThreadID = i64;
+		STRONG_TYPEDEF_INT(ThreadID, i64);
 	}
 
 	using Response = std::variant<
