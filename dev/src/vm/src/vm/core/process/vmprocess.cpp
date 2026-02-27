@@ -435,7 +435,7 @@ namespace vm {
 
 	bool VMProcess::shouldReleaseGil() {
 		operations++;
-		if (operations >= GIL_OPERATIONS) return true;
+		if (operations >= MAX_GIL_OPERATIONS) return true;
 		return false;
 	}
 

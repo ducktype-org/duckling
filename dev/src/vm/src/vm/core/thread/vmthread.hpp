@@ -297,7 +297,15 @@ namespace vm {
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
 
-		void acquireGil();
+		/**
+		 * @brief Called only on instruction execution.
+         * Checks if thread has GIL and if not then acquires it.
+		 */
+		void keepOrAcquireGil();
+
+		/**
+		 * @brief Releases GIL.
+		 */
 		void releaseGil();
 	};
 }
