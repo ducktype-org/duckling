@@ -50,11 +50,31 @@ namespace vm {
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
-		std::mutex                  gil;
-		i64                         next_mutex_id  = 0;
-		u64                         operations     = 0;
-		const static u64            GIL_OPERATIONS = 10'000;
 
+		/**
+		 * @brief Main GIL mutex for a process.
+         * It stems from assumption that only one thread can be executing DVM code at the time.
+		 */
+		std::mutex                  gil;
+
+		/**
+		 * @brief ID of a new mutex that's gonna be added to mutex pool.
+		 */
+		i64                         next_mutex_id  = 0;
+
+		/**
+		 * @brief Count of VM operations from the last time GIL was acquired. 
+		 */
+		u64                         operations     = 0;
+
+		/**
+		 * @brief Maximum amount of operations that can be executed by thread without giving up GIL. 
+		 */
+		const static u64            MAX_GIL_OPERATIONS = 10'000;
+
+		/**
+		 * @brief Pool for mutexes used in the process. In the future they should be reusable. 
+		 */
 		base::HashMap<i64, SharedBox<std::mutex>>
 			mutex_map;  // @TODO: #2109 Find better structure then map for storing mutexes.
 
