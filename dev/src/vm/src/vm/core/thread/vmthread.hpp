@@ -299,7 +299,7 @@ namespace vm {
 
 		/**
 		 * @brief Called only on instruction execution.
-         * Checks if thread has GIL and if not then acquires it.
+		 * Checks if thread has GIL and if not then acquires it.
 		 */
 		void keepOrAcquireGil();
 

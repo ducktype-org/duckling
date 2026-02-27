@@ -53,27 +53,27 @@ namespace vm {
 
 		/**
 		 * @brief Main GIL mutex for a process.
-         * It stems from assumption that only one thread can be executing DVM code at the time.
+		 * It stems from assumption that only one thread can be executing DVM code at the time.
 		 */
-		std::mutex                  gil;
+		std::mutex gil;
 
 		/**
 		 * @brief ID of a new mutex that's gonna be added to mutex pool.
 		 */
-		i64                         next_mutex_id  = 0;
+		i64 next_mutex_id = 0;
 
 		/**
-		 * @brief Count of VM operations from the last time GIL was acquired. 
+		 * @brief Count of VM operations from the last time GIL was acquired.
 		 */
-		u64                         operations     = 0;
+		u64 operations = 0;
 
 		/**
-		 * @brief Maximum amount of operations that can be executed by thread without giving up GIL. 
+		 * @brief Maximum amount of operations that can be executed by thread without giving up GIL.
 		 */
-		const static u64            MAX_GIL_OPERATIONS = 10'000;
+		const static u64 MAX_GIL_OPERATIONS = 10'000;
 
 		/**
-		 * @brief Pool for mutexes used in the process. In the future they should be reusable. 
+		 * @brief Pool for mutexes used in the process. In the future they should be reusable.
 		 */
 		base::HashMap<i64, SharedBox<std::mutex>>
 			mutex_map;  // @TODO: #2109 Find better structure then map for storing mutexes.
@@ -199,13 +199,13 @@ namespace vm {
 
 		/**
 		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
-         * then it returns main thread 
+		 * then it returns main thread
 		 */
 		VMThread& getVMThreadByID(api::ThreadID thread_id);
 
 		/**
 		 * @brief Returns reference to either existing empty thread or
-         * creates new thread without worker and returns it 
+		 * creates new thread without worker and returns it
 		 */
 		VMThread& getEmptyThread();
 
@@ -250,37 +250,37 @@ namespace vm {
 
 		VMProcess(PID my_pid);
 
-        /**
-        * @brief Acquires GIL. If you leave this function you always have right to interpret DVM code.
-        */
+		/**
+		 * @brief Acquires GIL. If you leave this function you always have right to interpret DVM
+		 * code.
+		 */
 		void acquireGil();
 
-        /**
-        * @brief Releases GIL. If you leave this function you no longr can interpret DVM code.
-        * It also zeroes operations counter, for the next person to take GIL.
-        */
+		/**
+		 * @brief Releases GIL. If you leave this function you no longr can interpret DVM code.
+		 * It also zeroes operations counter, for the next person to take GIL.
+		 */
 		void releaseGil();
 
-        /**
-        * @brief Decides whether current thread should give up GIL based on set GIL policy.
-        In the future it will have seprarte interace, for now it is simple counter.
-        */
+		/**
+		* @brief Decides whether current thread should give up GIL based on set GIL policy.
+		In the future it will have seprarte interace, for now it is simple counter.
+		*/
 		bool shouldReleaseGil();
 
-        
-        /**
-        * @brief Getter for mutexes in the pool.
-        */
+		/**
+		 * @brief Getter for mutexes in the pool.
+		 */
 		SharedBox<std::mutex> getMutex(i64 mutex_id);
 
-        /**
-        * @brief Adds new mutex into pool.
-        */
-		i64                   addMutex();
+		/**
+		 * @brief Adds new mutex into pool.
+		 */
+		i64 addMutex();
 
-        /**
-        * @brief Removes mutex from pool.
-        */
-		void                  removeMutex(i64);
+		/**
+		 * @brief Removes mutex from pool.
+		 */
+		void removeMutex(i64);
 	};
 }
