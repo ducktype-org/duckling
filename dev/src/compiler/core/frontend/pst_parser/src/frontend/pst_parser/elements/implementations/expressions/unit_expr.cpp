@@ -4,8 +4,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> UnitExpr::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> UnitExpr::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))
 		    || !state[0].getRecursive().empty()) {

@@ -39,10 +39,10 @@ namespace pst::expr {
 			MBox<ExprElement> extension;
 			if (state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)) {
-				state.parse(out).with(&extension, Access::parse, +fwd);
+				state.parse(out).autoFallbackLen(fwd).with(&extension, Access::parse);
 			} else if (state[0].isBracketGroup(lexer::Token::Round)
 			           || state[0].isBracketGroup(lexer::Token::Square)) {
-				state.parse(out).with(&extension, Call::parse, +fwd);
+				state.parse(out).autoFallbackLen(fwd).with(&extension, Call::parse);
 			} else {
 				state.logInt(makeBox<BadChainExprError>(
 					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())

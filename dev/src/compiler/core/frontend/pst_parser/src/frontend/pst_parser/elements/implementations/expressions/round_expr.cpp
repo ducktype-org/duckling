@@ -18,7 +18,7 @@ namespace pst::expr {
 			));
 		}
 
-		if (state[0].getRecursive().size() == 0) return UnitExpr::parse(state, length);
+		if (state[0].getRecursive().size() == 0) return UnitExpr::parse(state);
 
 		auto out = makeBox<RoundExpr>(state.getPosition());
 
