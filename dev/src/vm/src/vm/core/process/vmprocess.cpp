@@ -444,7 +444,7 @@ namespace vm {
 	}
 
 	i64 VMProcess::addMutex() {
-		mutex_map[next_mutex_id] = base::makeSharedBox<std::mutex>();
+		mutex_map.put(next_mutex_id, base::makeSharedBox<std::mutex>());
 		return next_mutex_id++;
 	}
 
