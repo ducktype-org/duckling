@@ -26,14 +26,14 @@ namespace vm {
 
 	public:
 		/**
-		 * @brief Acquires GIL. If you leave this function you always have right to interpret DVM
+		 * @brief Acquires GIL. After you call this function you always have right to interpret DVM
 		 * code.
 		 */
 		void acquire();
 
 		/**
-		 * @brief Releases GIL. If you leave this function you no longr can interpret DVM code.
-		 * It also zeroes operations counter, for the next person to take GIL.
+		 * @brief Releases GIL. After you call this function you no longer can interpret DVM code.
+		 * It also zeroes operations counter, for the next thread to take GIL.
 		 */
 		void release();
 
