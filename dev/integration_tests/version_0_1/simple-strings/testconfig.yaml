@@ -1,13 +1,12 @@
-# Dummy test configuration for simple-strings
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for simple-strings
+# Tests string literals, print function, escape sequences, and format strings
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  simple-strings-test:
+    Description: Tests for string type and print functionality.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "hello\nworld\ntab:\there\nvalue: 42\n10 + 20 = 30\nline1\nline2\n"
+        ExitCode: 0

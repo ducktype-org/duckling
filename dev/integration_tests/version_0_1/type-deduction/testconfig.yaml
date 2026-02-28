@@ -1,13 +1,12 @@
-# Dummy test configuration for type-deduction
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for type-deduction
+# Tests type inference for variables, expressions, and function returns
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  type-deduction-test:
+    Description: Tests for type deduction/inference.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "42\n42\n42\n100\n1\n84\n200\n99\n-50\n"
+        ExitCode: 0

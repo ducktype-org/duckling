@@ -1,13 +1,12 @@
-# Dummy test configuration for boolean-operators
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for class-declaration
+# Tests class (record) declarations, construction, field access, and nested classes
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  class-declaration-test:
+    Description: Tests for class declarations.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "0\n0\n5\n10\n100\n200\n20\n30\n5\n10\n3\n4\n12\n0\n10\n"
+        ExitCode: 0

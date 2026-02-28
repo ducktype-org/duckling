@@ -1,13 +1,12 @@
-# Dummy test configuration for boolean-operators
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for first-class-typing
+# Tests type aliases and their usage in declarations and function signatures
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  first-class-typing-test:
+    Description: Tests for first-class typing features.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "100\n200\n50\n70\n300\n"
+        ExitCode: 0

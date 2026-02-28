@@ -1,0 +1,35 @@
+fun main() -> i64 = {
+    # Test let declarations with explicit types
+    let a: i64 = 10;
+    let b: i32 = 20i32;
+    let c: bool = true;
+
+    # Test let with type inference
+    let d = 30;
+    let e = 40i64;
+    let f = false;
+
+    # Output let values
+    builtin_output_i64(a);              # 10
+    builtin_output_i64(i64(b));         # 20
+    builtin_output_i64(d);              # 30
+    builtin_output_i64(e);              # 40
+
+    # Test let in expressions
+    let sum = a + d + e;                # 10 + 30 + 40 = 80
+    builtin_output_i64(sum);            # 80
+
+    # Test let with complex expression
+    let complex = (a * 2) + (d / 3);    # 20 + 10 = 30
+    builtin_output_i64(complex);        # 30
+
+    # Test let bool in condition
+    if (c) {
+        builtin_output_i64(1);          # 1
+    }
+    if (not f) {
+        builtin_output_i64(2);          # 2
+    }
+
+    return 0;
+}

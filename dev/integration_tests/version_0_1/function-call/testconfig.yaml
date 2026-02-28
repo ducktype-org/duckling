@@ -1,13 +1,12 @@
-# Dummy test configuration for function-call
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: Preexisting tests may exist in /compiler/compilation/expressions/testconfig.yaml.
+# Test configuration for function-call
+# Tests function calls: simple calls, with variables, nested calls, and expressions
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  function-call-test:
+    Description: Tests for function calls.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "1\n10\n7\n6\n30\n30\n30\n17\n13\n"
+        ExitCode: 0

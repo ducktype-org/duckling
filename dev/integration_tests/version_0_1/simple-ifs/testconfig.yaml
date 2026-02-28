@@ -1,13 +1,12 @@
-# Dummy test configuration for simple-ifs
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for simple-ifs
+# Tests if statements: simple if, if-else, nested if, compound conditions
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  simple-ifs-test:
+    Description: Tests for if statements.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "1\n3\n6\n7\n9\n10\n12\n13\n14\n15\n16\n"
+        ExitCode: 0

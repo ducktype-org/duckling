@@ -1,13 +1,13 @@
-# Dummy test configuration for primitive-integers
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for primitive-integers
+# Tests various integer types: i8, i16, i32, i64, u8, u16, u32, u64
+# Also tests literal suffixes and different numeric bases (hex, octal, binary)
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  primitive-integers-test:
+    Description: Tests for primitive integer types and literals.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "127\n32767\n2147483647\n100\n255\n65535\n100\n200\n-128\n-32768\n-100\n-50\n42\n42\n42\n10\n10\n10\n"
+        ExitCode: 0

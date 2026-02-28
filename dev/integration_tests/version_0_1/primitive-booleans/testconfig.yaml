@@ -1,13 +1,12 @@
-# Dummy test configuration for primitive-booleans
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for primitive-booleans
+# Tests boolean literals, assignment, and boolean operations (and, or, not, xor)
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  primitive-booleans-test:
+    Description: Tests for primitive boolean types and operations.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "1\n3\n5\n7\n9\n11\n"
+        ExitCode: 0

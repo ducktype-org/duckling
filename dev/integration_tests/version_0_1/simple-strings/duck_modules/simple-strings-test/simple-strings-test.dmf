@@ -1,0 +1,28 @@
+fun main() -> i64 = {
+    # Test string literals with print
+    print("hello\n");
+
+    # Test string variable
+    var s: str = "world\n";
+    print(s);
+
+    # Test string with escape sequences
+    print("tab:\there\n");
+
+    # Test format strings (f-strings)
+    let x = 42;
+    print(f"value: {x}\n");
+
+    # Test format string with expressions
+    let a = 10;
+    let b = 20;
+    print(f"{a} + {b} = {a + b}\n");
+
+    # Test empty string
+    print("");
+
+    # Test string concatenation via print
+    print("line1\nline2\n");
+
+    return 0;
+}

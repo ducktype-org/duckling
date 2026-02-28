@@ -1,13 +1,12 @@
-# Dummy test configuration for constant-simple-declaration
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for constant-simple-declaration
+# Tests const declarations with explicit types, type inference, and const expressions
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  constant-simple-declaration-test:
+    Description: Tests for constant declarations.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "100\n50\n42\n110\n57\n200\n1\n"
+        ExitCode: 0

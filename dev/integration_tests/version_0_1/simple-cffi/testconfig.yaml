@@ -1,13 +1,12 @@
-# Dummy test configuration for boolean-operators
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for simple-cffi
+# Tests C FFI (Foreign Function Interface) by calling libc's abs function
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  simple-cffi-test:
+    Description: Tests for C FFI.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "10\n25\n15\n"
+        ExitCode: 0

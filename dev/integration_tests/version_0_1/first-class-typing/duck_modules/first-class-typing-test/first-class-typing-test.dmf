@@ -1,0 +1,27 @@
+# Test type aliases
+alias Int = i64;
+alias UnsignedInt = u64;
+
+# Test type in function signatures
+fun identity(x: Int) -> Int = x;
+
+fun add(a: Int, b: Int) -> Int = a + b;
+
+fun main() -> i64 = {
+    # Test using type aliases
+    var x: Int = 100;
+    var y: UnsignedInt = 200u64;
+
+    builtin_output_i64(x);              # 100
+    builtin_output_i64(i64(y));         # 200
+
+    # Test function with aliased types
+    builtin_output_i64(identity(50));   # 50
+    builtin_output_i64(add(30, 40));    # 70
+
+    # Test operations on aliased types
+    var sum: Int = x + i64(y);
+    builtin_output_i64(sum);            # 300
+
+    return 0;
+}
