@@ -5,7 +5,6 @@
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
-#include "base/misc/shared_view.hpp"
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
@@ -13,9 +12,20 @@
 #include <filesystem/file.hpp>
 
 namespace {
-	// Content cache for each file path (used for deduplication and fast access)
-	using ContentMap = concurrent::ConHashMap<std::filesystem::path, base::SharedView>;
-	ContentMap to_content;
+	/**
+	 * @brief A value pair storing the information about a file.
+	 * This is merged here to not create to separate ConHashMaps for which the access would have to
+	 * be synchronized.
+	 */
+	struct PathState final {
+		// List of all SourceFile instances associated with this path.
+		std::vector<base::Ref<compiler::frontend::SourceFile>> instances;
+		// Cached view of the file's content (used for deduplication and fast access).
+		base::Optional<base::SharedView> content;
+	};
+
+	// Map that stores all SourceFile instanced and the content cache by their file path.
+	concurrent::ConHashMap<std::filesystem::path, PathState> path_registry;
 
 	/**
 	 * Concurrent Stable HashMap that stores all SourceFile instances.
@@ -23,16 +33,6 @@ namespace {
 	 */
 	concurrent::ConHashMap<usize, compiler::frontend::SourceFile> files;
 	std::atomic<usize>                                            next_storage_key = 0;
-
-	/*
-	 * Map that stores all SourceFile instances by their file path.
-	 * it is used for function getSourceFilesFromFile()
-	 */
-	concurrent::ConHashMap<
-		std::filesystem::path,
-		std::vector<base::Ref<compiler::frontend::SourceFile>>>
-		files_map;
-
 }
 
 namespace compiler::frontend {
@@ -55,10 +55,13 @@ namespace compiler::frontend {
 		created_ref->storage_handle = storage_key;
 		created_ref->file_id        = FileID(created_ref);
 
-		files_map.maybePutAndUpdate(
+		path_registry.maybePutAndUpdate(
 			abs_path,
-			std::vector<base::Ref<SourceFile>>{},
-			[&](Ref<std::vector<base::Ref<SourceFile>>> entries) { entries->push_back(created_ref); }
+			PathState{ .instances = { created_ref }, .content = std::nullopt },
+			[&](Ref<PathState> state) {
+				if (std::ranges::find(state->instances, created_ref) == state->instances.end())
+					state->instances.push_back(created_ref);
+			}
 		);
 
 		return created_ref;
@@ -66,16 +69,26 @@ namespace compiler::frontend {
 
 	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesFromFile(const fs::File& file) {
 		auto abs_path = file.getFilePath().absolute().getPath();
-		return files_map.atMaybeCopy(abs_path).copyValueOr(std::vector<base::Ref<SourceFile>>{});
+
+		auto state = path_registry.atMaybeCopy(abs_path);
+		if (state.has_value()) return state->instances;
+		return {};
 	}
 
 	void SourceFile::update() {
+		std::lock_guard lock(*state_lock);
+
 		auto abs_path = this->file.getFilePath().absolute().getPath();
+
 		// Update content in cache
-		to_content.erase(abs_path);
+		path_registry.maybePutAndUpdate(abs_path, PathState{}, [&](Ref<PathState> state) {
+			state->content.reset();
+		});
+
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
-		// reset the parse tree
+		// Reset the parse tree and the hash.
 		parse_tree.reset();
+		component_hash.reset();
 	}
 
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
@@ -102,24 +115,28 @@ namespace compiler::frontend {
 	base::SharedView SourceFile::getCachedContentIllegalAccess() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 
-		to_content.maybePutAndUpdate(
+		path_registry.maybePutAndUpdate(
 			abs_path,
-			file.getContent(),
-			[&](Ref<base::SharedView> content_in_map) {
-				CORE_ASSERT(
-					content_in_map->view() == file.getContent().view(),
-					base::strConcat(
-						"SourceFile with path '",
-						abs_path.string(),
-						"' already exists with different content. "
-						"Delete the existing SourceFile first or call "
-						"update handler from the ModuleModifier."
-					)
-				);
+			PathState{ .instances = {}, .content = file.getContent() },
+			[&](Ref<PathState> state) {
+				if (!state->content.has_value()) {
+					state->content = file.getContent();
+				} else {
+					CORE_ASSERT(
+						state->content->view() == file.getContent().view(),
+						base::strConcat(
+							"SourceFile with path '",
+							abs_path.string(),
+							"' already exists with different content. "
+							"Delete the existing SourceFile first or call "
+							"update handler from the ModuleModifier."
+						)
+					);
+				}
 			}
 		);
 
-		return *to_content.at(abs_path);
+		return *path_registry.at(abs_path)->content;
 	}
 
 	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
@@ -127,20 +144,10 @@ namespace compiler::frontend {
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
 
-		files_map
-			.maybePutAndUpdate(abs_path, {}, [&](Ref<std::vector<base::Ref<SourceFile>>> entries) {
-				std::erase(*entries, source_file);
-			});
-
-		// Remove the `Path -> SourceFile` if the value vector is empty.
-		files_map.eraseIf(abs_path, [](const std::vector<base::Ref<SourceFile>>& entries) {
-			return entries.empty();
-		});
-
-		// Remove the `Path -> SharedView` if if wasn't added by some other thread after we removed
-		// it from the files_map.
-		to_content.eraseIf(abs_path, [&](const base::SharedView&) {
-			return !files_map.contains(abs_path);
+		// Remove the `Path -> (SourceFiles, SharedView)` if the value vector is empty.
+		path_registry.eraseIf(abs_path, [&](PathState& state) {
+			std::erase(state.instances, source_file);
+			return state.instances.empty();
 		});
 
 		CORE_ASSERT(
