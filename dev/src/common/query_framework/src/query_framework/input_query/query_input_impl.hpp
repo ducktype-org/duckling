@@ -58,6 +58,7 @@
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);               \
 		evaluate_body return ::query::internal::SideInputMockValue{};                          \
 	}                                                                                          \
+	auto query_type::internal_erase(::query::QueryStableHash) -> bool { return false; }        \
 	static_assert(                                                                             \
 		not std::is_reference_v<query_type::QKey>,                                             \
 		"Query key type should not be a reference (use custom struct instead)"                 \
