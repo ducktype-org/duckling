@@ -56,7 +56,7 @@ namespace compiler::frontend {
 
 		files_map.maybePutAndUpdate(
 			abs_path,
-			std::vector<base::Ref<SourceFile>>{ created_ref },
+			std::vector<base::Ref<SourceFile>>{},
 			[&](Ref<std::vector<base::Ref<SourceFile>>> entries) { entries->push_back(created_ref); }
 		);
 
@@ -126,28 +126,18 @@ namespace compiler::frontend {
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
 
+		bool should_erase_key = false;
+
 		files_map
 			.maybePutAndUpdate(abs_path, {}, [&](Ref<std::vector<base::Ref<SourceFile>>> entries) {
 				std::erase(*entries, source_file);
+				if (entries->empty()) should_erase_key = true;
 			});
 
-
-		// if (files_map.contains(abs_path)) {
-		// 	auto&      entries = files_map.at(abs_path);
-		// 	const auto removal = std::ranges::remove_if(
-		// 		entries.begin(),
-		// 		entries.end(),
-		// 		[source_file](const base::Ref<SourceFile>& candidate) {
-		// 			return candidate == source_file;
-		// 		}
-		// 	);
-		// 	entries.erase(removal.begin(), removal.end());
-
-		// 	if (entries.empty()) {
-		// 		files_map.erase(abs_path);
-		// 		to_content.erase(abs_path);
-		// 	}
-		// }
+		if (should_erase_key) {
+			files_map.erase(abs_path);
+			to_content.erase(abs_path);
+		}
 
 		CORE_ASSERT(
 			source_file->storage_handle.has_value(),

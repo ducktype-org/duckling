@@ -121,7 +121,7 @@ private:
 			auto source_file1 = SourceFile::create(temp_file1, dummy_module->getModuleID());
 			auto source_file2 = SourceFile::create(temp_file2, dummy_module->getModuleID());
 
-			// Test getCachedContentIllegalAcess() on SourceFile objects
+			// Test getCachedContentIllegalAccess() on SourceFile objects
 			auto cached_content1 = source_file1->getCachedContentIllegalAccess();
 			auto cached_content2 = source_file2->getCachedContentIllegalAccess();
 
@@ -170,7 +170,7 @@ private:
 		ASSERT_EQUAL(hash1, hash1_again);
 
 		// Create another SourceFile with same path - the hash must be different this is because the
-		// file might be in different module and the manging names will be different
+		// file might be in different module and the mangled names will be different
 		auto source_file1_copy = SourceFile::create(temp_file1, dummy_module->getModuleID());
 		u64  hash1_copy        = source_file1_copy->getFileID().queryUnstablePerfectHash();
 		ASSERT_TRUE(hash1_copy != hash1);
