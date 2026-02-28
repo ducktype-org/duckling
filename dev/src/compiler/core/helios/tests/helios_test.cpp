@@ -1882,8 +1882,6 @@ private:
 	void testMethodCalls() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/method_calls")));
 
-		std::cout << "Got module" << std::endl;
-
 		auto example_class = getChain("ExampleClass", scope).back();
 		auto example_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(example_class)
@@ -1895,8 +1893,6 @@ private:
 		          .as<compiler::tsh::ClassAbstractType>();
 		ASSERT_EQUAL(3, example_class_info.methods.size());
 
-		std::cout << "Got ExampleClass details" << std::endl;
-
 		for (auto& method: example_class_info.methods) {
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
@@ -1904,8 +1900,6 @@ private:
 				ref_st(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
 		}
-
-		std::cout << "Got ExampleClass methods" << std::endl;
 
 		auto wrapper_class = getChain("Wrapper", scope).back();
 		auto wrapper_class_info
@@ -1918,8 +1912,6 @@ private:
 		          .as<compiler::tsh::ClassAbstractType>();
 		ASSERT_EQUAL(4, wrapper_class_info.methods.size());
 
-		std::cout << "Got Wrapper details" << std::endl;
-
 		for (auto& method: wrapper_class_info.methods) {
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
@@ -1927,8 +1919,6 @@ private:
 				ref_st(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
 		}
-
-		std::cout << "Got Wrapper methods" << std::endl;
 
 		auto point_class = getChain("Point", scope).back();
 		auto point_class_info
@@ -1940,11 +1930,7 @@ private:
 		          .as<compiler::tsh::ClassAbstractType>();
 		ASSERT_EQUAL(7, point_class_info.methods.size());
 
-		std::cout << "Got Point details" << std::endl;
-
 		for (auto& method: point_class_info.methods) {
-			std::cout << "\tChecking method: " << compiler::helios::name(method).strView()
-					  << std::endl;
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
 			ASSERT_EQUAL(
@@ -1952,15 +1938,11 @@ private:
 			);
 		}
 
-		std::cout << "Got Point methods" << std::endl;
-
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
 		          .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		               // that it is successful
-
-		std::cout << "Got all HOUT units recursively" << std::endl;
 	}
 
 	void testMangler() {

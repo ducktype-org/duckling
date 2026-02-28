@@ -5,12 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include "helios/hout/origin.hpp"
-#include "helios/symbols/query_class_of_member.hpp"
-#include "helios/symbols/query_type_of_symbol.hpp"
-#include "helios_private/lookup/lookup_result.hpp"
-#include "typesystem/higher/types.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -19,7 +13,10 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/origin.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/expressions/coercions.hpp>
@@ -28,9 +25,11 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
