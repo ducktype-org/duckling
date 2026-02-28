@@ -5,6 +5,7 @@
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
+#include "base/misc/shared_view.hpp"
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
@@ -17,7 +18,8 @@ namespace {
 	ContentMap to_content;
 
 	/**
-	 * StableHashMap that stores all SourceFile instances.
+	 * Concurrent Stable HashMap that stores all SourceFile instances.
+	 * @note: ConHashMap uses StableHashMap underneath.
 	 */
 	concurrent::ConHashMap<usize, compiler::frontend::SourceFile> files;
 	std::atomic<usize>                                            next_storage_key = 0;
@@ -125,18 +127,21 @@ namespace compiler::frontend {
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
 
-		bool should_erase_key = false;
-
 		files_map
 			.maybePutAndUpdate(abs_path, {}, [&](Ref<std::vector<base::Ref<SourceFile>>> entries) {
 				std::erase(*entries, source_file);
-				if (entries->empty()) should_erase_key = true;
 			});
 
-		if (should_erase_key) {
-			files_map.erase(abs_path);
-			to_content.erase(abs_path);
-		}
+		// Remove the `Path -> SourceFile` if the value vector is empty.
+		files_map.eraseIf(abs_path, [](const std::vector<base::Ref<SourceFile>>& entries) {
+			return entries.empty();
+		});
+
+		// Remove the `Path -> SharedView` if if wasn't added by some other thread after we removed
+		// it from the files_map.
+		to_content.eraseIf(abs_path, [&](const base::SharedView&) {
+			return !files_map.contains(abs_path);
+		});
 
 		CORE_ASSERT(
 			source_file->storage_handle.has_value(),

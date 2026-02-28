@@ -239,6 +239,26 @@ namespace concurrent {
 		}
 
 		/**
+		 * Atomically erases the key-value pair if the key exists and the predicate returns true.
+		 */
+		template<typename Predicate>
+		bool eraseIf(const KEY_T& key, Predicate pred) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			auto&         shard = shards[lock.shard_index];
+
+			auto opt_ref = shard.atMaybe(key);
+			if (opt_ref.has_value()) {
+				if (pred(*opt_ref.value())) {
+					if (shard.erase(key)) {
+						elements_count.fetch_sub(1, std::memory_order_relaxed);
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		/**
 		 * Returns the number of elements currently stored in the map.
 		 *
 		 * @note The value is approximate under concurrent modifications –

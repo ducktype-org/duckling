@@ -147,7 +147,6 @@ namespace compiler::driver {
 		void handleExecutionOptions(const options_types::ExecutionOptions& execution_options) {
 			concurrent::worker::setWorkerCount(execution_options.worker_count);
 		}
-
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
