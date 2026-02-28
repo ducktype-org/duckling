@@ -176,8 +176,8 @@ add_vm_variant(tc "USE_TAIL_CALLS")
 add_vm_variant(sc "USE_SWITCH_CASE")
 
 # Default alias to "sc"
-add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc> $<TARGET_OBJECTS:JitDep>)
 if (JIT_ENABLED)
+    add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc> $<TARGET_OBJECTS:JitDep>)
     make_module(LibVM USES llvm_helpers ${vm_dependencies})
     target_link_libraries(LibVM ${llvm_libs})
     add_executable(VM $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
@@ -185,6 +185,7 @@ if (JIT_ENABLED)
     target_link_libraries(VM LibVM ${llvm_libs})
     target_link_options(VM PRIVATE -Wl,--export-dynamic)
 else() # Same as for JIT, but without JITDep and llvm_libs
+    add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc>)
     make_module(LibVM USES ${vm_dependencies})
     add_executable(VM $<TARGET_OBJECTS:MainVM>)
 
