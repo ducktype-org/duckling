@@ -1,5 +1,7 @@
 #include "origin.hpp"
 
+#include "frontend/pst_parser/stable_position.hpp"
+
 #include <frontend/pst_parser/lang_parser_element.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -8,34 +10,46 @@
 
 namespace compiler::helios::code {
 	base::Optional<dia::SourcePosition> ElementOrigin::getSourcePosition() const {
-		return source_position;
+		return source_position.map([](const pst::StablePosition& stable_pos) {
+			return stable_pos.getActiveSourcePosition();
+		});
 	}
 
 	ElementOrigin ElementOrigin::extended(pst::Access<pst::LangElement> pst_element) const {
-		base::Optional<dia::SourcePosition> new_pos;
 		match_optional(source_position) {
 			opt_some(pos) {
-				new_pos = dia::SourcePosition::merge(pos, pst_element->getSourcePosition());
+				pst::StablePosition new_pos = pos;
+				new_pos.extendWith(pst_element->getStablePosition());
+				return { new_pos, {}, false };
 			}
-			opt_none { new_pos = pst_element->getSourcePosition(); }
+			opt_none { return { pst_element->getStablePosition(), {}, false }; }
 		}
-		return { new_pos, false };
+		CORE_UNREACHABLE();
 	}
 
-	ElementOrigin ElementOrigin::generatedFrom() const { return { source_position, true }; }
+	ElementOrigin ElementOrigin::generatedFrom() const { return { source_position, {}, true }; }
 
 	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements) {
-		auto pos = pst_elements[0]->getSourcePosition();
+		if (pst_elements.empty()) return generatedOrigin();
+
+		auto pos = pst_elements[0]->getStablePosition();
 
 		for (usize i{ 1 }; i < pst_elements.size(); ++i)
-			pos = dia::SourcePosition::merge(pos, pst_elements[i]->getSourcePosition());
+			pos.extendWith(pst_elements[i]->getStablePosition());
 
-		return { pos, false };
+		return { pos, {}, false };
 	}
 
 	ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element) {
-		return { pst_element->getSourcePosition(), false };
+		return { pst_element->getStablePosition(), pst_element->getHash(), false };
 	}
 
-	ElementOrigin generatedOrigin() { return { {}, true }; }
+	ElementOrigin generatedOrigin() { return { {}, {}, true }; }
+
+	base::Optional<pst::AccessLocked<pst::LangElement>> ElementOrigin::getPSTElement() const {
+		return pst_element.map([](const pst::LangElement::HashType& hash) {
+			auto element = pst::LangElement::getByStableHash(hash);
+			return element;
+		});
+	}
 }
