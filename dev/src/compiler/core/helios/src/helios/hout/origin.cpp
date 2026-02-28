@@ -1,8 +1,7 @@
 #include "origin.hpp"
 
-#include "frontend/pst_parser/stable_position.hpp"
-
 #include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/stable_position.hpp>
 
 #include <base/except/exceptions.hpp>
 
