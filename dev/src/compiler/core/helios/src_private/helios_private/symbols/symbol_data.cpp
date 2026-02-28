@@ -1,10 +1,10 @@
 #include "symbol_data.hpp"
 
 #include <helios/scope_id.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -89,12 +89,13 @@ namespace compiler::helios {
 					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
 				}
 				variant_case(SelfParameter, param) {
-					const auto class_type = ctx.query<QueryClassOfMember>(param.method_symbol)->valueOrThrow();
+					const auto class_type
+						= ctx.query<QueryClassOfMember>(param.method_symbol)->valueOrThrow();
 					auto param_symbol_type = tsh::SymbolType{
-							class_type,
-							tsh::ReferenceKind::Ref,
-							tsh::Mutability::Mutable,
-						};
+						class_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
 					return param_symbol_type;
 				}
 				variant_case(Variable, var) { return var.type; }

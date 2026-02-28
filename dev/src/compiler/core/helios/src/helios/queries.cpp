@@ -288,14 +288,12 @@ namespace compiler::helios {
 			void visitMethod(pst::Access<pst::Method> method) final { visitFuncLike(method); }
 
 			void visitReturn(pst::Access<pst::Return> stmt) final {
-				std::cout << "Visiting return statement" << std::endl;
 				if (auto val = stmt->getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
 					                ->valueOrThrow()
 					                .ref();
 					output(expr->expression_type.getSymbolType());
 				}
-				std::cout << "Visited return statement" << std::endl;
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) final {
@@ -308,12 +306,9 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::cout << "\33[31mQueryReturnTypeDeduction\33[0m for symbol: " << name(key).str()
-					  << std::endl;
 			ReturnTypeCollector return_collector(ctx, key, true);
 			auto                fun = stmt(ctx, key).value();
 			fun->acceptVisitor(return_collector);
-			std::cout << "Collected return candidates: " << return_collector.out.size() << std::endl;
 			switch (return_collector.out.size()) {
 			case 0:
 				// there are no returns to deduce the type
@@ -435,10 +430,9 @@ namespace compiler::helios {
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				std::cout << "Getting Method declaration" << std::endl;
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 
-				const auto self_scope = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
+				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
@@ -448,15 +442,13 @@ namespace compiler::helios {
 
 				this->out->parameters.insert(
 					this->out->parameters.begin(),
-					code::Parameter{
-						.name          = name(self_symbol),
-						.type          = ctx.query<QueryTypeOfSymbol>(self_symbol)->valueOrThrow(),
-						.initial_value = std::nullopt,
-						.helios_symbol = self_symbol,
-						.origin = code::generatedOrigin()
-					}
+					code::Parameter{ .name = name(self_symbol),
+				                     .type
+				                     = ctx.query<QueryTypeOfSymbol>(self_symbol)->valueOrThrow(),
+				                     .initial_value = std::nullopt,
+				                     .helios_symbol = self_symbol,
+				                     .origin        = code::generatedOrigin() }
 				);
-				std::cout << "Finished Method declaration" << std::endl;
 			}
 		};
 
@@ -556,7 +548,6 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::cout << "\33[31mQueryDeclOfFun\33[0m for symbol: " << name(key).str() << std::endl;
 			switch (kind(key)) {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration:
@@ -966,8 +957,6 @@ namespace compiler::helios {
 			std::shared_ptr<const code::CodeBlock> processBody(
 				const HOUTFunctionDeclaration& decl, pst::AccessLocked<pst::CodeBlockOrStmt> body
 			) {
-				std::cout << "\33[31mHOUTFunctionMaker::processBody\33[0m for symbol: " << name(original_symbol).str()
-						  << std::endl;
 				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
 
 				if (body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
@@ -1014,7 +1003,6 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::cout << "\33[31mQueryCodeOfFun\33[0m for symbol: " << name(key).str() << std::endl;
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
 				"Function creation called on non-function and non-method symbol"
@@ -1026,7 +1014,6 @@ namespace compiler::helios {
 			HOUTFunctionMaker func_maker(ctx, key);
 			stmt(ctx, key).value()->acceptVisitor(func_maker);
 
-			std::cout << "\33[32mFinished\33[0m" << std::endl;
 			return func_maker.out.value();
 		}
 
