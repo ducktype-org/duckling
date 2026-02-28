@@ -257,7 +257,7 @@ namespace vm {
 		void acquireGil();
 
 		/**
-		 * @brief Releases GIL. If you leave this function you no longr can interpret DVM code.
+		 * @brief Releases GIL. After you call this function you no longer can interpret DVM code.
 		 * It also zeroes operations counter, for the next thread to take GIL.
 		 */
 		void releaseGil();
