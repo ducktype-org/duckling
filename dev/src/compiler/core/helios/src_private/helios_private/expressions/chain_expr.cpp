@@ -271,7 +271,7 @@ namespace compiler::helios::code {
 				}))
 				return looked_up_callees;
 
-			// If all candidates are methods, check if they are from the same class.
+			// If all candidates are methods, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Method;
 				})) {
@@ -811,14 +811,25 @@ namespace compiler::helios::code {
 				pst_elem->getSourcePosition(), ctx, base::StrID("self")
 			);
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
+
+			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), sym_list.back());
+			auto self_type = self_expr->expression_type.getSymbolType().getType();
+
+			auto fields = self_type.getInterface(ctx)->getFieldsView();
+			if (std::ranges::find(fields, field_symbol, &tsh::InterfaceElement::getSymbol)
+			    == fields.end()) {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"No such field found in the interface of prefix expression.",
+					pst_elem->getSourcePosition()
+				));
+				return query::Failed();
+			}
+
+
 			return makeBox<AccessExpr>(
 				ctx,
 				pst_element_origin,
-				makeBox<DerefExpr>(
-					ctx,
-					generatedOrigin(),
-					makeBox<IdentifierExpr>(ctx, generatedOrigin(), sym_list.back())
-				),
+				makeBox<DerefExpr>(ctx, generatedOrigin(), std::move(self_expr)),
 				field_symbol
 			);
 		}
@@ -874,8 +885,7 @@ namespace compiler::helios::code {
 				auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), self_arg);
 
 				// Filter candidates for which the self argument is different than the found one
-				auto self_type_res = ctx.query<QueryTypeOfSymbol>(self_arg);
-				UNPACK_QRESULT_CREF(const auto& self_type =, self_type_res);
+				auto self_type = self_expr->expression_type;
 
 				auto methods = self_type.getType().getInterface(ctx)->getMethodsView();
 
