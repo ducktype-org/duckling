@@ -53,9 +53,9 @@ namespace query::internal {
 
 		// @TODO: #2026 add note status static assertion if possible.
 
-		IF_BUILD_TYPE_DEV(if (auto v = QueryImplType::load(perfect_hash)) {
-			CORE_PANIC("query cache present in standardQueryEntry");
-		});
+		CORE_ASSERT(
+			QueryImplType::load(perfect_hash).empty(), "Cache should be empty in standardQueryEntry"
+		);
 
 		auto node_id = makeNodeID<QueryIntType>(key);
 		auto context = ContextAccess::make(node_id);

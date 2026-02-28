@@ -54,6 +54,7 @@ namespace compiler::helios {
 			bool is_failed = false;
 
 			std::vector<query::TaskHandle> scheduled_tasks;
+			std::vector<SymID>             class_symbols;
 
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
@@ -64,12 +65,18 @@ namespace compiler::helios {
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
+
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
 						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
-					if (kind(sym) == SymbolKind::Class)
-						appendClassConstructors(out.functions, sym, ctx);
+					if (kind(sym) == SymbolKind::Class) class_symbols.emplace_back(sym);
 				}
+			}
+
+			for (auto class_sym: class_symbols) {
+				// we postpone this past function scheduling, as
+				// appendClassConstructors may be time consuming.
+				appendClassConstructors(out.functions, class_sym, ctx);
 			}
 
 			for (auto handler: scheduled_tasks) {

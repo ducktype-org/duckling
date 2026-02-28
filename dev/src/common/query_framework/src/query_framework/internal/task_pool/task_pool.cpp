@@ -42,7 +42,7 @@ namespace query::internal {
 			is_worker_free_map[free_worker_opt.value()] = false;
 			return;
 		} else {
-			 addToGlobalPoolUnlocked(std::move(task));
+			addToGlobalPoolUnlocked(std::move(task));
 		}
 	}
 
