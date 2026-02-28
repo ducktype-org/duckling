@@ -47,7 +47,8 @@ private:
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
-				.incremental           = { .enabled = true }
+				.incremental           = { .enabled = true },
+				.execution_options = {},
             }
         );
 

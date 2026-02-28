@@ -63,7 +63,8 @@ protected:
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
-				.incremental           = {}
+				.incremental           = {},
+				.execution_options {},
 			}
 		);
 	}

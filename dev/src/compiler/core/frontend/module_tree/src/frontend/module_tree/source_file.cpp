@@ -101,13 +101,12 @@ namespace compiler::frontend {
 	base::SharedView SourceFile::getCachedContentIllegalAccess() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 
-		to_content.maybePut(abs_path, file.getContent());
-
-		IF_BUILD_TYPE_DEV({
-			auto content = to_content.atMaybeCopy(abs_path);
-			if (content.has_value()) {
+		to_content.maybePutAndUpdate(
+			abs_path,
+			file.getContent(),
+			[&](Ref<base::SharedView> content_in_map) {
 				CORE_ASSERT(
-					to_content.at(abs_path)->view() == file.getContent().view(),
+					content_in_map->view() == file.getContent().view(),
 					base::strConcat(
 						"SourceFile with path '",
 						abs_path.string(),
@@ -117,10 +116,9 @@ namespace compiler::frontend {
 					)
 				);
 			}
-		});
+		);
 
-		// This should not happen since content is cached in constructor
-		CORE_PANIC("SourceFile content not found in cache for: " + abs_path.string());
+		return *to_content.at(abs_path);
 	}
 
 	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
