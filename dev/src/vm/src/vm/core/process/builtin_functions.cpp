@@ -116,24 +116,24 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
-		i64 mutex_id = thread.process.addMutex();
+		i64 mutex_id = thread.process.getSynchronizationPrimitives()->addMutex();
 		return mutex_id;
 	}
 
 	void FunctionHandlers::builtinLockMutex(VMThread& thread, i64 mutex_id) {
-		auto mutex = thread.process.getMutex(mutex_id);
+		auto mutex = thread.process.getSynchronizationPrimitives()->getMutex(mutex_id);
 		thread.releaseGil();
 		mutex->lock();
 		thread.keepOrAcquireGil();
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(VMThread& thread, i64 mutex_id) {
-		auto mutex = thread.process.getMutex(mutex_id);
+		auto mutex = thread.process.getSynchronizationPrimitives()->getMutex(mutex_id);
 		mutex->unlock();
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(VMThread& thread, i64 mutex_id) {
-		thread.process.removeMutex(mutex_id);
+		thread.process.getSynchronizationPrimitives()->removeMutex(mutex_id);
 	}
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(

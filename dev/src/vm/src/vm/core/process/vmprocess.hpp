@@ -8,7 +8,8 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/core/process/gil.hpp>
+#include <vm/core/process/concurrency/gil.hpp>
+#include <vm/core/process/concurrency/synchronization_primitives.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -53,18 +54,9 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 
-		Box<GIL> gil = makeBox<GIL>();
-
-		/**
-		 * @brief ID of a new mutex that's gonna be added to mutex pool.
-		 */
-		i64 next_mutex_id = 0;
-
-		/**
-		 * @brief Pool for mutexes used in the process. In the future they should be reusable.
-		 */
-		base::HashMap<i64, SharedBox<std::mutex>>
-			mutex_map;  // @TODO: #2109 Find better structure then map for storing mutexes.
+		Box<GIL>                       gil = makeBox<GIL>();
+		Box<SynchronizationPrimitives> synchronization_primitives
+			= makeBox<SynchronizationPrimitives>();
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
@@ -238,21 +230,7 @@ namespace vm {
 
 		VMProcess(PID my_pid);
 
-		Ref<GIL> getGIL();
-
-		/**
-		 * @brief Getter for mutexes in the pool.
-		 */
-		SharedBox<std::mutex> getMutex(i64 mutex_id);
-
-		/**
-		 * @brief Adds new mutex into pool.
-		 */
-		i64 addMutex();
-
-		/**
-		 * @brief Removes mutex from pool.
-		 */
-		void removeMutex(i64);
+		Ref<GIL>                       getGIL();
+		Ref<SynchronizationPrimitives> getSynchronizationPrimitives();
 	};
 }
