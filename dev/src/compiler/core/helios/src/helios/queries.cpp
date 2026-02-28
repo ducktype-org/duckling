@@ -860,14 +860,13 @@ namespace compiler::helios {
 						return;
 					}
 
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Variable declarations without initial value are not supported yet.",
-						stmt->getSourcePosition()
+					// @TODO: #1921 This is not a proper way to handle default initialization. Make
+					// it better.
+					auto initial_value
+						= makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), symbol_type);
+					output(code::VariableStmt(
+						code::pstOrigin(stmt), std::move(initial_value), symbol_type, symbol
 					));
-
-					is_failed = true;
-					return;
-
 				} else {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(

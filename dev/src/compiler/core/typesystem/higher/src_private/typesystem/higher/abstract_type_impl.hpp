@@ -500,6 +500,69 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
+	class StaticArrayAbstractTypeImpl final: public AbstractTypeImpl {
+		SymbolType<> element_type;
+		usize        size;  // Number of elements in the array.
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::StaticArray;
+
+		StaticArrayAbstractTypeImpl(const SymbolType<> element, const usize size):
+			  element_type(element),
+			  size(size) {
+			representation = base::strConcat(element.toString(), "[", base::toString(size), "]");
+		}
+
+		[[nodiscard]]
+		SymbolType<> getElementType() const {
+			return element_type;
+		}
+
+		/**
+		 * @brief Gets the compile-time constant size of the array.
+		 * @return The size of the array.
+		 */
+		[[nodiscard]]
+		usize getSize() const {
+			return size;
+		}
+
+		[[nodiscard]]
+		bool isImplicitlyCoercible(AbstractType target, query::Context&) const override {
+			// Static arrays are implicitly coercible to dynamic arrays storing the same type.
+			if (target.getKind() == Kind::DynamicArray) {
+				auto dynamic_array_type = DynamicArrayAbstractType(target);
+				return dynamic_array_type.getElementType() == element_type;
+			}
+
+			return false;
+		}
+
+		/**
+		 * @brief Static arrays have trivial destructors if the inner type has a noOpDestructor.
+		 */
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			return element_type.getType().hasNoOpDestructor();
+		}
+
+		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
+			// Static Arrays don't carry information if they don't contain any elements or contain
+			// types that don't carry information.
+			return element_type.getType().carriesInformation(ctx) && size > 0;
+		}
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+	};
+
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
 		std::vector<SymbolType<>> components;
 

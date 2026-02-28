@@ -10,10 +10,16 @@
 namespace compiler::driver {
 
 	/**
-	 * Collect InputData "ids" (i.e. pst side input hashes) of all PST elements across all modules
-	 * in global packages.
-	 * @return A vector of InputData containing PST element hashes and their corresponding QueryIDs.
+	 * Collect InputData "ids" (i.e. side input hashes) across all modules in global packages.
+	 * This includes:
+	 * - Module side inputs for all modules in the package.
+	 * - File side inputs for all source files in the package.
+	 * - PST access side inputs for all PST elements in the package.
+	 * - Source file count and submodule count side inputs for all modules.
+	 * - Module child side inputs for all module lookups performed in the previous compilation, that
+	 * are still valid in the current module tree.
+	 * @return A vector of InputData containing SideInput hashes and their corresponding QueryIDs.
 	 */
-	std::vector<query::external::InputData> collectAllPstElementHashesFromGlobalPackages();
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackages();
 
 }  // namespace compiler::driver

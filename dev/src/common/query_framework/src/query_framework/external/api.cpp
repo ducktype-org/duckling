@@ -13,9 +13,7 @@
 
 namespace query::external {
 
-	void setPreviousGraphFromRawBytes(
-		std::span<const std::byte> graph_raw_bytes, std::vector<InputData>&& inputs
-	) {
+	void setPreviousGraphFromRawBytes(std::span<const std::byte> graph_raw_bytes) {
 		static concurrent::AssertLock lock;
 		concurrent::WithLock          guard(&lock);
 
@@ -33,7 +31,9 @@ namespace query::external {
 		);
 
 		state->setPreviousGraph(std::move(graph));
+	}
 
+	void markPreviousGraphNodesInputs(std::vector<query::external::InputData>&& inputs) {
 		::query::internal::markPreviousGraphNodesInputs(std::move(inputs));
 	}
 
@@ -51,6 +51,11 @@ namespace query::external {
 
 	std::vector<byte> serializeMetadata() {
 		auto state = ::query::internal::ContextAccess::getState();
-		return state->getMetadataStorage().serialize();
+		return state->getMetadataStorage()->serialize();
+	}
+
+	bool prevMetadataExists() {
+		auto state = ::query::internal::ContextAccess::getState();
+		return state->getPreviousMetadataStorage().has_value();
 	}
 }  // namespace query::external

@@ -12,9 +12,9 @@ int dir_counter  = 0;
 
 // Recursively count files and directories in a ModuleTree
 void countFiles(const compiler::frontend::ModuleTree& tree) {
-	file_counter += (int) tree.getSourceFiles().size();
+	file_counter += (int) tree.getSourceFiles().illegalAccess().size();
 	for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
-	for (const auto& submodule: tree.getSubmodules()) {
+	for (const auto& submodule: tree.getSubmodules().illegalAccess()) {
 		countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
 		dir_counter++;
 	}
