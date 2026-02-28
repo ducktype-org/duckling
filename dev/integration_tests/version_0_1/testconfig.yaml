@@ -40,19 +40,25 @@ SubDirs:
 #################################
 #         WORKING
 # #################################
-#   - namespace-declaration
-#   - arithmetic-operators-on-integers
-#   - comparison-operators-on-integers
+  # - namespace-declaration
+  # - arithmetic-operators-on-integers
+  # - comparison-operators-on-integers
 #################################
 #         NOT WORKING
 #################################
   # - alias-using-declaration
   # - boolean-operators
+  # - coercions
+  # - variable-simple-declaration
+  # - io-builtins
+  # - while-loops
+#################################
+#         NOT IMPLEMENTED
+#################################
   # - primitive-booleans
   # - primitive-integers
   # - class-declaration
   # - simple-cffi
-  # - coercions
   # - simple-chars
   # - simple-ifs
   # - constant-simple-declaration
@@ -61,7 +67,4 @@ SubDirs:
   # - function-call
   # - type-deduction
   # - function-definition
-  # - variable-simple-declaration
-  # - io-builtins
-  # - while-loops
   # - let-simple-declaration
