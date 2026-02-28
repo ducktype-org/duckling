@@ -145,7 +145,7 @@ private:
 	/**
 	 * Shorthand to create a reference to mutable symbol type from an abstract type.
 	 */
-	static compiler::tsh::SymbolType<> ref_st(const compiler::tsh::AbstractType abstract_type) {
+	static compiler::tsh::SymbolType<> refst(const compiler::tsh::AbstractType abstract_type) {
 		return compiler::tsh::SymbolType{
 			abstract_type,
 			compiler::tsh::ReferenceKind::Ref,
@@ -1897,7 +1897,7 @@ private:
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
 			ASSERT_EQUAL(
-				ref_st(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				refst(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
 		}
 
@@ -1916,7 +1916,7 @@ private:
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
 			ASSERT_EQUAL(
-				ref_st(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				refst(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
 		}
 
@@ -1934,7 +1934,7 @@ private:
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
 			ASSERT_EQUAL(
-				ref_st(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				refst(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
 		}
 
