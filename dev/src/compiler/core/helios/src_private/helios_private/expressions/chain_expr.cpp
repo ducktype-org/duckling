@@ -262,6 +262,8 @@ namespace compiler::helios::code {
 		query::QResult<std::vector<SymID>> getCallableCandidates(
 			const std::vector<SymID>& looked_up_callees
 		) const {
+			// @TODO: #2135 handle ambiguity in class scopes
+
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Function
@@ -803,6 +805,7 @@ namespace compiler::helios::code {
 			ElementOrigin                 pst_element_origin,
 			pst::Access<pst::LangElement> pst_elem
 		) -> query::QResult<base::Box<Expr>> {
+			// @TODO: #2135 handle ambiguity in class scopes
 			auto scope           = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
 			auto sym_list_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 				pst_elem->getSourcePosition(), ctx, base::StrID("self")
@@ -835,6 +838,8 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Call>  call_expr
 		) -> query::QResult<base::Box<CallExpr>> {
 			if (candidates.size() >= 1 && kind(candidates[0]) == SymbolKind::Method) {
+				// @TODO: #2135 handle ambiguity in class scopes
+
 				// Try to find "self" argument
 				auto find_self_arg = [&] -> query::QResult<SymID> {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ call_expr });
