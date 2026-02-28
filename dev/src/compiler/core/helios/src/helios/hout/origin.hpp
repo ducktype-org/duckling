@@ -42,7 +42,8 @@ namespace compiler::helios::code {
 		[[nodiscard]] base::Optional<dia::SourcePosition> getSourcePosition() const;
 
 		/**
-		 * @brief Get the PST element that this origin corresponds to, if it corresponds to a specific PST element.
+		 * @brief Get the PST element that this origin corresponds to, if it corresponds to a
+		 * specific PST element.
 		 */
 		[[nodiscard]] base::Optional<pst::AccessLocked<pst::LangElement>> getPSTElement() const;
 
