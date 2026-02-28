@@ -686,7 +686,7 @@ namespace compiler::helios::code {
 			pst::Access<pst::LangElement> callee_element,
 			pst::Access<pst::expr::Call>  call_expr
 		) -> query::QResult<base::Box<CallExpr>> {
-			if (candidates.size() > 1 && kind(candidates[0]) == SymbolKind::Method) {
+			if (candidates.size() >= 1 && kind(candidates[0]) == SymbolKind::Method) {
 				// Try to find "self" argument
 				auto find_self_arg = [&] -> query::QResult<SymID> {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ call_expr });
