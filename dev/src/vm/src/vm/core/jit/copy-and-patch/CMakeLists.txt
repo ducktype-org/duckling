@@ -4,7 +4,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # JIT_ENABLED nie działa
 endif ()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    process_to_binary(stensils/wrapper.cpp copy-and-patch.cpp)
+    process_to_binary(stencils/wrapper.cpp copy-and-patch.cpp)
     add_files(copy-and-patch.cpp)
 endif()
 
