@@ -1,7 +1,6 @@
 #include "source_file.hpp"
 
-#include "concurrent/base/collections/hash_map.hpp"
-
+#include <concurrent/base/collections/hash_map.hpp>
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>

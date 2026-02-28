@@ -1,14 +1,13 @@
 #include "module_tree.hpp"
 
 #include "access.hpp"
-#include "concurrent/module_flags/worker_count.hpp"
-#include "concurrent/worker/worker_manager.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
 #include "queries.hpp"
 #include "source_file.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/worker/worker_manager.hpp>
 #include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -22,7 +21,6 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
-#include <mutex>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -858,8 +856,8 @@ namespace compiler::frontend {
 		);
 
 
-		std::vector<FileID> files_to_parse;
-
+		// First collect all files to be parsed.
+		std::vector<FileID>           files_to_parse;
 		std::function<void(ModuleID)> collect_files = [&](ModuleID mid) {
 			auto module_tree = GetModuleID_Functor::get(mid);
 			if (module_tree->hasMainSourceFile())
@@ -873,6 +871,7 @@ namespace compiler::frontend {
 
 		if (files_to_parse.empty()) return;
 
+		// Now parse them concurrently.
 		std::mutex              wait_mtx;
 		std::condition_variable wait_cv;
 		std::atomic<usize>      tasks_left = files_to_parse.size();
@@ -884,9 +883,8 @@ namespace compiler::frontend {
 					= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 						file_id
 					);
-				std::cout << "Parsing\n";
+
 				file_ref->getPST();
-				std::cout << "Parsed\n";
 
 				if (tasks_left.fetch_sub(1, std::memory_order_acq_rel) == 1) {
 					std::lock_guard<std::mutex> lock(wait_mtx);
@@ -895,6 +893,7 @@ namespace compiler::frontend {
 			});
 		}
 
+		// Wait until all files are parsed.
 		std::unique_lock lock(wait_mtx);
 		wait_cv.wait(lock, [&] { return tasks_left.load(std::memory_order_acquire) == 0; });
 	}

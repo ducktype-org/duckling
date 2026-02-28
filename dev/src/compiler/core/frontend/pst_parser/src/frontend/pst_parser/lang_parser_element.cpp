@@ -182,7 +182,6 @@ namespace pst {
 
 	AccessLocked<LangElement> LangElement::getByStableHash(query::QueryStableHash stable_hash) {
 		CORE_ASSERT(pst_hash_map.contains(stable_hash), "Invalid stable hash");
-		// TODOP: hmm
 		return *pst_hash_map.at(stable_hash);
 	}
 }
