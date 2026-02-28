@@ -26,7 +26,7 @@ namespace base {
 		typename KEY_T,
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
-		u64 ALLOCATOR_BLOCK_SIZE = 4 * 4'096>
+		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
 	class StableHashMap final {
 	public:
 		/**
