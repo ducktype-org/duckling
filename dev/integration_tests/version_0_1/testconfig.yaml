@@ -43,6 +43,14 @@ SubDirs:
   # - namespace-declaration
   # - arithmetic-operators-on-integers
   # - comparison-operators-on-integers
+  # - primitive-integers
+  # - simple-cffi     # needs more robust testing
+  # - simple-ifs
+  # - constant-simple-declaration
+  # - function-call
+  # - type-deduction
+  # - function-definition
+  # - let-simple-declaration
 #################################
 #         NOT WORKING
 #################################
@@ -52,19 +60,11 @@ SubDirs:
   # - variable-simple-declaration
   # - io-builtins
   # - while-loops
-#################################
-#         NOT IMPLEMENTED
-#################################
   # - primitive-booleans
-  # - primitive-integers
   # - class-declaration
-  # - simple-cffi
   # - simple-chars
-  # - simple-ifs
-  # - constant-simple-declaration
   # - simple-strings
   # - first-class-typing
-  # - function-call
-  # - type-deduction
-  # - function-definition
-  # - let-simple-declaration
+
+
+
