@@ -1,3 +1,5 @@
+include(CMakePrintHelpers)
+
 add_custom_test_pack(vm)
 
 function(add_files)
@@ -12,6 +14,7 @@ endfunction()
 
 # Add vm files
 add_subdirectory(src/vm)
+cmake_print_variables(vm_config_dependent_sources)
 
 set(exec_sources
     src/vm/main.cpp
