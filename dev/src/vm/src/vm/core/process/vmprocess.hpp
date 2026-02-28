@@ -2,11 +2,14 @@
 
 #include "interface_types.hpp"
 
+#include "base/pointers/box.hpp"
 #include <base/collections/optional.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/concurrency/gil.hpp>
+#include <vm/core/process/concurrency/synchronization_primitives.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -51,32 +54,9 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 
-		/**
-		 * @brief Main GIL mutex for a process.
-		 * It stems from assumption that only one thread can be executing DVM code at the time.
-		 */
-		std::mutex gil;
-
-		/**
-		 * @brief ID of a new mutex that's gonna be added to mutex pool.
-		 */
-		i64 next_mutex_id = 0;
-
-		/**
-		 * @brief Count of VM operations from the last time GIL was acquired.
-		 */
-		u64 operations = 0;
-
-		/**
-		 * @brief Maximum amount of operations that can be executed by thread without giving up GIL.
-		 */
-		const static u64 MAX_GIL_OPERATIONS = 10'000;
-
-		/**
-		 * @brief Pool for mutexes used in the process. In the future they should be reusable.
-		 */
-		base::HashMap<i64, SharedBox<std::mutex>>
-			mutex_map;  // @TODO: #2109 Find better structure then map for storing mutexes.
+		Box<GIL>                       gil = makeBox<GIL>();
+		Box<SynchronizationPrimitives> synchronization_primitives
+			= makeBox<SynchronizationPrimitives>();
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
@@ -250,37 +230,7 @@ namespace vm {
 
 		VMProcess(PID my_pid);
 
-		/**
-		 * @brief Acquires GIL. After you call this function you always have right to interpret DVM
-		 * code.
-		 */
-		void acquireGil();
-
-		/**
-		 * @brief Releases GIL. After you call this function you no longer can interpret DVM code.
-		 * It also zeroes operations counter, for the next thread to take GIL.
-		 */
-		void releaseGil();
-
-		/**
-		* @brief Decides whether current thread should give up GIL based on set GIL policy.
-		In the future it will have seprarte interace, for now it is simple counter.
-		*/
-		bool shouldReleaseGil();
-
-		/**
-		 * @brief Getter for mutexes in the pool.
-		 */
-		SharedBox<std::mutex> getMutex(i64 mutex_id);
-
-		/**
-		 * @brief Adds new mutex into pool.
-		 */
-		i64 addMutex();
-
-		/**
-		 * @brief Removes mutex from pool.
-		 */
-		void removeMutex(i64);
+		Ref<GIL>                       getGIL();
+		Ref<SynchronizationPrimitives> getSynchronizationPrimitives();
 	};
 }

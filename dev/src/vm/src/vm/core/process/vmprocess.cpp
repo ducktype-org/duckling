@@ -1,5 +1,6 @@
 #include "vmprocess.hpp"
 
+#include "base/pointers/box.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -426,31 +427,10 @@ namespace vm {
 		return memory.validateMemoryState();
 	}
 
-	void VMProcess::acquireGil() { gil.lock(); }
+	Ref<GIL> VMProcess::getGIL() { return gil.refMut(); }
 
-	void VMProcess::releaseGil() {
-		operations = 0;
-		gil.unlock();
+	Ref<SynchronizationPrimitives> VMProcess::getSynchronizationPrimitives() {
+		return synchronization_primitives.refMut();
 	}
 
-	bool VMProcess::shouldReleaseGil() {
-		operations++;
-		if (operations >= MAX_GIL_OPERATIONS) return true;
-		return false;
-	}
-
-	SharedBox<std::mutex> VMProcess::getMutex(i64 mutex_id) {
-		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
-		return mutex_map.at(mutex_id);
-	}
-
-	i64 VMProcess::addMutex() {
-		mutex_map.put(next_mutex_id, base::makeSharedBox<std::mutex>());
-		return next_mutex_id++;
-	}
-
-	void VMProcess::removeMutex(i64 mutex_id) {
-		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
-		mutex_map.erase(mutex_id);
-	}
 }
