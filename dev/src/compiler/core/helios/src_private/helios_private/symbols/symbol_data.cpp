@@ -21,7 +21,7 @@ namespace compiler::helios {
 		// @TODO: #1807 Refactor the code so that it's impossible to create
 		// two symbols with the same counter but different return types.
 		base::Bit256 GeneratedSymbolData::ReplExpressionWrapper::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(return_type, counter);
+			return hashing::justHash<hashing::Blake3_256>(return_type, counter);
 		}
 
 		GeneratedSymbolData::GeneratedSymbolData(
@@ -30,7 +30,7 @@ namespace compiler::helios {
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(
+			return hashing::justHash<hashing::Blake3_256>(
 				data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
 			);
 		}

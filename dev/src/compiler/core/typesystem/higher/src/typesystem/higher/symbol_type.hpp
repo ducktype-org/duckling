@@ -239,7 +239,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(
+			return hashing::justHash<hashing::Blake3_256>(
 				abstract_type, reference_kind, mutability, leakage, uniqueness
 			);
 		}

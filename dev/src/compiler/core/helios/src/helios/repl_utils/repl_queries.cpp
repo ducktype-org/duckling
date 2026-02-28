@@ -27,7 +27,7 @@ namespace compiler::repl {
 	base::Bit256 QueryReplExpressionWrapper_Key::queryUnstablePerfectHash() const {
 		auto expr_hash = expr_stmt.illegalAccess().value()->getHash();
 
-		return hashing::justHash<hashing::SHA256>(expr_hash, counter);
+		return hashing::justHash<hashing::Blake3_256>(expr_hash, counter);
 	}
 
 	struct IMPLEMENT_QUERY(QueryReplExpressionWrapper, helios::HOUTFunction) {
