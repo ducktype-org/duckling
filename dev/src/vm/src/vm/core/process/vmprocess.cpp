@@ -432,5 +432,4 @@ namespace vm {
 	Ref<SynchronizationPrimitives> VMProcess::getSynchronizationPrimitives() {
 		return synchronization_primitives.refMut();
 	}
-
 }
