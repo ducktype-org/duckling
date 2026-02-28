@@ -1,5 +1,3 @@
-include(CMakePrintHelpers)
-
 function(process_to_binary source_file destination_file)
     get_filename_component(
         source_file_abs "${source_file}"
@@ -31,8 +29,6 @@ function(process_to_binary source_file destination_file)
     set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${source_file_stem}-nm")
     set(text_out "${CMAKE_CURRENT_BINARY_DIR}/${source_file_stem}-text")
     
-    cmake_print_variables(linked_out nm_out text_out)
-    
     find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
     find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
 
@@ -63,15 +59,27 @@ function(process_to_binary source_file destination_file)
     set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
     set_source_files_properties("${text_out}" PROPERTIES GENERATED TRUE)
 
-    target_include_directories(${destination_file} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+    set_property(
+        SOURCE ${destination_file}
+        APPEND
+        PROPERTY INCLUDE_DIRECTORIES
+        "${CMAKE_CURRENT_BINARY_DIR}"
+    )
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        target_compile_options(${destination_file} PRIVATE "--embed-dir=${CMAKE_CURRENT_BINARY_DIR}")
+        set_property(
+            SOURCE ${destination_file}
+            APPEND
+            PROPERTY COMPILE_OPTIONS
+            "--embed-dir=${CMAKE_CURRENT_BINARY_DIR}"
+        )
     endif()
     
-    target_sources(
-        ${destination_file} 
-        PRIVATE "${nm_out}" "${text_out}"
+    set_property(
+        SOURCE ${destination_file}
+        APPEND
+        PROPERTY OBJECT_DEPENDS
+        "${nm_out}" "${text_out}"
     )
 endfunction()
 
