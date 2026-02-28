@@ -25,12 +25,48 @@ class Wrapper {
         return innerField.exampleField;
     }
 
-    fun getInner() -> ExampleClass {
+    fun getInner() -> ExampleClass = {
         return innerField;
     }
 
     fun setInner(inner: ref ExampleClass) = {
         innerField = inner;
+    }
+}
+
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+
+    fun manhattanFromOrigin() = {
+        return x + self.y;
+    }
+
+    fun areaFromOrigin() = {
+        return self.x * y;
+    }
+
+    fun manhattanFromOrigin(a: i64) = {
+        return x + self.y + a;
+    }
+
+    fun areaFromOrigin(a: i64) = {
+        return self.x * y * a;
+    }
+
+    fun setX(newX: i64) = {
+        x = newX;
+    }
+
+    fun setY(newY: i64) = {
+        self.y = newY;
+    }
+
+    fun output() = {
+        builtin_output_i64(manhattanFromOrigin());
+        builtin_output_i64(self.areaFromOrigin());
+        builtin_output_i64(manhattanFromOrigin(3));
+        builtin_output_i64(self.areaFromOrigin(4));
     }
 }
 
