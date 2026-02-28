@@ -291,15 +291,13 @@ private:
 	}
 
 	void fnv1a256Test() {
-		// hashing::StatefulHash<hashing::Fnv1a_256> h;
-		// h(42);
-
 		hashing::Fnv1a_256 h;
-		std::byte          data[] = { std::byte{ 0x42 }, std::byte{ 0x43 }, std::byte{ 0x44 } };
+		std::array         data = { std::byte{ 0x42 }, std::byte{ 0x43 }, std::byte{ 0x44 } };
 		std::span<const std::byte> span{ data };
-		// h(span);
+		h(span);
 	}
 
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void Blake3_256Test() {
 		const auto hash_value
 			= hashing::StatefulHash<hashing::Blake3_256>{}(

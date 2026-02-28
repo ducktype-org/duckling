@@ -58,11 +58,11 @@ namespace base {
 				for (const char c: end) {
 					value <<= 4;
 					if (c >= '0' && c <= '9')
-						value |= (c - '0');
+						value |= static_cast<u64>(c - '0');
 					else if (c >= 'a' && c <= 'f')
-						value |= (c - 'a' + 10);
+						value |= static_cast<u64>(c - 'a' + 10);
 					else if (c >= 'A' && c <= 'F')
-						value |= (c - 'A' + 10);
+						value |= static_cast<u64>(c - 'A' + 10);
 					else
 						CORE_ASSERT(
 							false, "Invalid character \'" + std::string(1, c) + "\' in Bit256 string"
@@ -136,7 +136,7 @@ namespace base {
 	// in `base` namespace
 	inline namespace literals {
 		constexpr Bit256 operator""_Bit256(const char* str, size_t len) {
-			return Bit256(std::string_view(str, len));
+			return std::string_view(str, len);
 		}
 	}
 }

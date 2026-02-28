@@ -1,3 +1,5 @@
+#include "../hash_algorithm_utils.hpp"
+
 #include <base/types/bit256.hpp>
 
 #include <iostream>
