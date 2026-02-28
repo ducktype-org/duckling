@@ -810,7 +810,7 @@ private:
 	}
 
 	void entryPointSanityTest() {
-		// @TODO: #1933 reenable this test.
+		// @TODO: #1933 re-enable this test.
 		return;
 
 #if defined(BUILD_TYPE_DEV)
@@ -902,7 +902,7 @@ private:
 	void cycleDetectionTest() {
 		// @TODO: #1888 this test will change when proper cycle handling will
 		// be introduced.
-		// Note: we can't catch panics anymore, reenable this test when working on #1888.
+		// Note: we can't catch panics anymore, re-enable this test when working on #1888.
 		return;
 
 		assertTrue(
