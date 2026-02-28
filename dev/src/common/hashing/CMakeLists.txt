@@ -1,5 +1,6 @@
 add_library(Hashing
 	src/hashing/component_hash.cpp
+    src/hashing/hashing_algorithms/blake3.cpp
 )
 
 llvm_map_components_to_libnames(llvm_libs

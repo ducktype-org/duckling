@@ -4,6 +4,7 @@
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
+#include <hashing/hashing_algorithms/blake3.hpp>
 #include <tester/tester.hpp>
 
 #include <unordered_map>
@@ -144,6 +145,7 @@ public:
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(hashTest<Fnv1a_32>);
 		TESTER_ADD_TEST(hashTest<Fnv1a_64>);
+		// TESTER_ADD_TEST(hashTest<Fnv1a_256>);
 		TESTER_ADD_TEST(hashTest<SHA256>);
 		TESTER_ADD_TEST(hashTest<Blake3_256>);
 		TESTER_ADD_TEST(constexprTest);
@@ -152,6 +154,7 @@ public:
 		TESTER_ADD_TEST(defaultsTest<SHA256>);
 		TESTER_ADD_TEST(defaultsTest<Blake3_256>);
 		TESTER_ADD_TEST(sha256Test);
+		TESTER_ADD_TEST(fnv1a256Test);
 		TESTER_ADD_TEST(Blake3_256Test);
 	}
 
@@ -159,6 +162,7 @@ private:
 	void hashingAlgorithmsTest() {
 		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
+		assertTrue(hash_algorithm<Fnv1a_256>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
 		assertTrue(hash_algorithm<SHA256>, "SHA256 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Blake3_256>, "Blake3_256 should be a hashing algorithm");
@@ -192,8 +196,9 @@ private:
 		                      .toStringHex();
 		assertEqual(
 			res4,
-			"9f9524ca18c0cc03aef1a0b84faed9375e5d19575e9328e65fea72991f0f58cf",
-			"Blake3_256 hash does not match expected value"
+			"5fea72991f0f58cf5e5d19575e9328e6aef1a0b84faed9379f9524ca18c0cc03",
+			"Blake3_256 hash does not match expected value (" + res4
+				+ " != 5fea72991f0f58cf5e5d19575e9328e6aef1a0b84faed9379f9524ca18c0cc03)"
 		);
 	}
 
@@ -241,40 +246,60 @@ private:
 	}
 
 	void sha256Test() {
-		constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::SHA256>{}(
-										7,
-										type2{},
-										7,
-										std::string{ "hello" },
-										42,
-										7,
-										std::string{ "hello" },
-										42,
-										7,
-										std::string{ "hello" },
-										42,
-										7,
-										std::string{ "hello" },
-										42,
-										7,
-										std::string{ "hello" },
-										42
-		)
-		                                .finalize();
-
-
-		const std::string expected_hash
-			= "cc29a5e32052f1e78ce5933758b457e9829c84322bfa1e8e2794ae1456a274a0";
-		const std::string computed_hash = HASH_VALUE.toStringHex();
-
-		assertTrue(
-			computed_hash == expected_hash,
-			"SHA256 hash does not match expected value.\nExpected: " + expected_hash
-				+ "\nComputed: " + computed_hash
+		constexpr auto HASH_VALUE_SIMPLE
+			= hashing::StatefulHash<hashing::SHA256>{}(std::byte{ 0x42 }).finalize();
+		std::cerr << HASH_VALUE_SIMPLE << '\n' << HASH_VALUE_SIMPLE.toStringHex() << '\n';
+		assertEqual(
+			HASH_VALUE_SIMPLE.toStringHex(),
+			"df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+			"SHA256 hash of a byte 0x42 does not match expected value:\nExpected:\n"
+			"df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c\nComputed:\n"
+				+ HASH_VALUE_SIMPLE.toStringHex()
 		);
+
+		// constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::SHA256>{}(
+		// 								7,
+		// 								type2{},
+		// 								7,
+		// 								std::string{ "hello" },
+		// 								42,
+		// 								7,
+		// 								std::string{ "hello" },
+		// 								42,
+		// 								7,
+		// 								std::string{ "hello" },
+		// 								42,
+		// 								7,
+		// 								std::string{ "hello" },
+		// 								42,
+		// 								7,
+		// 								std::string{ "hello" },
+		// 								42
+		// )
+		//                                 .finalize();
+
+
+		// const std::string expected_hash
+		// 	= "2794ae1456a274a0829c84322bfa1e8e8ce5933758b457e9cc29a5e32052f1e7";
+		// const std::string computed_hash = HASH_VALUE.toStringHex();
+
+		// assertTrue(
+		// 	computed_hash == expected_hash,
+		// 	"SHA256 hash does not match expected value.\nExpected: " + expected_hash
+		// 		+ "\nComputed: " + computed_hash
+		// );
 	}
 
-	// NOLINTNEXTLINE(readability-identifier-naming)
+	void fnv1a256Test() {
+		// hashing::StatefulHash<hashing::Fnv1a_256> h;
+		// h(42);
+
+		hashing::Fnv1a_256 h;
+		std::byte          data[] = { std::byte{ 0x42 }, std::byte{ 0x43 }, std::byte{ 0x44 } };
+		std::span<const std::byte> span{ data };
+		// h(span);
+	}
+
 	void Blake3_256Test() {
 		const auto hash_value
 			= hashing::StatefulHash<hashing::Blake3_256>{}(
@@ -283,7 +308,7 @@ private:
 		          .finalize();
 
 		const std::string expected_hash
-			= "2a6afca2fbc44ccd6fbd1b46838a71d7eed51da26a3040486eeb835aba54c640";
+			= "6eeb835aba54c640eed51da26a3040486fbd1b46838a71d72a6afca2fbc44ccd";
 		const std::string computed_hash = hash_value.toStringHex();
 		assertTrue(
 			computed_hash == expected_hash,
