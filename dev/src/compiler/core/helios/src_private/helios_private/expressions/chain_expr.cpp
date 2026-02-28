@@ -7,6 +7,7 @@
 
 #include "helios/hout/origin.hpp"
 #include "helios/symbols/query_class_of_member.hpp"
+#include "helios/symbols/query_type_of_symbol.hpp"
 #include "helios_private/lookup/lookup_result.hpp"
 #include "typesystem/higher/types.hpp"
 
@@ -874,14 +875,15 @@ namespace compiler::helios::code {
 				auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), self_arg);
 
 				// Filter candidates for which the self argument is different than the found one
+				auto self_type_res = ctx.query<QueryTypeOfSymbol>(self_arg);
+				UNPACK_QRESULT_CREF(const auto& self_type =, self_type_res);
+
+				auto methods = self_type.getType().getInterface(ctx)->getMethodsView();
+
 				std::vector<SymID> filtered_candidates;
-				for (const auto& candidate: candidates) {
-					auto query_class_of_member_result
-						= ctx.query<QueryClassOfMember>({ candidate });
-					UNPACK_QRESULT_CREF(auto class_of_member =, query_class_of_member_result);
-					if (self_expr->expression_type.getType() == class_of_member)
-						filtered_candidates.push_back(candidate);
-				}
+				for (const auto& method: methods)
+					if (std::ranges::find(candidates, method.getSymbol()) != candidates.end())
+						filtered_candidates.push_back(method.getSymbol());
 
 				return processMethodCall(
 					ctx, filtered_candidates, callee_element, call_expr, std::move(self_expr)
