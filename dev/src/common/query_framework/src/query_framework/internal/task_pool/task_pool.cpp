@@ -34,12 +34,16 @@ namespace query::internal {
 
 		added_tasks.fetch_add(1);
 
-		auto chosen_worker
-			= worker_manager.scheduleTaskOnAnyWorker([this, pt = std::move(task)](WRef) mutable {
-				  tryExecuteTask(pt);
-			  });
-
-		is_worker_free_map[chosen_worker] = false;
+		auto free_worker_opt = getFreeWorkerUnlocked();
+		if (free_worker_opt.has_value()) {
+			free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](WRef) mutable {
+				tryExecuteTask(pt);
+			});
+			is_worker_free_map[free_worker_opt.value()] = false;
+			return;
+		} else {
+			 addToGlobalPoolUnlocked(std::move(task));
+		}
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
