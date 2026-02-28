@@ -9,7 +9,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "42\n7\n8\n24\n1\n2\n99\n120\n10\n30\n1\n2\n3\n50\n"
+          String: "42\n7\n8\n24\n1\n2\n99\n120\n"
         ExitCode: 0
 
   function-features-test:

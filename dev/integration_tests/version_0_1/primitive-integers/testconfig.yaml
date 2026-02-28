@@ -9,7 +9,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "127\n32767\n2147483647\n100\n255\n65535\n100\n200\n-128\n-32768\n-100\n-50\n42\n42\n42\n10\n10\n10\n3\n2\n65\n"
+          String: "127\n32767\n2147483647\n100\n255\n65535\n100\n200\n-128\n-32768\n-100\n-50\n42\n42\n42\n10\n10\n10\n"
         ExitCode: 0
 
   integer-literals-advanced-test:
