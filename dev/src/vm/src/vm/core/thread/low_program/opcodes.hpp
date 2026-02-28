@@ -4,9 +4,7 @@
  */
 #pragma once
 
-#include <base/types/ints.hpp>
-
-#include <array>
+#include <vm/bytecode/instructions.hpp>
 
 /**
  * Opcodes names conventions:
