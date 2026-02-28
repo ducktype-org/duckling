@@ -1,7 +1,7 @@
 #include "gil.hpp"
 
-namespace vm {    
-    void GIL::acquire() { gil.lock(); }
+namespace vm {
+	void GIL::acquire() { gil.lock(); }
 
 	void GIL::release() {
 		operations = 0;

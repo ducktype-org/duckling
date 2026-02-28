@@ -1,8 +1,9 @@
 #include "synchronization_primitives.hpp"
+
 #include <vm/core/process/exceptions.hpp>
 
 namespace vm {
-    SharedBox<std::mutex> SynchronizationPrimitives::getMutex(i64 mutex_id) {
+	SharedBox<std::mutex> SynchronizationPrimitives::getMutex(i64 mutex_id) {
 		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
 		return mutex_map.at(mutex_id);
 	}
