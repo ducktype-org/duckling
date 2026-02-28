@@ -2,7 +2,9 @@
 
 #include <tester/tester.hpp>
 
+#include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/core/process/interface_types.hpp>
 
 class VmUnitTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -32,6 +34,7 @@ public:
 		TESTER_ADD_TEST(checkZeroDivision);
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
 		TESTER_ADD_TEST(checkCastingInstructions);
+		TESTER_ADD_TEST(testSyncRun);
 	}
 
 private:
@@ -112,11 +115,11 @@ private:
 		loadInvalidDbc(
 			"invalid_literal.dbc",
 			{
-				"Invalid literal: Numeric literal overflows a 32-bit signed integer",
-				"Invalid literal: Numeric literal underflows a 32-bit signed integer",
-				"Invalid literal: Numeric literal overflows a 32-bit unsigned integer",
-				"Invalid literal: Numeric literal overflows a 64-bit signed integer",
-				"Invalid literal: Floating-point literals must be in decimal base for",
+				"Numeric literal overflows a 32-bit signed integer",
+				"Numeric literal underflows a 32-bit signed integer",
+				"Numeric literal overflows a 32-bit unsigned integer",
+				"Numeric literal overflows a 64-bit signed integer",
+				"Floating-point literals must be in decimal base for",
 			}
 		);
 	}
@@ -140,6 +143,13 @@ private:
 				vm::code::VoidTypeArgumentError::ERR_MSG,
 			}
 		);
+	}
+
+	void testSyncRun() {
+		vm::PID pid = initProcess();
+		ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }).has_value());
+		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
+		vm::api::deinitAndValidate(pid);
 	}
 };
 

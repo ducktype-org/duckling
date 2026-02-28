@@ -261,8 +261,8 @@ namespace query::internal {
 	);                                                                                                                                 \
                                                                                                                                        \
 	static_assert(                                                                                                                     \
-		std::is_invocable_v<decltype(type::load), type::KHash>,                                                                        \
-		"Load function must be callable with hash of QKey"                                                                             \
+		std::is_same_v<std::invoke_result_t<decltype(type::load), type::KHash>, type::LoadResult>,                                     \
+		"Bad load result."                                                                                                             \
 	);                                                                                                                                 \
 	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                                \
 	static_assert(                                                                                                                     \

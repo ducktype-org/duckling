@@ -45,8 +45,7 @@ namespace vm {
 		} else {
 			std::stringstream ss;
 			code_result.error().dump(ss);
-			std::cerr << ss.str() << '\n';
-			return std::unexpected(api::LoadProgramError{ "Error in loader: \n" + ss.str() });
+			return std::unexpected(api::LoadProgramError{ ss.str() });
 		}
 	}
 
@@ -60,6 +59,22 @@ namespace vm {
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
+	}
+
+	std::expected<api::Response, api::ApiError> VMProcess::runFunctionAwait(
+		const std::string& func_name, const RunArguments& run_arguments
+	) {
+		std::unique_lock lock(rw_global);
+
+		getMainVMThread().runNoSpawn(loaded_program, func_name, run_arguments);
+		variant_match(getStatus()) {
+			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
+			variant_default return std::unexpected(api::StateError(
+				executingStarted(getStatus()) ? "Execution did not complete"
+											  : "Execution did not start"
+			));
+		}
+		CORE_UNREACHABLE();
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::join() {
@@ -160,6 +175,12 @@ namespace vm {
 
 			variant_case(api::request::RunFunction, run_func_request) {
 				return runFunction(run_func_request.func_name, run_func_request.func_args);
+			}
+
+			variant_case(api::request::RunFunctionAwait, run_func_await_request) {
+				return runFunctionAwait(
+					run_func_await_request.func_name, run_func_await_request.func_args
+				);
 			}
 
 			variant_case_novalue(api::request::Join) { return join(); }
@@ -375,4 +396,5 @@ namespace vm {
 		}
 		return memory.validateMemoryState();
 	}
+
 }

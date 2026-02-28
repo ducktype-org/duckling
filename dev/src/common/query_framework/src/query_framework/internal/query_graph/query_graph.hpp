@@ -133,21 +133,21 @@ namespace query::internal {
 			 * become dangling after the move.
 			 */
 			ChildrenData moveFrom() {
-				IF_BUILD_TYPE_DEV({
-					// this sets the original lock to nullptr,
-					// we have to do it first:
-					auto moved_1 = std::move(*children);
+				// this sets the original lock to nullptr,
+				// we have to do it first:
+				auto moved_1 = std::move(*children);
 
+				IF_BUILD_TYPE_DEV({
 					bool was_released_check = was_released.test_and_set(std::memory_order_acquire);
 					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
 
 					// we unlock not on *children, as that object is moved from, but on this local
 					// one no one else can see (yet):
 					moved_1.lock->unlock();
-
-					// we move again, to actually return the children data:
-					return std::move(moved_1);
 				})
+
+				// we move again, to actually return the children data:
+				return std::move(moved_1);
 			}
 
 			~ChildrenDataHolderImpl() {

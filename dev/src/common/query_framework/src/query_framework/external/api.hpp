@@ -1,9 +1,12 @@
 #pragma once
 
+#include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 
+#include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
+#include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/utils/query_hash.hpp>
 
 #include <cstddef>
@@ -28,15 +31,31 @@ namespace query::external {
 	};
 
 	/**
-	 * Set the previous query graph and mark previous graph input nodes (Input/SideInput)
-	 * as Green/Red based on provided input hashes.
+	 * @brief Structure to hold metadata with its associated InputData (for previous nodes).
+	 * @tparam MetadataT The metadata type.
+	 */
+	template<typename MetadataT>
+	struct MetadataInfo final {
+		InputData       input_data;
+		CRef<MetadataT> value;
+	};
+
+	/**
+	 * Set the previous query graph from raw bytes.
+	 * Driver must call this before setPreviousMetadataFromRawBytes().
 	 * This function wires external input knowledge into query internals.
 	 * @param graph_raw_bytes Raw bytes of serialized previous query graph.
-	 * @param inputs Vector of input data (QueryID + hash) used in previous compilation.
 	 */
-	void setPreviousGraphFromRawBytes(
-		std::span<const std::byte> graph_raw_bytes, std::vector<InputData>&& inputs
-	);
+	void setPreviousGraphFromRawBytes(std::span<const std::byte> graph_raw_bytes);
+
+	/**
+	 * @brief Mark previous graph input nodes (Input/SideInput) as Green/Red based on provided input
+	 * hashes.
+	 * @param inputs Vector of input data (QueryID + hash) used in previous compilation.
+	 * Driver must call this function after collecting all input data from its packages.
+	 * This function wires external input knowledge into query internals.
+	 */
+	void markPreviousGraphNodesInputs(std::vector<query::external::InputData>&& inputs);
 
 
 	/**
@@ -78,5 +97,42 @@ namespace query::external {
 	 * @return Serialized metadata as raw bytes.
 	 */
 	[[nodiscard]] std::vector<byte> serializeMetadata();
+
+	/**
+	 * @brief Get all metadata of a specific type from all nodes in the previous compilation.
+	 *
+	 * Efficiently iterates through all previous nodes once, collecting metadata of the given type.
+	 *
+	 * @tparam MetadataT The metadata type to retrieve (must derive from BaseMetadata)
+	 * @return std::vector<MetadataInfo<MetadataT>> Metadata with associated InputData.
+	 *         Returns empty vector if no previous metadata exists
+	 *         or no metadata of this type was found.
+	 */
+	template<typename MetadataT>
+	requires std::derived_from<MetadataT, internal::BaseMetadata> [[nodiscard]]
+	std::vector<MetadataInfo<MetadataT>> getMetadataFromAllPrevNodes() {
+		auto state         = ::query::internal::ContextAccess::getState();
+		auto prev_metadata = state->getPreviousMetadataStorage();
+		if (!prev_metadata.has_value()) return {};
+
+		auto internal_result = prev_metadata.value()->getMetadataFromAllNodes<MetadataT>();
+		std::vector<MetadataInfo<MetadataT>> result;
+		result.reserve(internal_result.size());
+
+		for (const auto& info: internal_result) {
+			result.push_back(MetadataInfo<MetadataT>{
+				.input_data = InputData(info.node_id.q_id, info.node_id.hash.val),
+				.value      = info.value,
+			});
+		}
+
+		return result;
+	}
+
+	/**
+	 * @brief Check if previous metadata exists.
+	 * @note this is used mostly for assertions.
+	 */
+	bool prevMetadataExists();
 
 }  // namespace query::external

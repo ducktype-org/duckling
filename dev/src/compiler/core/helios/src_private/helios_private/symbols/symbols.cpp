@@ -101,7 +101,7 @@ namespace compiler::helios {
 					CORE_PANIC("Unexpected pst path of variable");
 				}
 			},
-			getSymRef(id)->getPSTData()->pst_element.unlock(ctx)
+			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
 		);
 	}
 
@@ -124,7 +124,7 @@ namespace compiler::helios {
 	}
 
 	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
-		return getSymRef(id)->getPSTData()->pst_element;
+		return getSymRef(id)->getPSTData()->getElement();
 	}
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
@@ -175,10 +175,7 @@ namespace compiler::helios {
 	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
-		PstSymbolData pst_data{
-			.scope       = scope,
-			.pst_element = stmt,
-		};
+		PstSymbolData pst_data(scope, stmt->getHash());
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
@@ -272,17 +269,33 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::Import: {
-			// For now only non-wildcard import exist
-			auto import = stmt.dynamicCast<pst::Import>().value();
-			return SymbolData::makePSTSymbolData(
-				{
-					.name        = import->getAlias(),
-					.kind        = SymbolKind::Import,
-					.is_wildcard = false,
-					.is_alias    = false,
-				},
-				pst_data
-			);
+			// For now we assume that only two types of import exists:
+			// import a.b.c;
+			// import a.b.c as d;
+
+			auto import       = stmt.dynamicCast<pst::Import>().value();
+			auto import_chain = import->getImportChain().unlock(ctx);
+			if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
+				base::StrID name;
+				if (import_as.value()->isImportAs())
+					name = import_as.value()->asWhat().value();
+				else
+					name = import_as.value()->getNames().back().value;
+
+				return SymbolData::makePSTSymbolData(
+					{
+						.name        = name,
+						.kind        = SymbolKind::Import,
+						.is_wildcard = false,
+						.is_alias    = false,
+					},
+					pst_data
+				);
+			} else {
+				throw base::NotYetImplemented(
+					"Not handled type of import chain in makeSymbolFromStatement"
+				);
+			}
 		}
 		case pst::StmtKind::Method: {
 			auto method = stmt.dynamicCast<pst::Method>().value();
@@ -357,16 +370,13 @@ namespace compiler::helios {
 					.name = parameter->getName(),
 					.kind = SymbolKind::Parameter,
 				},
-				{
-					.scope       = scope,
-					.pst_element = element,
-				}
+				PstSymbolData(scope, element->getHash())
 			);
 		}
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
 	}
 
-	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymbolData) {
+	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
@@ -381,13 +391,27 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
+			if (key.element.unlock(ctx)->getElementKind() == pst::ElementKind::NonClassStmt) {
+				// @TODO: #2087 remove this branch, when non-class statements will be properly supported.
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Non-class statements inside classes are not supported yet.",
+					key.element.unlock(ctx)->getSourcePosition(),
+					"",
+					"here"
+				));
+				return query::Failed();
+			} else if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<query::QResult<SymbolData>> presult) -> QResult {
+			if (presult->hasFailed())
+				return query::Failed();
+			else
+				return SymID{ &presult->valueOrPanic() };
+		})
 
 	private:
 		/**
@@ -399,7 +423,11 @@ namespace compiler::helios {
 
 			std::vector<SymID> out;
 
-			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
+			for (auto& [key, cache_entry]: cache) {
+				if (cache_entry.data.hasFailed()) continue;
+
+				out.emplace_back(SymID{ &cache_entry.data.valueOrPanic() });
+			}
 			return out;
 		}
 
@@ -634,13 +662,28 @@ namespace compiler::helios {
 
 			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
-				auto imported_module = frontend::getRelativeModule(
-										   ctx, module(scope(key)), import_stmt->getModulePath()
-				)
-				                           .value();
+
+				auto names = import_stmt.dynamicCast<pst::Import>()
+				                 .value()
+				                 ->getImportChain()
+				                 .dynamicCast<pst::ImportIdentifierAs>()
+				                 .unlock(ctx)
+				                 ->getNames();
+				std::vector<base::StrID> module_path{ names.begin(), names.end() };
+
+				auto maybe_imported_module
+					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
+
+				if (!maybe_imported_module.has_value()) {
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Module not found", import_stmt->getSourcePosition()
+					));
+					return;
+				}
 
 				// Here we don't access just root scope, because root scopes are currently empty:
-				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
+				auto linked_scope
+					= queryRootScopeOfMainModuleFile(ctx, maybe_imported_module.value());
 
 				output(linked_scope);
 			}
@@ -656,7 +699,7 @@ namespace compiler::helios {
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
-				key.ref->getPSTData()->pst_element.unlock(ctx)->acceptVisitor(visitor);
+				key.ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
 			default:
@@ -682,14 +725,16 @@ namespace compiler::helios {
 			if (kind(key) == SymbolKind::Using) {
 				auto using_stmt = getSymRef(key)
 				                      ->getPSTData()
-				                      ->pst_element.unlock(ctx)
+				                      ->getElement()
+				                      .unlock(ctx)
 				                      .dynamicCast<pst::Using>()
 				                      .value();
 				pointed_chain = using_stmt->getPointed().unlock(ctx)->getNames();
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto alias_stmt = getSymRef(key)
 				                      ->getPSTData()
-				                      ->pst_element.unlock(ctx)
+				                      ->getElement()
+				                      .unlock(ctx)
 				                      .dynamicCast<pst::Alias>()
 				                      .value();
 				pointed_chain = alias_stmt->getPointed().unlock(ctx)->getNames();
@@ -717,9 +762,12 @@ namespace compiler::helios {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			// Get the const's data
-			const auto pst
-				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
-				);
+			const auto pst = getSymRef(key)
+			                     ->getPSTData()
+			                     ->getElement()
+			                     .unlock(ctx)
+			                     .dynamicCast<pst::Const>()
+			                     .value();
 			const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
 			// Get the coerced HOUT expression
@@ -790,7 +838,7 @@ namespace compiler::helios {
 				return {};
 			}
 
-			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
+			auto pst_element = getSymRef(key)->getPSTData()->getElement().unlock(ctx);
 
 			// SpecifierBlock only has a "CodeBlock" child, which can has "Stmt" children.
 			//

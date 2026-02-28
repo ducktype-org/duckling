@@ -52,6 +52,7 @@ namespace compiler::frontend {
 		created_ref->storage_handle = storage_key;
 		created_ref->file_id        = FileID(created_ref);
 		files_map.at(abs_path).emplace_back(created_ref);
+
 		return created_ref;
 	}
 

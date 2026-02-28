@@ -16,12 +16,12 @@ namespace query {
 	/**
 	 * Total time spent in red-green sweeps across all queries.
 	 */
-	extern timer::Duration total_red_green_sweep_time;
+	extern timer::AtomicDuration total_red_green_sweep_time;
 
 	/**
 	 * Total time spent in graph merges across all queries.
 	 */
-	extern timer::Duration total_graph_merge_time;
+	extern timer::AtomicDuration total_graph_merge_time;
 
 	/**
 	 * RAII-like object to collect statistics about a single query call.

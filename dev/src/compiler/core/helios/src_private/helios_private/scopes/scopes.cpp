@@ -7,6 +7,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -85,6 +86,7 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::Import:
+		case pst::ElementKind::ImportIdentifierAs:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -137,6 +139,10 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassSpecifierBlock:
 			return ElementScopeKind::Transparent;
 
+		// @TODO: #2087 this is a mock, figure out proper handling of non-class statements
+		case pst::ElementKind::NonClassStmt:
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::If:
 		case pst::ElementKind::While:
 		case pst::ElementKind::For:
@@ -174,9 +180,7 @@ namespace compiler::helios {
 			CORE_UNREACHABLE();
 
 		default:
-			throw base::NotYetImplemented(
-				base::strConcat("PST element scope kind for: ", element->elementType())
-			);
+			CORE_PANIC("PST element scope kind for: ", element->elementType());
 		}
 		CORE_UNREACHABLE();
 	}
@@ -253,7 +257,7 @@ namespace compiler::helios {
 			// clang-format on
 
 			return ScopeData{
-				parent, false, element, module(parent), scopeDepth(parent) + 1,
+				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
 			};
 		}
 
@@ -386,7 +390,7 @@ namespace compiler::helios {
 			for (const auto& stmt: list) {
 				switch (stmt.unlock(ctx)->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 					symbols.emplace_back(sym_id);
 					break;
 				}
@@ -402,7 +406,13 @@ namespace compiler::helios {
 					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
+						symbols.emplace_back(sym_id);
+					} else if (auto import_opt
+					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
+						// Import has DeclType::Transparent as it can intrude many different
+						// symbols. This is currently handled the same way as DeclType::Symbol.
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 						symbols.emplace_back(sym_id);
 					} else {
 						CORE_PANIC(
@@ -446,7 +456,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *fun->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -456,7 +466,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *meth->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -470,7 +480,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -489,6 +499,13 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
+			void visitFor(pst::Access<pst::For>) override {
+				// Scope of "for →(...)← {}"
+				// @TODO: #2096 add for loop variables to the scope
+				// and add them here.
+				output(std::vector<SymID>{});
+			}
+
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
 				output(std::vector<SymID>{});
 			}
@@ -501,11 +518,11 @@ namespace compiler::helios {
 		static auto getSymbols(Context& ctx, QKey key) -> PResult {
 			// @TODO: expand macros?
 
-			if (not key.ref->related_pst_element.has_value()) {
+			if (not key.ref->related_pst_element_hash.has_value()) {
 				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
 				return {};
 			}
-			auto base_element = key.ref->related_pst_element.value().unlock(ctx);
+			auto base_element = key.ref->relatedPSTElement().value().unlock(ctx);
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
@@ -542,14 +559,14 @@ namespace compiler::helios {
 						name(sym),
 						"\n\n"
 						" considered scope : ",
-						key.ref->related_pst_element.value().unlock(ctx)->elementType(),
+						key.ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						key.ref->related_pst_element.value().unlock(ctx)->getID().asInt(),
+						key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 						"\n\n",
 						" scope of symbol: ",
-						scope(sym).ref->related_pst_element.value().unlock(ctx)->elementType(),
+						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						scope(sym).ref->related_pst_element.value().unlock(ctx)->getID().asInt(),
+						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 						"\n"
 					)
 				);
@@ -699,8 +716,9 @@ namespace compiler::helios {
 
 		while (true) {
 			os << iter_scope.queryUnstablePerfectHash() << "("
-			   << (iter_scope.ref->related_pst_element.has_value()
-			           ? iter_scope.ref->related_pst_element.value()
+			   << (iter_scope.ref->relatedPSTElement().has_value()
+			           ? iter_scope.ref->relatedPSTElement()
+			                 .value()
 			                 .illegalAccess()
 			                 .value()
 			                 ->elementType()

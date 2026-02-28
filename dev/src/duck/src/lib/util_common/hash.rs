@@ -13,5 +13,5 @@ pub fn sha256_bytes<H: AsRef<[u8]>>(data: H) -> [u8; 32] {
 
 pub fn sha256_string<H: AsRef<[u8]>>(data: H) -> StrId {
     let hash = sha256_bytes(data);
-    hex::encode(hash).into()
+    super::hex::encode(hash).into()
 }

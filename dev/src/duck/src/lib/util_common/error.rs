@@ -1,4 +1,4 @@
-use std::{any::Any, fmt};
+use std::fmt;
 
 use crate::QuackResult;
 
@@ -353,19 +353,24 @@ where
     E: std::error::Error + 'static,
 {
     fn from(value: E) -> Self {
-        let test_err = &value as &dyn Any;
-        if let Some(clap_err) = test_err.downcast_ref::<clap::Error>() {
-            if clap_err.use_stderr() {
-                let mut err = QuackError::error(format!("{}", clap_err.render().ansi()));
-                err.set_display_place(DisplayPlace::StdErr);
-                err
-            } else {
-                let mut err = QuackError::bare_message(format!("{}", clap_err.render().ansi()));
-                err.set_display_place(DisplayPlace::StdOut);
-                err
+        fn from_dyn_ref(value: &(dyn std::error::Error + 'static)) -> QuackError {
+            if let Some(clap_err) = value.downcast_ref::<clap::Error>() {
+                return if clap_err.use_stderr() {
+                    let mut err = QuackError::error(format!("{}", clap_err.render().ansi()));
+                    err.set_display_place(DisplayPlace::StdErr);
+                    err
+                } else {
+                    let mut err = QuackError::bare_message(format!("{}", clap_err.render().ansi()));
+                    err.set_display_place(DisplayPlace::StdOut);
+                    err
+                };
             }
-        } else {
+            if let Some(source) = value.source() {
+                let err = from_dyn_ref(source);
+                return err.context(value.to_string());
+            }
             QuackError::error(value.to_string())
         }
+        from_dyn_ref(&value)
     }
 }

@@ -108,6 +108,36 @@ namespace pst {
 		return partial_hash;
 	}
 
+	void LangElement::calcSignature(LangElement::HashAlg& partial_hash) const {
+		addToHash(partial_hash, hash->data);
+		for (auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) { addToHash(partial_hash, el->getHash().data); }
+				variant_case(InternalNamedChild, el) {
+					addToHash(partial_hash, el.element->getHash().data);
+				}
+				variant_case(SubToken, el) {}
+				variant_default { CORE_PANIC("Unhandled variant case"); }
+			}
+		}
+		addToHash(partial_hash, "hash_end");
+	}
+
+	void LangElement::signGenerated(LangElement::HashType& signature) {
+		LangElement::HashAlg new_hash;
+		addToHash(new_hash, hash->data);
+		addToHash(new_hash, signature.data);
+		hash = new_hash.finalize();
+		for (auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) { el->signGenerated(signature); }
+				variant_case(InternalNamedChild, el) { el.element->signGenerated(signature); }
+				variant_case(SubToken, el) {}
+				variant_default { CORE_PANIC("Unhandled variant case"); }
+			}
+		}
+	}
+
 	void LangElement::addToken(CRef<tpc::Token> t) {
 		sub_elements.emplace_back(t);
 		setLastToken(t->getPosition());
