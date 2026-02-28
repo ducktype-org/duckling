@@ -338,8 +338,8 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
-			return ChainState::ofExpr(std::move(expr));
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			case lexer::Token::Square: {
 				const auto lookup_result = h_interface.lookupExpectUnique(
@@ -347,7 +347,8 @@ namespace compiler::helios::code {
 				);
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
-				auto base_state_res = processNamespaceOrValue(sym_list.back(), pstOrigin(ident));
+				auto base_state_res
+					= processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
 				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
 
 
@@ -640,6 +641,25 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
 			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				auto current_expr_type = current_expr->expression_type.getType();
+				auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
+				                         .lookup(query_ctx, expr_access->getName().value);
+
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				auto self_expr_ref = makeBox<RefOfExpr>(
+					query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
+				);
+
+				auto res = processMethodCall(
+					query_ctx, callees, expr_access, call_expr, std::move(self_expr_ref)
+				);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+				return ChainState::ofExpr(std::move(expr));
+			}
 			case lexer::Token::Square: {
 				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
@@ -685,9 +705,9 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto expr_result
-				= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
-			return ChainState::ofExpr(std::move(expr));
+					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			case lexer::Token::Square: {
 				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
@@ -700,7 +720,8 @@ namespace compiler::helios::code {
 
 				auto whole_expr_origin
 					= current_state.getNamespaceLikePstOrigin().extended(expr_access);
-				auto state_res = processNamespaceOrValue(sym_list.back(), whole_expr_origin);
+				auto state_res
+					= processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
 
 				if (access_state.isExpr()) {
