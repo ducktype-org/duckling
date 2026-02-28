@@ -1,12 +1,12 @@
 #include "../../memory/memory.cpp"  // for easy invocation
 #include "../../memory/memory.hpp"
-#include "../../stensils/import_stensils.hpp"
+#include "../../stencils/import_stencils.hpp"
 
 #include <cstring>
 #include <string>
 
-LLVM_nm_data stensils_offsets[]{};
-Stensils     stensils {
+LLVM_nm_data stencils_offsets[]{};
+Stencils     stencils {
 		.binary = {
 #embed "data-text" suffix(, )
 	}, .functions = {

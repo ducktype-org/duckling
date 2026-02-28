@@ -5,7 +5,7 @@
 namespace vm::jit {
 
 template<size_t BinarySize, size_t NumFunctions>
-struct Stensils {
+struct Stencils {
 	struct LLVM_nm_data {
 		const char* name;
 		const char* type;

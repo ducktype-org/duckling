@@ -1,4 +1,4 @@
-#include "stensils/import_stensils.hpp"
+#include "stencils/import_stencils.hpp"
 #include "memory/memory.hpp"
 
 #include <vm/core/thread/low_program/instruction.hpp>
@@ -8,7 +8,7 @@ namespace vm::jit {
 	vm::JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
 
 PUSH_DIAGNOSTIC ALLOW_EXTENSIONS
-		static Stensils     stensils = Stensils{
+		static Stencils     stencils = Stencils{
 				.binary = {
 #embed "wrapper-text" suffix(, )
 			}, .functions = {
@@ -28,7 +28,7 @@ POP_DIAGNOSTIC
 		};
 
 		for (auto opcode : opcodes) {
-			add_instr(stensils.function_binary(opcode));
+			add_instr(stencils.function_binary(opcode));
 		}
 	}
 }
