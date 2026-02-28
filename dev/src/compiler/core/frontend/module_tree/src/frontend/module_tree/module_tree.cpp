@@ -20,6 +20,9 @@
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -870,11 +873,13 @@ namespace compiler::frontend {
 
 		if (files_to_parse.empty()) return;
 
-		std::atomic<usize> tasks_left = files_to_parse.size();
-		auto&              manager    = concurrent::worker::WorkerManager::get();
+		std::mutex              wait_mtx;
+		std::condition_variable wait_cv;
+		std::atomic<usize>      tasks_left = files_to_parse.size();
+		auto&                   manager    = concurrent::worker::WorkerManager::get();
 
 		for (const auto& file_id: files_to_parse) {
-			manager.scheduleTaskOnAnyWorker([file_id, &tasks_left](concurrent::worker::WRef) {
+			manager.scheduleTaskOnAnyWorker([&, file_id](concurrent::worker::WRef) {
 				auto file_ref
 					= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 						file_id
@@ -883,10 +888,15 @@ namespace compiler::frontend {
 				file_ref->getPST();
 				std::cout << "Parsed\n";
 
-				tasks_left.fetch_sub(1, std::memory_order_release);
+				if (tasks_left.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+					std::lock_guard<std::mutex> lock(wait_mtx);
+					wait_cv.notify_one();
+				}
 			});
 		}
-		while (tasks_left.load(std::memory_order_acquire) > 0) std::this_thread::yield();
+
+		std::unique_lock lock(wait_mtx);
+		wait_cv.wait(lock, [&] { return tasks_left.load(std::memory_order_acquire) == 0; });
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {

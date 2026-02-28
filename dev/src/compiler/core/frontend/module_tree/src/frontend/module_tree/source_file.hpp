@@ -24,6 +24,10 @@ namespace compiler::frontend {
 	 * @brief Represents a source file in the Duckling compiler.
 	 */
 	class SourceFile final {
+		/**
+		 * @brief Synchronizes access to state of SourceFile. Since multiple workers may try to
+		 * parse the same file simultaneously.
+		 */
 		mutable base::Box<concurrent::AtomicFlagSpinlock> state_lock;
 		fs::File                                          file;
 		base::StrID                                       lang_file_name;

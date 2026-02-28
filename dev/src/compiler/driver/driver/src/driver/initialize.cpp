@@ -21,8 +21,6 @@
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
 
-#include <iostream>
-
 namespace compiler::driver {
 
 	namespace {
@@ -72,9 +70,12 @@ namespace compiler::driver {
 			);
 			global_state::setters::addMainPackage(root_module);
 
-			// We need to parse all files before compilation to collect all PST element
-			// @TODO: #1974 this should be done concurrently and only if prev graph exists nad
-			// incremental compilation is enabled
+			// We need to parse all files before compilation to collect all PST elements.
+			// @note: For now, since CompileModule isn't run concurrently we parse all files before
+			// compilation in both the incremental and non-incremental setting.
+			// In the future, if compiling without incremental (or during first compilation with
+			// incremental) parsing here should be removed as it will be handled by the query system
+			// itself.
 			compiler::frontend::parseAllFilesInModuleTree(root_module);
 		}
 
@@ -118,9 +119,6 @@ namespace compiler::driver {
 				auto                  view = maybe_metadata_blob.value()->getDataView();
 				std::span<const byte> span(view.getBegin(), view.size());
 				query::external::setPreviousMetadataFromRawBytes(span);
-
-				// @TODO: #1974 We should parse PST concurrently here, before
-				// collectInputDataFromGlobalPackages()
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
@@ -178,14 +176,6 @@ namespace compiler::driver {
 
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 				handlePackageOptions(package_compilation_options.main_package_info);
-
-				// No matter if we're in the incremental or --no-incremental setting we always parse
-				// all the files first concurrently.
-				if (not global_state::getPackages().empty()) {
-					compiler::frontend::parseAllFilesInModuleTree(
-						global_state::getMainPackage().root_module
-					);
-				}
 
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);
