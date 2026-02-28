@@ -756,7 +756,6 @@ private:
 	}
 
 	void testDeps() {
-
 #if defined(BUILD_TYPE_DEV)
 		const auto& graph = query::Context::getState().getGraph();
 
@@ -1069,8 +1068,8 @@ private:
 		auto result = query::entryPoint<UsesQResultTest>({ 1 });
 		assertTrue(result.hasFailed(), "Expected error in UsesQResultTest");
 
-		// @TODO: #2138, decide what to do with commented parts of this test, likely remove them, as they 
-		// test inner query entry panics.
+		// @TODO: #2138, decide what to do with commented parts of this test, likely remove them, as
+		// they test inner query entry panics.
 
 		// assertThrows<base::Panic>(
 		// 	[] { query::entryPoint<UsesQResultNoCatchTest>({ 1 }); },
