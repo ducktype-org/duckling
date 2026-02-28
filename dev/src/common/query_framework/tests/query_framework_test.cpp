@@ -756,16 +756,14 @@ private:
 	}
 
 	void testDeps() {
-		// PR to discuss: large part of this test no longer works, since we can't catch panics that
-		// happen inside worker threads.
-		return;
 
 #if defined(BUILD_TYPE_DEV)
 		const auto& graph = query::Context::getState().getGraph();
 
-		assertThrows<base::Panic>(
-			[&]() { graph.getNodeDeps<EmptyQuery>({ 1 }); }, "Query deps present before query call."
-		);
+		// @TODO: #2138 Change this to proper check, like "doesNodeExist"
+		// assertThrows<base::Panic>(
+		// 	[&]() { graph.getNodeDeps<EmptyQuery>({ 1 }); }, "Query deps present before query call."
+		// );
 
 		query::entryPoint<EmptyQuery>({ 1 });
 		auto deps = graph.getNodeDeps<EmptyQuery>({ 1 });
@@ -967,7 +965,8 @@ private:
 	}
 
 	void testContextSanityCheck() {
-		// PR same here..
+		// @TODO: #2138 This tests will be hard to bring back, but maybe we can explicitly test
+		// contexts active flags here.
 		return;
 
 #if defined(BUILD_TYPE_DEV)
@@ -1067,21 +1066,21 @@ private:
 	}
 
 	void testQueryResultExceptionsHandling() {
-		// PR same here...
-		return;
-
 		auto result = query::entryPoint<UsesQResultTest>({ 1 });
 		assertTrue(result.hasFailed(), "Expected error in UsesQResultTest");
 
-		assertThrows<base::Panic>(
-			[] { query::entryPoint<UsesQResultNoCatchTest>({ 1 }); },
-			"QueryFailedException not thrown as expected"
-		);
+		// @TODO: #2138, decide what to do with commented parts of this test, likely remove them, as they 
+		// test inner query entry panics.
 
-		assertThrows<base::Panic>(
-			[] { query::entryPoint<NoQResultTest>({ 1 }); },
-			"QueryFailedException not thrown as expected"
-		);
+		// assertThrows<base::Panic>(
+		// 	[] { query::entryPoint<UsesQResultNoCatchTest>({ 1 }); },
+		// 	"QueryFailedException not thrown as expected"
+		// );
+
+		// assertThrows<base::Panic>(
+		// 	[] { query::entryPoint<NoQResultTest>({ 1 }); },
+		// 	"QueryFailedException not thrown as expected"
+		// );
 
 		assertThrows<query::internal::QueryFailedException>(
 			[] {
@@ -1180,7 +1179,7 @@ private:
 	}
 
 	void testMetadataPreserveInGraphCheck() {
-		// PR same here...
+		// @TODO: #2138 Figure out if we can re-enable this test in some form.
 		return;
 
 #if defined(BUILD_TYPE_DEV)
