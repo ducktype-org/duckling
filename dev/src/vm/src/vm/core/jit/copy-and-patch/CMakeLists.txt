@@ -8,5 +8,4 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_files(copy-and-patch.cpp)
 endif()
 
-set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
-set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
+set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
