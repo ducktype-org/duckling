@@ -108,11 +108,10 @@ namespace vm::builtins {
 		return i64{ vm::api::runFunction(thread.process.getPID(), thread_ctx).value() };
 	}
 
-	i64 FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
+	void FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
 		thread.releaseGil();
 		vm::api::join(thread.process.getPID(), api::ThreadID{ thread_id });
 		thread.keepOrAcquireGil();
-		return 0;
 	}
 
 	i64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
@@ -204,7 +203,7 @@ namespace vm::builtins {
 			     {
 					 BuiltinFunctionID::JoinThread,
 					 { base::StrID("builtin_join_thread"),
-			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
+			           code::FuncSignature(base::StrID("void"), { base::StrID("i64") }) },
 				 },
 			     { BuiltinFunctionID::CreateMutex,
 			       { base::StrID("builtin_create_mutex"),

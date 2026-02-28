@@ -19,7 +19,7 @@ private:
 	void multithreadingTest() {
 		// We don't check result here - only if it finished sucessfully
 		// That's because this code is purposefully not deterministic - it has data race
-		runTestOnVmGetResult("multithreading.dbc", "", {}, {});
+		runTestOnVm("multithreading.dbc", "", {}, {});
 	}
 
 	void mutexTest() {
