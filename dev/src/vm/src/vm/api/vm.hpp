@@ -54,7 +54,7 @@ namespace vm::api {
 	 * @brief Run a function with a given name on DVM.
 	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
 	 *
-	 * @return Nothing if the function was run successfully or an API error otherwise.
+	 * @return ThreadID if the function was run successfully or an API error otherwise.
 	 */
 	std::expected<ThreadID, ApiError> runFunction(
 		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
