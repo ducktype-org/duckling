@@ -1,16 +1,42 @@
+# Test alias declaration - creates an alternative name for a symbol
+# Per docs: alias can be used on any symbol including functions, variables, class members
+
 namespace outer {
     namespace inner {
         namespace core {
+            var counter: i64 = 0;
+
             fun veryLongFunctionName() -> bool = {
-                builtin_output_i64(1i64);
+                counter = counter + 1;
+                builtin_output_i64(counter);  # Output counter value
                 return true;
             }
+
+            fun addNumbers(a: i64, b: i64) -> i64 = a + b;
         }
     }
 }
 
+# Alias to a function in nested namespace
 alias f = outer.inner.core.veryLongFunctionName;
-if (f()) {
-    builtin_output_i64(2);
-}
+alias add = outer.inner.core.addNumbers;
+alias cnt = outer.inner.core.counter;
 
+fun main() -> i64 = {
+    # Call function via alias
+    if (f()) {
+        builtin_output_i64(10);   # 10
+    }
+
+    # Call again to verify counter increments
+    f();  # outputs 2
+
+    # Use alias to function with parameters
+    let result = add(15, 25);
+    builtin_output_i64(result);  # 40
+
+    # Access variable through alias (read)
+    builtin_output_i64(cnt);     # 2 (counter was incremented twice)
+
+    return 0;
+}

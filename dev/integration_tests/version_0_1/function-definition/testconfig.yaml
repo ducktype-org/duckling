@@ -1,6 +1,6 @@
 # Test configuration for function-definition
-# Tests various function definition styles: no args, single/multiple args,
-# expression bodies, different return types, and recursive functions
+# Tests function definitions: args, expression bodies, return types, recursion,
+# default params, static variables, and return type inference
 
 Tests:
   function-definition-test:
@@ -9,5 +9,14 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "42\n7\n8\n24\n1\n2\n99\n120\n"
+          String: "42\n7\n8\n24\n1\n2\n99\n120\n10\n30\n1\n2\n3\n50\n"
+        ExitCode: 0
+
+  function-features-test:
+    Description: Tests for default parameters, static variables, and return type inference.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "10\n30\n16\n13\n6\n1\n2\n3\n10\n15\n40\n50\n15\n1\n2\n"
         ExitCode: 0

@@ -1,5 +1,5 @@
 # Test configuration for first-class-typing
-# Tests type aliases and their usage in declarations and function signatures
+# Tests type usage in function signatures, type inference, and type conversions
 
 Tests:
   first-class-typing-test:
@@ -8,5 +8,14 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "100\n200\n50\n70\n300\n"
+          String: "100\n5\n10\n50\n25\n3\n"
+        ExitCode: 0
+
+  type-values-test:
+    Description: Tests for type conversions and casts.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "100\n100\n100\n5\n10\n1000\n50\n3\n42\n25\n"
         ExitCode: 0

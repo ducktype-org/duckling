@@ -1,13 +1,12 @@
-# Dummy test configuration for comparison-operators-on-integers
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for comparison-operators-on-integers
+# Tests ==, !=, <, >, <=, >= and comparison chaining (a < b < c)
 
 Tests:
   comparing-integers:
-    Description: Minimal working dummy test.
+    Description: Tests for comparison operators on integers.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "1\n3\n5\n7\n9\n11\n"
+          String: "1\n3\n5\n7\n9\n11\n13\n14\n16\n"
         ExitCode: 0

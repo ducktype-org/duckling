@@ -2,6 +2,7 @@ fun main() -> i64 = {
     var a: i64 = 5;
     var b: i64 = 10;
     var c: i64 = 5;
+    var d: i64 = 15;
 
     # Test equality
     if (a == c) {
@@ -49,6 +50,23 @@ fun main() -> i64 = {
     }
     if (a >= b) {
         builtin_output_i64(12); # Should not execute
+    }
+
+    # Test comparison chaining (per docs: a < b < c is equivalent to a < b and b < c)
+    if (a < b < d) {
+        builtin_output_i64(13); # Should execute: 5 < 10 < 15
+    }
+    if (d > b > a) {
+        builtin_output_i64(14); # Should execute: 15 > 10 > 5
+    }
+    if (a < b > d) {
+        builtin_output_i64(15); # Should not execute: 5 < 10 but 10 > 15 is false
+    }
+
+    # Test chained equality/inequality
+    var e: i64 = 5;
+    if (a == c == e) {
+        builtin_output_i64(16); # Should execute: all equal to 5
     }
 
     return 0;

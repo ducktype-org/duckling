@@ -1,6 +1,5 @@
-# Dummy test configuration for variable-simple-declaration
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for variable-simple-declaration
+# Tests var declarations with values and default initialization
 
 Tests:
   variable-declaration-value-test:

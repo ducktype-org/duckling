@@ -1,5 +1,5 @@
 # Test configuration for let-simple-declaration
-# Tests let (immutable) variable declarations with explicit types and type inference
+# Tests let (immutable) declarations with types, inference, globals, and scopes
 
 Tests:
   let-simple-declaration-test:
@@ -8,5 +8,14 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "10\n20\n30\n40\n80\n30\n1\n2\n"
+          String: "10\n20\n30\n40\n80\n30\n1\n2\n1000\n25\n99\n"
+        ExitCode: 0
+
+  let-advanced-test:
+    Description: Tests for global let, block scopes, and shadowing.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1000\n2000\n3000\n42\n25\n99\n10\n20\n10\n1\n2\n3\n15\n"
         ExitCode: 0

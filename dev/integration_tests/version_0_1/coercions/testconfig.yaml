@@ -1,6 +1,5 @@
-# Dummy test configuration for boolean-operators
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for coercions
+# Tests implicit and explicit type coercions between numeric types
 
 Tests:
   coercion-cast-simple-test:

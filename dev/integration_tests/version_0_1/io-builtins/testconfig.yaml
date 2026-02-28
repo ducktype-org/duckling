@@ -1,6 +1,5 @@
-# Dummy test configuration for boolean-operators
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for io-builtins
+# Tests builtin output functions and print function
 
 Tests:
   io-builtins-output:

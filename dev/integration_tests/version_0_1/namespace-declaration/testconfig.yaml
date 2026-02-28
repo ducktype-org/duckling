@@ -1,6 +1,5 @@
-# Dummy test configuration for namespace-declaration
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for namespace-declaration
+# Tests namespace declaration, nested namespaces, and access specifiers
 
 Tests:
   namespace-declaration-test:
@@ -9,5 +8,5 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n2\n30\n"
+          String: "1\n2\n30\n12\n42\n100\n10\n50\n100\n"
         ExitCode: 0

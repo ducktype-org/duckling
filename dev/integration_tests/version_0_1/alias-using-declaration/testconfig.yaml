@@ -1,22 +1,21 @@
-# Dummy test configuration for alias-using-declaration
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for alias-using-declaration
+# Tests alias (symbol aliases) and using (namespace imports)
 
 Tests:
   alias-test:
-    Description: Tests for alias declarations in a namespace.
+    Description: Tests for alias declarations on functions and variables.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "50\n"
+          String: "1\n10\n2\n40\n2\n"
         ExitCode: 0
 
   using-test:
-    Description: Tests for using declarations to import functions.
+    Description: Tests for using declarations to import symbols from namespaces.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "30\n"
+          String: "10\n12\n9\n3\n11\n9\n8\n"
         ExitCode: 0

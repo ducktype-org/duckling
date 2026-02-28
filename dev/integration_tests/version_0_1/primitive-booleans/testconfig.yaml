@@ -1,5 +1,5 @@
 # Test configuration for primitive-booleans
-# Tests boolean literals, assignment, and boolean operations (and, or, not, xor)
+# Tests boolean literals, assignment, boolean operators (and, or, not, xor), ternary expressions
 
 Tests:
   primitive-booleans-test:
@@ -8,5 +8,5 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n3\n5\n7\n9\n11\n"
+          String: "1\n3\n5\n7\n9\n11\n100\n200\n12\n13\n"
         ExitCode: 0

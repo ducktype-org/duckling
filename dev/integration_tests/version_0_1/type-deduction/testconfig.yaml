@@ -1,5 +1,5 @@
 # Test configuration for type-deduction
-# Tests type inference for variables, expressions, and function returns
+# Tests type inference for variables, expressions, literals, and function returns
 
 Tests:
   type-deduction-test:
@@ -8,5 +8,14 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "42\n42\n42\n100\n1\n84\n200\n99\n-50\n"
+          String: "42\n42\n42\n100\n1\n84\n200\n99\n-50\n255\n10\n15\n88\n500\n2\n27\n"
+        ExitCode: 0
+
+  type-inference-advanced-test:
+    Description: Tests for complex type inference scenarios.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "255\n10\n15\n88\n3\n4\n500\n1\n2\n27\n10\n71\n"
         ExitCode: 0

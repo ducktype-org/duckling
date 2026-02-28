@@ -8,5 +8,14 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "10\n25\n15\n"
+          String: "10\n25\n15\n0\n2\n7\n"
+        ExitCode: 0
+
+  cffi-libc-test:
+    Description: Tests for CFFI in complex contexts.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "5\n7\n1\n6\n42\n100\n7\n"
         ExitCode: 0

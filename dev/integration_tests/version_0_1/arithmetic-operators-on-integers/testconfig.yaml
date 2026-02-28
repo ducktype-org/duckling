@@ -1,6 +1,5 @@
-# Dummy test configuration for arithmetic-operators-on-integers
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
+# Test configuration for arithmetic-operators-on-integers
+# Tests +, -, *, /, %, unary negation, precedence, and operations on various integer types
 
 Tests:
   arithmetic-operators-test:
@@ -9,5 +8,5 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "30\n10\n200\n2\n0\n15\n15\n30\n5\n2\n"
+          String: "30\n10\n200\n2\n0\n15\n15\n30\n5\n2\n-50\n50\n14\n20\n8\n2\n8\n2\n15\n1\n2\n130\n70\n10\n25\n24\n"
         ExitCode: 0
