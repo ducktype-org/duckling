@@ -37,17 +37,23 @@ Run: "
 
 
 SubDirs:
-  - alias-using-declaration
-  # - namespace-declaration
-  # - arithmetic-operators-on-integers
-  # - primitive-booleans
+#################################
+#         WORKING
+# #################################
+#   - namespace-declaration
+#   - arithmetic-operators-on-integers
+#   - comparison-operators-on-integers
+#################################
+#         NOT WORKING
+#################################
+  # - alias-using-declaration
   # - boolean-operators
+  # - primitive-booleans
   # - primitive-integers
   # - class-declaration
   # - simple-cffi
   # - coercions
   # - simple-chars
-  # - comparison-operators-on-integers
   # - simple-ifs
   # - constant-simple-declaration
   # - simple-strings
