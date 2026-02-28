@@ -1,5 +1,6 @@
 #include "initialize.hpp"
 
+#include "concurrent/module_flags/worker_count.hpp"
 #include "options.hpp"
 
 #include <diagnostic_interactive/logger.hpp>
@@ -123,6 +124,11 @@ namespace compiler::driver {
 		void handleBackendOptions(const global_state::BackendOptions& backend_options) {
 			global_state::setters::setBackendOptions(backend_options);
 		}
+
+		void handleExecutionOptions(const options_types::ExecutionOptions& execution_options) {
+			concurrent::worker::setWorkerCount(execution_options.worker_count);
+		}
+
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
@@ -138,7 +144,6 @@ namespace compiler::driver {
 		CORE_ASSERT(!is_initialized, "Compiler is already initialized!");
 		is_initialized = true;
 
-		concurrent::worker::setWorkerCount(9);
 		variant_match(options.mode) {
 			variant_case(CompilerModeOfOperationAndOptions::BareMode, bare_options) {
 				handleDebugOptions(bare_options.debug_options);
@@ -148,6 +153,8 @@ namespace compiler::driver {
 				package_compilation_options
 			) {
 				handleDebugOptions(package_compilation_options.debug_options);
+				handleExecutionOptions(package_compilation_options.execution_options);
+
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 				handlePackageOptions(package_compilation_options.main_package_info);
 
@@ -164,6 +171,7 @@ namespace compiler::driver {
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
 				handleDebugOptions(repl_options.debug_options);
+				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

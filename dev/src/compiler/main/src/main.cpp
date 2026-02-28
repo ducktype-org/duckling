@@ -6,6 +6,8 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
+#include "concurrent/module_flags/worker_count.hpp"
+
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
@@ -25,6 +27,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include "clah/value_parser.hpp"
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
@@ -35,7 +38,6 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
-#include "concurrent/module_flags/worker_count.hpp"
 
 #include <iostream>
 
@@ -265,7 +267,7 @@ clah::Clah getClahForMain() {
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
                         base::generateRandomString(32)
                     );
-					
+
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
@@ -278,6 +280,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = 1,
+							},
 						}
 					);
 
@@ -343,10 +348,20 @@ clah::Clah getClahForMain() {
 							 "Disable incremental compilation (do not load previous query graph)."
 						 )
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
+
+
+					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -361,6 +376,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
@@ -436,7 +454,10 @@ clah::Clah getClahForMain() {
 									.backend_options = {},
 									.debug_options = getDebugOptionsFromClap(options),
 									.incremental = {.enabled = !options.isFlag("no-incremental") },
-						}
+									.execution_options = {
+										.worker_count = 1,
+									},
+}
 					);
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
@@ -460,10 +481,13 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(
-								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
-									   .debug_options = getDebugOptionsFromClap(options),
-								   }
-							   );
+						compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
+							.debug_options = getDebugOptionsFromClap(options),
+							.execution_options = {
+								.worker_count =1,
+							},
+						}
+					);
 
 							   compiler::repl::ReplSession session;
 							   int                         result = session.run();
@@ -506,7 +530,8 @@ int main(int argc, const char* argv[]) {
 	} catch (...) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
-			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
+			{ "Unexpected Exception not inheriting from std::exception was "
+		      "caught.\n",
 		      printer::Color::Default },
 		});
 		return 1;

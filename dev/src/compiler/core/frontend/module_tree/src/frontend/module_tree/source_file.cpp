@@ -128,11 +128,10 @@ namespace compiler::frontend {
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
 
-		files_map.maybePutAndUpdate(
-			abs_path, {}, [&](Ref<std::vector<base::Ref<SourceFile>>> entries) {
+		files_map
+			.maybePutAndUpdate(abs_path, {}, [&](Ref<std::vector<base::Ref<SourceFile>>> entries) {
 				std::erase(*entries, source_file);
-			}
-		);
+			});
 
 
 		// if (files_map.contains(abs_path)) {

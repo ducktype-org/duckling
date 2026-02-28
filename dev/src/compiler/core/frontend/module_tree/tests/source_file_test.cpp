@@ -282,7 +282,9 @@ private:
 		std::cerr << "After modification, sourcefile content: "
 				  << source_file->getCachedContentIllegalAccess().view().stringView() << '\n';
 		// SourceFile should have updated cached content
-		ASSERT_EQUAL("new content", source_file->getCachedContentIllegalAccess().view().stringView());
+		ASSERT_EQUAL(
+			"new content", source_file->getCachedContentIllegalAccess().view().stringView()
+		);
 
 		fs::FileManager::deleteFile(temp_file);
 	}
