@@ -9,7 +9,6 @@
 
 #include <query_framework/module_flags/module_flags.hpp>
 
-#include <algorithm>
 #include <cstring>
 #include <iomanip>
 #include <ostream>
