@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <ostream>
+#include <vector>
 
 namespace dia_int {
 	class Logger {

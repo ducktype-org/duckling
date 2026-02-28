@@ -42,14 +42,19 @@ namespace query::external {
 	/**
 	 * @brief Takes new input data for the current compilation and invalidates queries
 	 * that depend on the inputs not present in the new input set.
-	 * The query invalidation involves removing them from the graph, erasing their cache entries,
-	 * erasing their diagnostics and all the state that need to be erased when a query is invalidated.
+	 * If previous_inputs_opt is provided, the function will only invalidate inputs after
+	 * substracting previous_inputs_opt - new_inputs. The query invalidation involves removing them
+	 * from the graph, erasing their cache entries, erasing their diagnostics and all the state that
+	 * need to be erased when a query is invalidated.
+	 *
+	 * @note This is for incremental LS.
+	 * @warning Should not be executed concurrently with any query execution.
 	 *
 	 * @param new_inputs Vector of input data (QueryID + hash) used in current compilation.
 	 * @param previous_inputs_opt Optional vector of input data. If provided, the function will only
-	 * search the provided previous inputs for invalidation, (otherwise it will search all previous
-	 * inputs from the whole graph). Used when we know the rest of the previous inputs are the same
-	 * as the new ones.
+	 * invalidate previous_inputs_opt - new_inputs. If not provided will invalidate
+	 * all_inputs_in_graph - new_inputs.
+	 * Used when we know the rest of the previous inputs are the same as the new ones.
 	 */
 	void invalidateQueries(
 		std::vector<InputData>&&               new_inputs,
@@ -73,6 +78,5 @@ namespace query::external {
 	 * @return Serialized metadata as raw bytes.
 	 */
 	[[nodiscard]] std::vector<byte> serializeMetadata();
-
 
 }  // namespace query::external

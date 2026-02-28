@@ -1,10 +1,8 @@
 #pragma once
 
-#include <string_view>
+#include <query_framework/utils/query_hash.hpp>
 
-namespace base {
-	struct Bit256;
-}
+#include <string_view>
 
 namespace query {
 
@@ -78,7 +76,7 @@ namespace query {
 		 * @brief Struct holding all the data related to query caching, like erase function pointer.
 		 */
 		struct QueryCacheData final {
-			using InternalEraseFunctionType = bool (*)(base::Bit256);
+			using InternalEraseFunctionType = bool (*)(QueryStableHash);
 
 			InternalEraseFunctionType erase_function;
 		};
@@ -108,7 +106,6 @@ namespace query {
 			 * Pointer to the function that can erase the query result from it's cache based on the
 			 * key hash.
 			 */
-
 			constexpr QueryData(
 				QueryKind kind, std::string_view name, QueryTags tags, QueryCacheData cache_data
 			):

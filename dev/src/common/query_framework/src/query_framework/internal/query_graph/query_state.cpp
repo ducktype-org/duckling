@@ -286,6 +286,8 @@ namespace query::internal {
 		return *node_colors->atMaybe(start_node).value();
 	}
 
+	bool dummyEraseRunction(QueryStableHash) { CORE_PANIC("erase from cache called for dummy"); }
+
 	NodeID QueryState::remapUnstableOrUnregisteredNodes(NodeID node) {
 		static base::VectorMap<QueryID, QueryID> old_to_new;
 
@@ -296,11 +298,12 @@ namespace query::internal {
 		if (auto existing = old_to_new.atMaybe(node.q_id); existing.has_value())
 			return { **existing, node.hash };
 
+
 		QueryData dummy_query_data(
 			QueryKind::Dummy,
 			"Dummy from previous graph created during deserialization",
 			{},
-			{ .erase_function = nullptr }
+			{ .erase_function = dummyEraseRunction }
 		);
 		QueryID new_qid = registerQuery(dummy_query_data);
 		old_to_new.put(node.q_id, new_qid);
@@ -936,12 +939,14 @@ namespace query::internal {
 		return { .nodes = std::move(new_idx_to_node), .adjacency = std::move(new_opt_graph) };
 	}
 
+	Ref<MetadataStorage> QueryState::getMetadataStorageMutable() { return &metadata_storage; }
+
 	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic) {
 		diagnostic_loggers.maybePutAndUpdate(
 			node_id,
 			makeBox<dia_int::Logger>(),
-			[diag = std::move(diagnostic)](Ref<Box<dia_int::Logger>> logger) mutable {
-				logger->refMut()->log(std::move(diag));
+			[&](Ref<Box<dia_int::Logger>> logger) mutable {
+				logger->refMut()->log(std::move(diagnostic));
 			}
 		);
 	}
@@ -955,6 +960,6 @@ namespace query::internal {
 
 	base::Optional<CRef<dia_int::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
 		if (auto it = diagnostic_loggers.atMaybe(node_id); it.has_value()) return it.value()->ref();
-		return std::nullopt;
+		return {};
 	}
 }  // namespace query::internal

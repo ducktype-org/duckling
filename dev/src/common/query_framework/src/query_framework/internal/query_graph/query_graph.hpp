@@ -166,6 +166,8 @@ namespace query::internal {
 		 * Graph that tracks the reversed relation to `node_deps`.
 		 * Only used if @p track_reverse_graph is true.
 		 *
+		 * Currently only used by the Language Server.
+		 *
 		 * Does not take part in any of the additional logic like serialization
 		 * or deserialization.
 		 */
@@ -291,7 +293,7 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Helper function to keep the output of the `getDependentNodes`
+		 * @brief Helper to keep the output of the `getDependentNodes`
 		 * function in a single struct, as it should be the transitive closure of
 		 * the dependent nodes.
 		 */
@@ -314,6 +316,7 @@ namespace query::internal {
 		 *
 		 * @warning This method should not be used when the query graph is being concurrently
 		 * modified.
+		 * @note This is for Language Server.
 		 */
 		void eraseNodes(const Dependents& nodes_to_erase);
 

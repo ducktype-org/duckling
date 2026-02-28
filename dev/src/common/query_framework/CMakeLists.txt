@@ -4,6 +4,7 @@ add_library(QueryFramework
 	src/query_framework/internal/query_graph/query_state.cpp
 	src/query_framework/internal/query_data/query_id.cpp
 	src/query_framework/internal/query_graph/node_marking.cpp
+	src/query_framework/module_flags/module_flags.cpp
 
 	src/query_framework/external/api.cpp
 	

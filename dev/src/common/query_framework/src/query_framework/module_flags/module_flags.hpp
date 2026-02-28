@@ -12,5 +12,5 @@ namespace query {
 	 * It is used by the Langauge Server to find the dependent nodes of a given node and invalidate
 	 * them without having to traverse the whole graph.
 	 */
-	inline bool track_reverse_graph = false;
+	extern constinit bool track_reverse_graph;
 }

@@ -8,16 +8,23 @@
 #include <query_framework/internal/query_graph/query_graph.hpp>
 
 #include <algorithm>
-#include <utility>
 
 namespace query::internal {
 
+	/**
+	 * @brief General function to check presence of every input from the old inputs in the new
+	 * inputs and call corresponding callbacks.
+	 *
+	 * @param present_callback Function to call when an input is present in the new inputs.
+	 * @param not_present_callback FUnction to call when an input is not present among the new inputs.
+	 * @param all_nodes
+	 * @param new_inputs
+	 */
 	template<typename NodePresentCallback, typename NodeRemovedCallback>
-	void callForEveryRemovedInput(
+	void checkPresenceOfEveryInput(
 		NodePresentCallback                     present_callback,
-		NodeRemovedCallback                     removed_callback,
-		const std::vector<NodeID>&              all_nodes,
-		CRef<QueryGraph>                        prev_graph,
+		NodeRemovedCallback                     not_present_callback,
+		const std::vector<NodeID>&              previous_nodes,
 		std::vector<query::external::InputData> new_inputs
 	) {
 		// Sort inputs by (hash, q_id)
@@ -31,12 +38,8 @@ namespace query::internal {
 
 		// Collect previous nodes of interest (Input and SideInput)
 		std::vector<NodeID> prev_inputs;
-		prev_inputs.reserve(all_nodes.size());
-		for (const auto& node: all_nodes) {
-			// You should map unregistered nodes to Dummy first for correctness of query framework
-			// The function qury_state::remapUnstableOrUnregisteredNodes does it already
-			CORE_ASSERT(node.q_id.registered(), "Node from previous graph must be registered.");
-
+		prev_inputs.reserve(previous_nodes.size());
+		for (const auto& node: previous_nodes) {
 			if (node.q_id.getData().kind != QueryKind::SideInput
 			    && node.q_id.getData().kind != QueryKind::Input) {
 				continue;
@@ -45,12 +48,6 @@ namespace query::internal {
 			CORE_ASSERT(
 				node.q_id.getData().usesStableHashing(),
 				"Side/Input nodes must have stable hashes: ",
-				node.q_id.getData().name
-			);
-
-			CORE_ASSERT(
-				!prev_graph->hasDependencies(node),
-				"Input nodes should not have dependencies: ",
 				node.q_id.getData().name
 			);
 
@@ -85,13 +82,13 @@ namespace query::internal {
 				++i;
 			} else {
 				// node < input: mark as red and advance nodes
-				removed_callback(node);
+				not_present_callback(node);
 				++j;
 			}
 		}
 
 		// Remaining nodes are red
-		for (; j < prev_inputs.size(); ++j) removed_callback(prev_inputs[j]);
+		for (; j < prev_inputs.size(); ++j) not_present_callback(prev_inputs[j]);
 	}
 
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs) {
@@ -101,31 +98,44 @@ namespace query::internal {
 		auto prev_graph = maybe_prev.value();
 
 		auto present_callback = [&](const NodeID& node) {
+			CORE_ASSERT(
+				!prev_graph->hasDependencies(node),
+				"Input nodes should not have dependencies: ",
+				node.q_id.getData().name
+			);
+
+			CORE_ASSERT(node.q_id.registered(), "Node from previous graph must be registered.");
 			state->setPrevNodeColor(node, QueryState::PrevColor::Green);
 		};
-		auto removed_callback = [&](const NodeID& node) {
+		auto not_present_callback = [&](const NodeID& node) {
+			CORE_ASSERT(
+				!prev_graph->hasDependencies(node),
+				"Input nodes should not have dependencies: ",
+				node.q_id.getData().name
+			);
+
+			CORE_ASSERT(node.q_id.registered(), "Node from previous graph must be registered.");
 			state->setPrevNodeColor(node, QueryState::PrevColor::Red);
 		};
 
 		auto all_nodes = prev_graph->getAllNodes();
-		callForEveryRemovedInput(
-			present_callback, removed_callback, all_nodes, prev_graph, std::move(inputs)
+		checkPresenceOfEveryInput(
+			present_callback, not_present_callback, all_nodes, std::move(inputs)
 		);
 	}
 
 	std::vector<NodeID> findRemovedInputsFromCurrentGraph(
 		std::vector<query::external::InputData> new_inputs
 	) {
-		auto                state      = ContextAccess::getState();
-		auto&               prev_graph = state->getGraph();
-		auto                nodes      = state->getGraph().getAllNodes();
+		auto                state = ContextAccess::getState();
+		auto                nodes = state->getGraph().getAllNodes();
 		std::vector<NodeID> removed_inputs;
 
-		auto present_callback = [&](const NodeID&) { /* empty*/ };
-		auto removed_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
+		auto present_callback     = [&](const NodeID&) { /* empty*/ };
+		auto not_present_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
 
-		callForEveryRemovedInput(
-			present_callback, removed_callback, nodes, &prev_graph, std::move(new_inputs)
+		checkPresenceOfEveryInput(
+			present_callback, not_present_callback, nodes, std::move(new_inputs)
 		);
 		return removed_inputs;
 	}
@@ -134,8 +144,6 @@ namespace query::internal {
 		const std::vector<external::InputData>& selected_inputs,
 		std::vector<query::external::InputData> new_inputs
 	) {
-		auto                state      = ContextAccess::getState();
-		auto&               prev_graph = state->getGraph();
 		std::vector<NodeID> removed_inputs;
 
 		std::vector<NodeID> selected_nodes
@@ -144,11 +152,11 @@ namespace query::internal {
 			  })
 		    | std::ranges::to<std::vector>();
 
-		auto present_callback = [&](const NodeID&) { /* empty*/ };
-		auto removed_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
+		auto present_callback     = [&](const NodeID&) { /* empty*/ };
+		auto not_present_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
 
-		callForEveryRemovedInput(
-			present_callback, removed_callback, selected_nodes, &prev_graph, std::move(new_inputs)
+		checkPresenceOfEveryInput(
+			present_callback, not_present_callback, selected_nodes, std::move(new_inputs)
 		);
 		return removed_inputs;
 	}

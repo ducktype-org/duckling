@@ -17,12 +17,15 @@ namespace query::internal {
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
 
 	/**
-	 * @brief Get the NodeIDs of the input nodes in the previous graph
+	 * @brief Get the NodeIDs of the input nodes in the current graph
 	 * that are not present in the new inputs.
 	 *
-	 * For example if the previous graph had input nodes {1,2}
+	 * For example if the current graph had input nodes {1,2}
 	 * and we call this function with new inputs {2,3},
 	 * it should return the NodeID corresponding to input {1}.
+	 *
+	 * @note This is for incremental compilation.
+	 * @warning Should not be executed concurrently with query multi-thread execution.
 	 *
 	 * @param new_inputs All new inputs given to the compiler.
 	 */

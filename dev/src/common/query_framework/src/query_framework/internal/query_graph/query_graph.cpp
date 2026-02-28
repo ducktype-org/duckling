@@ -354,18 +354,18 @@ namespace query::internal {
 			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
 		);
 
-		std::queue<NodeID>         queue{ start_nodes.begin(), start_nodes.end() };
+		std::vector<NodeID>        queue{ start_nodes.begin(), start_nodes.end() };
 		std::unordered_set<NodeID> visited;
 
 		while (not queue.empty()) {
-			auto node = queue.front();
-			queue.pop();
+			auto node = queue.back();
+			queue.pop_back();
 
 			if (visited.contains(node)) continue;
 			visited.insert(node);
 
 			if_opt_some(node_reverse_deps->atMaybe(node), its_reverse_deps) {
-				for (auto& new_node: *its_reverse_deps) queue.push(new_node);
+				for (auto& new_node: *its_reverse_deps) queue.push_back(new_node);
 			}
 		}
 
@@ -393,8 +393,7 @@ namespace query::internal {
 
 				for (const auto& dep: *removed_node_deps) {
 					if_opt_some(node_reverse_deps->atMaybe(dep), its_reverse_deps) {
-						auto new_end = std::ranges::remove(*its_reverse_deps, node);
-						its_reverse_deps->erase(new_end.begin(), new_end.end());
+						std::erase(*its_reverse_deps, node);
 					}
 				}
 			}

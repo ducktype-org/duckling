@@ -286,9 +286,7 @@ namespace query::internal {
 		}
 
 		[[nodiscard]]
-		Ref<MetadataStorage> getMetadataStorageMutable() {
-			return &metadata_storage;
-		}
+		Ref<MetadataStorage> getMetadataStorageMutable();
 
 		/*******************************\
 		|    Diagnostic's interface:    |
@@ -307,6 +305,9 @@ namespace query::internal {
 
 		/**
 		 * @brief Gets a diagnostic logger for a specific node, if it exists.
+		 * Used for the tests.
+		 *
+		 * Not thread safe.
 		 */
 		base::Optional<CRef<dia_int::Logger>> getDiagnosticForNode(NodeID node_id) const;
 
