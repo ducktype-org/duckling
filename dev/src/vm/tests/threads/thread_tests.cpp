@@ -24,7 +24,7 @@ private:
 
 	void mutexTest() {
 		// On the contrary here, this test should give clear result
-		runTestOnVmGetResult("mutex.dbc", "", "20000", {});
+		runTestOnVm("mutex.dbc", "", "20000", {});
 	}
 };
 
