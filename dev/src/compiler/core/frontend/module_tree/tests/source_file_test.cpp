@@ -322,14 +322,14 @@ private:
 		auto source_path = fs::FileManager::createRandomVirtualFile("removal content");
 		cleanup_files.push_back(source_path);
 		ModuleTreeModifier::addSourceFile(module, source_path);
-		ASSERT_EQUAL(1, module->getSourceFiles().size());
-		auto sf_ref = getRef(module->getSourceFiles().front());
+		ASSERT_EQUAL(1, module->getSourceFiles().illegalAccess().size());
+		auto sf_ref = getRef(module->getSourceFiles().illegalAccess().front());
 
 		auto before = SourceFile::getSourceFilesFromFile(source_path);
 		ASSERT_EQUAL(1, before.size());
 
 		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
-		ASSERT_TRUE(module->getSourceFiles().size() == 0);
+		ASSERT_TRUE(module->getSourceFiles().illegalAccess().size() == 0);
 		auto after = SourceFile::getSourceFilesFromFile(source_path);
 		ASSERT_TRUE(after.empty());
 
@@ -349,8 +349,8 @@ private:
 		auto source_path = fs::FileManager::createRandomVirtualFile("dangling content");
 		cleanup_files.push_back(source_path);
 		ModuleTreeModifier::addSourceFile(module, source_path);
-		ASSERT_EQUAL(1, module->getSourceFiles().size());
-		auto sf_ref  = getRef(module->getSourceFiles().front());
+		ASSERT_EQUAL(1, module->getSourceFiles().illegalAccess().size());
+		auto sf_ref  = getRef(module->getSourceFiles().illegalAccess().front());
 		auto file_id = sf_ref->getFileID();
 
 		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);

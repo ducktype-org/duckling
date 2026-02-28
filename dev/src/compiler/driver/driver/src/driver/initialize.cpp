@@ -21,6 +21,8 @@
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
 
+#include <iostream>
+
 namespace compiler::driver {
 
 	namespace {
@@ -69,6 +71,11 @@ namespace compiler::driver {
 				package_info.package_path, package_info.package_name
 			);
 			global_state::setters::addMainPackage(root_module);
+
+			// We need to parse all files before compilation to collect all PST element
+			// @TODO: #1974 this should be done concurrently and only if prev graph exists nad
+			// incremental compilation is enabled
+			compiler::frontend::parseAllFilesInModuleTree(root_module);
 		}
 
 		/**
@@ -81,6 +88,8 @@ namespace compiler::driver {
 			auto maybe_query_col = root->subCollectionAtMaybe(base::StrID("query"));
 
 			if (maybe_query_col.has_value()) {
+				// Get the "query" collection from artifacts, which should contain the previous
+				// query graph and metadata.
 				auto query_col = maybe_query_col.value();
 
 				// Load previous query graph
@@ -88,23 +97,35 @@ namespace compiler::driver {
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
-					// TODOP
-					// We need to parse all files before compilation to collect all PST element
-					compiler::frontend::parseAllFilesInModuleTree(
-						global_state::getMainPackage().root_module
-					);
-					auto inputs = collectAllPstElementHashesFromGlobalPackages();
-					query::external::setPreviousGraphFromRawBytes(span, std::move(inputs));
+					query::external::setPreviousGraphFromRawBytes(span);
+				} else {
+					// No previous graph found. This can happen if this is the first compilation or
+					// if artifacts from previous compilation were deleted. This is not an error.
+					return;
 				}
 
-				// Load previous metadata (must be after graph)
+				// Load previous metadata (must be called after graph)
 				auto maybe_metadata_blob
 					= query_col->blobArtifactAtMaybe(base::StrID("query_metadata"));
-				if (maybe_metadata_blob.has_value()) {
-					auto                  view = maybe_metadata_blob.value()->getDataView();
-					std::span<const byte> span(view.getBegin(), view.size());
-					query::external::setPreviousMetadataFromRawBytes(span);
-				}
+
+				// Metadata should exist if graph exists, even if it's empty.
+				CORE_ASSERT(
+					maybe_metadata_blob.has_value(),
+					"Previous query graph found but no metadata blob found in artifacts. "
+					"This indicates a corrupted state in artifacts."
+				);
+
+				auto                  view = maybe_metadata_blob.value()->getDataView();
+				std::span<const byte> span(view.getBegin(), view.size());
+				query::external::setPreviousMetadataFromRawBytes(span);
+
+				// @TODO: #1974 We should parse PST concurrently here, before
+				// collectInputDataFromGlobalPackages()
+
+				// Collect all Inputs and Side inputs and perform red-green sweep.
+				// This must be called after loading both the graph and metadata, as metadata
+				// contains information about which nodes are inputs and their associated hashes.
+				query::external::markPreviousGraphNodesInputs(collectInputDataFromGlobalPackages());
 			}
 		}
 
