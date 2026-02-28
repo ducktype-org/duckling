@@ -251,7 +251,7 @@ namespace vm {
 		VMProcess(PID my_pid);
 
 		/**
-		 * @brief Acquires GIL. If you leave this function you always have right to interpret DVM
+		 * @brief Acquires GIL. After you call this function you always have right to interpret DVM
 		 * code.
 		 */
 		void acquireGil();
