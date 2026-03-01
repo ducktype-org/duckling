@@ -1006,9 +1006,7 @@ namespace compiler::helios::code {
 		return makeBox<LiftToTypeExpr>(expression_type, origin, value_expr->clone());
 	}
 
-	ListPushExpr::ListPushExpr(
-		query::Context& ctx, ElementOrigin origin, Box<Expr> list, Box<Expr> element
-	):
+	ListPushExpr::ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element):
 		  Expr(
 			  tsh::ExpressionType(
 				  tsh::SymbolType<>(
@@ -1040,9 +1038,7 @@ namespace compiler::helios::code {
 		return makeBox<ListPushExpr>(expression_type, origin, list->clone(), element->clone());
 	}
 
-	ListPopExpr::ListPopExpr(
-		query::Context& ctx, ElementOrigin origin, Box<Expr> list, Box<Expr> count
-	):
+	ListPopExpr::ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count):
 		  Expr(
 			  tsh::ExpressionType(
 				  tsh::SymbolType<>(

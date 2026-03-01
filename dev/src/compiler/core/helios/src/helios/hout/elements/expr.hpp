@@ -751,7 +751,7 @@ namespace compiler::helios::code {
 		Box<Expr> list;
 		Box<Expr> element;
 
-		ListPushExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> list, Box<Expr> element);
+		ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -779,7 +779,7 @@ namespace compiler::helios::code {
 		Box<Expr> list;
 		Box<Expr> count;
 
-		ListPopExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> list, Box<Expr> count);
+		ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

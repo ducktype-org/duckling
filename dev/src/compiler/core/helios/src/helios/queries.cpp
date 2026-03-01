@@ -792,7 +792,6 @@ namespace compiler::helios {
 						output(code::ExprStmt(
 							code::pstOrigin(assignment),
 							makeBox<code::ListPushExpr>(
-								ctx,
 								code::pstOrigin(assignment),
 								std::move(location_expr),
 								std::move(value_expr_coerced)
@@ -816,7 +815,6 @@ namespace compiler::helios {
 						output(code::ExprStmt(
 							code::pstOrigin(assignment),
 							makeBox<code::ListPopExpr>(
-								ctx,
 								code::pstOrigin(assignment),
 								std::move(location_expr),
 								std::move(value_expr_coerced)
