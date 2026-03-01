@@ -377,8 +377,9 @@ namespace query::internal {
 
 		/**
 		 * @brief Clear all metadata storage.
+		 * TODO PR: check uses 
 		 */
-		void clear();
+		// void clear();
 
 		/**
 		 * @brief Check if storage is empty.
