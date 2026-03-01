@@ -10,6 +10,7 @@
 #include "../types.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -277,15 +278,11 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			// TODOP: Update
-			static base::Map<KeyFor_QueryTypeTemplateType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher{};
+			addToHash(hasher, source.index());
+			VISIT(source, value, addToHash(hasher, value));
+			return hasher.finalize();
 		}
 	};
 
