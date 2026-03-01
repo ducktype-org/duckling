@@ -251,6 +251,28 @@ namespace concurrent {
 		}
 
 		/**
+		 * Atomically extracts the given key->value pair from the map, that is:
+		 * 1. Moves out the value associated with the key and returns it.
+		 * 2. Erases the key->value pair from the map.
+		 // TODO PR: add tests
+		 */
+		base::Optional<DATA_T> extract(const KEY_T& key) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+
+			auto at_maybe = shards[lock.shard_index].atMaybe(key);
+			if (!at_maybe.has_value()) {
+				// data was already not present
+				return base::Optional<DATA_T>{};
+			}
+			else {
+				auto value = std::move(at_maybe.value());
+				shards[lock.shard_index].erase(key);
+				elements_count.fetch_sub(1, std::memory_order_relaxed);
+				return value;
+			}
+		}
+
+		/**
 		 * Returns the number of elements currently stored in the map.
 		 *
 		 * @note The value is approximate under concurrent modifications –

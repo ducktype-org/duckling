@@ -61,12 +61,22 @@ namespace query::internal {
 	}  // namespace
 
 	base::Optional<ExtractedNodeMetadata> MetadataStorage::extract(NodeID node_id) {
-		auto it = storage.atMaybe(node_id);
-		if (!it.has_value()) return {};
+		auto extracted = storage.extract(node_id);
 
-		ExtractedNodeMetadata result(node_id, std::move(*it.value()));
-		storage.erase(node_id);
-		return result;
+		if (!extracted.has_value()) {
+			// NodeID not found, return empty optional
+			return base::Optional<ExtractedNodeMetadata>{};
+		}
+		else {
+			// We have to convert ConHashMap to StableHashMap for the extracted data
+			base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> extracted_map;
+
+			for (auto& [type_id, metadata_vec]: extracted.value()) {
+				extracted_map.put(type_id, std::move(metadata_vec));
+			}
+
+			return ExtractedNodeMetadata{  node_id, std::move(extracted_map) };
+		}
 	}
 
 	void MetadataStorage::emplace(ExtractedNodeMetadata&& extracted) {
