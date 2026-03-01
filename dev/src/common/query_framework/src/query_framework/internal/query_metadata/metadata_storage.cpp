@@ -172,7 +172,7 @@ namespace query::internal {
 	MetadataStorage MetadataStorage::deserialize(std::span<const std::byte> data) {
 		MetadataStorage storage;
 
-		if (data.empty()) return storage;
+		if (data.empty()) return std::move(storage);
 
 		usize offset = 0;
 
