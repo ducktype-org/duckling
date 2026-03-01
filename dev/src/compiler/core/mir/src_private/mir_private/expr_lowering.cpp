@@ -453,7 +453,7 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered_inner.begin,
 				hole,
-				Instruction(Operation::AllocBox, {}, { res_inner }, {}, expr_scope),
+				Instruction(Operation::BoxAlloc, {}, { res_inner }, {}, expr_scope),
 				result_type
 			);
 		}

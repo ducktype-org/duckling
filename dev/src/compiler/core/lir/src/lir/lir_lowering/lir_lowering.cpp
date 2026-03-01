@@ -88,7 +88,7 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::AllocBox:
+		case mir::Operation::BoxAlloc:
 			return Operation::BoxAlloc;
 		case mir::Operation::ListPush:
 			return Operation::ListPush;
@@ -540,7 +540,7 @@ namespace compiler::lir {
 				}
 				case mir::Operation::AddressOf:
 				case mir::Operation::ListLen:
-				case mir::Operation::AllocBox:
+				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:

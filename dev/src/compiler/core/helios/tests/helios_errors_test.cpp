@@ -509,6 +509,50 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l: List[i64];
+					l -= "sth";
+				}
+			)",
+			{ "Type `string` cannot be converted to type `u64`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x = 10;
+					var length = len x;
+				}
+			)",
+			{ "No builtin unary operator `len` for type `i32`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l: List;
+					l[0] = 123;
+				}
+			)",
+			{ "Index operator base must be indexable" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l1: List[i64];
+					var l2: List[f64] = l1;
+				}
+			)",
+			{ "Type `List[i64]` cannot be converted to type `List[f64]`" },
+			1
+		);
+
 		// =========================== Not-yet-implemented errors ==========================
 		// Note: just remove the tests when the features are implemented.
 
@@ -526,17 +570,6 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"(
-				fun main() = {
-					var l: List[i64];
-					l -= "sth";
-				}
-			)",
-			{ "Type `string` cannot be converted to type `u64`" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
 				fun main() -> i64 = {
 					while (true) {
 						break;
@@ -544,17 +577,6 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "break" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
-				fun main() = {
-					var x = 10;
-					var length = len x;
-				}
-			)",
-			{ "No builtin unary operator `len` for type `i32`" },
 			1
 		);
 
@@ -572,33 +594,11 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"(
-				fun main() = {
-					var l: List;
-					l[0] = 123;
-				}
-			)",
-			{ "Index operator base must be indexable" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
 				fun main() -> i64 = {
 					defer 1;
 				}
 			)",
 			{ "Feature not implemented", "defer" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
-				fun main() = {
-					var l1: List[i64];
-					var l2: List[f64] = l1;
-				}
-			)",
-			{ "Type `List[i64]` cannot be converted to type `List[f64]`" },
 			1
 		);
 

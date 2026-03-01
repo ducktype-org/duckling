@@ -691,7 +691,7 @@ private:
 			using namespace compiler::mir;
 			for (const auto& block_id: mir_func.block_order) {
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					if (instr.operation == Operation::AllocBox) {
+					if (instr.operation == Operation::BoxAlloc) {
 						// var b_int: box i32 = 42;
 						// var b_point: box Point = Point(10, 20);
 						const auto& arg = instr.arguments[0];
@@ -843,10 +843,6 @@ private:
 			auto& mir_func = (compiler::mir::Function&) ctx
 			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
 			                     ->valueOrThrow();
-
-			mir_func.debugPrint(std::cout);
-			std::cout << '\n';
-
 
 			bool found_zero_init        = false;
 			bool found_push             = false;

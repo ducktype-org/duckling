@@ -278,6 +278,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
+			// TODOP: Update
 			static base::Map<KeyFor_QueryTypeTemplateType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;

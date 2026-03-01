@@ -16,10 +16,6 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/collections/optional.hpp"
-#include "base/str/str_utils.hpp"
-
-#include "diagnostic/source_position.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -194,10 +190,11 @@ namespace compiler::helios {
 					return;
 				}
 
-				// TODOP: Update
-				// @TODO: #1922 If base is not meta, this is a normal index expression. Implement that.
+				// @TODO: #1922 If base is not meta and not a type template, this is a normal index
+				// expression. Implement that.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Evaluating index expressions with non-meta base at compile time.",
+					"Evaluating index expressions with non-meta and non-type-template base at "
+					"compile time.",
 					expr.origin.getSourcePosition()
 				));
 				result = query::Failed();
@@ -775,12 +772,18 @@ namespace compiler::helios {
 					= CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
 			}
 
-			void visitListPushExpr(const code::ListPushExpr&) final {
-				throw base::NotYetImplemented("List Push expr in comp time");
+			void visitListPushExpr(const code::ListPushExpr& expr) final {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Evaluating list push expression at compile time.",
+					expr.origin.getSourcePosition()
+				));
 			}
 
-			void visitListPopExpr(const code::ListPopExpr&) final {
-				throw base::NotYetImplemented("List Pop expr in comp time");
+			void visitListPopExpr(const code::ListPopExpr& expr) final {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Evaluating list pop expression at compile time.",
+					expr.origin.getSourcePosition()
+				));
 			}
 		};
 

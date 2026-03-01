@@ -9,11 +9,6 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/pointers/box.hpp"
-
-#include "query_framework/context/context.hpp"
-#include "query_framework/query_result.hpp"
-
 namespace compiler::helios::code {
 	namespace {
 		/**
