@@ -337,14 +337,19 @@ namespace query::internal {
 		usize getMetadataCount(NodeID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage.atMaybe(node_id);
-			if (!node_it.has_value()) return 0;
+			auto node_ref = storage.atMaybe(node_id);
+			if (!node_ref.has_value()) return 0;
 
-			const auto& node_map = *node_it.value();
-			auto        type_it  = node_map.atMaybe(type_id);
-			if (!type_it.has_value()) return 0;
+			CRef node_map = node_ref.value();
+			u64 result = 0;
+			node_map->maybeCallOn(
+				type_id,
+				[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+					result = type_vec->size();
+				}
+			);
 
-			return type_it.value()->size();
+			return result;
 		}
 
 		/**
