@@ -21,81 +21,88 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
-	auto  lljit_ptr = llvmGetLljit();
-	auto& lljit     = *lljit_ptr;
+namespace vm {
+	JitOpFun* compileJit(const low::LowFuncData& func_data) {
+		auto  lljit_ptr = llvmGetLljit();
+		auto& lljit     = *lljit_ptr;
 
-	auto               ctx = std::make_unique<llvm::LLVMContext>();
-	llvm::LLVMContext& C   = *ctx;
-	auto new_module        = std::make_unique<llvm::Module>(base::toString(func_data.name), C);
+		auto               ctx = std::make_unique<llvm::LLVMContext>();
+		llvm::LLVMContext& C   = *ctx;
+		auto new_module        = std::make_unique<llvm::Module>(base::toString(func_data.name), C);
 
-	llvm::Type* voidTy = llvm::Type::getVoidTy(C);
+		llvm::Type* voidTy = llvm::Type::getVoidTy(C);
 
-	llvm::StructType* miTy       = llvm::StructType::create(C, "vm::MicroInstruction");
-	llvm::StructType* frameTy    = llvm::StructType::create(C, "vm::Frame");
-	llvm::StructType* vmThreadTy = llvm::StructType::create(C, "vm::VMThread");
+		llvm::StructType* miTy       = llvm::StructType::create(C, "vm::MicroInstruction");
+		llvm::StructType* frameTy    = llvm::StructType::create(C, "vm::Frame");
+		llvm::StructType* vmThreadTy = llvm::StructType::create(C, "vm::VMThread");
 
-	llvm::PointerType* miPtrPtrTy
-		= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(miTy));
-	llvm::PointerType* bytePtrPtrTy
-		= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(C)));
-	llvm::PointerType* framePtrPtrTy
-		= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(frameTy));
-	llvm::PointerType* vmThreadPtrTy = llvm::PointerType::getUnqual(vmThreadTy);
+		llvm::PointerType* miPtrPtrTy
+			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(miTy));
+		llvm::PointerType* bytePtrPtrTy
+			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(C)));
+		llvm::PointerType* framePtrPtrTy
+			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(frameTy));
+		llvm::PointerType* vmThreadPtrTy = llvm::PointerType::getUnqual(vmThreadTy);
 
-	llvm::FunctionType* opFunTy = llvm::FunctionType::get(
-		voidTy, { miPtrPtrTy, bytePtrPtrTy, framePtrPtrTy, vmThreadPtrTy }, false
-	);
+		llvm::FunctionType* opFunTy = llvm::FunctionType::get(
+			voidTy, { miPtrPtrTy, bytePtrPtrTy, framePtrPtrTy, vmThreadPtrTy }, false
+		);
 
-	llvm::Function* user_func_wrapper = llvm::Function::Create(
-		opFunTy, llvm::Function::ExternalLinkage, base::toString(func_data.name), new_module.get()
-	);
+		llvm::Function* user_func_wrapper = llvm::Function::Create(
+			opFunTy,
+			llvm::Function::ExternalLinkage,
+			base::toString(func_data.name),
+			new_module.get()
+		);
 
-	llvm::BasicBlock* entry = llvm::BasicBlock::Create(C, "entry", user_func_wrapper);
-	llvm::IRBuilder<> B(entry);
+		llvm::BasicBlock* entry = llvm::BasicBlock::Create(C, "entry", user_func_wrapper);
+		llvm::IRBuilder<> B(entry);
 
-	auto         argIt         = user_func_wrapper->arg_begin();
-	llvm::Value* v_instr       = &*argIt++;
-	llvm::Value* v_local_stack = &*argIt++;
-	llvm::Value* v_frame       = &*argIt++;
-	llvm::Value* v_thread      = &*argIt++;
-	v_instr->setName("instr");
-	v_local_stack->setName("local_stack");
-	v_frame->setName("frame");
-	v_thread->setName("thread");
+		auto         argIt         = user_func_wrapper->arg_begin();
+		llvm::Value* v_instr       = &*argIt++;
+		llvm::Value* v_local_stack = &*argIt++;
+		llvm::Value* v_frame       = &*argIt++;
+		llvm::Value* v_thread      = &*argIt++;
+		v_instr->setName("instr");
+		v_local_stack->setName("local_stack");
+		v_frame->setName("frame");
+		v_thread->setName("thread");
 
-	for (const vm::MicroInstruction& mi: func_data.bc) {
-		llvm::Function* opfun      = llvmGetFun(vm::getInstructionOpcode(mi));
-		std::string     opfun_name = opfun->getName().str();
+		for (const vm::MicroInstruction& mi: func_data.bc) {
+			llvm::Function* opfun      = llvmGetFun(vm::getInstructionOpcode(mi));
+			std::string     opfun_name = opfun->getName().str();
 
-		llvm::Function* callee = new_module->getFunction(opfun_name);
-		if (!callee) {
-			callee = llvm::Function::Create(
-				opFunTy, llvm::Function::ExternalLinkage, opfun_name, new_module.get()
-			);
+			llvm::Function* callee = new_module->getFunction(opfun_name);
+			if (!callee) {
+				callee = llvm::Function::Create(
+					opFunTy, llvm::Function::ExternalLinkage, opfun_name, new_module.get()
+				);
+			}
+
+			B.CreateCall(opFunTy, callee, { v_instr, v_local_stack, v_frame, v_thread });
 		}
 
-		B.CreateCall(opFunTy, callee, { v_instr, v_local_stack, v_frame, v_thread });
+		B.CreateRetVoid();
+
+		llvm::orc::ThreadSafeModule tsm(std::move(new_module), std::move(ctx));
+		if (auto err = lljit.addIRModule(std::move(tsm)))
+			llvm::logAllUnhandledErrors(
+				std::move(err), llvm::errs(), "Error adding module to JIT: "
+			);
+		auto addr_or_err = lljit.lookup(base::toString(func_data.name));
+		if (!addr_or_err) {
+			llvm::handleAllErrors(addr_or_err.takeError(), [&](const llvm::ErrorInfoBase& EIB) {
+				llvm::errs() << "JIT lookup failed: " << EIB.message() << '\n';
+			});
+			return nullptr;
+		}
+
+		llvm::orc::ExecutorAddr addr = *addr_or_err;
+
+		auto compiled_fn = addr.toPtr<vm::JitOpFun>();
+
+		return compiled_fn;
 	}
-
-	B.CreateRetVoid();
-
-	llvm::orc::ThreadSafeModule tsm(std::move(new_module), std::move(ctx));
-	if (auto err = lljit.addIRModule(std::move(tsm)))
-		llvm::logAllUnhandledErrors(std::move(err), llvm::errs(), "Error adding module to JIT: ");
-	auto addr_or_err = lljit.lookup(base::toString(func_data.name));
-	if (!addr_or_err) {
-		llvm::handleAllErrors(addr_or_err.takeError(), [&](const llvm::ErrorInfoBase& EIB) {
-			llvm::errs() << "JIT lookup failed: " << EIB.message() << '\n';
-		});
-		return nullptr;
-	}
-
-	llvm::orc::ExecutorAddr addr = *addr_or_err;
-
-	auto compiled_fn = addr.toPtr<vm::JitOpFun>();
-
-	return compiled_fn;
 }
 
 #endif
