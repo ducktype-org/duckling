@@ -82,7 +82,8 @@ namespace compiler::helios::code {
 			// template type. Otherwise we expect an integer for StaticArray type creation.
 			// @TODO: #1532 This u64/meta coercions should be handled by the `[]` operator.
 			auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
-				// TODOP: This is invalid I think.
+				// @TODO: #1918 This logic should be generalized to handle any expressions with
+				// TypeTemplate type, not just literals.
 				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
 					if (literal_type_expr->value_type.getType().getKind()
 					    == tsh::Kind::TypeTemplate) {
