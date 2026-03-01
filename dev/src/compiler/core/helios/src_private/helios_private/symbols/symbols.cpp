@@ -85,6 +85,10 @@ namespace compiler::helios {
 
 				case pst::ElementKind::Class:
 				case pst::ElementKind::Fun:
+				case pst::ElementKind::ClassBlock:
+				case pst::ElementKind::ClassMethod:
+				case pst::ElementKind::ClassSpecial:
+				case pst::ElementKind::ClassSpecifierBlock:
 				case pst::ElementKind::If:
 				case pst::ElementKind::While:
 				case pst::ElementKind::For:
@@ -98,7 +102,9 @@ namespace compiler::helios {
 					return self(el->getParent().value().unlock(ctx));
 
 				default:
-					CORE_PANIC("Unexpected pst path of variable");
+					CORE_PANIC(base::strConcat(
+						"Unexpected element kind for variable symbol: ", el->elementType()
+					));
 				}
 			},
 			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
@@ -107,13 +113,13 @@ namespace compiler::helios {
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->getPSTData()->scope; }
+	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
 
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-			variant_case_novalue(builtin::BuiltinFunctionData) { return base::Optional<ScopeID>{}; }
-			variant_case_novalue(houtgen::GeneratedSymbolData) { return base::Optional<ScopeID>{}; }
+			variant_case_novalue(builtin::BuiltinFunctionData) { return {}; }
+			variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();
