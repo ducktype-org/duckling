@@ -274,7 +274,7 @@ namespace compiler::lir {
 		struct IndexProjection {
 			// Box is needed because of the cyclic dependency:
 			// IndexProjection -> LIRValue -> LIRPlace -> LIRValue.
-			// We also want MIRPlace to be copyable, thus the Shared.
+			// We also want MIRPlace to be copyable, thus it's Shared.
 			SharedBox<LIRValue> index;
 			bool                operator==(const IndexProjection&) const = default;
 		};

@@ -74,6 +74,7 @@ public:
 		TESTER_ADD_TEST(testVisitorAlternative);
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
 		TESTER_ADD_TEST(testFunDeclFFI);
+		TESTER_ADD_TEST(testSimpleExpand);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -250,6 +251,14 @@ private:
 			ASSERT_EQUAL(visitor.counter, 1);
 			i++;
 		}
+	}
+
+	void testSimpleExpand() {
+		auto pos      = dia::SourcePosition::fakePosition();
+		auto contents = "var a: T = 5;";
+		auto pst
+			= pst::PST<>::fromExpand(pos, contents, pst::LangParserContext::programBaseContext());
+		assertTrue(pst.getLogger()->messageCount() == 0, "Expected 0 errors");
 	}
 
 

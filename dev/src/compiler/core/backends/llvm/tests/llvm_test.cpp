@@ -23,10 +23,6 @@ class LLVMBackendTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		global_state::setters::setBackendOptions({
-			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
-		});
-
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleansTest);
@@ -43,9 +39,17 @@ public:
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(dynamicArraysTest);
+		TESTER_ADD_TEST(defaultInitialization);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
+	}
+
+protected:
+	void beforeAll() override {
+		global_state::setters::setBackendOptions({
+			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
+		});
 	}
 
 private:
@@ -345,6 +349,37 @@ private:
 		assertTrue(
 			std::regex_search(ir, access_pattern),
 			"Correct sequence for dynamic array element access was not found."
+		);
+	}
+
+	void defaultInitialization() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/default_init");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// i32 = 0
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store\s+i32\s+0,\s+ptr\s+%\w+)" }),
+			"Expected default initialization of i32 with 0"
+		);
+
+		// f64 = 0.0
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store\s+double\s+0\.0+e\+00,\s+ptr\s+%\w+)" }),
+			"Expected default initialization of f64 with 0.000000e+00"
+		);
+
+		// Point = zeroinitializer @class.point
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store\s+%.+\s+zeroinitializer,\s+ptr\s+%\w+)" }),
+			"Expected default initialization of Point with zeroinitializer"
+		);
+
+		// i32[5] = zeroinitializer [5 x i32]
+		assertTrue(
+			std::regex_search(
+				ir, std::regex{ R"(store\s+\[5\s+x\s+i32\]\s+zeroinitializer,\s+ptr\s+%\w+)" }
+			),
+			"Expected default initialization of i32[5] with zeroinitializer"
 		);
 	}
 

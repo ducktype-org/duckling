@@ -16,9 +16,9 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
-#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
+#include <helios_private/expressions/function_calls/square_call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -294,8 +294,13 @@ namespace compiler::helios::code {
 				          ->valueOrThrow();
 				return std::vector{ ctor.declaration->original_symbol };
 			}
-			default:
-				CORE_PANIC("Not implemented yet (", name(symbol), ")");
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat("Round Call '()' operator on symbol: ", name(symbol)),
+					stmt(query_ctx, symbol).value()->getSourcePosition()
+				));
+				return query::Failed();
+			}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -306,42 +311,63 @@ namespace compiler::helios::code {
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain
 		 * Case when we have a global identifier followed by a call expression,
-		 * like "foo()".
+		 * like "foo()" or array_like[i].
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
-			if (call_expr->getType() == lexer::Token::Square) {
-				auto base_res = processPSTExpr(ident);
-				UNPACK_QRESULT_MOVE(auto base =, base_res);
+			const auto scope       = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			auto       h_interface = HInterface::ofScopeWithParents(scope);
 
-				return processSquareCall(base.getExpr(), call_expr);
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				const auto lookup_result = h_interface.lookup(query_ctx, ident->getName().value);
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				auto res = processFunctionCall(query_ctx, callees, ident, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+				return ChainState::ofExpr(std::move(expr));
 			}
+			case lexer::Token::Square: {
+				const auto lookup_result = h_interface.lookupExpectUnique(
+					ident->getSourcePosition(), query_ctx, ident->getName().value
+				);
+				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
-			if (call_expr->getType() != lexer::Token::Round) {
-				throw base::NotYetImplemented(base::strConcat(
-					"HOUT call with invalid bracket type: ", char(call_expr->getType())
+				auto base_state_res = processNamespaceOrValue(sym_list.back(), pstOrigin(ident));
+				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
+
+				if (base_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, base_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"This symbol cannot be indexed.", call_expr->getSourcePosition()
 				));
+				return query::Failed();
 			}
-			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-			const auto lookup_result
-				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
-
-			// @TODO: #1412 fix dealias
-			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
-
-			auto res = processFunctionCall(query_ctx, callees, ident, call_expr);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
-			return ChainState::ofExpr(std::move(expr));
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		/**
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain.
-		 * It is when we have keyword literal followed by a call expression. This includes:
-		 * - `i64(42)` - for type casts.
-		 * - `i64[3]` - for static array type creation.
+		 * It is when we have keyword literal followed by a call expression. This currently includes:
+		 * - `i64(42)` - used for explicit type casts.
+		 * - `i64[42]` - used for static array type creation.
 		 * - `List[i64]` - for dynamic array type creation.
 		 */
 		auto processPSTExpr(
@@ -351,11 +377,9 @@ namespace compiler::helios::code {
 			auto hout_expr_result = query_ctx.query<QueryHoutOfExpr>({ keyword });
 			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, hout_expr_result);
 
-			if (call_expr->getType() == lexer::Token::Square)
-				return processSquareCall(hout_expr->clone(), call_expr);
-
-			if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
-				if (call_expr->getType() == lexer::Token::Round) {
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
 					auto args = call_expr->getArgs().unlock(query_ctx);
 					if (args->size() != 1) {
 						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -379,11 +403,27 @@ namespace compiler::helios::code {
 					);
 					return ChainState::ofExpr(std::move(cast_expr));
 				}
+
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Unsupported keyword literal in call expression.", call_expr->getSourcePosition()
+				));
+				break;
+			}
+			case lexer::Token::Square: {
+				auto square_call_res = processSquareCall(query_ctx, hout_expr->clone(), call_expr);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			default:
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
 			}
 
-			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Unsupported keyword literal in call expression.", call_expr->getSourcePosition()
-			));
 			return query::Failed();
 		}
 
@@ -423,27 +463,43 @@ namespace compiler::helios::code {
 
 		/**
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
-		 * for example we have two call expr like a[i]() or b()()
+		 * for example we have two call expr like a[i]() or b()().
+		 * @note: For now this function is called only in the `foo()[i]` case. (where foo is a
+		 * function returning a static array).
 		 */
 		auto processPSTExpr(Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
-			if (call_expr->getType() == lexer::Token::Square)
-				return processSquareCall(std::move(current_expr), call_expr);
-
-			// @note this function is not run yet.
-
 			// @note: previous mock-implementation of this function
 			// was deleted in PR #1239. See it for reference.
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				// @TODO: #982 improve type lookup and provide correct
+				// candidates for processFunctionCall. Write tests for this case, when it will be
+				// implemented.
 
-			// @TODO: #982 improve type lookup and provide correct
-			// candidates for processFunctionCall. write tests for this case, when it will be implemented
-
-			// This is only a temporary thing for error handling, note the incorrect callee PST
-			// expression.
-			auto expr_result
-				= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
-			return ChainState::ofExpr(std::move(expr));
+				// This is only a temporary thing for error handling, note the incorrect callee PST
+				// expression.
+				auto expr_result
+					= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case lexer::Token::Square: {
+				auto square_call_res
+					= processSquareCall(query_ctx, std::move(current_expr), call_expr);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		/**
@@ -502,9 +558,12 @@ namespace compiler::helios::code {
 						result_sequence.push_back(std::move(current_expr));
 						return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
 					} else if (kind(sym) == SymbolKind::Method) {
-						throw base::NotYetImplemented(
+						query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Handling of access to method without a call is not implemented yet"
-						);
+							"argument at compile time",
+							current_expr->origin.getSourcePosition()
+						));
+						return query::Failed();
 					}
 					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 						base::strConcat(
@@ -559,59 +618,101 @@ namespace compiler::helios::code {
 
 		/**
 		 * Case when we have an access expression followed by a call expression,
-		 * and current state is an expression, for example "my_expr.foo()".
-		   This may result in a method. Method
-		 * parameter overload is possible.
+		 * and current state is an expression.
+		 * For example:
+		 * - `my_expr.foo()` - this may result in a method. Method parameter overload is possible.
+		 * - `class.array_field[ix]` - this is an index access the an array which is a class field.
 		 */
 		auto processPSTExpr(
 			base::Box<Expr>                current_expr,
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
-			if (call_expr->getType() == lexer::Token::Square) {
+			switch (call_expr->getType()) {
+			case lexer::Token::Square: {
 				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
 
-				if (access_state.isExpr())
-					return processSquareCall(access_state.getExpr(), call_expr);
+				if (access_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
 				return query::Failed();
 			}
-
-
-			throw base::NotYetImplemented(
-				"Helios chain expr: () call on access expr not implemented yet"
-			);
-			return query::Failed();
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		/**
 		 * Case when we have an access expression followed by a call expression,
-		 * and current state is a namespace, for example "my_ns.foo()".
-		 * This may result in function overload.
+		 * and current state is a namespace.
+		 * For example:
+		 * - `my_ns.foo()` - this may result in function overload.
+		 * - `my_ns.array[ix]`
 		 */
 		auto processPSTExpr(
 			SymID                          namespace_like_symbol,
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
-			if (call_expr->getType() == lexer::Token::Square) {
-				auto access_res = processPSTExpr(namespace_like_symbol, expr_access);
-				UNPACK_QRESULT_MOVE(ChainState access_state =, access_res);
-				if (access_state.isExpr())
-					return processSquareCall(access_state.getExpr(), call_expr);
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+				                         .lookup(query_ctx, expr_access->getName().value);
+				// @TODO: #1412 fix dealias
+				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case lexer::Token::Square: {
+				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+				                         .lookupExpectUnique(
+											 expr_access->getSourcePosition(),
+											 query_ctx,
+											 expr_access->getName().value
+										 );
+				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+
+				auto whole_expr_origin
+					= current_state.getNamespaceLikePstOrigin().extended(expr_access);
+				auto state_res = processNamespaceOrValue(sym_list.back(), whole_expr_origin);
+				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
+
+				if (access_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
+
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"This symbol cannot be indexed", call_expr->getSourcePosition()
+				));
 				return query::Failed();
 			}
-
-			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
-			                         .lookup(query_ctx, expr_access->getName().value);
-
-			// @TODO: #1412 fix dealias
-			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
-
-			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
-			return ChainState::ofExpr(std::move(expr));
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
@@ -646,143 +747,6 @@ namespace compiler::helios::code {
 				));
 				return query::Failed();
 			}
-		}
-
-		/**
-		 * @brief Process a square bracket call on an expression. Panics if the base expression
-		 * can't be indexed (is not an array).
-		 *
-		 * - The `[ix]` expects the base to be an array-like type and a direct type (inserts
-		 * DerefExpr if needed).
-		 * - The argument for the operator has to be implicitly coercible to `i64`.
-		 */
-		auto processArrayIndexing(
-			Box<Expr> current_expr, pst::AccessLocked<pst::ExprElement> index_pst
-		) -> query::QResult<ChainState> {
-			if (current_expr->expression_type.getSymbolType().getType().getKind()
-			        != tsh::Kind::StaticArray
-			    && current_expr->expression_type.getSymbolType().getType().getKind()
-			           != tsh::Kind::DynamicArray) {
-				auto error_pos = current_expr->origin.getSourcePosition().copyValueOr(
-					index_pst.unlock(query_ctx)->getSourcePosition()
-				);
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Index operator base must be indexable.", error_pos
-				));
-				return query::Failed();
-			}
-
-			// Base has to be direct for array access.
-			if (current_expr->expression_type.getSymbolType().getRefKind()
-			    != tsh::ReferenceKind::Direct)
-				current_expr = makeBox<DerefExpr>(
-					query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
-				);
-
-			// Index access. We assume [] takes in an i64 value.
-			auto i64_type = tsh::SymbolType<>{
-				tsh::getIntegralType(query_ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable
-			};
-			auto index_res = getHoutOfExprWithExpectedType(query_ctx, index_pst, i64_type);
-			UNPACK_QRESULT_MOVE(Box<Expr> index_expr =, index_res);
-
-			return ChainState::ofExpr(makeBox<IndexExpr>(
-				query_ctx,
-				current_expr->origin.extended(index_pst.unlock(query_ctx)),
-				std::move(current_expr),
-				std::move(index_expr)
-			));
-		}
-
-		/**
-		 * @brief Processes the creation of array-related types. This includes:
-		 * - Type template baking - if the base is a 'TypeTemplate' (e.g., bare 'List' keyword),
-		 * the index argument is expected to be Meta.
-		 * - Static Array Type Creation - if the base is a concrete type (e.g., 'i32'), the index
-		 * argument is expected to be an integral constant representing the array size. This results
-		 * in a 'StaticArray' type.
-		 *
-		 * @param base The base expression being indexed.
-		 * @param arg_pst The PST element inside the square brackets.
-		 * @return A ChainState containing an IndexExpr representing the type construction.
-		 */
-		auto processArrayTypeCreation(Box<Expr> base, pst::AccessLocked<pst::ExprElement> arg_pst)
-			-> query::QResult<ChainState> {
-			// If base is a type template, we expect meta in the index arguments for baking the
-			// template type. Otherwise we expect an integer for StaticArray type creation.
-			auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
-				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
-					if (literal_type_expr->value_type.getType().getKind()
-					    == tsh::Kind::TypeTemplate) {
-						return tsh::SymbolType<>{ tsh::getMetaType(),
-
-							                      tsh::ReferenceKind::Direct,
-							                      tsh::Mutability::Immutable };
-					}
-				}
-				return tsh::SymbolType<>{
-					tsh::getIntegralType(
-						query_ctx, 64, tsh::IntegralAbstractType::Signedness::Signed
-					),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable
-				};
-			}();
-
-			auto arg_res
-				= getHoutOfExprWithExpectedType(query_ctx, arg_pst, expected_index_arg_type);
-			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
-
-			return ChainState::ofExpr(makeBox<IndexExpr>(
-				query_ctx,
-				base->origin.extended(arg_pst.unlock(query_ctx)),
-				std::move(base),
-				std::move(arg_expr)
-			));
-		}
-
-		/**
-		 * @brief Helper function of @p processPSTExpr that processes a square bracket call.
-		 * This can mean:
-		 * - static array type creation - if `[]` with an `u64` argument is called on `meta`.
-		 * - dynamic array type creation - if `[]` with an `meta` argument is called on the untyped
-		 * DynamicArray expression
-		 * - index operator - if `[]` with an `i64` argument is called on
-		 * `StaticArray`/`DynamicArray`.
-		 */
-		auto processSquareCall(Box<Expr> base, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState> {
-			CORE_ASSERT(
-				call_expr->getType() == lexer::Token::Square,
-				"processSquareCall called on a different call type: ",
-				char(call_expr->getType())
-			);
-
-			auto args = call_expr->getArgs().unlock(query_ctx);
-			if (args->size() != 1) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Array index/size must be exactly one expression.",
-					call_expr->getSourcePosition()
-				));
-				return query::Failed();
-			}
-
-			auto arg_pst
-				= (*args->begin()).unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr();
-
-			auto meta_res = canCoerceToMeta(query_ctx, base->expression_type.getSymbolType());
-			UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
-
-			// If base is coercible to meta, this is an array type creation.
-			if (meta_coercion_res.isValid()) {
-				auto coerced_base = meta_coercion_res.coerce(query_ctx, std::move(base));
-				return processArrayTypeCreation(std::move(coerced_base), arg_pst);
-			}
-
-			// Index operator.
-			return processArrayIndexing(std::move(base), arg_pst);
 		}
 
 		// =============================== MAIN PROCESSING LOOP ===============================

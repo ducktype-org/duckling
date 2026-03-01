@@ -391,17 +391,20 @@ private:
 			arr_str.hasNoOpDestructor(), "StaticArray of Strings should not have a no-op destructor."
 		);
 
-		const auto ptr_to_int16 = query::entryPoint<QueryPointerType>({ st(int_16) });
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ arr_1, ptr_to_int16 }),
-			"Static array should be coercible to a pointer of its element type."
-		);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertTrue(arr_1.carriesInformation(ctx), "Array of ints should carry information");
+			const auto unit = getUnitType();
 
-		const auto ptr_to_int32 = query::entryPoint<QueryPointerType>({ st(int_32) });
-		assertFalse(
-			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ arr_1, ptr_to_int32 }),
-			"Static array should not be coercible to a pointer of a different type."
-		);
+			const auto unit_array = ctx.query<QueryStaticArrayType>({ st(unit), 10 });
+			assertFalse(
+				unit_array.carriesInformation(ctx), "Array of units should not carry information"
+			);
+
+			const auto empty_array = ctx.query<QueryStaticArrayType>({ st(int_16), 0 });
+			assertFalse(
+				empty_array.carriesInformation(ctx), "Empty array should not carry information"
+			);
+		});
 	}
 
 	/**

@@ -47,6 +47,7 @@ namespace logger {
 		HANDLE_CATEGORY_NAME(Artifacts)
 		HANDLE_CATEGORY_NAME(Query)
 		HANDLE_CATEGORY_NAME(QueryStacktraces)
+		HANDLE_CATEGORY_NAME(NYIStacktraces)
 		HANDLE_CATEGORY_NAME(Command)
 		HANDLE_CATEGORY_NAME(Diagnostics)
 		HANDLE_CATEGORY_NAME(Compiler)

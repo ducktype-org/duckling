@@ -538,11 +538,6 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(AbstractType target, query::Context&) const override {
-			// Static arrays (T[N]) are implicitly coercible to a pointer of their element type (T*).
-			if (target.getKind() == Kind::Pointer) {
-				auto pointer_type = PointerAbstractType(target);
-				return pointer_type.getUnderlyingType() == element_type.getType();
-			}
 			// Static arrays are implicitly coercible to dynamic arrays storing the same type.
 			if (target.getKind() == Kind::DynamicArray) {
 				auto dynamic_array_type = DynamicArrayAbstractType(target);
@@ -559,9 +554,10 @@ namespace compiler::tsh {
 			return element_type.getType().hasNoOpDestructor();
 		}
 
-		[[nodiscard]] bool carriesInformation(query::Context&) const override {
-			// Static Arrays don't carry information if they don't contain any elements.
-			return size > 0;
+		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
+			// Static Arrays don't carry information if they don't contain any elements or contain
+			// types that don't carry information.
+			return element_type.getType().carriesInformation(ctx) && size > 0;
 		}
 
 		[[nodiscard]]

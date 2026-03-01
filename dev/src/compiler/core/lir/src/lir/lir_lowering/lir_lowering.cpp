@@ -255,12 +255,10 @@ namespace compiler::lir {
 						}
 						variant_case(mir::MIRPlace::IndexProjection, index) {
 							auto maybe_lir_index = getLocation(*index.index);
-
-							if (!maybe_lir_index.has_value()) {
-								CORE_PANIC(
-									"Array index must carry information (cannot be Unit/Void)"
-								);
-							}
+							CORE_ASSERT(
+								maybe_lir_index.has_value(),
+								"Array index must carry information (cannot be Unit/Void)"
+							);
 
 							lir_projection_chain.push_back(
 								LIRPlace::Projection::index(maybe_lir_index.value())
