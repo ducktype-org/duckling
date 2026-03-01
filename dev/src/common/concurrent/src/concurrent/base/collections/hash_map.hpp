@@ -172,6 +172,20 @@ namespace concurrent {
 		}
 
 		/**
+		 * Calls f with reference to the value associated with the key if the key exists.
+		 */
+		template<typename K = KEY_T, typename Func>
+		void maybeCallOn(const K& key, Func f) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+
+			auto data = shards[lock.shard_index].atMaybe(key);
+			if (data.has_value()) {
+				f(Ref<DATA_T>(data.value()));
+			}
+		}
+
+
+		/**
 		 * Atomically retrieves a copy of the value associated with the given key.
 		 */
 		[[nodiscard]]

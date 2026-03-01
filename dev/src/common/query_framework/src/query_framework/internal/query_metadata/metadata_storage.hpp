@@ -201,11 +201,11 @@ namespace query::internal {
 			TypeID type_id = MetadataT::TYPE_ID;
 
 			// Check if metadata of this type already exists
-			auto node_it = storage.atMaybe(node_id);
-			if (node_it.has_value()) {
-				auto& node_map = *node_it.value();
-				auto  type_it  = node_map.atMaybe(type_id);
-				if (type_it.has_value() && !type_it.value()->empty())
+			auto node_ref = storage.atMaybe(node_id);
+			if (node_ref.has_value()) {
+				Ref node_map = node_ref.value();
+				auto  type_ref = node_map->atMaybe(type_id);
+				if (type_ref.has_value() && !type_ref.value()->empty()) // PR validate types here
 					return false;  // Metadata already exists
 			}
 
@@ -228,14 +228,14 @@ namespace query::internal {
 			std::vector<CRef<MetadataT>> result;
 			TypeID                       type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage.atMaybe(node_id);
-			if (!node_it.has_value()) return result;
+			auto node_ref = storage.atMaybe(node_id);
+			if (!node_ref.has_value()) return result;
 
-			const auto& node_map = *node_it.value();
-			auto        type_it  = node_map.atMaybe(type_id);
-			if (!type_it.has_value()) return result;
+			CRef node_map = node_ref.value();
+			auto        type_ref  = node_map->atMaybe(type_id);
+			if (!type_ref.has_value()) return result;
 
-			const auto& type_vec = *type_it.value();
+			CRef type_vec = type_ref.value();
 			result.reserve(type_vec.size());
 
 			for (const auto& metadata_ptr: type_vec) {
