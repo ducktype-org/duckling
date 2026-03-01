@@ -13,4 +13,8 @@ namespace compiler::helios::code {
 	query::QResult<Box<code::Expr>> fromChainExpr(
 		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
 	);
+
+	query::QResult<Box<code::Expr>> fromIdentifierLiteral(
+		query::Context& ctx, pst::AccessLocked<pst::expr::IdentifierLiteral> expr
+	);
 }
