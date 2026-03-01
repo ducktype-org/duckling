@@ -148,7 +148,7 @@ namespace lang_def {
 		Private,
 		Protected,
 		Static,
-		This,
+		Self,
 		Extends,
 		Implements,
 

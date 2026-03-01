@@ -7,6 +7,7 @@
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/chain_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -275,15 +276,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
-				// note: this is a mock, it should be unified with ChainExpr
-				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-
-				const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-					stmt->getName().position, ctx, stmt->getName().value
-				);
-
-				node
-					= makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), sym_list.valueOrThrow().back());
+				node = fromIdentifierLiteral(ctx, stmt).valueOrThrow();
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
@@ -398,10 +391,23 @@ namespace compiler::helios::code {
 					);
 					break;
 				}
-				default:
-					CORE_PANIC(
-						"Keyword not yet handled (or bad keyword) by PstExprToHoutExprVisitor"
+				case pst::Keyword::Self: {
+					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
+
+					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
+						stmt->getSourcePosition(), ctx, base::StrID("self")
 					);
+
+					node = makeBox<IdentifierExpr>(
+						ctx, pstOrigin(stmt), sym_list.valueOrThrow().back()
+					);
+					break;
+				}
+				default:
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Keyword not yet handled.", stmt->getSourcePosition()
+					));
+					return;  // failed
 				}
 			}
 
