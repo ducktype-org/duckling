@@ -12,10 +12,10 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <concurrent/base/collections/hash_map.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <string_id/string_id.hpp>
@@ -131,14 +131,14 @@ namespace query::internal {
 		 */
 		using TypeID = BaseMetadata::TypeID;
 
-		using TypeMap = base::StableHashMap<TypeID, std::vector<Box<BaseMetadata>>>;
+		using TypeMap = concurrent::ConHashMap<TypeID, std::vector<Box<BaseMetadata>>>;
 
 		/**
 		 * @brief The main storage map: NodeID -> TypeMap
 		 * For each NodeID, it stores a map of TypeID to vectors of metadata instances.
 		 * This allows multiple metadata instances of the same type per NodeID.
 		 */
-		using MetadataMap = base::StableHashMap<NodeID, TypeMap>;
+		using MetadataMap = concurrent::ConHashMap<NodeID, TypeMap>;
 
 		/**
 		 * @brief This actually stores the metadata.
@@ -147,10 +147,10 @@ namespace query::internal {
 
 	public:
 		MetadataStorage()                  = default;
-		MetadataStorage(MetadataStorage&&) = default;
 
-		MetadataStorage& operator=(MetadataStorage&&)      = delete;
 		MetadataStorage(const MetadataStorage&)            = delete;
+		MetadataStorage(MetadataStorage&&) = delete;
+		MetadataStorage& operator=(MetadataStorage&&)      = delete;
 		MetadataStorage& operator=(const MetadataStorage&) = delete;
 
 		/**
@@ -170,14 +170,14 @@ namespace query::internal {
 			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
 			// Get or create the node's metadata map
-			if (!storage.contains(node_id)) storage.put(node_id, {});
-			auto& node_map = *storage.atMaybe(node_id).value();
+			storage.maybePut(node_id, {});
+
+			Ref node_map = storage.atMaybe(node_id).value();
 
 			// Get or create the type's vector
-			if (!node_map.contains(type_id)) node_map.put(type_id, {});
-			auto& type_vec = *node_map.atMaybe(type_id).value();
-
-			type_vec.push_back(std::move(metadata));
+			node_map->maybePutAndUpdate(type_id, {}, [&metadata](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
+				metadata_vector->push_back(std::move(metadata));
+			});
 		}
 
 		/**
