@@ -160,18 +160,15 @@ namespace vm {
 	 *
 	 * @note This is done in VMThread, since it depends on the arguments passed during the call
 	 * which may vary from call to call and creating a generic start function using builders in the
-	 * loading phase is not possible. This also results in the need to create the function in its
-	 * low representation.
-	 * @note In the future, we might want to add a
-	 * separate start function builder because the start function creation will get a lot more
-	 * complicated, after we start using VmValue or default value constructors which have to be
-	 * invoked before main.
+	 * loading phase is not possible. This also results in the need to create the function in the
+	 * micro-bytecode right away.
 	 */
 	low::LowFuncData VMThread::createProgramStartFunction(
 		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
 		// Types
-		// @note All the following are guaranteed to exist or their existence was checked earlier.
+		// @note: All the following are guaranteed to exist or since their existence was checked
+		// during code loading.
 
 		auto        main_return_type = func.result_type;
 		const auto& types            = executing_program->getTypes();
@@ -182,13 +179,15 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
+		const bool main_has_args = !func.parameters.empty();
+
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
 			                             .bc               = {},
 			                             .local_stack_size = 72,
-			                             .arg_size = i64_type->getSize() + argv_ptr_type->getSize(),
-			                             .ret_size = main_return_type->getSize(),
-			                             .parameters  = { i64_type, argv_ptr_type },
-			                             .result_type = func.result_type };
+			                             .arg_size         = 0,
+			                             .ret_size         = main_return_type->getSize(),
+			                             .parameters       = {},
+			                             .result_type      = func.result_type };
 
 		// TypeIDs to pass to opcodes.
 		u64 func_ret_type_id = main_return_type->getID().asInt();
@@ -199,11 +198,9 @@ namespace vm {
 		u64 str_ptr_type_id  = str_ptr_type->getID().asInt();
 		u64 byte_type_id     = byte_type->getID().asInt();
 
-		const auto& funcs              = executing_program->getFunctions();
-		u64         called_function_id = 0;
-		for (u64 i = 0; i < funcs.size(); i++)
-			if (func.name == funcs[i].name) called_function_id = i;
+		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
 
+		// Initialize the needed data first - argc and argv dynamic table.
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
@@ -227,6 +224,7 @@ namespace vm {
 			}
 		);
 
+		// Now fill in the argv table.
 		for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
 			start_function.bc.insert(
 				start_function.bc.end(),
@@ -282,14 +280,29 @@ namespace vm {
 			);
 		}
 
+
+		// Now actually prepare to call 'main'.
+		start_function.bc.push_back(
+			MAKE_BYTECODE_INSTRUCTION(init_lany_type, 40, i64_type_id)  // [40, 48) main ret_val
+		);
+
+		if (main_has_args) {
+			start_function.bc.insert(
+				start_function.bc.end(),
+				{
+					MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),  // [48, 56) argc
+					MAKE_BYTECODE_INSTRUCTION(
+						init_lany_type, 56, argv_ptr_type_id
+					),                                                        // [56, 72) *argv
+					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
+					MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),  // argv := argv_internal
+				}
+			);
+		}
+
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 40, i64_type_id),  // [40, 48) main ret_val
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),       // [48, 56) argc
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, argv_ptr_type_id),  // [56, 72) *argv
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
-				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),          // argv := argv_internal
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
@@ -298,6 +311,8 @@ namespace vm {
 				),  // [48, 64) ptr_tmp_store
 			}
 		);
+
+		// After 'main' returned, free all the allocated strings in the argv table.
 		for ([[maybe_unused]] const auto& arg: args) {
 			start_function.bc.insert(
 				start_function.bc.end(),
@@ -311,6 +326,8 @@ namespace vm {
 				}
 			);
 		}
+
+		// Lastly, free all the data allocated by the start function.
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
@@ -320,7 +337,8 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ix
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit argc_internal
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit *argv_internal
-				// At this point only the start function return value remains on the stack.
+				// At this point only the start function return value (which is the program exit
+		        // code) remains on the stack.
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
@@ -587,15 +605,19 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = index,  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id  = index,  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();
