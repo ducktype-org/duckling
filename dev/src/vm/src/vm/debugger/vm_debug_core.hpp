@@ -22,7 +22,7 @@ namespace vm::debugger {
 
 	public:
 		void addHandler(std::function<void(Args...)> handler) { handlers.push_back(handler); }
-		void handleEvent(Args... args) {
+		void handleEvent(Args... args) const {
 			for (const auto& handler : handlers) {
 				handler(args...);
 			}
@@ -52,6 +52,7 @@ namespace vm::debugger {
 		EventHandle<vm::api::ProcStatus> onVmStateChange;
 		EventHandle<vm::api::response::CodePosition> onVmExecutionPaused;
 		EventHandle<vm::api::ExitValue> onVmExecutionCompleted;
+		EventHandle<std::string> onMessage;
 
 		static DuckVMDebugCore get(const fs::File& filepath, const std::vector<std::string>& args = {});
 

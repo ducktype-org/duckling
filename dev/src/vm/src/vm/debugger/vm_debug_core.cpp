@@ -74,7 +74,6 @@ namespace vm::debugger {
 		if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 		pid = process_pid_response->pid;
 		if (!vm::api::loadFiles(pid, { filepath })) throw BeRDFailedToLoadFile();
-		std::cout << "File loaded\n";
 		if (!vm::api::attach(pid, vm_input_stream, vm_output_stream))
 			throw BeRDFailedToAttachStreamsException();
 	}
@@ -84,7 +83,7 @@ namespace vm::debugger {
 		if (response.has_value()
 		&& (!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
 			&& !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
-			std::cout << "You have to finish execution to run VM.\n";
+			onMessage.handleEvent("You have to finish execution to run VM.\n");
 			getStatus();
 			return;
 		}
@@ -129,7 +128,7 @@ namespace vm::debugger {
 			try {
 				if (!arg.empty()) arguments.push_back(getIntVmValue(pid, std::stoll(arg)));
 			} catch (const std::exception& _) {
-				std::cout << "Error: Invalid argument '" << arg << "' - must be integer\n";
+				onMessage.handleEvent("Error: Invalid argument '" + arg + "' - must be integer\n");
 				return;
 			}
 			start = end + 1;
@@ -139,7 +138,7 @@ namespace vm::debugger {
 		if (response.has_value()
 		&& (!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
 			&& !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
-			std::cout << "You have to finish execution and get exit value.\n";
+			onMessage.handleEvent("You have to finish execution and get exit value.\n");
 			getStatus();
 			return;
 		}
@@ -178,7 +177,7 @@ namespace vm::debugger {
 			return status;
 		} else {
 			const vm::api::ApiError& err = response.error();
-			std::cout << "error: " << vm::api::errorToString(err) << "\n";
+			onMessage.handleEvent("error: " + vm::api::errorToString(err) + "\n");
 			// TODO: change it for sth better
 			return vm::api::Paused();
 		}
@@ -187,7 +186,7 @@ namespace vm::debugger {
 	void DuckVMDebugCore::step() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
-			std::cout << "Not paused program - make sure you started it.\n";
+			onMessage.handleEvent("Not paused program - make sure you started it.\n");
 			return;
 		}
 		if (!vm::api::step(pid)) throw BeRDFailedToMakeStep();
@@ -196,7 +195,7 @@ namespace vm::debugger {
 	void DuckVMDebugCore::resume() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
-			std::cout << "Not paused program - make sure you started it.\n";
+			onMessage.handleEvent("Not paused program - make sure you started it.\n");
 			return;
 		}
 		if (!vm::api::resume(pid)) throw BeRDFailedToResumeVM();
@@ -205,7 +204,7 @@ namespace vm::debugger {
 	void DuckVMDebugCore::pause() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !vm::api::isExecuting(response.value())) {
-			std::cout << "Not running program right now - make sure you started it.\n";
+			onMessage.handleEvent("Not running program right now - make sure you started it.\n");
 			return;
 		}
 		if (!vm::api::pause(pid)) throw BeRDFailedToPauseVM();
@@ -214,7 +213,7 @@ namespace vm::debugger {
 	void DuckVMDebugCore::stop() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !vm::api::isExecuting(response.value())) {
-			std::cout << "Not running program right now - make sure you started it.\n";
+			onMessage.handleEvent("Not running program right now - make sure you started it.\n");
 			return;
 		}
 		if (!vm::api::stop(pid)) throw BeRDFailedToPauseVM();
@@ -223,14 +222,13 @@ namespace vm::debugger {
 	void DuckVMDebugCore::getCurrentPosition() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
-			std::cout << "Not paused program - make sure you started it.\n";
+			onMessage.handleEvent("Not paused program - make sure you started it.\n");
 			return;
 		}
 		auto position_response = vm::api::getCurrentPosition(pid);
 		if (!position_response.has_value()) throw std::runtime_error("Failed to get current position");
 		vm::api::response::CodePosition position = position_response.value();
-		std::cout << "Line " << position.instr_number << " of function "
-				<< position.function_name.strView() << " (id: " << position.function_id << ")\n";
+		onVmExecutionPaused.handleEvent(position);
 	}
 
 	void DuckVMDebugCore::printMemory() const {

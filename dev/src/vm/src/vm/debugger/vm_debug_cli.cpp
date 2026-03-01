@@ -64,6 +64,10 @@ namespace vm::debugger {
 				std::cout << "Program exited with value: " << exit_value->readBytes<i64>() << "\n";
 		});
 
+		core.onMessage.addHandler([this](const std::string& message) {
+			std::cout << "\n[VM message]\n" << message << "\n";
+		});
+
 		std::string line;
 		int         event_fd = core.getEventPipeReadFD();
 
