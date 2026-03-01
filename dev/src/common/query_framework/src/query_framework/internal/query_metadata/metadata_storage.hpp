@@ -11,11 +11,12 @@
  */
 #pragma once
 
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-#include <concurrent/base/collections/hash_map.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <string_id/string_id.hpp>
@@ -146,10 +147,10 @@ namespace query::internal {
 		MetadataMap storage;
 
 	public:
-		MetadataStorage()                  = default;
+		MetadataStorage() = default;
 
 		MetadataStorage(const MetadataStorage&)            = delete;
-		MetadataStorage(MetadataStorage&&) = delete;
+		MetadataStorage(MetadataStorage&&)                 = delete;
 		MetadataStorage& operator=(MetadataStorage&&)      = delete;
 		MetadataStorage& operator=(const MetadataStorage&) = delete;
 
@@ -175,9 +176,13 @@ namespace query::internal {
 			Ref node_map = storage.atMaybe(node_id).value();
 
 			// Get or create the type's vector
-			node_map->maybePutAndUpdate(type_id, {}, [&metadata](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
-				metadata_vector->push_back(std::move(metadata));
-			});
+			node_map->maybePutAndUpdate(
+				type_id,
+				{},
+				[&metadata](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
+					metadata_vector->push_back(std::move(metadata));
+				}
+			);
 		}
 
 		/**
@@ -203,10 +208,10 @@ namespace query::internal {
 			// Check if metadata of this type already exists
 			auto node_ref = storage.atMaybe(node_id);
 			if (node_ref.has_value()) {
-				Ref node_map = node_ref.value();
-				auto  type_ref = node_map->atMaybe(type_id);
-				if (type_ref.has_value() && !type_ref.value()->empty()) // PR validate types here
-					return false;  // Metadata already exists
+				Ref  node_map = node_ref.value();
+				auto type_ref = node_map->atMaybe(type_id);
+				if (type_ref.has_value() && !type_ref.value()->empty())  // PR validate types here
+					return false;                                        // Metadata already exists
 			}
 
 			// Add the metadata
@@ -270,17 +275,22 @@ namespace query::internal {
 			TypeID                               type_id = MetadataT::TYPE_ID;
 
 			// Single pass through all nodes
+			// note that iteration here locks storage
 			for (const auto& [node_id, node_map]: storage) {
-				auto type_it = node_map.atMaybe(type_id);
-				if (!type_it.has_value()) continue;
-
-				const auto& type_vec = *type_it.value();
-				for (const auto& metadata_ptr: type_vec) {
-					// Safe downcast - we know the type matches because we used type id as key
-					const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
-					result.push_back(MetadataInfo<MetadataT>{
-						.node_id = node_id, .value = CRef<MetadataT>(typed_ptr) });
-				}
+				auto type_ref = node_map.maybeCallOn(
+					type_id,
+					[&result, node_id](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+						for (const auto& metadata_ptr: *type_vec) {
+							// Safe downcast - we know the type matches because we used type id as key
+							const auto* typed_ptr
+								= static_cast<const MetadataT*>(metadata_ptr.get());
+							result.push_back(MetadataInfo<MetadataT>{
+								.node_id = node_id,
+								.value   = CRef<MetadataT>(typed_ptr),
+							});
+						}
+					}
+				);
 			}
 
 			return result;
