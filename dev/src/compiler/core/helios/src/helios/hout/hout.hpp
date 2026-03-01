@@ -67,6 +67,8 @@ namespace compiler::helios {
 
 		std::vector<code::Parameter> parameters;
 
+		code::ElementOrigin origin;
+
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
@@ -75,7 +77,10 @@ namespace compiler::helios {
 
 	private:
 		HOUTFunctionDeclaration(
-			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
+			SymID                        symbol,
+			tsh::SymbolType<>            ret_type,
+			std::vector<code::Parameter> parameters,
+			code::ElementOrigin          origin
 		);
 		friend ImplementationOf_QueryDeclOfFun;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;

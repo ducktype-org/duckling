@@ -47,6 +47,7 @@ namespace compiler::helios::code {
 		tsh::SymbolType<>         type;
 		base::Optional<Box<Expr>> initial_value;
 		SymID                     helios_symbol;
+		ElementOrigin             origin;
 	};
 
 	/***********************\
