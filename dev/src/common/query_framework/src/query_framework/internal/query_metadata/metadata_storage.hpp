@@ -232,17 +232,14 @@ namespace query::internal {
 			if (!node_ref.has_value()) return result;
 
 			CRef node_map = node_ref.value();
-			auto        type_ref  = node_map->atMaybe(type_id);
-			if (!type_ref.has_value()) return result;
-
-			CRef type_vec = type_ref.value();
-			result.reserve(type_vec.size());
-
-			for (const auto& metadata_ptr: type_vec) {
-				// Safe downcast - we know the type matches because we used type id as key
-				const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
-				result.push_back(CRef<MetadataT>(typed_ptr));
-			}
+			node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+				result.reserve(type_vec->size());
+				for (const auto& metadata_ptr: *type_vec) {
+					// Safe downcast - we know the type matches because we used type id as key
+					const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
+					result.push_back(CRef<MetadataT>(typed_ptr));
+				}
+			});
 
 			return result;
 		}
