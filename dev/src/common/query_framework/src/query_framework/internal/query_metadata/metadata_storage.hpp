@@ -308,14 +308,21 @@ namespace query::internal {
 		bool hasMetadata(NodeID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage.atMaybe(node_id);
-			if (!node_it.has_value()) return false;
+			auto node_ref = storage.atMaybe(node_id);
+			if (!node_ref.has_value()) return false;
 
-			const auto& node_map = *node_it.value();
-			auto        type_it  = node_map.atMaybe(type_id);
-			if (!type_it.has_value()) return false;
+			bool result = false;
 
-			return !type_it.value()->empty();
+
+			CRef node_map = node_ref.value();
+			node_map->maybeCallOn(
+				type_id,
+				[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+					result = !type_vec->empty(); // this will set result to true only if there is at least one metadata of this type
+				}
+			);
+
+			return result;
 		}
 
 		/**
