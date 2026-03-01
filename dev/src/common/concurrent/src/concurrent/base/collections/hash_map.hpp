@@ -248,7 +248,7 @@ namespace concurrent {
 
 			auto opt_ref = shard.atMaybe(key);
 			if (opt_ref.has_value()) {
-				if (pred(*opt_ref.value())) {
+				if (pred(opt_ref.value())) {
 					if (shard.erase(key)) {
 						elements_count.fetch_sub(1, std::memory_order_relaxed);
 						return true;

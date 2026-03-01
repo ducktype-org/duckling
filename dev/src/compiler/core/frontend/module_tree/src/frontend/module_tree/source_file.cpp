@@ -145,9 +145,9 @@ namespace compiler::frontend {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
 
 		// Remove the `Path -> (SourceFiles, SharedView)` if the value vector is empty.
-		path_registry.eraseIf(abs_path, [&](PathState& state) {
-			std::erase(state.instances, source_file);
-			return state.instances.empty();
+		path_registry.eraseIf(abs_path, [&](Ref<PathState> state) {
+			std::erase(state->instances, source_file);
+			return state->instances.empty();
 		});
 
 		CORE_ASSERT(
