@@ -51,6 +51,10 @@ public:
 		TESTER_ADD_TEST(multiThreadedSimpleTest3<2>);
 		TESTER_ADD_TEST(multiThreadedSimpleTest3<4>);
 
+		TESTER_ADD_TEST(multiThreadedMoveConstructorTest<1>);
+		TESTER_ADD_TEST(multiThreadedMoveConstructorTest<2>);
+		TESTER_ADD_TEST(multiThreadedMoveConstructorTest<4>);
+
 		TESTER_ADD_TEST(multiThreadedEraseTest<1>);
 		TESTER_ADD_TEST(multiThreadedEraseTest<2>);
 		TESTER_ADD_TEST(multiThreadedEraseTest<4>);
@@ -292,6 +296,53 @@ private:
 
 		// we should have the last update from one of the threads:
 		ASSERT_TRUE(map.getCopy(1) >= (OPS_PER_THREAD - 1) * thread_count);
+	}
+
+	template<u64 thread_count>
+	void multiThreadedMoveConstructorTest() {
+		constexpr u64 OPS_PER_THREAD = 100'000;
+
+		concurrent::ConHashMap<u64, u64>                 map;
+		base::Optional<concurrent::ConHashMap<u64, u64>> moved_map_opt;
+
+		// All the threads will be writing to the map while the first thread will move-construct
+		// moved_map_opt from the map in the middle of the computation.
+
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			threads.emplace_back([&map, &moved_map_opt, thread_id]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					if (thread_id == 0 && j == OPS_PER_THREAD / 2) {
+						// move-construct moved_map_opt from map in the middle of the computation
+						moved_map_opt.emplace(std::move(map));
+					}
+
+					u64 key = j * thread_count + thread_id;
+					map.put(key, key * 10);
+				}
+			});
+		}
+
+		for (auto& t: threads) t.join();
+
+		// Validate state:
+		ASSERT_TRUE(moved_map_opt.has_value());
+		ASSERT_EQUAL(moved_map_opt->size() + map.size(), thread_count * OPS_PER_THREAD);
+
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+				u64 key = j * thread_count + thread_id;
+				if (moved_map_opt->contains(key)) {
+					ASSERT_EQUAL(moved_map_opt->getCopy(key), key * 10);
+					ASSERT_TRUE(!map.contains(key));
+				} else {
+					ASSERT_TRUE(map.contains(key));
+					ASSERT_EQUAL(map.getCopy(key), key * 10);
+					ASSERT_TRUE(!moved_map_opt->contains(key));
+				}
+			}
+		}
 	}
 
 	/**
