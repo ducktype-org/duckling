@@ -5,7 +5,7 @@
 
 #include <base/pointers/ref.hpp>
 
-#include <query_framework/context/context.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 
