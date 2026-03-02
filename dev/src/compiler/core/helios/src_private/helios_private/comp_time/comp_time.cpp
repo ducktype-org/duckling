@@ -263,6 +263,17 @@ namespace compiler::helios {
 								throw base::NotYetImplemented("Other binary operators for bool type"
 							    );
 							}
+						} else if constexpr (std::is_same_v<LhsT, tsh::SymbolType<>>
+					                         && std::is_same_v<RhsT, tsh::SymbolType<>>) {
+							using enum code::BuiltinBinary;
+							switch (expr.operation) {
+							case MetaEq:
+								return CompileTimeValue(lhs == rhs);
+							case MetaNeq:
+								return CompileTimeValue(lhs != rhs);
+							default:
+								CORE_UNREACHABLE();
+							}
 						} else {
 							// Unsupported type for binary operator.
 							return query::Failed();
@@ -687,9 +698,14 @@ namespace compiler::helios {
 				variant_case(CompileTimeValue, ctv) { return ctv; }
 				variant_case(CouldNotShortPath, _) {
 					// If TreeEval failed, try to evaluate with VM.
-					const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
-					if (!call_expr) return query::Failed();
-					return evaluateFunctionWithVm(ctx, call_expr);
+					if (const auto* reusable_expr
+					    = dynamic_cast<const code::ReusableExpr*>(expr.get())) {
+						// If it's a reusable expression, propagate evaluation inwards.
+						return evalHoutExpr(ctx, reusable_expr->inner.ref());
+					}
+					if (const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get()))
+						return evaluateFunctionWithVm(ctx, call_expr);
+					return query::Failed();
 				}
 				variant_default { CORE_PANIC("Unexpected TreeEvalResult variant."); }
 			}

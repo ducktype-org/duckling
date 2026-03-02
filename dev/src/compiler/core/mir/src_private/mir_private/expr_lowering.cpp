@@ -504,8 +504,12 @@ namespace compiler::mir {
 						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
 						.type = result_type }
 				);
-			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
+			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
+			} else if (const auto* reusable_expr
+			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
+				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
+			}
 
 			return lowerSubExpr(expr, continuation);
 		}

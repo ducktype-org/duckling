@@ -235,12 +235,12 @@ namespace compiler::helios::code {
 
 	void ReusableExpr::debugPrint(std::ostream& out) const {
 		if (first_use) {
-			out << "[tmp " << inner->getID().asInt() << "](";
-			inner->debugPrint(out);
-			out << ")";
+			out << "[tmp](";
 		} else {
-			out << "[reuse " << inner->getID().asInt() << "]";
+			out << "[reuse](";
 		}
+		inner->debugPrint(out);
+		out << ")";
 	}
 
 	Box<Expr> ReusableExpr::clone() const {
@@ -347,6 +347,7 @@ namespace compiler::helios::code {
 		// note: this might get more complex in the future
 
 		lhs->debugPrint(out);
+		out << " ";
 
 		using enum BuiltinBinary;
 		switch (operation) {
@@ -367,6 +368,7 @@ namespace compiler::helios::code {
 			out << "/";
 			break;
 		case IntegerMod:
+		case FloatMod:
 			out << "%";
 			break;
 		case IntegerPow:
@@ -374,32 +376,42 @@ namespace compiler::helios::code {
 			out << "**";
 			break;
 		case IntegerLt:
-			out << " < ";
+		case FloatLt:
+			out << "<";
 			break;
 		case IntegerLteq:
-			out << " <= ";
+		case FloatLteq:
+			out << "<=";
 			break;
 		case IntegerGt:
-			out << " > ";
+		case FloatGt:
+			out << ">";
 			break;
 		case IntegerGteq:
-			out << " >= ";
+		case FloatGteq:
+			out << ">=";
 			break;
 		case IntegerEq:
-			out << " == ";
+		case FloatEq:
+		case MetaEq:
+			out << "==";
 			break;
 		case IntegerNeq:
-			out << " != ";
+		case FloatNeq:
+		case MetaNeq:
+			out << "!=";
 			break;
 		case BooleanAnd:
-			out << " and ";
+			out << "and";
 			break;
 		case BooleanOr:
-			out << " or ";
+			out << "or";
 			break;
 		default:
 			CORE_UNREACHABLE();
 		}
+
+		out << " ";
 		rhs->debugPrint(out);
 	}
 

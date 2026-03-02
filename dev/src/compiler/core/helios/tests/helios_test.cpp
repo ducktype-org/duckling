@@ -965,6 +965,12 @@ private:
 		auto symbol_name = [](const char* name, auto&& symbol) {
 			return base::strConcat("(Symbol ", name, " (", symbol.queryUnstablePerfectHash(), "))");
 		};
+		auto tmp = [](const std::string& expr) {
+			return base::strConcat("[tmp](", expr, ")");
+		};
+		auto reuse = [](const std::string& expr) {
+			return base::strConcat("[reuse](", expr, ")");
+		};
 
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
@@ -986,7 +992,7 @@ private:
 		std::stringstream out_v256;
 		auto              tree_v256 = getExprOfConst(sym_v256);
 		tree_v256->debugPrint(out_v256);
-		ASSERT_EQUAL("(3+4-4*16/5%7)**8", out_v256.str());
+		ASSERT_EQUAL("(3 + 4 - 4 * 16 / 5 % 7) ** 8", out_v256.str());
 
 		ASSERT_EQUAL(12, getConstValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();
@@ -997,7 +1003,7 @@ private:
 		auto sym_v3      = getChain("N.V3", root_scope).back();
 		auto sym_v3_repr = symbol_name("V3", sym_v3);
 		ASSERT_EQUAL(
-			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
+			base::strConcat(sym_v3_repr, " + ", sym_v3_repr, " * ", sym_v3_repr), out_v12.str()
 		);
 
 		ASSERT_EQUAL(false, getConstValueAs<bool>("CMP", root_scope));
@@ -1007,7 +1013,12 @@ private:
 		expr_cmp->debugPrint(out_cmp);
 		ASSERT_EQUAL_PRINT(
 			(base::strConcat(
-				symbol_name("V1", sym_v1), "<3<=4==5!=6>=7>", symbol_name("VM1", sym_vm1)
+				symbol_name("V1", sym_v1), " < ", tmp("3"), " and ",
+				reuse("3"), " <= ", tmp("4"), " and ",
+				reuse("4"), " == ", tmp("5"), " and ",
+				reuse("5"), " != ", tmp("6"), " and ",
+				reuse("6"), " >= ", tmp("7"), " and ",
+				reuse("7"), " > ", tmp(symbol_name("VM1", sym_vm1))
 			)),
 			out_cmp.str()
 		);
