@@ -1043,7 +1043,8 @@ namespace compiler::helios {
 							"QueryDirectFunctionCalls is not implemented for generated symbols "
 							"yet. ",
 							"The symbol in question is: ",
-							getSymRef(key)->common.name, ". "
+							getSymRef(key)->common.name,
+							". "
 							"This usually means that a class was used inside compile time "
 							"evaluation."
 						),
