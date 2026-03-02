@@ -30,6 +30,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <typesystem/higher/mutability.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
@@ -84,6 +85,7 @@ public:
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
+		TESTER_ADD_TEST(testMethodCalls);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
@@ -136,6 +138,17 @@ private:
 		return compiler::tsh::SymbolType{
 			abstract_type,
 			compiler::tsh::ReferenceKind::Direct,
+			Mutable,
+		};
+	}
+
+	/**
+	 * Shorthand to create a reference to mutable symbol type from an abstract type.
+	 */
+	static compiler::tsh::SymbolType<> refst(const compiler::tsh::AbstractType abstract_type) {
+		return compiler::tsh::SymbolType{
+			abstract_type,
+			compiler::tsh::ReferenceKind::Ref,
 			Mutable,
 		};
 	}
@@ -492,15 +505,12 @@ private:
 
 		ASSERT_EQUAL(c_member_type, st(first_class_abstract_type));
 
-		// @TODO: #1547 uncomment this test
-		// auto c_member_a_symbol =  getChain("c_member_a", root_scope).back();
-		// auto c_member_a_type =
-		// query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
-		//                          ->valueOrThrow();
-		// ASSERT_EQUAL(
-		// 	c_member_a_type,
-		// 	st(query::entryPoint<compiler::tsh::QueryIntegralType>({64, Signed}))
-		// );
+		auto c_member_a_symbol = getChain("c_member_a", root_scope).back();
+		auto c_member_a_type
+			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
+		          ->valueOrThrow();
+		auto expected_type = st(getIntegralTypeNoContext(64, Signed));
+		ASSERT_EQUAL(c_member_a_type, expected_type);
 
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
@@ -1867,6 +1877,72 @@ private:
 			    );
 			assertTrue(cast_expr != nullptr, "Cast expression expected.");
 		}
+	}
+
+	void testMethodCalls() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/method_calls")));
+
+		auto example_class = getChain("ExampleClass", scope).back();
+		auto example_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(example_class)
+		          ->valueOrThrow();
+		auto example_class_abstract_type
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(example_class)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<compiler::tsh::ClassAbstractType>();
+		ASSERT_EQUAL(3, example_class_info.methods.size());
+
+		for (auto& method: example_class_info.methods) {
+			auto method_hout
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+			ASSERT_EQUAL(
+				refst(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
+			);
+		}
+
+		auto wrapper_class = getChain("Wrapper", scope).back();
+		auto wrapper_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(wrapper_class)
+		          ->valueOrThrow();
+		auto wrapper_class_abstract_type
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(wrapper_class)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<compiler::tsh::ClassAbstractType>();
+		ASSERT_EQUAL(4, wrapper_class_info.methods.size());
+
+		for (auto& method: wrapper_class_info.methods) {
+			auto method_hout
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+			ASSERT_EQUAL(
+				refst(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
+			);
+		}
+
+		auto point_class = getChain("Point", scope).back();
+		auto point_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(point_class)->valueOrThrow();
+		auto point_class_abstract_type
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(point_class)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<compiler::tsh::ClassAbstractType>();
+		ASSERT_EQUAL(7, point_class_info.methods.size());
+
+		for (auto& method: point_class_info.methods) {
+			auto method_hout
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method })->valueOrPanic();
+			ASSERT_EQUAL(
+				refst(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
+			);
+		}
+
+		std::vector<CRef<compiler::helios::HOUTUnit>> units
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
+		          .valueOrPanic();
+		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		               // that it is successful
 	}
 
 	void testMangler() {
