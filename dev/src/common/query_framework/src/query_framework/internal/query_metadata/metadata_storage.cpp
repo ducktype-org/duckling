@@ -89,8 +89,6 @@ namespace query::internal {
 
 	void MetadataStorage::clearNodeMetadata(NodeID node_id) { storage.erase(node_id); }
 
-	// void MetadataStorage::clear() { storage.clear(); }
-
 	bool MetadataStorage::empty() const { return storage.size() == 0; }
 
 	std::vector<std::byte> MetadataStorage::serialize() const {

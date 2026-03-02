@@ -371,12 +371,6 @@ namespace query::internal {
 		void clearNodeMetadata(NodeID node_id);
 
 		/**
-		 * @brief Clear all metadata storage.
-		 * TODO PR: check uses
-		 */
-		// void clear();
-
-		/**
 		 * @brief Check if storage is empty.
 		 * @return true if no metadata is stored
 		 */
