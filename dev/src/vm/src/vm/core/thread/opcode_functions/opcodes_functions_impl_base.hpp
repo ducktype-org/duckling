@@ -56,7 +56,6 @@
 	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
 	#define FUNCTION_CONT(step)                instr += step;
 	#define FUNCTION_CONT_CHECK_STRATEGY(step) instr += step;
-	#define OP_FUN                             vm::DebugOpFun
 #else
 	#define OPCODE_NAME(name)                  op_##name
 	#define FUNCTION_ARGS                      OPFUN_ARGS
