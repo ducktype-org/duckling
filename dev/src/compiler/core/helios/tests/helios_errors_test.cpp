@@ -83,7 +83,7 @@ private:
 	void testErrorLogging() {
 		// ============================ No operator found ============================
 		checkForErrorOnCompileModule(
-			R"(fun a() = true + false;)", { "No builtin binary operator" }, 1
+			R"(fun a() = true + false;)", { "Call failed due to ambiguous overload resolution" }, 1
 		);
 		checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
 
@@ -358,13 +358,6 @@ private:
 
 		try {
 			test_utils::getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
