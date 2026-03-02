@@ -277,7 +277,7 @@ namespace query::internal {
 			// Single pass through all nodes
 			// note that iteration here locks storage
 			for (const auto& [node_id, node_map]: storage) {
-				auto type_ref = node_map.maybeCallOn(
+				node_map.maybeCallOn(
 					type_id,
 					[&result, node_id](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
 						for (const auto& metadata_ptr: *type_vec) {
