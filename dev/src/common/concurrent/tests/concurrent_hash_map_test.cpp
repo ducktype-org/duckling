@@ -61,6 +61,10 @@ public:
 		TESTER_ADD_TEST(constIteratorTest);
 		TESTER_ADD_TEST(multiThreadedSizeTest);
 
+		TESTER_ADD_TEST(multiThreadedExtractTest<1>);
+		TESTER_ADD_TEST(multiThreadedExtractTest<2>);
+		TESTER_ADD_TEST(multiThreadedExtractTest<4>);
+
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<1>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<2>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<4>);
@@ -490,6 +494,72 @@ private:
 		for (int i = 0; i < N; i++) expected += i * 10;
 
 		for (auto& s: sums) ASSERT_EQUAL(s.load(), expected);
+	}
+
+	template<u64 thread_count>
+	void multiThreadedExtractTest() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 KEY_RANGE      = 5'000;
+
+		concurrent::ConHashMap<u64, u64> map;
+
+		// fill the map
+		for (u64 i = 0; i < KEY_RANGE; i++) map.put(i, i * 10);
+
+		// Each thread tries to extract keys [0, KEY_RANGE).
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+		std::vector<std::vector<std::pair<u64, u64>>> extracted_values(thread_count);
+
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			threads.emplace_back([&map, &extracted_values, thread_id]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					u64  key       = (j * thread_id * 1'000'000'007) % KEY_RANGE;
+					auto extracted = map.extract(key);
+					if (extracted) extracted_values[thread_id].emplace_back(key, extracted.value());
+				}
+			});
+		}
+		for (auto& t: threads) t.join();
+
+		// Verify that each key was extracted at most once and that the extracted value is correct.
+		std::vector<bool> extracted_keys(KEY_RANGE, false);
+		u64               total_extracted = 0;
+
+		for (const auto& thread_values: extracted_values) {
+			for (const auto& [key, value]: thread_values) {
+				ASSERT_TRUE(key < KEY_RANGE);
+				ASSERT_TRUE(value == key * 10);
+				ASSERT_TRUE(!extracted_keys[key]);
+
+				extracted_keys[key] = true;
+				total_extracted++;
+			}
+		}
+
+		// Verify that remaining keys in the map are correct and were not extracted.
+		ASSERT_TRUE(total_extracted + map.size() == KEY_RANGE);
+		u64 remaining_in_map = 0;
+		u64 expected_size    = map.size();
+		for (auto [key, value]: map) {
+			ASSERT_TRUE(key < KEY_RANGE);
+			ASSERT_TRUE(value == key * 10);
+			ASSERT_TRUE(!extracted_keys[key]);
+			remaining_in_map++;
+		}
+		ASSERT_EQUAL(remaining_in_map, expected_size);
+
+		// Double check it with other map operations to ensure no extracted keys are still accessible.
+		for (u64 key = 0; key < KEY_RANGE; key++) {
+			if (extracted_keys[key]) {
+				ASSERT_TRUE(!map.contains(key));
+				ASSERT_TRUE(map.atMaybe(key).empty());
+			} else {
+				ASSERT_TRUE(map.contains(key));
+				ASSERT_TRUE(map.atMaybe(key).has_value());
+				ASSERT_TRUE(map.getCopy(key) == key * 10);
+			}
+		}
 	}
 
 	/**

@@ -297,7 +297,6 @@ namespace concurrent {
 		 * Atomically extracts the given key->value pair from the map, that is:
 		 * 1. Moves out the value associated with the key and returns it.
 		 * 2. Erases the key->value pair from the map.
-		 // TODO PR: add tests
 		 */
 		base::Optional<DATA_T> extract(const KEY_T& key) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
