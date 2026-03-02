@@ -32,7 +32,11 @@ LLVM_INCLUDE_END()
 using namespace llvm;
 using namespace llvm::orc;
 
-// char[] is better than std::array, because we don't know the size.
+/**
+ * @brief We can't use std::to_array, because it doesn't compile.
+ * If used in lambda uses infinite memory (clang bug).
+ * Embed gives raw bytes, which can't be assigned directly to std::array
+ */
 // NOLINTBEGIN
 PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
 	#embed "src/vm/common_sc.bc"
@@ -40,11 +44,20 @@ PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
 POP_DIAGNOSTIC
 // NOLINTEND
 
+/// @brief context of llvmInit.
 static std::unique_ptr<LLVMContext>                              g_context;
+
+/// @brief LLVM module containing the parsed microinstruction bitcode.
 static std::unique_ptr<Module>                                   g_module;
-static std::unordered_map<vm::low::MicroOpcode, llvm::Function*> func_map;
+
+/// @brief Active LLjit instance.
 static std::unique_ptr<LLJIT>                                    lljit_instance;
+
+/// @brief LLVM helper object used for errors. 
 static ExitOnError                                               exit_on_err;
+
+/// @brief For each MicroOpcode stores calculated llvm::Function*.
+static std::unordered_map<vm::low::MicroOpcode, llvm::Function*> func_map;
 
 namespace {
 	/**

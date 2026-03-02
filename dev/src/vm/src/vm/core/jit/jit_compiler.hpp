@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <base/pointers/ref.hpp>
+
 #include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit {
@@ -14,7 +16,7 @@ namespace vm::jit {
 	 * @brief The data additionally stored per function, by the JIT compiler.
 	 */
 	struct JitFuncData {
-		JitOpFun* func_ptr          = nullptr;
+		MRef<JitOpFun> func_ptr          = nullptr;
 		uint      until_compilation = 1;
 	};
 
@@ -26,5 +28,5 @@ namespace vm::jit {
 	/**
 	 * @brief Compile the function on the C2, LLVM-based compiler.
 	 */
-	JitOpFun* compileLLVM(const vm::low::LowFuncData& func_data);
+	MRef<JitOpFun>  compileLLVM(const vm::low::LowFuncData& func_data);
 }
