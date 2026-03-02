@@ -20,6 +20,8 @@ namespace pst {
 	 * Useful for distinguishing a standalone expression input (to be evaluated and printed)
 	 * from a definition input (function, variable, class, etc.).
 	 *
+	 * @note This function is used in the REPL to determine how to handle a single statement.
+	 *
 	 * @param ctx  Query context for PST access
 	 * @param root The PST root element to examine
 	 * @return The single ExprStmt if present, empty otherwise

@@ -7,7 +7,6 @@
 #include "source_file.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -188,7 +187,7 @@ namespace compiler::frontend {
 		// If ModuleHash is invalid, then children are also invalid
 		if (!m_path_component_hash.has_value()) {
 			// m_hash should not have value if path component hash is invalid
-			// The are calculaten in the same function: updateModuleHash()
+			// The are calculated in the same function: updateModuleHash()
 			CORE_ASSERT(!m_hash.has_value(), "Module hash have value!");
 
 			// assert if children are invalid too
@@ -564,7 +563,7 @@ namespace compiler::frontend {
 		);
 
 		// we need to detect cycles as someone could accidentally create one
-		// for example if module A is parent of B in oryginal module tree
+		// for example if module A is parent of B in original module tree
 		// and function addSubmodule(B, A) is called
 		// we would have a cycle A -> B -> A
 		// this is a programer error, because cycle is not possible in standard module tree from
@@ -761,7 +760,7 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// Chenge the parent of all submodules to the parent of the removed module
+		// Change the parent of all submodules to the parent of the removed module
 		for (auto& [_, submodule]: module->m_submodules) {
 			if (parent.has_value()) {
 				parent.value()->m_submodules.put(submodule->getName(), submodule);
@@ -955,31 +954,6 @@ namespace compiler::frontend {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
-
-	/********************************
-	 * QueryModuleStatementSources *
-	 ********************************/
-	struct IMPLEMENT_QUERY(QueryModuleStatementSources, std::vector<std::string>) {
-		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			auto main_file = ctx.query<QueryMainSourceFile>(key);
-			auto pst       = getFilePST(ctx, main_file);
-			auto root      = pst->getRootElement().unlock(ctx);
-
-			std::vector<std::string> sources;
-			for (auto stmt_locked: root->getStatements()) {
-				auto stmt = stmt_locked.unlock(ctx);
-				auto pos  = stmt->getSourcePosition();
-				sources.emplace_back(
-					pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString()
-				);
-			}
-			return sources;
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleStatementSources);
 
 	/****************
 	 * getFilePST *

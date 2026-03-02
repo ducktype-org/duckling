@@ -1,5 +1,7 @@
 #include "repl_session.hpp"
 
+#include "utils.hpp"
+
 #include <driver/operations/generic_operations.hpp>
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -244,8 +246,7 @@ namespace compiler::repl {
 					return;
 				}
 
-				statement_sources
-					= *ctx.query<frontend::QueryModuleStatementSources>(probe_module_id);
+				statement_sources = extractStatementSources(ctx, probe_module_id);
 			});
 
 			if (has_parse_errors) return ReplResult::error("Parse error");

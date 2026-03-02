@@ -22,7 +22,6 @@
 
 #include <vm/core/process/interface_types.hpp>
 
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -145,6 +144,9 @@ namespace compiler::repl {
 		 * Determines whether the module contains a lone expression (to be evaluated
 		 * and printed) or a definition (to be loaded into the environment) and routes
 		 * accordingly.
+		 *
+		 * @note This function works only on single statements. Splitting the input into statements
+		 * is the responsibility of executeInput().
 		 *
 		 * @param module_id Already-created module for this statement
 		 * @return ReplResult with execution outcome
