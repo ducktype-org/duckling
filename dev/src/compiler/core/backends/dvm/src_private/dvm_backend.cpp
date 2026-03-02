@@ -7,8 +7,7 @@
 
 namespace compiler::backend_vm {
 
-	DVMCodeBuilder::DVMCodeBuilder(base::StrID module_id, query::Context& query_ctx):
-		  module_id(module_id),
+	DVMCodeBuilder::DVMCodeBuilder(query::Context& query_ctx):
 		  program_context(makeBox<internal::ProgramLoweringContext>(query_ctx)) {}
 
 	vm::code::CodeCollection DVMCodeBuilder::build() const {

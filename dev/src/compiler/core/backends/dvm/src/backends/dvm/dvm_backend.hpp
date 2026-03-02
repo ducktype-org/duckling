@@ -16,10 +16,8 @@ namespace compiler::backend_vm {
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 */
 	class DVMCodeBuilder final {
-		base::StrID module_id;
-
 	public:
-		DVMCodeBuilder(base::StrID module_id, query::Context& query_ctx);
+		DVMCodeBuilder(query::Context& query_ctx);
 
 		/**
 		 * @brief Inserts a LIR function into the module.

@@ -14,7 +14,7 @@ namespace compiler::driver {
 	) {
 		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
-		backend_vm::DVMCodeBuilder module(data->module_id, query_ctx);
+		backend_vm::DVMCodeBuilder module(query_ctx);
 
 		for (const auto& global: data->globals)
 			module.insertLirGlobal(global.lir_global, global.global_ctor, global.global_dtor);
