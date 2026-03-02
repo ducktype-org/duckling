@@ -107,7 +107,7 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Parses an keyword to @p result. Skips on success, logs error on failure.
+		 * @brief Parses a keyword to @p result. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed keyword.
 		 */
 		PSTAutomatic& one(tpc::Keyword* result) {
