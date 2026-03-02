@@ -107,6 +107,40 @@ namespace concurrent {
 		~ConHashMap() = default;
 
 		/**
+		 * Acts as move constructor.
+		 * After this operation, the source map is left in an empty but valid state.
+		 *
+		 * Underneath this performs the following:
+		 * * it moves the content of each shard by changing the ownership of the memory
+		 *   i.e. elements of the map remain in the same place in memory, and their constructors are
+		 * not called.
+		 * * it generates new locks for the new map. This way if other threads try to access the
+		 * source map during or after the move, they will be properly synchronized and will not
+		 * cause data races or access to invalid memory.
+		 *
+		 * @note It is made explicit to avoid accidental moves, as they can be bug prone with
+		 * concurrent operations.
+		 */
+		ConHashMap moveOut() {
+			// No one should access the map during this operation:
+			WithAllShardsLock lock(*this);
+
+			// this creates new locks
+			ConHashMap result;
+
+			// transfer ownership of each shard's content to the new map
+			result.shards = std::move(shards);
+			result.elements_count.store(elements_count.load());
+
+			// leave this map in an empty but valid state
+			shards.clear();
+			shards.resize(SHARD_COUNT);
+			elements_count.store(0);
+
+			return result;
+		}
+
+		/**
 		 * Inserts key->value into the container.
 		 * Panics if key already exists.
 		 * @param key Data key
@@ -263,8 +297,7 @@ namespace concurrent {
 			if (!at_maybe.has_value()) {
 				// data was already not present
 				return base::Optional<DATA_T>{};
-			}
-			else {
+			} else {
 				auto value = std::move(at_maybe.value());
 				shards[lock.shard_index].erase(key);
 				elements_count.fetch_sub(1, std::memory_order_relaxed);

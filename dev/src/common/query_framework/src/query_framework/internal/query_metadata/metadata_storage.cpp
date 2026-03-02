@@ -66,16 +66,14 @@ namespace query::internal {
 		if (!extracted.has_value()) {
 			// NodeID not found, return empty optional
 			return base::Optional<ExtractedNodeMetadata>{};
-		}
-		else {
+		} else {
 			// We have to convert ConHashMap to StableHashMap for the extracted data
 			base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> extracted_map;
 
-			for (auto& [type_id, metadata_vec]: extracted.value()) {
+			for (auto& [type_id, metadata_vec]: extracted.value())
 				extracted_map.put(type_id, std::move(metadata_vec));
-			}
 
-			return ExtractedNodeMetadata{  node_id, std::move(extracted_map) };
+			return ExtractedNodeMetadata{ node_id, std::move(extracted_map) };
 		}
 	}
 
@@ -170,9 +168,9 @@ namespace query::internal {
 	}
 
 	MetadataStorage MetadataStorage::deserialize(std::span<const std::byte> data) {
-		MetadataStorage storage;
+		if (data.empty()) return MetadataStorage{};
 
-		if (data.empty()) return std::move(storage);
+		MetadataStorage storage;
 
 		usize offset = 0;
 

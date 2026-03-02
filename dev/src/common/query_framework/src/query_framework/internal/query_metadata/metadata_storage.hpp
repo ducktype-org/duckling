@@ -315,12 +315,10 @@ namespace query::internal {
 
 
 			CRef node_map = node_ref.value();
-			node_map->maybeCallOn(
-				type_id,
-				[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-					result = !type_vec->empty(); // this will set result to true only if there is at least one metadata of this type
-				}
-			);
+			node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+				result = !type_vec->empty();  // this will set result to true only if there is at
+				                              // least one metadata of this type
+			});
 
 			return result;
 		}
@@ -341,13 +339,10 @@ namespace query::internal {
 			if (!node_ref.has_value()) return 0;
 
 			CRef node_map = node_ref.value();
-			u64 result = 0;
-			node_map->maybeCallOn(
-				type_id,
-				[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-					result = type_vec->size();
-				}
-			);
+			u64  result   = 0;
+			node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+				result = type_vec->size();
+			});
 
 			return result;
 		}
@@ -377,7 +372,7 @@ namespace query::internal {
 
 		/**
 		 * @brief Clear all metadata storage.
-		 * TODO PR: check uses 
+		 * TODO PR: check uses
 		 */
 		// void clear();
 
@@ -390,6 +385,9 @@ namespace query::internal {
 
 		/**
 		 * @brief Serialize all metadata to a byte vector.
+		 * \parallel This method should not race, but might behave weirdly if metadata is being
+		 * concurrently modified during serialization, as there is no large lock in place. It should
+		 * be used in a context where we can guarantee no concurrent modifications.
 		 *
 		 * Format (optimized with type name table and StrID table):
 		 *
@@ -429,6 +427,9 @@ namespace query::internal {
 
 		/**
 		 * @brief Pretty print the metadata storage for debugging.
+		 * \parallel This method should not race, but might behave weirdly if metadata is being
+		 * concurrently modified during printing, as there is no large lock in place. It should be
+		 * used in a context where we can guarantee no concurrent modifications.
 		 * @param os The output stream to print to.
 		 */
 		void prettyPrint(std::ostream& os) const;
