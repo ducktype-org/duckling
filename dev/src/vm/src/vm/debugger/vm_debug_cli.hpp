@@ -40,7 +40,9 @@ namespace vm::debugger {
 	public:
 		using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
 
-		static DuckVMDebugCli get(const fs::File& filepath, const std::vector<std::string>& args = {});
+		static DuckVMDebugCli get(
+			const fs::File& filepath, const std::vector<std::string>& args = {}
+		);
 
 		DuckVMDebugCli(DuckVMDebugCli&&)                 = delete;
 		DuckVMDebugCli& operator=(DuckVMDebugCli&&)      = delete;

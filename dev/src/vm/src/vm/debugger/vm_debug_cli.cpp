@@ -14,7 +14,6 @@
 #include <string>
 #include <variant>
 
-
 namespace vm::debugger {
 	DuckVMDebugCli* DuckVMDebugCli::active_instance = nullptr;
 
@@ -34,8 +33,8 @@ namespace vm::debugger {
 
 	void DuckVMDebugCli::run() {
 		std::cout << "++++++++++++++++++++++++\n"
-					"+   BeRD has started   +\n"
-					"++++++++++++++++++++++++\n";
+					 "+   BeRD has started   +\n"
+					 "++++++++++++++++++++++++\n";
 
 		core.onVmStateChange.addHandler([this](vm::api::ProcStatus status) {
 			std::cout << "\n[VM state changed]\n";
@@ -53,7 +52,7 @@ namespace vm::debugger {
 		core.onVmExecutionPaused.addHandler([this](vm::api::response::CodePosition position) {
 			std::cout << "\n[VM execution paused]\n";
 			std::cout << "Paused on line " << position.instr_number << " of function '"
-					<< position.function_name.strView() << "'\n";
+					  << position.function_name.strView() << "'\n";
 		});
 
 		core.onVmExecutionCompleted.addHandler([this](vm::api::ExitValue exit_value) {
@@ -72,12 +71,12 @@ namespace vm::debugger {
 		int         event_fd = core.getEventPipeReadFD();
 
 		struct pollfd fds[4] = { { .fd = STDIN_FILENO, .events = POLLIN, .revents = 0 },
-					// vm state(status) change
-					{ .fd = event_fd, .events = POLLIN, .revents = 0 },
-					// ctrl-Z handling
-					{ .fd = signal_pipe[0], .events = POLLIN, .revents = 0 },
-					// vm output
-					{ .fd = output_pipe[0], .events = POLLIN, .revents = 0 } };
+			                     // vm state(status) change
+			                     { .fd = event_fd, .events = POLLIN, .revents = 0 },
+			                     // ctrl-Z handling
+			                     { .fd = signal_pipe[0], .events = POLLIN, .revents = 0 },
+			                     // vm output
+			                     { .fd = output_pipe[0], .events = POLLIN, .revents = 0 } };
 
 
 		while (true) {
@@ -98,7 +97,7 @@ namespace vm::debugger {
 				read(event_fd, &byte, 1);
 				core.getStatus();
 			}
-			
+
 			// User typed something
 			if (mode == Mode::Command && fds[0].revents & POLLIN) {
 				if (!std::getline(std::cin, line)) {
@@ -135,7 +134,7 @@ namespace vm::debugger {
 
 	void DuckVMDebugCli::changeMode(vm::api::ProcStatus& status) {
 		auto target = modeFromStatus(status);
-		
+
 		if (mode != target) {
 			mode = target;
 			setSigaction(mode == Mode::Run);
@@ -144,7 +143,7 @@ namespace vm::debugger {
 
 	DuckVMDebugCli::Mode DuckVMDebugCli::modeFromStatus(vm::api::ProcStatus& status) {
 		if (std::holds_alternative<vm::api::Running>(status)
-		|| std::holds_alternative<vm::api::WaitingForInput>(status))
+		    || std::holds_alternative<vm::api::WaitingForInput>(status))
 			return Mode::Run;
 		else
 			return Mode::Command;
@@ -180,19 +179,19 @@ namespace vm::debugger {
 			std::cout << "Stack frames:\n";
 			for (const auto& frame: stack_frames) {
 				std::cout << "  Frame id: " << frame.frame_id
-						<< ", function: " << frame.function_name.strView()
-						<< ", variables reference: " << frame.variables_reference << "\n";
+						  << ", function: " << frame.function_name.strView()
+						  << ", variables reference: " << frame.variables_reference << "\n";
 			}
 		} else if (stripped_line.starts_with("vars ")) {
 			std::string_view vars_arg = stripped_line.substr(5);
 			try {
 				u64  variables_reference = std::stoull(std::string(vars_arg));
 				auto var_infos           = core.dereferenceVariablesReference(variables_reference);
-				std::cout << "Variables:\n";
+				std::cout << "\nVariables:\n";
 				for (const auto& var_info: var_infos) {
-					std::cout << "  Name: " << var_info.name.strView() << ", Value: " << var_info.value
-							<< ", Type: " << var_info.type
-							<< ", variables reference: " << var_info.variables_reference << "\n";
+					std::cout << "  Name: " << var_info.name.strView()
+							  << ", Value: " << var_info.value << ", Type: " << var_info.type
+							  << ", variables reference: " << var_info.variables_reference << "\n";
 				}
 			} catch (const std::exception& e) {
 				std::cout << "Invalid variables reference: \"" << vars_arg << "\"\n";
@@ -203,7 +202,7 @@ namespace vm::debugger {
 			size_t           second_space = set_arg.find(' ', first_space + 1);
 			if (first_space == std::string_view::npos || second_space == std::string_view::npos) {
 				std::cout << "Invalid set command format. Use: set <variables_reference> "
-					"<variable_name> <new_value>\n";
+							 "<variable_name> <new_value>\n";
 				return true;
 			}
 			try {
@@ -214,7 +213,7 @@ namespace vm::debugger {
 				core.editVariable(variables_reference, variable_name, new_value);
 			} catch (const std::exception& e) {
 				std::cout << "Invalid set command format. Use: set <variables_reference> "
-					"<variable_name> <new_value>\n";
+							 "<variable_name> <new_value>\n";
 			}
 		} else
 			std::cout << "Invalid input: \"" << line << "\"\n";
@@ -227,7 +226,7 @@ namespace vm::debugger {
 		sigemptyset(&custom_tstp.sa_mask);
 
 		custom_tstp.sa_handler = enable ? staticHandleTstp : SIG_DFL;
-		custom_tstp.sa_flags = 0;
+		custom_tstp.sa_flags   = 0;
 
 		sigaction(SIGTSTP, &custom_tstp, nullptr);
 	}
@@ -241,11 +240,15 @@ namespace vm::debugger {
 		if (active_instance) active_instance->handleTstp(signo);
 	}
 
-	DuckVMDebugCli DuckVMDebugCli::get(const fs::File& filepath, const std::vector<std::string>& args) {
+	DuckVMDebugCli DuckVMDebugCli::get(
+		const fs::File& filepath, const std::vector<std::string>& args
+	) {
 		return { filepath, args };
 	}
 
-	DuckVMDebugCli::DuckVMDebugCli(): vm_input_stream(), core(DuckVMDebugCore(std::cin, std::cout)) {
+	DuckVMDebugCli::DuckVMDebugCli():
+		  vm_input_stream(),
+		  core(DuckVMDebugCore(std::cin, std::cout)) {
 		active_instance = this;
 
 		if (pipe(signal_pipe) < 0) throw std::runtime_error("Failed to create signal pipe");
@@ -276,13 +279,13 @@ namespace vm::debugger {
 
 	void DuckVMDebugCli::help() const {
 		std::cout << "BeRD Debugger Commands:\n"
-					"  s, step                     - Execute one step in the VM\n"
-					"  run                         - Run the VM until completion\n"
-					"  run <func([args])>          - Run a specific function with arguments\n"
-					"  resume, continue, c         - Resume execution of the VM\n"
-					"  pause                       - Pause execution of the VM\n"
-					"  cp, pos, position           - Show current position\n"
-					"  exit, q, quit               - Exit the debugger\n"
-					"  help, h, ?                  - Show this help message\n";
+					 "  s, step                     - Execute one step in the VM\n"
+					 "  run                         - Run the VM until completion\n"
+					 "  run <func([args])>          - Run a specific function with arguments\n"
+					 "  resume, continue, c         - Resume execution of the VM\n"
+					 "  pause                       - Pause execution of the VM\n"
+					 "  cp, pos, position           - Show current position\n"
+					 "  exit, q, quit               - Exit the debugger\n"
+					 "  help, h, ?                  - Show this help message\n";
 	}
 }

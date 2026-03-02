@@ -16,24 +16,22 @@
 
 namespace vm::debugger {
 
-	template <typename... Args>
+	template<typename... Args>
 	class EventHandle {
 		std::vector<std::function<void(Args...)>> handlers;
 
 	public:
 		void addHandler(std::function<void(Args...)> handler) { handlers.push_back(handler); }
+
 		void handleEvent(Args... args) const {
-			for (const auto& handler : handlers) {
-				handler(args...);
-			}
+			for (const auto& handler: handlers) handler(args...);
 		}
 	};
-
 
 	class DuckVMDebugCore {
 	public:
 		using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
-	
+
 	private:
 		struct CallInfo {
 			std::string       func_name;
@@ -49,12 +47,14 @@ namespace vm::debugger {
 		OwnedArgumentList        arguments;
 
 	public:
-		EventHandle<vm::api::ProcStatus> onVmStateChange;
+		EventHandle<vm::api::ProcStatus>             onVmStateChange;
 		EventHandle<vm::api::response::CodePosition> onVmExecutionPaused;
-		EventHandle<vm::api::ExitValue> onVmExecutionCompleted;
-		EventHandle<std::string> onMessage;
+		EventHandle<vm::api::ExitValue>              onVmExecutionCompleted;
+		EventHandle<std::string> onMessage;  // temporary before we have proper error handling
 
-		static DuckVMDebugCore get(const fs::File& filepath, const std::vector<std::string>& args = {});
+		static DuckVMDebugCore get(
+			const fs::File& filepath, const std::vector<std::string>& args = {}
+		);
 
 		// DuckVMDebugCore(DuckVMDebugCore&&)                 = delete;
 		// DuckVMDebugCore& operator=(DuckVMDebugCore&&)      = delete;
@@ -128,34 +128,42 @@ namespace vm::debugger {
 
 		std::vector<VariableInfo> dereferenceVariablesReference(u64 variables_reference);
 		void                      editVariable(
-								u64 variables_reference, const std::string& variable_name, const std::string& new_value
-							);
+								 u64 variables_reference, const std::string& variable_name, const std::string& new_value
+							 );
 	};
 
 	class DuckVMDebugCoreException: public base::Exception {
 		std::string message;
 
 	public:
-		DuckVMDebugCoreException(std::string message): base::Exception(), message(std::move(message)) {}
+		DuckVMDebugCoreException(std::string message):
+			  base::Exception(),
+			  message(std::move(message)) {}
 
 		[[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
 	};
 
-	#define DEFINE_DEBUG_EXCEPTION(err, msg)                         \
-		struct err: public DuckVMDebugCoreException {                \
-			constexpr static std::string_view ERR_MSG = msg;         \
-			err(): DuckVMDebugCoreException(std::string(ERR_MSG)) {} \
-		}
+#define DEFINE_DEBUG_EXCEPTION(err, msg)                         \
+	struct err: public DuckVMDebugCoreException {                \
+		constexpr static std::string_view ERR_MSG = msg;         \
+		err(): DuckVMDebugCoreException(std::string(ERR_MSG)) {} \
+	}
 
-	DEFINE_DEBUG_EXCEPTION(BeRDFailedToSpawnProcessException, "Failed to spawn the VM process for BeRD.");
+	DEFINE_DEBUG_EXCEPTION(
+		BeRDFailedToSpawnProcessException, "Failed to spawn the VM process for BeRD."
+	);
 	DEFINE_DEBUG_EXCEPTION(
 		BeRDFailedToAttachStreamsException, "Failed to attach streams to the VM process for BeRD."
 	);
-	DEFINE_DEBUG_EXCEPTION(BeRDFailedToJoinProcessException, "Failed to join the VM process for BeRD.");
+	DEFINE_DEBUG_EXCEPTION(
+		BeRDFailedToJoinProcessException, "Failed to join the VM process for BeRD."
+	);
 	DEFINE_DEBUG_EXCEPTION(BeRDFailedToLoadFile, "Failed to load files to the VM process for BeRD.");
 	DEFINE_DEBUG_EXCEPTION(BeRDFailedToPauseVM, "Failed to pause the VM process for BeRD.");
 	DEFINE_DEBUG_EXCEPTION(BeRDFailedToResumeVM, "Failed to resume the VM process for BeRD.");
-	DEFINE_DEBUG_EXCEPTION(BeRDFailedToMakeStep, "Failed to make one step in the VM process for BeRD.");
+	DEFINE_DEBUG_EXCEPTION(
+		BeRDFailedToMakeStep, "Failed to make one step in the VM process for BeRD."
+	);
 	DEFINE_DEBUG_EXCEPTION(BeRDFailedToRunCodeException, "Failed to run code in BeRD.");
 	DEFINE_DEBUG_EXCEPTION(BeRDWrongTypeException, "BeRD encountered a different type than 'i64'");
 	DEFINE_DEBUG_EXCEPTION(BeRDFailedToCreateAVmValue, "Failed to create a VmValue for arguments.");

@@ -9,7 +9,6 @@
 #include <string>
 #include <variant>
 
-
 namespace vm::debugger {
 	namespace {
 		Box<vm::VmValue> getIntVmValue(const vm::PID pid, const i64 value) {
@@ -36,7 +35,7 @@ namespace vm::debugger {
 		 */
 		vm::FunctionRunArguments createArgumentList(DuckVMDebugCore::OwnedArgumentList& arguments) {
 			return arguments | std::views::transform([](auto& value) { return value.refMut(); })
-			| std::ranges::to<vm::FunctionRunArguments>();
+			     | std::ranges::to<vm::FunctionRunArguments>();
 		}
 
 		void freeArguments(const DuckVMDebugCore::OwnedArgumentList& arguments) {
@@ -44,7 +43,9 @@ namespace vm::debugger {
 		}
 	}
 
-	DuckVMDebugCore DuckVMDebugCore::get(const fs::File& filepath, const std::vector<std::string>& args) {
+	DuckVMDebugCore DuckVMDebugCore::get(
+		const fs::File& filepath, const std::vector<std::string>& args
+	) {
 		return { filepath, args };
 	}
 
@@ -60,7 +61,7 @@ namespace vm::debugger {
 	}
 
 	DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args):
-		DuckVMDebugCore(std::cin, std::cout, filepath, args) {}
+		  DuckVMDebugCore(std::cin, std::cout, filepath, args) {}
 
 	DuckVMDebugCore::DuckVMDebugCore(
 		std::istream&                   vm_input_stream,
@@ -68,7 +69,7 @@ namespace vm::debugger {
 		const fs::File&                 filepath,
 		const std::vector<std::string>& args
 	):
-		debug_args(args) {
+		  debug_args(args) {
 		if (pipe(event_pipe) < 0) throw std::runtime_error("Failed to create event pipe");
 		const auto process_pid_response = vm::api::spawn(event_pipe[1]);
 		if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
@@ -81,10 +82,10 @@ namespace vm::debugger {
 	void DuckVMDebugCore::runVm() {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value()
-		&& (!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
-			&& !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
-			onMessage.handleEvent("You have to finish execution to run VM.\n");
-			getStatus();
+		    && (!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
+		        && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
+			onMessage.handleEvent("You have to finish execution to run VM.");
+			// getStatus();
 			return;
 		}
 		if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
@@ -98,14 +99,14 @@ namespace vm::debugger {
 		const u64 paren_close = string.rfind(')');
 
 		if (paren_open == std::string::npos || paren_close == std::string::npos
-		|| paren_close <= paren_open) {
-			std::cerr << "Error: Invalid function call -> ')' appeared before '('\n";
+		    || paren_close <= paren_open) {
+			onMessage.handleEvent("Error: Invalid function call -> ')' appeared before '('");
 			return;
 		}
 
 		const std::string function_name = strip(string.substr(0, paren_open));
 		if (function_name.empty()) {
-			std::cerr << "Error: Invalid function call -> function name is empty\n";
+			onMessage.handleEvent("Error: Invalid function call -> function name is empty");
 			return;
 		}
 
@@ -128,7 +129,7 @@ namespace vm::debugger {
 			try {
 				if (!arg.empty()) arguments.push_back(getIntVmValue(pid, std::stoll(arg)));
 			} catch (const std::exception& _) {
-				onMessage.handleEvent("Error: Invalid argument '" + arg + "' - must be integer\n");
+				onMessage.handleEvent("Error: Invalid argument '" + arg + "' - must be integer");
 				return;
 			}
 			start = end + 1;
@@ -136,10 +137,10 @@ namespace vm::debugger {
 
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value()
-		&& (!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
-			&& !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
-			onMessage.handleEvent("You have to finish execution and get exit value.\n");
-			getStatus();
+		    && (!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
+		        && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
+			onMessage.handleEvent("You have to finish execution and get exit value.");
+			// getStatus();
 			return;
 		}
 		if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
@@ -177,7 +178,7 @@ namespace vm::debugger {
 			return status;
 		} else {
 			const vm::api::ApiError& err = response.error();
-			onMessage.handleEvent("error: " + vm::api::errorToString(err) + "\n");
+			onMessage.handleEvent("error: " + vm::api::errorToString(err));
 			// TODO: change it for sth better
 			return vm::api::Paused();
 		}
@@ -186,7 +187,7 @@ namespace vm::debugger {
 	void DuckVMDebugCore::step() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
-			onMessage.handleEvent("Not paused program - make sure you started it.\n");
+			onMessage.handleEvent("Not paused program - make sure you started it.");
 			return;
 		}
 		if (!vm::api::step(pid)) throw BeRDFailedToMakeStep();
@@ -195,7 +196,7 @@ namespace vm::debugger {
 	void DuckVMDebugCore::resume() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
-			onMessage.handleEvent("Not paused program - make sure you started it.\n");
+			onMessage.handleEvent("Not paused program - make sure you started it.");
 			return;
 		}
 		if (!vm::api::resume(pid)) throw BeRDFailedToResumeVM();
@@ -204,7 +205,7 @@ namespace vm::debugger {
 	void DuckVMDebugCore::pause() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !vm::api::isExecuting(response.value())) {
-			onMessage.handleEvent("Not running program right now - make sure you started it.\n");
+			onMessage.handleEvent("Not running program right now - make sure you started it.");
 			return;
 		}
 		if (!vm::api::pause(pid)) throw BeRDFailedToPauseVM();
@@ -213,7 +214,7 @@ namespace vm::debugger {
 	void DuckVMDebugCore::stop() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !vm::api::isExecuting(response.value())) {
-			onMessage.handleEvent("Not running program right now - make sure you started it.\n");
+			onMessage.handleEvent("Not running program right now - make sure you started it.");
 			return;
 		}
 		if (!vm::api::stop(pid)) throw BeRDFailedToPauseVM();
@@ -222,11 +223,12 @@ namespace vm::debugger {
 	void DuckVMDebugCore::getCurrentPosition() const {
 		auto response = vm::api::getExecutionStatus(pid);
 		if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
-			onMessage.handleEvent("Not paused program - make sure you started it.\n");
+			onMessage.handleEvent("Not paused program - make sure you started it.");
 			return;
 		}
 		auto position_response = vm::api::getCurrentPosition(pid);
-		if (!position_response.has_value()) throw std::runtime_error("Failed to get current position");
+		if (!position_response.has_value())
+			throw std::runtime_error("Failed to get current position");
 		vm::api::response::CodePosition position = position_response.value();
 		onVmExecutionPaused.handleEvent(position);
 	}
@@ -246,14 +248,14 @@ namespace vm::debugger {
 				return;
 			}
 
-			std::cout << "Frame " << frame_index << " (" << response_sfv.value().function_name.strView()
-					<< ")\n";
+			std::cout << "Frame " << frame_index << " ("
+					  << response_sfv.value().function_name.strView() << ")\n";
 
 			auto vars = response_sfv.value().frame_vars;
 			for (auto& var: vars) {
-				std::cout << "\t+ 0x" << std::hex << var.offset << " aka. " << std::dec << var.offset
-						<< " <" << var.type->getName().strView() << "> [size: 0x" << std::hex
-						<< var.type->getSize() << std::dec << "]:";
+				std::cout << "\t+ 0x" << std::hex << var.offset << " aka. " << std::dec
+						  << var.offset << " <" << var.type->getName().strView() << "> [size: 0x"
+						  << std::hex << var.type->getSize() << std::dec << "]:";
 				auto response_pd
 					= vm::api::debuggerGetPointerData(pid, var.pointer, var.type->getSize());
 				if (!response_pd.has_value()) {
@@ -299,7 +301,7 @@ namespace vm::debugger {
 				default:
 					for (u64 i = 0; i < var_data_view.size(); i++) {
 						std::cout << " 0x" << std::hex << std::setfill('0') << std::setw(2)
-								<< std::to_integer<u64>(var_data_view.getBegin()[i]);
+								  << std::to_integer<u64>(var_data_view.getBegin()[i]);
 					}
 					std::cout << std::dec << "\n";
 					break;
@@ -317,7 +319,7 @@ namespace vm::debugger {
 	std::vector<DuckVMDebugCore::StackFrameInfo> DuckVMDebugCore::enumerateFrames(u64 thread_id) {
 		auto response_nosf = vm::api::debuggerGetNumberOfStackFrames(pid);
 		if (!response_nosf.has_value()) {
-			std::cerr << "get number of stack frames error";
+			onMessage.handleEvent("get number of stack frames error");
 			return {};
 		}
 
@@ -326,7 +328,7 @@ namespace vm::debugger {
 		for (u64 frame_index = 0; frame_index < number_of_stack_frames; frame_index++) {
 			auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, frame_index);
 			if (!response_sfv.has_value()) {
-				std::cerr << "get number of stack frames error";
+				onMessage.handleEvent("get stack frame vars error");
 				return {};
 			}
 
@@ -336,24 +338,24 @@ namespace vm::debugger {
 				enumerated_variables_references.end(),
 				[thread_id, frame_index](const VariablesReference& vr) {
 					return std::holds_alternative<StackFrameHook>(vr.vr)
-					&& std::get<StackFrameHook>(vr.vr).thread_id == thread_id
-					&& std::get<StackFrameHook>(vr.vr).frame_id == frame_index;
+				        && std::get<StackFrameHook>(vr.vr).thread_id == thread_id
+				        && std::get<StackFrameHook>(vr.vr).frame_id == frame_index;
 				}
 			);
 
 			if (it != enumerated_variables_references.end()) {
 				frames_info.push_back(StackFrameInfo{ .frame_id = frame_index,
-								.function_name
-								= response_sfv.value().function_name,
-								.variables_reference = it->id });
+				                                      .function_name
+				                                      = response_sfv.value().function_name,
+				                                      .variables_reference = it->id });
 			} else {
 				u64 variables_reference
 					= enumerated_variables_references.size();  // TODO: rethink numerating
 
 				frames_info.push_back(StackFrameInfo{ .frame_id = frame_index,
-								.function_name
-								= response_sfv.value().function_name,
-								.variables_reference = variables_reference });
+				                                      .function_name
+				                                      = response_sfv.value().function_name,
+				                                      .variables_reference = variables_reference });
 
 				enumerated_variables_references.push_back(VariablesReference{
 					.id = variables_reference,
@@ -366,7 +368,7 @@ namespace vm::debugger {
 	std::string valueToString(const vm::PID pid, const vm::Pointer pointer, const vm::TypeCRef type) {
 		auto response_pd = vm::api::debuggerGetPointerData(pid, pointer, type->getSize());
 		if (!response_pd.has_value()) {
-			std::cerr << "get pointer data error";
+			// onMessage.handleEvent("get pointer data error");
 			return "<error>";
 		}
 		base::ModRawView var_data_view = response_pd.value().data;
@@ -409,7 +411,9 @@ namespace vm::debugger {
 		auto it = std::find_if(
 			enumerated_variables_references.begin(),
 			enumerated_variables_references.end(),
-			[variables_reference](const VariablesReference& vr) { return vr.id == variables_reference; }
+			[variables_reference](const VariablesReference& vr) {
+				return vr.id == variables_reference;
+			}
 		);
 
 		if (it == enumerated_variables_references.end())
@@ -437,23 +441,28 @@ namespace vm::debugger {
 					enumerated_variables_references.end(),
 					[&var](const VariablesReference& vr) {
 						return std::holds_alternative<VariableHook>(vr.vr)
-						&& std::get<VariableHook>(vr.vr).pointer == var.pointer
-						&& std::get<VariableHook>(vr.vr).type == var.type;
+					        && std::get<VariableHook>(vr.vr).pointer == var.pointer
+					        && std::get<VariableHook>(vr.vr).type == var.type;
 					}
 				);
 
 				if (existing_vr == enumerated_variables_references.end()) {
 					var_ref = enumerated_variables_references.size();  // TODO: rethink numerating
 					enumerated_variables_references.push_back(VariablesReference{
-						.id = var_ref, .vr = VariableHook{ .pointer = var.pointer, .type = var.type } });
-					std::cerr << "Created new variables reference " << var_ref
-							<< " for variable at offset 0x" << std::hex << var.offset << std::dec
-							<< " of type " << var.type->getName().strView() << "\n";
+						.id = var_ref,
+						.vr = VariableHook{ .pointer = var.pointer, .type = var.type } });
+					std::stringstream ss;
+					ss << "Created new variables reference " << var_ref
+					   << " for variable at offset 0x" << std::hex << var.offset << std::dec
+					   << " of type " << var.type->getName().strView();
+					onMessage.handleEvent(ss.str());
 				} else {
 					var_ref = existing_vr->id;
-					std::cerr << "Reusing existing variables reference " << var_ref
-							<< " for variable at offset 0x" << std::hex << var.offset << std::dec
-							<< " of type " << var.type->getName().strView() << "\n";
+					std::stringstream ss;
+					ss << "Reusing existing variables reference " << var_ref
+					   << " for variable at offset 0x" << std::hex << var.offset << std::dec
+					   << " of type " << var.type->getName().strView();
+					onMessage.handleEvent(ss.str());
 				}
 				break;
 			}
@@ -465,7 +474,7 @@ namespace vm::debugger {
 			variant_case(StackFrameHook, hook) {
 				auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, hook.frame_id);
 				if (!response_sfv.has_value()) {
-					std::cerr << "get stack frame vars error";
+					onMessage.handleEvent("get stack frame vars error");
 					return {};
 				}
 
@@ -482,7 +491,7 @@ namespace vm::debugger {
 				throw std::runtime_error("Dereferencing variable hook is not implemented yet");
 			}
 			variant_case_novalue(VariablesReference::Nothing) {
-				std::cerr << "This variables reference does not refer to anything\n";
+				onMessage.handleEvent("This variables reference does not refer to anything\n");
 				return {};
 			}
 		}
@@ -497,7 +506,9 @@ namespace vm::debugger {
 		auto it = std::find_if(
 			enumerated_variables_references.begin(),
 			enumerated_variables_references.end(),
-			[variables_reference](const VariablesReference& vr) { return vr.id == variables_reference; }
+			[variables_reference](const VariablesReference& vr) {
+				return vr.id == variables_reference;
+			}
 		);
 		if (it == enumerated_variables_references.end())
 			throw std::runtime_error("Invalid variables reference");
@@ -507,7 +518,7 @@ namespace vm::debugger {
 				// find variable with given name in this frame
 				auto response_sfv = vm::api::debuggerGetStackFrameVars(pid, hook.frame_id);
 				if (!response_sfv.has_value()) {
-					std::cerr << "get stack frame vars error";
+					onMessage.handleEvent("get stack frame vars error");
 					return;
 				}
 				auto var_it = std::find_if(
@@ -518,16 +529,19 @@ namespace vm::debugger {
 					}
 				);
 				if (var_it == response_sfv.value().frame_vars.end()) {
-					std::cerr << "Variable with name '" << variable_name
-							<< "' not found in this frame\n";
+					onMessage.handleEvent(
+						"Variable with name '" + variable_name + "' not found in this frame\n"
+					);
 					return;
 				}
 
 				// currently only supports editing primitive types by rewriting their bytes
 				auto& var = *var_it;
 				if (var.type->getKind() != vm::Type::Kind::Primitive) {
-					std::cerr << "Editing variable of type '" << var.type->getName().strView()
-							<< "' is not supported yet\n";
+					onMessage.handleEvent(
+						"Editing variable of type '" + var.type->getName().str()
+						+ "' is not supported yet\n"
+					);
 					return;
 				}
 
@@ -535,7 +549,7 @@ namespace vm::debugger {
 				auto response_pd
 					= vm::api::debuggerGetPointerData(pid, var.pointer, var.type->getSize());
 				if (!response_pd.has_value()) {
-					std::cerr << "get pointer data error";
+					onMessage.handleEvent("get pointer data error");
 					return;
 				}
 				base::ModRawView var_data_view = response_pd.value().data;
@@ -555,16 +569,18 @@ namespace vm::debugger {
 						u64 value = static_cast<u64>(std::stoull(new_value));
 						std::memcpy(var_data_view.getBegin(), &value, 8);
 					} else {
-						std::cerr << "Unsupported primitive type size: " << var.type->getSize() << "\n";
+						onMessage.handleEvent(
+							"Unsupported primitive type size: " + std::to_string(var.type->getSize())
+						);
 						return;
 					}
 				} catch (const std::exception& e) {
-					std::cerr << "Failed to parse new value: " << e.what() << "\n";
+					onMessage.handleEvent("Failed to parse new value: " + std::string(e.what()));
 					return;
 				}
 			}
 			variant_default {
-				std::cerr << "Editing variable hook is not implemented yet\n";
+				onMessage.handleEvent("Editing variable hook is not implemented yet");
 				return;
 			}
 		}
