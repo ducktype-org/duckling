@@ -6,7 +6,10 @@ use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
         Dependency, FeatureName, Manifest,
-        gathering::{fetch_types::FetchResult, gatherer::Gatherer},
+        gathering::{
+            fetch_types::{FetchResponse, FetchSuccess},
+            gatherer::Gatherer,
+        },
         git_access::GitAccess,
         solver_freeze::{SolverFreeze, SolverPackageFreeze},
         types_common::ExpandedPackage,
@@ -19,6 +22,7 @@ impl SolverFreeze {
     pub async fn get_prev_freeze_manifests<'duck, GitAccessImpl: GitAccess>(
         &self,
         gatherer: &'duck Gatherer<'duck, GitAccessImpl>,
+        offline: bool,
     ) -> QuackResult<HashMap<ExpandedPackage, Box<Manifest>>> {
         let mut tasks = vec![];
         for pkg in self.package_freezes.keys() {
@@ -26,23 +30,23 @@ impl SolverFreeze {
                 continue;
             }
             if let Ok(request) = pkg.create_manifest_request() {
-                tasks.push(Box::pin(gatherer.fetch(request)));
+                tasks.push(Box::pin(gatherer.fetch(request, offline)));
             }
         }
         let results = join_all(tasks).await;
         let mut manifests = HashMap::new();
-        for fetch_result in results {
-            let fetch_result = fetch_result?;
-            if let Some(fetch_result) = fetch_result.0 {
-                match fetch_result {
-                    FetchResult::Pinned(pinned_result) => {
+        for fetch_response in results {
+            let fetch_response = fetch_response?;
+            if let FetchResponse::Success(success_response) = fetch_response.0 {
+                match success_response {
+                    FetchSuccess::Pinned(pinned_success) => {
                         manifests.insert(
-                            pinned_result.expanded_package,
-                            pinned_result.fetched_manifest,
+                            pinned_success.expanded_package,
+                            pinned_success.fetched_manifest,
                         );
                     }
-                    FetchResult::NotPinned(not_pinned_result) => {
-                        manifests.extend(not_pinned_result.fetched_manifests);
+                    FetchSuccess::NotPinned(not_pinned_success) => {
+                        manifests.extend(not_pinned_success.fetched_manifests);
                     }
                 }
             }
@@ -61,7 +65,7 @@ impl SolverFreeze {
     pub fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
-    ) -> QuackResult<Self> {
+    ) -> QuackResult<(Self, bool)> {
         self.retain_not_flawed_pkgs(manifests)?;
         self.substitute_root_pkg(manifests)
     }
@@ -222,7 +226,7 @@ impl SolverFreeze {
     fn substitute_root_pkg(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
-    ) -> QuackResult<Self> {
+    ) -> QuackResult<(Self, bool)> {
         let main_pkg_freeze = self
             .package_freezes
             .get(&self.main_pkg)
@@ -248,13 +252,18 @@ impl SolverFreeze {
         main_pkg_freeze
             .dependencies_realization
             .retain(|alias, _| still_satisfied_root_deps.contains(alias));
+        let all_main_pkg_deps_satisfied = main_manifest
+            .dependencies()
+            .all_dependencies()
+            .keys()
+            .all(|alias| main_pkg_freeze.dependencies_realization.contains_key(alias));
         // Change the previous main package to the new root package.
         let main_pkg_freeze = self
             .package_freezes
             .remove(&self.main_pkg)
             .context_internal("Main package was not put into package freezes")?;
         self.package_freezes.insert(self.main_pkg, main_pkg_freeze);
-        Ok(self)
+        Ok((self, all_main_pkg_deps_satisfied))
     }
 }
 
@@ -355,7 +364,7 @@ features:
             ]),
             main_pkg: exp_pkg_a,
         };
-        let new_freeze = prev_freeze
+        let (new_freeze, _) = prev_freeze
             .clone()
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
@@ -428,7 +437,7 @@ metadata:
             ]),
             main_pkg: exp_pkg_a,
         };
-        let new_freeze = prev_freeze
+        let (new_freeze, _) = prev_freeze
             .clone()
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
@@ -520,7 +529,7 @@ metadata:
             ]),
             main_pkg: exp_pkg_a,
         };
-        let new_freeze = prev_freeze
+        let (new_freeze, _) = prev_freeze
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
@@ -638,7 +647,7 @@ metadata:
             ]),
             main_pkg: exp_pkg_a,
         };
-        let new_freeze = prev_freeze
+        let (new_freeze, _) = prev_freeze
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();

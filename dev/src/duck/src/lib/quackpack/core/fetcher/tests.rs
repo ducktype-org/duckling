@@ -201,18 +201,27 @@ mod private {
         let server = create_mock_server().await;
         let fetcher = Fetcher::new(&ctx).unwrap();
         let response = fetcher
-            .get_package_all_metadata(&server.uri().parse().unwrap(), "foo".into())
+            .get_package_all_metadata(&server.uri().parse().unwrap(), "foo".into(), false)
             .await
             .unwrap();
+        let FetcherResponse::Some(response) = response else {
+            panic!("Offline response with offline flag not present");
+        };
         assert_eq!(response.packages_metadata.len(), 2);
-        let fetched_from_cache = fetcher
-            .get_package_metadata(&types::PackageWithUrl {
-                id: "foo".into(),
-                version: Version::new(1, 2, 5),
-                url: server.uri().parse().unwrap(),
-            })
+        let FetcherResponse::Some(fetched_from_cache) = fetcher
+            .get_package_metadata(
+                &types::PackageWithUrl {
+                    id: "foo".into(),
+                    version: Version::new(1, 2, 5),
+                    url: server.uri().parse().unwrap(),
+                },
+                true,
+            )
             .await
-            .unwrap();
+            .unwrap()
+        else {
+            panic!("Offline response when metadata should be present in cache");
+        };
         assert_eq!(fetched_from_cache.metadata.name, "foo");
         assert_eq!(fetched_from_cache.metadata.version, Version::new(1, 2, 5));
     }
@@ -221,11 +230,14 @@ mod private {
         let server = create_mock_server().await;
         let fetcher = Fetcher::new(&ctx).unwrap();
         let err = fetcher
-            .get_package_metadata(&types::PackageWithUrl {
-                id: "foo".into(),
-                version: Version::new(1, 2, 5),
-                url: server.uri().parse().unwrap(),
-            })
+            .get_package_metadata(
+                &types::PackageWithUrl {
+                    id: "foo".into(),
+                    version: Version::new(1, 2, 5),
+                    url: server.uri().parse().unwrap(),
+                },
+                false,
+            )
             .await
             .unwrap_err();
         assert_eq!(

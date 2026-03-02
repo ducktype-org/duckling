@@ -1,5 +1,12 @@
-use crate::{DuckCtx, QuackResult, qp_bail};
+use crate::{
+    DuckCtx, QpCtx, QuackResult,
+    quackpack::core::{
+        AllowGlobalPackage, PackageLoader,
+        storage::{SyncOptions, sync},
+    },
+};
 use clap::{ArgMatches, Command};
+use tokio::runtime;
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
 
@@ -21,6 +28,25 @@ pub fn get_parser() -> Command {
         )
 }
 
-pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
-    qp_bail!("implement sync")
+pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
+    let qp_ctx = QpCtx::new(ctx);
+    let pkg = if matches.get_flag("global") {
+        PackageLoader::global_package(&qp_ctx)?
+    } else {
+        PackageLoader::find_from_cwd(&qp_ctx, AllowGlobalPackage::No)?
+    };
+    let rt = runtime::Builder::new_multi_thread().enable_all().build()?;
+    rt.block_on(async {
+        sync(
+            ctx,
+            &pkg,
+            SyncOptions {
+                overwrite: true,
+                frozen: false,
+                offline: false,
+                strict_errors: false,
+            },
+        )
+    })?;
+    Ok(())
 }

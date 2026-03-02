@@ -6,7 +6,13 @@ use url::Url;
 
 use crate::{
     DuckCtx, QpCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::{core::Git, schemas::registry},
+    quackpack::{
+        core::{
+            Git,
+            fetcher::types::{FetcherResponse, PackageWithUrl},
+        },
+        schemas::registry,
+    },
     util_common::path_ops_ext::{MkdirOptions, PathOpsExt},
 };
 
@@ -71,19 +77,23 @@ impl<'duck> Fetcher<'duck> {
     pub async fn get_package_metadata(
         &self,
         package: &types::PackageWithUrl,
-    ) -> QuackResult<registry::Manifest> {
+        offline: bool,
+    ) -> QuackResult<FetcherResponse<registry::Manifest>> {
         let span = span!(Level::DEBUG, "metadata", package = ?package);
         let _guard = span.enter();
         if let Some(cached) = self.cache.get_manifest(package).await? {
             debug!("cache hit");
-            return Ok(cached);
+            return Ok(FetcherResponse::Some(cached));
         }
         debug!("cache miss");
+        if offline {
+            return Ok(FetcherResponse::Offline);
+        }
         let result = self.ducknest_client.get_exact_metadata(package).await?;
         self.cache
             .add_or_replace_manifest(package, result.clone())
             .await?;
-        Ok(result)
+        Ok(FetcherResponse::Some(result))
     }
 
     /// Retrieve metadata for all versions of a `package_name` from a given Ducknest instance at
@@ -95,9 +105,21 @@ impl<'duck> Fetcher<'duck> {
         &self,
         url: &Url,
         package_name: StrId,
-    ) -> QuackResult<types::MultiMetadata> {
+        offline: bool,
+    ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         let span = span!(Level::DEBUG, "all metadata", package = %package_name, url = %url);
         let _guard = span.enter();
+        if offline {
+            let package = PackageWithUrl {
+                id: package_name,
+                version: 1.into(),
+                url: url.clone(),
+            };
+            let cached = self.cache.get_all_manifests(&package).await?;
+            return Ok(FetcherResponse::Some(types::MultiMetadata {
+                packages_metadata: cached,
+            }));
+        }
         let result = self
             .ducknest_client
             .get_multi_metadata(url, package_name)
@@ -105,7 +127,7 @@ impl<'duck> Fetcher<'duck> {
         self.cache
             .add_or_replace_multiple_manifests(url.clone(), result.packages_metadata.clone())
             .await?;
-        Ok(result)
+        Ok(FetcherResponse::Some(result))
     }
 
     /// Fetch a source of a `package`. Returns a path to the file where the blob has been saved.

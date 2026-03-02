@@ -178,9 +178,10 @@ mod private {
     use crate::{
         QpCtx,
         quackpack::core::{
-            PackageCtx, Solver, SolverMode,
+            PackageCtx, ShouldRunSolverEngine, Solver,
             fetcher::Fetcher,
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
+            solver_mode::SolverMode,
             types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
         },
     };
@@ -262,12 +263,15 @@ dependencies:
             .into(),
         };
 
-        let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Strict);
-        solver = solver
+        let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
+        let ShouldRunSolverEngine::Yes(solver) = solver
             .prepare_solving(Arc::new(Mutex::new(MockGitAccess())))
             .await
-            .unwrap();
-        let new_freeze = solver.solve().unwrap().0;
+            .unwrap()
+        else {
+            panic!()
+        };
+        let new_freeze = solver.solve().unwrap().new_freeze;
         assert!(new_freeze.main_pkg == root_pkg);
         assert!(
             new_freeze.package_freezes
@@ -377,15 +381,17 @@ dependencies:
             .into(),
         };
 
-        let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Strict);
-        solver = solver
+        let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
+        let ShouldRunSolverEngine::No(answer) = solver
             .prepare_solving(Arc::new(Mutex::new(MockGitAccess())))
             .await
-            .unwrap();
-        let new_freeze = solver.solve().unwrap().0;
-        assert!(new_freeze.main_pkg == root_pkg);
+            .unwrap()
+        else {
+            panic!()
+        };
+        assert!(answer.new_freeze.main_pkg == root_pkg);
         assert!(
-            new_freeze.package_freezes
+            answer.new_freeze.package_freezes
                 == [
                     (
                         root_pkg,
@@ -478,12 +484,20 @@ dependencies:
             .into(),
         };
 
-        let mut solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::Merciful);
-        solver = solver
+        let mode = SolverMode {
+            supress_foreign_manifests_errors: true,
+            offline: false,
+            frozen: false,
+        };
+        let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, mode);
+        let ShouldRunSolverEngine::Yes(solver) = solver
             .prepare_solving(Arc::new(Mutex::new(MockGitAccess())))
             .await
-            .unwrap();
-        let new_freeze = solver.solve().unwrap().0;
+            .unwrap()
+        else {
+            panic!()
+        };
+        let new_freeze = solver.solve().unwrap().new_freeze;
         assert!(new_freeze.main_pkg == root_pkg);
         assert!(
             new_freeze.package_freezes
