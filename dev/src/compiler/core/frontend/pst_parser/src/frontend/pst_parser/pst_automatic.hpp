@@ -113,7 +113,10 @@ namespace pst {
 		PSTAutomatic& one(tpc::Keyword* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isKeyword()) {
-				state.logInt(makeBox<tpc::NoKeywordError>(state.getPosition()), state.ctokens().peek().describe());
+				state.logInt(
+					makeBox<tpc::NoKeywordError>(state.getPosition()),
+					state.ctokens().peek().describe()
+				);
 				*result = Keyword::NotAKeyword;
 				return *this;
 			}
@@ -129,7 +132,10 @@ namespace pst {
 		PSTAutomatic& one(tpc::Identifier* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+				state.logInt(
+					makeBox<tpc::NoIdentifierError>(state.getPosition()),
+					state.ctokens().peek().describe()
+				);
 				result->value = base::StrID("<error>");
 				return *this;
 			}

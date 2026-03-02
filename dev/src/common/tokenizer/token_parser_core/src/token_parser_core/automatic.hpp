@@ -104,7 +104,9 @@ namespace tpc {
 		void one(Identifier* result, bool ignorable = false) {
 			result->position = state.getPosition();
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.logInt(makeBox<NoIdentifierError>(state.getPosition(), state.ctokens().peek().describe()));
+				state.logInt(makeBox<NoIdentifierError>(
+					state.getPosition(), state.ctokens().peek().describe()
+				));
 				result->value = base::StrID("<error>");
 				if (!ignorable) state.tokens().next();
 				return;
@@ -242,10 +244,12 @@ namespace tpc {
 
 	class NoIdentifierError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "no_identifier", };
+			return {
+				.template_type = "message",
+				.type          = "error",
+				.family        = "parser",
+				.name          = "no_identifier",
+			};
 		}
 
 	public:
@@ -254,10 +258,12 @@ namespace tpc {
 
 	class NoKeywordError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "no_keyword", };
+			return {
+				.template_type = "message",
+				.type          = "error",
+				.family        = "parser",
+				.name          = "no_keyword",
+			};
 		}
 
 	public:

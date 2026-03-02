@@ -14,21 +14,36 @@
 namespace lexer {
 	std::string Token::typeToStr(Type type) {
 		switch (type) {
-			case Type::Keyword:        return "Keyword";
-			case Type::Identifier:     return "Identifier";
-			case Type::NumLiteral:     return "NumLiteral";
-			case Type::NumLiteralGroup:return "NumLiteralGroup";
-			case Type::TypeSpecifier:  return "TypeSpecifier";
-			case Type::String:         return "String";
-			case Type::Char:           return "Char";
-			case Type::FormattedString:return "FormattedString";
-			case Type::BracketGroup:   return "BracketGroup";
-			case Type::Operator:       return "Operator";
-			case Type::Comment:        return "Comment";
-			case Type::Special:        return "Special";
-			case Type::Empty:          return "Empty";
-			case Type::Sentinel:       return "Sentinel";
-			case Type::Error:          return "Error";
+		case Type::Keyword:
+			return "Keyword";
+		case Type::Identifier:
+			return "Identifier";
+		case Type::NumLiteral:
+			return "NumLiteral";
+		case Type::NumLiteralGroup:
+			return "NumLiteralGroup";
+		case Type::TypeSpecifier:
+			return "TypeSpecifier";
+		case Type::String:
+			return "String";
+		case Type::Char:
+			return "Char";
+		case Type::FormattedString:
+			return "FormattedString";
+		case Type::BracketGroup:
+			return "BracketGroup";
+		case Type::Operator:
+			return "Operator";
+		case Type::Comment:
+			return "Comment";
+		case Type::Special:
+			return "Special";
+		case Type::Empty:
+			return "Empty";
+		case Type::Sentinel:
+			return "Sentinel";
+		case Type::Error:
+			return "Error";
 		}
 		CORE_UNREACHABLE();
 	}
