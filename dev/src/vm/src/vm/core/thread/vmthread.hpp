@@ -14,6 +14,11 @@
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
+#ifdef ENABLE_JIT
+	#include <vm/core/jit/jit_compiler.hpp>
+#endif
+
+
 #include <atomic>
 #include <condition_variable>
 #include <expected>
@@ -131,6 +136,10 @@ namespace vm {
 		 * @todo rewrite this to C++ futures
 		 */
 		BlockingQueue<api::ProcStatus> execution_response_queue;
+
+#ifdef ENABLE_JIT
+		jit::JitData jit_data;
+#endif
 
 		bool waitForBreakpointResponse();
 

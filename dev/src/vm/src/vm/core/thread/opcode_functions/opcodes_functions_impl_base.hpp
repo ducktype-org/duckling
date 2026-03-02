@@ -364,19 +364,13 @@ namespace vm {
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
-			struct JitData {
-				JitOpFun* func_ptr          = nullptr;
-				uint      until_compilation = 1;
-			};
+			auto& jit_data = thread.jit_data;
+			auto  func_id  = instr->arg0;
 
-			static std::vector<JitData>
-				jit_data;                //@TODO: #2126 move this to thread? couldn't as thead
-			                             // does not know the execution style
-
-			auto func_id = instr->arg0;  // @TODO: #2126 manage the size when inserting new code
+			// @TODO: #2126 manage the size when inserting new code
 			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
 
-			JitData& my_data = jit_data[func_id];
+			jit::JitFuncData& my_data = jit_data[func_id];
 
 			auto run_compiled = [&]() {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
@@ -395,7 +389,7 @@ namespace vm {
 				const low::LowFuncData& current_function
 					= thread.executing_program->getFunctions()[func_id];
 
-				JitOpFun* compiled = compileJit(current_function);
+				jit::JitOpFun* compiled = jit::compileLLVM(current_function);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;

@@ -6,10 +6,25 @@
 #pragma once
 
 #include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>  // maybe remove this dependency?
 
-namespace vm {
+namespace vm::jit {
 	using JitOpFun = void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::VMThread*);
-}
 
-vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data);
+	/**
+	 * @brief The data additionally stored per function, by the JIT compiler.
+	 */
+	struct JitFuncData {
+		JitOpFun* func_ptr          = nullptr;
+		uint      until_compilation = 1;
+	};
+
+	/**
+	 * @brief The data additionally stored by the JIT compiler.
+	 */
+	using JitData = std::vector<JitFuncData>;
+
+	/**
+	 * @brief Compile the function on the C2, LLVM-based compiler.
+	 */
+	JitOpFun* compileLLVM(const vm::low::LowFuncData& func_data);
+}
