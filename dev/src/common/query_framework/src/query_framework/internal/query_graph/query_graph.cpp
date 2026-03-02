@@ -385,7 +385,7 @@ namespace query::internal {
 			// rev_deps(A) = {B}
 			// rev_deps(D) = {B}
 
-			// Some input's may have no dependencies at all when in Language Server mode (e.g. no
+			// Some inputs may have no dependencies at all when in Language Server mode (e.g. no
 			// queries were executed between reparsings).
 			if_opt_some(node_deps->atMaybe(node), node_deps_children_data) {
 				auto removed_node_deps = node_deps_children_data->getHolder();

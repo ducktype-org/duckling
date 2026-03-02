@@ -9,7 +9,7 @@ namespace query {
 
 	/**
 	 * @brief This flag is used to track the reverse graph of dependencies in the QueryGraph.
-	 * It is used by the Langauge Server to find the dependent nodes of a given node and invalidate
+	 * It is used by the Language Server to find the dependent nodes of a given node and invalidate
 	 * them without having to traverse the whole graph.
 	 */
 	extern constinit bool track_reverse_graph;

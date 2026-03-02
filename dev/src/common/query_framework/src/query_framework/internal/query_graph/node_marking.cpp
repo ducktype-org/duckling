@@ -16,9 +16,11 @@ namespace query::internal {
 	 * inputs and call corresponding callbacks.
 	 *
 	 * @param present_callback Function to call when an input is present in the new inputs.
-	 * @param not_present_callback FUnction to call when an input is not present among the new inputs.
-	 * @param all_nodes
-	 * @param new_inputs
+	 * @param not_present_callback Function to call when an input is not present among the new
+	 * inputs.
+	 * @param all_nodes All nodes that are considered for checking presence. Only nodes of kind
+	 * Input and SideInput are checked.
+	 * @param new_inputs New inputs to check against.
 	 */
 	template<typename NodePresentCallback, typename NodeRemovedCallback>
 	void checkPresenceOfEveryInput(
@@ -131,7 +133,7 @@ namespace query::internal {
 		auto                nodes = state->getGraph().getAllNodes();
 		std::vector<NodeID> removed_inputs;
 
-		auto present_callback     = [&](const NodeID&) { /* empty*/ };
+		auto present_callback     = [&](const NodeID&) { /* empty */ };
 		auto not_present_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
 
 		checkPresenceOfEveryInput(
@@ -152,7 +154,7 @@ namespace query::internal {
 			  })
 		    | std::ranges::to<std::vector>();
 
-		auto present_callback     = [&](const NodeID&) { /* empty*/ };
+		auto present_callback     = [&](const NodeID&) { /* empty */ };
 		auto not_present_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
 
 		checkPresenceOfEveryInput(

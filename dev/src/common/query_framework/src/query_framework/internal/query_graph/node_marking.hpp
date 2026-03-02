@@ -24,7 +24,7 @@ namespace query::internal {
 	 * and we call this function with new inputs {2,3},
 	 * it should return the NodeID corresponding to input {1}.
 	 *
-	 * @note This is for incremental compilation.
+	 * @note This is for incremental Language Server.
 	 * @warning Should not be executed concurrently with query multi-thread execution.
 	 *
 	 * @param new_inputs All new inputs given to the compiler.
@@ -37,7 +37,7 @@ namespace query::internal {
 	 * @brief Same as @p findRemovedInputsFromCurrentGraph but compares the new inputs
 	 * with a selected set of previous inputs.
 	 *
-	 * It is used by the Langauge Server if we only want to invalidate
+	 * It is used by the Language Server if we only want to invalidate
 	 * input's gathered from one source file and keep all other source files intact.
 	 */
 	std::vector<NodeID> findRemovedInputsFromSelectedInputs(

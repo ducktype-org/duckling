@@ -294,7 +294,7 @@ namespace query::internal {
 		return *node_colors->atMaybe(start_node).value();
 	}
 
-	bool dummyEraseRunction(QueryStableHash) { return false; }
+	bool dummyEraseFunction(QueryStableHash) { return false; }
 
 	NodeID QueryState::remapUnstableOrUnregisteredNodes(NodeID node) {
 		static base::VectorMap<QueryID, QueryID> old_to_new;
@@ -311,7 +311,7 @@ namespace query::internal {
 			QueryKind::Dummy,
 			"Dummy from previous graph created during deserialization",
 			{},
-			{ .erase_function = dummyEraseRunction }
+			{ .erase_function = dummyEraseFunction }
 		);
 		QueryID new_qid = registerQuery(dummy_query_data);
 		old_to_new.put(node.q_id, new_qid);

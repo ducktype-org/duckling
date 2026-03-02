@@ -120,8 +120,8 @@ private:
 	/**
 	 * @brief Utility function to check if the node with @p node_id has
 	 * expected number of dependencies, dependents, metadata and diagnostics.
-	 * If the @param expected_deps is 0, it also checks that the node does not exist in the graph
-	 * and if the @param expected_dependents is 0, it also checks that the node does not exist in
+	 * If the @p expected_deps is 0, it also checks that the node does not exist in the graph
+	 * and if the @p expected_dependents is 0, it also checks that the node does not exist in
 	 * the graph.
 	 */
 	void checkNodeStateEqualTo(
@@ -146,8 +146,8 @@ private:
 		if (expected_dependents == 0) {
 			ASSERT_TRUE(not graph.nodeExists(node_id));
 		} else {
-			auto dependants = graph.getDependentNodes({ node_id });
-			ASSERT_EQUAL(dependants.dependents_recursive.size(), expected_dependents);
+			auto dependents = graph.getDependentNodes({ node_id });
+			ASSERT_EQUAL(dependents.dependents_recursive.size(), expected_dependents);
 		}
 
 		// 3. Number of metadata in graph
@@ -163,41 +163,41 @@ private:
 	}
 
 	/**
-	  We need to test if all queries dependend on start nodes are invalidated correctly, meaning
-	  - they are removed from the graph
-	  - their cache is cleared
-	  - their metadata is cleared
-	  - their diagnostics are cleared
-	  - other nodes are not affected
-	  - if an erased node is in the reversed dependency
-
-	  Note the graph topology is like lattice with 4 levels
-	  - [DummyQuery1, DummyQuery2, DummyQuery3, SideInput]
-	  and the following dependencies:
-
-	    1_1 depends on (2_1, 2_2)
-	    1_2 depends on (2_2, 2_3)
-	    1_3 depends on (2_3, 2_4)
-
-	    2_1 depends on (3_1, 3_2)
-	    2_2 depends on (3_2, 3_3)
-	    2_3 depends on (3_3, 3_4)
-	    2_4 depends on (3_4, 3_5)
-
-	    3_1 depends on Input(1) (4_1)
-	    3_2 depends on Input(2) (4_2)
-	    3_3 depends on Input(3) (4_3)
-	    3_4 depends on Input(4) (4_4)
-	    3_5 depends on Input(5) (4_5)
-
-	             1_1     1_2    1_3
-	            /   \   /   \  /   \
-	          2_1    2_2    2_3    2_4
-	         /   \  /   \  /   \  /   \
-	       3_1   3_2    3_3    3_4    3_5
-	        |     |      |      |      |
-	       4_1   4_2    4_3    4_4    4_5
-	*/
+	 * We need to test if all queries dependent on start nodes are invalidated correctly, meaning
+	 * - they are removed from the graph
+	 * - their cache is cleared
+	 * - their metadata is cleared
+	 * - their diagnostics are cleared
+	 * - other nodes are not affected
+	 * - if an erased node is in the reversed dependency
+	 *
+	 * Note the graph topology is like lattice with 4 levels
+	 * - [DummyQuery1, DummyQuery2, DummyQuery3, SideInput]
+	 * and the following dependencies:
+	 *
+	 *   1_1 depends on (2_1, 2_2)
+	 *   1_2 depends on (2_2, 2_3)
+	 *   1_3 depends on (2_3, 2_4)
+	 *
+	 *   2_1 depends on (3_1, 3_2)
+	 *   2_2 depends on (3_2, 3_3)
+	 *   2_3 depends on (3_3, 3_4)
+	 *   2_4 depends on (3_4, 3_5)
+	 *
+	 *   3_1 depends on Input(1) (4_1)
+	 *   3_2 depends on Input(2) (4_2)
+	 *   3_3 depends on Input(3) (4_3)
+	 *   3_4 depends on Input(4) (4_4)
+	 *   3_5 depends on Input(5) (4_5)
+	 *
+	 *            1_1     1_2    1_3
+	 *           /   \   /   \  /   \
+	 *         2_1    2_2    2_3    2_4
+	 *        /   \  /   \  /   \  /   \
+	 *      3_1   3_2    3_3    3_4    3_5
+	 *       |     |      |      |      |
+	 *      4_1   4_2    4_3    4_4    4_5
+	 */
 	void testInvalidation() {
 		// =============================== Part 1 ===============================
 		// We populate the graph with some queries and metadata.
@@ -250,9 +250,9 @@ private:
 		auto [node_4_4, input_4] = nodesFromSideInput<SideInput>(KeyOf_SideInput{ 4 });
 		auto [node_4_5, input_5] = nodesFromSideInput<SideInput>(KeyOf_SideInput{ 5 });
 
-		// Test depedants from two nodes at the same time.
-		auto  dependants     = graph.getDependentNodes({ node_4_1, node_4_2 });
-		auto& nodes_to_erase = dependants.dependents_recursive;
+		// Test dependents from two nodes at the same time.
+		auto  dependents     = graph.getDependentNodes({ node_4_1, node_4_2 });
+		auto& nodes_to_erase = dependents.dependents_recursive;
 
 		// Sanity checks:
 		ASSERT_TRUE(std::ranges::find(nodes_to_erase, node_3_1) != nodes_to_erase.end());
@@ -262,7 +262,7 @@ private:
 
 		// =============================== Part 2 ===============================
 		// We invalidate the inputs.
-		// We check which input's are not present in the new inputs among the previous input's
+		// We check which inputs are not present in the new inputs among the previous inputs
 		// and in this case the {input_1, input_2} are missing.
 		query::external::invalidateQueries({ input_3, input_4, input_5 });
 
@@ -294,9 +294,9 @@ private:
 		ASSERT_EQUAL(graph.getAllNodes().size(), 5 + 5 + 4 + 3);
 
 		// =============================== Part 3 ===============================
-		// This should invalidate the missing input's from the selected previous inputs.
+		// This should invalidate the missing inputs from the selected previous inputs.
 		// Here the `input_1` is missing from new inputs compared to the previous selected inputs
-		// and all it's dependants should be invalidated.
+		// and all its dependents should be invalidated.
 		query::external::invalidateQueries({ input_2 }, { { input_1, input_2 } });
 
 		ASSERT_EQUAL(graph.getAllNodes().size(), 4 + 4 + 3 + 2);

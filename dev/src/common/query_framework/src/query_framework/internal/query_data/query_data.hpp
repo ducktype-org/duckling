@@ -78,6 +78,10 @@ namespace query {
 		struct QueryCacheData final {
 			using InternalEraseFunctionType = bool (*)(QueryStableHash);
 
+			/**
+			 * Pointer to the function that can erase the query result from its cache based on the
+			 * key hash.
+			 */
 			InternalEraseFunctionType erase_function;
 		};
 
@@ -102,10 +106,6 @@ namespace query {
 			QueryTags        tags;
 			QueryCacheData   cache_data;
 
-			/**
-			 * Pointer to the function that can erase the query result from it's cache based on the
-			 * key hash.
-			 */
 			constexpr QueryData(
 				QueryKind kind, std::string_view name, QueryTags tags, QueryCacheData cache_data
 			):

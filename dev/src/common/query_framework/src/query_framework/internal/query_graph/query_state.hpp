@@ -294,7 +294,7 @@ namespace query::internal {
 		Ref<MetadataStorage> getMetadataStorageMutable();
 
 		/*******************************\
-		|    Diagnostic's interface:    |
+		|    Diagnostics interface:    |
 		\******************************/
 
 		/**
@@ -395,6 +395,9 @@ namespace query::internal {
 		MetadataStorage metadata_storage;
 
 
+		/**
+		 * @brief Storage for the diagnostic loggers for each noe.
+		 */
 		concurrent::ConHashMap<NodeID, Box<dia_int::Logger>> diagnostic_loggers;
 	};
 }

@@ -62,9 +62,9 @@ namespace query::external {
 	 * @brief Takes new input data for the current compilation and invalidates queries
 	 * that depend on the inputs not present in the new input set.
 	 * If previous_inputs_opt is provided, the function will only invalidate inputs after
-	 * substracting previous_inputs_opt - new_inputs. The query invalidation involves removing them
+	 * subtracting previous_inputs_opt - new_inputs. The query invalidation involves removing them
 	 * from the graph, erasing their cache entries, erasing their diagnostics and all the state that
-	 * need to be erased when a query is invalidated.
+	 * needs to be erased when a query is invalidated.
 	 *
 	 * @note This is for incremental LS.
 	 * @warning Should not be executed concurrently with any query execution.
