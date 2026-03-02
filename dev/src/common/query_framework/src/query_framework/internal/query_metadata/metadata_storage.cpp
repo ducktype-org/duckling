@@ -78,12 +78,10 @@ namespace query::internal {
 	}
 
 	void MetadataStorage::emplace(ExtractedNodeMetadata&& extracted) {
-		
 		// convert StableHashMap back to ConHashMap for storage
 		TypeMap type_map;
-		for (auto& [type_id, metadata_vec]: extracted.type_map) {
+		for (auto& [type_id, metadata_vec]: extracted.type_map)
 			type_map.put(type_id, std::move(metadata_vec));
-		}
 		extracted.type_map.clear();
 
 		storage.put(std::move(extracted).node_id, std::move(type_map));

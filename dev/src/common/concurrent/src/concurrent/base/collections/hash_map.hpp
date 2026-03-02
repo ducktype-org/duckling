@@ -126,7 +126,7 @@ namespace concurrent {
 			// Note that locks are initialized in the constructor initializer list.
 			// Linter wants the following line to be placed in init-list. We can't do that, since
 			// we need to lock the source map first.
-			shards = std::move(source.shards); // NOLINT 
+			shards = std::move(source.shards);  // NOLINT
 			elements_count.store(source.elements_count.load());
 
 			// Leave the source map in an empty but valid state
@@ -310,7 +310,7 @@ namespace concurrent {
 				DATA_T value = std::move(*at_maybe.value());
 				shards[lock.shard_index].erase(key);
 				elements_count.fetch_sub(1, std::memory_order_relaxed);
-				return base::Optional<DATA_T>{std::move(value)};
+				return base::Optional<DATA_T>{ std::move(value) };
 			}
 		}
 
