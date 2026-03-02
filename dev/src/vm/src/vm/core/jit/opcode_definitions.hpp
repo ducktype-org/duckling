@@ -9,4 +9,5 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 llvm::Function*   llvmGetFun(const vm::low::MicroOpcode& fun);
+std::string llvmGetFunSym(const vm::low::MicroOpcode& fun);
 llvm::orc::LLJIT* llvmGetLljit();

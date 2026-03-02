@@ -64,7 +64,7 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
-	std::cerr << "called compileJit\n";
+	std::cerr << "called compileJit for function " << base::toString(func_data.name) << "\n";
 	auto  lljit_ptr = llvmGetLljit();
 	auto& lljit     = *lljit_ptr;
 
@@ -110,8 +110,10 @@ vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
 	for (const vm::MicroInstruction& mi: func_data.bc) {
 		auto num = static_cast<uint64_t>(vm::getInstructionOpcode(mi));
 		std::cerr << "Looking up opcode " << num << ' ' << vm::low::OPCODE_NAMES[num] << '\n';
-		llvm::Function* opfun      = llvmGetFun(vm::getInstructionOpcode(mi));
-		std::string     opfun_name = opfun->getName().str();
+		// llvm::Function* opfun      = llvmGetFun(vm::getInstructionOpcode(mi));
+		// std::string     opfun_name = opfun->getName().str();
+		// std::cerr << "opfun name: " << opfun_name << '\n';
+		std::string opfun_name = llvmGetFunSym(vm::getInstructionOpcode(mi));
 		std::cerr << "opfun name: " << opfun_name << '\n';
 
 		llvm::Function* callee = new_module->getFunction(opfun_name);

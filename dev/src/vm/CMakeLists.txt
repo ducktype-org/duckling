@@ -185,7 +185,7 @@ add_vm_variant(sc "USE_SWITCH_CASE")
 
 if (JIT_ENABLED)
     add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc> $<TARGET_OBJECTS:JitDep>)
-    target_link_libraries(LibVM ${llvm_libs} ${JitDep} "-Wl,--export-dynamic")
+    target_link_libraries(LibVM ${llvm_libs} ${JitDep})
     make_module(LibVM USES llvm_helpers ${vm_dependencies})
     add_executable(VM $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
     target_link_libraries(VM LibVM ${llvm_libs} ${JitDep} "-Wl,--export-dynamic")

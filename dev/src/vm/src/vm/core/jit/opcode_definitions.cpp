@@ -37,6 +37,7 @@ inline constexpr char OPCODES[] = {
 static std::unique_ptr<LLVMContext>                              g_context;
 static std::unique_ptr<Module>                                   g_module;
 static std::unordered_map<vm::low::MicroOpcode, llvm::Function*> func_map;
+static std::unordered_map<vm::low::MicroOpcode, std::string>     lfunc_sym_map;
 static std::unique_ptr<LLJIT>                                    lljit_instance;
 static ExitOnError                                               exit_on_err;
 
@@ -106,6 +107,7 @@ void llvmInit() {
 					std::cerr << "found " << name << " number: " << static_cast<uint64_t>(opcode)
 							  << " with " << F.getInstructionCount() << " instructions\n";
 					func_map[opcode] = &F;
+					lfunc_sym_map[opcode] = F.getName().str();
 				}
 			}
 		}
@@ -119,6 +121,11 @@ void llvmInit() {
 llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun) {
 	CORE_ASSERT(func_map.contains(fun), "Opcode function not found in LLVM module");
 	return func_map.at(fun);
+}
+
+std::string llvmGetFunSym(const vm::low::MicroOpcode& fun) {
+	CORE_ASSERT(func_map.contains(fun), "LLVM opcode function symbol not found");
+	return lfunc_sym_map.at(fun);
 }
 
 llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }
