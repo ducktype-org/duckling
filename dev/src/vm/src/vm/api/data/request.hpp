@@ -4,6 +4,7 @@
 
 #include <filesystem/file.hpp>
 
+#include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/pointer.hpp>
@@ -25,9 +26,13 @@ namespace vm::api {
 			code::CodeCollection code_collection;
 		};
 
-		struct Pause {};
+		struct Pause {
+			ThreadID thread_id;
+		};
 
-		struct Resume {};
+		struct Resume {
+			ThreadID thread_id;
+		};
 
 		struct Stop {};
 
@@ -40,12 +45,14 @@ namespace vm::api {
 			FunctionRunArguments func_args;
 		};
 
+		struct Join {
+			ThreadID thread_id;
+		};
+
 		struct RunFunctionAwait {
 			std::string          func_name;
 			FunctionRunArguments func_args;
 		};
-
-		struct Join {};
 
 		struct Step {};
 

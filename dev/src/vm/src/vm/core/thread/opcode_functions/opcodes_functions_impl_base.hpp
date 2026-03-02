@@ -441,6 +441,14 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
+		{
+			auto& called_func = thread.executing_program->getFunctions()[instr->arg0];
+			builtins::setThreadCtx(called_func.name.str());
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
 		{
 			const auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);

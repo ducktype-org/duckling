@@ -149,7 +149,7 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data);
+				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
 				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
@@ -245,7 +245,7 @@ namespace compiler::driver {
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
 		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
+		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
 
 		vm::PID pid{};
 
