@@ -363,7 +363,7 @@ private:
 				    builtin_output_i64(1);
 				    return u;
 				}
-				
+
 				fun main() -> i64 = {
 					foo(unitType);
 					return 0;
@@ -425,6 +425,21 @@ private:
 				}
 			)",
 			{ "Immutable variables must have an initial value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var n = 42;
+                    if (true) {
+                        var n = 24;
+                        builtin_output_i64(n);
+                    }
+				}
+			)",
+			{ "Variable name is ambiguous, because it has been defined multiple times.",
+		      "Found declaration:" },
 			1
 		);
 
@@ -565,6 +580,46 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "Nested", "function" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: i64 = 0;
+					a += 1;
+					return a;
+				}
+			)",
+			{ "Feature not implemented" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					var a: i64 = 0;
+					&a;
+
+					return a;
+				}
+
+				const bar = foo();
+			)",
+			{ "Feature not implemented", "pointer types" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { x: i64 = 0; }
+				const a = A();
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "compile time evaluation" },
 			1
 		);
 	}
