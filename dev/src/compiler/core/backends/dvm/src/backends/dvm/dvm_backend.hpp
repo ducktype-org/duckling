@@ -5,18 +5,19 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <query_framework/context/context_fd.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 
 namespace compiler::backend_vm {
 
 	/**
 	 * @brief A statefull collection of code lowered into VM bytecode.
+	 * @note If used improperly, query_ctx might become a dangling reference.
 	 */
-	class Module {
-		base::StrID module_id;
-
+	class DVMCodeBuilder final {
 	public:
-		Module(base::StrID module_id);
+		DVMCodeBuilder(query::Context& query_ctx);
 
 		/**
 		 * @brief Inserts a LIR function into the module.

@@ -236,6 +236,49 @@ private:
 		});
 	}
 
+	void staticArrayTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			const IntegralAbstractType i32_type
+				= getIntegralType(ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
+			const auto  i32_layout = ctx.query<QueryAbstractTypeLayout>(i32_type);
+			const usize count      = 10;
+
+			const StaticArrayAbstractType static_array_type
+				= ctx.query<QueryStaticArrayType>({ st(i32_type), count });
+
+			const auto static_array_layout = ctx.query<QueryAbstractTypeLayout>(static_array_type);
+
+			assertEqual(
+				static_array_layout->getSize(),
+				Bits(32 * count),
+				"Static array size should be exactly (element_size * count)."
+			);
+
+			assertEqual(
+				static_array_layout->getSourceType(),
+				static_array_type,
+				"Layout source type mismatch."
+			);
+
+			variant_match(static_array_layout->getVariant()) {
+				variant_case(StaticArrayTypeLayout, l) {
+					assertEqual(l.getElementCount(), count, "Stored element count mismatch.");
+
+					assertEqual(
+						*l.getElementLayout(),
+						*i32_layout,
+						"Array element layout should match the base type layout."
+					);
+				}
+				variant_default {
+					fail("Layout of static array type should be StaticArrayTypeLayout variant.");
+				}
+			}
+
+			testPrinting(static_array_layout, ctx, true);
+		});
+	}
+
 	void variantTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			SymbolType<> i8_type = st(

@@ -1137,6 +1137,7 @@ class FunctionValidator {
 			instr_case_novalue(Op_call_func) {}
 			instr_case_novalue(Op_call_builtinfunc) {}
 			instr_case_novalue(Op_call_cfunc) {}
+			instr_case_novalue(Op_set_threadctx) {}
 			instr_case(Op_virtual_call_lptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
 				const auto& pointer_type = current_stack.at(instr.object_ptr.var_name)
