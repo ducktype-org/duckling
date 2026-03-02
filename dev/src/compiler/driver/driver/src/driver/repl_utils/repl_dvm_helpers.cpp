@@ -27,7 +27,7 @@ namespace compiler::repl {
 		                                                           base::StrID("repl_module") })
 		           ->valueOrPanic();
 
-		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data);
+		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data, ctx);
 
 		return vm::api::loadCode(pid, dvm_code_collection).transform_error(vm::api::errorToString);
 	}

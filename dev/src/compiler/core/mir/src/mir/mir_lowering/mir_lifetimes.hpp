@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mir/mir_structure/mir_lifetime_scope.hpp>
+
 #include <query_framework/context/context_fd.hpp>
 
 namespace compiler::mir {
@@ -31,4 +33,9 @@ namespace compiler::mir {
 	 * @return Function
 	 */
 	Function addDestructors(query::Context&, Function);
+
+	/**
+	 * @brief Helper lowest common ancestor of @p a and @p b
+	 */
+	ScopeRef lca(ScopeRef a, ScopeRef b);
 }
