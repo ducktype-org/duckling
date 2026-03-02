@@ -7,3 +7,5 @@ add_library(TPC STATIC
 )
 
 make_module(TPC USES Printer Base Lexer Diagnostic DiagnosticInteractive Hashing)
+
+duck_add_test(compiler parsing_errors tests/parsing_errors_test.cpp USES TPC)
