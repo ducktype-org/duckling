@@ -16,7 +16,7 @@ params:
 
 
 header_message:
-  - "Variable definition shadows a previous definition."
+  - "Variable declaration shadows a previous declaration."
 
 
 description:

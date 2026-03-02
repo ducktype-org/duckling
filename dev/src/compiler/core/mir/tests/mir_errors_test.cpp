@@ -95,14 +95,14 @@ private:
                     var n = 24;
                 }
             })",
-			{ "Variable definition shadows a previous definition.", "Previous definition:" },
+			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
 			1
 		);
 		checkForErrorOnCompileModule(
 			R"(fun shadowedArg(n: i64) = {
                 var n = 42;
             })",
-			{ "Variable definition shadows a previous definition.", "Previous definition:" },
+			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
 			1
 		);
 	}

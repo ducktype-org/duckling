@@ -16,7 +16,7 @@ params:
 
 
 header_message:
-  - "Found definition."
+  - "Found declaration:"
 
 description:
   - codeblock:
@@ -28,4 +28,4 @@ pointer_messages:
   cause:
     priority: 1
     type: "note"
-    content: "defined here"
+    content: "declared here"

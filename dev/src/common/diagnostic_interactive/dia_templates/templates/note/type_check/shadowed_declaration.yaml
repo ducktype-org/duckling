@@ -16,7 +16,7 @@ params:
 
 
 header_message:
-  - "Previous definition:"
+  - "Previous declaration:"
 
 description:
   - codeblock:
