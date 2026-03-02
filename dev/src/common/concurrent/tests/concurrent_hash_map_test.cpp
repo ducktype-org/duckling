@@ -649,9 +649,10 @@ private:
 		std::vector<std::jthread> threads;
 		threads.reserve(thread_count);
 		std::vector<std::vector<std::pair<u64, u64>>> accessed_values(thread_count);
+		std::vector<std::vector<std::pair<u64, u64>>> const_accessed_values(thread_count);
 
 		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
-			threads.emplace_back([&map, &accessed_values, thread_id]() {
+			threads.emplace_back([&map, &accessed_values, &const_accessed_values, thread_id]() {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
 					u64 key = (j * thread_id * 1'000'000'007) % (KEY_RANGE * 3);
 
@@ -665,6 +666,15 @@ private:
 						if (*value_ref == key * 10)
 							*value_ref += 1;  // if it's an original value, update it
 					});
+
+					// also test const variant of maybeCallOn:
+					const auto& cmap = map;
+					cmap.maybeCallOn(
+						key,
+						[&const_accessed_values, thread_id, key](CRef<u64> value_ref) {
+							const_accessed_values[thread_id].emplace_back(key, *value_ref);
+						}
+					);
 				}
 			});
 		}
@@ -687,6 +697,22 @@ private:
 				} else {
 					// keys >= KEY_RANGE*2 should not be present
 					fail("Accessed key that should not be present: " + std::to_string(key));
+				}
+			}
+		}
+
+		// Verify that const maybeCallOn accessed the keys with correct values.
+		for (const auto& thread_values: const_accessed_values) {
+			for (const auto& [key, value]: thread_values) {
+				if (key < KEY_RANGE) {
+					// original keys should have been accessed with value = key * 10 or key * 10 + 1
+					ASSERT_TRUE(value == key * 10 or value == key * 10 + 1);
+				} else if (key < KEY_RANGE * 2) {
+					// maybePut should have added keys in [KEY_RANGE, KEY_RANGE*2) with value = key*100
+					ASSERT_TRUE(value == key * 100);
+				} else {
+					// keys >= KEY_RANGE*2 should not be present
+					fail("Accessed const key that should not be present: " + std::to_string(key));
 				}
 			}
 		}

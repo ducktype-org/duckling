@@ -215,7 +215,6 @@ namespace concurrent {
 
 		/**
 		 * Calls f with const reference to the value associated with the key if the key exists.
-		 // TODO PR: add tests
 		 */
 		template<typename K = KEY_T, typename Func>
 		void maybeCallOn(const K& key, Func f) const RELEASE_NOEXCEPT {
