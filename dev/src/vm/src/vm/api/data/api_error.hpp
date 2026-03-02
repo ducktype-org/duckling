@@ -6,6 +6,7 @@
 #include <variant>
 
 namespace vm::api {
+	// NOLINTBEGIN(modernize-use-constraints)
 	struct ResumeError {};
 
 	struct PauseError {};
@@ -44,6 +45,8 @@ namespace vm::api {
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(StateError, why);
 	};
+
+	// NOLINTEND(modernize-use-constraints)
 
 	using ApiError = std::variant<
 		ResumeError,
