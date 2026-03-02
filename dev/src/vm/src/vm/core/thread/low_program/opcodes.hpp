@@ -25,10 +25,23 @@
  * Opcodes not following this convention have additional description
  */
 
-
 namespace vm::low {
 	enum class MicroOpcode : u64 {
 #define HANDLE_MICRO_INSTR(opcode) opcode,
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
+	};
+
+	constexpr usize microInstrCount() {
+		usize count = 0;
+#define HANDLE_MICRO_INSTR(instr) ++count;
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
+		return count;
+	}
+
+	constexpr std::array<std::string_view, microInstrCount()> OPCODE_NAMES = {
+#define HANDLE_MICRO_INSTR(opcode) #opcode,
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 	};

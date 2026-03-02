@@ -57,6 +57,29 @@ namespace query::external {
 	 */
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData>&& inputs);
 
+
+	/**
+	 * @brief Takes new input data for the current compilation and invalidates queries
+	 * that depend on the inputs not present in the new input set.
+	 * If previous_inputs_opt is provided, the function will only invalidate inputs after
+	 * subtracting previous_inputs_opt - new_inputs. The query invalidation involves removing them
+	 * from the graph, erasing their cache entries, erasing their diagnostics and all the state that
+	 * needs to be erased when a query is invalidated.
+	 *
+	 * @note This is for incremental LS.
+	 * @warning Should not be executed concurrently with any query execution.
+	 *
+	 * @param new_inputs Vector of input data (QueryID + hash) used in current compilation.
+	 * @param previous_inputs_opt Optional vector of input data. If provided, the function will only
+	 * invalidate previous_inputs_opt - new_inputs. If not provided will invalidate
+	 * all_inputs_in_graph - new_inputs.
+	 * Used when we know the rest of the previous inputs are the same as the new ones.
+	 */
+	void invalidateQueries(
+		std::vector<InputData>&&               new_inputs,
+		base::Optional<std::vector<InputData>> previous_inputs_opt = {}
+	);
+
 	/**
 	 * @brief Optimize and serialize the current query graph for persistence on disk.
 	 */
