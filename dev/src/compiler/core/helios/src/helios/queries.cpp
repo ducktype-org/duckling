@@ -729,7 +729,6 @@ namespace compiler::helios {
 						assignment->getSourcePosition()
 					));
 					query::throwFailed();
-					return;
 				}
 
 				auto var = assignment->getVariables();
