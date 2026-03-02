@@ -594,6 +594,19 @@ private:
 			{ "Feature not implemented", "pointer types" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { x: i64 = 0; }
+				const a = A();
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "compile time evaluation" },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
