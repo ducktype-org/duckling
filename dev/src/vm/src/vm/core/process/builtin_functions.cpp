@@ -144,7 +144,8 @@ namespace vm::builtins {
 		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
 
 		thread.releaseGil();
-		std::unique_lock lock(*mutex);
+		//TODO: #2109 Possible UB if the mutex is not actually locked by this thread.
+		std::unique_lock lock(*mutex, std::adopt_lock);
 		cv->wait(lock);
 		thread.keepOrAcquireGil();
 	}

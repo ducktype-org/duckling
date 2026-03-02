@@ -1,139 +1,204 @@
-global_data counter i64 {};
-
 global_data lock mutex {};
+global_data not_full_cv condition_variable {};
+global_data not_empty_cv condition_variable {};
 
-global_data cv condition_variable {};
+global_data buffer_count i64 {};
+global_data produced_total i64 {};
+global_data consumed_total i64 {};
+global_data done_producing i64 {};
 
-global_data ready i64 {}; # Flaga stanu
+function producer {} -> void {
+    init_lany_type        to_produce, i64;
+    init_lany_type        p_lock, mutex;
+    init_lany_type        space_now, i64;
+    init_lany_type        cv_wait_full, condition_variable;
+    init_lany_type        wait_lock_full, mutex;
+    init_lany_type        produced_now, i64;
+    init_lany_type        count_now, i64;
+    init_lany_type        cv_notify_data, condition_variable;
+    init_lany_type        p_unlock, mutex;
+    init_lany_type        p_lock_done, mutex;
+    init_lany_type        cv_notify_finish, condition_variable;
+    init_lany_type        p_unlock_done, mutex;
 
+    mov_l64_imm           to_produce, 20;
 
-function worker {} -> void {
+    label ProduceLoop;
+        cmpGt_l64_imm     to_produce, 0;
+        jmpIfNot_label    ProducerFinish;
 
-    # 1. Zablokuj mutex, aby bezpiecznie zmienić dane
+        mov_lopq_gopq     p_lock, lock;
+        call_builtinfunc  builtin_lock_mutex;
 
-    init_lany_type        l1, mutex;
-    mov_lopq_gopq         l1, lock;
+        label WaitSpace;
+            mov_l64_g64    space_now, buffer_count;
+            cmpEq_l64_imm  space_now, 3;
+            jmpIfNot_label HasSpace;
+
+            mov_lopq_gopq  cv_wait_full, not_full_cv;
+            mov_lopq_gopq  wait_lock_full, lock;
+            call_builtinfunc builtin_wait_cv;
+            jmp_label      WaitSpace;
+
+        label HasSpace;
+        mov_l64_g64       produced_now, produced_total;
+        add_l64_imm       produced_now, 1;
+        mov_g64_l64       produced_total, produced_now;
+
+        mov_l64_g64       count_now, buffer_count;
+        add_l64_imm       count_now, 1;
+        mov_g64_l64       buffer_count, count_now;
+
+        mov_lopq_gopq     cv_notify_data, not_empty_cv;
+        call_builtinfunc  builtin_notify_all_cv;
+
+        mov_lopq_gopq     p_unlock, lock;
+        call_builtinfunc  builtin_unlock_mutex;
+
+        sub_l64_imm       to_produce, 1;
+        jmp_label         ProduceLoop;
+
+    label ProducerFinish;
+    mov_lopq_gopq         p_lock_done, lock;
     call_builtinfunc      builtin_lock_mutex;
 
+    mov_g64_imm           done_producing, 1;
 
-    # 2. Zwiększ licznik (symulacja pracy)
+    mov_lopq_gopq         cv_notify_finish, not_empty_cv;
+    call_builtinfunc      builtin_notify_all_cv;
 
-    init_lany_type        temp, i64;
-    mov_l64_g64           temp, counter;
-    add_l64_imm           temp, 5;
-    mov_g64_l64           counter, temp;
-
-
-    # 3. Ustaw flagę gotowości
-
-    init_lany_type        one, i64;
-    mov_l64_imm           one, 1;
-    mov_g64_l64           ready, one;
-
-
-    # 4. Wyślij powiadomienie (Notify)
-
-    #init_lany_type        cv_signal, condition_variable;
-    #mov_lopq_gopq         cv_signal, cv;
-    #call_builtinfunc      builtin_notify_cv;
-
-
-    # 5. Odblokuj mutex
-
-    init_lany_type          l2, mutex;
-    mov_lopq_gopq           l2, lock;
-    call_builtinfunc        builtin_unlock_mutex;
-
+    mov_lopq_gopq         p_unlock_done, lock;
+    call_builtinfunc      builtin_unlock_mutex;
 
     ret;
 }
 
+function consumer {} -> void {
+    init_lany_type        c_lock, mutex;
+    init_lany_type        count_now, i64;
+    init_lany_type        done_now, i64;
+    init_lany_type        cv_wait_empty, condition_variable;
+    init_lany_type        wait_lock_empty, mutex;
+    init_lany_type        consumed_now, i64;
+    init_lany_type        count_after, i64;
+    init_lany_type        cv_notify_space, condition_variable;
+    init_lany_type        c_unlock, mutex;
+    init_lany_type        c_unlock_exit, mutex;
+
+    label ConsumeLoop;
+        mov_lopq_gopq     c_lock, lock;
+        call_builtinfunc  builtin_lock_mutex;
+
+        label WaitData;
+            mov_l64_g64    count_now, buffer_count;
+            cmpGt_l64_imm  count_now, 0;
+            jmpIf_label    ConsumeOne;
+
+            mov_l64_g64    done_now, done_producing;
+            cmpEq_l64_imm  done_now, 1;
+            jmpIf_label    ConsumerExit;
+
+            mov_lopq_gopq  cv_wait_empty, not_empty_cv;
+            mov_lopq_gopq  wait_lock_empty, lock;
+            call_builtinfunc builtin_wait_cv;
+            jmp_label      WaitData;
+
+        label ConsumeOne;
+        mov_l64_g64       consumed_now, consumed_total;
+        add_l64_imm       consumed_now, 1;
+        mov_g64_l64       consumed_total, consumed_now;
+
+        mov_l64_g64       count_after, buffer_count;
+        sub_l64_imm       count_after, 1;
+        mov_g64_l64       buffer_count, count_after;
+
+        mov_lopq_gopq     cv_notify_space, not_full_cv;
+        call_builtinfunc  builtin_notify_all_cv;
+
+        mov_lopq_gopq     c_unlock, lock;
+        call_builtinfunc  builtin_unlock_mutex;
+        jmp_label         ConsumeLoop;
+
+    label ConsumerExit;
+    mov_lopq_gopq         c_unlock_exit, lock;
+    call_builtinfunc      builtin_unlock_mutex;
+    ret;
+}
 
 function main { i64, ptr_argv } -> i64 {
-
-    # --- Inicjalizacja synchronizacji ---
-    init_lany_type			output_var, i64;
     init_lany_type        m_init, mutex;
+    init_lany_type        cv1_init, condition_variable;
+    init_lany_type        cv2_init, condition_variable;
+    init_lany_type        producer_id, i64;
+    init_lany_type        consumer_id, i64;
+    init_lany_type        producer_ret, i64;
+    init_lany_type        join_producer_id, i64;
+    init_lany_type        consumer_ret, i64;
+    init_lany_type        join_consumer_id, i64;
+    init_lany_type        out_produced, i64;
+    init_lany_type        out_consumed, i64;
+    init_lany_type        out_buffer, i64;
+    init_lany_type        status, i64;
+    init_lany_type        destroy_cv1, condition_variable;
+    init_lany_type        destroy_cv2, condition_variable;
+    init_lany_type        m_destroy, mutex;
+
     call_builtinfunc      builtin_create_mutex;
     mov_gopq_lopq         lock, m_init;
 
-    init_lany_type        cv_init, condition_variable;
     call_builtinfunc      builtin_create_cv;
-    mov_gopq_lopq         cv, cv_init;
+    mov_gopq_lopq         not_full_cv, cv1_init;
 
-    # --- Start wątku worker ---
-    init_lany_type        t_id, i64;
-    set_threadctx         worker;
+    call_builtinfunc      builtin_create_cv;
+    mov_gopq_lopq         not_empty_cv, cv2_init;
+
+    mov_g64_imm           buffer_count, 0;
+    mov_g64_imm           produced_total, 0;
+    mov_g64_imm           consumed_total, 0;
+    mov_g64_imm           done_producing, 0;
+
+    set_threadctx         producer;
     call_builtinfunc      builtin_start_thread;
 
+    set_threadctx         consumer;
+    call_builtinfunc      builtin_start_thread;
 
-    # --- Oczekiwanie na sygnał ---
-    # Lock przed sprawdzaniem warunku
-    init_lany_type        m_lock, mutex;
-    mov_lopq_gopq         m_lock, lock;
-    call_builtinfunc      builtin_lock_mutex;
-
-
-    label WaitLoop;
-
-        init_lany_type    check_ready, i64;
-        mov_l64_g64       check_ready, ready;
-        cmpEq_l64_imm     check_ready, 1;
-        jmpIf_label       DoneWaiting; # Jeśli ready == 1, wyjdź z pętli
-
-        #init_lany_type    cv_wait, condition_variable;
-        #mov_lopq_gopq     cv_wait, cv;
-        #init_lany_type      l3, mutex;
-        #mov_lopq_gopq       l3, lock;
-        #call_builtinfunc  builtin_wait_cv;
-
-
-
-        # Wywołanie Wait: puszcza mutex i zasypia, po obudzeniu znów bierze mutex
-
-        deinit;
-        jmp_label         WaitLoop; # Ponownie sprawdź warunek (predykat)
-
-
-    label DoneWaiting;
-
-
-    # --- Sprzątanie i wynik ---
-
-    init_lany_type        final_val, i64;
-    mov_l64_g64           final_val, counter;
-    output_l64            final_val; # Powinno wypisać 5
-
-
-    init_lany_type        l4, mutex;
-    mov_lopq_gopq         l4, lock;
-    call_builtinfunc      builtin_unlock_mutex;
-
-
-    # Join i niszczenie
-    init_lany_type        t_ret, i64;
-    init_lany_type        join_t_id, i64;
-    mov_l64_l64           join_t_id, t_id;
+    mov_l64_l64           join_producer_id, producer_id;
     call_builtinfunc      builtin_join_thread;
 
+    mov_l64_l64           join_consumer_id, consumer_id;
+    call_builtinfunc      builtin_join_thread;
 
-    init_lany_type      cv2, condition_variable;
-    mov_lopq_gopq       cv2, cv;
+    mov_l64_g64           out_produced, produced_total;
+    output_l64            out_produced;
+
+    mov_l64_g64           out_consumed, consumed_total;
+    output_l64            out_consumed;
+
+    mov_l64_g64           out_buffer, buffer_count;
+    output_l64            out_buffer;
+
+    mov_l64_imm           status, 0;
+
+    cmpEq_l64_imm         out_produced, 20;
+    jmpIfNot_label        EndChecks;
+    cmpEq_l64_imm         out_consumed, 20;
+    jmpIfNot_label        EndChecks;
+    cmpEq_l64_imm         out_buffer, 0;
+    jmpIfNot_label        EndChecks;
+    mov_l64_imm           status, 1;
+
+    label EndChecks;
+    output_l64            status;
+
+    mov_lopq_gopq         destroy_cv1, not_full_cv;
     call_builtinfunc      builtin_destroy_cv;
-    
 
-    init_lany_type      l5, mutex;
-    mov_lopq_gopq       l5, lock;
+    mov_lopq_gopq         destroy_cv2, not_empty_cv;
+    call_builtinfunc      builtin_destroy_cv;
+
+    mov_lopq_gopq         m_destroy, lock;
     call_builtinfunc      builtin_destroy_mutex;
 
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-
     ret;
-
 }

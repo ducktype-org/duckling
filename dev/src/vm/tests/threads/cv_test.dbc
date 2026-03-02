@@ -1,152 +1,253 @@
+
 global_data counter i64 {};
+global_data started i64 {};
+global_data done i64 {};
+global_data phase i64 {};
+
 global_data lock mutex {};
 global_data cv condition_variable {};
-global_data working i8 {};
 
-function inc {} -> void {
-    init_lany_type			temp, i64;
-	init_lany_type			i, i64;
-	mov_l64_imm				i, 10000;
-    init_lany_type          small, i8;
-	# while(i > 0)
-	label Loop1;
-		# i--
-		sub_l64_imm			i, 1;
+function worker_a {} -> void {
+    init_lany_type        l1, mutex;
+    mov_lopq_gopq         l1, lock;
+    call_builtinfunc      builtin_lock_mutex;
 
-		init_lany_type		lock1, mutex;
-		mov_lopq_gopq		lock1, lock;
-		call_builtinfunc	builtin_lock_mutex;
+    init_lany_type        started_local, i64;
+    mov_l64_g64           started_local, started;
+    add_l64_imm           started_local, 1;
+    mov_g64_l64           started, started_local;
 
-		mov_l64_g64			temp, counter;
-		add_l64_imm			temp, 1;
-		mov_g64_l64			counter, temp;
+    init_lany_type        cv_signal_a, condition_variable;
+    mov_lopq_gopq         cv_signal_a, cv;
+    call_builtinfunc      builtin_notify_all_cv;
 
-		init_lany_type		lock2, mutex;
-		mov_lopq_gopq		lock2, lock;
-		call_builtinfunc	builtin_unlock_mutex;
+    label WaitPhaseA;
+        init_lany_type    check_phase_a, i64;
+        mov_l64_g64       check_phase_a, phase;
+        cmpEq_l64_imm     check_phase_a, 1;
+        jmpIf_label       DoWorkA;
 
-        # if counter % 1000 == 0 do cv.wait()
-        mod_l64_imm         temp, 1000; 
-        cmpGt_l64_imm       temp, 0;
-        jmpIfNot_label      EndLoop;
+        init_lany_type    cv_wait_a, condition_variable;
+        mov_lopq_gopq     cv_wait_a, cv;
+        init_lany_type    wait_lock_a, mutex;
+        mov_lopq_gopq     wait_lock_a, lock;
+        call_builtinfunc  builtin_wait_cv;
+        deinit;
+        jmp_label         WaitPhaseA;
 
-		
-        init_lany_type		lock1, mutex;
-		mov_lopq_gopq		lock1, lock;
-		call_builtinfunc	builtin_lock_mutex;
+    label DoWorkA;
+    init_lany_type        iter_a, i64;
+    init_lany_type        temp_a, i64;
+    mov_l64_imm           iter_a, 0;
 
-		mov_g8_imm			working, 0;
+    label WorkLoopA;
+        cmpEq_l64_imm     iter_a, 5;
+        jmpIf_label       WorkDoneA;
 
-		init_lany_type		lock2, mutex;
-		mov_lopq_gopq		lock2, lock;
-		call_builtinfunc	builtin_unlock_mutex;
+        mov_l64_g64       temp_a, counter;
+        add_l64_imm       temp_a, 1;
+        mov_g64_l64       counter, temp_a;
 
+        add_l64_imm       iter_a, 1;
+        jmp_label         WorkLoopA;
 
-        label SleepLoop;
-            init_lany_type		cv1, condition_variable;
-		    mov_lopq_gopq		cv1, cv;
-        	init_lany_type		lock2, mutex;
-		    mov_lopq_gopq		lock2, lock;
-            call_builtinfunc    builtin_wait_cv;
+    label WorkDoneA;
 
-            mov_l8_g8           small, working;
+    init_lany_type        done_local_a, i64;
+    mov_l64_g64           done_local_a, done;
+    add_l64_imm           done_local_a, 1;
+    mov_g64_l64           done, done_local_a;
 
-            cmpGt_l8_imm        small, 0;
-            jmpIf_label         SleepLoop;
-        label EndLoop;
+    init_lany_type        cv_done_a, condition_variable;
+    mov_lopq_gopq         cv_done_a, cv;
+    call_builtinfunc      builtin_notify_all_cv;
 
-        init_lany_type		lock4, mutex;
-	    mov_lopq_gopq		lock4, lock;
-	    call_builtinfunc	builtin_unlock_mutex;
+    init_lany_type        unlock_a, mutex;
+    mov_lopq_gopq         unlock_a, lock;
+    call_builtinfunc      builtin_unlock_mutex;
 
-		# if i > 0 goto Loop1
-		cmpGt_l64_imm		i, 0;
-		jmpIf_label			Loop1;
+    ret;
+}
+
+function worker_b {} -> void {
+    init_lany_type        l1, mutex;
+    mov_lopq_gopq         l1, lock;
+    call_builtinfunc      builtin_lock_mutex;
+
+    init_lany_type        started_local, i64;
+    mov_l64_g64           started_local, started;
+    add_l64_imm           started_local, 1;
+    mov_g64_l64           started, started_local;
+
+    init_lany_type        cv_signal_b, condition_variable;
+    mov_lopq_gopq         cv_signal_b, cv;
+    call_builtinfunc      builtin_notify_all_cv;
+
+    label WaitPhaseB;
+        init_lany_type    check_phase_b, i64;
+        mov_l64_g64       check_phase_b, phase;
+        cmpEq_l64_imm     check_phase_b, 1;
+        jmpIf_label       DoWorkB;
+
+        init_lany_type    cv_wait_b, condition_variable;
+        mov_lopq_gopq     cv_wait_b, cv;
+        init_lany_type    wait_lock_b, mutex;
+        mov_lopq_gopq     wait_lock_b, lock;
+        call_builtinfunc  builtin_wait_cv;
+        deinit;
+        jmp_label         WaitPhaseB;
+
+    label DoWorkB;
+    init_lany_type        iter_b, i64;
+    init_lany_type        temp_b, i64;
+    mov_l64_imm           iter_b, 0;
+
+    label WorkLoopB;
+        cmpEq_l64_imm     iter_b, 7;
+        jmpIf_label       WorkDoneB;
+
+        mov_l64_g64       temp_b, counter;
+        add_l64_imm       temp_b, 1;
+        mov_g64_l64       counter, temp_b;
+
+        add_l64_imm       iter_b, 1;
+        jmp_label         WorkLoopB;
+
+    label WorkDoneB;
+
+    init_lany_type        done_local_b, i64;
+    mov_l64_g64           done_local_b, done;
+    add_l64_imm           done_local_b, 1;
+    mov_g64_l64           done, done_local_b;
+
+    init_lany_type        cv_done_b, condition_variable;
+    mov_lopq_gopq         cv_done_b, cv;
+    call_builtinfunc      builtin_notify_all_cv;
+
+    init_lany_type        unlock_b, mutex;
+    mov_lopq_gopq         unlock_b, lock;
+    call_builtinfunc      builtin_unlock_mutex;
 
     ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
-    init_lany_type			temp, i64;
-    init_lany_type			temp2, i64;
-    init_lany_type			output_var, i64;
-    init_lany_type			lock1, mutex;
-	call_builtinfunc		builtin_create_mutex;
-	mov_gopq_lopq			lock, lock1;
+    init_lany_type        m_init, mutex;
+    call_builtinfunc      builtin_create_mutex;
+    mov_gopq_lopq         lock, m_init;
 
-    init_lany_type          cv3, condition_variable;
-    call_builtinfunc        builtin_create_cv;
-    mov_gopq_lopq			cv, cv3;
+    init_lany_type        cv_init, condition_variable;
+    call_builtinfunc      builtin_create_cv;
+    mov_gopq_lopq         cv, cv_init;
 
-    mov_g8_imm              working, 1;
+    mov_g64_imm           counter, 0;
+    mov_g64_imm           started, 0;
+    mov_g64_imm           done, 0;
+    mov_g64_imm           phase, 0;
 
-	init_lany_type			thread_inc1_id, i64;
-	set_threadctx			inc;
-    call_builtinfunc		builtin_start_thread;
+    init_lany_type        t1_id, i64;
+    set_threadctx         worker_a;
+    call_builtinfunc      builtin_start_thread;
 
-	init_lany_type			thread_inc2_id, i64;
-	set_threadctx			inc;
-    call_builtinfunc		builtin_start_thread;
+    init_lany_type        t2_id, i64;
+    set_threadctx         worker_b;
+    call_builtinfunc      builtin_start_thread;
 
-    label Loop2;
-        init_lany_type		lock6, mutex;
-		mov_lopq_gopq		lock6, lock;
-		call_builtinfunc	builtin_lock_mutex;
+    init_lany_type        m_lock, mutex;
+    mov_lopq_gopq         m_lock, lock;
+    call_builtinfunc      builtin_lock_mutex;
 
-		mov_l64_g64			temp, counter;
-        mov_l64_l64         temp2, temp;
+    label WaitAllStarted;
+        init_lany_type    started_now, i64;
+        mov_l64_g64       started_now, started;
+        cmpEq_l64_imm     started_now, 2;
+        jmpIf_label       ReleaseWorkers;
 
-		init_lany_type		lock2, mutex;
-		mov_lopq_gopq		lock2, lock;
-		call_builtinfunc	builtin_unlock_mutex;
+        init_lany_type    cv_wait_started, condition_variable;
+        mov_lopq_gopq     cv_wait_started, cv;
+        init_lany_type    wait_started_lock, mutex;
+        mov_lopq_gopq     wait_started_lock, lock;
+        call_builtinfunc  builtin_wait_cv;
+        deinit;
+        jmp_label         WaitAllStarted;
 
-        mov_l64_g64		    output_var, counter;
-        output_l64		    output_var;        
-        
-        mod_l64_imm         temp, 1000; 
-        cmpGt_l64_imm       temp, 0;
-        jmpIf_label         Skipper;
+    label ReleaseWorkers;
+    mov_g64_imm           phase, 1;
+    init_lany_type        cv_go, condition_variable;
+    mov_lopq_gopq         cv_go, cv;
+    call_builtinfunc      builtin_notify_all_cv;
 
-        mov_l64_l64			output_var, temp2;
-        output_l64			output_var;  
+    label WaitAllDone;
+        init_lany_type    done_now, i64;
+        mov_l64_g64       done_now, done;
+        cmpEq_l64_imm     done_now, 2;
+        jmpIf_label       VerifyResults;
 
-        init_lany_type		lock8, mutex;
-		mov_lopq_gopq		lock8, lock;
-		call_builtinfunc	builtin_lock_mutex;
+        init_lany_type    cv_wait_done, condition_variable;
+        mov_lopq_gopq     cv_wait_done, cv;
+        init_lany_type    wait_done_lock, mutex;
+        mov_lopq_gopq     wait_done_lock, lock;
+        call_builtinfunc  builtin_wait_cv;
+        deinit;
+        jmp_label         WaitAllDone;
 
-        mov_g8_imm          working, 1;
+    label VerifyResults;
+    init_lany_type        final_counter, i64;
+    mov_l64_g64           final_counter, counter;
+    output_l64            final_counter;
 
-		init_lany_type		lock7, mutex;
-		mov_lopq_gopq		lock7, lock;
-		call_builtinfunc	builtin_unlock_mutex;
+    init_lany_type        check_started, i64;
+    mov_l64_g64           check_started, started;
+    output_l64            check_started;
 
+    init_lany_type        check_done, i64;
+    mov_l64_g64           check_done, done;
+    output_l64            check_done;
 
-        init_lany_type      cv4, condition_variable;
-        mov_lopq_gopq         cv4, cv;
-        call_builtinfunc    builtin_notify_all_cv;
+    init_lany_type        status, i64;
+    mov_l64_imm           status, 0;
 
-        label               Skipper;
-        sub_l64_imm         temp2, 20000;
-        cmpLt_l64_imm       temp, 0;
-        jmpIf_label         Loop2;
+    cmpEq_l64_imm         final_counter, 12;
+    jmpIfNot_label        FinishChecks;
+    cmpEq_l64_imm         check_started, 2;
+    jmpIfNot_label        FinishChecks;
+    cmpEq_l64_imm         check_done, 2;
+    jmpIfNot_label        FinishChecks;
+    mov_l64_imm           status, 1;
 
+    label FinishChecks;
+    output_l64            status;
 
-	init_lany_type			join_inc1_ret, i64;
-	init_lany_type			join_inc1_id, i64;
-    mov_l64_l64				join_inc1_id, thread_inc1_id;
-    call_builtinfunc		builtin_join_thread;	
+    init_lany_type        unlock_main, mutex;
+    mov_lopq_gopq         unlock_main, lock;
+    call_builtinfunc      builtin_unlock_mutex;
 
-	init_lany_type			join_inc2_ret, i64;
-	init_lany_type			join_inc2_id, i64;
-    mov_l64_l64				join_inc2_id, thread_inc2_id;
-    call_builtinfunc		builtin_join_thread;
+    init_lany_type        t1_ret, i64;
+    init_lany_type        join_t1_id, i64;
+    mov_l64_l64           join_t1_id, t1_id;
+    call_builtinfunc      builtin_join_thread;
 
-    mov_l64_g64				output_var, counter;
-    output_l64				output_var;
-	
-	init_lany_type			lock2, mutex;
-	mov_lopq_gopq			lock2, lock;
-	call_builtinfunc		builtin_destroy_mutex;
+    init_lany_type        t2_ret, i64;
+    init_lany_type        join_t2_id, i64;
+    mov_l64_l64           join_t2_id, t2_id;
+    call_builtinfunc      builtin_join_thread;
+
+    init_lany_type        cv2, condition_variable;
+    mov_lopq_gopq         cv2, cv;
+    call_builtinfunc      builtin_destroy_cv;
+
+    init_lany_type        l5, mutex;
+    mov_lopq_gopq         l5, lock;
+    call_builtinfunc      builtin_destroy_mutex;
+
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
 
     ret;
 }
