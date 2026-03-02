@@ -586,13 +586,15 @@ private:
 				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
 					u64 key = (j * thread_id * 1'000'000'007) % (KEY_RANGE * 3);
 
-					// we also add to map here in range [KEY_RANGE, KEY_RANGE*2) to test that maybeCallOn can see new keys added by other threads:
+					// we also add to map here in range [KEY_RANGE, KEY_RANGE*2) to test that
+					// maybeCallOn can see new keys added by other threads:
 					auto add_key = (key % KEY_RANGE) + KEY_RANGE;
 					map.maybePut(add_key, add_key * 100);
 
 					map.maybeCallOn(key, [&accessed_values, thread_id, key](Ref<u64> value_ref) {
 						accessed_values[thread_id].emplace_back(key, *value_ref);
-						if (*value_ref == key * 10) *value_ref += 1;  // if it's an original value, update it
+						if (*value_ref == key * 10)
+							*value_ref += 1;  // if it's an original value, update it
 					});
 				}
 			});
@@ -619,8 +621,6 @@ private:
 				}
 			}
 		}
-
-
 	}
 
 	/**
