@@ -5,7 +5,8 @@
 #pragma once
 
 /**
- * @brief Parses opcodes from bitcode file. Function is registered to be called at init.
+ * @brief Initializes JIT C2 compiler.
+ * @note It is implemented in opcodes_bitcode_source.cpp.
  */
 __attribute__((noinline)) void llvmInit();
 
