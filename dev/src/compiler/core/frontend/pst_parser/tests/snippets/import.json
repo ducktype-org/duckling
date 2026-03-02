@@ -1,7 +1,7 @@
 {
 	"position": {
 		"sourceStart": 0,
-		"sourceEnd": 152
+		"sourceEnd": 210
 	},
 	"Top Level": [
 		{
@@ -10,13 +10,12 @@
 				"sourceEnd": 22
 			},
 			"Import": {
-				"Import": {
+				"import_chain": {
 					"position": {
 						"sourceStart": 7,
-						"sourceEnd": 16
+						"sourceEnd": 21
 					},
-					"Dotted Name": {
-						"star": "false",
+					"Import Identifier As Chain": {
 						"names": [
 							{
 								"Name": "aaaa"
@@ -27,25 +26,26 @@
 							{
 								"Name": "c"
 							},
-						]
+						],
+						"as": {
+							"Name": "D"
+						}
 					}
-				},
-				"Alias": "D"
+				}
 			}
 		},
 		{
 			"position": {
 				"sourceStart": 25,
-				"sourceEnd": 50
+				"sourceEnd": 45
 			},
 			"Import": {
-				"Import": {
+				"import_chain": {
 					"position": {
 						"sourceStart": 32,
 						"sourceEnd": 44
 					},
-					"Dotted Name": {
-						"star": "true",
+					"Import Star Hides Chain": {
 						"names": [
 							{
 								"Name": "dasdsa"
@@ -53,48 +53,47 @@
 							{
 								"Name": "dasd"
 							},
-						]
+						],
 					}
-				},
-				"Alias": "F"
+				}
 			}
 		},
 		{
 			"position": {
-				"sourceStart": 53,
-				"sourceEnd": 72
+				"sourceStart": 48,
+				"sourceEnd": 67
 			},
 			"Import": {
-				"Import": {
+				"import_chain": {
 					"position": {
-						"sourceStart": 60,
-						"sourceEnd": 63
+						"sourceStart": 55,
+						"sourceEnd": 66
 					},
-					"Dotted Name": {
-						"star": "false",
+					"Import Identifier As Chain": {
 						"names": [
 							{
 								"Name": "aaaa"
 							},
-						]
+						],
+						"as": {
+							"Name": "σααα"
+						}
 					}
-				},
-				"Alias": "σααα"
+				}
 			}
 		},
 		{
 			"position": {
-				"sourceStart": 75,
-				"sourceEnd": 95
+				"sourceStart": 70,
+				"sourceEnd": 84
 			},
 			"Import": {
-				"Import": {
+				"import_chain": {
 					"position": {
-						"sourceStart": 82,
-						"sourceEnd": 88
+						"sourceStart": 77,
+						"sourceEnd": 83
 					},
-					"Dotted Name": {
-						"star": "false",
+					"Import Identifier As Chain": {
 						"names": [
 							{
 								"Name": "a"
@@ -108,25 +107,23 @@
 							{
 								"Name": "d"
 							},
-						]
+						],
 					}
-				},
-				"Alias": "XX"
+				}
 			}
 		},
 		{
 			"position": {
-				"sourceStart": 98,
-				"sourceEnd": 125
+				"sourceStart": 87,
+				"sourceEnd": 114
 			},
 			"Import": {
-				"Import": {
+				"import_chain": {
 					"position": {
-						"sourceStart": 105,
-						"sourceEnd": 119
+						"sourceStart": 94,
+						"sourceEnd": 113
 					},
-					"Dotted Name": {
-						"star": "false",
+					"Import Identifier As Chain": {
 						"names": [
 							{
 								"Name": "ἄλφα"
@@ -137,25 +134,26 @@
 							{
 								"Name": "γάμμα"
 							},
-						]
+						],
+						"as": {
+							"Name": "U"
+						}
 					}
-				},
-				"Alias": "U"
+				}
 			}
 		},
 		{
 			"position": {
-				"sourceStart": 128,
-				"sourceEnd": 152
+				"sourceStart": 117,
+				"sourceEnd": 135
 			},
 			"Import": {
-				"Import": {
+				"import_chain": {
 					"position": {
-						"sourceStart": 135,
-						"sourceEnd": 145
+						"sourceStart": 124,
+						"sourceEnd": 134
 					},
-					"Dotted Name": {
-						"star": "true",
+					"Import Star Hides Chain": {
 						"names": [
 							{
 								"Name": "ἄλφα"
@@ -163,10 +161,162 @@
 							{
 								"Name": "βῆτα"
 							},
-						]
+						],
 					}
-				},
-				"Alias": "_1"
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 138,
+				"sourceEnd": 160
+			},
+			"Import": {
+				"import_chain": {
+					"position": {
+						"sourceStart": 145,
+						"sourceEnd": 159
+					},
+					"Import Nested": {
+						"names": [
+							{
+								"Name": "A"
+							},
+							{
+								"Name": "B"
+							},
+						],
+						"nested_import": {
+							"position": {
+								"sourceStart": 149,
+								"sourceEnd": 159
+							},
+							"nested import list": [
+								{
+									"position": {
+										"sourceStart": 150,
+										"sourceEnd": 150
+									},
+									"Import Identifier As Chain": {
+										"names": [
+											{
+												"Name": "C"
+											},
+										],
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 152,
+										"sourceEnd": 157
+									},
+									"Import Nested": {
+										"names": [],
+										"nested_import": {
+											"position": {
+												"sourceStart": 152,
+												"sourceEnd": 157
+											},
+											"nested import list": [
+												{
+													"position": {
+														"sourceStart": 153,
+														"sourceEnd": 153
+													},
+													"Import Identifier As Chain": {
+														"names": [
+															{
+																"Name": "D"
+															},
+														],
+													}
+												},
+												{
+													"position": {
+														"sourceStart": 156,
+														"sourceEnd": 156
+													},
+													"Import Identifier As Chain": {
+														"names": [
+															{
+																"Name": "E"
+															},
+														],
+													}
+												},
+											]
+										}
+									}
+								},
+							]
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 163,
+				"sourceEnd": 180
+			},
+			"Import": {
+				"import_chain": {
+					"position": {
+						"sourceStart": 170,
+						"sourceEnd": 179
+					},
+					"Import Identifier As Chain": {
+						"names": [
+							{
+								"Name": "A"
+							},
+							{
+								"Name": "B"
+							},
+							{
+								"Name": "C"
+							},
+						],
+						"as": {
+							"Name": "D"
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 183,
+				"sourceEnd": 210
+			},
+			"Import": {
+				"import_chain": {
+					"position": {
+						"sourceStart": 190,
+						"sourceEnd": 209
+					},
+					"Import Star Hides Chain": {
+						"names": [
+							{
+								"Name": "A"
+							},
+							{
+								"Name": "B"
+							},
+						],
+						"hides": [
+							{
+								"Name": "D"
+							},
+							{
+								"Name": "G"
+							},
+							{
+								"Name": "C"
+							},
+						],
+					}
+				}
 			}
 		},
 	]

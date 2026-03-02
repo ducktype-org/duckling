@@ -3,7 +3,6 @@
 #include <base/str/str_utils.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/loader/errors.hpp>
 
 class BCBuildingTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -34,8 +33,8 @@ private:
 		loadInvalidDbc(
 			"repeated_types.dbc",
 			{
-				vm::loader::DuplicatedTypeError::ERR_MSG,
-				vm::loader::DuplicatedTypeNote::ERR_MSG,
+				"Type with this name already exists.",
+				"Previous type declaration here.",
 			}
 		);
 	}

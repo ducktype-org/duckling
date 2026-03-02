@@ -103,6 +103,8 @@ namespace pst {
 		 * @tparam ListElements - Kept Elements, has to have precise length parse like Expr
 		 * @tparam Self - Inheriting class type for construction purposes
 		 * @tparam NON_EMPTY - Should empty list be an error.
+		 * @tparam ALLOW_TRAILING_SEPARATOR - Should trailing separator be allowed, for example (a,
+		 * b,).
 		 * @tparam BRACKETS - expected brackets or None if not expected
 		 * @tparam isSeparator - Separator should always be skip-able with one skip.
 		 * @tparam isEnding - Check for successful ending.
@@ -113,6 +115,7 @@ namespace pst {
 			class ListElements,
 			typename Self,
 			bool                      NON_EMPTY,
+			bool                      ALLOW_TRAILING_SEPARATOR,
 			lexer::Token::BracketType BRACKETS,
 			TokenStreamCondition      isSeparator,
 			TokenStreamCondition      isEnding,
@@ -176,9 +179,10 @@ namespace pst {
 					state.exitFallback();
 
 					if (isEnding(state.ctokens(), 0)) break;
-					if (isSeparator(state.ctokens(), 0))
+					if (isSeparator(state.ctokens(), 0)) {
 						state.parse(out).eatOne();
-					else
+						if (isEnding(state.ctokens(), 0) && ALLOW_TRAILING_SEPARATOR) break;
+					} else
 						state.logInt(makeBox<NoSeparatorError<getName>>(state.getPosition()));
 				}
 			}

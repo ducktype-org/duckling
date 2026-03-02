@@ -13,15 +13,23 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/origin.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
+#include <helios_private/expressions/function_calls/square_call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -32,7 +40,6 @@
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
-#include <token_parser_core/common_elements.hpp>
 
 namespace compiler::helios::code {
 
@@ -49,7 +56,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		class InvaidCallableReferenceDocs final: public dia_int::MessageBase {
+		class InvalidCallableReferenceDocs final: public dia_int::MessageBase {
 			dia_int::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "docs",
@@ -58,7 +65,7 @@ namespace compiler::helios::code {
 			}
 
 		public:
-			InvaidCallableReferenceDocs(): MessageBase() {}
+			InvalidCallableReferenceDocs(): MessageBase() {}
 		};
 
 		class CandidateNote final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -76,7 +83,7 @@ namespace compiler::helios::code {
 
 		CallInvalidCallablesError(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			addAttachedMessage(makeBox<InvaidCallableReferenceDocs>());
+			addAttachedMessage(makeBox<InvalidCallableReferenceDocs>());
 		}
 	};
 
@@ -181,7 +188,7 @@ namespace compiler::helios::code {
 		/**
 		 * The original PST chain expression that is being processed.
 		 */
-		pst::Access<pst::expr::ChainExpr> original_chain_expr;
+		pst::Access<pst::ExprElement> whole_chain_pst;
 
 		/**
 		 * The temporary buffor for the currently built value from left to current place of
@@ -255,12 +262,21 @@ namespace compiler::helios::code {
 		query::QResult<std::vector<SymID>> getCallableCandidates(
 			const std::vector<SymID>& looked_up_callees
 		) const {
+			// @TODO: #2135 handle ambiguity in class scopes
+
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Function
 				        || kind(symbol) == SymbolKind::FunctionDeclaration;
 				}))
 				return looked_up_callees;
+
+			// If all candidates are methods, return them as is.
+			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+					return kind(symbol) == SymbolKind::Method;
+				})) {
+				return looked_up_callees;
+			}
 
 			// Check error condition and report error.
 			if (looked_up_callees.size() > 1) {
@@ -291,8 +307,13 @@ namespace compiler::helios::code {
 				          ->valueOrThrow();
 				return std::vector{ ctor.declaration->original_symbol };
 			}
-			default:
-				CORE_PANIC("Not implemented yet (", name(symbol), ")");
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat("Round Call '()' operator on symbol: ", name(symbol)),
+					stmt(query_ctx, symbol).value()->getSourcePosition()
+				));
+				return query::Failed();
+			}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -303,34 +324,65 @@ namespace compiler::helios::code {
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain
 		 * Case when we have a global identifier followed by a call expression,
-		 * like "foo()".
+		 * like "foo()" or array_like[i].
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
-			if (call_expr->getType() != lexer::Token::Round) {
-				throw base::NotYetImplemented(base::strConcat(
-					"HOUT call with invalid bracket type: ", char(call_expr->getType())
-				));
+			const auto scope       = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			auto       h_interface = HInterface::ofScopeWithParents(scope);
+
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				const auto lookup_result = h_interface.lookup(query_ctx, ident->getName().value);
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+				return ChainState::ofExpr(std::move(expr));
 			}
-			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-			const auto lookup_result
-				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
+			case lexer::Token::Square: {
+				const auto lookup_result = h_interface.lookupExpectUnique(
+					ident->getSourcePosition(), query_ctx, ident->getName().value
+				);
+				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
-			// @TODO: #1412 fix dealias
-			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+				auto base_state_res
+					= processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
+				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
 
-			auto res = processFunctionCall(query_ctx, callees, ident, call_expr);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
-			return ChainState::ofExpr(std::move(expr));
+
+				if (base_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, base_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"This symbol cannot be indexed.", call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		/**
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain.
-		 * It is when we have keyword literal followed by a call expression, like "i64(42)".
-		 * Currently used only for type casts.
+		 * It is when we have keyword literal followed by a call expression. This currently includes:
+		 * - `i64(42)` - used for explicit type casts.
+		 * - `i64[42]` - used for static array type creation.
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
@@ -339,19 +391,21 @@ namespace compiler::helios::code {
 			auto hout_expr_result = query_ctx.query<QueryHoutOfExpr>({ keyword });
 			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, hout_expr_result);
 
-			if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
-				auto args = call_expr->getArgs().unlock(query_ctx);
-				if (args->size() != 1) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Type cast must have exactly one argument.", call_expr->getSourcePosition()
-					));
-					return query::Failed();
-				}
-				// Iterating over a single argument list, because the pst arguments
-				// have only iterator accessor.
-				for (auto&& arg: *args) {
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
+					auto args = call_expr->getArgs().unlock(query_ctx);
+					if (args->size() != 1) {
+						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Type cast must have exactly one argument.",
+							call_expr->getSourcePosition()
+						));
+						return query::Failed();
+					}
+
+					auto arg_access      = (*args->begin()).unlock(query_ctx);
 					auto arg_expr_result = query_ctx.query<QueryHoutOfExpr>(
-						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
+						arg_access->getArg().unlock(query_ctx)->getExpr()
 					);
 					UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> arg_expr =, arg_expr_result);
 
@@ -363,11 +417,27 @@ namespace compiler::helios::code {
 					);
 					return ChainState::ofExpr(std::move(cast_expr));
 				}
+
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Unsupported keyword literal in call expression.", call_expr->getSourcePosition()
+				));
+				break;
+			}
+			case lexer::Token::Square: {
+				auto square_call_res = processSquareCall(query_ctx, hout_expr->clone(), call_expr);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			default:
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
 			}
 
-			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Unsupported keyword literal in call expression.", call_expr->getSourcePosition()
-			));
 			return query::Failed();
 		}
 
@@ -387,7 +457,7 @@ namespace compiler::helios::code {
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident));
+			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
 		}
 
 		/**
@@ -401,30 +471,49 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, expr);
 			auto symbol = getIdentifierExprSymID(hout_expr);
 			if (symbol.has_value())
-				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr));
+				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr), pst_expr);
 			return ChainState::ofExpr(hout_expr->clone());
 		}
 
 		/**
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
-		 * for example we have two call expr like a[i]() or b()()
+		 * for example we have two call expr like a[i]() or b()().
+		 * @note: For now this function is called only in the `foo()[i]` case. (where foo is a
+		 * function returning a static array).
 		 */
-		auto processPSTExpr(Box<Expr>, pst::Access<pst::expr::Call> call_expr)
+		auto processPSTExpr(Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
-			// @note this function is not run yet.
-
 			// @note: previous mock-implementation of this function
 			// was deleted in PR #1239. See it for reference.
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				// @TODO: #982 improve type lookup and provide correct
+				// candidates for processFunctionCall. Write tests for this case, when it will be
+				// implemented.
 
-			// @TODO: #982 improve type lookup and provide correct
-			// candidates for processFunctionCall. write tests for this case, when it will be implemented
-
-			// This is only a temporary thing for error handling, note the incorrect callee PST
-			// expression.
-			auto expr_result
-				= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
-			return ChainState::ofExpr(std::move(expr));
+				// This is only a temporary thing for error handling, note the incorrect callee PST
+				// expression.
+				auto expr_result
+					= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case lexer::Token::Square: {
+				auto square_call_res
+					= processSquareCall(query_ctx, std::move(current_expr), call_expr);
+				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		/**
@@ -483,9 +572,12 @@ namespace compiler::helios::code {
 						result_sequence.push_back(std::move(current_expr));
 						return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
 					} else if (kind(sym) == SymbolKind::Method) {
-						throw base::NotYetImplemented(
+						query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Handling of access to method without a call is not implemented yet"
-						);
+							"argument at compile time",
+							current_expr->origin.getSourcePosition()
+						));
+						return query::Failed();
 					}
 					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 						base::strConcat(
@@ -535,43 +627,128 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto whole_expr_origin
 				= current_state.getNamespaceLikePstOrigin().extended(expr_access);
-			return processNamespaceOrValue(sym_list.back(), whole_expr_origin);
+			return processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 		}
 
 		/**
 		 * Case when we have an access expression followed by a call expression,
-		 * and current state is an expression, for example "my_expr.foo()".
-		   This may result in a method. Method
-		 * parameter overload is possible.
+		 * and current state is an expression.
+		 * For example:
+		 * - `my_expr.foo()` - this may result in a method. Method parameter overload is possible.
+		 * - `class.array_field[ix]` - this is an index access the an array which is a class field.
 		 */
-		auto processPSTExpr(base::Box<Expr>, pst::Access<pst::expr::Access>, pst::Access<pst::expr::Call>)
-			-> query::QResult<ChainState> {
-			throw base::NotYetImplemented(
-				"Helios chain expr: call on access expr not implemented yet"
-			);
-			return query::Failed();
+		auto processPSTExpr(
+			base::Box<Expr>                current_expr,
+			pst::Access<pst::expr::Access> expr_access,
+			pst::Access<pst::expr::Call>   call_expr
+		) -> query::QResult<ChainState> {
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				auto current_expr_type = current_expr->expression_type.getType();
+				auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
+				                         .lookup(query_ctx, expr_access->getName().value);
+
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				auto self_expr_ref = makeBox<RefOfExpr>(
+					query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
+				);
+
+				auto res = processMethodCall(
+					query_ctx, callees, expr_access, call_expr, std::move(self_expr_ref)
+				);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case lexer::Token::Square: {
+				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
+				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
+
+				if (access_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
+				return query::Failed();
+			}
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		/**
 		 * Case when we have an access expression followed by a call expression,
-		 * and current state is a namespace, for example "my_ns.foo()".
-		 * This may result in function overload.
+		 * and current state is a namespace.
+		 * For example:
+		 * - `my_ns.foo()` - this may result in function overload.
+		 * - `my_ns.array[ix]`
 		 */
 		auto processPSTExpr(
 			SymID                          namespace_like_symbol,
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
-			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
-			                         .lookup(query_ctx, expr_access->getName().value);
+			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+				                         .lookup(query_ctx, expr_access->getName().value);
+				// @TODO: #1412 fix dealias
+				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			// @TODO: #1412 fix dealias
-			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+				auto expr_result
+					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case lexer::Token::Square: {
+				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+				                         .lookupExpectUnique(
+											 expr_access->getSourcePosition(),
+											 query_ctx,
+											 expr_access->getName().value
+										 );
+				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
-			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
-			return ChainState::ofExpr(std::move(expr));
+				auto whole_expr_origin
+					= current_state.getNamespaceLikePstOrigin().extended(expr_access);
+				auto state_res
+					= processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
+				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
+
+				if (access_state.isExpr()) {
+					auto square_call_res
+						= processSquareCall(query_ctx, access_state.getExpr(), call_expr);
+					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
+					return ChainState::ofExpr(std::move(expr));
+				}
+
+
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"This symbol cannot be indexed", call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			default: {
+				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
+					),
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			}
 		}
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
@@ -583,8 +760,11 @@ namespace compiler::helios::code {
 		 * @param symbol The symbol found in the lookup.
 		 * @param pst_elem The PST element for which the lookup was performed.
 		 */
-		auto processNamespaceOrValue(const SymID& symbol, ElementOrigin pst_element_origin)
-			-> query::QResult<ChainState> {
+		auto processNamespaceOrValue(
+			const SymID&                  symbol,
+			ElementOrigin                 pst_element_origin,
+			pst::Access<pst::LangElement> pst_elem
+		) -> query::QResult<ChainState> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {
@@ -597,6 +777,11 @@ namespace compiler::helios::code {
 				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
 				return ChainState::ofExpr(std::move(expr));
 			}
+			case SymbolKind::Field: {
+				auto expr = processFieldNoSelf(query_ctx, symbol, pst_element_origin, pst_elem);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> field_expr =, expr);
+				return ChainState::ofExpr(std::move(field_expr));
+			}
 			default:
 				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					base::strConcat(
@@ -606,6 +791,114 @@ namespace compiler::helios::code {
 				));
 				return query::Failed();
 			}
+		}
+
+		/**
+		 * @brief When we have a field symbol found in lookup,
+		 * that is not preceded by an access expression, for example "field"
+		 * this functions finds the "self" argument
+		 * and creates an access expression.
+		 */
+		auto processFieldNoSelf(
+			query::Context&               ctx,
+			const SymID&                  field_symbol,
+			ElementOrigin                 pst_element_origin,
+			pst::Access<pst::LangElement> pst_elem
+		) -> query::QResult<base::Box<Expr>> {
+			// @TODO: #2135 handle ambiguity in class scopes
+			auto scope           = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
+			auto sym_list_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
+				pst_elem->getSourcePosition(), ctx, base::StrID("self")
+			);
+			UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
+
+			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), sym_list.back());
+			auto self_type = self_expr->expression_type.getSymbolType().getType();
+
+			auto fields = self_type.getInterface(ctx)->getFieldsView();
+			if (std::ranges::find(fields, field_symbol, &tsh::InterfaceElement::getSymbol)
+			    == fields.end()) {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"No such field found in the interface of prefix expression.",
+					pst_elem->getSourcePosition()
+				));
+				return query::Failed();
+			}
+
+
+			return makeBox<AccessExpr>(
+				ctx,
+				pst_element_origin,
+				makeBox<DerefExpr>(ctx, generatedOrigin(), std::move(self_expr)),
+				field_symbol
+			);
+		}
+
+		/**
+		 * @brief This function processes a function or method call when there is no "self" argument
+		 * to find, for example "foo()". If the candidates are methods, it tries to find "self"
+		 * argument and fails if it is not found. If the candidates are functions, it processes the
+		 * call as a normal function call.
+		 *
+		 * @return query::QResult<base::Box<Expr>>
+		 */
+		auto processFunctionOrMethodNoSelfCall(
+			query::Context&               ctx,
+			const std::vector<SymID>&     candidates,
+			pst::Access<pst::LangElement> callee_element,
+			pst::Access<pst::expr::Call>  call_expr
+		) -> query::QResult<base::Box<CallExpr>> {
+			if (candidates.size() >= 1 && kind(candidates[0]) == SymbolKind::Method) {
+				// @TODO: #2135 handle ambiguity in class scopes
+
+				// Try to find "self" argument
+				auto find_self_arg = [&] -> query::QResult<SymID> {
+					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ call_expr });
+
+					auto sym_list_result = HInterface::ofScopeWithParents(scope)
+					                           .lookup(ctx, base::StrID("self"))
+					                           ->getAsSingle();
+					UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
+
+					variant_match(sym_list) {
+						variant_case(SymbolList, result) { return result.back(); }
+						variant_case_novalue(errors::SymbolNotFound) {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								"Method call without `self` argument.",
+								call_expr->getSourcePosition()
+							));
+							return query::Failed();
+						}
+						variant_case_novalue(errors::Ambiguity) {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								"Multiple candidates for `self` argument found which should be "
+								"impossible.",
+								call_expr->getSourcePosition()
+							));
+							return query::Failed();
+						}
+					}
+					CORE_UNREACHABLE();
+				};
+				auto self_arg_result = find_self_arg();
+				UNPACK_QRESULT(auto self_arg =, self_arg_result);
+				auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), self_arg);
+
+				// Filter candidates for which the self argument is different than the found one
+				auto self_type = self_expr->expression_type;
+
+				auto methods = self_type.getType().getInterface(ctx)->getMethodsView();
+
+				std::vector<SymID> filtered_candidates;
+				for (const auto& method: methods)
+					if (std::ranges::find(candidates, method.getSymbol()) != candidates.end())
+						filtered_candidates.push_back(method.getSymbol());
+
+				return processMethodCall(
+					ctx, filtered_candidates, callee_element, call_expr, std::move(self_expr)
+				);
+			}
+			return processFunctionCall(ctx, candidates, callee_element, call_expr);
 		}
 
 		// =============================== MAIN PROCESSING LOOP ===============================
@@ -694,10 +987,16 @@ namespace compiler::helios::code {
 	public:
 		ChainExprConstruction(query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr):
 			  query_ctx(ctx),
-			  original_chain_expr(expr) {
+			  whole_chain_pst(expr) {
 			this->chain_elements.emplace_back(expr->getAtom());
 			auto chain = expr->getChain();
 			std::ranges::copy(chain, std::back_inserter(this->chain_elements));
+		}
+
+		ChainExprConstruction(query::Context& ctx, pst::Access<pst::expr::IdentifierLiteral> expr):
+			  query_ctx(ctx),
+			  whole_chain_pst(expr) {
+			this->chain_elements.emplace_back(expr);
 		}
 
 		/**
@@ -716,6 +1015,9 @@ namespace compiler::helios::code {
 			           && isNextElement<pst::expr::Call>()) {
 				error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
 				this->index += 2;
+			} else if (isCurrentElement<pst::expr::IdentifierLiteral>()) {
+				error = firstStep<pst::expr::IdentifierLiteral>();
+				this->index++;
 			} else {
 				error = firstStep<pst::ExprElement>();
 				this->index++;
@@ -768,7 +1070,7 @@ namespace compiler::helios::code {
 
 			// If we have multiple expressions, we need to create a chain expression
 			auto chain_expr = makeBox<SequenceExpr>(
-				query_ctx, pstOrigin(original_chain_expr), std::move(result_sequence)
+				query_ctx, pstOrigin(whole_chain_pst), std::move(result_sequence)
 			);
 			return chain_expr;
 		}
@@ -776,6 +1078,13 @@ namespace compiler::helios::code {
 
 	ExprConstructionResult fromChainExpr(
 		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
+	) {
+		ChainExprConstruction construction(ctx, expr.unlock(ctx));
+		return construction.run();
+	}
+
+	query::QResult<Box<code::Expr>> fromIdentifierLiteral(
+		query::Context& ctx, pst::AccessLocked<pst::expr::IdentifierLiteral> expr
 	) {
 		ChainExprConstruction construction(ctx, expr.unlock(ctx));
 		return construction.run();

@@ -114,7 +114,7 @@ namespace concurrent {
 		 * @returns A reference to the inserted key-value pair.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			auto          result
 				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
@@ -223,7 +223,7 @@ namespace concurrent {
 		}
 
 		[[nodiscard]]
-		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].contains(key);
 		}
@@ -231,7 +231,7 @@ namespace concurrent {
 		/**
 		 * Atomically erases the given key->value pair from the map.
 		 */
-		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto erase(const KEY_T& key) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			bool          erased = shards[lock.shard_index].erase(key);
 			if (erased) elements_count.fetch_sub(1, std::memory_order_relaxed);

@@ -5,6 +5,7 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/errors.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -133,7 +134,7 @@ private:
 					b(1,2,3);
 				}
 			)",
-			{ "no functions found" },
+			{ "no matching functions" },
 			1
 		);
 
@@ -198,6 +199,130 @@ private:
 			1
 		);
 
+		// =========================== Method call errors ===========================
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method(1.0);
+				}
+			)",
+			{ "The given argument type `f32` cannot be converted to the expected type `i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method();
+				}
+			)",
+			{ "The call is missing a required argument with no default value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+
+					fun method(x: f64) = {
+						return x + 1.0;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method("abc");
+				}
+			)",
+			{ " Call failed due to ambiguous overload resolution." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(x: i64) = {
+					return x + 1;
+				}
+
+				class MyClass {
+					a: i64 = 0;
+
+					fun foo(x: i64) = {
+						return x + 1;
+					}
+
+					fun goo(x: i64) = {
+						return foo(x);
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.goo(1);
+				}
+			)",
+			{ "Found a combination of function and non-function callables in a call expression." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Point {
+					x:i64;y:i64;
+
+					fun Point() = {}
+
+					fun foo() = {
+						let a = Point(1, 2);
+					}
+				}
+			)",
+			{ "Found a combination of function and non-function callables in a call expression." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					x:i64 = 0;
+
+					fun foo() = {
+						return self.goo(5);
+					}
+				}
+			)",
+			{ "Call failed because no matching functions were found." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					x:i64 = 0;
+
+					fun foo(a:i64 = 0.5) = {
+						return a;
+					}
+				}
+			)",
+			{ "Type `f32` cannot be converted to type `i64`." },
+			1
+		);
+
 		// ============================ Typecheck errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() -> i64 = 1.0;)", { "Type `f32` cannot be converted to type `i64`." }, 1
@@ -214,7 +339,7 @@ private:
 					}
 				}
 			)",
-			{ "no explicit return type and inconsistent returns" },
+			{ "no explicit return type and inconsistent return statements" },
 			1
 		);
 
@@ -229,6 +354,7 @@ private:
 			1
 		);
 
+
 		checkForErrorOnCompileModule(
 			R"(
 				const unitType: type = ();
@@ -237,7 +363,7 @@ private:
 				    builtin_output_i64(1);
 				    return u;
 				}
-				
+
 				fun main() -> i64 = {
 					foo(unitType);
 					return 0;
@@ -301,6 +427,7 @@ private:
 			{ "Immutable variables must have an initial value." },
 			1
 		);
+
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
@@ -315,10 +442,190 @@ private:
 		      "Found declaration:" },
 			1
 		);
+
+		// ============================ Static Arrays ============================
+		checkForErrorOnCompileModule(
+			R"(
+				fun main(n: u64) = {
+					var arr: i32[n];
+				}
+			)",
+			{ "Expression cannot be evaluated at compile-time." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const ARR_TYPE = i32[10.5];
+			)",
+			{ "Type `f32` cannot be converted to type `const u64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const ARR_TYPE = i32[-2];
+			)",
+			{ "Value cannot be converted to type `const u64` at compile-time." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var arr: i32[5];
+					var x = arr[1, 2];
+				}
+			)",
+			{ "Array index/size must be exactly one expression" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var arr: i32[5];
+					arr["index"] = 1;
+				}
+			)",
+			{ "Type `string` cannot be converted to type `const i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const NOT_A_TYPE = 10;
+				const ARR = NOT_A_TYPE[5];
+			)",
+			{ "Index operator base must be indexable." },
+			1
+		);
+
+
+		// =========================== Not-yet-implemented errors ==========================
+		// Note: just remove the tests when the features are implemented.
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: i64 = 0;
+					x++;
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "Suffix" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						break;
+					}
+				}
+			)",
+			{ "Feature not implemented", "break" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						continue;
+					}
+				}
+			)",
+			{ "Feature not implemented", "continue" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					defer 1;
+				}
+			)",
+			{ "Feature not implemented", "defer" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					while (true) {
+						redo;
+					}
+				}
+			)",
+			{ "Feature not implemented", "redo" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					for (i in 0) { }
+				}
+			)",
+			{ "Feature not implemented", "for" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					fun foo() = 0;
+				}
+			)",
+			{ "Feature not implemented", "Nested", "function" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: i64 = 0;
+					a += 1;
+					return a;
+				}
+			)",
+			{ "Feature not implemented" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					var a: i64 = 0;
+					&a;
+
+					return a;
+				}
+
+				const bar = foo();
+			)",
+			{ "Feature not implemented", "pointer types" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { x: i64 = 0; }
+				const a = A();
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "compile time evaluation" },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
-		using namespace helios;
+		using namespace compiler::helios;
 
 		auto [_, root_scope]
 			= test_utils::getModule(fs::File(path("test_modules/error_generating/bad_expr")));
@@ -326,12 +633,11 @@ private:
 
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
 		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		try {
-			test_utils::getConstValueAs<i64>("InvalidExpr", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (base::NotYetImplemented& err) {
-			// Since this branch was chosen, everything worked well.
-		}
+
+		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
+						test_utils::getChain("InvalidExpr", root_scope).back()
+		)
+		                .hasFailed());
 
 		try {
 			test_utils::getConstValueAs<i64>("InvalidSym", root_scope);

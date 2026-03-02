@@ -313,20 +313,14 @@ namespace vm::code {
 }
 
 // The following macros are almost copied from <base/extend_cpp/variant_match.hpp>.
-#define instr_match(value)                                                                \
-	PUSH_DIAGNOSTIC                                                                       \
-	NO_SHADOW if (bool instr_match_stop                                                   \
-	              = true) for (auto&& internal_value = (value); instr_match_stop;         \
-	                           instr_match_stop      = false) switch (internal_value.opcode()) \
-		POP_DIAGNOSTIC
+#define instr_match(value) \
+	PUSH_DIAGNOSTIC        \
+	NO_SHADOW switch (auto&& internal_value = (value); internal_value.opcode()) POP_DIAGNOSTIC
 
-#define instr_case(type, name)                                                               \
-	PUSH_DIAGNOSTIC NO_SHADOW break;                                                         \
-	case (type::OPCODE):                                                                     \
-		if (bool instr_case_stop = true)                                                     \
-			for ([[maybe_unused]] auto&& name = internal_value.get<type>(); instr_case_stop; \
-			     instr_case_stop              = false)                                       \
-		POP_DIAGNOSTIC
+#define instr_case(type, name)       \
+	PUSH_DIAGNOSTIC NO_SHADOW break; \
+	case (type::OPCODE):             \
+		if ([[maybe_unused]] auto&& name = internal_value.get<type>(); true) POP_DIAGNOSTIC
 
 #define instr_case_novalue(type) \
 	break;                       \

@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
+		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(moveValidation);
 	}
 
@@ -761,6 +762,73 @@ private:
 			ASSERT_TRUE(found_field_access_write);
 			ASSERT_TRUE(found_by_val_deref);
 			ASSERT_TRUE(found_by_ref_passthrough);
+		});
+	}
+
+	void staticArraysTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/static_arrays")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& hout_func = unit.functions.at(0);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
+			                     ->valueOrThrow();
+
+			bool found_zero_init_arr          = false;
+			bool found_zero_init_pts          = false;
+			bool found_index_projection       = false;
+			bool found_complex_pts_projection = false;
+
+			using namespace compiler::mir;
+
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					if (instr.operation == Operation::ZeroInitialize) {
+						auto& out_place = instr.output.value();
+						auto  local     = out_place.getBase<MIRLocalRef>();
+						if (local->getName() == "arr") found_zero_init_arr = true;
+						if (local->getName() == "pts") found_zero_init_pts = true;
+					}
+
+					if ((instr.operation == Operation::Assign
+					     || instr.operation == Operation::AddressOf)
+					    && instr.output.has_value()) {
+						auto& out_place = instr.output.value();
+						auto  local     = out_place.getBase<MIRLocalRef>();
+
+						if (local->getName() == "arr" && out_place.projection_chain.size() == 1) {
+							bool is_index = std::holds_alternative<MIRPlace::IndexProjection>(
+								out_place.projection_chain[0].storage
+							);
+							if (is_index) found_index_projection = true;
+						}
+
+						if (out_place.projection_chain.size() == 2) {
+							const auto& chain = out_place.projection_chain;
+
+							bool is_idx
+								= std::holds_alternative<MIRPlace::IndexProjection>(chain[0].storage
+							    );
+							bool is_fld
+								= std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage
+							    );
+
+							if (is_idx && is_fld) {
+								auto field = std::get<MIRPlace::FieldProjection>(chain[1].storage);
+								if (compiler::helios::name(field.field_id) == base::StrID("x"))
+									found_complex_pts_projection = true;
+							}
+						}
+					}
+				}
+			}
+
+			ASSERT_TRUE(found_zero_init_arr);
+			ASSERT_TRUE(found_zero_init_pts);
+			ASSERT_TRUE(found_index_projection);
+			ASSERT_TRUE(found_complex_pts_projection);
 		});
 	}
 

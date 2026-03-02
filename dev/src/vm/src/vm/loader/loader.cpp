@@ -5,8 +5,8 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
-#include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 #include <string_id/string_id.hpp>
 
@@ -18,7 +18,6 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
-#include <vm/loader/errors.hpp>
 #include <vm/loader/logger.hpp>
 
 #include <expected>
@@ -117,37 +116,45 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 		compiler.recompile(validated_high_program);
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
-		log.logMap<SomeValidationError>(
+		log.logMap(
 			e.label,
-			[&](Box<SomeValidationError>& err) {
+			[&](Box<dia_int::PlaceholderCodeError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
-						log.addNote<SomeValidationNote>(
-							err, i, code::StackStructureMismatchError::NOTE_MSG
+						log.addNote(
+							err,
+							static_cast<const code::ElementBase&>(i),
+							code::StackStructureMismatchError::NOTE_MSG
 						);
 					});
 			},
 			e.what()
 		);
 	} catch (code::DuplicatedFunctionError& e) {
-		log.logMap<DuplicatedFunctionError>(e.new_element, [&](auto& err) {
-			log.addNote<DuplicatedFunctionNote>(err, e.previous_element);
-		});
-	} catch (code::DuplicatedGlobalDataError& e) {
-		log.logMap<DuplicatedGlobalDataError>(
+		log.logMap(
 			e.new_element,
-			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.previous_element); },
-			e.new_element.name.str
+			[&](auto& err) {
+				log.addNote(err, e.previous_element, "Previous function declaration here.");
+			},
+			"Function with this name already exists."
+		);
+	} catch (code::DuplicatedGlobalDataError& e) {
+		log.logMap(
+			e.new_element,
+			[&](auto& err) { log.addNote(err, e.previous_element, "Previous declaration here."); },
+			"Global variable with this name already exists."
 		);
 	} catch (code::DuplicatedTypeError& e) {
-		log.logMap<DuplicatedTypeError>(
+		log.logMap(
 			**e.maybeElement(),
-			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.previous_element); },
-			code::typeName(e.new_element)
+			[&](auto& err) {
+				log.addNote(err, e.previous_element, "Previous type declaration here.");
+			},
+			"Type with this name already exists."
 		);
 	} catch (code::ValidationError& e) {
 		match_optional(e.maybeElement()) {
-			opt_some(elem) log.log<SomeValidationError>(*elem, e.what());
+			opt_some(elem) log.log(*elem, e.what());
 			opt_none log.logSimple(e.what());
 		}
 	}

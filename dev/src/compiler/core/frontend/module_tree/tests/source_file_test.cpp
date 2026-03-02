@@ -26,7 +26,6 @@ class SourceFileTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		::compiler::frontend::use_module_modifier_remove = true;
 		TESTER_ADD_TEST(testSourceFileCreation);
 		TESTER_ADD_TEST(testSourceFileProperties);
 		TESTER_ADD_TEST(testPSTGeneration);
@@ -39,6 +38,9 @@ public:
 		TESTER_ADD_TEST(testSourceFileRemovalClearsLookups);
 		TESTER_ADD_TEST(testSourceFileDanglingReferenceDetection);
 	}
+
+protected:
+	void beforeAll() override { ::compiler::frontend::use_module_modifier_remove = true; }
 
 private:
 	void testSourceFileCreation() {
@@ -318,14 +320,14 @@ private:
 		auto source_path = fs::FileManager::createRandomVirtualFile("removal content");
 		cleanup_files.push_back(source_path);
 		ModuleTreeModifier::addSourceFile(module, source_path);
-		ASSERT_EQUAL(1, module->getSourceFiles().size());
-		auto sf_ref = getRef(module->getSourceFiles().front());
+		ASSERT_EQUAL(1, module->getSourceFiles().illegalAccess().size());
+		auto sf_ref = getRef(module->getSourceFiles().illegalAccess().front());
 
 		auto before = SourceFile::getSourceFilesfromFile(source_path);
 		ASSERT_EQUAL(1, before.size());
 
 		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
-		ASSERT_TRUE(module->getSourceFiles().size() == 0);
+		ASSERT_TRUE(module->getSourceFiles().illegalAccess().size() == 0);
 		auto after = SourceFile::getSourceFilesfromFile(source_path);
 		ASSERT_TRUE(after.empty());
 
@@ -345,8 +347,8 @@ private:
 		auto source_path = fs::FileManager::createRandomVirtualFile("dangling content");
 		cleanup_files.push_back(source_path);
 		ModuleTreeModifier::addSourceFile(module, source_path);
-		ASSERT_EQUAL(1, module->getSourceFiles().size());
-		auto sf_ref  = getRef(module->getSourceFiles().front());
+		ASSERT_EQUAL(1, module->getSourceFiles().illegalAccess().size());
+		auto sf_ref  = getRef(module->getSourceFiles().illegalAccess().front());
 		auto file_id = sf_ref->getFileID();
 
 		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
