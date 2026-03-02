@@ -13,10 +13,10 @@ params:
   code_location:
     description: "The location of the code snippet."
   but_got:
-    description: "What was found instead of the expected identifier."
+    description: "What was found instead of the expected keyword."
 
 header_message:
-  - "Expected an keyword here, but got: "
+  - "Expected a keyword here, but got: "
   - param: "but_got"
   - "."
 
