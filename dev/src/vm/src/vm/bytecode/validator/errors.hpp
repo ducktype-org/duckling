@@ -18,7 +18,7 @@
 namespace vm::code {
 	class ValidationError: public base::LogicError {
 	public:
-		ValidationError(std::string reason): base::LogicError(std::move(reason)) {}
+		ValidationError(const std::string& reason): base::LogicError(std::move(reason)) {}
 
 		// Element causing the error.
 		[[nodiscard]] virtual base::Optional<CRef<ElementBase>> maybeElement() const { return {}; }
@@ -154,9 +154,25 @@ namespace vm::code {
 	class ExtCArgumentTypeNotTriviallyCopyable: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG = "Given VM type is not trivially copyable: ";
+		const code::FuncSignature         main_signature;
 
 		ExtCArgumentTypeNotTriviallyCopyable(TypeCRef vm_type):
 			  ValidationError(base::strConcat(ERR_MSG, vm_type->getName())) {}
+	};
+
+	class InvalidMainReturnType: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "It's required for the `main` function to return a value of type `i64`";
+		const code::FuncSignature main_signature;
+
+		InvalidMainReturnType(code::FuncSignature main_signature):
+			  ValidationError(ERR_MSG.data()),
+			  main_signature(std::move(main_signature)) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return static_cast<CRef<ElementBase>>(&main_signature.result_type);
+		}
 	};
 
 	class DuplicatedTypeError: public ValidationError {
@@ -179,8 +195,8 @@ namespace vm::code {
 	public:
 		const TypeOfData type;
 
-		TypeErrorBase(std::string msg, TypeOfData type):
-			  ValidationError(std::move(msg)),
+		TypeErrorBase(const std::string& msg, TypeOfData type):
+			  ValidationError(msg),
 			  type(std::move(type)) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
@@ -205,8 +221,8 @@ namespace vm::code {
 	public:
 		const opargs::OpCodeArg argument;
 
-		ArgumentErrorBase(std::string msg, opargs::OpCodeArg argument):
-			  ValidationError(std::move(msg)),
+		ArgumentErrorBase(const std::string& msg, opargs::OpCodeArg argument):
+			  ValidationError(msg),
 			  argument(argument) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
@@ -219,8 +235,8 @@ namespace vm::code {
 		const TypeOfData  type;
 		const base::StrID attribute_name;
 
-		TypeAttributeBase(std::string msg, TypeOfData argument, base::StrID field_name):
-			  ValidationError(std::move(msg)),
+		TypeAttributeBase(const std::string& msg, TypeOfData argument, base::StrID field_name):
+			  ValidationError(msg),
 			  type(std::move(argument)),
 			  attribute_name(field_name) {}
 

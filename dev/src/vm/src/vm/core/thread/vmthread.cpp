@@ -5,6 +5,7 @@
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
+#include "base/str/str_utils.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -494,12 +495,15 @@ namespace vm {
 			if (process_memory.tryInsertGlobalData(id, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(global->ctor_name.value())
-					                        .expect(
-												"Called function does not exist: "
-												+ global->ctor_name.value().str()
-											);
+					const auto& maybe_func
+						= executing_program->getFunctions().atMaybe(global->ctor_name.value());
+					if (!maybe_func.has_value()) {
+						respondExecutionRequest(api::ExecutionPanicked{ base::strConcat(
+							"Called function '", global->ctor_name.value(), "' does not exist."
+						) });
+					}
+					const auto& func = *maybe_func.value();
+
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -509,20 +513,27 @@ namespace vm {
 		}
 
 		try {
-			const auto& func = *executing_program->getFunctions()
-			                        .atMaybe(base::StrID(func_name.data()))
-			                        .expect("Called function does not exist: " + func_name);
-			std::optional<low::LowFuncData> start_function;
-			variant_match(run_arguments) {
-				variant_case(ProgramRunArguments, program_run_arguments) {
-					start_function = createProgramStartFunction(func, program_run_arguments);
-				}
-				variant_case(FunctionRunArguments, function_run_data) {
-					start_function = createStartFunctionFor(func, function_run_data);
-				}
+			const auto& maybe_func
+				= executing_program->getFunctions().atMaybe(base::StrID(func_name.data()));
+			if (!maybe_func.has_value()) {
+				respondExecutionRequest(api::ExecutionPanicked{
+					base::strConcat("Called function '", func_name, "' does not exist.") });
 			}
+			const auto& func = *maybe_func.value();
 
-			const auto exit_value = executeFunction(*start_function, func);
+			low::LowFuncData start_function = [&]() {
+				variant_match(run_arguments) {
+					variant_case(ProgramRunArguments, program_run_arguments) {
+						return createProgramStartFunction(func, program_run_arguments);
+					}
+					variant_case(FunctionRunArguments, function_run_data) {
+						return createStartFunctionFor(func, function_run_data);
+					}
+				}
+				CORE_UNREACHABLE();
+			}();
+
+			const auto exit_value = executeFunction(start_function, func);
 			respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
