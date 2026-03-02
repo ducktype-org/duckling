@@ -722,7 +722,7 @@ namespace compiler::helios::code {
 
 				auto whole_expr_origin
 					= pstOrigin(current_state.getNamespaceLikePstOrigin(), expr_access);
-				auto state_res = processNamespaceOrValue(sym_list.back(), whole_expr_origin);
+				auto state_res = processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
 
 				if (access_state.isExpr()) {
