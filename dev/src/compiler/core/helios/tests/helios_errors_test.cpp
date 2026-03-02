@@ -363,7 +363,7 @@ private:
 				    builtin_output_i64(1);
 				    return u;
 				}
-				
+
 				fun main() -> i64 = {
 					foo(unitType);
 					return 0;
@@ -577,6 +577,21 @@ private:
 				}
 			)",
 			{ "Feature not implemented" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					var a: i64 = 0;
+					&a;
+
+					return a;
+				}
+
+				const bar = foo();
+			)",
+			{ "Feature not implemented", "pointer types" },
 			1
 		);
 
