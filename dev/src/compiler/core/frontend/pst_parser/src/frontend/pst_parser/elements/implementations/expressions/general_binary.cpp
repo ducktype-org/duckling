@@ -67,7 +67,7 @@ namespace pst::expr {
 		i64              next = 0;
 		PST_WHILE(fwd < reduced_length) {
 			next = skipAtom(state, fwd, reduced_length);
-			if (fwd == next) makeBox<tpc::NoIdentifierError>(state.getPosition(fwd));
+			if (fwd == next) makeBox<tpc::NoIdentifierError>(state.getPosition(fwd), state[fwd].describe());
 			if (next < reduced_length - 1)  // Not a suffix operator or end of expression
 				operators.push_back(next);
 			fwd = std::min(next + 1, reduced_length);

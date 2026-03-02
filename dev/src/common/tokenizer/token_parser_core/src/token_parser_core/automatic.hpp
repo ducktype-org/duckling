@@ -104,7 +104,7 @@ namespace tpc {
 		void one(Identifier* result, bool ignorable = false) {
 			result->position = state.getPosition();
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.logInt(makeBox<NoIdentifierError>(state.getPosition()));
+				state.logInt(makeBox<NoIdentifierError>(state.getPosition(), state.ctokens().peek().describe()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) state.tokens().next();
 				return;
@@ -245,11 +245,23 @@ namespace tpc {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
-				     .name          = "no_identifier" };
+				     .name          = "no_identifier", };
 		}
 
 	public:
-		NoIdentifierError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
+		NoIdentifierError(dia::SourcePosition pos, std::string but_got);
+	};
+
+	class NoKeywordError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "no_keyword", };
+		}
+
+	public:
+		NoKeywordError(dia::SourcePosition pos, std::string but_got);
 	};
 
 	class NoStringError final: public dia_int::MessageWithCodeFragmentAndCause {

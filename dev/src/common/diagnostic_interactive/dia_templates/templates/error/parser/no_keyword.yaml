@@ -16,7 +16,7 @@ params:
     description: "What was found instead of the expected identifier."
 
 header_message:
-  - "Expected an identifier here. But got: "
+  - "Expected an keyword here. But got: "
   - param: "but_got"
   - "."
 

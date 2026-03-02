@@ -12,6 +12,27 @@
 #include <utility>
 
 namespace lexer {
+	std::string Token::typeToStr(Type type) {
+		switch (type) {
+			case Type::Keyword:        return "Keyword";
+			case Type::Identifier:     return "Identifier";
+			case Type::NumLiteral:     return "NumLiteral";
+			case Type::NumLiteralGroup:return "NumLiteralGroup";
+			case Type::TypeSpecifier:  return "TypeSpecifier";
+			case Type::String:         return "String";
+			case Type::Char:           return "Char";
+			case Type::FormattedString:return "FormattedString";
+			case Type::BracketGroup:   return "BracketGroup";
+			case Type::Operator:       return "Operator";
+			case Type::Comment:        return "Comment";
+			case Type::Special:        return "Special";
+			case Type::Empty:          return "Empty";
+			case Type::Sentinel:       return "Sentinel";
+			case Type::Error:          return "Error";
+		}
+		CORE_UNREACHABLE();
+	}
+
 	Token::Token(Token::Type type, const base::RawView value, const dia::SourcePosition& position):
 		  type(type),
 		  str_id(value),
@@ -265,6 +286,10 @@ namespace lexer {
 	bool Token::is(Keyword key) const { return lang_def::strAsKeyword(str_id) == key; }
 
 	dia::SourcePosition Token::getPosition() const { return source_position; }
+
+	std::string Token::describe() const {
+		return base::strConcat(typeToStr(type), " '", getStrValue(), "'");
+	}
 
 	TokenData::TokenData(Tokens&& tokens, Token&& bof_sentinel, Token&& eof_sentinel):
 		  tokens(std::move(tokens)),
