@@ -10,6 +10,8 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <query_framework/context/context.hpp>  // @TODO: #404 relax to fd
 #include <string_id/string_id.hpp>
 
@@ -76,6 +78,19 @@ namespace compiler::helios {
 		static SymbolData makeGeneratedSymbol(
 			base::StrID name, houtgen::GeneratedSymbolData generated_data
 		);
+
+		[[nodiscard]]
+		ScopeID getScope() const {
+			variant_match(other) {
+				variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
+				variant_case_novalue(builtin::BuiltinFunctionData) {
+					base::NotYetImplemented("Can't get scope of builtin function.");
+				}
+				variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
+				variant_default { CORE_UNREACHABLE(); }
+			}
+			CORE_UNREACHABLE();
+		}
 
 		template<class T>
 		[[nodiscard]]

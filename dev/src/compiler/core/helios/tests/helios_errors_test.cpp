@@ -199,6 +199,130 @@ private:
 			1
 		);
 
+		// =========================== Method call errors ===========================
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method(1.0);
+				}
+			)",
+			{ "The given argument type `f32` cannot be converted to the expected type `i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method();
+				}
+			)",
+			{ "The call is missing a required argument with no default value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+
+					fun method(x: f64) = {
+						return x + 1.0;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method("abc");
+				}
+			)",
+			{ " Call failed due to ambiguous overload resolution." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(x: i64) = {
+					return x + 1;
+				}
+
+				class MyClass {
+					a: i64 = 0;
+
+					fun foo(x: i64) = {
+						return x + 1;
+					}
+
+					fun goo(x: i64) = {
+						return foo(x);
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.goo(1);
+				}
+			)",
+			{ "Found a combination of function and non-function callables in a call expression." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Point {
+					x:i64;y:i64;
+
+					fun Point() = {}
+
+					fun foo() = {
+						let a = Point(1, 2);
+					}
+				}
+			)",
+			{ "Found a combination of function and non-function callables in a call expression." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					x:i64 = 0;
+
+					fun foo() = {
+						return self.goo(5);
+					}
+				}
+			)",
+			{ "Call failed because no matching functions were found." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					x:i64 = 0;
+
+					fun foo(a:i64 = 0.5) = {
+						return a;
+					}
+				}
+			)",
+			{ "Type `f32` cannot be converted to type `i64`." },
+			1
+		);
+
 		// ============================ Typecheck errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() -> i64 = 1.0;)", { "Type `f32` cannot be converted to type `i64`." }, 1
@@ -239,7 +363,7 @@ private:
 				    builtin_output_i64(1);
 				    return u;
 				}
-				
+
 				fun main() -> i64 = {
 					foo(unitType);
 					return 0;
@@ -301,6 +425,21 @@ private:
 				}
 			)",
 			{ "Immutable variables must have an initial value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var n = 42;
+                    if (true) {
+                        var n = 24;
+                        builtin_output_i64(n);
+                    }
+				}
+			)",
+			{ "Variable name is ambiguous, because it has been defined multiple times.",
+		      "Found declaration:" },
 			1
 		);
 
@@ -441,6 +580,46 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "Nested", "function" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: i64 = 0;
+					a += 1;
+					return a;
+				}
+			)",
+			{ "Feature not implemented" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					var a: i64 = 0;
+					&a;
+
+					return a;
+				}
+
+				const bar = foo();
+			)",
+			{ "Feature not implemented", "pointer types" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { x: i64 = 0; }
+				const a = A();
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "compile time evaluation" },
 			1
 		);
 	}

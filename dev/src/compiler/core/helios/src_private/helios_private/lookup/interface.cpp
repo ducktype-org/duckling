@@ -1,7 +1,9 @@
 #include "interface.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <helios_private/lookup/errors.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
@@ -110,9 +112,14 @@ namespace compiler::helios {
 				return dealiased_result;
 			}
 			variant_case(errors::Ambiguity, _) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Ambiguity in lookup", error_position, "", "symbol lookup here"
-				));
+				auto msg = makeBox<ShadowedVariableLookupError>(error_position);
+				for (auto& leaf: lookup_result->leaves) {
+					if_opt_some(getSymRef(leaf)->getPSTDataOpt(), pst_data) {
+						auto decl_pos = pst_data->getElement().unlock(ctx)->getSourcePosition();
+						msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
+					}
+				}
+				ctx.logInt(std::move(msg));
 				return query::Failed();
 			}
 			variant_case(errors::SymbolNotFound, _) {
