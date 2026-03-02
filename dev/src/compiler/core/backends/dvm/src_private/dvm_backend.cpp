@@ -7,9 +7,9 @@
 
 namespace compiler::backend_vm {
 
-	Module::Module(base::StrID module_id):
+	Module::Module(base::StrID module_id, query::Context& query_ctx):
 		  module_id(module_id),
-		  program_context(makeBox<internal::ProgramLoweringContext>()) {}
+		  program_context(makeBox<internal::ProgramLoweringContext>(query_ctx)) {}
 
 	vm::code::CodeCollection Module::build() const {
 		match_optional(program_context->validateAndProduceProgram()) {

@@ -5,6 +5,8 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <query_framework/context/context.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 
 namespace compiler::backend_vm {
@@ -16,7 +18,7 @@ namespace compiler::backend_vm {
 		base::StrID module_id;
 
 	public:
-		Module(base::StrID module_id);
+		Module(base::StrID module_id, query::Context& query_ctx);
 
 		/**
 		 * @brief Inserts a LIR function into the module.
