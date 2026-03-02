@@ -1,0 +1,139 @@
+global_data counter i64 {};
+
+global_data lock mutex {};
+
+global_data cv condition_variable {};
+
+global_data ready i64 {}; # Flaga stanu
+
+
+function worker {} -> void {
+
+    # 1. Zablokuj mutex, aby bezpiecznie zmienić dane
+
+    init_lany_type        l1, mutex;
+    mov_lopq_gopq         l1, lock;
+    call_builtinfunc      builtin_lock_mutex;
+
+
+    # 2. Zwiększ licznik (symulacja pracy)
+
+    init_lany_type        temp, i64;
+    mov_l64_g64           temp, counter;
+    add_l64_imm           temp, 5;
+    mov_g64_l64           counter, temp;
+
+
+    # 3. Ustaw flagę gotowości
+
+    init_lany_type        one, i64;
+    mov_l64_imm           one, 1;
+    mov_g64_l64           ready, one;
+
+
+    # 4. Wyślij powiadomienie (Notify)
+
+    #init_lany_type        cv_signal, condition_variable;
+    #mov_lopq_gopq         cv_signal, cv;
+    #call_builtinfunc      builtin_notify_cv;
+
+
+    # 5. Odblokuj mutex
+
+    init_lany_type          l2, mutex;
+    mov_lopq_gopq           l2, lock;
+    call_builtinfunc        builtin_unlock_mutex;
+
+
+    ret;
+}
+
+
+function main { i64, ptr_argv } -> i64 {
+
+    # --- Inicjalizacja synchronizacji ---
+    init_lany_type			output_var, i64;
+    init_lany_type        m_init, mutex;
+    call_builtinfunc      builtin_create_mutex;
+    mov_gopq_lopq         lock, m_init;
+
+    init_lany_type        cv_init, condition_variable;
+    call_builtinfunc      builtin_create_cv;
+    mov_gopq_lopq         cv, cv_init;
+
+    # --- Start wątku worker ---
+    init_lany_type        t_id, i64;
+    set_threadctx         worker;
+    call_builtinfunc      builtin_start_thread;
+
+
+    # --- Oczekiwanie na sygnał ---
+    # Lock przed sprawdzaniem warunku
+    init_lany_type        m_lock, mutex;
+    mov_lopq_gopq         m_lock, lock;
+    call_builtinfunc      builtin_lock_mutex;
+
+
+    label WaitLoop;
+
+        init_lany_type    check_ready, i64;
+        mov_l64_g64       check_ready, ready;
+        cmpEq_l64_imm     check_ready, 1;
+        jmpIf_label       DoneWaiting; # Jeśli ready == 1, wyjdź z pętli
+
+        #init_lany_type    cv_wait, condition_variable;
+        #mov_lopq_gopq     cv_wait, cv;
+        #init_lany_type      l3, mutex;
+        #mov_lopq_gopq       l3, lock;
+        #call_builtinfunc  builtin_wait_cv;
+
+
+
+        # Wywołanie Wait: puszcza mutex i zasypia, po obudzeniu znów bierze mutex
+
+        deinit;
+        jmp_label         WaitLoop; # Ponownie sprawdź warunek (predykat)
+
+
+    label DoneWaiting;
+
+
+    # --- Sprzątanie i wynik ---
+
+    init_lany_type        final_val, i64;
+    mov_l64_g64           final_val, counter;
+    output_l64            final_val; # Powinno wypisać 5
+
+
+    init_lany_type        l4, mutex;
+    mov_lopq_gopq         l4, lock;
+    call_builtinfunc      builtin_unlock_mutex;
+
+
+    # Join i niszczenie
+    init_lany_type        t_ret, i64;
+    init_lany_type        join_t_id, i64;
+    mov_l64_l64           join_t_id, t_id;
+    call_builtinfunc      builtin_join_thread;
+
+
+    init_lany_type      cv2, condition_variable;
+    mov_lopq_gopq       cv2, cv;
+    call_builtinfunc      builtin_destroy_cv;
+    
+
+    init_lany_type      l5, mutex;
+    mov_lopq_gopq       l5, lock;
+    call_builtinfunc      builtin_destroy_mutex;
+
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+
+    ret;
+
+}

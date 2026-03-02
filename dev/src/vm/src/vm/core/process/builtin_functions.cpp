@@ -135,6 +135,34 @@ namespace vm::builtins {
 		thread.process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
 
+	void FunctionHandlers::builtinCreateCV(VMThread& thread) {
+		thread.process.getSynchronizationPrimitives().addCV();
+	}
+
+	void FunctionHandlers::builtinWaitCV(VMThread& thread, i64 cv_id, i64 mutex_id) {
+		auto cv    = thread.process.getSynchronizationPrimitives().getCV(cv_id);
+		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
+
+		thread.releaseGil();
+		std::unique_lock lock(*mutex);
+		cv->wait(lock);
+		thread.keepOrAcquireGil();
+	}
+
+	void FunctionHandlers::builtinNotifyCV(VMThread& thread, i64 cv_id) {
+		auto cv = thread.process.getSynchronizationPrimitives().getCV(cv_id);
+		cv->notify_one();
+	}
+
+	void FunctionHandlers::builtinNotifyAllCV(VMThread& thread, i64 cv_id) {
+		auto cv = thread.process.getSynchronizationPrimitives().getCV(cv_id);
+		cv->notify_all();
+	}
+
+	void FunctionHandlers::builtinDestroyCV(VMThread& thread, i64 cv_id) {
+		thread.process.getSynchronizationPrimitives().removeCV(cv_id);
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
@@ -161,7 +189,12 @@ namespace vm::builtins {
 				CreateMutex,
 				LockMutex,
 				UnlockMutex,
-				DestroyMutex
+				DestroyMutex,
+				CreateCV,
+				WaitCV,
+				NotifyCV,
+				NotifyAllCV,
+				DestroyCV
 			)
 
 
@@ -216,8 +249,22 @@ namespace vm::builtins {
 			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } },
 			     { BuiltinFunctionID::DestroyMutex,
 			       { base::StrID("builtin_destroy_mutex"),
-			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } } };
-
+			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } },
+			     { BuiltinFunctionID::CreateCV,
+			       { base::StrID("builtin_create_cv"),
+			         code::FuncSignature(base::StrID("condition_variable"), {}) } },
+			     { BuiltinFunctionID::WaitCV,
+			       { base::StrID("builtin_wait_cv"),
+			         code::FuncSignature(base::StrID("void"), { base::StrID("condition_variable"), base::StrID("mutex") }) } },
+			     { BuiltinFunctionID::NotifyCV,
+			       { base::StrID("builtin_notify_cv"),
+			         code::FuncSignature(base::StrID("void"), { base::StrID("condition_variable") }) } },
+			     { BuiltinFunctionID::NotifyAllCV,
+			       { base::StrID("builtin_notify_all_cv"),
+			         code::FuncSignature(base::StrID("void"), { base::StrID("condition_variable") }) } },
+			     { BuiltinFunctionID::DestroyCV,
+			       { base::StrID("builtin_destroy_cv"),
+			         code::FuncSignature(base::StrID("void"), { base::StrID("condition_variable") }) } } };
 
 		return &map;
 	}

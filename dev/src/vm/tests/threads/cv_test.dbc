@@ -1,0 +1,152 @@
+global_data counter i64 {};
+global_data lock mutex {};
+global_data cv condition_variable {};
+global_data working i8 {};
+
+function inc {} -> void {
+    init_lany_type			temp, i64;
+	init_lany_type			i, i64;
+	mov_l64_imm				i, 10000;
+    init_lany_type          small, i8;
+	# while(i > 0)
+	label Loop1;
+		# i--
+		sub_l64_imm			i, 1;
+
+		init_lany_type		lock1, mutex;
+		mov_lopq_gopq		lock1, lock;
+		call_builtinfunc	builtin_lock_mutex;
+
+		mov_l64_g64			temp, counter;
+		add_l64_imm			temp, 1;
+		mov_g64_l64			counter, temp;
+
+		init_lany_type		lock2, mutex;
+		mov_lopq_gopq		lock2, lock;
+		call_builtinfunc	builtin_unlock_mutex;
+
+        # if counter % 1000 == 0 do cv.wait()
+        mod_l64_imm         temp, 1000; 
+        cmpGt_l64_imm       temp, 0;
+        jmpIfNot_label      EndLoop;
+
+		
+        init_lany_type		lock1, mutex;
+		mov_lopq_gopq		lock1, lock;
+		call_builtinfunc	builtin_lock_mutex;
+
+		mov_g8_imm			working, 0;
+
+		init_lany_type		lock2, mutex;
+		mov_lopq_gopq		lock2, lock;
+		call_builtinfunc	builtin_unlock_mutex;
+
+
+        label SleepLoop;
+            init_lany_type		cv1, condition_variable;
+		    mov_lopq_gopq		cv1, cv;
+        	init_lany_type		lock2, mutex;
+		    mov_lopq_gopq		lock2, lock;
+            call_builtinfunc    builtin_wait_cv;
+
+            mov_l8_g8           small, working;
+
+            cmpGt_l8_imm        small, 0;
+            jmpIf_label         SleepLoop;
+        label EndLoop;
+
+        init_lany_type		lock4, mutex;
+	    mov_lopq_gopq		lock4, lock;
+	    call_builtinfunc	builtin_unlock_mutex;
+
+		# if i > 0 goto Loop1
+		cmpGt_l64_imm		i, 0;
+		jmpIf_label			Loop1;
+
+    ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+    init_lany_type			temp, i64;
+    init_lany_type			temp2, i64;
+    init_lany_type			output_var, i64;
+    init_lany_type			lock1, mutex;
+	call_builtinfunc		builtin_create_mutex;
+	mov_gopq_lopq			lock, lock1;
+
+    init_lany_type          cv3, condition_variable;
+    call_builtinfunc        builtin_create_cv;
+    mov_gopq_lopq			cv, cv3;
+
+    mov_g8_imm              working, 1;
+
+	init_lany_type			thread_inc1_id, i64;
+	set_threadctx			inc;
+    call_builtinfunc		builtin_start_thread;
+
+	init_lany_type			thread_inc2_id, i64;
+	set_threadctx			inc;
+    call_builtinfunc		builtin_start_thread;
+
+    label Loop2;
+        init_lany_type		lock6, mutex;
+		mov_lopq_gopq		lock6, lock;
+		call_builtinfunc	builtin_lock_mutex;
+
+		mov_l64_g64			temp, counter;
+        mov_l64_l64         temp2, temp;
+
+		init_lany_type		lock2, mutex;
+		mov_lopq_gopq		lock2, lock;
+		call_builtinfunc	builtin_unlock_mutex;
+
+        mov_l64_g64		    output_var, counter;
+        output_l64		    output_var;        
+        
+        mod_l64_imm         temp, 1000; 
+        cmpGt_l64_imm       temp, 0;
+        jmpIf_label         Skipper;
+
+        mov_l64_l64			output_var, temp2;
+        output_l64			output_var;  
+
+        init_lany_type		lock8, mutex;
+		mov_lopq_gopq		lock8, lock;
+		call_builtinfunc	builtin_lock_mutex;
+
+        mov_g8_imm          working, 1;
+
+		init_lany_type		lock7, mutex;
+		mov_lopq_gopq		lock7, lock;
+		call_builtinfunc	builtin_unlock_mutex;
+
+
+        init_lany_type      cv4, condition_variable;
+        mov_lopq_gopq         cv4, cv;
+        call_builtinfunc    builtin_notify_all_cv;
+
+        label               Skipper;
+        sub_l64_imm         temp2, 20000;
+        cmpLt_l64_imm       temp, 0;
+        jmpIf_label         Loop2;
+
+
+	init_lany_type			join_inc1_ret, i64;
+	init_lany_type			join_inc1_id, i64;
+    mov_l64_l64				join_inc1_id, thread_inc1_id;
+    call_builtinfunc		builtin_join_thread;	
+
+	init_lany_type			join_inc2_ret, i64;
+	init_lany_type			join_inc2_id, i64;
+    mov_l64_l64				join_inc2_id, thread_inc2_id;
+    call_builtinfunc		builtin_join_thread;
+
+    mov_l64_g64				output_var, counter;
+    output_l64				output_var;
+	
+	init_lany_type			lock2, mutex;
+	mov_lopq_gopq			lock2, lock;
+	call_builtinfunc		builtin_destroy_mutex;
+
+    ret;
+}

@@ -32,4 +32,5 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMFoundMemoryLeakException, "Memory leak detected");
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
 	VM_RUNTIME_EXCEPTION(VMMutexDoesntExist, "Mutex doesn\'t exist");
+	VM_RUNTIME_EXCEPTION(VMConditionVariableDoesntExist, "Condition variable doesn\'t exist");
 }

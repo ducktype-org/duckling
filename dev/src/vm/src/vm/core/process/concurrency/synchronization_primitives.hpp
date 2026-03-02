@@ -3,6 +3,7 @@
 #include <base/types/ints.hpp>
 
 #include <mutex>
+#include <condition_variable>
 
 namespace vm {
 	class SynchronizationPrimitives final {
@@ -17,6 +18,16 @@ namespace vm {
 		 */
 		base::HashMap<i64, SharedBox<std::mutex>>
 			mutex_map;  // @TODO: #2109 Find better structure then map for storing mutexes.
+
+
+		i64 next_cv_id = 0;
+
+		/**
+		 * @brief Pool for condition variables used in the process.
+		 */
+		base::HashMap<i64, SharedBox<std::condition_variable_any>>
+			cv_map;  // @TODO: #2109 Find better structure then map for storing condition variables.
+
 
 	public:
 		/**
@@ -33,5 +44,11 @@ namespace vm {
 		 * @brief Removes mutex from pool.
 		 */
 		void removeMutex(i64);
+
+
+		SharedBox<std::condition_variable_any> getCV(i64 cv_id);
+		i64 addCV();
+		void removeCV(i64);
+
 	};
 }
