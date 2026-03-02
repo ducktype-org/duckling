@@ -240,9 +240,6 @@ namespace vm::code::type {
 		 */
 		void finalize(ObjIdNameMap<type::Type>& types);
 
-		void finalizeStructureInheritanceMetadata(
-			ObjIdNameMap<type::Type>& types, concrete::Structure& structure
-		);
 
 		/**********************/
 		/* General operations */
@@ -284,7 +281,17 @@ namespace vm::code::type {
 		[[nodiscard]] bool isPodType() const;
 
 	private:
+		/**
+		 * @brief Helper function for finalize. Sets is_instantiable.
+		 */
 		void finalizeInstantiability(ObjIdNameMap<type::Type>& types);
+
+		/**
+		 * @brief Helper function for finalize. Fills inheritance metadata for structures.
+		 */
+		void finalizeStructureInheritanceMetadata(
+			ObjIdNameMap<type::Type>& types, concrete::Structure& structure
+		);
 
 		/**
 		 * @brief Whether this type is instantiable. This is false for types that cannot be

@@ -131,7 +131,7 @@
 		std::is_integral_v<BASE>,                                                                  \
 		"STRONG_TYPEDEF_INT can only define integral types. Use `STRONG_TYPEDEF` for any generic " \
 		"types"                                                                                    \
-	);
+	)
 
 /**
  * @brief This macro is intended to create strongly typed

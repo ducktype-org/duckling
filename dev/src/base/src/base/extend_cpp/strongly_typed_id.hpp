@@ -60,7 +60,7 @@
 		auto                 operator<=>(const NAME&) const = default;       \
 		inline bool          isBad() const { return id == BAD_ID; }          \
 		inline bool          isGood() const { return id != BAD_ID; }         \
-	};
+	}
 
 /**
  * @brief Macro used to create Strong ID types that can be created

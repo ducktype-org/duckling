@@ -76,7 +76,6 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 
 	// @note: This is a temporary built type metadata for the sake of function verification.
 	// @TODO: #1306
-	// auto type_metadata = detail::buildTypeMetadata(type_context);
 
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
@@ -99,15 +98,7 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 			throw DuplicatedExtCFunctionError(new_func, *ext_c_function_map.at(new_func.name));
 
 		// Validate arguments exist and are trivially copyable
-#ifdef __cpp_lib_ranges_concat
-		for (const auto& type: std::views::concat(
-				 new_func.signature.parameters, std::views::single(new_func.signature.result_type)
-			 ))
-			if (auto tp = type_context.getCurrentTypes().atMaybe(type)) {
-				if (!tp.value()->isPodType()) throw ExtCArgumentTypeNotTriviallyCopyable(*tp);
-			} else
-				throw UnknownTypeError(opargs::Type(type));
-#else
+
 		if (auto tp = type_context.getCurrentTypes().atMaybe(new_func.signature.result_type)) {
 			if (!tp.value()->isPodType()) throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 		} else
@@ -118,7 +109,6 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 			} else
 				throw UnknownTypeError(opargs::Type(type));
-#endif
 
 		ext_c_function_map.insert(new_func, new_func.name);
 	}
