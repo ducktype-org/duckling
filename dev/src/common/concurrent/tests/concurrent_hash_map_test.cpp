@@ -65,6 +65,10 @@ public:
 		TESTER_ADD_TEST(multiThreadedExtractTest<2>);
 		TESTER_ADD_TEST(multiThreadedExtractTest<4>);
 
+		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<1>);
+		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<2>);
+		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<4>);
+
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<1>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<2>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<4>);
@@ -560,6 +564,63 @@ private:
 				ASSERT_TRUE(map.getCopy(key) == key * 10);
 			}
 		}
+	}
+
+	template<u64 thread_count>
+	void multiThreadedMaybeCallOnTest() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 KEY_RANGE      = 5'000;
+
+		concurrent::ConHashMap<u64, u64> map;
+
+		// fill the map
+		for (u64 i = 0; i < KEY_RANGE; i++) map.put(i, i * 10);
+
+		// Each thread tries to maybeCallOn keys [0, KEY_RANGE * 3).
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+		std::vector<std::vector<std::pair<u64, u64>>> accessed_values(thread_count);
+
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			threads.emplace_back([&map, &accessed_values, thread_id]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					u64 key = (j * thread_id * 1'000'000'007) % (KEY_RANGE * 3);
+
+					// we also add to map here in range [KEY_RANGE, KEY_RANGE*2) to test that maybeCallOn can see new keys added by other threads:
+					auto add_key = (key % KEY_RANGE) + KEY_RANGE;
+					map.maybePut(add_key, add_key * 100);
+
+					map.maybeCallOn(key, [&accessed_values, thread_id, key](Ref<u64> value_ref) {
+						accessed_values[thread_id].emplace_back(key, *value_ref);
+						if (*value_ref == key * 10) *value_ref += 1;  // if it's an original value, update it
+					});
+				}
+			});
+		}
+		for (auto& t: threads) t.join();
+
+		// Verify that accessed keys are correct and that original values were updated.
+		for (const auto& thread_values: accessed_values) {
+			for (const auto& [key, value]: thread_values) {
+				if (key < KEY_RANGE) {
+					// original keys should have been updated to key*10 + 1
+					ASSERT_TRUE(value == key * 10 || value == key * 10 + 1);
+					ASSERT_TRUE(map.contains(key));
+					ASSERT_EQUAL(map.getCopy(key), key * 10 + 1);
+
+				} else if (key < KEY_RANGE * 2) {
+					// maybePut should have added keys in [KEY_RANGE, KEY_RANGE*2) with value = key*100
+					ASSERT_TRUE(value == key * 100);
+					ASSERT_TRUE(map.contains(key));
+					ASSERT_EQUAL(map.getCopy(key), key * 100);
+				} else {
+					// keys >= KEY_RANGE*2 should not be present
+					fail("Accessed key that should not be present: " + std::to_string(key));
+				}
+			}
+		}
+
+
 	}
 
 	/**
