@@ -5,7 +5,7 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <query_framework/context/context.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/errors.hpp>
@@ -15,16 +15,14 @@ namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext {
 		/**
 		 * @brief Context used purely for throwing NotYetImplemented errors.
-		 * Remove when applicable.
+		 * @note This context should not be used for anything other than throwing NotYetImplemented
+		 * errors.
+		 * Remove this field when applicable.
 		 */
-		[[deprecated(
-			"This context should not be used for anything other than throwing NotYetImplemented "
-			"errors"
-		)]]
-		query::Context& query_ctx;
+		query::Context& query_ctx_for_errors;
 
 	public:
-		ProgramLoweringContext(query::Context& query_ctx): query_ctx(query_ctx) {}
+		ProgramLoweringContext(query::Context& query_ctx): query_ctx_for_errors(query_ctx) {}
 
 		/**
 		 * @brief Lowers a LIR function into DVM bytecode function.

@@ -271,7 +271,7 @@ namespace {
 		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
 		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::Module m(base::StrID("COMP_TIME"), query_ctx);
+		compiler::backend_vm::DVMCodeBuilder m(base::StrID("COMP_TIME"), query_ctx);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
