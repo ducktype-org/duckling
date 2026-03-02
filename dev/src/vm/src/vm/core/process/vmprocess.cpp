@@ -427,9 +427,9 @@ namespace vm {
 		return memory.validateMemoryState();
 	}
 
-	Ref<GIL> VMProcess::getGIL() { return gil.refMut(); }
+	GIL& VMProcess::getGIL() { return gil; }
 
-	Ref<SynchronizationPrimitives> VMProcess::getSynchronizationPrimitives() {
-		return synchronization_primitives.refMut();
+	SynchronizationPrimitives& VMProcess::getSynchronizationPrimitives() {
+		return synchronization_primitives;
 	}
 }

@@ -54,9 +54,8 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 
-		Box<GIL>                       gil = makeBox<GIL>();
-		Box<SynchronizationPrimitives> synchronization_primitives
-			= makeBox<SynchronizationPrimitives>();
+		GIL                       gil;
+		SynchronizationPrimitives synchronization_primitives;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
@@ -230,7 +229,7 @@ namespace vm {
 
 		VMProcess(PID my_pid);
 
-		Ref<GIL>                       getGIL();
-		Ref<SynchronizationPrimitives> getSynchronizationPrimitives();
+		GIL&                       getGIL();
+		SynchronizationPrimitives& getSynchronizationPrimitives();
 	};
 }
