@@ -17,7 +17,7 @@ namespace vm::jit {
 	 */
 	struct JitFuncData {
 		MRef<JitOpFun> func_ptr          = nullptr;
-		uint      until_compilation = 1;
+		uint           until_compilation = 1;
 	};
 
 	/**
@@ -28,5 +28,5 @@ namespace vm::jit {
 	/**
 	 * @brief Compile the function on the C2, LLVM-based compiler.
 	 */
-	MRef<JitOpFun>  compileLLVM(const vm::low::LowFuncData& func_data);
+	MRef<JitOpFun> compileLLVM(const vm::low::LowFuncData& func_data);
 }

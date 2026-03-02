@@ -389,7 +389,7 @@ namespace vm {
 				const low::LowFuncData& current_function
 					= thread.executing_program->getFunctions()[func_id];
 
-				MRef<jit::JitOpFun>  compiled = jit::compileLLVM(current_function);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(current_function);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;

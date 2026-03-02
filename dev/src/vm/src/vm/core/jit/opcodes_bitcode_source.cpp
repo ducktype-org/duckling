@@ -45,16 +45,16 @@ POP_DIAGNOSTIC
 // NOLINTEND
 
 /// @brief context of llvmInit.
-static std::unique_ptr<LLVMContext>                              g_context;
+static std::unique_ptr<LLVMContext> g_context;
 
 /// @brief LLVM module containing the parsed microinstruction bitcode.
-static std::unique_ptr<Module>                                   g_module;
+static std::unique_ptr<Module> g_module;
 
 /// @brief Active LLjit instance.
-static std::unique_ptr<LLJIT>                                    lljit_instance;
+static std::unique_ptr<LLJIT> lljit_instance;
 
-/// @brief LLVM helper object used for errors. 
-static ExitOnError                                               exit_on_err;
+/// @brief LLVM helper object used for errors.
+static ExitOnError exit_on_err;
 
 /// @brief For each MicroOpcode stores calculated llvm::Function*.
 static std::unordered_map<vm::low::MicroOpcode, llvm::Function*> func_map;
