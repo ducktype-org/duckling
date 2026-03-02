@@ -668,11 +668,12 @@ private:
 					});
 
 					// also test const variant of maybeCallOn:
-					const auto& cmap = map;
+					const auto& cmap  = map;
+					auto        c_key = (key * 1'000'000'009) % (KEY_RANGE * 3);
 					cmap.maybeCallOn(
-						key,
-						[&const_accessed_values, thread_id, key](CRef<u64> value_ref) {
-							const_accessed_values[thread_id].emplace_back(key, *value_ref);
+						c_key,
+						[&const_accessed_values, thread_id, c_key](CRef<u64> value_ref) {
+							const_accessed_values[thread_id].emplace_back(c_key, *value_ref);
 						}
 					);
 				}
