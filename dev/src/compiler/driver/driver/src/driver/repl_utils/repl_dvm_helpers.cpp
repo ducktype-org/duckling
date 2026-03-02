@@ -42,7 +42,7 @@ namespace compiler::repl {
 
 		if (type_str == "void") {
 			auto run_result = vm::api::runFunction(pid, std::string(func_name), {})
-			                      .and_then([&] { return vm::api::join(pid); })
+			                      .and_then([&](auto) { return vm::api::join(pid); })
 			                      .transform_error(vm::api::errorToString);
 
 			if (run_result.has_value())
@@ -52,7 +52,7 @@ namespace compiler::repl {
 		}
 
 		return vm::api::runFunction(pid, std::string(func_name), {})
-		    .and_then([&] { return vm::api::join(pid); })
+		    .and_then([&](auto) { return vm::api::join(pid); })
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
