@@ -65,11 +65,8 @@ namespace {
 	 * @brief For microinstruction name, returns corresponding MicroOpcode.
 	 */
 	vm::low::MicroOpcode getOpcode(const std::string& func_name) {
-		for (size_t i = 0; i < sizeof(vm::low::OPCODE_NAMES) / sizeof(vm::low::OPCODE_NAMES[0]);
-		     ++i) {
-			if (strcmp(func_name.c_str(), vm::low::OPCODE_NAMES[i]) == 0)
-				return static_cast<vm::low::MicroOpcode>(i);
-		}
+		for (size_t i = 0; i < vm::low::OPCODE_NAMES.size(); ++i)
+			if (func_name == vm::low::OPCODE_NAMES[i]) return static_cast<vm::low::MicroOpcode>(i);
 		CORE_PANIC("Function name does not correspond to any MicroOpcode", func_name);
 	}
 }

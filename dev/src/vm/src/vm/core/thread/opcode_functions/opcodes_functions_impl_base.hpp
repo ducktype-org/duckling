@@ -361,6 +361,7 @@ namespace vm {
 		// restoring `instr` from frame.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
+
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
