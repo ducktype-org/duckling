@@ -777,11 +777,12 @@ namespace compiler::helios {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						base::strConcat(
 							"Evaluating a function in DVM at compile time which was generated "
-							"automatically."
+							"automatically. "
 							"This likely means that the function was a compiler generated class "
 							"constructor. "
 							"The failure happened for the symbol `",
-							name(func_id)
+							name(func_id),
+							"`."
 						),
 						std::nullopt
 					));
