@@ -26,6 +26,7 @@ pub fn get_parser() -> Command {
             flag("global", "Synchronize the global virtual environment")
                 .conflicts_with("overwrite"),
         )
+        .arg(flag("external_errors", "Halt computation after encountering errors in foreign manifests"))
 }
 
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
@@ -41,10 +42,10 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
             ctx,
             &pkg,
             SyncOptions {
-                overwrite: true,
-                frozen: false,
-                offline: false,
-                strict_errors: false,
+                overwrite: matches.get_flag("overwrite"),
+                frozen: matches.get_flag("frozen"),
+                offline: matches.get_flag("offline"),
+                strict_errors: matches.get_flag("external_errors"),
             },
         )
     })?;
