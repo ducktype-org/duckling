@@ -9,7 +9,7 @@ namespace compiler::mir {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
-				     .family        = "type_check",
+				     .family        = "lookup",
 				     .name          = "variable_shadowing" };
 		}
 
@@ -22,7 +22,7 @@ namespace compiler::mir {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "note",
-				     .family        = "type_check",
+				     .family        = "lookup",
 				     .name          = "shadowed_declaration" };
 		}
 

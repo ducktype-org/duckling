@@ -1,6 +1,6 @@
 metadata:
   type: "note"
-  family: "type_check"
+  family: "lookup"
   name: "shadowed_declaration"
   code: "0"
   active_from: "0.0.1"

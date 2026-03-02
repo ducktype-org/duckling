@@ -9,7 +9,7 @@ namespace compiler::helios {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
-				     .family        = "type_check",
+				     .family        = "lookup",
 				     .name          = "shadowed_variable_lookup" };
 		}
 
@@ -22,7 +22,7 @@ namespace compiler::helios {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "note",
-				     .family        = "type_check",
+				     .family        = "lookup",
 				     .name          = "lookup_shadowing_declaration" };
 		}
 
