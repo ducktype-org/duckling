@@ -147,10 +147,10 @@ namespace query::internal {
 		MetadataMap storage;
 
 	public:
-		MetadataStorage() = default;
+		MetadataStorage()                           = default;
+		MetadataStorage(MetadataStorage&&) noexcept = default;
 
 		MetadataStorage(const MetadataStorage&)            = delete;
-		MetadataStorage(MetadataStorage&&)                 = delete;
 		MetadataStorage& operator=(MetadataStorage&&)      = delete;
 		MetadataStorage& operator=(const MetadataStorage&) = delete;
 

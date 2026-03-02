@@ -102,43 +102,40 @@ namespace concurrent {
 		}
 
 		ConHashMap(const ConHashMap&) = delete;
-		ConHashMap(ConHashMap&&)      = delete;
-
-		~ConHashMap() = default;
 
 		/**
-		 * Acts as move constructor.
-		 * After this operation, the source map is left in an empty but valid state.
+		 * Move constructor.
+		 * After this operation, the @p source map is left in an empty but valid state.
 		 *
 		 * Underneath this performs the following:
-		 * * it moves the content of each shard by changing the ownership of the memory
-		 *   i.e. elements of the map remain in the same place in memory, and their constructors are
-		 * not called.
-		 * * it generates new locks for the new map. This way if other threads try to access the
-		 * source map during or after the move, they will be properly synchronized and will not
-		 * cause data races or access to invalid memory.
+		 * * It moves the content of each shard by transferring the ownership,
+		 *   i.e. the shards remain in the same place in memory, and their constructors are
+		 *   not called.
+		 * * It generates new locks for the new map. This way if other threads try to access the
+		 *   source map during the move, they will be properly synchronized and will not
+		 *   cause data races or access to invalid memory.
 		 *
-		 * @note It is made explicit to avoid accidental moves, as they can be bug prone with
-		 * concurrent operations.
+		 * @note This operation is thread safe, but beware that moves perform a large lock on the
+		 * map, and may in general be bug prone when done accidentally.
 		 */
-		ConHashMap moveOut() {
-			// No one should access the map during this operation:
-			WithAllShardsLock lock(*this);
+		ConHashMap(ConHashMap&& source) noexcept: ConHashMap() {
+			// No one should access the source map during this operation
+			WithAllShardsLock lock(source);
 
-			// this creates new locks
-			ConHashMap result;
+			// Transfer ownership of each shard's content to the new map.
+			// Note that locks are initialized in the constructor initializer list.
+			// Linter wants the following line to be placed in init-list. We can't do that, since
+			// we need to lock the source map first.
+			shards = std::move(source.shards); // NOLINT 
+			elements_count.store(source.elements_count.load());
 
-			// transfer ownership of each shard's content to the new map
-			result.shards = std::move(shards);
-			result.elements_count.store(elements_count.load());
-
-			// leave this map in an empty but valid state
-			shards.clear();
-			shards.resize(SHARD_COUNT);
-			elements_count.store(0);
-
-			return result;
+			// Leave the source map in an empty but valid state
+			source.shards.clear();
+			source.shards.resize(SHARD_COUNT);
+			source.elements_count.store(0);
 		}
+
+		~ConHashMap() = default;
 
 		/**
 		 * Inserts key->value into the container.
@@ -298,7 +295,7 @@ namespace concurrent {
 				// data was already not present
 				return base::Optional<DATA_T>{};
 			} else {
-				auto value = std::move(at_maybe.value());
+				DATA_T value = std::move(*at_maybe.value());
 				shards[lock.shard_index].erase(key);
 				elements_count.fetch_sub(1, std::memory_order_relaxed);
 				return value;
