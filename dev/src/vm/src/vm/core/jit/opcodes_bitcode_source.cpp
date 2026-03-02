@@ -1,6 +1,11 @@
+/**
+ * @file opcodes_bitcode_source.cpp
+ * @note Tis file does not depend on execution style.
+ */
+
 #ifdef ENABLE_JIT
 
-	#include "opcode_definitions.hpp"
+	#include "opcodes_bitcode_source.hpp"
 
 	#include "jit_init.hpp"
 
@@ -30,11 +35,7 @@ using namespace llvm::orc;
 // char[] is better than std::array, because we don't know the size.
 // NOLINTBEGIN
 PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
-	#ifdef USE_TAIL_CALLS
-		#embed "src/vm/common_tc.bc"
-	#else
-		#embed "src/vm/common_sc.bc"
-	#endif
+	#embed "src/vm/common_sc.bc"
 };
 POP_DIAGNOSTIC
 // NOLINTEND
@@ -46,6 +47,10 @@ static std::unique_ptr<LLJIT>                                    lljit_instance;
 static ExitOnError                                               exit_on_err;
 
 namespace {
+	/**
+	 * @brief Extracts function name from its mangled version. It should be string
+	 * between last "::" (if present) and first "(".
+	 */
 	std::string extractFunctionName(const std::string& full) {
 		size_t paren_pos = full.find('(');
 		if (paren_pos == std::string::npos) paren_pos = full.length();
@@ -56,6 +61,9 @@ namespace {
 		return full.substr(start, paren_pos - start);
 	}
 
+	/**
+	 * @brief For microinstruction name, returns corresponding MicroOpcode.
+	 */
 	vm::low::MicroOpcode getOpcode(const std::string& func_name) {
 		for (size_t i = 0; i < sizeof(vm::low::OPCODE_NAMES) / sizeof(vm::low::OPCODE_NAMES[0]);
 		     ++i) {

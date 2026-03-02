@@ -1,7 +1,7 @@
 #ifdef ENABLE_JIT
 	#include "jit_compiler.hpp"
 
-	#include "opcode_definitions.hpp"
+	#include "opcodes_bitcode_source.hpp"
 
 	#include <llvm_helpers/llvm_helpers.hpp>
 

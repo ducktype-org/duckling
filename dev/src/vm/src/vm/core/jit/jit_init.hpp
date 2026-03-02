@@ -4,6 +4,9 @@
  */
 #pragma once
 
+/**
+ * @brief Parses opcodes from bitcode file. Function is registered to be called at init.
+ */
 __attribute__((noinline)) void llvmInit();
 
 #ifdef ENABLE_JIT

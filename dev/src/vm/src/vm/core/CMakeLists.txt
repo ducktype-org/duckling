@@ -22,7 +22,7 @@ add_files(
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
 
 add_files(
-	jit/opcode_definitions.cpp
+	jit/opcodes_bitcode_source.cpp
 )
 
 set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)

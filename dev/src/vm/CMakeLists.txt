@@ -143,6 +143,7 @@ function(add_vm_variant suffix compile_def)
             COMMENT "Full O3 + LTO + Aggressive Inline for ${suffix}"
         )
 
+        # JitDep depends to both bc files (it can embed both of them), but is NOT config dependent.
         add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc})
         add_dependencies(JitDep CommonVMBitcode_${suffix})
 
