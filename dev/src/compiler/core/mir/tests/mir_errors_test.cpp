@@ -64,6 +64,7 @@ private:
 			assertTrue(
 				some_fun_lowering_failed, "Expected some MIR query to fail for module functions."
 			);
+			logger = query::Context::dumpToOneLoggerAndClear();
 			assertTrue(logger->hasErrors(), "Expected errors to be logged by MIR.");
 
 			std::stringstream logged_messages;
