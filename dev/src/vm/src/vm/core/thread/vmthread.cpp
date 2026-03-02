@@ -380,7 +380,7 @@ namespace vm {
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
-		process.getGIL()->release();
+		process.getGIL().release();
 
 		return exit_value_storage.value();
 	}
@@ -682,20 +682,20 @@ namespace vm {
 			// Check if you can hold it longer - releasing policy
 			// If you can't hold it longer then
 			// 1. say
-			if (!process.getGIL()->shouldRelease()) return;
+			if (!process.getGIL().shouldRelease()) return;
 			has_gil = false;
 			// 2. release gil
-			process.getGIL()->release();
+			process.getGIL().release();
 			// 3. yield - to not reacquire instantly
 			std::this_thread::yield();
 		}
 		// Try to acquire GIL
-		process.getGIL()->acquire();
+		process.getGIL().acquire();
 		has_gil = true;
 	}
 
 	void VMThread::releaseGil() {
 		has_gil = false;
-		process.getGIL()->release();
+		process.getGIL().release();
 	}
 }
