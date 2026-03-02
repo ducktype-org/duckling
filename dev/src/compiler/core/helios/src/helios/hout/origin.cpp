@@ -14,22 +14,34 @@ namespace compiler::helios::code {
 		});
 	}
 
-	ElementOrigin ElementOrigin::extended(pst::Access<pst::LangElement> pst_element) const {
-		match_optional(source_position) {
-			opt_some(pos) {
-				pst::StablePosition new_pos = pos;
-				new_pos.extendWith(pst_element->getStablePosition());
-				return { new_pos, {}, false };
-			}
-			opt_none { return { pst_element->getStablePosition(), {}, false }; }
-		}
-		CORE_UNREACHABLE();
+	base::Optional<pst::StablePosition> ElementOrigin::getStablePosition() const {
+		return source_position;
+	}
+
+	base::Optional<pst::AccessLocked<pst::LangElement>> ElementOrigin::getPSTElement() const {
+		return pst_element.map([](const pst::LangElement::HashType& hash) {
+			auto element = pst::LangElement::getByStableHash(hash);
+			return element;
+		});
 	}
 
 	ElementOrigin ElementOrigin::generatedFrom() const { return { source_position, {}, true }; }
 
+	ElementOrigin generatedOrigin() { return { {}, {}, true }; }
+
+	ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element) {
+		return { pst_element->getStablePosition(), pst_element->getHash(), false };
+	}
+
+	ElementOrigin pstOrigin(const ElementOrigin& origin, pst::Access<pst::LangElement> pst_element) {
+		auto source_position = origin.getStablePosition();
+		if_opt_some(source_position, pos) { pos.extendWith(pst_element->getStablePosition()); }
+		if_opt_none(source_position) { source_position = pst_element->getStablePosition(); }
+		return { source_position, {}, false };
+	}
+
 	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements) {
-		if (pst_elements.empty()) return generatedOrigin();
+		CORE_ASSERT(!pst_elements.empty(), "pst_elements cannot be empty");
 
 		auto pos = pst_elements[0]->getStablePosition();
 
@@ -39,16 +51,4 @@ namespace compiler::helios::code {
 		return { pos, {}, false };
 	}
 
-	ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element) {
-		return { pst_element->getStablePosition(), pst_element->getHash(), false };
-	}
-
-	ElementOrigin generatedOrigin() { return { {}, {}, true }; }
-
-	base::Optional<pst::AccessLocked<pst::LangElement>> ElementOrigin::getPSTElement() const {
-		return pst_element.map([](const pst::LangElement::HashType& hash) {
-			auto element = pst::LangElement::getByStableHash(hash);
-			return element;
-		});
-	}
 }

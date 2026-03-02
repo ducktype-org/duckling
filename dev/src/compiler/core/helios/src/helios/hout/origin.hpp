@@ -9,7 +9,13 @@ namespace compiler::helios::code {
 
 	class ElementOrigin {
 		/**
-		 * @brief The source position of the origin.
+		 * @brief The source position of the origin, if it is available.
+		 *
+		 * If the origin was generated, it may (or may not) have the source position,
+		 * which is the position of the code that it was generated from.
+		 *
+		 * If element was created from multiple PST elements,
+		 * the position is the merged position of all of them.
 		 */
 		base::Optional<pst::StablePosition> source_position;
 
@@ -38,21 +44,24 @@ namespace compiler::helios::code {
 	public:
 		/**
 		 * @brief Get the source position of the origin, if it is available.
+		 * Note that the generated elements can have the source position,
+		 * if we know where they are generated from.
+		 * The position is empty if they do not have position in the code.
 		 */
 		[[nodiscard]] base::Optional<dia::SourcePosition> getSourcePosition() const;
+
+		/**
+		 * @brief Get the stable source position of the origin, if it is available.
+		 * Same as @p getSourcePosition, but returns the stable position instead of the active
+		 * position.
+		 */
+		[[nodiscard]] base::Optional<pst::StablePosition> getStablePosition() const;
 
 		/**
 		 * @brief Get the PST element that this origin corresponds to, if it corresponds to a
 		 * specific PST element.
 		 */
 		[[nodiscard]] base::Optional<pst::AccessLocked<pst::LangElement>> getPSTElement() const;
-
-
-		/**
-		 * @brief Helper function that creates a new origin based on the current one
-		 * but extending the source position to include the additional PST element.
-		 */
-		[[nodiscard]] ElementOrigin extended(pst::Access<pst::LangElement> pst_element) const;
 
 		/**
 		 * @brief Helper function that creates a new origin based on the current one but marked as
@@ -66,6 +75,9 @@ namespace compiler::helios::code {
 		friend ElementOrigin multiplePstOrigin(
 			const std::vector<pst::Access<pst::LangElement>>& pst_elements
 		);
+		friend ElementOrigin pstOrigin(
+			const ElementOrigin& origin, pst::Access<pst::LangElement> pst_element
+		);
 		friend ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element);
 		friend ElementOrigin generatedOrigin();
 	};
@@ -76,12 +88,17 @@ namespace compiler::helios::code {
 	ElementOrigin generatedOrigin();
 
 	/**
-	 * @brief Creates an ElementOrigin from a single PST element.
+	 * @brief Creates a non-generated ElementOrigin from a single PST element.
 	 */
 	ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element);
 
 	/**
-	 * @brief Creates an ElementOrigin from multiple PST elements.
+	 * @brief Creates a non-generated ElementOrigin from some existing origin and pst element.
+	 */
+	ElementOrigin pstOrigin(const ElementOrigin& origin, pst::Access<pst::LangElement> pst_element);
+
+	/**
+	 * @brief Creates a non-generated ElementOrigin from multiple PST elements.
 	 */
 	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements);
 }
