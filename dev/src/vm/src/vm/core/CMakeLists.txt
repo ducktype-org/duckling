@@ -6,6 +6,8 @@ add_files(
 		process/type_metadata/type_metadata.cpp
 		process/type_metadata/type.cpp
 		process/memory/memory.cpp
+		process/concurrency/gil.cpp
+		process/concurrency/synchronization_primitives.cpp
 )
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
