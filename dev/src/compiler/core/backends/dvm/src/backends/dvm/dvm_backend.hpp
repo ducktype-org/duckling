@@ -15,7 +15,7 @@ namespace compiler::backend_vm {
 	 * @brief A statefull collection of code lowered into VM bytecode.
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 */
-	class DVMCodeBuilder {
+	class DVMCodeBuilder final {
 		base::StrID module_id;
 
 	public:
