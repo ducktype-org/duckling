@@ -199,6 +199,130 @@ private:
 			1
 		);
 
+		// =========================== Method call errors ===========================
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method(1.0);
+				}
+			)",
+			{ "The given argument type `f32` cannot be converted to the expected type `i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method();
+				}
+			)",
+			{ "The call is missing a required argument with no default value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					fun method(x: i64) = {
+						return x + 1;
+					}
+
+					fun method(x: f64) = {
+						return x + 1.0;
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.method("abc");
+				}
+			)",
+			{ " Call failed due to ambiguous overload resolution." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(x: i64) = {
+					return x + 1;
+				}
+
+				class MyClass {
+					a: i64 = 0;
+
+					fun foo(x: i64) = {
+						return x + 1;
+					}
+
+					fun goo(x: i64) = {
+						return foo(x);
+					}
+				}
+				fun main() = {
+					var obj = MyClass();
+					return obj.goo(1);
+				}
+			)",
+			{ "Found a combination of function and non-function callables in a call expression." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Point {
+					x:i64;y:i64;
+
+					fun Point() = {}
+
+					fun foo() = {
+						let a = Point(1, 2);
+					}
+				}
+			)",
+			{ "Found a combination of function and non-function callables in a call expression." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					x:i64 = 0;
+
+					fun foo() = {
+						return self.goo(5);
+					}
+				}
+			)",
+			{ "Call failed because no matching functions were found." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class MyClass {
+					x:i64 = 0;
+
+					fun foo(a:i64 = 0.5) = {
+						return a;
+					}
+				}
+			)",
+			{ "Type `f32` cannot be converted to type `i64`." },
+			1
+		);
+
 		// ============================ Typecheck errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() -> i64 = 1.0;)", { "Type `f32` cannot be converted to type `i64`." }, 1
