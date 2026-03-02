@@ -8,8 +8,6 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include "string_id/string_id.hpp"
-
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
