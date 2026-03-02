@@ -1,7 +1,7 @@
 metadata:
   type: "error"
   family: "parser"
-  name: "no_identifier"
+  name: "no_keyword"
   code: "0"
   active_from: "0.0.1"
   active_until: "now"
