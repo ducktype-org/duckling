@@ -4,8 +4,8 @@
 
 namespace vm {
 	SharedBox<std::mutex> SynchronizationPrimitives::getMutex(i64 mutex_id) {
-		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
-		return mutex_map.at(mutex_id);
+		if (auto it = mutex_map.find(mutex_id); it != mutex_map.end()) return (*it).second;
+		throw exceptions::VMMutexDoesntExist();
 	}
 
 	i64 SynchronizationPrimitives::addMutex() {
@@ -14,7 +14,9 @@ namespace vm {
 	}
 
 	void SynchronizationPrimitives::removeMutex(i64 mutex_id) {
-		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
-		mutex_map.erase(mutex_id);
+		if (auto it = mutex_map.find(mutex_id); it != mutex_map.end())
+			mutex_map.erase(it);
+		else
+			throw exceptions::VMMutexDoesntExist();
 	}
 }
