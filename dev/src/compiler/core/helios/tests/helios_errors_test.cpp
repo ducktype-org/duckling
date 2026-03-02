@@ -567,6 +567,18 @@ private:
 			{ "Feature not implemented", "Nested", "function" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: i64 = 0;
+					a += 1;
+					return a;
+				}
+			)",
+			{ "Feature not implemented" },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
