@@ -154,7 +154,6 @@ namespace vm::code {
 	class ExtCArgumentTypeNotTriviallyCopyable: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG = "Given VM type is not trivially copyable: ";
-		const code::FuncSignature         main_signature;
 
 		ExtCArgumentTypeNotTriviallyCopyable(TypeCRef vm_type):
 			  ValidationError(base::strConcat(ERR_MSG, vm_type->getName())) {}
