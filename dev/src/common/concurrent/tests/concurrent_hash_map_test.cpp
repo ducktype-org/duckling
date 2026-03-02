@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <random>
+#include <set>
 
 template<usize Size>
 struct BigObject final {
@@ -343,6 +344,23 @@ private:
 				}
 			}
 		}
+
+		// Test iteration:
+		std::set<std::pair<u64, u64>> all_pairs;
+
+		for (auto [key, value]: *moved_map_opt) {
+			ASSERT_TRUE(!all_pairs.contains(std::make_pair(key, value)));
+			all_pairs.emplace(key, value);
+		}
+
+		ASSERT_EQUAL(all_pairs.size(), moved_map_opt->size());
+
+		for (auto [key, value]: map) {
+			ASSERT_TRUE(!all_pairs.contains(std::make_pair(key, value)));
+			all_pairs.emplace(key, value);
+		}
+
+		ASSERT_EQUAL(all_pairs.size(), thread_count * OPS_PER_THREAD);
 	}
 
 	/**
