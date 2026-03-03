@@ -10,3 +10,5 @@ make_module(Repl USES Base
         Driver
         HELIOS
         ModuleTree)
+
+duck_add_test(compiler extract_statement_sources tests/extract_statement_sources_test.cpp USES Repl)
