@@ -31,7 +31,7 @@ vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCol
 	return copy;
 }
 
-const vm::code::valid_type::TypeMap& vm::code::ValidProgram::types() const {
+const vm::code::valid_type::ValidTypeMap& vm::code::ValidProgram::types() const {
 	return type_context.getCurrentTypes();
 }
 

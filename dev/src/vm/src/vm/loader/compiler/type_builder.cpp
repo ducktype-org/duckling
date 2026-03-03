@@ -18,17 +18,18 @@ namespace {
 	 */
 	base::Optional<vm::InheritanceMetadata> buildInheritanceMetadata(
 		vm::TypeMetadata&                                type_metadata,
-		const vm::code::valid_type::Type&                type,
+		const vm::code::valid_type::ValidType&           type,
 		const vm::code::valid_type::concrete::Structure& structure
 	) {
 		match_optional(structure.inheritance_metadata) {
 			opt_some(prev_imd) {
 				vm::TypeCRef tp = type_metadata.at(type.getName());
 
-				auto get_typeid = [&](vm::code::valid_type::TypeID type_id) -> vm::TypeID {
+				auto get_typeid = [&](vm::code::valid_type::ValidTypeID type_id) -> vm::TypeID {
 					return vm::TypeID(type_id.asInt());
 				};
-				auto get_type_cref = [&](vm::code::valid_type::TypeID type_id) -> vm::TypeCRef {
+				auto get_type_cref
+					= [&](vm::code::valid_type::ValidTypeID type_id) -> vm::TypeCRef {
 					return type_metadata.at(get_typeid(type_id));
 				};
 				auto implements = prev_imd.implements | std::views::transform(get_type_cref)
@@ -73,8 +74,8 @@ namespace {
 	 * @brief Declare types from a list in the given type_metadata.
 	 */
 	void declareTypes(
-		Ref<vm::TypeMetadata>                                type_metadata,
-		const std::vector<CRef<vm::code::valid_type::Type>>& types
+		Ref<vm::TypeMetadata>                                     type_metadata,
+		const std::vector<CRef<vm::code::valid_type::ValidType>>& types
 	) {
 		for (const auto& type: types)
 			type_metadata->addType(vm::Type::declareType(type->getName()));
@@ -84,9 +85,9 @@ namespace {
 	 * @brief Define types from the list in the given type_metadata.
 	 */
 	void defineTypes(
-		Ref<vm::TypeMetadata>                            type_metadata,
-		const vm::code::valid_type::TypeMap&             types_ctx,
-		const std::vector<vm::code::valid_type::TypeID>& new_types
+		Ref<vm::TypeMetadata>                                 type_metadata,
+		const vm::code::valid_type::ValidTypeMap&             types_ctx,
+		const std::vector<vm::code::valid_type::ValidTypeID>& new_types
 	) {
 		for (const auto& type_id: new_types) {
 			const auto& type             = types_ctx.at(type_id);
@@ -96,7 +97,7 @@ namespace {
 					type_at_metadata->definePrimitive(static_cast<usize>(data.size));
 				}
 				variant_case(vm::code::valid_type::concrete::Pointer, data) {
-					// Note the interesting cast from valid_type::TypeID to vm::TypeID.
+					// Note the interesting cast from valid_type::ValidTypeID to vm::TypeID.
 					// This is by convention, they have to be the same.
 					type_at_metadata->definePointer(type_metadata->at(vm::TypeID(data.inner.asInt())
 					));
@@ -150,7 +151,7 @@ namespace {
 Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& types) {
 	Box<vm::TypeMetadata> type_metadata = makeBox<vm::TypeMetadata>();
 
-	std::vector<CRef<valid_type::Type>> types_vec
+	std::vector<CRef<valid_type::ValidType>> types_vec
 		= types.getCurrentTypes()
 	    | std::views::transform([](const auto& type) { return CRef(&type); })
 	    | std::ranges::to<std::vector>();
@@ -173,7 +174,7 @@ Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& typ
 void vm::code::detail::rebuildTypeMetadata(
 	Ref<vm::TypeMetadata> type_metadata, const TypeContext& types
 ) {
-	std::vector<CRef<valid_type::Type>> types_vec
+	std::vector<CRef<valid_type::ValidType>> types_vec
 		= types.getCurrentTypes() | std::views::drop(type_metadata->size())
 	    | std::views::transform([](const auto& type) { return CRef(&type); })
 	    | std::ranges::to<std::vector>();

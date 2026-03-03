@@ -10,7 +10,7 @@ namespace vm::code::detail {
 	 * @brief Validates (newly added) types in the given TypeContext.
 	 * @note Throws a builder error if type is invalid in current context.
 	 * @note There is a single check that is not performed here - Cyclic dependencies between types.
-	 * This is done in valid_type::Type. For the complete list of specific checks see
+	 * This is done in valid_type::ValidType. For the complete list of specific checks see
 	 * `vm/src/vm/bytecode/validator/readme.md`.
 	 * @param types_ctx Type context containing types that will be validated, but also the others.
 	 * @param new_types_id A vector of IDs of newly added types to validate. Only these types will

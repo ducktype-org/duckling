@@ -12,7 +12,9 @@ using namespace vm::code;
 
 namespace {
 	void defineTypeFromData(
-		const valid_type::TypeMap& types, valid_type::Type& tp, const TypeOfData& type_of_data
+		const valid_type::ValidTypeMap& types,
+		valid_type::ValidType&          tp,
+		const TypeOfData&               type_of_data
 	) {
 		variant_match(type_of_data) {
 			variant_case(vm::code::PrimitiveType, primitive) {
@@ -30,21 +32,21 @@ namespace {
 				tp.defineDynamicTable(types.at(dynamic_table.inner)->getID());
 			}
 			variant_case(vm::code::DataType, data) {
-				std::vector<std::pair<base::StrID, valid_type::TypeID>> field_definitions;
+				std::vector<std::pair<base::StrID, valid_type::ValidTypeID>> field_definitions;
 				field_definitions.reserve(data.fields.size());
 				for (const auto& field: data.fields)
 					field_definitions.emplace_back(field.name, types.at(field.type)->getID());
 				tp.defineData(field_definitions);
 			}
 			variant_case(vm::code::VariantType, variant) {
-				std::vector<vm::code::valid_type::TypeID> variant_types;
+				std::vector<vm::code::valid_type::ValidTypeID> variant_types;
 				variant_types.reserve(variant.variant_alternatives.size());
 				for (const auto& variant_type: variant.variant_alternatives)
 					variant_types.push_back(types.at(variant_type)->getID());
 				tp.defineVariant(variant_types);
 			}
 			variant_case(vm::code::FunctionType, function) {
-				std::vector<vm::code::valid_type::TypeID> parameter_types;
+				std::vector<vm::code::valid_type::ValidTypeID> parameter_types;
 				parameter_types.reserve(function.parameters.size());
 				for (const auto& param: function.parameters)
 					parameter_types.push_back(types.at(param)->getID());
@@ -52,17 +54,18 @@ namespace {
 			}
 			variant_case(vm::code::OpaqueType, opaque) { tp.defineOpaque(Bytes(opaque.size)); }
 			variant_case(vm::code::ClassType, clazz) {
-				std::vector<std::pair<base::StrID, vm::code::valid_type::TypeID>> fields_definitions;
+				std::vector<std::pair<base::StrID, vm::code::valid_type::ValidTypeID>>
+					fields_definitions;
 				fields_definitions.reserve(clazz.fields.size());
 				for (const auto& field: clazz.fields)
 					fields_definitions.emplace_back(field.name, types.at(field.type)->getID());
 				tp.defineClass(
 					fields_definitions,
 					clazz.is_abstract,
-					clazz.extends ? base::Optional<vm::code::valid_type::TypeID>(
+					clazz.extends ? base::Optional<vm::code::valid_type::ValidTypeID>(
 										types.at(*clazz.extends)->getID()
 									)
-								  : base::Optional<vm::code::valid_type::TypeID>(),
+								  : base::Optional<vm::code::valid_type::ValidTypeID>(),
 					clazz.implements | std::views::transform([&](const auto& i) {
 						return types.at(i)->getID();
 					}) | std::ranges::to<std::vector>(),
@@ -111,7 +114,10 @@ void TypeContext::insertAndValidate(
 		} else {
 			pod_types.insert(type, name);
 			types.insert(
-				vm::code::valid_type::Type::declareType(name, valid_type::TypeID(types.size())), name
+				vm::code::valid_type::ValidType::declareType(
+					name, valid_type::ValidTypeID(types.size())
+				),
+				name
 			);
 			really_new_types.emplace_back(&type);
 		}
@@ -136,6 +142,6 @@ void TypeContext::insertAndValidate(
 	}
 }
 
-const valid_type::TypeMap& TypeContext::getCurrentTypes() const { return types; }
+const valid_type::ValidTypeMap& TypeContext::getCurrentTypes() const { return types; }
 
 const vm::ObjIdNameMap<TypeOfData>& vm::code::TypeContext::getPodTypes() const { return pod_types; }

@@ -10,8 +10,8 @@ namespace vm::code::valid_type {
 	 * references to types can be invalidated when the TypeContext is e.g. copied.
 	 * @TODO: #1306 Maybe it can become Ref<Type>?
 	 */
-	STRONG_TYPEDEF_ID_DIRECT_CREATION(TypeID);
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(ValidTypeID);
 
 }
 
-ID_STD_HASH(vm::code::valid_type::TypeID);
+ID_STD_HASH(vm::code::valid_type::ValidTypeID);

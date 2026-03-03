@@ -26,13 +26,13 @@ namespace vm::code {
 			const base::HashMap<base::StrID, FuncSignature>& function_signatures
 		);
 
-		[[nodiscard]] const valid_type::TypeMap& getCurrentTypes() const;
+		[[nodiscard]] const valid_type::ValidTypeMap& getCurrentTypes() const;
 
 		[[nodiscard]] const ObjIdNameMap<TypeOfData>& getPodTypes() const;
 
 	private:
 		ObjIdNameMap<TypeOfData> pod_types;
 
-		valid_type::TypeMap types;
+		valid_type::ValidTypeMap types;
 	};
 }

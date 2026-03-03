@@ -46,7 +46,7 @@ namespace {
 	template<valid_type::ConcreteType ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
 		const vm::code::valid_type::concrete::Pointer& pointer,
-		const valid_type::TypeMap&                     types_ctx,
+		const valid_type::ValidTypeMap&                types_ctx,
 		Args&&... error_args
 	) {
 		const auto& pointed_type = types_ctx.at(pointer.inner);
@@ -57,10 +57,10 @@ namespace {
 
 	template<class ErrorT = PointerTypeMismatchError, class... Args>
 	void validateStructFieldType(
-		const valid_type::Type&                type,
+		const valid_type::ValidType&           type,
 		const valid_type::concrete::Structure& as_struct,
 		const opargs::Field&                   field_arg,
-		valid_type::TypeID                     expected_field_type,
+		valid_type::ValidTypeID                expected_field_type,
 		Args&&... error_args
 	) {
 		if (type.getName() != field_arg.type_name)
@@ -78,8 +78,8 @@ namespace {
  * @brief Represents a local stack variable.
  */
 struct LocalStackEntry {
-	base::StrID            local_name;
-	CRef<valid_type::Type> type;
+	base::StrID                 local_name;
+	CRef<valid_type::ValidType> type;
 
 	constexpr bool operator==(const LocalStackEntry& other) const {
 		return local_name == other.local_name && *type == *other.type;
@@ -91,8 +91,8 @@ class LocalStack {
 
 	// the following are CRefs instead of const& to allow copy/move.
 
-	CRef<valid_type::TypeMap>                          types_ctx;
-	base::HashMap<base::StrID, CRef<valid_type::Type>> local_name_to_type;
+	CRef<valid_type::ValidTypeMap>                          types_ctx;
+	base::HashMap<base::StrID, CRef<valid_type::ValidType>> local_name_to_type;
 
 public:
 	LocalStack(const LocalStack&)            = default;
@@ -100,7 +100,7 @@ public:
 	LocalStack& operator=(const LocalStack&) = default;
 	LocalStack& operator=(LocalStack&&)      = default;
 
-	LocalStack(const FuncSignature& signature, const valid_type::TypeMap& types_ctx):
+	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
 		  types_ctx(&types_ctx) {
 		push(base::StrID("ret_val"), signature.result_type.str);
 		for (auto [idx, param]: std::views::enumerate(signature.parameters))
@@ -148,7 +148,7 @@ public:
 
 	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
 
-	CRef<valid_type::Type> at(base::StrID local_name) const {
+	CRef<valid_type::ValidType> at(base::StrID local_name) const {
 		return local_name_to_type.at(local_name);
 	}
 };
@@ -159,7 +159,7 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const valid_type::TypeMap&                       types_ctx;
+	const valid_type::ValidTypeMap&                  types_ctx;
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
@@ -209,11 +209,12 @@ class FunctionValidator {
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better
-		// way. EDIT: After valid_type::Type was added, it's simpler but still could be improved.
+		// way. EDIT: After valid_type::ValidType was added, it's simpler but still could be improved.
 		valid_type::concrete::Function method_signature = [&] {
-			const auto&        ptr      = local_stack.at(instr.object_ptr.var_name);
-			valid_type::TypeID inner_id = ptr->getKindAs<valid_type::concrete::Pointer>().inner;
-			const auto&        structure
+			const auto&             ptr = local_stack.at(instr.object_ptr.var_name);
+			valid_type::ValidTypeID inner_id
+				= ptr->getKindAs<valid_type::concrete::Pointer>().inner;
+			const auto& structure
 				= types_ctx.at(inner_id)->getKindAs<valid_type::concrete::Structure>();
 			const auto& imd           = structure.inheritance_metadata.value();
 			auto        method_type   = imd.available_methods[instr.method.method_name];
@@ -290,7 +291,7 @@ class FunctionValidator {
 #define STACK_LOCAL_CASE(BIT_COUNT)                                                        \
 	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {                             \
 		if (!current_stack.contains(local->var_name)) throw UnknownLocalNameError(*local); \
-		CRef<valid_type::Type> entry = current_stack.at(local->var_name);                  \
+		CRef<valid_type::ValidType> entry = current_stack.at(local->var_name);             \
 		variant_match(entry->getKind()) {                                                  \
 			variant_case(valid_type::concrete::Primitive, primitive_type) {                \
 				if (static_cast<usize>(primitive_type.size) != (BIT_COUNT / 8))            \
@@ -302,8 +303,8 @@ class FunctionValidator {
 #define GLOBAL_CASE(BIT_COUNT)                                                                  \
 	variant_case(CRef<opargs::Global##BIT_COUNT>, global) {                                     \
 		if (!globals.contains(global->global_data_name)) throw UnknownGlobalNameError(*global); \
-		CRef<GlobalData>       entry = globals.at(global->global_data_name);                    \
-		CRef<valid_type::Type> type  = types_ctx.at(entry->type);                               \
+		CRef<GlobalData>            entry = globals.at(global->global_data_name);               \
+		CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);                          \
 		variant_match(type->getKind()) {                                                        \
 			variant_case(valid_type::concrete::Primitive, primitive_type) {                     \
 				if (static_cast<usize>(primitive_type.size) != (BIT_COUNT / 8))                 \
@@ -320,16 +321,16 @@ class FunctionValidator {
 				variant_case(CRef<opargs::GlobalPtr>, global) {
 					if (!globals.contains(global->global_data_name))
 						throw UnknownGlobalNameError(*global);
-					CRef<GlobalData>       entry = globals.at(global->global_data_name);
-					CRef<valid_type::Type> type  = types_ctx.at(entry->type);
+					CRef<GlobalData>            entry = globals.at(global->global_data_name);
+					CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);
 					if (type->isKind<valid_type::concrete::Primitive>())
 						throw InvalidArgumentTypeError(*global);
 				}
 				variant_case(CRef<opargs::GlobalOpq>, global_opq) {
 					if (!globals.contains(global_opq->global_data_name))
 						throw UnknownGlobalNameError(*global_opq);
-					CRef<GlobalData>       entry = globals.at(global_opq->global_data_name);
-					CRef<valid_type::Type> type  = types_ctx.at(entry->type);
+					CRef<GlobalData>            entry = globals.at(global_opq->global_data_name);
+					CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);
 					if (!type->isKind<valid_type::concrete::Opaque>())
 						throw InvalidArgumentTypeError(*global_opq);
 				}
@@ -341,7 +342,7 @@ class FunctionValidator {
 				variant_case(CRef<opargs::StackLocalPtr>, local) {
 					if (!current_stack.contains(local->var_name))
 						throw UnknownLocalNameError(*local);
-					CRef<valid_type::Type> type = current_stack.at(local->var_name);
+					CRef<valid_type::ValidType> type = current_stack.at(local->var_name);
 					if (!type->isKind<valid_type::concrete::Pointer>())
 						throw InvalidArgumentTypeError(*local);
 				}
@@ -360,7 +361,7 @@ class FunctionValidator {
 				variant_case(CRef<opargs::StackLocalOpq>, local) {
 					if (!current_stack.contains(local->var_name))
 						throw UnknownLocalNameError(*local);
-					CRef<valid_type::Type> type = current_stack.at(local->var_name);
+					CRef<valid_type::ValidType> type = current_stack.at(local->var_name);
 					if (!type->isKind<valid_type::concrete::Opaque>())
 						throw InvalidArgumentTypeError(*local);
 				}
@@ -416,7 +417,7 @@ class FunctionValidator {
 				variant_case(CRef<opargs::StackLocalVnt>, variant) {
 					if (!current_stack.contains(variant->var_name))
 						throw UnknownLocalNameError(*variant);
-					CRef<valid_type::Type> type = current_stack.at(variant->var_name);
+					CRef<valid_type::ValidType> type = current_stack.at(variant->var_name);
 					if (!type->isKind<valid_type::concrete::Variant>())
 						throw InvalidArgumentTypeError(*variant);
 				}
@@ -454,7 +455,7 @@ class FunctionValidator {
 	void validateStackPrimitiveArgumentsSameType(
 		const Instruction& instruction, const LocalStack& current_stack
 	) const {
-		std::vector<valid_type::TypeID> primitive_args;
+		std::vector<valid_type::ValidTypeID> primitive_args;
 
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
@@ -494,7 +495,7 @@ class FunctionValidator {
 			instr_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.type); }
 			instr_case(Op_alloc_lptr_type, instr) {
 				validateArgInstantiable(instr.type);
-				CRef<valid_type::Type>        variable = current_stack.at(instr.ptr.var_name);
+				CRef<valid_type::ValidType>   variable = current_stack.at(instr.ptr.var_name);
 				valid_type::concrete::Pointer pointer
 					= variable->getKindAs<valid_type::concrete::Pointer>();
 				if (types_ctx.at(pointer.inner)->getName() != instr.type.type_name)
@@ -1090,9 +1091,11 @@ class FunctionValidator {
 			instr_case(Op_variantSetInner_lvnt_type, instr) {
 				const auto& variant_type = current_stack.at(instr.variant.var_name)
 				                               ->getKindAs<valid_type::concrete::Variant>();
-				valid_type::TypeID wanted_type = types_ctx.at(instr.inner_type.type_name)->getID();
+				valid_type::ValidTypeID wanted_type
+					= types_ctx.at(instr.inner_type.type_name)->getID();
 
-				const std::vector<valid_type::TypeID>& alternatives = variant_type.alternatives;
+				const std::vector<valid_type::ValidTypeID>& alternatives
+					= variant_type.alternatives;
 				if (!std::ranges::contains(alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
@@ -1102,7 +1105,8 @@ class FunctionValidator {
 				const auto& pointer_type = current_stack.at(instr.dst_ptr.var_name)
 				                               ->getKindAs<valid_type::concrete::Pointer>();
 				auto wanted_type = types_ctx.at(pointer_type.inner);
-				const std::vector<valid_type::TypeID>& possible_types = variant_type.alternatives;
+				const std::vector<valid_type::ValidTypeID>& possible_types
+					= variant_type.alternatives;
 				if (!std::ranges::contains(possible_types, wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
@@ -1187,21 +1191,21 @@ class FunctionValidator {
 			instr_case(Op_store_lptr_lany, instr) {
 				const auto& pointer_type = current_stack.at(instr.dst_ptr.var_name)
 				                               ->getKindAs<valid_type::concrete::Pointer>();
-				CRef<valid_type::Type> other_type = current_stack.at(instr.src.var_name);
+				CRef<valid_type::ValidType> other_type = current_stack.at(instr.src.var_name);
 				if (pointer_type.inner != other_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_load_lany_lptr, instr) {
 				const auto& pointer_type = current_stack.at(instr.src_ptr.var_name)
 				                               ->getKindAs<valid_type::concrete::Pointer>();
-				CRef<valid_type::Type> other_type = current_stack.at(instr.dst.var_name);
+				CRef<valid_type::ValidType> other_type = current_stack.at(instr.dst.var_name);
 				if (pointer_type.inner != other_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_ref_lptr_lany, instr) {
 				const auto& pointer_type = current_stack.at(instr.dst_ptr.var_name)
 				                               ->getKindAs<valid_type::concrete::Pointer>();
-				CRef<valid_type::Type> other_type = current_stack.at(instr.src.var_name);
+				CRef<valid_type::ValidType> other_type = current_stack.at(instr.src.var_name);
 				if (pointer_type.inner != other_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
@@ -1326,7 +1330,7 @@ class FunctionValidator {
 					table_pointer, types_ctx, instr
 				);
 
-				valid_type::TypeID allocated_type
+				valid_type::ValidTypeID allocated_type
 					= types_ctx.at(instr.table_type.type_name)->getID();
 				if (allocated_type != table_pointer.inner)
 					throw InvalidArgumentTypeError(instr.table_type);
@@ -1535,7 +1539,7 @@ class FunctionValidator {
 
 public:
 	FunctionValidator(
-		const valid_type::TypeMap&                       types_ctx,
+		const valid_type::ValidTypeMap&                  types_ctx,
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
@@ -1561,7 +1565,7 @@ public:
 };
 
 vm::code::Function vm::code::detail::validateAndExtractReachableCode(
-	const valid_type::TypeMap&                       types,
+	const valid_type::ValidTypeMap&                  types,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,

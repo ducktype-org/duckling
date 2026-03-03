@@ -24,7 +24,7 @@ namespace vm::code::valid_type {
 	 * because it's more effective.
 	 * After finalization type is immutable. Type cannot be unfinalized.
 	 */
-	class Type final {
+	class ValidType final {
 		enum class State { Declared, Defined, Finalizing, Finalized } state = State::Declared;
 		// struct Declared {
 
@@ -38,36 +38,36 @@ namespace vm::code::valid_type {
 		/****************/
 		/* Constructors */
 		/****************/
-		static Type declareType(base::StrID name, TypeID id);
+		static ValidType declareType(base::StrID name, ValidTypeID id);
 
 		void definePrimitive(Bytes size);
 
-		void definePointer(TypeID inner);
+		void definePointer(ValidTypeID inner);
 
-		void defineFixedSizeTable(TypeID inner, usize element_count);
+		void defineFixedSizeTable(ValidTypeID inner, usize element_count);
 
-		void defineDynamicTable(TypeID inner);
+		void defineDynamicTable(ValidTypeID inner);
 
-		void defineData(const std::vector<std::pair<base::StrID, TypeID>>& fields_definitions);
+		void defineData(const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions);
 
 		void defineClass(
-			const std::vector<std::pair<base::StrID, TypeID>>&      fields_definitions,
+			const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions,
 			bool                                                    is_abstract,
-			const base::Optional<TypeID>&                           extends,
-			const std::vector<TypeID>&                              implements,
-			const std::vector<std::pair<base::StrID, TypeID>>&      new_virtual_methods,
+			const base::Optional<ValidTypeID>&                      extends,
+			const std::vector<ValidTypeID>&                         implements,
+			const std::vector<std::pair<base::StrID, ValidTypeID>>& new_virtual_methods,
 			const std::vector<std::pair<base::StrID, base::StrID>>& implementations
 		);
 
 		void defineInterface(
-			const std::vector<TypeID>&                              implements,
-			const std::vector<std::pair<base::StrID, TypeID>>&      new_virtual_methods,
+			const std::vector<ValidTypeID>&                         implements,
+			const std::vector<std::pair<base::StrID, ValidTypeID>>& new_virtual_methods,
 			const std::vector<std::pair<base::StrID, base::StrID>>& implementations
 		);
 
-		void defineVariant(const std::vector<TypeID>& variant_types);
+		void defineVariant(const std::vector<ValidTypeID>& variant_types);
 
-		void defineFunction(const std::vector<TypeID>& parameters, TypeID result);
+		void defineFunction(const std::vector<ValidTypeID>& parameters, ValidTypeID result);
 
 		void defineOpaque(Bytes size);
 
@@ -78,7 +78,7 @@ namespace vm::code::valid_type {
 		 * @note There is no need for a type to be "unfinalizable", because we finalize all types at
 		 * the end of validation, and after that we don't need to change them anymore.
 		 */
-		void finalize(TypeMap& types);
+		void finalize(ValidTypeMap& types);
 
 
 		/**********************/
@@ -87,7 +87,7 @@ namespace vm::code::valid_type {
 
 		[[nodiscard]] base::StrID getName() const;
 
-		[[nodiscard]] TypeID getID() const;
+		[[nodiscard]] ValidTypeID getID() const;
 
 		template<ConcreteType T>
 		[[nodiscard]]
@@ -114,9 +114,9 @@ namespace vm::code::valid_type {
 
 		[[nodiscard]] TypeSize getSize() const;
 
-		bool operator==(const Type& other) const;
+		bool operator==(const ValidType& other) const;
 
-		bool operator==(const TypeID& other_id) const;
+		bool operator==(const ValidTypeID& other_id) const;
 
 		[[nodiscard]] bool isTriviallyCopyable() const;
 
@@ -124,12 +124,14 @@ namespace vm::code::valid_type {
 		/**
 		 * @brief Helper function for finalize. Sets is_instantiable.
 		 */
-		void finalizeInstantiability(TypeMap& types);
+		void finalizeInstantiability(ValidTypeMap& types);
 
 		/**
 		 * @brief Helper function for finalize. Fills inheritance metadata for structures.
 		 */
-		void finalizeStructureInheritanceMetadata(TypeMap& types, concrete::Structure& structure);
+		void finalizeStructureInheritanceMetadata(
+			ValidTypeMap& types, concrete::Structure& structure
+		);
 
 		/**
 		 * @brief Whether this type is instantiable. This is false for types that cannot be
@@ -148,10 +150,10 @@ namespace vm::code::valid_type {
 
 		TypeSize size = TypeSize(Bytes(0), 0);
 
-		Type(base::StrID name, TypeID id);
+		ValidType(base::StrID name, ValidTypeID id);
 
 		base::StrID name;
-		TypeID      id;
+		ValidTypeID id;
 
 		ConcreteTypeVariant kind;
 	};

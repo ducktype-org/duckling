@@ -12,38 +12,40 @@
 
 using namespace vm::code;
 
-valid_type::Type valid_type::Type::declareType(base::StrID name, TypeID id) { return { name, id }; }
+valid_type::ValidType valid_type::ValidType::declareType(base::StrID name, ValidTypeID id) {
+	return { name, id };
+}
 
-void valid_type::Type::definePrimitive(Bytes size) {
+void valid_type::ValidType::definePrimitive(Bytes size) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
 	kind = concrete::Primitive{ size };
 }
 
-void valid_type::Type::definePointer(TypeID inner) {
+void valid_type::ValidType::definePointer(ValidTypeID inner) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
 	kind = concrete::Pointer{ inner };
 }
 
-void valid_type::Type::defineFixedSizeTable(TypeID inner, usize element_count) {
+void valid_type::ValidType::defineFixedSizeTable(ValidTypeID inner, usize element_count) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
 	kind = concrete::FixedSizeTable{ .inner = inner, .element_count = element_count };
 }
 
-void valid_type::Type::defineDynamicTable(TypeID inner) {
+void valid_type::ValidType::defineDynamicTable(ValidTypeID inner) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
 	kind = concrete::DynamicTable{ .inner = inner };
 }
 
-void valid_type::Type::defineData(
-	const std::vector<std::pair<base::StrID, TypeID>>& fields_definitions
+void valid_type::ValidType::defineData(
+	const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions
 ) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
@@ -65,12 +67,12 @@ void valid_type::Type::defineData(
 	kind = structure;
 }
 
-void valid_type::Type::defineClass(
-	const std::vector<std::pair<base::StrID, TypeID>>&      fields_definitions,
+void valid_type::ValidType::defineClass(
+	const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions,
 	const bool                                              is_abstract,
-	const base::Optional<TypeID>&                           extends,
-	const std::vector<TypeID>&                              implements,
-	const std::vector<std::pair<base::StrID, TypeID>>&      new_virtual_methods,
+	const base::Optional<ValidTypeID>&                      extends,
+	const std::vector<ValidTypeID>&                         implements,
+	const std::vector<std::pair<base::StrID, ValidTypeID>>& new_virtual_methods,
 	const std::vector<std::pair<base::StrID, base::StrID>>& implementations
 ) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
@@ -85,7 +87,7 @@ void valid_type::Type::defineClass(
 			field_def.first
 		);
 
-	base::HashMap<base::StrID, TypeID> virtual_methods;
+	base::HashMap<base::StrID, ValidTypeID> virtual_methods;
 	for (const auto& method: new_virtual_methods) virtual_methods.put(method.first, method.second);
 
 	base::HashMap<base::StrID, base::StrID> vtable;
@@ -105,15 +107,15 @@ void valid_type::Type::defineClass(
 	kind = strukt;
 }
 
-void valid_type::Type::defineInterface(
-	const std::vector<TypeID>&                              implements,
-	const std::vector<std::pair<base::StrID, TypeID>>&      new_virtual_methods,
+void valid_type::ValidType::defineInterface(
+	const std::vector<ValidTypeID>&                         implements,
+	const std::vector<std::pair<base::StrID, ValidTypeID>>& new_virtual_methods,
 	const std::vector<std::pair<base::StrID, base::StrID>>& implementations
 ) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
-	base::HashMap<base::StrID, TypeID> virtual_methods;
+	base::HashMap<base::StrID, ValidTypeID> virtual_methods;
 	for (const auto& method: new_virtual_methods) virtual_methods.put(method.first, method.second);
 
 	base::HashMap<base::StrID, base::StrID> vtable;
@@ -132,7 +134,7 @@ void valid_type::Type::defineInterface(
 	};
 }
 
-void valid_type::Type::defineVariant(const std::vector<TypeID>& variant_types) {
+void valid_type::ValidType::defineVariant(const std::vector<ValidTypeID>& variant_types) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	CORE_ASSERT(!variant_types.empty(), "Cannot define variant with no alternatives");
 	state = State::Defined;
@@ -148,20 +150,22 @@ void valid_type::Type::defineVariant(const std::vector<TypeID>& variant_types) {
 		                      .alternatives  = variant_types };
 }
 
-void valid_type::Type::defineFunction(const std::vector<TypeID>& parameters, TypeID result) {
+void valid_type::ValidType::defineFunction(
+	const std::vector<ValidTypeID>& parameters, ValidTypeID result
+) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 	kind  = concrete::Function{ .parameters = parameters, .result = result };
 }
 
-void valid_type::Type::defineOpaque(Bytes size) {
+void valid_type::ValidType::defineOpaque(Bytes size) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 	kind  = concrete::Opaque{ size };
 }
 
-void valid_type::Type::finalizeStructureInheritanceMetadata(
-	TypeMap& types, concrete::Structure& structure
+void valid_type::ValidType::finalizeStructureInheritanceMetadata(
+	ValidTypeMap& types, concrete::Structure& structure
 ) {
 	if (!structure.inheritance_metadata.has_value()) return;
 	const auto& prev_imd = *structure.inheritance_metadata;
@@ -184,12 +188,12 @@ void valid_type::Type::finalizeStructureInheritanceMetadata(
 	}
 
 	// 2. Fill the data
-	std::vector<std::pair<base::StrID, valid_type::TypeID>> fields;
-	concrete::InheritanceMetadata                           imd = { .super_types = { getID() },
-		                                                            .implements  = implements,
-		                                                            .available_methods = {},
-		                                                            .vtable            = {},
-		                                                            .kind = prev_imd.kind };
+	std::vector<std::pair<base::StrID, valid_type::ValidTypeID>> fields;
+	concrete::InheritanceMetadata                                imd = { .super_types = { getID() },
+		                                                                 .implements  = implements,
+		                                                                 .available_methods = {},
+		                                                                 .vtable            = {},
+		                                                                 .kind = prev_imd.kind };
 
 	variant_match(prev_imd.kind) {
 		variant_case(concrete::InheritanceMetadata::ClassKind, class_kind) {
@@ -275,7 +279,7 @@ void valid_type::Type::finalizeStructureInheritanceMetadata(
 	std::get<concrete::Structure>(kind).inheritance_metadata = imd;
 }
 
-void valid_type::Type::finalize(TypeMap& types) {
+void valid_type::ValidType::finalize(ValidTypeMap& types) {
 	switch (state) {
 	case State::Declared:
 		CORE_PANIC("Tried to finalize a type that was not defined");
@@ -362,17 +366,17 @@ void valid_type::Type::finalize(TypeMap& types) {
 	state = State::Finalized;
 }
 
-[[nodiscard]] base::StrID valid_type::Type::getName() const { return name; }
+[[nodiscard]] base::StrID valid_type::ValidType::getName() const { return name; }
 
-[[nodiscard]] valid_type::TypeID valid_type::Type::getID() const { return id; }
+[[nodiscard]] valid_type::ValidTypeID valid_type::ValidType::getID() const { return id; }
 
-bool valid_type::Type::operator==(const Type& other) const { return other.id == id; }
+bool valid_type::ValidType::operator==(const ValidType& other) const { return other.id == id; }
 
-bool valid_type::Type::operator==(const TypeID& other_id) const { return id == other_id; }
+bool valid_type::ValidType::operator==(const ValidTypeID& other_id) const { return id == other_id; }
 
-valid_type::Type::Type(base::StrID name, TypeID id): name(name), id(id) {}
+valid_type::ValidType::ValidType(base::StrID name, ValidTypeID id): name(name), id(id) {}
 
-void valid_type::Type::finalizeInstantiability(TypeMap& types) {
+void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 	// This method assumes all dependent types are already finalized, so we can query their
 	// instantiability.
 	variant_match(kind) {
@@ -428,7 +432,7 @@ void valid_type::Type::finalizeInstantiability(TypeMap& types) {
 	}
 }
 
-[[nodiscard]] valid_type::TypeSize valid_type::Type::getSize() const {
+[[nodiscard]] valid_type::TypeSize valid_type::ValidType::getSize() const {
 	CORE_ASSERT(state == State::Finalized, "Tried to get size of a type that was not finalized");
 	CORE_ASSERT(
 		!std::holds_alternative<concrete::DynamicTable>(kind), "Tried to get size of a dynamic table"
@@ -437,15 +441,17 @@ void valid_type::Type::finalizeInstantiability(TypeMap& types) {
 }
 
 [[nodiscard]]
-bool valid_type::Type::isInstantiable() const {
+bool valid_type::ValidType::isInstantiable() const {
 	CORE_ASSERT(
 		state == State::Finalized, "Tried to query instantiability of a type that was not finalized"
 	);
 	return is_instantiable;
 }
 
-[[nodiscard]] valid_type::ConcreteTypeVariant valid_type::Type::getKind() const { return kind; }
+[[nodiscard]] valid_type::ConcreteTypeVariant valid_type::ValidType::getKind() const {
+	return kind;
+}
 
-[[nodiscard]] bool vm::code::valid_type::Type::isTriviallyCopyable() const {
+[[nodiscard]] bool vm::code::valid_type::ValidType::isTriviallyCopyable() const {
 	return is_trivially_copyable;
 }

@@ -24,24 +24,24 @@ namespace vm::code::valid_type {
 		 * @brief Pointer type representation.
 		 */
 		struct Pointer final {
-			TypeID inner;
+			ValidTypeID inner;
 
-			Pointer(TypeID inner): inner(inner) {}
+			Pointer(ValidTypeID inner): inner(inner) {}
 		};
 
 		/**
 		 * @brief Fixed-size table type representation.
 		 */
 		struct FixedSizeTable final {
-			TypeID inner;
-			usize  element_count;
+			ValidTypeID inner;
+			usize       element_count;
 		};
 
 		/**
 		 * @brief Dynamic table type representation.
 		 */
 		struct DynamicTable final {
-			TypeID inner;
+			ValidTypeID inner;
 		};
 
 		/**
@@ -51,7 +51,7 @@ namespace vm::code::valid_type {
 			STRONG_TYPEDEF_ID_DIRECT_CREATION(ID);
 			TypeSize    offset;
 			base::StrID name;
-			TypeID      type;
+			ValidTypeID type;
 		};
 
 		/**
@@ -66,19 +66,19 @@ namespace vm::code::valid_type {
 			 * itself.
 			 * @note Both a class and an interface can be a super type.
 			 */
-			std::unordered_set<TypeID> super_types;
+			std::unordered_set<ValidTypeID> super_types;
 
 			/**
 			 * @brief In an interface-like way. Multiple interfaces allowed.
 			 */
-			std::unordered_set<TypeID> implements;
+			std::unordered_set<ValidTypeID> implements;
 
 			/**
 			 * @brief Virtual method declarations for this class. Contains all methods callable on
 			 * this type, including inherited ones. Maps method name to its type.
 			 * @note Unimplemented methods *do* exist in this map, but do not exist in the vtable.
 			 */
-			base::HashMap<base::StrID, TypeID> available_methods;
+			base::HashMap<base::StrID, ValidTypeID> available_methods;
 
 			/**
 			 * @brief A map from virtual method name to the name of the function that implements it.
@@ -95,7 +95,7 @@ namespace vm::code::valid_type {
 				/**
 				 * @brief A super-class. Only one super-class allowed.
 				 */
-				base::Optional<TypeID> extends;
+				base::Optional<ValidTypeID> extends;
 
 				/**
 				 * @brief Whether this type is abstract (i.e. cannot be instantiated).
@@ -137,16 +137,17 @@ namespace vm::code::valid_type {
 		 * @brief Variant type representation.
 		 */
 		struct Variant final {
-			Bytes               type_tag_size;
-			std::vector<TypeID> alternatives;  /// Order matters, as it determines type tag values.
+			Bytes type_tag_size;
+			std::vector<ValidTypeID>
+				alternatives;  /// Order matters, as it determines type tag values.
 		};
 
 		/**
 		 * @brief Function type representation.
 		 */
 		struct Function final {
-			std::vector<TypeID> parameters;
-			TypeID              result;
+			std::vector<ValidTypeID> parameters;
+			ValidTypeID              result;
 		};
 
 		/**
@@ -158,22 +159,22 @@ namespace vm::code::valid_type {
 		};
 	}
 
-// #define CONCRETE_TYPE_LIST                                                                    \
-// 	concrete::Primitive, concrete::Pointer, concrete::FixedSizeTable, concrete::DynamicTable, \
-// 		concrete::Structure, concrete::Variant, concrete::Function, concrete::Opaque
+	// #define CONCRETE_TYPE_LIST \
+	// 	concrete::Primitive, concrete::Pointer, concrete::FixedSizeTable, concrete::DynamicTable, \
+	// 		concrete::Structure, concrete::Variant, concrete::Function, concrete::Opaque
 
-// 	template<class T>
-// 	concept ConcreteType = base::IsOneOf<
-// 		T,
-// 		concrete ::Primitive,
-// 		concrete ::Pointer,
-// 		concrete ::FixedSizeTable,
-// 		concrete ::DynamicTable,
-// 		concrete ::Structure,
-// 		concrete ::Variant,
-// 		concrete ::Function,
-// 		concrete ::Opaque>;
+	// 	template<class T>
+	// 	concept ConcreteType = base::IsOneOf<
+	// 		T,
+	// 		concrete ::Primitive,
+	// 		concrete ::Pointer,
+	// 		concrete ::FixedSizeTable,
+	// 		concrete ::DynamicTable,
+	// 		concrete ::Structure,
+	// 		concrete ::Variant,
+	// 		concrete ::Function,
+	// 		concrete ::Opaque>;
 
-// 	using ConcreteTypeVariant = std::variant<std::monostate, CONCRETE_TYPE_LIST>;
+	// 	using ConcreteTypeVariant = std::variant<std::monostate, CONCRETE_TYPE_LIST>;
 
 }
