@@ -203,8 +203,28 @@ namespace compiler::mir {
 			output(lowerSubExpr(*expr.inner, continuation));
 		}
 
-		void visitTupleExpr(const hc::TupleExpr&) override {
-			throw base::NotYetImplemented("tuple constructor");
+		void visitTupleExpr(const hc::TupleExpr& expr) override {
+			std::vector<MIRValue> element_values;
+			element_values.reserve(expr.elements.size());
+			for (auto &element: expr.elements) {
+				auto lowered_element = lowerSubExpr(*element, continuation);
+				element_values.push_back(lowered_element.getResult(function));
+			}
+			
+			auto hole = continuation->addHole();
+
+			return noValueOutput(
+				continuation,
+				hole,
+				Instruction(
+					Operation::TuplePack,
+					{},
+					element_values,
+					{},
+					expr_scope
+				),
+				expr.expression_type.getSymbolType()
+			);
 		}
 
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {

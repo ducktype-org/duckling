@@ -91,6 +91,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	BooleanOr,
 	BooleanNot,
 
+	TuplePack, // N arguments, creates a tuple with those arguments as fields.
+
 	Cast,
 	ZeroInitialize,
 

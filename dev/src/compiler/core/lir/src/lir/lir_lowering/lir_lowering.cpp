@@ -92,6 +92,8 @@ namespace compiler::lir {
 			return Operation::AllocBox;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
+		case mir::Operation::TuplePack:
+			return Operation::TuplePack;
 
 		// Control Flow
 		case mir::Operation::ReturnValue:
@@ -550,7 +552,9 @@ namespace compiler::lir {
 
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:
-				case mir::Operation::BooleanNot: {
+				case mir::Operation::BooleanNot:
+				
+				case mir::Operation::TuplePack: {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
 					auto output = getOutput(mir_instruction.output);

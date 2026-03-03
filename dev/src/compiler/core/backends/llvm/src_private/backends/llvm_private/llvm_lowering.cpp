@@ -1,6 +1,8 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <type_traits>
+#include "typesystem/higher/abstract_type.hpp"
+#include "typesystem/lower/queries.hpp"
 
 LLVM_INCLUDE_BEGIN()
 
@@ -354,6 +356,62 @@ namespace compiler::backend_llvm {
 				return llvm::Type::getIntNTy(
 					llvm_context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
 				);
+			}
+			variant_case(tsl::TupleTypeLayout, tuple_layout) {
+				const auto tuple_name = tuple_layout.getSourceType().toString();
+
+				// Get the struct from the context, if it has been previously defined.
+				if (llvm::StructType* struct_type
+				    = llvm::StructType::getTypeByName(llvm_context, tuple_name);
+				    struct_type) {
+					return struct_type;
+				}
+
+				// Otherwise, define the struct in LLVM.
+				// - First, create an opaque type.
+				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, tuple_name);
+				// - Then, collect the member types.
+				const usize              num_elems = tuple_layout.getNumComponents();
+				std::vector<llvm::Type*> member_types;
+				member_types.reserve(num_elems);
+				for (usize layout_idx = 0; layout_idx < num_elems; layout_idx++) {
+					const CRef<tsl::TypeLayout> elem_layout
+						= tuple_layout.getComponentLayoutOfLayoutIndex(layout_idx);
+					member_types.push_back(typeFromLayout(module, elem_layout));
+				}
+				// - Finally, set the body of the struct and return it.
+				struct_type->setBody(member_types, /*is_packed=*/false);
+
+				// Now, confirm that the LLVM struct layout matches the TSL type layout.
+				// - First, get the LLVM struct layout.
+				const llvm::DataLayout&   data_layout   = module->getDataLayout();
+				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
+
+				// - Then, check each field's offset.
+				for (usize layout_idx = 0; layout_idx < num_elems; layout_idx++) {
+					const Bytes expected_offset = tuple_layout.getOffsetOfComponentIndex(
+						tuple_layout.getComponentIndexOfLayoutIndex(layout_idx)
+					);
+					const auto actual_offset = Bytes(
+						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
+					);
+					CORE_ASSERT(
+						expected_offset == actual_offset,
+						base::strConcat(
+							"LLVM struct layout mismatch for tuple '",
+							tuple_name,
+							"' at element index ",
+							base::toString(layout_idx),
+							": expected offset ",
+							base::toString(expected_offset),
+							", got ",
+							base::toString(actual_offset)
+						)
+					);
+				}
+
+				// Finally, return the struct type.
+				return struct_type;
 			}
 			variant_default {
 				CORE_PANIC(
@@ -994,6 +1052,38 @@ namespace compiler::backend_llvm {
 				llvm::Type*  type   = typeFromLayout(module, output.layout);
 
 				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
+				break;
+			}
+			case TuplePack: {
+				const auto& output = lir_instruction.output.value();
+
+				// Get the type of the tuple that is beeing packed
+				auto layout = output.layout;
+				auto result_type = typeFromLayout(module, layout);
+				
+				CORE_ASSERT(
+					layout->is<tsl::TupleTypeLayout>(),
+					"Output of TuplePack should have tuple layout"
+				);
+				const auto& tuple_layout = std::get<tsl::TupleTypeLayout>(output.layout->getVariant());
+
+				// Get the values to be packed into the tuple
+				auto elements = loadLIRValueList(
+					std::vector(
+						lir_instruction.arguments.begin(), lir_instruction.arguments.end()
+					),
+					builder
+				);
+
+				// Create an SSA value for the tuple. Since tuples are just a collection of their fields, we can create an undef value of the tuple type and insert field values into it.
+				llvm::Value* value = llvm::UndefValue::get(result_type);
+				for (usize elem_idx = 0; elem_idx < lir_instruction.arguments.size(); elem_idx++) {
+					auto layout_index = tuple_layout.getLayoutIndexOfComponentIndex(elem_idx);
+					value = builder.CreateInsertValue(value, elements[elem_idx], static_cast<u32>(layout_index));
+					// value = builder.CreateInsertValue(value, elements[elem_idx], elem_idx);
+				}
+
+				storeOutput(output, value, builder);
 				break;
 			}
 			case AllocBox: {
