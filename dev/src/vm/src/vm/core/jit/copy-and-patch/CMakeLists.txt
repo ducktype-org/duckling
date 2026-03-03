@@ -1,5 +1,5 @@
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # JIT_ENABLED nie działa
-    process_to_binary(tests/memory/data.cpp tests/jit_memory_test.cpp)
+    process_to_binary(tests/memory/data.c tests/jit_memory_test.cpp)
     duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
 endif ()
 
