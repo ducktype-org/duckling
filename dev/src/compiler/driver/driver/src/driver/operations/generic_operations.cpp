@@ -22,6 +22,7 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include "filesystem/file.hpp"
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -183,6 +184,15 @@ namespace compiler::driver {
 
 			moduleLog(key, "Cached, loading artifact from disk");
 			return output;
+		}
+
+		static auto deleteFromDisc(const QKey& key) -> bool {
+			auto output_name
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+
+			auto collection = getQueryArtifactsCollection();
+			moduleLog(key, "Deleting artifact from disk");
+			return collection->deleteFileArtifact(base::StrID(output_name.c_str()));
 		}
 	};
 
