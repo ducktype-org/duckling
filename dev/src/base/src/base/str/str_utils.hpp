@@ -202,7 +202,8 @@ namespace base {
 	 * - \' : Single quote
 	 * - \0 : Null character
 	 *
-	 * Unknown escape sequences result in a panic.
+	 * Unknown escape sequences result in an error, and the unescaping process is aborted. The error
+	 * contains the unknown escape sequence.
 	 */
 	UnescapeResult unescapeString(std::string_view raw);
 }

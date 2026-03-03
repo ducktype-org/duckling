@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/validator/type_context.hpp>
+#include <vm/bytecode/validator/type/type_context.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>

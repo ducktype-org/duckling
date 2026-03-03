@@ -4,8 +4,8 @@ add_files(
     serializer/serializer.cpp
     validator/function_validator.cpp
     validator/type_validator.cpp
-    validator/type_context.cpp
+    validator/type/type_context.cpp
+    validator/type/type.cpp
     validator/valid_program.cpp
-    validator/type.cpp
 )
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)

@@ -31,7 +31,7 @@ vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCol
 	return copy;
 }
 
-const vm::code::TypeMap& vm::code::ValidProgram::types() const {
+const vm::code::valid_type::TypeMap& vm::code::ValidProgram::types() const {
 	return type_context.getCurrentTypes();
 }
 
@@ -100,12 +100,13 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 		// Validate arguments exist and are trivially copyable
 
 		if (auto tp = type_context.getCurrentTypes().atMaybe(new_func.signature.result_type)) {
-			if (!tp.value()->isPodType()) throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
+			if (!tp.value()->isTriviallyCopyable())
+				throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 		} else
 			throw UnknownTypeError(opargs::Type(new_func.signature.result_type));
 		for (const auto& type: new_func.signature.parameters)
 			if (auto tp = type_context.getCurrentTypes().atMaybe(type)) {
-				if (!tp.value()->isPodType())
+				if (!tp.value()->isTriviallyCopyable())
 					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 			} else
 				throw UnknownTypeError(opargs::Type(type));

@@ -2,16 +2,18 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/bytecode/validator/type.hpp>
+#include <vm/bytecode/validator/type/type.hpp>
+#include <vm/bytecode/validator/type/type_id.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
 
 using namespace vm::code;
 
 namespace {
-	void defineTypeFromData(const TypeMap& types, type::Type& tp, const TypeOfData& type_of_data) {
+	void defineTypeFromData(
+		const valid_type::TypeMap& types, valid_type::Type& tp, const TypeOfData& type_of_data
+	) {
 		variant_match(type_of_data) {
 			variant_case(vm::code::PrimitiveType, primitive) {
 				tp.definePrimitive(Bytes(primitive.size));
@@ -28,21 +30,21 @@ namespace {
 				tp.defineDynamicTable(types.at(dynamic_table.inner)->getID());
 			}
 			variant_case(vm::code::DataType, data) {
-				std::vector<std::pair<base::StrID, type::TypeID>> field_definitions;
+				std::vector<std::pair<base::StrID, valid_type::TypeID>> field_definitions;
 				field_definitions.reserve(data.fields.size());
 				for (const auto& field: data.fields)
 					field_definitions.emplace_back(field.name, types.at(field.type)->getID());
 				tp.defineData(field_definitions);
 			}
 			variant_case(vm::code::VariantType, variant) {
-				std::vector<vm::code::type::TypeID> variant_types;
+				std::vector<vm::code::valid_type::TypeID> variant_types;
 				variant_types.reserve(variant.variant_alternatives.size());
 				for (const auto& variant_type: variant.variant_alternatives)
 					variant_types.push_back(types.at(variant_type)->getID());
 				tp.defineVariant(variant_types);
 			}
 			variant_case(vm::code::FunctionType, function) {
-				std::vector<vm::code::type::TypeID> parameter_types;
+				std::vector<vm::code::valid_type::TypeID> parameter_types;
 				parameter_types.reserve(function.parameters.size());
 				for (const auto& param: function.parameters)
 					parameter_types.push_back(types.at(param)->getID());
@@ -50,16 +52,17 @@ namespace {
 			}
 			variant_case(vm::code::OpaqueType, opaque) { tp.defineOpaque(Bytes(opaque.size)); }
 			variant_case(vm::code::ClassType, clazz) {
-				std::vector<std::pair<base::StrID, vm::code::type::TypeID>> fields_definitions;
+				std::vector<std::pair<base::StrID, vm::code::valid_type::TypeID>> fields_definitions;
 				fields_definitions.reserve(clazz.fields.size());
 				for (const auto& field: clazz.fields)
 					fields_definitions.emplace_back(field.name, types.at(field.type)->getID());
 				tp.defineClass(
 					fields_definitions,
 					clazz.is_abstract,
-					clazz.extends
-						? base::Optional<vm::code::type::TypeID>(types.at(*clazz.extends)->getID())
-						: base::Optional<vm::code::type::TypeID>(),
+					clazz.extends ? base::Optional<vm::code::valid_type::TypeID>(
+										types.at(*clazz.extends)->getID()
+									)
+								  : base::Optional<vm::code::valid_type::TypeID>(),
 					clazz.implements | std::views::transform([&](const auto& i) {
 						return types.at(i)->getID();
 					}) | std::ranges::to<std::vector>(),
@@ -95,7 +98,7 @@ namespace {
 	}
 }
 
-void vm::code::TypeContext::insertAndValidate(
+void TypeContext::insertAndValidate(
 	const std::vector<TypeOfData>&                   new_types,
 	const base::HashMap<base::StrID, FuncSignature>& function_signatures
 ) {
@@ -107,17 +110,19 @@ void vm::code::TypeContext::insertAndValidate(
 			if (type != *pod_types.at(name)) throw DuplicatedTypeError(type, *pod_types.at(name));
 		} else {
 			pod_types.insert(type, name);
-			types.insert(vm::code::type::Type::declareType(name, types.size()), name);
+			types.insert(
+				vm::code::valid_type::Type::declareType(name, valid_type::TypeID(types.size())), name
+			);
 			really_new_types.emplace_back(&type);
 		}
 	}
 
 	// Validate
-	const std::vector<type::TypeID> new_types_id = really_new_types
-	                                             | std::views::transform([&](const auto& type) {
-													   return types.at(typeName(*type))->getID();
-												   })
-	                                             | std::ranges::to<std::vector>();
+	const std::vector<usize> new_types_id = really_new_types
+	                                      | std::views::transform([&](const auto& type) {
+												return pod_types.idOf(typeName(*type)).value();
+											})
+	                                      | std::ranges::to<std::vector>();
 	detail::validateTypes(pod_types, new_types_id, function_signatures);
 
 	// Define
@@ -131,6 +136,6 @@ void vm::code::TypeContext::insertAndValidate(
 	}
 }
 
-const TypeMap& TypeContext::getCurrentTypes() const { return types; }
+const valid_type::TypeMap& TypeContext::getCurrentTypes() const { return types; }
 
 const vm::ObjIdNameMap<TypeOfData>& vm::code::TypeContext::getPodTypes() const { return pod_types; }

@@ -4,8 +4,8 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/bytecode/validator/type.hpp>
-#include <vm/bytecode/validator/type_utils.hpp>
+#include <vm/bytecode/validator/type/type.hpp>
+#include <vm/bytecode/validator/type/type_utils.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace {

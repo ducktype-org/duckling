@@ -10,7 +10,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type.hpp>
+#include <vm/bytecode/validator/type/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #include <string_view>
@@ -156,7 +156,7 @@ namespace vm::code {
 	public:
 		constexpr static std::string_view ERR_MSG = "Given VM type is not trivially copyable: ";
 
-		ExtCArgumentTypeNotTriviallyCopyable(const type::Type& type):
+		ExtCArgumentTypeNotTriviallyCopyable(const valid_type::Type& type):
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
 	};
 

@@ -4,16 +4,16 @@
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
 
-namespace vm::code::type {
+namespace vm::code::valid_type {
 	/**
 	 * @brief TypeSize represents the size of a type in bytes. It takes into account the fact that
 	 * pointer sizes can be different on different architectures. This is useful for calculating the
 	 * size of structured types, like structures and variants, which can contain pointer fields.
 	 * @note If TypeSize were to be a tuple of (Bytes non_pointer_bytes, usize
-	 * number_of_pointer_fields) then it would be less usefull, because of the pointer size issue:
+	 * number_of_pointer_fields) then it would be less useful, because of the pointer size issue:
 	 * e.g. structure of size 32 bytes (4 * i64) should be able to fit 3 pointers on regular 64-bit
 	 * architecture, but once pointer size is increased to 16 bytes, the pointers do not fit
-	 * anymore. This means type::TypeSize is uncomparable - we can't choose a "larger" size
+	 * anymore. This means valid_type::TypeSize is uncomparable - we can't choose a "larger" size
 	 * directly. This is why TypeSize has two separate fields for size when pointer size is 8 bytes
 	 * and when pointer size is 16 bytes, so that we can at least we can perform `fieldMax` on two
 	 * TypeSizes, which is useful for calculating the size of structures (mainly variant's data

@@ -8,43 +8,42 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <variant>
 
 using namespace vm::code;
 
-type::Type type::Type::declareType(base::StrID name, TypeID id) { return { name, id }; }
+valid_type::Type valid_type::Type::declareType(base::StrID name, TypeID id) { return { name, id }; }
 
-void type::Type::definePrimitive(Bytes size) {
+void valid_type::Type::definePrimitive(Bytes size) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
 	kind = concrete::Primitive{ size };
 }
 
-void type::Type::definePointer(type::TypeID inner) {
+void valid_type::Type::definePointer(TypeID inner) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
 	kind = concrete::Pointer{ inner };
 }
 
-void type::Type::defineFixedSizeTable(type::TypeID inner, usize element_count) {
+void valid_type::Type::defineFixedSizeTable(TypeID inner, usize element_count) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
 	kind = concrete::FixedSizeTable{ .inner = inner, .element_count = element_count };
 }
 
-void type::Type::defineDynamicTable(type::TypeID inner) {
+void valid_type::Type::defineDynamicTable(TypeID inner) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
 	kind = concrete::DynamicTable{ .inner = inner };
 }
 
-void type::Type::defineData(
-	const std::vector<std::pair<base::StrID, type::TypeID>>& fields_definitions
+void valid_type::Type::defineData(
+	const std::vector<std::pair<base::StrID, TypeID>>& fields_definitions
 ) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
@@ -52,7 +51,7 @@ void type::Type::defineData(
 	ObjIdNameMap<concrete::Field, concrete::Field::ID> fields;
 	for (const auto& field_def: fields_definitions)
 		fields.insert(
-			concrete::Field{ .offset = type::TypeSize(Bytes(0), 0),  // Offsets are calculated later
+			concrete::Field{ .offset = TypeSize(Bytes(0), 0),  // Offsets are calculated later
 		                     .name   = field_def.first,
 		                     .type   = field_def.second },
 			field_def.first
@@ -66,34 +65,34 @@ void type::Type::defineData(
 	kind = structure;
 }
 
-void type::Type::defineClass(
-	const std::vector<std::pair<base::StrID, type::TypeID>>& fields_definitions,
-	const bool                                               is_abstract,
-	const base::Optional<type::TypeID>&                      extends,
-	const std::vector<type::TypeID>&                         implements,
-	const std::vector<std::pair<base::StrID, type::TypeID>>& new_virtual_methods,
-	const std::vector<std::pair<base::StrID, base::StrID>>&  implementations
+void valid_type::Type::defineClass(
+	const std::vector<std::pair<base::StrID, TypeID>>&      fields_definitions,
+	const bool                                              is_abstract,
+	const base::Optional<TypeID>&                           extends,
+	const std::vector<TypeID>&                              implements,
+	const std::vector<std::pair<base::StrID, TypeID>>&      new_virtual_methods,
+	const std::vector<std::pair<base::StrID, base::StrID>>& implementations
 ) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
-	kind = concrete::Structure();
+	auto strukt = concrete::Structure();
 	for (const auto& field_def: fields_definitions)
-		std::get<concrete::Structure>(kind).fields.insert(
-			concrete::Field{ .offset = type::TypeSize(Bytes(0), 0),
+		strukt.fields.insert(
+			concrete::Field{ .offset = TypeSize(Bytes(0), 0),
 		                     .name   = field_def.first,
 		                     .type   = field_def.second },
 			field_def.first
 		);
 
-	base::HashMap<base::StrID, type::TypeID> virtual_methods;
+	base::HashMap<base::StrID, TypeID> virtual_methods;
 	for (const auto& method: new_virtual_methods) virtual_methods.put(method.first, method.second);
 
 	base::HashMap<base::StrID, base::StrID> vtable;
 	for (const auto& impl: implementations) vtable.put(impl.first, impl.second);
 
 	// Forward the data to be used in inheritance metadata construction during finalization.
-	std::get<concrete::Structure>(kind).inheritance_metadata = concrete::InheritanceMetadata {
+	strukt.inheritance_metadata = concrete::InheritanceMetadata {
 		.super_types       = {},
 		.implements        = implements | std::ranges::to<std::unordered_set>(),
 		.available_methods = virtual_methods, .vtable = vtable,
@@ -102,17 +101,19 @@ void type::Type::defineClass(
 			.is_abstract = is_abstract,
 		},
 	};
+
+	kind = strukt;
 }
 
-void type::Type::defineInterface(
-	const std::vector<type::TypeID>&                         implements,
-	const std::vector<std::pair<base::StrID, type::TypeID>>& new_virtual_methods,
-	const std::vector<std::pair<base::StrID, base::StrID>>&  implementations
+void valid_type::Type::defineInterface(
+	const std::vector<TypeID>&                              implements,
+	const std::vector<std::pair<base::StrID, TypeID>>&      new_virtual_methods,
+	const std::vector<std::pair<base::StrID, base::StrID>>& implementations
 ) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 
-	base::HashMap<base::StrID, type::TypeID> virtual_methods;
+	base::HashMap<base::StrID, TypeID> virtual_methods;
 	for (const auto& method: new_virtual_methods) virtual_methods.put(method.first, method.second);
 
 	base::HashMap<base::StrID, base::StrID> vtable;
@@ -131,9 +132,9 @@ void type::Type::defineInterface(
 	};
 }
 
-void type::Type::defineVariant(const std::vector<TypeID>& variant_types) {
+void valid_type::Type::defineVariant(const std::vector<TypeID>& variant_types) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
-	CORE_ASSERT(variant_types.size() != 0, "Cannot define variant with no alternatives");
+	CORE_ASSERT(!variant_types.empty(), "Cannot define variant with no alternatives");
 	state = State::Defined;
 
 	// log_256(x) = log_2(x) / log_2(256) = log_2(x) / 8.0
@@ -147,20 +148,20 @@ void type::Type::defineVariant(const std::vector<TypeID>& variant_types) {
 		                      .alternatives  = variant_types };
 }
 
-void type::Type::defineFunction(const std::vector<TypeID>& parameters, TypeID result) {
+void valid_type::Type::defineFunction(const std::vector<TypeID>& parameters, TypeID result) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 	kind  = concrete::Function{ .parameters = parameters, .result = result };
 }
 
-void type::Type::defineOpaque(Bytes size) {
+void valid_type::Type::defineOpaque(Bytes size) {
 	CORE_ASSERT(state == State::Declared, "Bad type define");
 	state = State::Defined;
 	kind  = concrete::Opaque{ size };
 }
 
-void type::Type::finalizeStructureInheritanceMetadata(
-	ObjIdNameMap<type::Type>& types, concrete::Structure& structure
+void valid_type::Type::finalizeStructureInheritanceMetadata(
+	TypeMap& types, concrete::Structure& structure
 ) {
 	if (!structure.inheritance_metadata.has_value()) return;
 	const auto& prev_imd = *structure.inheritance_metadata;
@@ -183,12 +184,12 @@ void type::Type::finalizeStructureInheritanceMetadata(
 	}
 
 	// 2. Fill the data
-	std::vector<std::pair<base::StrID, type::TypeID>> fields;
-	concrete::InheritanceMetadata                     imd = { .super_types       = { getID() },
-		                                                      .implements        = implements,
-		                                                      .available_methods = {},
-		                                                      .vtable            = {},
-		                                                      .kind              = prev_imd.kind };
+	std::vector<std::pair<base::StrID, valid_type::TypeID>> fields;
+	concrete::InheritanceMetadata                           imd = { .super_types = { getID() },
+		                                                            .implements  = implements,
+		                                                            .available_methods = {},
+		                                                            .vtable            = {},
+		                                                            .kind = prev_imd.kind };
 
 	variant_match(prev_imd.kind) {
 		variant_case(concrete::InheritanceMetadata::ClassKind, class_kind) {
@@ -266,14 +267,15 @@ void type::Type::finalizeStructureInheritanceMetadata(
 	structure.fields.clear();
 	for (const auto& [field_name, field_type]: fields)
 		structure.fields.insert(
-			concrete::Field{
-				.offset = type::TypeSize(Bytes(0), 0), .name = field_name, .type = field_type },
+			concrete::Field{ .offset = valid_type::TypeSize(Bytes(0), 0),
+		                     .name   = field_name,
+		                     .type   = field_type },
 			field_name
 		);
 	std::get<concrete::Structure>(kind).inheritance_metadata = imd;
 }
 
-void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
+void valid_type::Type::finalize(TypeMap& types) {
 	switch (state) {
 	case State::Declared:
 		CORE_PANIC("Tried to finalize a type that was not defined");
@@ -289,35 +291,35 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 
 	variant_match(kind) {
 		variant_case(concrete::Primitive, primitive) {
-			this->size   = type::TypeSize(primitive.size, 0);
-			this->is_pod = true;
+			this->size                  = valid_type::TypeSize(primitive.size, 0);
+			this->is_trivially_copyable = true;
 		}
 		variant_case(concrete::Pointer, pointer) {
-			this->size   = type::TypeSize::pointer();
-			this->is_pod = true;
+			this->size                  = valid_type::TypeSize::pointer();
+			this->is_trivially_copyable = true;
 		}
 		variant_case(concrete::FixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
-			this->size   = inner_type->getSize() * fixed_size_table.element_count;
-			this->is_pod = inner_type->isPodType();
+			this->size                  = inner_type->getSize() * fixed_size_table.element_count;
+			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
 		}
 		variant_case(concrete::DynamicTable, dynamic_table) {
 			/// @note Size of dynamicTable is unknown at this point,
 			/// as this is a runtime property, so size should never be queried,
 			/// through this object. Dynamic table is only accessed by a pointer.
-			this->size   = type::TypeSize(Bytes(0), 0);
-			this->is_pod = false;
+			this->size                  = valid_type::TypeSize(Bytes(0), 0);
+			this->is_trivially_copyable = false;
 		}
 		variant_case(concrete::Opaque, opaque) {
 			// Opaque type size is known, so we don't need to do anything here.
-			this->size   = type::TypeSize(opaque.size, 0);
-			this->is_pod = true;
+			this->size                  = valid_type::TypeSize(opaque.size, 0);
+			this->is_trivially_copyable = true;
 		}
 		variant_case(concrete::Function, function) {
 			// Function type size is known, so we don't need to do anything here.
-			this->size   = type::TypeSize::pointer();
-			this->is_pod = false;
+			this->size                  = valid_type::TypeSize::pointer();
+			this->is_trivially_copyable = false;
 		}
 
 		variant_case(concrete::Variant, variant) {
@@ -325,32 +327,33 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 			// The process to calculate data_segment_size is not trivial,
 			// because technically it's the maximum of the sizes of the alternatives, but we also
 			// need to take into account different pointer sizes. More info in TypeSize's doc-comment.
-			type::TypeSize data_segment_size(Bytes(0), 0);
+			valid_type::TypeSize data_segment_size(Bytes(0), 0);
 			for (auto& alternative: variant.alternatives) {
 				auto alternative_type = types.at(alternative);
 				alternative_type->finalize(types);
 				data_segment_size = data_segment_size.fieldMax(alternative_type->getSize());
 			}
-			this->size   = type::TypeSize(Bytes(variant.type_tag_size), 0) + data_segment_size;
-			this->is_pod = false;
+			this->size = valid_type::TypeSize(Bytes(variant.type_tag_size), 0) + data_segment_size;
+			this->is_trivially_copyable = false;
 		}
 
 		variant_case(concrete::Structure, structure) {
 			finalizeStructureInheritanceMetadata(types, structure);
 
 			// Finalize the fields and calculate their offsets.
-			type::TypeSize offset(Bytes(0), 0);
+			valid_type::TypeSize offset(Bytes(0), 0);
 			for (auto& field: structure.fields) {
 				auto field_type = types.at(field.type);
 				field_type->finalize(types);
 				field.offset = offset;
 				offset += field_type->getSize();
 			}
-			this->size   = offset;
-			this->is_pod = std::ranges::all_of(structure.fields, [&](const auto& field) {
-				auto field_type = types.at(field.type);
-				return field_type->isPodType();
-			});
+			this->size = offset;
+			this->is_trivially_copyable
+				= std::ranges::all_of(structure.fields, [&](const auto& field) {
+					  auto field_type = types.at(field.type);
+					  return field_type->isTriviallyCopyable();
+				  });
 		}
 		variant_default { CORE_PANIC("Finalization not implemented for this type kind"); }
 	}
@@ -359,17 +362,17 @@ void type::Type::finalize(ObjIdNameMap<type::Type>& types) {
 	state = State::Finalized;
 }
 
-[[nodiscard]] base::StrID type::Type::getName() const { return name; }
+[[nodiscard]] base::StrID valid_type::Type::getName() const { return name; }
 
-[[nodiscard]] type::TypeID type::Type::getID() const { return id; }
+[[nodiscard]] valid_type::TypeID valid_type::Type::getID() const { return id; }
 
-bool type::Type::operator==(const Type& other) const { return other.id == id; }
+bool valid_type::Type::operator==(const Type& other) const { return other.id == id; }
 
-bool vm::code::type::Type::operator==(const TypeID& other_id) const { return id == other_id; }
+bool valid_type::Type::operator==(const TypeID& other_id) const { return id == other_id; }
 
-type::Type::Type(base::StrID name, TypeID id): name(name), id(id) {}
+valid_type::Type::Type(base::StrID name, TypeID id): name(name), id(id) {}
 
-void type::Type::finalizeInstantiability(ObjIdNameMap<type::Type>& types) {
+void valid_type::Type::finalizeInstantiability(TypeMap& types) {
 	// This method assumes all dependent types are already finalized, so we can query their
 	// instantiability.
 	variant_match(kind) {
@@ -425,7 +428,7 @@ void type::Type::finalizeInstantiability(ObjIdNameMap<type::Type>& types) {
 	}
 }
 
-[[nodiscard]] type::TypeSize type::Type::getSize() const {
+[[nodiscard]] valid_type::TypeSize valid_type::Type::getSize() const {
 	CORE_ASSERT(state == State::Finalized, "Tried to get size of a type that was not finalized");
 	CORE_ASSERT(
 		!std::holds_alternative<concrete::DynamicTable>(kind), "Tried to get size of a dynamic table"
@@ -434,13 +437,15 @@ void type::Type::finalizeInstantiability(ObjIdNameMap<type::Type>& types) {
 }
 
 [[nodiscard]]
-bool type::Type::isInstantiable() const {
+bool valid_type::Type::isInstantiable() const {
 	CORE_ASSERT(
 		state == State::Finalized, "Tried to query instantiability of a type that was not finalized"
 	);
 	return is_instantiable;
 }
 
-[[nodiscard]] type::ConcreteTypeVariant type::Type::getKind() const { return kind; }
+[[nodiscard]] valid_type::ConcreteTypeVariant valid_type::Type::getKind() const { return kind; }
 
-[[nodiscard]] bool vm::code::type::Type::isPodType() const { return is_pod; }
+[[nodiscard]] bool vm::code::valid_type::Type::isTriviallyCopyable() const {
+	return is_trivially_copyable;
+}

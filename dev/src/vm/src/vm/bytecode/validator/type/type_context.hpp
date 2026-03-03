@@ -1,17 +1,13 @@
 #pragma once
 
-#include "type.hpp"
-
 #include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/type/type.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code {
-	// @TODO: #1306 Change this to StableObjIdNameMap<Type>
-	using TypeMap = ObjIdNameMap<type::Type>;
-
 	/**
 	 * @brief A simple container for types which doesn't allow duplicates. This structure is the
 	 * main entry point for type verification and building.
@@ -21,8 +17,8 @@ namespace vm::code {
 		/**
 		 * @brief Inserts new types.
 		 * If a type is duplicated throws DuplicatedTypeError.
-		 * If inserting new types would invalidate type context provided with function_signatures,
-		 * throw an error.
+		 * Throws an exception if inserting new types would invalidate the TypeContext in the
+		 * context of function_signatures.
 		 * @note After an exception is thrown, the TypeContext's state is undefined.
 		 */
 		void insertAndValidate(
@@ -30,13 +26,13 @@ namespace vm::code {
 			const base::HashMap<base::StrID, FuncSignature>& function_signatures
 		);
 
-		const TypeMap& getCurrentTypes() const;
+		[[nodiscard]] const valid_type::TypeMap& getCurrentTypes() const;
 
-		const ObjIdNameMap<TypeOfData>& getPodTypes() const;
+		[[nodiscard]] const ObjIdNameMap<TypeOfData>& getPodTypes() const;
 
 	private:
 		ObjIdNameMap<TypeOfData> pod_types;
 
-		TypeMap types;
+		valid_type::TypeMap types;
 	};
 }
