@@ -25,15 +25,15 @@ public:
 			"Default constructor failed"
 		);
 
-		// std::array<u32, 8> arr
-		// 	= { 0xFF'FF'FF'FF, 0x00'00'00'00, 0x12'34'56'78, 0x9A'BC'DE'F0, 0x0, 0x0, 0x0, 0x0 };
-		// base::Bit256 array_bit(arr);
-		// assertTrue(
-		// 	array_bit.data[0] == 0x00'00'00'00'FF'FF'FF'FF
-		// 		&& array_bit.data[1] == 0x9A'BC'DE'F0'12'34'56'78 && array_bit.data[2] == 0
-		// 		&& array_bit.data[3] == 0,
-		// 	"Array constructor failed"
-		// );
+		std::array<u32, 8> arr
+			= { 0xFF'FF'FF'FF, 0x00'00'00'00, 0x12'34'56'78, 0x9A'BC'DE'F0, 0x0, 0x0, 0x0, 0x0 };
+		base::Bit256 array_bit(arr);
+		assertTrue(
+			array_bit.data[0] == 0x00'00'00'00'FF'FF'FF'FF
+				&& array_bit.data[1] == 0x9A'BC'DE'F0'12'34'56'78 && array_bit.data[2] == 0
+				&& array_bit.data[3] == 0,
+			"Array constructor failed"
+		);
 
 		base::Bit256 multi_arg_bit(0x1, 0x2, 0x3, 0x4);
 		assertTrue(

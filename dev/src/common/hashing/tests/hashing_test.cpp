@@ -257,37 +257,36 @@ private:
 				+ HASH_VALUE_SIMPLE.toStringHex()
 		);
 
-		// constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::SHA256>{}(
-		// 								7,
-		// 								type2{},
-		// 								7,
-		// 								std::string{ "hello" },
-		// 								42,
-		// 								7,
-		// 								std::string{ "hello" },
-		// 								42,
-		// 								7,
-		// 								std::string{ "hello" },
-		// 								42,
-		// 								7,
-		// 								std::string{ "hello" },
-		// 								42,
-		// 								7,
-		// 								std::string{ "hello" },
-		// 								42
-		// )
-		//                                 .finalize();
+		constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::SHA256>{}(
+										7,
+										type2{},
+										7,
+										std::string{ "hello" },
+										42,
+										7,
+										std::string{ "hello" },
+										42,
+										7,
+										std::string{ "hello" },
+										42,
+										7,
+										std::string{ "hello" },
+										42,
+										7,
+										std::string{ "hello" },
+										42
+		)
+		                                .finalize();
 
+		const std::string expected_hash
+			= "cc29a5e32052f1e78ce5933758b457e9829c84322bfa1e8e2794ae1456a274a0";
+		const std::string computed_hash = HASH_VALUE.toStringHex();
 
-		// const std::string expected_hash
-		// 	= "2794ae1456a274a0829c84322bfa1e8e8ce5933758b457e9cc29a5e32052f1e7";
-		// const std::string computed_hash = HASH_VALUE.toStringHex();
-
-		// assertTrue(
-		// 	computed_hash == expected_hash,
-		// 	"SHA256 hash does not match expected value.\nExpected: " + expected_hash
-		// 		+ "\nComputed: " + computed_hash
-		// );
+		assertTrue(
+			computed_hash == expected_hash,
+			"SHA256 hash does not match expected value.\nExpected: " + expected_hash
+				+ "\nComputed: " + computed_hash
+		);
 	}
 
 	void fnv1a256Test() {

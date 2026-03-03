@@ -125,7 +125,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(element_type, size);
+			return hashing::justHash<hashing::Blake3_256>(element_type, size);
 		}
 	};
 
@@ -155,7 +155,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			hashing::SHA256 hasher{};
+			hashing::Blake3_256 hasher{};
 			// Note that tuple components are ordered.
 			for (const auto& component: components) addToHash(hasher, component);
 			return hasher.finalize();
@@ -189,7 +189,7 @@ namespace compiler::tsh {
 				hashes.push_back(underlying_type.queryUnstablePerfectHash());
 			std::ranges::sort(hashes, [](const auto& a, const auto& b) { return a < b; });
 
-			hashing::SHA256 hasher{};
+			hashing::Blake3_256 hasher{};
 			for (const auto& hash: hashes) addToHash(hasher, hash);
 			return hasher.finalize();
 		}
@@ -236,7 +236,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			hashing::SHA256 hasher{};
+			hashing::Blake3_256 hasher{};
 			for (const auto& param_type: parameter_types) addToHash(hasher, param_type);
 			addToHash(hasher, result_type);
 			addToHash(hasher, pure);
