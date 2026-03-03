@@ -94,7 +94,7 @@ set(CMAKE_CXX_FLAGS_DEBUG      ${CMAKE_CXX_FLAGS_DEVDEBUG})
 
 if(STRIP_SYMBOL_INFORMATION)
 	# if not gcc/clang, this might fail:
-	if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+	if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
 		message(FATAL_ERROR "Error: STRIP_SYMBOL_INFORMATION will likely fail (as is) compilers other then GCC and Clang. Fix or validate it first.")
 	endif()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
