@@ -187,7 +187,7 @@ namespace compiler::frontend {
 		// If ModuleHash is invalid, then children are also invalid
 		if (!m_path_component_hash.has_value()) {
 			// m_hash should not have value if path component hash is invalid
-			// The are calculaten in the same function: updateModuleHash()
+			// The are calculated in the same function: updateModuleHash()
 			CORE_ASSERT(!m_hash.has_value(), "Module hash have value!");
 
 			// assert if children are invalid too
@@ -563,7 +563,7 @@ namespace compiler::frontend {
 		);
 
 		// we need to detect cycles as someone could accidentally create one
-		// for example if module A is parent of B in oryginal module tree
+		// for example if module A is parent of B in original module tree
 		// and function addSubmodule(B, A) is called
 		// we would have a cycle A -> B -> A
 		// this is a programer error, because cycle is not possible in standard module tree from
@@ -760,7 +760,7 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// Chenge the parent of all submodules to the parent of the removed module
+		// Change the parent of all submodules to the parent of the removed module
 		for (auto& [_, submodule]: module->m_submodules) {
 			if (parent.has_value()) {
 				parent.value()->m_submodules.put(submodule->getName(), submodule);
