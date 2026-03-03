@@ -2,6 +2,7 @@
 
 #include <base/types/ints.hpp>
 
+#include <atomic>
 #include <mutex>
 
 namespace vm {
@@ -12,17 +13,25 @@ namespace vm {
 		 * @brief Main GIL mutex for a process.
 		 * It stems from assumption that only one thread can be executing DVM code at the time.
 		 */
-		std::mutex gil;
+		std::recursive_timed_mutex gil;
 
 		/**
-		 * @brief Count of VM operations from the last time GIL was acquired.
+		 * @brief Count of how many times GIL was exchanged between threads.
 		 */
-		u64 operations = 0;
+		std::atomic<u64> gil_exchanges{ 0 };
 
 		/**
-		 * @brief Maximum amount of operations that can be executed by thread without giving up GIL.
+		 * @brief Time in milliseconds after which thread waiting for GIL will raise a flag
+		 * to notify running thread to release GIL.
 		 */
-		const static u64 MAX_GIL_OPERATIONS = 50;
+		static constexpr u64 GIL_TIMEOUT_MS = 5;
+
+		/**
+		 * @brief Flag which indicates that waiting thread is waiting for GIL for too long
+		 * and running thread should release it.
+		 */
+		std::atomic<bool> gil_timeout_flag = false;
+
 
 	public:
 		/**
