@@ -77,3 +77,5 @@ make_module(PstParser USES DiagnosticInteractive Hashing Lexer UnicodeClassifica
 duck_add_test(compiler parser tests/parser_test.cpp USES PstParser)
 duck_add_test(compiler parser_builder tests/parser_builder_test.cpp USES PstParser)
 duck_add_test(compiler parser_errors tests/parser_errors_test.cpp USES PstParser)
+
+duck_add_test(compiler extract_single_expression tests/extract_single_expression_test.cpp USES PstParser)
