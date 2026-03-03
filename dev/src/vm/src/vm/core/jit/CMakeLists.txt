@@ -4,6 +4,11 @@ function(process_to_binary source_file destination_file)
         ABSOLUTE BASE_DIR
         "${CMAKE_CURRENT_LIST_DIR}"
     )
+    get_filename_component(
+        destination_file_abs "${destination_file}"
+        ABSOLUTE BASE_DIR
+        "${CMAKE_CURRENT_LIST_DIR}"
+    )
 
     if(NOT EXISTS "${source_file_abs}")
         message(
@@ -24,6 +29,15 @@ function(process_to_binary source_file destination_file)
         -fno-plt
         -fno-semantic-interposition
     )
+    if(source_file_stem STREQUAL "wrapper")
+        target_include_directories(${source_file_stem}-compiled PRIVATE
+            "${CMAKE_SOURCE_DIR}/src/vm/src"
+            "${CMAKE_SOURCE_DIR}/src/vm/src_private"
+        )
+        target_link_libraries(${source_file_stem}-compiled
+            Base Clah Filesystem TPC Init Logger Diagnostic Crow::Crow JSON
+        )
+    endif()
 
     set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${source_file_stem}-linked")
     set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${source_file_stem}-nm")
@@ -46,7 +60,7 @@ function(process_to_binary source_file destination_file)
         OUTPUT ${nm_out}
         COMMAND
             sh -c
-            "\"${LLVM_NM}\" -S --demangle --format=posix \"${linked_out}\" | awk 'NF >= 4 { print \"{ .name =\\\"\" $1 \"\\\", .type = \\\"\" $2 \"\\\", .place = 0x\" $3 \", .size = 0x\" $4 \"},\" }' > \"${nm_out}\""
+            "\"${LLVM_NM}\" -S --format=posix \"${linked_out}\" | awk 'NF >= 4 { print \"{ .name =\\\"\" $1 \"\\\", .type = \\\"\" $2 \"\\\", .place = 0x\" $3 \", .size = 0x\" $4 \"},\" }' > \"${nm_out}\""
         DEPENDS ${linked_out}
         VERBATIM
     )
@@ -56,11 +70,21 @@ function(process_to_binary source_file destination_file)
         DEPENDS ${linked_out}
     )
 
+    add_custom_target(${source_file_stem}-binary-artifacts
+        DEPENDS "${nm_out}" "${text_out}"
+    )
+
     set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
     set_source_files_properties("${text_out}" PROPERTIES GENERATED TRUE)
 
+    set(destination_scopes
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_SOURCE_DIR}/src/vm"
+    )
+
     set_property(
-        SOURCE ${destination_file}
+        SOURCE "${destination_file_abs}"
+        DIRECTORY ${destination_scopes}
         APPEND
         PROPERTY INCLUDE_DIRECTORIES
         "${CMAKE_CURRENT_BINARY_DIR}"
@@ -68,7 +92,8 @@ function(process_to_binary source_file destination_file)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set_property(
-            SOURCE ${destination_file}
+            SOURCE "${destination_file_abs}"
+            DIRECTORY ${destination_scopes}
             APPEND
             PROPERTY COMPILE_OPTIONS
             "--embed-dir=${CMAKE_CURRENT_BINARY_DIR}"
@@ -76,7 +101,8 @@ function(process_to_binary source_file destination_file)
     endif()
     
     set_property(
-        SOURCE ${destination_file}
+        SOURCE "${destination_file_abs}"
+        DIRECTORY ${destination_scopes}
         APPEND
         PROPERTY OBJECT_DEPENDS
         "${nm_out}" "${text_out}"
