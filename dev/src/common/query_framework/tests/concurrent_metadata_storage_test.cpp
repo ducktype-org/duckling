@@ -108,6 +108,9 @@ private:
                 auto metadata_vec = storage.getMetadata<MetaDataT>(node_id);
                 total_retrieved_count += metadata_vec.size();
 
+                ASSERT_EQUAL(metadata_vec.size() != 0, storage.hasMetadata<MetaDataT>(node_id));
+                ASSERT_EQUAL(metadata_vec.size(), storage.getMetadataCount<MetaDataT>(node_id));
+
                 for (const auto& metadata_value: metadata_vec) {
                     ASSERT_TRUE(metadata_value->value < 1000);
                 }
