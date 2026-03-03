@@ -1,10 +1,13 @@
 #include "repl_session.hpp"
 
+#include "utils.hpp"
+
 #include <driver/operations/generic_operations.hpp>
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
+#include <frontend/pst_parser/utility.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
@@ -24,6 +27,7 @@
 #include <cstring>
 #include <iostream>
 #include <string_view>
+#include <vector>
 
 namespace compiler::repl {
 	// @TODO: #1784 decide if we want to do it here or in the main.cpp.
@@ -59,30 +63,29 @@ namespace compiler::repl {
 		initDVM();
 	}
 
-	bool ReplSession::isCommand(const std::string& line) const {
+	bool ReplSession::isCommand(std::string_view line) const {
 		return !line.empty() && line[0] == '/';
 	}
 
-	// It doesn't belong here, should probably be moved to frontend later.
-	base::Optional<pst::AccessLocked<pst::ExprStmt>> ReplSession::extractSingleExpression(
-		query::Context& ctx, const pst::AccessLocked<pst::LangElement>& root
-	) const {
-		auto root_elem = root.unlock(ctx);
-		auto children  = root_elem->viewChildren();
+	ReplResult ReplSession::executeSingleStatement(frontend::ModuleID module_id) {
+		base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
+			auto pst       = getFilePST(ctx, main_file);
+			auto root      = pst->getRootElement();
+			expr_stmt_opt  = pst::extractSingleExpression(ctx, root);
+		});
 
-		auto it = children.begin();
-		if (it == children.end()) return {};
+		if (expr_stmt_opt.has_value()) {
+			CORE_DEV_LOG(REPL, "Processing statement as expression\n");
+			return handleExpression(expr_stmt_opt.value());
+		}
 
-		auto first_child = (*it).unlock(ctx);
-		++it;
-
-		if (it == children.end() && first_child->getElementKind() == pst::ElementKind::ExprStmt)
-			return (*children.begin()).template dynamicCast<pst::ExprStmt>();
-
-		return {};
+		CORE_DEV_LOG(REPL, "Processing statement as definition\n");
+		return handleDefinition(module_id);
 	}
 
-	bool ReplSession::handleCommand(const std::string& line) {
+	bool ReplSession::handleCommand(std::string_view line) {
 		if (line == "/exit" || line == "/quit" || line == "/q") {
 			m_should_exit = true;
 			return true;
@@ -114,7 +117,7 @@ namespace compiler::repl {
 		m_line_counter = 0;
 	}
 
-	ReplResult ReplSession::processLine(const std::string& line) {
+	ReplResult ReplSession::processLine(std::string_view line) {
 		if (isCommand(line)) {
 			handleCommand(line);
 			if (m_should_exit) return ReplResult::exit();
@@ -213,22 +216,21 @@ namespace compiler::repl {
 		return ReplResult::success(output_message);
 	}
 
-	ReplResult ReplSession::executeInput(const std::string& input) {
+	ReplResult ReplSession::executeInput(std::string_view input) {
 		if (input.empty()) return ReplResult::success();
 
 		try {
 			CORE_DEV_LOG(REPL, "Starting executeInput\n");
 
-			CORE_DEV_LOG(REPL, "Creating module\n");
-			auto module_id = frontend::createModuleTreeFromContents(input);
+			// This probe module is temporary — individual statement modules are created below.
+			CORE_DEV_LOG(REPL, "Parsing input for statement extraction\n");
+			auto probe_module_id = frontend::createModuleTreeFromContents(input);
 
-			m_history.emplace_back(input, module_id);
-			++m_line_counter;
+			std::vector<std::string> statement_sources;
+			bool                     has_parse_errors = false;
 
-			CORE_DEV_LOG(REPL, "Extracting expression\n");
-			base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
 			query::utils::withContextDo([&](query::Context& ctx) {
-				auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
+				auto main_file = ctx.query<frontend::QueryMainSourceFile>(probe_module_id);
 				auto pst       = getFilePST(ctx, main_file);
 
 				CORE_DEV_LOG(REPL, "PST:\n");
@@ -240,20 +242,33 @@ namespace compiler::repl {
 				if (pst->getLogger()->bad()) {
 					std::cerr << "Parse errors:\n";
 					pst->getLogger()->dumpLog(false, std::cerr);
+					has_parse_errors = true;
 					return;
 				}
 
-				auto root     = pst->getRootElement();
-				expr_stmt_opt = extractSingleExpression(ctx, root);
+				statement_sources = extractStatementSources(ctx, probe_module_id);
 			});
 
-			if (expr_stmt_opt.has_value()) {
-				CORE_DEV_LOG(REPL, "Processing as expression\n");
-				return handleExpression(expr_stmt_opt.value());
-			} else {
-				CORE_DEV_LOG(REPL, "Processing as definition\n");
-				return handleDefinition(module_id);
+			if (has_parse_errors) return ReplResult::error("Parse error");
+			if (statement_sources.empty()) return ReplResult::success();
+
+			CORE_DEV_LOG(REPL, "Input divided into ", statement_sources.size(), " statement(s):\n");
+			for (usize i = 0; i < statement_sources.size(); ++i)
+				CORE_DEV_LOG(REPL, "  [", i + 1, "] \"", statement_sources[i], "\"\n");
+
+			CORE_DEV_LOG(REPL, "Executing ", statement_sources.size(), " statement(s)\n");
+
+			ReplResult last_result = ReplResult::success();
+			for (const auto& stmt_source: statement_sources) {
+				CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
+				auto module_id = frontend::createModuleTreeFromContents(stmt_source);
+				m_history.emplace_back(stmt_source, module_id);
+				++m_line_counter;
+				last_result = executeSingleStatement(module_id);
+				if (last_result.status == ReplResult::Status::Error) return last_result;
 			}
+			return last_result;
+
 		} catch (const std::out_of_range& e) {
 			std::string error_msg = std::string("REPL map::at error (out_of_range): ") + e.what();
 			std::cerr << error_msg << "\n";

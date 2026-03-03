@@ -12,9 +12,13 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
+  but_got:
+    description: "What was found instead of the expected identifier."
 
 header_message:
-  - "Expected an identifier here."
+  - "Expected an identifier here, but got: "
+  - param: "but_got"
+  - "."
 
 description:
   - codeblock:

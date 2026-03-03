@@ -4,9 +4,6 @@
 
 namespace compiler::mir {
 
-	/**
-	 * @brief Lowest common ancestor of @p a and @p b
-	 */
 	ScopeRef lca(ScopeRef a, ScopeRef b) {
 		auto depth_a = a->depth;
 		auto depth_b = b->depth;

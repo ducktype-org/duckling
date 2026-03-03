@@ -77,6 +77,8 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}
+
+	static auto erase(KHash key) -> bool { return cache.erase(key); }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(Query1);
@@ -103,6 +105,8 @@ struct IMPLEMENT_QUERY(Query2, uint64_t) {
 		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}
+
+	static auto erase(KHash key) -> bool { return cache.erase(key); }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
@@ -129,6 +133,8 @@ struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
 		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}
+
+	static auto erase(KHash key) -> bool { return cache.erase(key); }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery);
@@ -146,7 +152,8 @@ int main() {
 	std::cerr << "\n";
 
 	std::cerr << "Here are the logs in user readable form:\n";
-	query::Context::int_logger.terminalPrint(std::cerr);
+	auto logger = query::Context::dumpToOneLoggerAndClear();
+	logger->terminalPrint(std::cerr);
 
 	std::cerr << query::entryPoint<CyclicQuery>({ 0 }) << "\n";
 
