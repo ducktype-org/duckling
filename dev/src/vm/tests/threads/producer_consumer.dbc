@@ -1,13 +1,15 @@
-# Producer-consumer test using condition variables.
+# Multi producer-consumer test using one shared CV + mutex.
 #
-# - One producer creates 20000 items into a bounded buffer of size 3.
-# - One consumer consumes exactly 20000 items.
-# - Producer waits on not_full_cv when buffer is full.
-# - Consumer waits on not_empty_cv when buffer is empty.
-# - notify_cv is used to wake one waiting counterpart.
+# Scenario:
+# - 2 producer threads, each produces 10000 items (20000 total).
+# - 2 consumer threads, each consumes 10000 items (20000 total).
+# - Buffer capacity is 3 items.
+# - Producer waits when buffer is full.
+# - Consumer waits when buffer is empty.
 #
-# Expected final state:
-# produced_total=20000, consumed_total=20000, buffer_count=0, done_producing=1, ok=1.
+# Final invariants:
+# produced_total=20000, consumed_total=20000, buffer_count=0,
+# finished_producers=2, finished_consumers=2, ok=1.
 
 global_data lock mutex {};
 global_data cv condition_variable {};
@@ -15,11 +17,12 @@ global_data cv condition_variable {};
 global_data buffer_count i64 {};
 global_data produced_total i64 {};
 global_data consumed_total i64 {};
-global_data done_producing i64 {};
+global_data finished_producers i64 {};
+global_data finished_consumers i64 {};
 
 function producer {} -> void {
 	init_lany_type              to_produce, i64;
-	mov_l64_imm                 to_produce, 20000;
+	mov_l64_imm                 to_produce, 10000;
 
 	label ProduceLoop;
 		cmpEq_l64_imm           to_produce, 0;
@@ -45,6 +48,9 @@ function producer {} -> void {
 			mov_lopq_gopq       wait_lock_full, lock;
 			call_builtinfunc    builtin_wait_cv;
 			deinit;
+			init_lany_type      relock_after_wait, mutex;
+			mov_lopq_gopq       relock_after_wait, lock;
+			call_builtinfunc    builtin_lock_mutex;
 			jmp_label           WaitSpaceInit;
 
 		label HaveSpacePrep;
@@ -81,7 +87,10 @@ function producer {} -> void {
 	mov_lopq_gopq               lock_done, lock;
 	call_builtinfunc            builtin_lock_mutex;
 
-	mov_g64_imm                 done_producing, 1;
+	init_lany_type              fp_now, i64;
+	mov_l64_g64                 fp_now, finished_producers;
+	add_l64_imm                 fp_now, 1;
+	mov_g64_l64                 finished_producers, fp_now;
 
 	init_lany_type              cv_notify_finish, condition_variable;
 	mov_lopq_gopq               cv_notify_finish, cv;
@@ -96,7 +105,7 @@ function producer {} -> void {
 
 function consumer {} -> void {
 	init_lany_type              to_consume, i64;
-	mov_l64_imm                 to_consume, 20000;
+	mov_l64_imm                 to_consume, 10000;
 
 	label ConsumeLoop;
 		cmpEq_l64_imm           to_consume, 0;
@@ -120,6 +129,9 @@ function consumer {} -> void {
 			mov_lopq_gopq       wait_lock_empty, lock;
 			call_builtinfunc    builtin_wait_cv;
 			deinit;
+			init_lany_type      relock_after_wait, mutex;
+			mov_lopq_gopq       relock_after_wait, lock;
+			call_builtinfunc    builtin_lock_mutex;
 			jmp_label           WaitDataInit;
 
 		label   ConsumePrep;
@@ -152,6 +164,23 @@ function consumer {} -> void {
 		jmp_label               ConsumeLoop;
 
 	label   ConsumerFinish;
+	init_lany_type              lock_done, mutex;
+	mov_lopq_gopq               lock_done, lock;
+	call_builtinfunc            builtin_lock_mutex;
+
+	init_lany_type              fc_now, i64;
+	mov_l64_g64                 fc_now, finished_consumers;
+	add_l64_imm                 fc_now, 1;
+	mov_g64_l64                 finished_consumers, fc_now;
+
+	init_lany_type              cv_notify_finish, condition_variable;
+	mov_lopq_gopq               cv_notify_finish, cv;
+	call_builtinfunc            builtin_notify_all_cv;
+
+	init_lany_type              unlock_done, mutex;
+	mov_lopq_gopq               unlock_done, lock;
+	call_builtinfunc            builtin_unlock_mutex;
+
 	ret;
 }
 
@@ -167,24 +196,43 @@ function main { i64, ptr_argv } -> i64 {
 	mov_g64_imm                 buffer_count, 0;
 	mov_g64_imm                 produced_total, 0;
 	mov_g64_imm                 consumed_total, 0;
-	mov_g64_imm                 done_producing, 0;
+	mov_g64_imm                 finished_producers, 0;
+	mov_g64_imm                 finished_consumers, 0;
 
-	init_lany_type              producer_id, i64;
+	init_lany_type              producer1_id, i64;
 	set_threadctx               producer;
 	call_builtinfunc            builtin_start_thread;
 
-	init_lany_type              consumer_id, i64;
+	init_lany_type              producer2_id, i64;
+	set_threadctx               producer;
+	call_builtinfunc            builtin_start_thread;
+
+	init_lany_type              consumer1_id, i64;
 	set_threadctx               consumer;
 	call_builtinfunc            builtin_start_thread;
 
-	init_lany_type              producer_ret, i64;
-	init_lany_type              join_producer_id, i64;
-	mov_l64_l64                 join_producer_id, producer_id;
+	init_lany_type              consumer2_id, i64;
+	set_threadctx               consumer;
+	call_builtinfunc            builtin_start_thread;
+
+	init_lany_type              producer1_ret, i64;
+	init_lany_type              join_producer1_id, i64;
+	mov_l64_l64                 join_producer1_id, producer1_id;
 	call_builtinfunc            builtin_join_thread;
 
-	init_lany_type              consumer_ret, i64;
-	init_lany_type              join_consumer_id, i64;
-	mov_l64_l64                 join_consumer_id, consumer_id;
+	init_lany_type              producer2_ret, i64;
+	init_lany_type              join_producer2_id, i64;
+	mov_l64_l64                 join_producer2_id, producer2_id;
+	call_builtinfunc            builtin_join_thread;
+
+	init_lany_type              consumer1_ret, i64;
+	init_lany_type              join_consumer1_id, i64;
+	mov_l64_l64                 join_consumer1_id, consumer1_id;
+	call_builtinfunc            builtin_join_thread;
+
+	init_lany_type              consumer2_ret, i64;
+	init_lany_type              join_consumer2_id, i64;
+	mov_l64_l64                 join_consumer2_id, consumer2_id;
 	call_builtinfunc            builtin_join_thread;
 
 	init_lany_type              out_produced, i64;
@@ -199,9 +247,13 @@ function main { i64, ptr_argv } -> i64 {
 	mov_l64_g64                 out_buffer, buffer_count;
 	output_l64                  out_buffer;
 
-	init_lany_type              out_done, i64;
-	mov_l64_g64                 out_done, done_producing;
-	output_l64                  out_done;
+	init_lany_type              out_fp, i64;
+	mov_l64_g64                 out_fp, finished_producers;
+	output_l64                  out_fp;
+
+	init_lany_type              out_fc, i64;
+	mov_l64_g64                 out_fc, finished_consumers;
+	output_l64                  out_fc;
 
 	init_lany_type              ok, i64;
 	mov_l64_imm                 ok, 0;
@@ -212,17 +264,19 @@ function main { i64, ptr_argv } -> i64 {
 	jmpIfNot_label              EndChecks;
 	cmpEq_l64_imm               out_buffer, 0;
 	jmpIfNot_label              EndChecks;
-	cmpEq_l64_imm               out_done, 1;
+	cmpEq_l64_imm               out_fp, 2;
+	jmpIfNot_label              EndChecks;
+	cmpEq_l64_imm               out_fc, 2;
 	jmpIfNot_label              EndChecks;
 	mov_l64_imm                 ok, 1;
 
 	label EndChecks;
 	output_l64                  ok;
-        
+
 	init_lany_type              destroy_cv1, condition_variable;
 	mov_lopq_gopq               destroy_cv1, cv;
 	call_builtinfunc            builtin_destroy_cv;
-        
+
 	init_lany_type              m_destroy, mutex;
 	mov_lopq_gopq               m_destroy, lock;
 	call_builtinfunc            builtin_destroy_mutex;
