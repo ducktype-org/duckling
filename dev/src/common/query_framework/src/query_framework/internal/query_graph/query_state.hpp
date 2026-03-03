@@ -5,6 +5,8 @@
 #include "query_graph.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <diagnostic_interactive/logger_fwd.hpp>
+#include <diagnostic_interactive/message_fwd.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
@@ -104,6 +106,8 @@ namespace query::internal {
 		const QueryGraph& getGraph() const {
 			return query_graph;
 		}
+
+		QueryGraph& getGraphMutable() { return query_graph; }
 
 		/**
 		 * @brief Returns read-only reference to the graph from previous compilation.
@@ -286,6 +290,37 @@ namespace query::internal {
 		[[nodiscard]]
 		base::Optional<base::CRef<MetadataStorage>> getPreviousMetadataStorage() const;
 
+		[[nodiscard]]
+		Ref<MetadataStorage> getMetadataStorageMutable();
+
+		/*******************************\
+		|    Diagnostics interface:    |
+		\******************************/
+
+		/**
+		 * @brief Logs a diagnostic message for a specific node.
+		 * It creates a logger for the node if it doesn't exist and logs the message to it.
+		 */
+		void logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic);
+
+		/**
+		 * @brief Clears all diagnostics for a specific node.
+		 */
+		void clearDiagnosticForNode(NodeID node_id);
+
+		/**
+		 * @brief Gets a diagnostic logger for a specific node, if it exists.
+		 * Used for the tests.
+		 *
+		 * Not thread safe.
+		 */
+		base::Optional<CRef<dia_int::Logger>> getDiagnosticForNode(NodeID node_id) const;
+
+		/**
+		 * @brief Get the entire map of diagnostic loggers for direct access.
+		 */
+		CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> getDiagnosticLoggers() const;
+
 	private:
 		friend struct ::query::Context;
 
@@ -358,5 +393,11 @@ namespace query::internal {
 		 * @brief Storage for metadata attached to query nodes.
 		 */
 		MetadataStorage metadata_storage;
+
+
+		/**
+		 * @brief Storage for the diagnostic loggers for each noe.
+		 */
+		concurrent::ConHashMap<NodeID, Box<dia_int::Logger>> diagnostic_loggers;
 	};
 }

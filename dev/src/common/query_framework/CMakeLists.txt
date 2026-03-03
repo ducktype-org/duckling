@@ -4,6 +4,7 @@ add_library(QueryFramework
 	src/query_framework/internal/query_graph/query_state.cpp
 	src/query_framework/internal/query_data/query_id.cpp
 	src/query_framework/internal/query_graph/node_marking.cpp
+	src/query_framework/module_flags/module_flags.cpp
 
 	src/query_framework/external/api.cpp
 	
@@ -27,3 +28,4 @@ add_example(query_example examples/example.cpp USES QueryFramework)
 
 duck_add_test(common query_framework tests/query_framework_test.cpp USES QueryFramework)
 duck_add_test(common active_graph tests/active_graph_test.cpp USES QueryFramework)
+duck_add_test(common query_invalidation tests/query_invalidation_test.cpp USES QueryFramework)
