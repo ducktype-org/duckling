@@ -1,6 +1,7 @@
 #include "module_tree.hpp"
 
 #include "access.hpp"
+#include "concurrent/worker/worker.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
 #include "queries.hpp"
@@ -855,7 +856,6 @@ namespace compiler::frontend {
 			"parseAllFilesInModuleTree called from within a query!"
 		);
 
-
 		// First collect all files to be parsed.
 		std::vector<FileID> files_to_parse;
 		auto                collect_files = [&](this auto&& self, ModuleID mid) -> void {
@@ -874,28 +874,39 @@ namespace compiler::frontend {
 		// Now parse them concurrently.
 		std::mutex              wait_mtx;
 		std::condition_variable wait_cv;
-		std::atomic<usize>      tasks_left = files_to_parse.size();
-		auto&                   manager    = concurrent::worker::WorkerManager::get();
+		std::atomic<usize>      next_file_id{ 0 };
+		std::atomic<usize>      tasks_left{ files_to_parse.size() };
+		auto&                   manager = concurrent::worker::WorkerManager::get();
 
-		for (const auto& file_id: files_to_parse) {
-			manager.scheduleTaskOnAnyWorker([&, file_id](concurrent::worker::WRef) {
-				auto file_ref
-					= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-						file_id
-					);
+		auto schedule_next_file_parsing = [&](concurrent::worker::WRef worker) {
+			usize idx = next_file_id.fetch_add(1, std::memory_order_relaxed);
 
-				file_ref->getPST();
+			if (idx < files_to_parse.size()) {
+				FileID file_id = files_to_parse[idx];
 
-				if (tasks_left.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-					std::lock_guard<std::mutex> lock(wait_mtx);
-					wait_cv.notify_one();
-				}
-			});
-		}
+				worker->scheduleTask([&, file_id](concurrent::worker::WRef) {
+					auto file_ref
+						= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+							file_id
+						);
+					file_ref->getPST();
+
+					if (tasks_left.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+						std::lock_guard<std::mutex> lock(wait_mtx);
+						wait_cv.notify_one();
+					}
+				});
+			}
+		};
+
+		manager.setNoTasksCallback(schedule_next_file_parsing);
 
 		// Wait until all files are parsed.
 		std::unique_lock lock(wait_mtx);
 		wait_cv.wait(lock, [&] { return tasks_left.load(std::memory_order_acquire) == 0; });
+
+		// Clear the call back if all files are parsed.
+		manager.setNoTasksCallback([](concurrent::worker::WRef) {});
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {

@@ -6,6 +6,8 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
+#include <iostream>
+
 namespace concurrent::worker {
 	/**
 	 * @brief Manages a fixed number of workers to execute tasks.
@@ -81,7 +83,10 @@ namespace concurrent::worker {
 		 * @brief Same as above, but sets the same callback for all workers sequentially.
 		 */
 		void setNoTasksCallback(const NoTasksCallback& callback) {
-			for (auto& worker: getAllWorkers()) worker->setNoTasksCallback(callback);
+			for (auto& worker: getAllWorkers()) {
+				std::cout << "Callback set\n";
+				worker->setNoTasksCallback(callback);
+			}
 		}
 
 	private:
