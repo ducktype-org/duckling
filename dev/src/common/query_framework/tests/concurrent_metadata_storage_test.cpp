@@ -56,6 +56,10 @@ public:
 		TESTER_ADD_TEST(addMetadataIfNotExistTest<2>);
 		TESTER_ADD_TEST(addMetadataIfNotExistTest<4>);
 
+		TESTER_ADD_TEST(testConcurentReadsAndWrites<1>);
+		TESTER_ADD_TEST(testConcurentReadsAndWrites<2>);
+		TESTER_ADD_TEST(testConcurentReadsAndWrites<4>);
+
 	}
 
 private:
@@ -146,7 +150,7 @@ private:
 		// We will add q3 nodes before threads:
 		for (u64 hash = 0; hash < 1'000; ++hash) {
 			auto node_id = query::internal::NodeID{ q_id_3, { hash } };
-			storage.addMetadata<metadata_DummyMetadata1>(node_id, 42);
+			storage.addMetadata<metadata_DummyMetadata1>(node_id, u64(42));
 		}
 
 		std::vector<std::jthread> threads;
@@ -196,9 +200,11 @@ private:
 
 	}
 
+
 	template<u64 THREAD_COUNT>
-	void randomTest() {
-		constexpr u64 OPS_PER_THREAD = 10'000;
+	void testConcurentReadsAndWrites() {
+		
+		constexpr u64 OPS_PER_THREAD = 15'000;
 
 		query::internal::MetadataStorage storage;
 
@@ -206,28 +212,64 @@ private:
 		const auto q_id_2 = DummyQuery2::getID();
 		const auto q_id_3 = DummyQuery3::getID();
 
-
 		std::vector<std::jthread> threads;
 		threads.reserve(THREAD_COUNT);
+
+		std::atomic<u64> adds = 0;
+
 		for (u64 i = 0; i < THREAD_COUNT; ++i) {
 			threads.emplace_back([&, thread_id = i] {
 				std::mt19937_64 rng(thread_id);  // Seed with thread ID for reproducibility
-				std::uniform_int_distribution<u64> dist(1, 100);
+				std::uniform_int_distribution<u64> dist(1, 1'000);
 
 				for (u64 j = 0; j < OPS_PER_THREAD; ++j) {
-					u64 action = dist(rng) % 3;
+					u64 task = dist(rng) % 4;
 
-					switch (action) {
-					case 0: {
+					auto choose_query = dist(rng) % 3;
+					auto node_id      = query::internal::NodeID{
+						(choose_query == 0) ? q_id_1 : (choose_query == 1) ? q_id_2 : q_id_3, { dist(rng) % 1'000 }
+					};
+
+					if (task == 0) {
+						// add new metadata
+						auto metadata_value = dist(rng) % 1'000;
+						storage.addMetadata<metadata_DummyMetadata1>(node_id, metadata_value);
+						adds++;
+					} else if (task == 1) {
+						// just read
+						auto metadata_vec = storage.getMetadata<metadata_DummyMetadata1>(node_id);
+						for (const auto& metadata_value: metadata_vec)
+							ASSERT_TRUE(metadata_value->value < 1'000);
 					}
+					else if (task == 2) {
+						// just check existence
+						[[maybe_unused]]
+						bool has_metadata = storage.hasMetadata<metadata_DummyMetadata1>(node_id);
 					}
+					else if (task == 3) {
+						// just extract
+						auto extracted = storage.extract(node_id);
+						if (extracted.has_value()) {
+							adds -= extracted->type_map.size();
+						}
+					}
+					else {
+						CORE_UNREACHABLE();
+					}
+
 				}
 			});
 		}
 
 		for (auto& thread: threads) thread.join();
 
-		// v
+		// Verify that metadata was added correctly
+		u64 total_metadata_count = 0;
+		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata1>().size();
+		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata2>().size();
+		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata3>().size();
+		ASSERT_EQUAL(total_metadata_count, adds.load());
+		
 	}
 };
 
