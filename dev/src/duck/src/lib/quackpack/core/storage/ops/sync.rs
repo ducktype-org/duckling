@@ -64,7 +64,7 @@ pub fn sync(
     drop(data_lock);
 
     if !options.overwrite {
-        check_if_overwrites(pkg_ctx, &venv, id)?;
+        check_if_overwrites(pkg_ctx, venv.as_ref(), id)?;
     }
 
     let input_freeze = user_exposed_freeze
@@ -116,9 +116,9 @@ pub fn sync(
     ))
 }
 
-fn check_if_overwrites(pkg_ctx: &PackageCtx, venv: &Option<Venv>, id: StrId) -> QuackResult<()> {
-    if let Some(venv) = venv
-        && pkg_ctx.package().manifest_path() != venv.data().last_location()
+fn check_if_overwrites(pkg_ctx: &PackageCtx, venv: Option<&Venv>, id: StrId) -> QuackResult<()> {
+    let Some(venv) = venv else { return Ok(()) };
+    if pkg_ctx.package().manifest_path() != venv.data().last_location()
         && venv.data().last_location().exists()
     {
         let replaces =
@@ -185,9 +185,9 @@ fn get_solver_answer(
         .lock(ShouldBlock::Yes)?;
     let (_, results) = TokioScope::scope_and_block(|spawner| {
         spawner.spawn(async {
-            let solver_preparation_ans = solver.prepare_solving(git_access.clone()).await?;
+            let should_run_engine = solver.prepare_solving(git_access.clone()).await?;
             drop(fetcher_lock);
-            match solver_preparation_ans {
+            match should_run_engine {
                 ShouldRunSolverEngine::No(answer) => Ok(answer),
                 ShouldRunSolverEngine::Yes(solver) => solver.solve(),
             }
@@ -204,7 +204,7 @@ fn fetch_source_codes(
     git_access: Arc<Mutex<StorageGitAccess<'_>>>,
     pkgs: Vec<ExpandedPackage>,
 ) -> QuackResult<bool> {
-    let mut was_smth_new_installed = false;
+    let mut was_anything_installed = false;
     let fetcher_lock = ctx
         .duck_home()
         .ensure_fetcher_lockfile()?
@@ -221,9 +221,9 @@ fn fetch_source_codes(
     drop(fetcher_lock);
     let results = unpack_tokio_scoped_vector(results)?;
     for result in results {
-        was_smth_new_installed |= result?;
+        was_anything_installed |= result?;
     }
-    Ok(was_smth_new_installed)
+    Ok(was_anything_installed)
 }
 
 async fn fetch_source_code(

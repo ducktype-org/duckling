@@ -99,7 +99,9 @@ impl<'duck> Fetcher<'duck> {
     /// Retrieve metadata for all versions of a `package_name` from a given Ducknest instance at
     /// `url`.
     ///
-    /// This method does __not__ look up in the cache, however it saves all fetched metadata, so
+    /// This method does only looks up manifests in the cache if `offline` is set to true.
+    /// Otherwise __no__ lookup is performed.
+    /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
     pub async fn get_package_all_metadata(
         &self,
