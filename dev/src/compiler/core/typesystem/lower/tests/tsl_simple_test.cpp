@@ -356,6 +356,19 @@ private:
 							&& l.getOffsetOfComponentIndex(2) == Bytes(8),
 						"Tuple layout should align its component layouts."
 					);
+
+					for (usize i = 0; i < l.getNumComponents(); i++) {
+						assertTrue(
+							l.getComponentIndexOfLayoutIndex(l.getLayoutIndexOfComponentIndex(i))
+								== i,
+							"Component index to layout index mapping should be reversible."
+						);
+						assertTrue(
+							l.getLayoutIndexOfComponentIndex(l.getComponentIndexOfLayoutIndex(i))
+								== i,
+							"Layout index to component index mapping should be reversible."
+						);
+					}
 				}
 				variant_default { fail("Layout of tuple type should be tuple-like."); }
 			}

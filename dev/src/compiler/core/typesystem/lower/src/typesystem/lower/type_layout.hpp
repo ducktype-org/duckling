@@ -430,8 +430,6 @@ namespace compiler::tsl {
 
 		/**
 		 * @brief The component layout indices of the components in the original tuple type.
-		 * @note This is not used and not tested for now,
-		 * revisit and add tests in #802 (legit tuple types)
 		 */
 		std::vector<usize> component_idx_to_layout_idx;
 
