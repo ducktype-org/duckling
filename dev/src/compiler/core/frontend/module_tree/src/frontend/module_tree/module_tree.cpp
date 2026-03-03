@@ -857,15 +857,15 @@ namespace compiler::frontend {
 
 
 		// First collect all files to be parsed.
-		std::vector<FileID>           files_to_parse;
-		std::function<void(ModuleID)> collect_files = [&](ModuleID mid) {
-			auto module_tree = GetModuleID_Functor::get(mid);
-			if (module_tree->hasMainSourceFile())
-				files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
-			for (const auto& file: module_tree->getSourceFiles().illegalAccess())
-				files_to_parse.push_back(file.illegalAccess().getID());
-			for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
-				collect_files(submodule.illegalAccess().getID());
+		std::vector<FileID> files_to_parse;
+		auto                collect_files = [&](this auto&& self, ModuleID mid) -> void {
+            auto module_tree = GetModuleID_Functor::get(mid);
+            if (module_tree->hasMainSourceFile())
+                files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
+            for (const auto& file: module_tree->getSourceFiles().illegalAccess())
+                files_to_parse.push_back(file.illegalAccess().getID());
+            for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
+                self(submodule.illegalAccess().getID());
 		};
 		collect_files(module_id);
 

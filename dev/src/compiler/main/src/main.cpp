@@ -6,7 +6,6 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>

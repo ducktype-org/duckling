@@ -66,7 +66,7 @@ protected:
 				},
 				.debug_options         = {},
 				.incremental           = {},
-				.execution_options {},
+				.execution_options     = {},
 			}
 		);
 	}

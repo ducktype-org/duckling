@@ -18,9 +18,9 @@ namespace {
 	 * be synchronized.
 	 */
 	struct PathState final {
-		// List of all SourceFile instances associated with this path.
+		/// List of all SourceFile instances associated with this path.
 		std::vector<base::Ref<compiler::frontend::SourceFile>> instances;
-		// Cached view of the file's content (used for deduplication and fast access).
+		/// Cached view of the file's content (used for deduplication and fast access).
 		base::Optional<base::SharedView> content;
 	};
 
@@ -57,11 +57,8 @@ namespace compiler::frontend {
 
 		path_registry.maybePutAndUpdate(
 			abs_path,
-			PathState{ .instances = { created_ref }, .content = std::nullopt },
-			[&](Ref<PathState> state) {
-				if (std::ranges::find(state->instances, created_ref) == state->instances.end())
-					state->instances.push_back(created_ref);
-			}
+			PathState{ .instances = {}, .content = std::nullopt },
+			[&](Ref<PathState> state) { state->instances.push_back(created_ref); }
 		);
 
 		return created_ref;
@@ -86,9 +83,8 @@ namespace compiler::frontend {
 		});
 
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
-		// Reset the parse tree and the hash.
+		// Reset the parse tree.
 		parse_tree.reset();
-		component_hash.reset();
 	}
 
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
