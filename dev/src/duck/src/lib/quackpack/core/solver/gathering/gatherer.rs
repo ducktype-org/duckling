@@ -168,9 +168,9 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         offline: bool,
     ) -> GathererResult<FetchResponse> {
         match request {
-            ManifestsRequest::Pinned(pinned_request) => self
-                .fetch_registry_pinned(pinned_request, offline)
-                .await,
+            ManifestsRequest::Pinned(pinned_request) => {
+                self.fetch_registry_pinned(pinned_request, offline).await
+            }
             ManifestsRequest::NotPinned(not_pinned_request) => {
                 match not_pinned_request.location.as_ref() {
                     Location::Registry { url, real_name } => Ok(self
@@ -180,9 +180,10 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                         url,
                         branch_or_tag,
                         rev,
-                    } => Ok(self
-                        .fetch_git(&not_pinned_request, url, *branch_or_tag, *rev, offline)
-                        .await),
+                    } => {
+                        self.fetch_git(&not_pinned_request, url, *branch_or_tag, *rev, offline)
+                            .await
+                    }
                     Location::Local { path } => self.fetch_local(&not_pinned_request, path),
                 }
             }
@@ -310,8 +311,8 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         url: &Url,
         branch_or_tag: BranchOrTag,
         rev: Option<StrId>,
-        _offline: bool,
-    ) -> GathererComputation<FetchResponse> {
+        offline: bool,
+    ) -> GathererResult<FetchResponse> {
         let fetch_failure = || {
             FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
                 origin_location: InternedLocation::new(Location::Git {
@@ -321,11 +322,21 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                 }),
             }))
         };
+
+        if let Some(success) = self.try_get_cached_git(url, branch_or_tag, rev).await? {
+            return Ok(GathererComputation::only_success(FetchResponse::Success(
+                FetchSuccess::NotPinned(success),
+            )));
+        }
+        if offline {
+            return Ok(GathererComputation::only_success(fetch_failure()));
+        }
+
         let git_source = Git::new(url.clone(), branch_or_tag, rev);
         let fetcher_response: GathererComputation<Option<(GitCloneResponse, TempDir)>> =
             self.fetcher.clone_from_git(&git_source).await.into();
         let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
-            return GathererComputation(fetch_failure(), fetcher_response.1);
+            return Ok(GathererComputation(fetch_failure(), fetcher_response.1));
         };
         let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Git {
             url: url.clone(),
@@ -339,21 +350,66 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                 path_where_cloned.path(),
             )
         {
-            return GathererComputation(fetch_failure(), vec![e]);
+            return Ok(GathererComputation(fetch_failure(), vec![e]));
         }
         let expanded_pkg = ExpandedPackage {
             location: expanded_loc,
             version: None,
         };
-        GathererComputation::only_success(FetchResponse::Success(FetchSuccess::NotPinned(
-            NotPinnedSuccess {
+        Ok(GathererComputation::only_success(FetchResponse::Success(
+            FetchSuccess::NotPinned(NotPinnedSuccess {
                 origin_location: request.location,
                 fetched_manifests: HashMap::from([(
                     expanded_pkg,
                     Box::new(cloned_pkg.package.manifest().clone()),
                 )]),
-            },
+            }),
         )))
+    }
+
+    async fn try_get_cached_git(
+        &self,
+        url: &Url,
+        branch_or_tag: BranchOrTag,
+        rev: Option<StrId>,
+    ) -> QuackResult<Option<NotPinnedSuccess>> {
+        let git_access = self.git_access.lock().await;
+        if matches!(branch_or_tag, BranchOrTag::Default)
+            && let Some(commit) = rev
+            && let Some(path) = git_access.path_if_stored(url.clone(), commit)
+        {
+            let origin_location = InternedLocation::new(Location::Git {
+                url: url.clone(),
+                branch_or_tag,
+                rev,
+            });
+            let expanded_location = InternedExpandedLocation::new(ExpandedLocation::Git {
+                url: url.clone(),
+                commit,
+            });
+            let storage_local_request = NotPinnedRequest {
+                location: InternedLocation::new(Location::Local { path: path.clone() }),
+                versions: None,
+                features: [].into(),
+            };
+            drop(git_access);
+            let stored_git_manifest = self.fetch_local(&storage_local_request, &path)?;
+            if let FetchResponse::Success(FetchSuccess::NotPinned(success)) = stored_git_manifest.0
+                && let Some(manifest) = success.fetched_manifests.into_values().next()
+            {
+                let pkg = ExpandedPackage {
+                    location: expanded_location,
+                    version: None,
+                };
+                return Ok(Some(NotPinnedSuccess {
+                    origin_location,
+                    fetched_manifests: [(pkg, manifest)].into(),
+                }));
+            }
+        } else {
+            drop(git_access);
+        }
+        Ok(None)
     }
 
     /// Helper for [`Gatherer::explore()`], performs a local fetch

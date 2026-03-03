@@ -26,7 +26,10 @@ pub fn get_parser() -> Command {
             flag("global", "Synchronize the global virtual environment")
                 .conflicts_with("overwrite"),
         )
-        .arg(flag("external_errors", "Halt computation after encountering errors in foreign manifests"))
+        .arg(flag(
+            "external_errors",
+            "Halt computation after encountering errors in foreign manifests",
+        ))
 }
 
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
