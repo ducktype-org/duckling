@@ -18,19 +18,19 @@ namespace vm {
 		/**
 		 * @brief Count of how many times GIL was exchanged between threads.
 		 */
-		std::atomic<u64> gil_exchanges{ 0 };
+		std::atomic<u64> exchange_counter{ 0 };
 
 		/**
 		 * @brief Time in milliseconds after which thread waiting for GIL will raise a flag
 		 * to notify running thread to release GIL.
 		 */
-		static constexpr u64 GIL_TIMEOUT_MS = 5;
+		static constexpr u64 TIMEOUT_MS = 5;
 
 		/**
 		 * @brief Flag which indicates that waiting thread is waiting for GIL for too long
 		 * and running thread should release it.
 		 */
-		std::atomic<bool> gil_timeout_flag = false;
+		std::atomic<bool> release_requested_flag = false;
 
 
 	public:
@@ -42,13 +42,12 @@ namespace vm {
 
 		/**
 		 * @brief Releases GIL. After you call this function you no longer can interpret DVM code.
-		 * It also zeroes operations counter, for the next thread to take GIL.
+		 * It also increments exchanges counter, so waiting threads can detect release.
 		 */
 		void release();
 
 		/**
-		* @brief Decides whether current thread should give up GIL based on set GIL policy.
-		In the future it will have seprarte interace, for now it is simple counter.
+		* @brief Decides whether current thread should give up GIL based on set GIL policy by checking release_requested_flag.
 		*/
 		bool shouldRelease();
 	};
