@@ -171,19 +171,19 @@ namespace query::internal {
 			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
 			// Get or create the node's metadata map
-			storage.maybePut(node_id, {});
-
-			Ref node_map = storage.atMaybe(node_id).value();
-
-			// Get or create the type's vector
-			node_map->maybePutAndUpdate(
-				type_id,
-				{},
-				[&metadata](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
-					metadata_vector->push_back(std::move(metadata));
-				}
-			);
+			storage.maybePutAndUpdate(node_id, {}, [&](Ref<TypeMap> node_map) {
+				// Get or create the type's vector
+				node_map->maybePutAndUpdate(
+					type_id,
+					{},
+					[&metadata](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
+						metadata_vector->push_back(std::move(metadata));
+					}
+				);
+			});
 		}
+
+			
 
 		/**
 		 * @brief Add a metadata instance to a node only if no metadata of this type exists.
