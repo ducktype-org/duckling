@@ -1,7 +1,5 @@
 #include "queries.hpp"
 
-#include <helios_private/utils/pst_walkers.hpp>
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -29,6 +27,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>

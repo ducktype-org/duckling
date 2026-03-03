@@ -8,16 +8,17 @@
 #include <query_framework/external/api.hpp>
 
 namespace lsp {
+	using fs::File;
 
 	/**
 	 * @brief Helper to get file from virtual root, creating it if it doesn't exist.
 	 */
 	fs::File getFileFromVirtualRoot(const fs::File& virtual_root, const std::string& path) {
 		if (virtual_root.getFilePath().join(path).exists())
-			return fs::File(virtual_root.getFilePath().join(path));
+			return { virtual_root.getFilePath().join(path) };
 		else {
 			fs::FileManager::createVirtualFile(virtual_root.getFilePath().join(path), "");
-			return fs::File(virtual_root.getFilePath().join(path));
+			return { virtual_root.getFilePath().join(path) };
 		}
 	}
 

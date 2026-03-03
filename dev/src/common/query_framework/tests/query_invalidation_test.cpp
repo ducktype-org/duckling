@@ -308,7 +308,9 @@ private:
 
 		invalidated_inputs.clear();
 
-		query::external::invalidateQueries({ input_2 }, { { input_1, input_2 } }, {&invalidated_inputs});
+		query::external::invalidateQueries(
+			{ input_2 }, { { input_1, input_2 } }, { &invalidated_inputs }
+		);
 
 		ASSERT_TRUE(std::ranges::find(invalidated_inputs, input_1) != invalidated_inputs.end());
 		ASSERT_TRUE(invalidated_inputs.size() == 1);
