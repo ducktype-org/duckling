@@ -1,8 +1,7 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <type_traits>
-#include "typesystem/higher/abstract_type.hpp"
-#include "typesystem/lower/queries.hpp"
+#include <typesystem/higher/abstract_type.hpp>
 
 LLVM_INCLUDE_BEGIN()
 
