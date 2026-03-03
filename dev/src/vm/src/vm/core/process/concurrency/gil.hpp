@@ -47,8 +47,9 @@ namespace vm {
 		void release();
 
 		/**
-		* @brief Decides whether current thread should give up GIL based on set GIL policy by checking release_requested_flag.
-		*/
+		 * @brief Decides whether current thread should give up GIL based on set GIL policy by
+		 * checking release_requested_flag.
+		 */
 		bool shouldRelease();
 	};
 }
