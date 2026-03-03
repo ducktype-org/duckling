@@ -107,7 +107,7 @@ namespace lsp {
 	) {
 		std::vector<SemanticToken> tokens;
 		for (auto& file: files) {
-			auto pst = file->getPST();
+			auto pst     = file->getPST();
 			auto element = pst->getRootElement();
 			getSemanticTokens(element, tokens);
 		}

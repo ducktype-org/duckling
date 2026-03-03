@@ -90,7 +90,9 @@ namespace pst {
 
 	void LangElement::calcHash() {
 		hash = calcStableHash().finalize();
-		pst_hash_map.insertOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+		pst_hash_map.insertOrAssign(
+			hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this))
+		);
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
 	}

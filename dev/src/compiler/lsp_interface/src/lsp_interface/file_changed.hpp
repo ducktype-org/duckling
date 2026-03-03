@@ -17,10 +17,10 @@ namespace lsp {
 	/**
 	 * @brief Update the content of a file in the virtual file system.
 	 * It runs a query invalidation inside.
-	 * 
+	 *
 	 * If the file doesn't exist, it creates it with empty content, updates
 	 * it with the given content, and runs query invalidation.
-	 * 
+	 *
 	 * @param virtual_root The root of the virtual file system.
 	 * @param path The path to the file to update, relative to the virtual root.
 	 * @param content The new content of the file.

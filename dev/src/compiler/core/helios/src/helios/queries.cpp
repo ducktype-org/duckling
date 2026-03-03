@@ -1,5 +1,7 @@
 #include "queries.hpp"
 
+#include "helios_private/utils/pst_walkers.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -36,7 +38,6 @@
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-#include "helios_private/utils/pst_walkers.hpp"
 
 namespace compiler::helios {
 
@@ -239,7 +240,8 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts)) stmt.unlock(ctx)->acceptVisitor(*this);
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts))
+					stmt.unlock(ctx)->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>

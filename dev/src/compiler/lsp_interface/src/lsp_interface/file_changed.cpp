@@ -10,7 +10,7 @@
 #include <query_framework/external/api.hpp>
 
 namespace lsp {
-	
+
 	/**
 	 * @brief Helper to get file from virtual root, creating it if it doesn't exist.
 	 */
@@ -58,8 +58,12 @@ namespace lsp {
 
 	void debugPrintHashPaths(const std::vector<query::external::InputData>& inputs) {
 		for (const auto& input: inputs) {
-			std::cout << pst::LangElement::getByStableHash(input.hash).illegalAccess().value()->getElementPathHash().str() << " "
-			<< input.hash << "\n";
+			std::cout << pst::LangElement::getByStableHash(input.hash)
+							 .illegalAccess()
+							 .value()
+							 ->getElementPathHash()
+							 .str()
+					  << " " << input.hash << "\n";
 		}
 	}
 
@@ -85,8 +89,10 @@ namespace lsp {
 			auto pst = source_file->getPST();
 			collectQueryInputsFromPst(pst, new_inputs);
 		}
-		
+
 		std::vector<query::external::InputData> invalidated_inputs;
-		query::external::invalidateQueries(std::move(new_inputs), { previous_inputs }, {&invalidated_inputs});
+		query::external::invalidateQueries(
+			std::move(new_inputs), { previous_inputs }, { &invalidated_inputs }
+		);
 	}
 }

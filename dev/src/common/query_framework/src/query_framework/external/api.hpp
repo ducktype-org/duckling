@@ -29,7 +29,6 @@ namespace query::external {
 			  q_id(q_id),
 			  hash(hash) {}
 
-
 		bool operator==(const InputData& other) const {
 			return q_id == other.q_id && hash == other.hash;
 		}
@@ -78,14 +77,14 @@ namespace query::external {
 	 * @param previous_inputs_opt Optional vector of input data. If provided, the function will only
 	 * invalidate previous_inputs_opt - new_inputs. If not provided will invalidate
 	 * all_inputs_in_graph - new_inputs.
-	 * @param invalidated_inputs_opt[out] Optional output vector of input data that will be filled with
-	 * the inputs corresponding to the invalidated nodes.
+	 * @param invalidated_inputs_opt[out] Optional output vector of input data that will be filled
+	 * with the inputs corresponding to the invalidated nodes.
 	 *
 	 * Used when we know the rest of the previous inputs are the same as the new ones.
 	 */
 	void invalidateQueries(
 		std::vector<InputData>&&                    new_inputs,
-		base::Optional<std::vector<InputData>>      previous_inputs_opt  = {},
+		base::Optional<std::vector<InputData>>      previous_inputs_opt    = {},
 		base::Optional<Ref<std::vector<InputData>>> invalidated_inputs_opt = {}
 	);
 

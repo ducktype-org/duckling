@@ -82,7 +82,8 @@ namespace query::external {
 			start_nodes = internal::findRemovedInputsFromCurrentGraph(std::move(new_inputs));
 		}
 
-		// If requested, fill the invalidated_inputs vector with the inputs corresponding to the invalidated nodes.
+		// If requested, fill the invalidated_inputs vector with the inputs corresponding to the
+		// invalidated nodes.
 		if_opt_some(invalidated_inputs_opt, invalidated_inputs) {
 			std::ranges::copy(
 				start_nodes | std::views::transform([](const internal::NodeID& node) {

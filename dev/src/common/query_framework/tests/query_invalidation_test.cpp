@@ -265,14 +265,14 @@ private:
 		// We check which inputs are not present in the new inputs among the previous inputs
 		// and in this case the {input_1, input_2} are missing.
 		std::vector<query::external::InputData> invalidated_inputs;
-		query::external::invalidateQueries({ input_3, input_4, input_5 }, {}, {&invalidated_inputs});
+		query::external::invalidateQueries(
+			{ input_3, input_4, input_5 }, {}, { &invalidated_inputs }
+		);
 
-		ASSERT_TRUE(
-			std::ranges::find(invalidated_inputs, input_1) != invalidated_inputs.end());
-		ASSERT_TRUE(
-			std::ranges::find(invalidated_inputs, input_2) != invalidated_inputs.end());
+		ASSERT_TRUE(std::ranges::find(invalidated_inputs, input_1) != invalidated_inputs.end());
+		ASSERT_TRUE(std::ranges::find(invalidated_inputs, input_2) != invalidated_inputs.end());
 		ASSERT_TRUE(invalidated_inputs.size() == 2);
-		
+
 
 		ASSERT_EQUAL(graph.getAllNodes().size(), 3 + 3 + 2 + 1);
 
@@ -310,8 +310,7 @@ private:
 
 		query::external::invalidateQueries({ input_2 }, { { input_1, input_2 } });
 
-		ASSERT_TRUE(
-			std::ranges::find(invalidated_inputs, input_1) != invalidated_inputs.end());
+		ASSERT_TRUE(std::ranges::find(invalidated_inputs, input_1) != invalidated_inputs.end());
 		ASSERT_TRUE(invalidated_inputs.size() == 1);
 
 		ASSERT_EQUAL(graph.getAllNodes().size(), 4 + 4 + 3 + 2);

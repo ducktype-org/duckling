@@ -16,11 +16,11 @@ PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst wa
 POP_DIAGNOSTIC;
 
 #include "export_keywords.hpp"
+#include "file_changed.hpp"
 #include "go_to_definition.hpp"
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
 #include "validation.hpp"
-#include "file_changed.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -120,7 +120,7 @@ void server(i32 port) {
 		const auto file     = fs::File(path);
 		auto       json_str = lsp::getDiagnosticJsonFromCompiler(file);
 		CROW_LOG_INFO << "Diagnostics:\n" << json_str;
-		
+
 		crow::response res(200, json_str);
 		res.set_header("Content-Type", "application/json");
 		return res;

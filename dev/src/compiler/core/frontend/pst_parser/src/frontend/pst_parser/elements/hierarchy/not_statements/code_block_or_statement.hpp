@@ -28,7 +28,7 @@ namespace pst {
 		~CodeBlockOrStmt() final = default;
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
-		
+
 		[[nodiscard]]
 		Type getType() const;
 
@@ -43,7 +43,6 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		AccessLocked<CodeBlock> getCodeBlock() const;
-
 
 		[[nodiscard]]
 		std::string elementType() const override {
