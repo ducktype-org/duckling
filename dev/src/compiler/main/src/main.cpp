@@ -482,24 +482,19 @@ clah::Clah getClahForMain() {
 					return exit_code;
 				})
 		)
-	    .addSubcommand(
-			// This comment is needed here. Otherwise clang-format goes crazy.
-			clah::Clah("repl", "Start an interactive REPL session")
-				.setHandler([](const clah::ParsingResult& options) -> int {
-					compiler::driver::initializeTheCompiler(
-						compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
-							.debug_options = getDebugOptionsFromClap(options),
-							.execution_options = {
-								.worker_count = 1,
-							},
-						}
-					);
-					compiler::repl::ReplSession session;
-					int                         result = session.run();
-					compiler::driver::exit();
-					return result;
-				})
-		)
+	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   compiler::driver::initializeTheCompiler(
+								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
+									   .debug_options     = getDebugOptionsFromClap(options),
+									   .execution_options = { 1 },
+								   }
+							   );
+							   compiler::repl::ReplSession session;
+							   int                         result = session.run();
+							   compiler::driver::exit();
+							   return result;
+						   }))
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(
