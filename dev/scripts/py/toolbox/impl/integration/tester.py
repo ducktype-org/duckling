@@ -78,8 +78,8 @@ def tester_impl(
         fail_fast_prefix = "(Fail fast) " if fail_fast else ""
         failed_list = "\n".join(failed_tests)
         exit_with_error(
-            "%sFailed tests:\n%s\n" % (fail_fast_prefix, failed_list)
-            + "Please see log file '%s' for more info." % log_file.absolute()
+            "%sFailed tests:\n%s\nPlease see log file '%s' for more info."
+            % (fail_fast_prefix, failed_list, log_file.absolute())
         )
     elif not clean:
         print_success(f"All tests have run successfully!")

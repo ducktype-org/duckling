@@ -37,9 +37,9 @@ class BashCommandError(Exception):
         stderr_str = ("\n" + stderr) if stderr else ""
         super().__init__(
             "\n\tBash command `%s` %s\n\thas failed with an exit code: %s, because:\n"
-            % (command, at_str, exit_code)
-            + "[STDOUT]:%s\n" % stdout_str
-            + "[STDERR]:%s" % stderr_str
+            "[STDOUT]:%s\n"
+            "[STDERR]:%s"
+            % (command, at_str, exit_code, stdout_str, stderr_str)
         )
         self.command = command
         self.exit_code = exit_code
