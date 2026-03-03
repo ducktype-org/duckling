@@ -182,7 +182,6 @@ namespace query::internal {
 				);
 			});
 		}
-			
 
 		/**
 		 * @brief Add a metadata instance to a node only if no metadata of this type exists.
@@ -242,15 +241,19 @@ namespace query::internal {
 			std::vector<CRef<MetadataT>> result;
 			TypeID                       type_id = MetadataT::TYPE_ID;
 
-			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map){
-				node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-					result.reserve(type_vec->size());
-					for (const auto& metadata_ptr: *type_vec) {
-						// Safe downcast - we know the type matches because we used type id as key
-						const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
-						result.push_back(CRef<MetadataT>(typed_ptr));
+			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map) {
+				node_map->maybeCallOn(
+					type_id,
+					[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+						result.reserve(type_vec->size());
+						for (const auto& metadata_ptr: *type_vec) {
+							// Safe downcast - we know the type matches because we used type id as key
+							const auto* typed_ptr
+								= static_cast<const MetadataT*>(metadata_ptr.get());
+							result.push_back(CRef<MetadataT>(typed_ptr));
+						}
 					}
-				});
+				);
 			});
 
 			return result;
@@ -314,16 +317,19 @@ namespace query::internal {
 		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
 		bool hasMetadata(NodeID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
-			
+
 			bool result = false;
 
-			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map){
-				node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-					result = !type_vec->empty();  // this will set result to true only if there is at
-												// least one metadata of this type
-				});
+			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map) {
+				node_map->maybeCallOn(
+					type_id,
+					[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+						result = !type_vec->empty();  // this will set result to true only if there
+					                                  // is at least one metadata of this type
+					}
+				);
 			});
- 
+
 
 			return result;
 		}
@@ -343,9 +349,12 @@ namespace query::internal {
 			usize result = 0;
 
 			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map) {
-				node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-					result = type_vec->size();
-				});
+				node_map->maybeCallOn(
+					type_id,
+					[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+						result = type_vec->size();
+					}
+				);
 			});
 
 			return result;

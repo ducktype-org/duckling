@@ -292,7 +292,7 @@ namespace concurrent {
 		}
 
 		/**
-		 * Atomically extracts the given key->value pair from the map, that is:
+		 * Atomically extracts the given value from the map, that is:
 		 * 1. Moves out the value associated with the key and returns it.
 		 * 2. Erases the key->value pair from the map.
 		 */

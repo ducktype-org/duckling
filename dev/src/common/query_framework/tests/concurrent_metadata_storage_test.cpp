@@ -59,7 +59,6 @@ public:
 		TESTER_ADD_TEST(testConcurentReadsAndWrites<1>);
 		TESTER_ADD_TEST(testConcurentReadsAndWrites<2>);
 		TESTER_ADD_TEST(testConcurentReadsAndWrites<4>);
-
 	}
 
 private:
@@ -167,8 +166,10 @@ private:
 				for (u64 j = 0; j < OPS_PER_THREAD; ++j) {
 					auto choose_query = dist(rng) % 3;
 					auto node_id      = query::internal::NodeID{
-                        (choose_query == 0) ? q_id_1 : (choose_query == 1) ? q_id_2 : q_id_3, { dist(rng) % 1'000 }
-						// Random q hash
+                        (choose_query == 0)   ? q_id_1
+							 : (choose_query == 1) ? q_id_2
+												   : q_id_3,
+						{ dist(rng) % 1'000 }  // Random q hash
 					};
 
 					auto metadata_value = dist(rng) % 100 + 100;
@@ -188,7 +189,9 @@ private:
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata1>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata2>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata3>().size();
-		ASSERT_EQUAL(total_metadata_count, successful_adds + 1'000);  // +1000 from pre-added q3 nodes
+		ASSERT_EQUAL(
+			total_metadata_count, successful_adds + 1'000
+		);  // +1000 from pre-added q3 nodes
 
 		// verify that no q3 node was modified:
 		for (u64 hash = 0; hash < 1'000; ++hash) {
@@ -197,13 +200,10 @@ private:
 			ASSERT_EQUAL(metadata_vec.size(), 1);
 			ASSERT_EQUAL(metadata_vec[0]->value, 42);
 		}
-
 	}
-
 
 	template<u64 THREAD_COUNT>
 	void testConcurentReadsAndWrites() {
-		
 		constexpr u64 OPS_PER_THREAD = 15'000;
 
 		query::internal::MetadataStorage storage;
@@ -226,9 +226,10 @@ private:
 					u64 task = dist(rng) % 4;
 
 					auto choose_query = dist(rng) % 3;
-					auto node_id      = query::internal::NodeID{
-						(choose_query == 0) ? q_id_1 : (choose_query == 1) ? q_id_2 : q_id_3, { dist(rng) % 1'000 }
-					};
+					auto node_id      = query::internal::NodeID{ (choose_query == 0)   ? q_id_1
+						                                         : (choose_query == 1) ? q_id_2
+						                                                               : q_id_3,
+						                                    { dist(rng) % 1'000 } };
 
 					if (task == 0) {
 						// add new metadata
@@ -240,27 +241,23 @@ private:
 						auto metadata_vec = storage.getMetadata<metadata_DummyMetadata1>(node_id);
 						for (const auto& metadata_value: metadata_vec)
 							ASSERT_TRUE(metadata_value->value < 1'000);
-					}
-					else if (task == 2) {
+					} else if (task == 2) {
 						// just check existence
 						[[maybe_unused]]
-						bool has_metadata = storage.hasMetadata<metadata_DummyMetadata1>(node_id);
-					}
-					else if (task == 3) {
+						bool has_metadata
+							= storage.hasMetadata<metadata_DummyMetadata1>(node_id);
+					} else if (task == 3) {
 						// just extract
 						auto extracted = storage.extract(node_id);
 						if (extracted.has_value()) {
 							u64 deleted = 0;
-							for (auto& [type_id, metadata_vec]: extracted->type_map) {
+							for (auto& [type_id, metadata_vec]: extracted->type_map)
 								deleted += metadata_vec.size();
-							}
 							adds.fetch_sub(deleted);
 						}
-					}
-					else {
+					} else {
 						CORE_UNREACHABLE();
 					}
-
 				}
 			});
 		}
@@ -273,7 +270,6 @@ private:
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata2>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata3>().size();
 		ASSERT_EQUAL_PRINT(total_metadata_count, adds.load());
-		
 	}
 };
 
