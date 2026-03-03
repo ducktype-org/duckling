@@ -116,6 +116,10 @@ pub fn sync(
     ))
 }
 
+/// Helper for [`sync`].
+/// Checks if the venv for which the sync is run was previously synced from a different location,
+/// and there is a manifest in that location.
+/// This would override that manifest's venv.
 fn check_if_overwrites(pkg_ctx: &PackageCtx, venv: Option<&Venv>, id: StrId) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
     if pkg_ctx.package().manifest_path() != venv.data().last_location()
@@ -138,10 +142,14 @@ fn check_if_overwrites(pkg_ctx: &PackageCtx, venv: Option<&Venv>, id: StrId) -> 
     }
 }
 
+/// Helper for [`sync`].
+/// Generates freeze filename for the synced package.
 fn freeze_name(package: &Package) -> PathBuf {
     package.root_directory().join(PackageLoader::FREEZE_NAME)
 }
 
+/// Helper for [`sync`].
+/// If there is a freeze in the venv's root directory, deserializes it.
 fn load_external_freezefile(
     ctx: &PackageCtx,
     is_exposed: bool,
@@ -160,6 +168,8 @@ fn load_external_freezefile(
         .map(Some)
 }
 
+/// Helper for [`sync`].
+/// Prepares the input and runs [`Solver::prepare_solving`].
 fn get_solver_answer(
     ctx: &DuckCtx,
     pkg_ctx: &PackageCtx,
@@ -197,6 +207,9 @@ fn get_solver_answer(
     extract_single_item_from_vec(result)?
 }
 
+/// Helper for [`sync`].
+/// Fetches source codes of packages which have been decided to be part of the freeze,
+/// but their source codes have not yet been fetched.
 fn fetch_source_codes(
     ctx: &DuckCtx,
     storage: &Storage,
@@ -226,6 +239,8 @@ fn fetch_source_codes(
     Ok(was_anything_installed)
 }
 
+/// Helper for [`fetch_source_codes`].
+/// Fetches the source code of a package if it is not yet stored in the storage.
 async fn fetch_source_code(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
