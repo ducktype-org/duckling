@@ -1,4 +1,4 @@
-use crate::quackpack::core::storage::SyncOptions;
+use crate::quackpack::subcommands::sync::SyncOptions;
 
 #[derive(Clone, Copy, Debug)]
 pub struct SolverMode {

@@ -26,6 +26,7 @@ use crate::{
             },
             types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
         },
+        subcommands::sync::SyncOptions,
         util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
     },
     util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
@@ -34,14 +35,6 @@ use crate::{
 use crate::quackpack::core::storage;
 
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
-
-#[derive(Debug, Default, Clone, Copy)]
-pub struct SyncOptions {
-    pub overwrite: bool,
-    pub frozen: bool,
-    pub offline: bool,
-    pub strict_errors: bool,
-}
 
 /// Synchronize virtual environment for package, and return information required to build it.
 ///

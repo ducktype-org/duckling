@@ -1,12 +1,8 @@
 use crate::{
-    DuckCtx, QpCtx, QuackResult,
-    quackpack::core::{
-        AllowGlobalPackage, PackageLoader,
-        storage::{SyncOptions, sync},
-    },
+    DuckCtx, QuackResult,
+    quackpack::subcommands::sync::{SyncOptions, sync},
 };
 use clap::{ArgMatches, Command};
-use tokio::runtime;
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
 
@@ -33,24 +29,12 @@ pub fn get_parser() -> Command {
 }
 
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
-    let qp_ctx = QpCtx::new(ctx);
-    let pkg = if matches.get_flag("global") {
-        PackageLoader::global_package(&qp_ctx)?
-    } else {
-        PackageLoader::find_from_cwd(&qp_ctx, AllowGlobalPackage::No)?
+    let options = SyncOptions {
+        global: matches.get_flag("global"),
+        overwrite: matches.get_flag("overwrite"),
+        frozen: matches.get_flag("frozen"),
+        offline: matches.get_flag("offline"),
+        strict_errors: matches.get_flag("external_errors"),
     };
-    let rt = runtime::Builder::new_multi_thread().enable_all().build()?;
-    rt.block_on(async {
-        sync(
-            ctx,
-            &pkg,
-            SyncOptions {
-                overwrite: matches.get_flag("overwrite"),
-                frozen: matches.get_flag("frozen"),
-                offline: matches.get_flag("offline"),
-                strict_errors: matches.get_flag("external_errors"),
-            },
-        )
-    })?;
-    Ok(())
+    sync(ctx, options)
 }
