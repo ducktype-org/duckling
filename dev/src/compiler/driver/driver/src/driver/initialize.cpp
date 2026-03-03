@@ -69,14 +69,6 @@ namespace compiler::driver {
 				package_info.package_path, package_info.package_name
 			);
 			global_state::setters::addMainPackage(root_module);
-
-			// We need to parse all files before compilation to collect all PST elements.
-			// @note: For now, since CompileModule isn't run concurrently we parse all files before
-			// compilation in both the incremental and non-incremental setting.
-			// In the future, if compiling without incremental (or during first compilation with
-			// incremental) parsing here should be removed as it will be handled by the query system
-			// itself.
-			compiler::frontend::parseAllFilesInModuleTree(root_module);
 		}
 
 		/**
@@ -119,6 +111,10 @@ namespace compiler::driver {
 				auto                  view = maybe_metadata_blob.value()->getDataView();
 				std::span<const byte> span(view.getBegin(), view.size());
 				query::external::setPreviousMetadataFromRawBytes(span);
+
+				// We need to parse all files before compilation to collect all PST elements.
+				for (auto mid: global_state::getPackages())
+					compiler::frontend::parseAllFilesInModuleTree(mid.root_module);
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
