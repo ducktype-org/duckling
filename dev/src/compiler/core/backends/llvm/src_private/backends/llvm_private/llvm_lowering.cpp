@@ -1073,15 +1073,15 @@ namespace compiler::backend_llvm {
 					builder
 				);
 
-				// Create an SSA value for the tuple. Since tuples are just a collection of their fields,
-				// we can create an undef value of the tuple type and insert field values into it.
+				// Create an SSA value for the tuple. Since tuples are just a collection of their
+				// fields, we can create an undef value of the tuple type and insert field values
+				// into it.
 				llvm::Value* value = llvm::UndefValue::get(result_type);
 				for (usize elem_idx = 0; elem_idx < lir_instruction.arguments.size(); elem_idx++) {
 					auto layout_index = tuple_layout.getLayoutIndexOfComponentIndex(elem_idx);
 					value             = builder.CreateInsertValue(
                         value, elements[elem_idx], static_cast<u32>(layout_index)
                     );
-					// value = builder.CreateInsertValue(value, elements[elem_idx], elem_idx);
 				}
 
 				storeOutput(output, value, builder);
