@@ -53,6 +53,8 @@ public:
         TESTER_ADD_TEST(addMetadataTest<1>);
         TESTER_ADD_TEST(addMetadataTest<2>);
         TESTER_ADD_TEST(addMetadataTest<4>);
+
+
     }
 
 private:
@@ -73,7 +75,7 @@ private:
         for (u64 i = 0; i < THREAD_COUNT; ++i) {
             threads.emplace_back([&, thread_id = i] {
                 std::mt19937_64 rng(thread_id);  // Seed with thread ID for reproducibility
-                std::uniform_int_distribution<u64> dist(1, 100);
+                std::uniform_int_distribution<u64> dist(1, 1000);
 
                 for (u64 j = 0; j < OPS_PER_THREAD; ++j) {
                     auto choose_query = dist(rng) % 3;
@@ -96,11 +98,38 @@ private:
 
         ASSERT_EQUAL(total_metadata_count, THREAD_COUNT * 10'000);
 
-        // Verify that we can retrieve metadata for a specific node
+        // Verify that we can retrieve metadata for all nodes
+        u64 total_retrieved_count = 0;
 
+        // query 1:
+        auto read_metadata = [&]<class MetaDataT, class QueryT>() {
+            for (u64 hash = 0; hash < 1000; ++hash) {
+                auto node_id = query::internal::NodeID{QueryT::getID(), {hash}};
+                auto metadata_vec = storage.getMetadata<MetaDataT>(node_id);
+                total_retrieved_count += metadata_vec.size();
 
+                for (const auto& metadata_value: metadata_vec) {
+                    ASSERT_TRUE(metadata_value->value < 1000);
+                }
+            }
+        };
+
+        read_metadata.template operator()<metadata_DummyMetadata1, DummyQuery1>();
+        read_metadata.template operator()<metadata_DummyMetadata2, DummyQuery1>();
+        read_metadata.template operator()<metadata_DummyMetadata3, DummyQuery1>();
+
+        read_metadata.template operator()<metadata_DummyMetadata1, DummyQuery2>();
+        read_metadata.template operator()<metadata_DummyMetadata2, DummyQuery2>();
+        read_metadata.template operator()<metadata_DummyMetadata3, DummyQuery2>();
+
+        read_metadata.template operator()<metadata_DummyMetadata1, DummyQuery3>();
+        read_metadata.template operator()<metadata_DummyMetadata2, DummyQuery3>();
+        read_metadata.template operator()<metadata_DummyMetadata3, DummyQuery3>();
+
+        ASSERT_EQUAL_PRINT(total_retrieved_count, total_metadata_count);
 
     }
+
 
 	template<u64 THREAD_COUNT>
 	void randomTest() {
