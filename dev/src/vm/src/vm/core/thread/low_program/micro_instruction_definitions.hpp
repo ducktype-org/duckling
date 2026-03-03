@@ -416,6 +416,8 @@ DEF_MICRO_INSTR(jit_call_entrypoint, vm::opargs::FunctionName)
 DEF_MICRO_INSTR(call_builtinfunc, vm::opargs::BuiltinFunctionName)
 DEF_MICRO_INSTR(call_cfunc, vm::opargs::ExtCFunctionName)
 
+DEF_MICRO_INSTR(set_threadctx, vm::opargs::FunctionName)
+
 // return while performing a tail call
 DEF_MICRO_INSTR(ret_tailcall_func, vm::opargs::FunctionName)
 // return

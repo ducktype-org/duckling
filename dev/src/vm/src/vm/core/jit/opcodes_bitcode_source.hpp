@@ -18,7 +18,7 @@ LLVM_INCLUDE_END()
 /**
  * @brief For MicroOpcode returns llvm::Function* of corresponding function.
  */
-llvm::Function*   llvmGetFun(const vm::low::MicroOpcode& fun);
+llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun);
 
 /**
  * @brief Returns LLJIT instance.

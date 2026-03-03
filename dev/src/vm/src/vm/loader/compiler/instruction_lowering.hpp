@@ -350,6 +350,7 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
+			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
 			instr_case(high::Op_init_lany_type, i) { addLow<Op_init_lany_type>(i.var, i.type); }

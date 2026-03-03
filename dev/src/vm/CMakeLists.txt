@@ -125,6 +125,7 @@ function(add_vm_variant suffix compile_def)
         
         add_custom_command(
             OUTPUT ${common_bc}
+            # Links all opcodes dependencies to later optimize them with LTO, O3 and full inline.
             COMMAND ${JIT_LLVM_LINKER}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>

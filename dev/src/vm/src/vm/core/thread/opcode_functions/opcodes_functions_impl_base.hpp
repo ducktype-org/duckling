@@ -389,7 +389,7 @@ namespace vm {
 				const low::LowFuncData& current_function
 					= thread.executing_program->getFunctions()[func_id];
 
-				jit::JitOpFun* compiled = jit::compileLLVM(current_function);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(current_function);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
@@ -481,6 +481,14 @@ namespace vm {
 			}
 		}
 
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
+		{
+			auto& called_func = thread.executing_program->getFunctions()[instr->arg0];
+			builtins::setThreadCtx(called_func.name.str());
+		}
 		FUNCTION_CONT(1);
 	}
 

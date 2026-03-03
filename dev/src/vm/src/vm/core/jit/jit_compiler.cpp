@@ -22,9 +22,8 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 namespace vm::jit {
-	JitOpFun* compileLLVM(const low::LowFuncData& func_data) {
-		auto  lljit_ptr = llvmGetLljit();
-		auto& lljit     = *lljit_ptr;
+	MRef<JitOpFun> compileLLVM(const low::LowFuncData& func_data) {
+		auto& lljit = *llvmGetLljit();
 
 		auto               ctx_ptr = std::make_unique<llvm::LLVMContext>();
 		llvm::LLVMContext& ctx     = *ctx_ptr;

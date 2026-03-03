@@ -1,4 +1,3 @@
-
 #include "vmthread.hpp"
 
 #include "kill_process_exception.hpp"
@@ -16,6 +15,7 @@
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/concurrency/gil.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -338,6 +338,7 @@ namespace vm {
 	Ref<VmValue> VMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
+		keepOrAcquireGil();
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
@@ -379,6 +380,7 @@ namespace vm {
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
+		process.getGIL().release();
 
 		return exit_value_storage.value();
 	}
@@ -675,4 +677,25 @@ namespace vm {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
 
+	void VMThread::keepOrAcquireGil() {
+		if (has_gil) {
+			// Check if you can hold it longer - releasing policy
+			// If you can't hold it longer then
+			// 1. say
+			if (!process.getGIL().shouldRelease()) return;
+			has_gil = false;
+			// 2. release gil
+			process.getGIL().release();
+			// 3. yield - to not reacquire instantly
+			std::this_thread::yield();
+		}
+		// Try to acquire GIL
+		process.getGIL().acquire();
+		has_gil = true;
+	}
+
+	void VMThread::releaseGil() {
+		has_gil = false;
+		process.getGIL().release();
+	}
 }

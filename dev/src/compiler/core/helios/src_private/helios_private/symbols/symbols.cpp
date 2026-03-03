@@ -85,6 +85,10 @@ namespace compiler::helios {
 
 				case pst::ElementKind::Class:
 				case pst::ElementKind::Fun:
+				case pst::ElementKind::ClassBlock:
+				case pst::ElementKind::ClassMethod:
+				case pst::ElementKind::ClassSpecial:
+				case pst::ElementKind::ClassSpecifierBlock:
 				case pst::ElementKind::If:
 				case pst::ElementKind::While:
 				case pst::ElementKind::For:
@@ -98,7 +102,9 @@ namespace compiler::helios {
 					return self(el->getParent().value().unlock(ctx));
 
 				default:
-					CORE_PANIC("Unexpected pst path of variable");
+					CORE_PANIC(base::strConcat(
+						"Unexpected element kind for variable symbol: ", el->elementType()
+					));
 				}
 			},
 			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
@@ -107,13 +113,13 @@ namespace compiler::helios {
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->getPSTData()->scope; }
+	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
 
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-			variant_case_novalue(builtin::BuiltinFunctionData) { return base::Optional<ScopeID>{}; }
-			variant_case_novalue(houtgen::GeneratedSymbolData) { return base::Optional<ScopeID>{}; }
+			variant_case_novalue(builtin::BuiltinFunctionData) { return {}; }
+			variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();
@@ -914,7 +920,7 @@ namespace compiler::helios {
 		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
 	}
 
-	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, std::vector<SymID>) {
+	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
 		struct HoutFunctionCallCollector final:
 			  public code::HoutStmtVisitorEmpty,
 			  public code::HoutExprVisitorEmpty {
@@ -1014,12 +1020,42 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-			const auto& function_body   = fun_hout_result.body;
+			variant_match(getSymRef(key)->other) {
+				variant_case_novalue(PstSymbolData) {
+					// Just a pst function
+					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
 
-			HoutFunctionCallCollector visitor;
-			for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
-			return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+					const auto& function_body = fun_hout_result.body;
+
+					HoutFunctionCallCollector visitor;
+					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+					return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+				}
+
+				variant_case(builtin::BuiltinFunctionData, btd_data) {
+					// Builtin functions have no dependencies
+					return {};
+				}
+
+				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"QueryDirectFunctionCalls is not implemented for generated symbols "
+							"yet. ",
+							"The symbol in question is: ",
+							getSymRef(key)->common.name,
+							". "
+							"This usually means that a class was used inside compile time "
+							"evaluation."
+						),
+						std::nullopt
+					));
+					return query::Failed();
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
+
+			CORE_UNREACHABLE();
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -1027,7 +1063,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
 
-	struct IMPLEMENT_QUERY(QueryTransitiveFunctionCalls, std::vector<SymID>) {
+	struct IMPLEMENT_QUERY(QueryTransitiveFunctionCalls, query::QResult<std::vector<SymID>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function,
@@ -1047,7 +1083,8 @@ namespace compiler::helios {
 
 				all_dependencies.push_back(current_func);
 
-				auto direct_dependencies = ctx.query<QueryDirectFunctionCalls>(current_func);
+				Ref direct_dependencies
+					= &ctx.query<QueryDirectFunctionCalls>(current_func)->valueOrThrow();
 
 				for (const SymID& dependency: *direct_dependencies) {
 					if (!visited_functions.contains(dependency)) {

@@ -104,6 +104,11 @@ namespace vm {
 		std::condition_variable pause_cv;
 
 		/**
+		 * @brief True if a thread currently occupies GIL.
+		 */
+		bool has_gil = false;
+
+		/**
 		 * @brief Mutex responsible for setting the execution_request and execution_request_break
 		 * flags.
 		 *
@@ -300,5 +305,16 @@ namespace vm {
 		friend class VMProcess;
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
+
+		/**
+		 * @brief Called only on instruction execution.
+		 * Checks if thread has GIL and if not then acquires it.
+		 */
+		void keepOrAcquireGil();
+
+		/**
+		 * @brief Releases GIL.
+		 */
+		void releaseGil();
 	};
 }
