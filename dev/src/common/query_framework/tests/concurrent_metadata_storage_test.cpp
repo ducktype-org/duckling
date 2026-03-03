@@ -268,7 +268,7 @@ private:
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata1>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata2>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata3>().size();
-		ASSERT_EQUAL(total_metadata_count, adds.load());
+		ASSERT_EQUAL_PRINT(total_metadata_count, adds.load());
 		
 	}
 };

@@ -207,20 +207,25 @@ namespace query::internal {
 			// Create the metadata instance
 			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
+			bool was_added = false;
+
 			// Get or create the node's metadata map
 			storage.maybePutAndUpdate(node_id, {}, [&](Ref<TypeMap> node_map) {
 				// Get or create the type's vector
 				node_map->maybePutAndUpdate(
 					type_id,
 					{},
-					[&metadata](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
+					[&metadata, &was_added](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
 						if (metadata_vector->empty()) {
 							// no metadata exists, so we add
 							metadata_vector->push_back(std::move(metadata));
+							was_added = true;
 						}
 					}
 				);
 			});
+
+			return was_added;
 		}
 
 		/**
@@ -237,17 +242,15 @@ namespace query::internal {
 			std::vector<CRef<MetadataT>> result;
 			TypeID                       type_id = MetadataT::TYPE_ID;
 
-			auto node_ref = storage.atMaybe(node_id);
-			if (!node_ref.has_value()) return result;
-
-			CRef node_map = node_ref.value();
-			node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-				result.reserve(type_vec->size());
-				for (const auto& metadata_ptr: *type_vec) {
-					// Safe downcast - we know the type matches because we used type id as key
-					const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
-					result.push_back(CRef<MetadataT>(typed_ptr));
-				}
+			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map){
+				node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+					result.reserve(type_vec->size());
+					for (const auto& metadata_ptr: *type_vec) {
+						// Safe downcast - we know the type matches because we used type id as key
+						const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
+						result.push_back(CRef<MetadataT>(typed_ptr));
+					}
+				});
 			});
 
 			return result;
