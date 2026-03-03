@@ -58,10 +58,8 @@ function(process_to_binary source_file destination_file)
     )
     add_custom_command(
         OUTPUT ${nm_out}
-        COMMAND
-            sh -c
-            "\"${LLVM_NM}\" -S --format=posix \"${linked_out}\" | awk 'NF >= 4 { print \"{ .name =\\\"\" $1 \"\\\", .type = \\\"\" $2 \"\\\", .place = 0x\" $3 \", .size = 0x\" $4 \"},\" }' > \"${nm_out}\""
-        DEPENDS ${linked_out}
+        COMMAND sh -c "python3 ${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py ${linked_out} >${nm_out}"
+        DEPENDS ${linked_out} ${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py
         VERBATIM
     )
     add_custom_command(
