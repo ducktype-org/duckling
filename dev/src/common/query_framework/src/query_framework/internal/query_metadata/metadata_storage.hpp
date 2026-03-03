@@ -314,18 +314,16 @@ namespace query::internal {
 		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
 		bool hasMetadata(NodeID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
-
-			auto node_ref = storage.atMaybe(node_id);
-			if (!node_ref.has_value()) return false;
-
+			
 			bool result = false;
 
-
-			CRef node_map = node_ref.value();
-			node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-				result = !type_vec->empty();  // this will set result to true only if there is at
-				                              // least one metadata of this type
+			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map){
+				node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+					result = !type_vec->empty();  // this will set result to true only if there is at
+												// least one metadata of this type
+				});
 			});
+ 
 
 			return result;
 		}
@@ -342,13 +340,12 @@ namespace query::internal {
 		usize getMetadataCount(NodeID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
 
-			auto node_ref = storage.atMaybe(node_id);
-			if (!node_ref.has_value()) return 0;
+			usize result = 0;
 
-			CRef node_map = node_ref.value();
-			u64  result   = 0;
-			node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
-				result = type_vec->size();
+			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map) {
+				node_map->maybeCallOn(type_id, [&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+					result = type_vec->size();
+				});
 			});
 
 			return result;

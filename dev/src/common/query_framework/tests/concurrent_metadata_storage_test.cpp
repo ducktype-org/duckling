@@ -234,7 +234,7 @@ private:
 						// add new metadata
 						auto metadata_value = dist(rng) % 1'000;
 						storage.addMetadata<metadata_DummyMetadata1>(node_id, metadata_value);
-						adds++;
+						adds.fetch_add(1);
 					} else if (task == 1) {
 						// just read
 						auto metadata_vec = storage.getMetadata<metadata_DummyMetadata1>(node_id);
@@ -250,7 +250,11 @@ private:
 						// just extract
 						auto extracted = storage.extract(node_id);
 						if (extracted.has_value()) {
-							adds -= extracted->type_map.size();
+							u64 deleted = 0;
+							for (auto& [type_id, metadata_vec]: extracted->type_map) {
+								deleted += metadata_vec.size();
+							}
+							adds.fetch_sub(deleted);
 						}
 					}
 					else {
