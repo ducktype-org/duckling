@@ -36,6 +36,7 @@
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include "helios_private/utils/pst_walkers.hpp"
 
 namespace compiler::helios {
 
@@ -238,7 +239,7 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: *stmts.unlock(ctx)) stmt.unlock(ctx)->acceptVisitor(*this);
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts)) stmt.unlock(ctx)->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>
@@ -278,7 +279,7 @@ namespace compiler::helios {
 						"This should not happen"
 					);
 
-					for (const auto& stmt: *fun_body.unlock(ctx))
+					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
 						stmt.unlock(ctx)->acceptVisitor(*this);
 				}
 			}
@@ -621,8 +622,10 @@ namespace compiler::helios {
 		static auto queryCodeOfCodeBlock(
 			query::Context& ctx, const Container& container, tsh::SymbolType<> return_type
 		) {
+			std::cout << "Querying code of code block  with hash: ";
+			std::cout << container.unlock(ctx)->getHash() << std::endl;
 			code::CodeBlock block({});
-			for (const auto& stmt: *container.unlock(ctx)) {
+			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
 

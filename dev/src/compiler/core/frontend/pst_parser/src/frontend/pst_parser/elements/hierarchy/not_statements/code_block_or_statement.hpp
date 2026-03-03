@@ -29,11 +29,11 @@ namespace pst {
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
-		using const_iterator = CodeBlockOrStmtIterator;
-		[[nodiscard]]
-		const_iterator begin() const;
-		[[nodiscard]]
-		const_iterator end() const;
+		// using const_iterator = CodeBlockOrStmtIterator;
+		// [[nodiscard]]
+		// const_iterator begin() const;
+		// [[nodiscard]]
+		// const_iterator end() const;
 
 		[[nodiscard]]
 		Type getType() const;
@@ -43,6 +43,13 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		AccessLocked<Stmt> getStmt() const;
+
+		/**
+		 * @brief Get the stored code block. Panics if is in stmt state.
+		 */
+		[[nodiscard]]
+		AccessLocked<CodeBlock> getCodeBlock() const;
+
 
 		[[nodiscard]]
 		std::string elementType() const override {

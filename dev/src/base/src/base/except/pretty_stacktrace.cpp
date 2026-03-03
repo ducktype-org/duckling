@@ -10,9 +10,9 @@ namespace base {
 	namespace {
 		std::string col(const std::string& color_number, const std::string& text) {
 			std::string out;
-			out += "\033[" + color_number + "m";
+			// out += "\033[" + color_number + "m";
 			out += text;
-			out += "\033[0m";
+			// out += "\033[0m";
 			return out;
 		}
 	}
