@@ -162,7 +162,7 @@ namespace lsp {
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-		query::Context::int_logger.collectDiagnostics(diagnostics);
+		query::Context::collectAllDiagnostic(diagnostics);
 
 		dia_int::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());
 
