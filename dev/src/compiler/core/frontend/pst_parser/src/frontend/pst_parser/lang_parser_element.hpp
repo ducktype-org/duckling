@@ -28,6 +28,8 @@ namespace pst {
 
 	class PstVisitor;
 
+	class StablePosition;
+
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
@@ -80,10 +82,16 @@ namespace pst {
 		LangElement(LangElement&&)      = delete;
 
 		/**
-		 * @brief Position covering the whole element
+		 * @brief Position covering the whole element.
 		 */
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
+
+		/**
+		 * @brief The stable position of an element.
+		 */
+		[[nodiscard]]
+		StablePosition getStablePosition() const;
 
 		/**
 		 * @brief Get pst node the by stable hash. Throws on non-existent hash.

@@ -723,10 +723,13 @@ namespace compiler::helios {
 			void visitUsing(pst::Access<pst::Using>) override {}
 
 			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
-				CORE_ASSERT(
-					assignment->getAssignmentType() == base::StrID("="),
-					"Unsupported assignment type"
-				);
+				if (assignment->getAssignmentType() != base::StrID("=")) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Only simple `=` assignment is supported for now.",
+						assignment->getSourcePosition()
+					));
+					query::throwFailed();
+				}
 
 				auto var = assignment->getVariables();
 				auto val = assignment->getValue();

@@ -1,6 +1,7 @@
 #include "query_state.hpp"
 
 #include <concurrent/base/locks/assert_lock.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
@@ -293,6 +294,8 @@ namespace query::internal {
 		return *node_colors->atMaybe(start_node).value();
 	}
 
+	bool dummyEraseFunction(QueryStableHash) { return false; }
+
 	NodeID QueryState::remapUnstableOrUnregisteredNodes(NodeID node) {
 		static base::VectorMap<QueryID, QueryID> old_to_new;
 
@@ -303,8 +306,12 @@ namespace query::internal {
 		if (auto existing = old_to_new.atMaybe(node.q_id); existing.has_value())
 			return { **existing, node.hash };
 
+
 		QueryData dummy_query_data(
-			QueryKind::Dummy, "Dummy from previous graph created during deserialization", {}
+			QueryKind::Dummy,
+			"Dummy from previous graph created during deserialization",
+			{},
+			{ .erase_function = dummyEraseFunction }
 		);
 		QueryID new_qid = registerQuery(dummy_query_data);
 		old_to_new.put(node.q_id, new_qid);
@@ -940,4 +947,27 @@ namespace query::internal {
 		return { .nodes = std::move(new_idx_to_node), .adjacency = std::move(new_opt_graph) };
 	}
 
+	Ref<MetadataStorage> QueryState::getMetadataStorageMutable() { return &metadata_storage; }
+
+	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic) {
+		diagnostic_loggers.maybePutAndUpdate(
+			node_id,
+			makeBox<dia_int::Logger>(),
+			[&](Ref<Box<dia_int::Logger>> logger) mutable {
+				logger->refMut()->log(std::move(diagnostic));
+			}
+		);
+	}
+
+	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
+
+	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
+	) const {
+		return &diagnostic_loggers;
+	}
+
+	base::Optional<CRef<dia_int::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
+		if (auto it = diagnostic_loggers.atMaybe(node_id); it.has_value()) return it.value()->ref();
+		return {};
+	}
 }  // namespace query::internal

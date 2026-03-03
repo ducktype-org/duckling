@@ -31,6 +31,7 @@ POP_DIAGNOSTIC;
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <query_framework/entry/with_context_do.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 
 /**
  * @brief Starts the LSP server on the specified port.
@@ -265,6 +266,8 @@ clah::Clah getLspDaemonCLI() {
 int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clah = getLspDaemonCLI();
+
+	query::track_reverse_graph = true;
 
 	init::InitObject _;
 

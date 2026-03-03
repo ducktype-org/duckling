@@ -232,6 +232,9 @@ namespace query::internal {
 	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                     \
 		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
 	}                                                                                                                                  \
+	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                      \
+		return type::erase(type::KHash(hash));                                                                                         \
+	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \
 		"Query result type should not be a reference (use CRef instead)"                                                               \
