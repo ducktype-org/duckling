@@ -1,7 +1,5 @@
 #include "file_changed.hpp"
 
-#include "frontend/pst_parser/lang_parser_element.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
@@ -53,17 +51,6 @@ namespace lsp {
 					auto ptr = maybe_elem.value();
 					out.emplace_back(pst::internal::PSTAccessSideInput::getID(), ptr->getHash());
 				}
-		}
-	}
-
-	void debugPrintHashPaths(const std::vector<query::external::InputData>& inputs) {
-		for (const auto& input: inputs) {
-			std::cout << pst::LangElement::getByStableHash(input.hash)
-							 .illegalAccess()
-							 .value()
-							 ->getElementPathHash()
-							 .str()
-					  << " " << input.hash << "\n";
 		}
 	}
 

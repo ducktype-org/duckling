@@ -1,6 +1,6 @@
 #include "queries.hpp"
 
-#include "helios_private/utils/pst_walkers.hpp"
+#include <helios_private/utils/pst_walkers.hpp>
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
