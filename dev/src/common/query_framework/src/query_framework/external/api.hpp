@@ -28,6 +28,11 @@ namespace query::external {
 		InputData(query::internal::QueryID q_id, query::QueryStableHash hash):
 			  q_id(q_id),
 			  hash(hash) {}
+
+
+		bool operator==(const InputData& other) const {
+			return q_id == other.q_id && hash == other.hash;
+		}
 	};
 
 	/**

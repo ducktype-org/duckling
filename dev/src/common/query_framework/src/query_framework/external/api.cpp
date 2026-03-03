@@ -94,15 +94,12 @@ namespace query::external {
 
 		// Step 1: Get all nodes to invalidate
 		auto nodes_to_invalidate = state->getGraph().getDependentNodes(start_nodes);
-		auto& graph = state->getGraph();
-		// graph.debugPrint(std::cerr);
 
 		// Step 2: Erase nodes from the graph
 		state->getGraphMutable().eraseNodes(nodes_to_invalidate);
 
 		// Step 3: Erase values of the invalidated nodes from their cache
 		for (const auto& node: nodes_to_invalidate.dependents_recursive) {
-			// std::cout << "Invalidating node: " << node.q_id.getData().name << " with hash: " << std::hex << node.hash.val << std::dec << "\n";
 			node.q_id.getData().cache_data.erase_function(node.hash.val);
 			state->getMetadataStorageMutable()->clearNodeMetadata(node);
 			state->clearDiagnosticForNode(node);

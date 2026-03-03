@@ -35,22 +35,6 @@ namespace pst {
 		return partial_hash;
 	}
 
-	// CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
-	// 	if (code_block)
-	// 		return code_block.value().internal()->begin();
-	// 	else if (stmt)
-	// 		return stmt->give();
-	// 	CORE_UNREACHABLE();
-	// }
-
-	// CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
-	// 	if (code_block)
-	// 		return code_block.value().internal()->end();
-	// 	else if (stmt)
-	// 		return { stmt->give(), 1 };
-	// 	CORE_UNREACHABLE();
-	// }
-
 	CodeBlockOrStmt::Type CodeBlockOrStmt::getType() const {
 		if (stmt.has_value())
 			return Type::SingleStmt;
