@@ -1,7 +1,6 @@
 #include "module_tree.hpp"
 
 #include "access.hpp"
-#include "concurrent/worker/worker.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
 #include "queries.hpp"
