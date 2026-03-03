@@ -468,6 +468,14 @@ namespace compiler::helios {
 				for (auto params: *meth->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
+				out.emplace_back(ctx.query<houtgen::QueryGeneratedSymbol>({
+					.name = base::StrID("self"),
+					.generated_symbol_data
+					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::SelfParameter{
+						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
+						.scope         = key } },
+				}));
+
 				output(std::move(out));
 			}
 
@@ -662,6 +670,8 @@ namespace compiler::helios {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key)->data);
 		}
+
+		static auto erase(KHash key) -> bool { return cache.erase(key); }
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);

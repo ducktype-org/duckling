@@ -7,6 +7,7 @@
 #include "context_fd.hpp"  // IWYU pragma: keep
 
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/logger_fwd.hpp>
 #include <diagnostic_interactive/placeholder.hpp>  // @TODO: #1887 move to outer query-invocation layer
 
 #include <base/extend_cpp/defer.hpp>
@@ -53,18 +54,6 @@ namespace query {
 		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
 	public:
-		// @TODO: Make the context (and thus the logger) be propagated through query calls,
-		// so that all queries run on the same file / in the same compilation thread / whatever
-		// use a single, *non-static* logger object.
-		/**
-		 * @name Logs storage
-		 * @brief Global/vector-backed logging facility.
-		 * \parallel Current implementation uses a global vector; not thread-safe; serialize or
-		 * buffer per-thread.
-		 */
-		static dia_int::Logger int_logger;
-
-
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
 
@@ -144,16 +133,62 @@ namespace query {
 		void addMetadata(Args&&... args) {
 			assertActive();
 
+			// Check that the query has preserve_in_graph = true
+			CORE_ASSERT(
+				my_node.q_id.getData().tags.preserve_in_graph,
+				"Cannot add metadata to query without preserve_in_graph = true. "
+				"Query: "
+					+ std::string(my_node.q_id.getData().name)
+			);
+
 			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);
 		}
 
 		/**
-		 * Log message to be shown to the user.
-		 * @param message The dia::Message to be logged.
+		 * @brief Add metadata to the current query node only if no metadata of this type exists.
+		 *
+		 * Use this method when you know that for the current node only one metadata
+		 * instance of a given type should exist, but the same code path might be executed multiple
+		 * times (e.g., during incremental re-computation of the node that has been merged from
+		 * previous compilation).
+		 *
+		 * This is useful for metadata that acts as a "flag" or "singleton" per node,
+		 * where duplicate entries would be redundant.
+		 *
+		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
+		 * @tparam Args Argument types for constructing the metadata
+		 * @param args Arguments forwarded to MetadataT constructor
+		 * @return true if metadata was added, false if metadata of this type already exists
 		 */
-		void log(Box<dia::Message> message);
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, internal::BaseMetadata>
+		bool addMetadataIfNotExists(Args&&... args) {
+			assertActive();
 
+			return main_query_state.addMetadataIfNotExistsInternal<MetadataT>(
+				my_node, std::forward<Args>(args)...
+			);
+		}
+
+		/**
+		 * @brief Logs a diagnostic message for the current query node.
+		 * Is thread safe.
+		 */
 		void logInt(Box<dia_int::MessageBase> diagnostic);
+
+		/**
+		 * @brief Collect all diagnostics from the main query state into the provided output vector.
+		 * @warning This method is not thread safe.
+		 * It must not be called concurrently with any method that modifies the underlying collection.
+		 */
+		static void collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output);
+
+		/**
+		 * @brief Dump all loggers from all nodes into a single logger and clear them from the state.
+		 * @warning This method is not thread safe.
+		 * It must not be called concurrently with any method that modifies the underlying collection.
+		 */
+		static Box<dia_int::Logger> dumpToOneLoggerAndClear();
 
 		/**
 		 * @brief Returns a const reference to the main query state.
