@@ -14,8 +14,6 @@
 namespace {
 	/**
 	 * @brief A value pair storing the information about a file.
-	 * This is merged here to not create to separate ConHashMaps for which the access would have to
-	 * be synchronized.
 	 */
 	struct PathState final {
 		/// List of all SourceFile instances associated with this path.
@@ -29,7 +27,6 @@ namespace {
 
 	/**
 	 * Concurrent Stable HashMap that stores all SourceFile instances.
-	 * @note: ConHashMap uses StableHashMap underneath.
 	 */
 	concurrent::ConHashMap<usize, compiler::frontend::SourceFile> files;
 	std::atomic<usize>                                            next_storage_key = 0;
