@@ -182,7 +182,6 @@ namespace query::internal {
 				);
 			});
 		}
-
 			
 
 		/**
@@ -205,18 +204,23 @@ namespace query::internal {
 		bool addMetadataIfNotExists(NodeID node_id, Args&&... args) {
 			TypeID type_id = MetadataT::TYPE_ID;
 
-			// Check if metadata of this type already exists
-			auto node_ref = storage.atMaybe(node_id);
-			if (node_ref.has_value()) {
-				Ref  node_map = node_ref.value();
-				auto type_ref = node_map->atMaybe(type_id);
-				if (type_ref.has_value() && !type_ref.value()->empty())  // PR validate types here
-					return false;                                        // Metadata already exists
-			}
+			// Create the metadata instance
+			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
-			// Add the metadata
-			addMetadata<MetadataT>(node_id, std::forward<Args>(args)...);
-			return true;
+			// Get or create the node's metadata map
+			storage.maybePutAndUpdate(node_id, {}, [&](Ref<TypeMap> node_map) {
+				// Get or create the type's vector
+				node_map->maybePutAndUpdate(
+					type_id,
+					{},
+					[&metadata](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
+						if (metadata_vector->empty()) {
+							// no metadata exists, so we add
+							metadata_vector->push_back(std::move(metadata));
+						}
+					}
+				);
+			});
 		}
 
 		/**
