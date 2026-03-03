@@ -616,7 +616,7 @@ namespace compiler::helios::code {
 		pst::Access<pst::expr::Call>  call_expr,
 		Box<Expr>                     self_arg
 	) {
-		auto whole_call_origin = self_arg->origin.extended(callee_element).extended(call_expr);
+		auto whole_call_origin = pstOrigin(pstOrigin(self_arg->origin, callee_element), call_expr);
 
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                          positional_arguments;

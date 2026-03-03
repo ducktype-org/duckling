@@ -3,6 +3,7 @@
 #include "access.hpp"
 #include "elements/includes/basic.hpp"
 #include "lang_parser_state.hpp"
+#include "stable_position.hpp"
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -185,4 +186,6 @@ namespace pst {
 		CORE_ASSERT(pst_hash_map.contains(stable_hash), "Invalid stable hash");
 		return pst_hash_map.at(stable_hash);
 	}
+
+	StablePosition LangElement::getStablePosition() const { return { getHash(), {} }; }
 }
