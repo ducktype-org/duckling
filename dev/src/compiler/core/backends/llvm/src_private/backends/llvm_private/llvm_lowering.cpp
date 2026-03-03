@@ -1,7 +1,7 @@
 #include <llvm_helpers/llvm_helpers.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 
 #include <type_traits>
-#include <typesystem/higher/abstract_type.hpp>
 
 LLVM_INCLUDE_BEGIN()
 
@@ -1057,28 +1057,30 @@ namespace compiler::backend_llvm {
 				const auto& output = lir_instruction.output.value();
 
 				// Get the type of the tuple that is beeing packed
-				auto layout = output.layout;
+				auto layout      = output.layout;
 				auto result_type = typeFromLayout(module, layout);
-				
+
 				CORE_ASSERT(
 					layout->is<tsl::TupleTypeLayout>(),
 					"Output of TuplePack should have tuple layout"
 				);
-				const auto& tuple_layout = std::get<tsl::TupleTypeLayout>(output.layout->getVariant());
+				const auto& tuple_layout
+					= std::get<tsl::TupleTypeLayout>(output.layout->getVariant());
 
 				// Get the values to be packed into the tuple
 				auto elements = loadLIRValueList(
-					std::vector(
-						lir_instruction.arguments.begin(), lir_instruction.arguments.end()
-					),
+					std::vector(lir_instruction.arguments.begin(), lir_instruction.arguments.end()),
 					builder
 				);
 
-				// Create an SSA value for the tuple. Since tuples are just a collection of their fields, we can create an undef value of the tuple type and insert field values into it.
+				// Create an SSA value for the tuple. Since tuples are just a collection of their fields,
+				// we can create an undef value of the tuple type and insert field values into it.
 				llvm::Value* value = llvm::UndefValue::get(result_type);
 				for (usize elem_idx = 0; elem_idx < lir_instruction.arguments.size(); elem_idx++) {
 					auto layout_index = tuple_layout.getLayoutIndexOfComponentIndex(elem_idx);
-					value = builder.CreateInsertValue(value, elements[elem_idx], static_cast<u32>(layout_index));
+					value             = builder.CreateInsertValue(
+                        value, elements[elem_idx], static_cast<u32>(layout_index)
+                    );
 					// value = builder.CreateInsertValue(value, elements[elem_idx], elem_idx);
 				}
 
