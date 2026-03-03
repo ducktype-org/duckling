@@ -49,12 +49,12 @@ private:
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 		query::utils::withContextDo([&](query::Context& ctx) {
-			ctx.int_logger.clear();
 			auto hout_result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(
 				hout_result->hasValue(), "Expected HOUT query to succeed for module content."
 			);
-			assertTrue(!ctx.int_logger.hasErrors(), "Expected no errors to be logged by HELIOS.");
+			auto logger = query::Context::dumpToOneLoggerAndClear();
+			assertTrue(!logger->hasErrors(), "Expected no errors to be logged by HELIOS.");
 
 			bool some_fun_lowering_failed = false;
 			for (auto fun: hout_result->valueOrPanic().functions) {
@@ -64,12 +64,13 @@ private:
 			assertTrue(
 				some_fun_lowering_failed, "Expected some MIR query to fail for module functions."
 			);
-			assertTrue(ctx.int_logger.hasErrors(), "Expected errors to be logged by MIR.");
+			logger = query::Context::dumpToOneLoggerAndClear();
+			assertTrue(logger->hasErrors(), "Expected errors to be logged by MIR.");
 
 			std::stringstream logged_messages;
-			ctx.int_logger.terminalPrint(logged_messages);
+			logger->terminalPrint(logged_messages);
 			std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
-			auto msg_count = ctx.int_logger.messageCount();
+			auto msg_count = logger->messageCount();
 			assertEqual(
 				msg_count,
 				logged_msg_count,

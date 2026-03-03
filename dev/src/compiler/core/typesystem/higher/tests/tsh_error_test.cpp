@@ -45,18 +45,13 @@ private:
 	}
 
 	void integralSizeErrorTest() {
-		query::Context::int_logger.clear();
-		assertTrue(query::Context::int_logger.good(), "Test should begin without errors.");
-
 		// this should log an error since 42 is not a valid integral size:
 		getIntegralTypeNoContext(42, compiler::tsh::IntegralAbstractType::Signedness::Signed);
 
 		std::stringstream dumped_logs;
-		assertTrue(
-			query::Context::int_logger.bad(),
-			"Requesting bad integral size should result in an error."
-		);
-		query::Context::int_logger.dumpLog(false, dumped_logs);
+		auto              logger = query::Context::dumpToOneLoggerAndClear();
+		assertTrue(logger->bad(), "Requesting bad integral size should result in an error.");
+		logger->dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assertTrue(
 			dumped_logs_str.find("Invalid size of integral type") != decltype(dumped_logs_str)::npos,
@@ -65,17 +60,13 @@ private:
 	}
 
 	void floatSizeErrorTest() {
-		query::Context::int_logger.clear();
-		assertTrue(query::Context::int_logger.good(), "Test should begin without errors.");
-
 		// this should log an error since 42 is not a valid float size:
 		getFloatTypeNoContext(42);
 
 		std::stringstream dumped_logs;
-		assertTrue(
-			query::Context::int_logger.bad(), "Requesting bad float size should result in an error."
-		);
-		query::Context::int_logger.dumpLog(false, dumped_logs);
+		auto              logger = query::Context::dumpToOneLoggerAndClear();
+		assertTrue(logger->bad(), "Requesting bad float size should result in an error.");
+		logger->dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assertTrue(
 			dumped_logs_str.find("Invalid size of float type") != decltype(dumped_logs_str)::npos,
