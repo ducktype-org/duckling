@@ -232,6 +232,9 @@ namespace query::internal {
 	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                     \
 		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
 	}                                                                                                                                  \
+	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                      \
+		return type::erase(type::KHash(hash));                                                                                         \
+	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \
 		"Query result type should not be a reference (use CRef instead)"                                                               \
@@ -258,8 +261,8 @@ namespace query::internal {
 	);                                                                                                                                 \
                                                                                                                                        \
 	static_assert(                                                                                                                     \
-		std::is_invocable_v<decltype(type::load), type::KHash>,                                                                        \
-		"Load function must be callable with hash of QKey"                                                                             \
+		std::is_same_v<std::invoke_result_t<decltype(type::load), type::KHash>, type::LoadResult>,                                     \
+		"Bad load result."                                                                                                             \
 	);                                                                                                                                 \
 	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                                \
 	static_assert(                                                                                                                     \

@@ -16,7 +16,7 @@ impl SolverFreeze {
     /// The new freeze assumes that the main package is compiled with all its manifest-listed features.
     pub fn new_freeze(
         mut self,
-        manifests: &HashMap<ExpandedPackage, &Manifest>,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
         solver_output: FoundSolution,
     ) -> QuackResult<Self> {
         self.add_solver_output(solver_output)?;
@@ -63,7 +63,7 @@ impl SolverFreeze {
     ///     * a compilation graph from the new freeze (main_pkg_features equals to features provided by the build command).
     pub fn find_minimal_dep_solution(
         self,
-        manifests: &HashMap<ExpandedPackage, &Manifest>,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
         main_pkg_features: HashSet<FeatureName>,
     ) -> QuackResult<Self> {
         let mut new_package_freezes = HashMap::from([(
@@ -89,7 +89,7 @@ impl SolverFreeze {
     fn mark_children_as_necessary(
         &self,
         base_pkg: ExpandedPackage,
-        manifests: &HashMap<ExpandedPackage, &Manifest>,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
         new_pkg_freezes: &mut HashMap<ExpandedPackage, SolverPackageFreeze>,
     ) -> QuackResult<()> {
         let base_manifest = manifests
@@ -174,7 +174,6 @@ mod test {
         path::PathBuf,
     };
 
-    use rustvil::fs::PathExt;
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
@@ -185,10 +184,10 @@ mod test {
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
             solving::FoundSolution,
             types_common::{
-                DependencyEdge, ExpandedLocRegistry, ExpandedLocation, ExpandedPackage,
-                InternedExpandedLocation,
+                DependencyEdge, ExpandedLocation, ExpandedPackage, InternedExpandedLocation,
             },
         },
+        util_common::path_ops_ext::PathOpsExt,
     };
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -235,21 +234,18 @@ metadata:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
-        let exp_location_a =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("a"),
-            }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
-        let exp_location_c =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("c"),
-            }));
+        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("c"),
+        });
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -263,9 +259,9 @@ metadata:
             version: Some(Version::new(3, 0, 0)),
         };
         let manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
-            (exp_pkg_c, manifest_c.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
@@ -304,11 +300,11 @@ metadata:
             freeze_a.dependencies_realization
                 == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
-        assert!(freeze_c.dependencies_realization == HashMap::new());
-        assert!(freeze_c.features == HashSet::new());
+        assert!(freeze_c.dependencies_realization.is_empty());
+        assert!(freeze_c.features.is_empty());
     }
 
     #[test]
@@ -345,21 +341,18 @@ metadata:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
-        let exp_location_a =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("a"),
-            }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
-        let exp_location_c =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("c"),
-            }));
+        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("c"),
+        });
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -373,9 +366,9 @@ metadata:
             version: Some(Version::new(3, 0, 0)),
         };
         let manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
-            (exp_pkg_c, manifest_c.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([
@@ -411,8 +404,8 @@ metadata:
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         assert!(!new_freeze.package_freezes.contains_key(&exp_pkg_c));
         assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
     }
 
@@ -452,21 +445,18 @@ metadata:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
-        let exp_location_a =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("a"),
-            }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
-        let exp_location_c =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("c"),
-            }));
+        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("c"),
+        });
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -480,9 +470,9 @@ metadata:
             version: Some(Version::new(3, 0, 0)),
         };
         let manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
-            (exp_pkg_c, manifest_c.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([
@@ -521,10 +511,10 @@ metadata:
             freeze_a.dependencies_realization
                 == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
-        assert!(freeze_c.dependencies_realization == HashMap::new());
-        assert!(freeze_c.features == HashSet::new());
+        assert!(freeze_c.dependencies_realization.is_empty());
+        assert!(freeze_c.features.is_empty());
     }
 }

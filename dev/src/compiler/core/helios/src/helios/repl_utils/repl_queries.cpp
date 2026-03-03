@@ -80,7 +80,10 @@ namespace compiler::repl {
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");
 			auto decl_ptr = new helios::HOUTFunctionDeclaration(
-				synthetic_symbol, return_type, std::vector<helios::code::Parameter>{}
+				synthetic_symbol,
+				return_type,
+				std::vector<helios::code::Parameter>{},
+				helios::code::generatedOrigin()
 			);
 			auto decl = base::CRef<helios::HOUTFunctionDeclaration>(decl_ptr);
 

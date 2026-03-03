@@ -2,6 +2,8 @@
 #include "diagnostic_arguments_forward.hpp"
 #include "template_file.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 
@@ -54,9 +56,10 @@ namespace dia_int {
 	 */
 	class TemplateRegistrySingleton final {
 	private:
-		base::HashMap<std::string, template_file::DiagnosticTemplate> cache;
-		Box<TemplateRegistryProvider>                                 provider;
+		concurrent::ConHashMap<std::string, template_file::DiagnosticTemplate> cache;
+		Box<TemplateRegistryProvider>                                          provider;
 
+		static std::mutex                      instance_mutex;
 		static MBox<TemplateRegistrySingleton> instance;
 
 		TemplateRegistrySingleton(Box<TemplateRegistryProvider> provider):
@@ -74,7 +77,17 @@ namespace dia_int {
 
 		static TemplateRegistrySingleton& getInstance();
 
-		static void setInstance(Box<TemplateRegistryProvider> provider);
+		/**
+		 * @brief Set the instance object based on the provider.
+		 * When called multiple times, only the first call will have an effect.
+		 */
+		static void setInstance(Box<TemplateRegistryProvider>&& provider);
+
+		/**
+		 * @brief Force the registry to use a new provider.
+		 * For testing purposes.
+		 */
+		static void setNewInstance(Box<TemplateRegistryProvider>&& provider);
 	};
 
 }

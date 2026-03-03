@@ -54,9 +54,9 @@ namespace vm::api {
 	 * @brief Run a function with a given name on DVM.
 	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
 	 *
-	 * @return Nothing if the function was run successfully or an API error otherwise.
+	 * @return ThreadID if the function was run successfully or an API error otherwise.
 	 */
-	std::expected<void, ApiError> runFunction(
+	std::expected<ThreadID, ApiError> runFunction(
 		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
 	);
 
@@ -83,6 +83,7 @@ namespace vm::api {
 	 * @return Nothing if the thread successfully stopped or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
+	std::expected<void, ApiError> join(PID pid, ThreadID thread_id);
 	std::expected<void, ApiError> join(PID pid);
 
 	/**
@@ -108,6 +109,7 @@ namespace vm::api {
 	 * @return Code position of the next instruction to execute after the program is paused or an
 	 * error in which case the state is undefined.
 	 */
+	std::expected<response::CodePosition, ApiError> pause(PID pid, ThreadID thread_id);
 	std::expected<response::CodePosition, ApiError> pause(PID pid);
 
 	/**
@@ -115,6 +117,7 @@ namespace vm::api {
 	 * @return Nothing if the program successfully resumed or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id);
 	std::expected<void, ApiError> resume(PID pid);
 
 	/**

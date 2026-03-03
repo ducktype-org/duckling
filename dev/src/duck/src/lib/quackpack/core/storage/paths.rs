@@ -29,11 +29,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use rustvil::fs::PathExt;
-
 use crate::{
     QuackResult, duck::util::duck_home::DuckHome, qp_bail_internal,
-    quackpack::core::storage::venv_id::VenvId,
+    quackpack::core::storage::venv_id::VenvId, util_common::path_ops_ext::PathOpsExt,
 };
 
 use super::package_id::PackageId;
@@ -51,7 +49,7 @@ const PKGS_DIR_NAME: &str = "pkg";
 
 const OK_FILENAME: &str = ".ok";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Provides paths of the storage components, hiding the implementation details of the directory layout.
 pub struct Storage {
     packages_dir: PathBuf,

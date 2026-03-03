@@ -1,4 +1,9 @@
 #include "../mir_structure/mir_structure.hpp"
+#include "errors.hpp"
+#include "mir_lifetimes.hpp"
+
+#include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
@@ -7,7 +12,7 @@
 #include <unordered_set>
 
 namespace compiler::mir {
-	bool validateMoves(const Function& fun) {
+	base::OkBad validateMoves(query::Context&, const Function& fun) {
 		using LocalSet      = std::unordered_set<LocalID>;
 		using BlockLocalSet = base::HashMap<BlockID, LocalSet>;
 
@@ -28,7 +33,7 @@ namespace compiler::mir {
 				if (instr.operation == Operation::Destruct
 				    || instr.operation == Operation::DestructIf)
 
-					return true;  // LIR decides whether destruction should be performed.
+					return base::OK;  // LIR decides whether destruction should be performed.
 
 				// Firstly list all arguments - They must be valid.
 				for (const auto& arg: instr.arguments) {
@@ -40,7 +45,7 @@ namespace compiler::mir {
 						if (moved_variables.at(block.key).contains(
 								arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
 							))
-							return false;  // It is already moved.
+							return base::BAD;  // It is already moved.
 					}
 				}
 
@@ -53,7 +58,7 @@ namespace compiler::mir {
 					if (moved_variables.at(block.key).contains(
 							instr.output.value().getBase<MIRLocalRef>()->id
 						))
-						return false;  // It is already moved.
+						return base::BAD;  // It is already moved.
 				}
 
 				for (const auto& flag: instr.flags) {
@@ -63,7 +68,7 @@ namespace compiler::mir {
 						// output of instruction. It may change in the future.
 
 						if (moved_variables[block.key].contains(flag.local->id))
-							return false;  // Already moved.
+							return base::BAD;  // Already moved.
 
 						moved_variables[block.key].insert(flag.local->id);
 
@@ -78,11 +83,11 @@ namespace compiler::mir {
 								}
 							)
 						    != 1)
-							return false;  // Used 0 or 2 or more times as argument.
+							return base::BAD;  // Used 0 or 2 or more times as argument.
 
 						if (instr.output.has_value() && instr.output.value().isLocal()
 						    && instr.output.value().getBase<MIRLocalRef>()->id == flag.local->id)
-							return false;  // Moved local used as output.
+							return base::BAD;  // Moved local used as output.
 					}
 					if (flag.flag == OperationFlag::Flag::Construct) {
 						// Assume constructors are valid (every use is after construct).
@@ -90,13 +95,13 @@ namespace compiler::mir {
 					}
 					// Ommit destruct flag - LIR will handle it.
 				}
-				return true;
+				return base::OK;
 			};
 
 			for (const auto& instruction: block.value.instructions)
-				if (!process_instruction(instruction)) return false;
+				if (process_instruction(instruction).isBad()) return base::BAD;
 
-			if (!process_instruction(block.value.terminator)) return false;
+			if (process_instruction(block.value.terminator).isBad()) return base::BAD;
 		}
 
 		// Now we perform global analysis.
@@ -124,14 +129,14 @@ namespace compiler::mir {
 
 			const auto& starting_block = local.second;
 
-			auto visit
-				= [&](this const auto& self, const BlockID& id, const int& cr_state) -> bool {
+			auto visit = [&](this const auto& self, const BlockID& id, const int& cr_state
+			             ) -> base::OkBad {
 				visited[id].state[cr_state] = true;
 				int next_state              = NOT_USABLE;
 				if (cr_state == NOT_USABLE) {
 					if (moved_variables[id].contains(local.first)
 					    || used_variables[id].contains(local.first))
-						return false;
+						return base::BAD;
 					next_state = NOT_USABLE;
 				} else {
 					if (moved_variables[id].contains(local.first))
@@ -142,20 +147,57 @@ namespace compiler::mir {
 
 				for (const auto& next_block: getTerminatorSuccessors(fun.blocks[id].terminator)) {
 					if (next_block != starting_block && !visited[next_block].state[next_state]) {
-						if (!self(next_block, next_state)) return false;
+						if (self(next_block, next_state).isBad()) return base::BAD;
 					}
 				}
-				return true;
+				return base::OK;
 			};
 
-			if (!visit(starting_block, USABLE)) return false;
+			if (visit(starting_block, USABLE).isBad()) return base::BAD;
 		}
 
-		return true;
+		return base::OK;
 	}
 
-	base::OkBad validateFunction(const Function& fun) {
-		return validateMoves(fun) ? base::OK : base::BAD;
+	base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
+		base::HashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
+		for (auto& local: fun.local_list) {
+			if (local.helios_id.empty()) continue;
+
+			auto name = helios::name(*local.helios_id);
+			match_optional(named_locals.atMaybe(name)) {
+				opt_some(prev_defs) {
+					for (auto def: *prev_defs) {
+						auto lc_scope = lca(*def->scope, *local.scope);
+						if (lc_scope == *def->scope || lc_scope == *local.scope) {
+							// Since the LCA is one of the scopes, the other has to be contained in it.
+							auto [shadowing, shadowed] = (lc_scope == *def->scope)
+							                               ? std::tuple{ base::Ref(&local), def }
+							                               : std::tuple{ def, base::Ref(&local) };
+
+							auto get_pos = [&](auto local_ref) {
+								return helios::symbolPst(local_ref->helios_id.value())
+								    .unlock(ctx)
+								    ->getSourcePosition();
+							};
+							auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
+							msg->addAttachedMessage(
+								makeBox<ShadowedDeclerationNote>(get_pos(shadowed))
+							);
+							ctx.logInt(std::move(msg));
+							return base::BAD;
+						}
+					}
+					prev_defs->emplace_back(&local);
+				}
+				opt_none { named_locals.put(name, { &local }); }
+			}
+		}
+		return base::OK;
 	}
 
+	base::OkBad validateFunction(query::Context& ctx, const Function& fun) {
+		bool all_ok = validateMoves(ctx, fun).isOk() && validateShadowing(ctx, fun).isOk();
+		return all_ok ? base::OK : base::BAD;
+	}
 }

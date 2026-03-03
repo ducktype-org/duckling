@@ -95,6 +95,7 @@ namespace lang_def {
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
 			{ Keyword::As, "as", KeywordFlags() },
+			{ Keyword::Hides, "hides", KeywordFlags() },
 			{ Keyword::In, "in", KeywordFlags() },
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
 
@@ -144,7 +145,7 @@ namespace lang_def {
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
-			{ Keyword::This, "this", KeywordFlags() },
+			{ Keyword::Self, "self", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY

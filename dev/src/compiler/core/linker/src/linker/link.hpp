@@ -11,9 +11,15 @@ namespace compiler::linker {
 	 */
 	struct LinkingOptions final {
 		/**
-		 * Paths to external static libraries to link against.
+		 * Path to the linker executable (e.g., "gcc" or "ld").
+		 * If not set, the default linker will be used.
 		 */
-		std::vector<fs::FilePath> external_static_libraries;
+		base::Optional<std::string> linker_path;
+
+		/**
+		 * Additional options passed to the linker (e.g., "my_object.o" "-L/path/to/libs -lsomelib").
+		 */
+		std::string additional_link_options;
 
 		/**
 		 * @brief Whether to link the C standard library.
@@ -26,7 +32,8 @@ namespace compiler::linker {
 	 * In the future it will be changed to a query, to automatically support caching.
 	 * @note: we can add additional object/library files here when needed.
 	 */
-	void link(
+	[[nodiscard]]
+	base::OkBad link(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
 		const LinkingOptions&                       options
