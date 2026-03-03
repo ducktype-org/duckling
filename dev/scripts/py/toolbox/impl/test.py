@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 from ..commands.helpers import get_cpu_count

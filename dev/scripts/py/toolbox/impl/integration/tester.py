@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 from .test_loader import Case, Test, TestNode, load_tests
@@ -73,9 +75,11 @@ def tester_impl(
 
     if len(failed):
         failed_tests = map(lambda x: " - " + x, failed)
+        fail_fast_prefix = "(Fail fast) " if fail_fast else ""
+        failed_list = "\n".join(failed_tests)
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
-            + f"Please see log file '{log_file.absolute()}' for more info."
+            "%sFailed tests:\n%s\n" % (fail_fast_prefix, failed_list)
+            + "Please see log file '%s' for more info." % log_file.absolute()
         )
     elif not clean:
         print_success(f"All tests have run successfully!")
