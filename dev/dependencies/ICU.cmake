@@ -194,6 +194,32 @@ message("-- ICU version: ${ICU_VERSION}")
 message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
 message("-- ICU libraries: ${ICU_LIBRARIES}")
 
+# On macOS with LLVM/Clang, remove problematic system include directories
+# that come from ICU's configuration to prevent header conflicts
+if(APPLE AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
+	foreach(target ICU::i18n ICU::uc ICU::data ICU::io unicode)
+		if(TARGET ${target})
+			get_target_property(interface_includes ${target} INTERFACE_INCLUDE_DIRECTORIES)
+			if(interface_includes)
+				# Filter out SDK /usr/include and /opt/homebrew/include paths
+				list(FILTER interface_includes EXCLUDE REGEX ".*/MacOSX\\.sdk/usr/include$")
+				list(FILTER interface_includes EXCLUDE REGEX "^/opt/homebrew/include$")
+				list(FILTER interface_includes EXCLUDE REGEX "^/usr/include$")
+				set_target_properties(${target} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${interface_includes}")
+			endif()
+			# Also clear INTERFACE_SYSTEM_INCLUDE_DIRECTORIES if set
+			get_target_property(system_includes ${target} INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
+			if(system_includes)
+				list(FILTER system_includes EXCLUDE REGEX ".*/MacOSX\\.sdk/usr/include$")
+				list(FILTER system_includes EXCLUDE REGEX "^/opt/homebrew/include$")
+				list(FILTER system_includes EXCLUDE REGEX "^/usr/include$")
+				set_target_properties(${target} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${system_includes}")
+			endif()
+		endif()
+	endforeach()
+	message("-- Filtered problematic system include paths from ICU targets")
+endif()
+
 
 if (ICU_IS_EXTERNAL)
 	file(MAKE_DIRECTORY ${ICU_INCLUDE_DIRS})

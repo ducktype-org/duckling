@@ -1,16 +1,23 @@
 # The different targets supported by the compiler,
 # thus also the targets for which built-in libraries are built.
-set(BUILTIN_TARGETS
-        x86_64-linux-gnu
-
-        # This target requires further configuration so that clang
-        # can find the appropriate sysroot and libraries.
-        #        aarch64-linux-gnu
-
-        # This target requires proprietary Apple libraries and SDKs,
-        # so can only be built on macOS hosts.
-        #        x86_64-apple-darwin
-)
+# Determine targets based on the host platform.
+if(APPLE)
+    # On macOS, build for native Apple targets
+    set(BUILTIN_TARGETS
+            x86_64-apple-darwin
+            arm64-apple-darwin
+    )
+elseif(UNIX)
+    # On Linux, build for Linux targets
+    set(BUILTIN_TARGETS
+            x86_64-linux-gnu
+            # This target requires further configuration so that clang
+            # can find the appropriate sysroot and libraries.
+            #aarch64-linux-gnu
+    )
+else()
+    message(FATAL_ERROR "Unsupported platform for builtins generation")
+endif()
 
 # Before going further, ensure that there exists a Clang version on the system which
 # matches the LLVM version used by the compiler. This is important because the builtins
@@ -68,6 +75,23 @@ foreach (target IN LISTS BUILTIN_TARGETS)
 
     set(BUILTINS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src_private/driver_private/builtins")
 
+    # Determine additional flags based on target platform
+    set(EXTRA_CLANG_FLAGS "")
+    if(target MATCHES "apple-darwin")
+        # For Apple targets, we need to specify the sysroot
+        if(APPLE)
+            # On macOS host, use xcrun to find the SDK
+            execute_process(
+                COMMAND xcrun --show-sdk-path
+                OUTPUT_VARIABLE MACOS_SDK_PATH
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            if(MACOS_SDK_PATH)
+                list(APPEND EXTRA_CLANG_FLAGS -isysroot ${MACOS_SDK_PATH})
+            endif()
+        endif()
+    endif()
+
     # Add command to generate LLVM bitcode by compiling the built-ins source code via clang.
     add_custom_command(
             OUTPUT ${bc_file}
@@ -76,6 +100,7 @@ foreach (target IN LISTS BUILTIN_TARGETS)
             --target=${target}
             -O2
             -emit-llvm
+            ${EXTRA_CLANG_FLAGS}
             -c ${BUILTINS_SOURCE_DIR}/builtins_source.cpp
             -o ${bc_file}
             DEPENDS ${BUILTINS_SOURCE_DIR}/builtins_source.cpp

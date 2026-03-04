@@ -9,6 +9,37 @@ namespace lexer {
 
 	using Class = unicode::Classifications;
 
+	// Helper inline functions to automatically dereference the pointer members
+	// (needed because Classifications members are now pointers to avoid static initialization
+	// issues on macOS)
+	namespace {
+		inline auto& operator_start() { return *Class::operator_start; }
+
+		inline auto& operator_continue() { return *Class::operator_continue; }
+
+		inline auto& name_start() { return *Class::name_start; }
+
+		inline auto& name_continue() { return *Class::name_continue; }
+
+		inline auto& whitespace() { return *Class::whitespace; }
+
+		inline auto& vertical_space() { return *Class::vertical_space; }
+
+		inline auto& newline() { return *Class::newline; }
+
+		inline auto& format_control() { return *Class::format_control; }
+
+		inline auto& syntax() { return *Class::syntax; }
+
+		inline auto& special() { return *Class::special; }
+
+		inline auto& open_bracket() { return *Class::open_bracket; }
+
+		inline auto& close_bracket() { return *Class::close_bracket; }
+
+		inline auto& end_of_file() { return *Class::end_of_file; }
+	}
+
 	class TokenStartError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -251,21 +282,20 @@ namespace lexer {
 			blockCommentHandler(output);
 		} else if (isCommentBegin()) {
 			commentHandler(output);
-		} else if (peek().is(Class::operator_start)) {
+		} else if (peek().is(operator_start())) {
 			operatorHandler(output);
-		} else if (peek().is(Class::name_start)) {
+		} else if (peek().is(name_start())) {
 			nameHandler(output);
 		} else if (isStringBegin()) {
 			stringHandler(output);
 		} else if (isCharBegin()) {
 			charHandler(output);
-		} else if (peek().is(Class::open_bracket)) {
+		} else if (peek().is(open_bracket())) {
 			bracketHandler(output);
-		} else if (peek().is(Class::special)) {
+		} else if (peek().is(special())) {
 			specialHandler(output);
 		} else {
-			if (not peek().is(Class::whitespace))
-				logger->log(makeBox<TokenStartError>(source_start));
+			if (not peek().is(whitespace())) logger->log(makeBox<TokenStartError>(source_start));
 			next();
 		}
 	}
@@ -324,7 +354,7 @@ namespace lexer {
 		usize end{};
 		auto  source_start = currentPosition();
 
-		while (peek().is(Class::operator_continue)) next();
+		while (peek().is(operator_continue())) next();
 		end = where - 1;
 
 		dia::SourcePosition source_position(source_start, end);
@@ -339,7 +369,7 @@ namespace lexer {
 		auto  source_start = currentPosition();
 
 		next();  // first char - character
-		while (peek().is(Class::name_continue)) next();
+		while (peek().is(name_continue())) next();
 		end = where - 1;
 
 		dia::SourcePosition source_position(source_start, end);
@@ -364,12 +394,12 @@ namespace lexer {
 	}
 
 	base::Optional<Token> Lexer::typeSpecifierHandler() {
-		if (isEOF() || !peek().is(Class::name_start)) return {};
+		if (isEOF() || !peek().is(name_start())) return {};
 		usize suffix_begin     = where;
 		auto  suffix_start_pos = currentPosition();
 		usize lookahead        = 0;
 
-		while (peek(lookahead).is(Class::name_continue)) lookahead++;
+		while (peek(lookahead).is(name_continue())) lookahead++;
 
 		if (lookahead == 0) return {};
 
@@ -409,9 +439,11 @@ namespace lexer {
 		auto                full_view = file->getCharRange(begin, full_group_end + 1);
 		match_optional(opt_type_specifier_token) {
 			opt_some_move(specifier) {
-				output.push_back(Token::makeNumLiteralGroup(
-					full_view, std::move(value_token), std::move(specifier), full_pos
-				));
+				output.push_back(
+					Token::makeNumLiteralGroup(
+						full_view, std::move(value_token), std::move(specifier), full_pos
+					)
+				);
 			}
 			opt_none {
 				output.push_back(
@@ -499,9 +531,11 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "string");
-		output.push_back(Token::makeString(
-			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
-		));
+		output.push_back(
+			Token::makeString(
+				file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
+			)
+		);
 	}
 
 	void Lexer::charHandler(Tokens& output) {
@@ -563,9 +597,8 @@ namespace lexer {
 
 		Tokens inner_tokens;
 		next();  // par open
-		constexpr auto is_group_end = [](const Lexer& lexer) {
-			return lexer.isEOF() || lexer.peek().is(Class::close_bracket);
-		};
+		constexpr auto is_group_end
+			= [](const Lexer& lexer) { return lexer.isEOF() || lexer.peek().is(close_bracket()); };
 		parseUntil(inner_tokens, is_group_end);
 
 		end = where;
@@ -588,19 +621,21 @@ namespace lexer {
 		auto                sentinel_end_view = file->getCharRange(end, end + 1);
 		Token sentinel_end = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
 
-		output.push_back(Token::makeBracketGroup(
-			bracket_type,
-			std::move(inner_tokens),
-			std::move(sentinel_begin),
-			std::move(sentinel_end),
-			source_position
-		));
+		output.push_back(
+			Token::makeBracketGroup(
+				bracket_type,
+				std::move(inner_tokens),
+				std::move(sentinel_begin),
+				std::move(sentinel_end),
+				source_position
+			)
+		);
 		CORE_DEV_LOG(Lexer, "group end", "\n");
 	}
 
 	bool Lexer::isEOF() const { return peek().is(Class::END_OF_FILE_VALUE); }
 
-	bool Lexer::isEOL() const { return peek().is(Class::newline); }
+	bool Lexer::isEOL() const { return peek().is(newline()); }
 
 	bool Lexer::isCommentBegin() const { return tryRawValue('#'); }
 

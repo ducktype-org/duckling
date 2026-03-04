@@ -3,6 +3,8 @@
 #include <time_stats/module_flags/module_flags.hpp>
 #include <timer/timer.hpp>
 
+#include <base/extend_cpp/std_compat.hpp>
+
 #include <array>
 #include <atomic>
 #include <iostream>

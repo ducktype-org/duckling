@@ -19,7 +19,10 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/misc/raw_view.hpp>
 
+#include <unicode/utypes.h>
 #include <unicode/unistr.h>
+
+U_NAMESPACE_USE
 
 #include <stdexcept>
 #include <string>
@@ -45,10 +48,19 @@ namespace base {
 		};
 
 		template<typename T>
-		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>> && !std::is_pointer_v<std::decay_t<T>> && !std::is_null_pointer_v<std::decay_t<T>> && !HasEnumToStr<std::remove_cvref_t<T>>)
+		requires(
+			!base::IsNumber<std::remove_reference_t<T>>
+			&& !std::is_same_v<UnicodeString, std::remove_cvref_t<T>>
+			&& !std::is_pointer_v<std::decay_t<T>> && !std::is_null_pointer_v<std::decay_t<T>>
+			&& !HasEnumToStr<std::remove_cvref_t<T>>
+		)
 		constexpr void strConcat(std::string& out, T&& v) {
 			out.append(std::forward<T>(v));
 		}
+
+		constexpr void strConcat(std::string& out, const std::string& v) { out.append(v); }
+
+		constexpr void strConcat(std::string& out, std::string_view v) { out.append(v); }
 
 		constexpr void strConcat(std::string& out, base::RawView view) {
 			out.append(view.stringView());
@@ -59,7 +71,7 @@ namespace base {
 			out.append(std::to_string(v));
 		}
 
-		void strConcat(std::string& out, const icu::UnicodeString& unistr);
+		void strConcat(std::string& out, const UnicodeString& unistr);
 
 		// This is forward declaration to prevent circular header dependency through:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_utils.hpp

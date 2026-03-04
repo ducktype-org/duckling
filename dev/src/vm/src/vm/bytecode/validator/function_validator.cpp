@@ -105,8 +105,11 @@ public:
 		  tod_map(&tod_map),
 		  type_metadata(&type_metadata) {
 		push(base::StrID("ret_val"), signature.result_type.str);
-		for (auto [idx, param]: std::views::enumerate(signature.parameters))
+		u64 idx = 0;
+		for (const auto& param: signature.parameters) {
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
+			++idx;
+		}
 	}
 
 	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }
@@ -1333,8 +1336,9 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
-		const {
+	void validateUpcast(
+		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+	) const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 

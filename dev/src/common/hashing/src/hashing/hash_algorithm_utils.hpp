@@ -3,6 +3,7 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/types/ints.hpp>
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <concepts>

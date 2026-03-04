@@ -22,6 +22,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <ostream>
 #include <span>
 #include <vector>
 
@@ -281,8 +282,10 @@ namespace query::internal {
 				for (const auto& metadata_ptr: type_vec) {
 					// Safe downcast - we know the type matches because we used type id as key
 					const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
-					result.push_back(MetadataInfo<MetadataT>{
-						.node_id = node_id, .value = CRef<MetadataT>(typed_ptr) });
+					result.push_back(
+						MetadataInfo<MetadataT>{ .node_id = node_id,
+					                             .value   = CRef<MetadataT>(typed_ptr) }
+					);
 				}
 			}
 

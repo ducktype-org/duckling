@@ -109,8 +109,7 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void
-			performFunctionCall(
+			void performFunctionCall(
 				const MicroInstruction*& instr,
 				std::byte*&              local_stack,
 				Frame*&                  frame,
@@ -187,8 +186,7 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void
-			performInit(
+			void performInit(
 				[[maybe_unused]] const MicroInstruction*& instr,
 				std::byte*&                               local_stack,
 				Frame*&                                   frame,
@@ -199,7 +197,8 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
-			thread.process_memory.increaseBlockRefcount(block
+			thread.process_memory.increaseBlockRefcount(
+				block
 			);  // so that nobody can delete our block
 
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
@@ -220,8 +219,7 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void
-			performDeinit(Frame*& frame, VMThread& thread) {
+			void performDeinit(Frame*& frame, VMThread& thread) {
 			auto block = frame->block_stack.back();
 			auto type  = thread.process_memory.getBlockType(block);
 			frame->block_stack.pop_back();
@@ -238,8 +236,7 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void
-			setVariantType(
+			void setVariantType(
 				VMThread& thread,
 				Pointer   variant_pointer,
 				TypeID    wanted_type_id,
@@ -259,8 +256,11 @@ namespace vm {
 			// Find type index
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
-			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt->getID() == wanted_type_id) alternative_index = static_cast<usize>(idx);
+			usize idx               = 0;
+			for (const auto& alt: alternatives) {
+				if (alt->getID() == wanted_type_id) alternative_index = idx;
+				++idx;
+			}
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -293,8 +293,7 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			Pointer
-			getVariantPtr(
+			Pointer getVariantPtr(
 				VMThread& thread,
 				Pointer   variant_pointer,
 				TypeID    wanted_type_id,

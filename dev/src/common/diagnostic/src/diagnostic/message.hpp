@@ -474,14 +474,14 @@ namespace dia {
 	 * @tparam BASE_MESSAGE_CLASS The base class of the message, either Error, Warning, or Info.
 	 * @tparam DOMAIN The domain of the message. Pick Message::Domain::Misc if unsure.
 	 */
-	template<ValidBaseMessageClass BASE_MESSAGE_CLASS, Message::Domain DOMAIN>
+	template<ValidBaseMessageClass BASE_MESSAGE_CLASS, Message::Domain DOM>
 	class PlaceholderMessage final: public BASE_MESSAGE_CLASS {
 		std::string message;
 
 	public:
 		[[nodiscard]]
 		Message::Domain getDomain() const override {
-			return DOMAIN;
+			return DOM;
 		}
 
 		PlaceholderMessage(const SourcePosition& source_position, std::string message):

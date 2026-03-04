@@ -7,6 +7,7 @@
 #include <vm/utils/interpret.hpp>
 
 #include <ostream>
+#include <sstream>
 
 namespace vm {
 	class VMProcess;
