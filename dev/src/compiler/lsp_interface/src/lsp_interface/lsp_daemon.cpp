@@ -154,7 +154,7 @@ void server(i32 port) {
 			if (!path.exists()) return crow::response(404, "File not found");
 
 			const auto file        = fs::File(path);
-			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesFromFile(file);
 
 			return crow::response(200, lsp::getSemanticTokens(file_vector));
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
@@ -179,7 +179,7 @@ void server(i32 port) {
 			std::vector<std::string> out;
 
 			query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
-				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+				auto src_files = compiler::frontend::SourceFile::getSourceFilesFromFile(file);
 				for (auto& src_file: src_files) {
 					auto pst        = src_file->getPST();
 					auto pst_root   = pst->getRootElement();
