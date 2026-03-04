@@ -172,9 +172,7 @@ namespace concurrent {
 		}
 
 		/**
-		 * Performs atomically a following sequence:
-		 * 1. Inserts key->value into the container if key does not exist.
-		 * 2. Calls f with reference to the value associated with the key.
+		 * Inserts key->value into the container if key does not exist.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void putOrAssign(const K& key, D&& value) RELEASE_NOEXCEPT {
