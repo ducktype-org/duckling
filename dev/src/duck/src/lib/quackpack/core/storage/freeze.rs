@@ -6,10 +6,7 @@ use crate::{
     QuackError, QuackResultContext, StrId, qp_bail,
     quackpack::core::{
         FeatureName, Version,
-        storage::{
-            package_id::{GitId, LocalId, PackageId, RegistryId},
-            venv::VenvData,
-        },
+        storage::package_id::{GitId, LocalId, PackageId, RegistryId},
         types_common::{ExpandedLocation, InternedExpandedLocation},
     },
 };

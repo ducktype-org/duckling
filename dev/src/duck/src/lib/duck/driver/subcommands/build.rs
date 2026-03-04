@@ -1,5 +1,5 @@
 use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::{DuckCtx, QpCtx, QuackResult, qp_bail};
+use crate::{DuckCtx, QpCtx, QuackResult};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{

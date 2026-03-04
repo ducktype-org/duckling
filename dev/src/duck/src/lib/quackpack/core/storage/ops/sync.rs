@@ -15,7 +15,7 @@ use crate::{
             solver_freeze::SolverFreeze,
             storage::{
                 git_access::StorageGitAccess,
-                locks::{CompileLock, TrySyncLock},
+                locks::TrySyncLock,
                 package_id::{GitId, PackageId, RegistryId},
                 paths::Storage,
                 venv::{Venv, VenvData},

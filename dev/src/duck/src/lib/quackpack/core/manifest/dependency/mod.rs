@@ -90,6 +90,10 @@ impl Dependency {
         features
     }
 
+    pub fn is_aliased(&self) -> bool {
+        self.real_name() != self.desc().manifest_name()
+    }
+
     /// Get an iterator over features that are enabled for the given features.
     pub fn enabled_features<I>(&self, enabled_features: I) -> Vec<FeatureName>
     where
