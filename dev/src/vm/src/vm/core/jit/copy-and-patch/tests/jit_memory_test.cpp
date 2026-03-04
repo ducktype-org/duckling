@@ -20,13 +20,13 @@ private:
 	void testJitMemory() {
 		PUSH_DIAGNOSTIC ALLOW_EXTENSIONS;
 		constexpr char  binary[] = {
-#embed "data-text" suffix(, )
+#embed "mock_stencils-text" suffix(, )
 		};
 		POP_DIAGNOSTIC
 
 		constexpr vm::jit::Stencils stencils = vm::jit::Stencils{ .binary = std::to_array(binary),
 			                                                      .functions = {
-#include "data-nm"
+#include "mock_stencils-nm"
 																  } };
 
 		std::cerr << "Binary:\n";
@@ -42,10 +42,10 @@ private:
 			CORE_PANIC("No function with that name");
 		};
 
-		auto foo_data = find_func("foo");
+		auto foo_code = find_func("foo");
 
-		auto memory = JitMemory::allocate(foo_data.size);
-		std::memcpy(memory.memory, stencils.binary.data() + foo_data.place, foo_data.size);
+		auto memory = JitMemory::allocate(foo_code.size);
+		std::memcpy(memory.memory, stencils.binary.data() + foo_code.place, foo_code.size);
 		memory.mark_executable();
 		auto fibo = memory.into_func<int(int)>();
 		assert(std::invoke(fibo, 0) == 1);
