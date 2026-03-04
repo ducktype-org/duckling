@@ -16,7 +16,12 @@
 STRONG_TYPEDEF_INT(u8, uint8_t);
 using u16 = uint16_t;
 using u32 = uint32_t;
+#ifdef __APPLE__
 using u64 = std::size_t;
+static_assert(sizeof(u64) == sizeof(uint64_t), "u64 should be 64 bits");
+#else
+using u64 = uint64_t;
+#endif
 
 STRONG_TYPEDEF_INT(i8, int8_t);
 using i16 = int16_t;
