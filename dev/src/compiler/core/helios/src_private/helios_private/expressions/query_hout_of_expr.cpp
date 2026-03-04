@@ -567,7 +567,7 @@ namespace compiler::helios::code {
 		) {
 			auto element_unlocked = element.unlockOpt(ctx);
 			if (element_unlocked.empty()) {
-				// PST should have reported parsing err
+				// PST should have reported parsing error for this, so we just return failure here.
 				return query::Failed();
 			}
 
