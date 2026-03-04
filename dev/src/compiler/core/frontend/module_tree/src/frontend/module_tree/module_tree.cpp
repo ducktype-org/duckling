@@ -874,8 +874,8 @@ namespace compiler::frontend {
 		std::mutex              wait_mtx;
 		std::condition_variable wait_cv;
 		std::atomic<usize>      next_file_id{ 0 };
-		std::atomic<usize>      tasks_left{ files_to_parse.size() };
-		auto&                   manager = concurrent::worker::WorkerManager::get();
+		bool                    all_files_parsed = false;
+		auto&                   manager          = concurrent::worker::WorkerManager::get();
 
 		auto schedule_next_file_parsing = [&](concurrent::worker::WRef worker) {
 			usize idx = next_file_id.fetch_add(1, std::memory_order_relaxed);
@@ -889,12 +889,11 @@ namespace compiler::frontend {
 							file_id
 						);
 					file_ref->getPST();
-
-					if (tasks_left.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-						std::lock_guard<std::mutex> lock(wait_mtx);
-						wait_cv.notify_one();
-					}
 				});
+			} else if (idx == files_to_parse.size() + concurrent::worker::getWorkerCount() - 1) {
+				std::lock_guard<std::mutex> lock(wait_mtx);
+				all_files_parsed = true;
+				wait_cv.notify_one();
 			}
 		};
 
@@ -902,7 +901,7 @@ namespace compiler::frontend {
 
 		// Wait until all files are parsed.
 		std::unique_lock lock(wait_mtx);
-		wait_cv.wait(lock, [&] { return tasks_left.load(std::memory_order_acquire) == 0; });
+		wait_cv.wait(lock, [&] { return all_files_parsed; });
 
 		// Clear the call back if all files are parsed.
 		manager.setNoTasksCallback([](concurrent::worker::WRef) {});

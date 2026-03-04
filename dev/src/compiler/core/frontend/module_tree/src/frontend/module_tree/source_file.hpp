@@ -26,7 +26,10 @@ namespace compiler::frontend {
 	class SourceFile final {
 		/**
 		 * @brief Synchronizes access to state of SourceFile. Since multiple workers may try to
-		 * parse the same file simultaneously.
+		 * parse the same SourceFile simultaneously.
+		 * @note: It's possible that there are two SourceFiles pointing to the same physical file in
+		 * the file system. In this case, two threads may parse the same physical file at once, but
+		 * since this operation is read-only, it's thread-safe.
 		 */
 		mutable base::Box<concurrent::AtomicFlagSpinlock> state_lock;
 		fs::File                                          file;
