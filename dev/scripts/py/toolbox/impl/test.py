@@ -68,9 +68,7 @@ def test_impl(
 
     # Build tests (can be multiple targets)
     for target in build_targets:
-        bash_command(
-            f"cmake --build {build_dir} --target {target} -j {int(thread_count)}"
-        )
+        bash_command(f"cmake --build {build_dir} --target {target} -j {int(thread_count)}")
 
     # Build ctest command
     ctest_cmd = "ctest"

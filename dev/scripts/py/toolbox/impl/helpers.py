@@ -30,13 +30,10 @@ class BashCommandError(Exception):
     def __init__(
         self, command: str, exit_code, stdout, stderr, at: pathlib.Path = None
     ):
-        at_str = ("\n\texecuted at `%s` " % at.absolute()) if at else ""
-        stdout_str = ("\n" + stdout) if stdout else ""
-        stderr_str = ("\n" + stderr) if stderr else ""
         super().__init__(
-            "\n\tBash command `%s` %s\n\thas failed with an exit code: %s, because:\n"
-            "[STDOUT]:%s\n"
-            "[STDERR]:%s" % (command, at_str, exit_code, stdout_str, stderr_str)
+            f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
+            + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
+            + f"[STDERR]:{"\n" + stderr if stderr else ""}"
         )
         self.command = command
         self.exit_code = exit_code
