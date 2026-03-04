@@ -1,14 +1,12 @@
+from __future__ import annotations
+
 from contextlib import suppress
 from itertools import chain
 from pathlib import Path
 from typing import Final
 
 from quackpack.core.types.manifest.editable import EditableManifest
-from quackpack.core.types.manifest.schemas.manifest import (
-    ManifestSchema,
-    MetadataSchema,
-    SemverSchema,
-)
+from quackpack.core.types.manifest.schemas.manifest import ManifestSchema, MetadataSchema, SemverSchema
 from quackpack.core.types.package import Package
 from quackpack.util.global_context import GlobalContext
 from quackpack.util.logger import get_logger
@@ -55,9 +53,7 @@ class PackageLoader:
         return potential_path if potential_path.is_dir() else None
 
     @classmethod
-    def find_from_directory(
-        cls, start_path: Path, ctx: GlobalContext, allow_global: bool = False
-    ) -> Package:
+    def find_from_directory(cls, start_path: Path, ctx: GlobalContext, allow_global: bool = False) -> Package:
         """
         Start searching from directory `start_path`.
 
@@ -85,14 +81,10 @@ class PackageLoader:
         if allow_global:
             return cls.global_package(ctx)
         else:
-            raise QuackPackError(
-                f"No manifest found from `{start_path}` to `{start_path.root}`"
-            )
+            raise QuackPackError(f"No manifest found from `{start_path}` to `{start_path.root}`")
 
     @classmethod
-    def find_from_file(
-        cls, start_path: Path, ctx: GlobalContext, allow_global: bool = False
-    ) -> Package:
+    def find_from_file(cls, start_path: Path, ctx: GlobalContext, allow_global: bool = False) -> Package:
         """
         Firstly check, if `start_path` is manifest, otherwise search from `start_path`'s parent parent.
         (As you'd `cd ..`, if you are in directory with `start_path`).
@@ -113,9 +105,7 @@ class PackageLoader:
             local_storage_path = cls.local_storage_path(start_path.parent)
             return Package(start_path, venv_config_location, local_storage_path, ctx)
         # Note: We skip first parent, so we don't pick up manifest from same directory as `start_path`.
-        return PackageLoader.find_from_directory(
-            start_path.parent.parent, ctx, allow_global=allow_global
-        )
+        return PackageLoader.find_from_directory(start_path.parent.parent, ctx, allow_global=allow_global)
 
     @classmethod
     def find_at_exact_directory(cls, dir_path: Path, ctx: GlobalContext) -> Package:
@@ -170,9 +160,7 @@ class PackageLoader:
         # This check is not really needed as we have "x" flag later paired with suppress,
         # but will in most cases help avoid the operations inside.
         if not manifest_path.exists():
-            metadata = MetadataSchema(
-                version=SemverSchema(str(Version.default())), name="global"
-            )
+            metadata = MetadataSchema(version=SemverSchema(str(Version.default())), name="global")
             manifest = ManifestSchema(metadata=metadata)
             saveable_manifest = EditableManifest.create_with_data(
                 manifest.model_dump(exclude_none=True, exclude_unset=True)

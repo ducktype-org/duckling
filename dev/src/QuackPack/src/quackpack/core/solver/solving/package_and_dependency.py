@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import override
 
@@ -14,13 +16,10 @@ class PackageAndDependencyId:
 
     @staticmethod
     def from_dependency(
-        parent_package: ResolvedPackage,
-        dependency: Dependency,
-        id_resolvents: IdResolvents,
+        parent_package: ResolvedPackage, dependency: Dependency, id_resolvents: IdResolvents
     ) -> PackageAndDependencyId:
         return PackageAndDependencyId(
-            parent_package,
-            UnresolvedId.from_dependency(dependency).resolve(id_resolvents),
+            parent_package, UnresolvedId.from_dependency(dependency).resolve(id_resolvents)
         )
 
     @override

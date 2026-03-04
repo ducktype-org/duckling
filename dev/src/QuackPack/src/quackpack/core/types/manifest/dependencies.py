@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import ItemsView, Iterator, KeysView, ValuesView
 
 from quackpack.core.types.manifest.dependency_spec import DependencySpec

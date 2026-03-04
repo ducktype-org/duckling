@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from quackpack.core.types.manifest.schemas.registry import (
     RegistryManifestSchema,
     RegistryMetadataSchema,

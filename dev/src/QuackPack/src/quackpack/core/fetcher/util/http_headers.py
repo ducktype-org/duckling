@@ -9,6 +9,8 @@ References:
   [1] https://github.com/tornadoweb/tornado/blob/master/tornado/httputil.py
 """
 
+from __future__ import annotations
+
 import re
 from collections.abc import Iterable, Iterator, MutableMapping
 from functools import lru_cache

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import ItemsView, Iterable, Iterator, KeysView, ValuesView
 
 from pydantic import RootModel
