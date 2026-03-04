@@ -19,6 +19,7 @@ add_files(
 	thread/vmthread.cpp
     thread/vmvalue.cpp
 	jit/jit_compiler.cpp
+	jit/block_detection.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
