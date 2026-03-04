@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vm/bytecode/bytecode.hpp>
-#include <vector>
-
 #ifdef ENABLE_JIT
+
+#include <vector>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit {
 
@@ -28,7 +29,7 @@ struct CfOccurrence {
  * @param function The function to analyze
  * @return Vector of control flow occurrences (labels and jumps)
  */
-std::vector<CfOccurrence> collectControlFlowOccurrences(const code::Function& function);
+std::vector<CfOccurrence> collectControlFlowOccurrences(const low::LowFuncData& function);
 
 /**
  * @brief Returns a sorted vector of basic block beginning positions with last postion equal to function body size
@@ -36,7 +37,7 @@ std::vector<CfOccurrence> collectControlFlowOccurrences(const code::Function& fu
  * @param function The function to analyze
  * @return Sorted vector of basic block beginning positions with last postion equal to function body size
  */
-std::vector<usize> collectBasicBlockBeginnings(const code::Function& function);
+std::vector<usize> collectBasicBlockBeginnings(const low::LowFuncData& function);
 
 } // namespace vm::jit
 

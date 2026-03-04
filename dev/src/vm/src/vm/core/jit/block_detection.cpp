@@ -3,44 +3,47 @@
 #ifdef ENABLE_JIT
 
 #include <vm/bytecode/instructions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
+
+#include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
 
 using namespace vm::code::instructions;
 
 namespace vm::jit {
 
-std::vector<CfOccurrence> collectControlFlowOccurrences(const code::Function& function) {
+std::vector<CfOccurrence> collectControlFlowOccurrences(const low::LowFuncData& function) {
     std::vector<CfOccurrence> out;
-    out.reserve(function.body.size());
 
-    for (usize index = 0; index < function.body.size(); ++index) {
-        instr_match(function.body[index]) {
-            instr_case(Op_label, instr) {
-                out.push_back(CfOccurrence{index, CfOccurrenceKind::Label});
-            }
-            instr_case(Op_jmp_label, instr) {
+    for (usize index = 0; index < function.bc.size(); ++index) {
+        low::MicroOpcode opcode = getInstructionOpcode(function.bc[index]);
+
+        switch(opcode) {
+            case low::MicroOpcode::jmp_label: {
                 out.push_back(CfOccurrence{index, CfOccurrenceKind::Jump});
+                break;
             }
-            instr_case(Op_jmpIf_label, instr) {
+            case low::MicroOpcode::jmpIf_label:
+            case low::MicroOpcode::jmpIfNot_label: {
                 out.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
+                break;
             }
-            instr_case(Op_jmpIfNot_label, instr) {
-                out.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
-            }
-            instr_case(Op_ret, instr) {
+            case low::MicroOpcode::ret:
+            case low::MicroOpcode::ret_tailcall_func: {
                 out.push_back(CfOccurrence{index, CfOccurrenceKind::Ret});
+                break;
             }
-            instr_case(Op_ret_tailcall_func, instr) {
-                out.push_back(CfOccurrence{index, CfOccurrenceKind::Ret});
+            default: {
+                break;
             }
-            instr_default {}
         }
+
+        // MISSING: Detect goals of jumps and add them as "labels" (change name of CfOccurance::Label)
     }
 
     return out;
 }
 
-std::vector<usize> collectBasicBlockBeginnings(const code::Function& function) {
+std::vector<usize> collectBasicBlockBeginnings(const low::LowFuncData& function) {
     std::vector<CfOccurrence> cf_occurrences = collectControlFlowOccurrences(function);
     std::vector<usize> block_beginnings(1, 0); // First block always starts at position 0
 
