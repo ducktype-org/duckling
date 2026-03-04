@@ -4,7 +4,6 @@ import shutil
 import subprocess
 import argparse
 
-
 def compile_and_copy_binary(build_dir_name="build"):
     # Define paths (build dir name is used relative to two levels up)
     build_dir = os.path.abspath(os.path.join("..", "..", build_dir_name))
@@ -16,9 +15,7 @@ def compile_and_copy_binary(build_dir_name="build"):
     # Step 1: Go to build_dir and execute "ninja lsp_daemon"
     print(f"Compiling the binary in {build_dir}...")
     try:
-        subprocess.run(
-            ["cmake", "--build", build_dir, "--target", binary_name], check=True
-        )
+        subprocess.run(["cmake", "--build", build_dir,  "--target", binary_name], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Compilation failed: {e}")
         return
@@ -35,16 +32,9 @@ def compile_and_copy_binary(build_dir_name="build"):
 
     print("Binary successfully compiled and copied.")
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Compile and copy lsp_daemon from build directory."
-    )
-    parser.add_argument(
-        "build_dir_name",
-        nargs="?",
-        default="build",
-        help='Name of the build directory (default: "build")',
-    )
+    parser = argparse.ArgumentParser(description="Compile and copy lsp_daemon from build directory.")
+    parser.add_argument("build_dir_name", nargs="?", default="build",
+                        help='Name of the build directory (default: "build")')
     args = parser.parse_args()
     compile_and_copy_binary(args.build_dir_name)
