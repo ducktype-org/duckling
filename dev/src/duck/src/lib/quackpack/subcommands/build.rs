@@ -30,7 +30,7 @@ pub fn compile<'duck>(options: BuildOptions<'duck>) -> QuackResult<()> {
         rt.block_on(async { sync(ctx, &package, SyncOptions::default()) })?;
     let _compile_lock = lock
         .to_compile_lock(&storage, package.to_venv_id())
-        .context("failed to acquire compile lock")?;
+        .context("failed to acquire a compile lock")?;
     let bctx = BuildContext {
         duck_ctx: ctx,
         package: &package,

@@ -58,7 +58,9 @@ fn visit_impl<'a>(
         qp_bail!("malformed freezefile: cycle {cycle}")
     }
     for dep in &current.dependencies {
-        visit_impl(dep, order, visited)?;
+        if !visited.contains(&dep.node) {
+            visit_impl(dep, order, visited)?;
+        }
     }
     order.push(current);
     Ok(())
@@ -94,6 +96,8 @@ impl DependencyNode {
                 pkg_type.deepen(),
             )?);
         }
+        let popped = visited.pop();
+        debug_assert_eq!(popped, Some(node));
         Ok(Self { node, dependencies })
     }
 }

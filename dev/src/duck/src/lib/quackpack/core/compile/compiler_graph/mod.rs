@@ -17,7 +17,7 @@ use crate::{
 use super::Compiler;
 
 pub mod creating_graph;
-pub mod reducing_graph;
+pub mod modifying_graph;
 
 #[cfg(test)]
 mod tests;

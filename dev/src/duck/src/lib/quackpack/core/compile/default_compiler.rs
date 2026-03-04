@@ -4,6 +4,7 @@ use super::Compiler;
 use crate::{
     DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal,
     quackpack::core::compile::compiler_package::CompilerPackage,
+    util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
 
 #[non_exhaustive]
@@ -68,6 +69,8 @@ impl<'duck> Compiler for DefaultCompiler<'duck> {
         DefaultCompiler::set_src_dir(&mut builder, package);
         DefaultCompiler::set_package_artifacts_dir(&mut builder, package);
         DefaultCompiler::set_profile_arguments(&mut builder, package, profile);
+        // Duckc doesn't support parallel compilations on the same artifacts directory.
+        let _lock = package.package().artifacts_dir().lock(ShouldBlock::Yes).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", package.package().as_freeze_dep()))?;
         let code = builder.status().context("failed to spawn duckc")?;
         if !code.success() {
             qp_bail!(
