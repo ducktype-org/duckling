@@ -51,6 +51,8 @@ namespace lexer {
 			Error
 		};
 
+		static std::string typeToStr(Type type);
+
 		/**
 		 * @brief Non-exhaustive enum of bracket types
 		 *
@@ -211,6 +213,12 @@ namespace lexer {
 
 		[[nodiscard]]
 		dia::SourcePosition getPosition() const;
+
+		/**
+		 * @brief Returns a human readable description of the token, used for error messages.
+		 */
+		[[nodiscard]]
+		std::string describe() const;
 
 	private:
 		static Token makeError(const dia::SourcePosition&);
