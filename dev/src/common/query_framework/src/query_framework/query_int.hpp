@@ -13,6 +13,8 @@
 #include <query_framework/internal/query_graph/node_id.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
 #include <query_framework/utils/simple_keys.hpp>                     // IWYU pragma: export
+#include <query_framework/utils/query_hash.hpp> // IWYU pragma: export
+
 
 #include <string_view>  // IWYU pragma: export
 #include <base/preproc/remove_parentheses.hpp>
@@ -35,22 +37,23 @@ namespace query::internal {
  * @param result_mp Type of the query result
  * @param query_data_mp Query data struct
  */
-#define DECLARE_QUERY_AUX(query_type, key_mp, result_mp, query_data_mp)                    \
-	struct query_type final {                                                              \
-		using QueryType = query_type;                                                      \
-		using QKey      = key_mp;                                                          \
-		using QResult   = result_mp;                                                       \
-                                                                                           \
-	private:                                                                               \
-		static auto                       internal_query(const QKey&) -> QResult;          \
-		static ::query::internal::QueryID id;                                              \
-		friend struct ::query::Context;                                                    \
-		friend struct ::query::internal::EntryPointHelper;                                 \
-                                                                                           \
-	public:                                                                                \
-		static constexpr ::query::internal::QueryData QUERY_DATA          = query_data_mp; \
-		static constexpr bool                         QUERY_INTERFACE_TAG = true;          \
-		static auto                                   getID() { return id; }               \
+#define DECLARE_QUERY_AUX(query_type, key_mp, result_mp, query_data_mp)                     \
+	struct query_type final {                                                               \
+		using QueryType = query_type;                                                       \
+		using QKey      = key_mp;                                                           \
+		using QResult   = result_mp;                                                        \
+                                                                                            \
+	private:                                                                                \
+		static auto                       internal_query(const QKey&) -> QResult;           \
+		static auto                       internal_erase(::query::QueryStableHash) -> bool; \
+		static ::query::internal::QueryID id;                                               \
+		friend struct ::query::Context;                                                     \
+		friend struct ::query::internal::EntryPointHelper;                                  \
+                                                                                            \
+	public:                                                                                 \
+		static constexpr ::query::internal::QueryData QUERY_DATA          = query_data_mp;  \
+		static constexpr bool                         QUERY_INTERFACE_TAG = true;           \
+		static auto                                   getID() { return id; }                \
 	};
 
 /**
@@ -63,14 +66,15 @@ namespace query::internal {
  * This way there are no issues with commas in macro arguments.
  * Lack of parentheses should produce compilation errors.
  */
-#define DECLARE_QUERY(query_type, key, value, tags)               \
-	DECLARE_QUERY_AUX(                                            \
-		query_type,                                               \
-		key,                                                      \
-		value,                                                    \
-		::query::internal::QueryData(                             \
-			::query::internal::QueryKind::Normal,                 \
-			#query_type,                                          \
-			::query::internal::QueryTags REMOVE_PARENTHESES(tags) \
-		)                                                         \
+#define DECLARE_QUERY(query_type, key, value, tags)                \
+	DECLARE_QUERY_AUX(                                             \
+		query_type,                                                \
+		key,                                                       \
+		value,                                                     \
+		::query::internal::QueryData(                              \
+			::query::internal::QueryKind::Normal,                  \
+			#query_type,                                           \
+			::query::internal::QueryTags REMOVE_PARENTHESES(tags), \
+			{ .erase_function = query_type::internal_erase }       \
+		)                                                          \
 	)
