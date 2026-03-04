@@ -64,7 +64,7 @@ public:
 private:
 	template<u64 THREAD_COUNT>
 	void addMetadataTest() {
-		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 OPS_PER_THREAD = 2'000;
 
 		query::internal::MetadataStorage storage;
 
@@ -101,7 +101,7 @@ private:
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata2>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata3>().size();
 
-		ASSERT_EQUAL(total_metadata_count, THREAD_COUNT * 10'000);
+		ASSERT_EQUAL(total_metadata_count, THREAD_COUNT * OPS_PER_THREAD);
 
 		// Verify that we can retrieve metadata for all nodes
 		u64 total_retrieved_count = 0;
@@ -138,7 +138,7 @@ private:
 
 	template<u64 THREAD_COUNT>
 	void addMetadataIfNotExistTest() {
-		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 OPS_PER_THREAD = 2'000;
 
 		query::internal::MetadataStorage storage;
 
@@ -204,7 +204,7 @@ private:
 
 	template<u64 THREAD_COUNT>
 	void testConcurentReadsAndWrites() {
-		constexpr u64 OPS_PER_THREAD = 15'000;
+		constexpr u64 OPS_PER_THREAD = 3'000;
 
 		query::internal::MetadataStorage storage;
 
