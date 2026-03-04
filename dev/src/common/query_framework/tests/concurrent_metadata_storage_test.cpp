@@ -191,7 +191,9 @@ private:
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata1>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata2>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata3>().size();
-		ASSERT_EQUAL(total_metadata_count, successful_adds + HASH_MODULO);  // +HASH_MODULO from pre-added q3 nodes
+		ASSERT_EQUAL(
+			total_metadata_count, successful_adds + HASH_MODULO
+		);  // +HASH_MODULO from pre-added q3 nodes
 
 		// verify that no q3 node was modified:
 		for (u64 hash = 0; hash < HASH_MODULO; ++hash) {
