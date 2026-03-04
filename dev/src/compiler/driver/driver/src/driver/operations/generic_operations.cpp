@@ -119,8 +119,7 @@ namespace compiler::driver {
 			}
 			CRef lir_data = &lir_data_result->valueOrThrow();
 
-			auto output_name
-				= getModuleOutputName(key);
+			auto output_name = getModuleOutputName(key);
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
