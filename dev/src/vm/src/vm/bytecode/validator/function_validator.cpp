@@ -17,6 +17,7 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <ranges>
 #include <variant>
 
 using namespace vm;
@@ -105,11 +106,8 @@ public:
 		  tod_map(&tod_map),
 		  type_metadata(&type_metadata) {
 		push(base::StrID("ret_val"), signature.result_type.str);
-		u64 idx = 0;
-		for (const auto& param: signature.parameters) {
+		for (auto [idx, param]: std::views::enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
-			++idx;
-		}
 	}
 
 	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }
@@ -1336,9 +1334,8 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(
-		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
-	) const {
+	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
+		const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 

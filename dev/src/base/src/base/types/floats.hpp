@@ -19,9 +19,7 @@
 #pragma once
 
 #include <cfloat>  // For mantissa sizes.
-#if __has_include(<stdfloat>)
-	#include <stdfloat>
-#endif
+#include <stdfloat>
 #if defined(__STDCPP_FLOAT32_T__) && defined(__STDCPP_FLOAT64_T__)
 using f32 = std::float32_t;
 using f64 = std::float64_t;

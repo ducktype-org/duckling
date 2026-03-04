@@ -20,12 +20,8 @@ namespace base {
 		// Mutex to protect libbacktrace's non-thread-safe global state.
 		// GCC's std::stacktrace::current() uses libbacktrace internally,
 		// which has a racy mmap-based allocator (backtrace_state).
-		//
-		// @note: Use a pointer to avoid static initialization mutex issues on macOS.
-		// On macOS, function-local statics use pthread_mutex for initialization guards,
-		// which can fail during early static initialization before the C++ runtime is ready.
-		static std::mutex* stacktrace_mutex = new std::mutex();
-		std::scoped_lock   lock(*stacktrace_mutex);
+		static std::mutex stacktrace_mutex;
+		std::scoped_lock  lock(stacktrace_mutex);
 
 		if (max_depth > 0)
 			return prettyStacktraceString(std::stacktrace::current(0, max_depth));

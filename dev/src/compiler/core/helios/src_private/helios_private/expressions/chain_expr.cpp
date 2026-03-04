@@ -563,7 +563,7 @@ namespace compiler::helios::code {
 						}
 						auto node = makeBox<AccessExpr>(
 							query_ctx,
-							pstOrigin(current_expr->origin, expr_access),
+							current_expr->origin.extended(expr_access),
 							std::move(current_expr),
 							sym
 						);
@@ -626,7 +626,7 @@ namespace compiler::helios::code {
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto whole_expr_origin
-				= pstOrigin(current_state.getNamespaceLikePstOrigin(), expr_access);
+				= current_state.getNamespaceLikePstOrigin().extended(expr_access);
 			return processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 		}
 
@@ -721,7 +721,7 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
 				auto whole_expr_origin
-					= pstOrigin(current_state.getNamespaceLikePstOrigin(), expr_access);
+					= current_state.getNamespaceLikePstOrigin().extended(expr_access);
 				auto state_res
 					= processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, state_res);

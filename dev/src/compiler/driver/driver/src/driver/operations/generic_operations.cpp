@@ -20,7 +20,6 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/optional.hpp>
-#include <base/extend_cpp/std_compat.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <hashing/component_hash.hpp>

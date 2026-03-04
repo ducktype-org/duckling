@@ -31,7 +31,6 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
-#include <base/extend_cpp/std_compat.hpp>     // IWYU pragma: export
 #include <base/misc/int_conv.hpp>              // IWYU pragma: export
 #include <base/misc/simple_char_classifications.hpp>
 #include <base/preproc/argument_splitter.hpp>  // IWYU pragma: export

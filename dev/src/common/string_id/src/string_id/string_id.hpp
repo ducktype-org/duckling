@@ -154,7 +154,7 @@ namespace base {
 			return view().stringView() == oth.stringView();
 		}
 
-		explicit operator usize() const { return static_cast<usize>(id); }
+		explicit operator usize() const { return usize(id); }
 
 		friend void swap(StrID& first, StrID& second) noexcept {
 			using std::swap;

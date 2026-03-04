@@ -10,11 +10,6 @@ if(EMBED_ASSETS)
 # There is another more portable way to do this with converting files into C++ arrays
 
 # Detect platform and set appropriate objcopy tool and format
-set(IS_ARM64 FALSE)
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-    set(IS_ARM64 TRUE)
-endif()
-
 if(WIN32)
     # On Windows, use llvm-objcopy with COFF format
     find_program(OBJCOPY_TOOL llvm-objcopy)
@@ -22,28 +17,13 @@ if(WIN32)
         message(FATAL_ERROR "llvm-objcopy not found. Please install LLVM or ensure it's in PATH")
     endif()
     set(OBJCOPY_FORMAT "coff-x86-64")
-elseif(APPLE)
-    # On macOS, use llvm-objcopy with Mach-O format
-    find_program(OBJCOPY_TOOL llvm-objcopy)
-    if(NOT OBJCOPY_TOOL)
-        message(FATAL_ERROR "llvm-objcopy not found. Please install LLVM (e.g. brew install llvm)")
-    endif()
-    if(IS_ARM64)
-        set(OBJCOPY_FORMAT "mach-o-arm64")
-    else()
-        set(OBJCOPY_FORMAT "mach-o-x86-64")
-    endif()
 else()
     # On Linux/Unix, use standard objcopy with ELF format
     find_program(OBJCOPY_TOOL objcopy)
     if(NOT OBJCOPY_TOOL)
         message(FATAL_ERROR "objcopy not found. Please install binutils")
     endif()
-    if(IS_ARM64)
-        set(OBJCOPY_FORMAT "elf64-littleaarch64")
-    else()
-        set(OBJCOPY_FORMAT "elf64-x86-64")
-    endif()
+    set(OBJCOPY_FORMAT "elf64-x86-64")
 endif()
 
 # Find all YAML template files

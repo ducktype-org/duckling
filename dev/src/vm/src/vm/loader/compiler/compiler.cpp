@@ -4,7 +4,6 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/std_compat.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
@@ -92,15 +91,13 @@ namespace vm::loader::compiler {
 	void Compiler::linkLabelArguments(
 		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
 	) {
-		usize instr_idx = 0;
-		for (auto& instr: instructions) {
+		for (auto [instr_idx, instr]: std::views::enumerate(instructions)) {
 			auto       opcode_num = std::to_underlying(getInstructionOpcode(instr));
 			std::array args{ Ref(&instr.arg0), Ref(&instr.arg1) };
 			auto       are_args_labels = low::instruction_tags::IS_ARGUMENT_LABEL.at(opcode_num);
 
 			for (auto [arg, is_label]: std::views::zip(args, are_args_labels))
 				if (is_label) *arg = label_map.at(*arg) - static_cast<usize>(instr_idx) - 1;
-			++instr_idx;
 		}
 	}
 
@@ -164,24 +161,19 @@ namespace vm::loader::compiler {
 		// Label positions in high bytecode, used only for graph traversing
 		// in this function. Not used when lowering to microbytecode.
 		base::HashMap<base::StrID, usize> label_positions{};
-		usize                             idx = 0;
-		for (const auto& instr: ctx.function.body) {
+		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			instr_match(instr) {
 				instr_case(code::instructions::Op_label, label) {
 					label_positions.put(label.label.label_name, idx);
 				}
 				instr_default {}
 			}
-			++idx;
 		}
 
 		code::FuncSignature func_signature = ctx.function.signature;
 		push(base::StrID("ret_val"), func_signature.result_type.str);
-		usize param_idx = 0;
-		for (const auto& param_type: func_signature.parameters) {
-			push(base::StrID(base::strConcat("arg", param_idx).c_str()), param_type.str);
-			++param_idx;
-		}
+		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
+			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
 		std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
 			{ ctx.function.body.size(), {}, 0 }  // sentinel
@@ -343,8 +335,7 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::compileNewExtCFunctions(
-		const std::vector<code::ExternalCFunction>& new_functions
+	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
 			program_ctx.ext_c_functions.insert(new_func, new_func.name);

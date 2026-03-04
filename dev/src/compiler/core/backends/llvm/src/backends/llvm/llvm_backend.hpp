@@ -11,7 +11,6 @@
 #include <string_id/string_id.hpp>
 
 #include <filesystem>
-#include <span>
 
 namespace compiler::backend_llvm {
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };

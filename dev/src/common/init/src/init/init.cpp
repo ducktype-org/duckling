@@ -42,14 +42,10 @@ namespace init {
 		 * Wrapper around InitState object instance.
 		 * This way it can be safely used before main is called,
 		 * preventing static initialization order fiasco.
-		 *
-		 * @note On macOS, function-local statics use pthread_mutex for initialization
-		 * guards, which can fail during early static initialization. We use a raw
-		 * pointer with immediate allocation to avoid the mutex guard.
 		 */
 		Ref<InitState> getInitState() {
-			static InitState* deinit_static = new InitState();
-			return deinit_static;
+			static InitState deinit_static;
+			return &deinit_static;
 		}
 
 		/**

@@ -37,9 +37,8 @@ namespace query::internal {
 		struct ChildrenData final {
 		private:
 			std::vector<NodeID> children;
-			IF_BUILD_TYPE_DEV(
-				mutable base::Box<concurrent::AssertLock> lock
-				= base::makeBox<concurrent::AssertLock>();  // protects children vector
+			IF_BUILD_TYPE_DEV(mutable base::Box<concurrent::AssertLock> lock
+			                  = base::makeBox<concurrent::AssertLock>();  // protects children vector
 			)
 
 		public:
@@ -217,9 +216,8 @@ namespace query::internal {
 		 * Returns all dependencies of a @p node_id of type @p dependency_id.
 		 */
 		[[nodiscard]]
-		std::vector<NodeID> getNodeDepsFiltered(
-			internal::NodeID node_id, QueryID dependency_id
-		) const;
+		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
+			const;
 
 		/**
 		 * @brief Returns the immediate dependencies of a @p node_id.

@@ -17,8 +17,8 @@ namespace tokenizer {
 	 * newline
 	 */
 	usize isNewLine(const std::span<const lexer::Char> where) {
-		auto* newline = unicode::Classifications::newline;
-		if (where.size() > 0 && where[0].is(*newline)) {
+		auto& newline = unicode::Classifications::newline;
+		if (where.size() > 0 && where[0].is(newline)) {
 			if (where.size() > 1 && where[0].is(0x0D) && where[1].is(0x0A)) return 2;
 			return 1;
 		}
