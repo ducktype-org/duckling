@@ -9,7 +9,7 @@
 namespace vm::jit {
 
 enum class CfOccurrenceKind {
-    Label,
+    JumpDestination,
     Jump,
     ConditionalJump,
     Ret,
@@ -20,6 +20,7 @@ struct CfOccurrence {
     CfOccurrenceKind kind;
 
     CfOccurrence(usize position, CfOccurrenceKind kind): position(position), kind(kind) {}
+    auto operator<=>(const CfOccurrence&) const = default;
 };
 
 /**

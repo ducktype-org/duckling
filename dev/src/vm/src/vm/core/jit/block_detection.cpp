@@ -16,15 +16,18 @@ std::vector<CfOccurrence> collectControlFlowOccurrences(const low::LowFuncData& 
 
     for (usize index = 0; index < function.bc.size(); ++index) {
         low::MicroOpcode opcode = getInstructionOpcode(function.bc[index]);
+        u64 arg0 = function.bc[index].arg0;
 
         switch(opcode) {
             case low::MicroOpcode::jmp_label: {
                 out.push_back(CfOccurrence{index, CfOccurrenceKind::Jump});
+                out.push_back(CfOccurrence{index + arg0, CfOccurrenceKind::JumpDestination});
                 break;
             }
             case low::MicroOpcode::jmpIf_label:
             case low::MicroOpcode::jmpIfNot_label: {
                 out.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
+                out.push_back(CfOccurrence{index + arg0, CfOccurrenceKind::JumpDestination});
                 break;
             }
             case low::MicroOpcode::ret:
@@ -36,9 +39,11 @@ std::vector<CfOccurrence> collectControlFlowOccurrences(const low::LowFuncData& 
                 break;
             }
         }
-
-        // MISSING: Detect goals of jumps and add them as "labels" (change name of CfOccurance::Label)
     }
+
+    // Remove duplicates (occur if there are many jumps to the same destination)
+    std::sort(out.begin(), out.end());
+    out.erase(std::unique(out.begin(), out.end()), out.end());
 
     return out;
 }
@@ -48,11 +53,11 @@ std::vector<usize> collectBasicBlockBeginnings(const low::LowFuncData& function)
     std::vector<usize> block_beginnings(1, 0); // First block always starts at position 0
 
     for (const auto& occurrence : cf_occurrences) {
-        if (occurrence.kind == CfOccurrenceKind::Label) {
-            // Labels signify the beginning of a block
+        if (occurrence.kind == CfOccurrenceKind::JumpDestination) {
+            // Jump destinations signify the beginning of a block
             if (block_beginnings.back() != occurrence.position) {
                 // Avoid adding duplicate block beginning if previous block ends in jump
-                // or label is at the start of the function
+                // or it is at the start of the function
                 block_beginnings.push_back(occurrence.position);
             }
         } else {
