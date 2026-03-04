@@ -406,8 +406,6 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                     fetched_manifests: [(pkg, manifest)].into(),
                 }));
             }
-        } else {
-            drop(git_access);
         }
         Ok(None)
     }
