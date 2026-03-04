@@ -105,6 +105,10 @@ namespace compiler::driver {
 			}
 		}
 
+		static std::string getModuleOutputName(const QKey& key) {
+			return getModuleFullName(key.module_id) + typeExtension(key.backend_type);
+		}
+
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			moduleLog(key, "Recompiling");
 
@@ -116,7 +120,7 @@ namespace compiler::driver {
 			CRef lir_data = &lir_data_result->valueOrThrow();
 
 			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+				= getModuleOutputName(key);
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
@@ -168,8 +172,7 @@ namespace compiler::driver {
 		 * Returns Optional empty if the underlying file does not exist anymore.
 		 */
 		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
-			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name = getModuleOutputName(key);
 
 			auto collection   = getQueryArtifactsCollection();
 			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
@@ -186,8 +189,7 @@ namespace compiler::driver {
 		}
 
 		static auto deleteFromDisc(const QKey& key) -> bool {
-			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name = getModuleOutputName(key);
 
 			auto collection = getQueryArtifactsCollection();
 			moduleLog(key, "Deleting artifact from disk");

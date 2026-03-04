@@ -155,7 +155,7 @@ private:
 		driver::exit();
 
 		// delete the artifacts directory after test
-		// std::filesystem::remove_all(artifacts_path.getPath());
+		std::filesystem::remove_all(artifacts_path.getPath());
 	}
 };
 
