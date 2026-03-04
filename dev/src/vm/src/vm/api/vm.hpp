@@ -193,4 +193,14 @@ namespace vm::api {
 		PID pid, Pointer pointer, u64 size
 	);
 	std::expected<response::Pointer, ApiError> debuggerDereferencePointer(PID pid, Pointer pointer);
+
+	std::expected<void, ApiError> debuggerLoadFiles(PID pid, const std::vector<fs::File>& path);
+
+	std::expected<response::CodePosition, ApiError> debuggerGetFilePosition(
+		PID pid, const fs::File& file, usize line
+	);
+
+	std::expected<void, ApiError> debuggerPutBreakpoint(PID pid, u64 func_id, u64 instr_pos);
+
+	std::expected<void, ApiError> debuggerRemoveBreakpoint(PID pid, u64 func_id, u64 instr_pos);
 }

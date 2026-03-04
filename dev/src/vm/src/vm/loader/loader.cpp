@@ -10,6 +10,7 @@
 #include <diagnostic/source_position.hpp>
 #include <string_id/string_id.hpp>
 
+#include "vm/debugger/vm_debug_symb.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -97,7 +98,8 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
+template <LoadProgramResT T>
+std::expected<T, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
@@ -114,7 +116,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 
 		// @note: After successfully inserting code into `validated_high_program` we compile it to
 		// the low level representation. This step cannot fail since the code was already validated.
-		compiler.recompile(validated_high_program);
+		compiler.recompile<T>(validated_high_program);
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(
@@ -154,9 +156,10 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	return std::unexpected(std::move(log));
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
+template <LoadProgramResT T>
+std::expected<T, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
+	if (opt_code_collection.has_value()) return loadAndCompile<T>(*opt_code_collection);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 
@@ -165,3 +168,9 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 }
 
 vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
+
+template std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>&);
+template std::expected<vm::debugger::DebugContext, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>&);
+
+template std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection&);
+template std::expected<vm::debugger::DebugContext, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection&);

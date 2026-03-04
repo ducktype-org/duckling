@@ -3,7 +3,9 @@
 #include "compiler.hpp"
 
 #include <base/preproc/for_each.hpp>
+#include "diagnostic/location.hpp"
 
+#include "vm/debugger/vm_debug_symb.hpp"
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -32,6 +34,9 @@ namespace vm::loader::compiler::detail {
 
 		low::MicroBytecode result;
 
+		fs::File source_file;
+		u64 func_id;
+
 #if (BUILD_TYPE_DEV_DEBUG)
 		std::string current_high_instruction_representation{};
 #endif
@@ -39,7 +44,10 @@ namespace vm::loader::compiler::detail {
 	public:
 		MicroBytecodeBuilder(Compiler& compiler, Compiler::FunctionCompilationContext& ctx):
 			  compiler{ compiler },
-			  ctx{ ctx } {}
+			  ctx{ ctx },
+			  source_file{ ctx.function.bytecode_pos->getLocation()->getSourceFile() },
+			  func_id(*compiler.program_ctx.function_forward_declarations.idOf(ctx.function.name.str))
+			  {}
 
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
 			return { std::move(result), std::move(label_id_to_offset) };
@@ -47,6 +55,20 @@ namespace vm::loader::compiler::detail {
 
 		/// Add a new high instruction.
 		void add(const code::Instruction& instruction);
+
+		void addWithDebugSymb(const code::Instruction& instruction, vm::debugger::DebugContext& debug_ctx);
+
+		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> buildWithDebug(vm::debugger::DebugContext& debug_ctx) {
+			using namespace vm::debugger;
+			auto label_cpy = ctx.label_id_map;
+			for (auto& [name, id]: label_cpy) {
+				id = label_id_to_offset[id];
+			}
+
+			debug_ctx.funcs_ctx[func_id] = FunctionDebuggerContext{ .label_to_offset = label_cpy, .local_offset_map = ctx.local_offset_map };
+			
+			return { std::move(result), std::move(label_id_to_offset) };
+		}
 
 
 	private:
@@ -485,5 +507,29 @@ namespace vm::loader::compiler::detail {
 			}
 		}
 		POP_DIAGNOSTIC
+	}
+
+	void MicroBytecodeBuilder::addWithDebugSymb(const code::Instruction& instruction, vm::debugger::DebugContext& debug_ctx) {
+		auto maybe_pos = instruction.visit([](auto&& i) { return i.bytecode_pos; });
+
+		if (!maybe_pos) {
+			add(instruction);
+			return;
+		}
+
+		if (maybe_pos->getLocationType() != dia::LocationType::FileLocationType) {
+			/// @todo: deal somehow with the macros (check if they are even possible at bytecode) 
+			add(instruction);
+			return;			
+		}
+
+		if (instruction.opcode() == high::Op_label::OPCODE) {
+			add(instruction);
+			return;
+		}
+
+		auto [line, _] = maybe_pos->getStartLineColumn();
+		debug_ctx.files_ctx[source_file].lines.emplace(line, std::make_pair(func_id, next_instruction_index));
+		add(instruction);
 	}
 }

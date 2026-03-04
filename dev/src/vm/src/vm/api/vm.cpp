@@ -169,6 +169,24 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::Pointer>);
 	}
 
+	std::expected<void, ApiError> debuggerLoadFiles(PID pid, const std::vector<fs::File>& paths) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::DebuggerLoadFiles{ paths }))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> debuggerPutBreakpoint(PID pid, u64 func_id, u64 instr_pos) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::DebuggerPutBreakpoint{ .function_id = func_id, .instr_number = instr_pos }))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> debuggerRemoveBreakpoint(PID pid, u64 func_id, u64 instr_pos) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::DebuggerPutBreakpoint{ .function_id = func_id, .instr_number = instr_pos }))
+		    .transform(ignoreResponse);
+	}
+
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })

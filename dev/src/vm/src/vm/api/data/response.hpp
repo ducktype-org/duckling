@@ -5,6 +5,7 @@
 #include <base/pointers/box.hpp>
 
 #include <vm/core/process/type_metadata/type.hpp>
+#include <vm/debugger/vm_debug_symb.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
@@ -76,6 +77,10 @@ namespace vm::api {
 			vm::Pointer pointer;
 		};
 
+		struct DebugSymbols {
+			vm::debugger::DebugContext dbg_ctx;
+		};
+
 		using Boolean = bool;
 	}
 
@@ -91,5 +96,6 @@ namespace vm::api {
 		response::StackFrameVars,
 		response::PointerData,
 		response::Pointer,
+		response::DebugSymbols,
 		ExitValue>;
 }

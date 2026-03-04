@@ -3,6 +3,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -42,7 +43,8 @@ namespace vm::loader::compiler {
 		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
 		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
 		 */
-		void recompile(const code::ValidProgram& high_program);
+		template <LoadProgramResT T = void>
+		T recompile(const code::ValidProgram& high_program);
 
 		/**
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
@@ -125,7 +127,8 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		void compileNewFunctions(const std::vector<code::Function>& new_functions);
+		template <LoadProgramResT T = void>
+		void compileNewFunctions(const std::vector<code::Function>& new_functions, T* construct);
 
 		/**
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
@@ -160,7 +163,8 @@ namespace vm::loader::compiler {
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
-		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
+		template <LoadProgramResT T = void>
+		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx, T* to_build);
 
 		/**
 		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)

@@ -89,6 +89,20 @@ namespace vm::api {
 		struct DebuggerDereferencePointer {
 			Pointer pointer;
 		};
+
+		struct DebuggerLoadFiles {
+			std::vector<fs::File> filenames;
+		};
+
+		struct DebuggerPutBreakpoint {
+			u64 function_id;
+			u64 instr_number;
+		};
+
+		struct DebuggerRemoveBreakpoint {
+			u64 function_id;
+			u64 instr_number;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -110,6 +124,9 @@ namespace vm::api {
 		request::DebuggerGetStackFrameVars,
 		request::DebuggerGetPointerData,
 		request::DebuggerDereferencePointer,
+		request::DebuggerLoadFiles,
+		request::DebuggerPutBreakpoint,
+		request::DebuggerRemoveBreakpoint,
 		request::Input,
 		request::Output,
 		request::Attach,

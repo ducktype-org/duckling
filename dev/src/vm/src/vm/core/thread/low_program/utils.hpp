@@ -2,6 +2,8 @@
 
 #include "opcodes.hpp"
 
+#include <vm/debugger/vm_debug_symb.hpp>
+
 #include <vm/bytecode/opcode_args.hpp>
 
 #include <tuple>
@@ -85,4 +87,9 @@ namespace vm::low::instruction_tags {
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 	});
+}
+
+namespace vm::loader {
+	template<typename T>
+	concept LoadProgramResT = std::same_as<T, void> || std::same_as<T, vm::debugger::DebugContext>;
 }

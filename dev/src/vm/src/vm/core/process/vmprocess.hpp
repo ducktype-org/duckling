@@ -4,12 +4,15 @@
 
 #include <base/collections/optional.hpp>
 
+#include <filesystem/file.hpp>
+
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
 
@@ -84,9 +87,16 @@ namespace vm {
 		 * @brief Loads the program from a given source into the current loader program state,
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
+		template <loader::LoadProgramResT T = void>
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		);
+
+		base::HashMap<MicroInstruction*, low::MicroOpcode> known_breakpoints;
+
+		std::expected<api::Response, api::OtherError> putBreakpoint(u64 func_id, u64 instr_pos);
+
+		std::expected<api::Response, api::OtherError> removeBreakpoint(u64 func_id, u64 instr_pos);
 
 		/**
 		 * @brief Creates new thread that runs a function.

@@ -11,6 +11,8 @@
 
 #include <string_id/string_id.hpp>
 
+#include <vm/core/thread/low_program/utils.hpp>
+#include <vm/debugger/vm_debug_symb.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -101,8 +103,18 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
+	template<LoadProgramResT T>
+	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx, T* to_build) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
+
+		if constexpr (std::is_same_v<T, vm::debugger::DebugContext>) {
+			for (const auto& instr: ctx.function.body) builder.addWithDebugSymb(instr, *to_build);
+
+			auto [micro_bytecode, label_map] = builder.buildWithDebug(*to_build);
+			linkLabelArguments(micro_bytecode, label_map);
+
+			return micro_bytecode;
+		}
 
 		for (const auto& instr: ctx.function.body) builder.add(instr);
 
@@ -258,7 +270,10 @@ namespace vm::loader::compiler {
 		ctx.local_stack_size = max_stack_size;
 	}
 
-	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
+	template<LoadProgramResT T>
+	void Compiler::compileNewFunctions(
+		const std::vector<code::Function>& new_functions, T* construct
+	) {
 		// Forward declare all functions
 		for (const auto& function: new_functions)
 			program_ctx.function_forward_declarations.insert(function, function.name);
@@ -279,7 +294,7 @@ namespace vm::loader::compiler {
 				parameters_size += type->getSize();
 			}
 
-			low::MicroBytecode bytecode = lowerInstructions(ctx);
+			low::MicroBytecode bytecode = lowerInstructions(ctx, construct);
 
 			low_program.functions.insert(
 				low::LowFuncData{ .name             = function.name,
@@ -334,7 +349,8 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
+	void Compiler::compileNewExtCFunctions(
+		const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
 			program_ctx.ext_c_functions.insert(new_func, new_func.name);
@@ -361,7 +377,13 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::recompile(const code::ValidProgram& high_program) {
+	template<LoadProgramResT T>
+	T Compiler::recompile(const code::ValidProgram& high_program) {
+		T*                         addr = nullptr;
+		vm::debugger::DebugContext local_cpy;
+
+		if constexpr (std::is_same_v<T, vm::debugger::DebugContext>) addr = &local_cpy;
+
 		compileNewTypes(high_program.getTypeContext());
 
 		auto new_c_functions = high_program.extCFunctions()
@@ -377,9 +399,15 @@ namespace vm::loader::compiler {
 		auto new_functions = high_program.functions()
 		                   | std::views::drop(low_program.functions.size())
 		                   | std::ranges::to<std::vector<code::Function>>();
-		compileNewFunctions(new_functions);
+		compileNewFunctions(new_functions, addr);
+
+		if constexpr (std::is_same_v<T, vm::debugger::DebugContext>) return local_cpy;
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
 
+	template void                       Compiler::recompile(const code::ValidProgram&);
+	template vm::debugger::DebugContext Compiler::recompile(
+		const code::ValidProgram&
+	);
 }
