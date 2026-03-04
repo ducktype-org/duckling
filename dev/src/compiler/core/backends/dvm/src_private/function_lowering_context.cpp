@@ -142,35 +142,14 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	vm::code::Function function;
 	function.name = function_name;
 
-	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
-	// should be removed.
-	if (function_name == "main") {
-		function.signature.parameters.emplace_back(base::StrID("i64"));
-		function.signature.parameters.emplace_back(base::StrID("ptr_argv"));
-		function.signature.result_type = vm::code::Identifier(base::StrID("i64"));
-	} else {
-		for (const auto& param_type: function_parameter_types)
-			function.signature.parameters.emplace_back(vm::code::typeName(param_type));
-		function.signature.result_type
-			= vm::code::Identifier(vm::code::typeName(function_return_type));
-	}
-	function.body = std::move(function_body);
+	for (const auto& param_type: function_parameter_types)
+		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
+	function.signature.result_type = vm::code::Identifier(vm::code::typeName(function_return_type));
+	function.body                  = std::move(function_body);
 	return function;
 }
 
 DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
-	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
-	// should be removed.
-	if (function_name == "main") {
-		if (function_return_type
-		    != vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), 8) }) {
-			CORE_PANIC("Main function must have i64 return type");
-		}
-		// return DVMLocal{
-		// 	.name = base::StrID("ret_val"),
-		// 	.type = vm::code::PrimitiveType(base::StrID("i64"), 8),
-		// };
-	}
 	return DVMLocal{
 		.name = base::StrID("ret_val"),
 		.type = function_return_type,

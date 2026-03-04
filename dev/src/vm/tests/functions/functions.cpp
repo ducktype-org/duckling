@@ -23,7 +23,7 @@ public:
 		TESTER_ADD_TEST(testGraphJumps);
 		TESTER_ADD_TEST(testNoRet);
 		TESTER_ADD_TEST(testSignaturesValidation);
-		TESTER_ADD_TEST(testMainWithNoArguments);
+		TESTER_ADD_TEST(testDifferentMainSignatures);
 	}
 
 private:
@@ -52,7 +52,12 @@ private:
 		runTestOnVm("double_call.dbc", "123 456 789 100", "1468", {});
 	}
 
-	void testMainWithNoArguments() { runTestOnVm("main_no_args.dbc", "", "42", {}); }
+	void testDifferentMainSignatures() {
+		runTestOnVm("main_no_args.dbc", "", "42", {});
+		runTestOnVm("main_ret_i32.dbc", "", "", {}, 42);
+		runTestOnVm("main_ret_ptr.dbc", "", "", {}, 0);
+		runTestOnVm("main_ret_void.dbc", "", "", {}, 0);
+	}
 
 	void testDeinitializeReturnValue() {
 		loadInvalidDbc(

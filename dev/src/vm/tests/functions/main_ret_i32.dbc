@@ -1,0 +1,4 @@
+function main {} -> i32 {
+	mov_l32_imm ret_val, 42;
+    ret;
+}

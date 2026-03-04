@@ -1529,12 +1529,6 @@ vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
-	if (function.name.str == base::StrID("main")
-	    && function.signature.result_type.str != base::StrID("i64")) {
-		throw InvalidMainReturnType(function.signature);
-	}
-
-
 	FunctionValidator validator(
 		tod_map, type_metadata, globals_map, signatures, ext_c_signatures, function
 	);

@@ -1,0 +1,7 @@
+function main {} -> ptr_i64 {
+    init_lany_type x, i64;
+    init_lany_type p, ptr_i64;
+	ref_lptr_lany p, x;
+	mov_lptr_lptr ret_val, p;
+    ret;
+}

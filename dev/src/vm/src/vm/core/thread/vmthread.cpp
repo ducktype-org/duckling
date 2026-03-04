@@ -108,11 +108,8 @@ namespace vm {
 			                             .parameters       = {},
 			                             .result_type      = func.result_type };
 
-		u64         result_type_id     = func.result_type->getID().asInt();
-		const auto& funcs              = executing_program->getFunctions();
-		u64         called_function_id = 0;
-		for (u64 i = 0; i < funcs.size(); i++)
-			if (func.name == funcs[i].name) called_function_id = i;
+		u64       result_type_id     = func.result_type->getID().asInt();
+		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
 
 
 		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
@@ -190,7 +187,7 @@ namespace vm {
 			                             .result_type      = func.result_type };
 
 		// TypeIDs to pass to opcodes.
-		u64 func_ret_type_id = main_return_type->getID().asInt();
+		u64 main_ret_type_id = main_return_type->getID().asInt();
 		u64 argv_type_id     = argv_type->getID().asInt();
 		u64 argv_ptr_type_id = argv_ptr_type->getID().asInt();
 		u64 i64_type_id      = i64_type->getID().asInt();
@@ -204,9 +201,8 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(
-					init_lany_type, 0, func_ret_type_id
-				),  // [0, 8) program ret_val
+				// Program return value is fixed to return `i64`.
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, i64_type_id),  // [0, 8) program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
 					init_lany_type, 8, argv_ptr_type_id
 				),  // [8, 24) *argv_internal
@@ -281,11 +277,13 @@ namespace vm {
 		}
 
 
-		// Now actually prepare to call 'main'.
-		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_lany_type, 40, i64_type_id)  // [40, 48) main ret_val
+		// Now actually prepare to call 'main'. Initialize the return and argument variables.
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+			init_lany_type, 40, main_ret_type_id
+		)  // [40, 48) main ret_val
 		);
 
+		// Pass the command line arguments only if main signature specifies it.
 		if (main_has_args) {
 			start_function.bc.insert(
 				start_function.bc.end(),
@@ -300,11 +298,33 @@ namespace vm {
 			);
 		}
 
+		// Now actually call `main`.
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0));
+
+		// After main exited, we interpret it's return value as the exit code. For all numeric types
+		// we perform a cast to an i64 value, for all other type the exit code is default
+		// initialized and equal to 0.
+		const auto& ret_type_name = main_return_type->getName();
+		if (ret_type_name == base::StrID("i8"))
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(sext_l64_l8, 0, 40));
+		else if (ret_type_name == base::StrID("i16"))
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(sext_l64_l16, 0, 40));
+		else if (ret_type_name == base::StrID("i32"))
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(sext_l64_l32, 0, 40));
+		else if (ret_type_name == base::StrID("i64"))
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40));
+		else if (ret_type_name == base::StrID("u8"))
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(zext_l64_l8, 0, 40));
+		else if (ret_type_name == base::StrID("u16"))
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(zext_l64_l16, 0, 40));
+		else if (ret_type_name == base::StrID("u32"))
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(zext_l64_l32, 0, 40));
+		else if (ret_type_name == base::StrID("u64"))
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40));
+
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
 					init_lany_type, 48, str_ptr_type_id
@@ -393,8 +413,15 @@ namespace vm {
 	End:
 #endif
 		// @note: The return value is the only block left on the block stack.
-		auto block         = frame->block_stack.back();
-		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
+		auto block = frame->block_stack.back();
+
+		// If the executed function is main, the exit value is the exit code of the program which is
+		// always an `i64`.
+		auto res_type = func.name == base::StrID("main")
+		                  ? executing_program->getTypes().at(base::StrID("i64"))
+		                  : func.result_type;
+
+		exit_value_storage = process.createVmValue(res_type, Pointer(block, 0));
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
