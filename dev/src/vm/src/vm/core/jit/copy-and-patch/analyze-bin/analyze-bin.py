@@ -14,13 +14,12 @@ async def generate_stencils(llvm_nm: str, binary: str, output_file):
             continue
 
         values = line.split(' ')
-        if len(values) != 4:
-            logging.error(f"Unexpected line format: '{line}'")
-            continue
 
-        name, type, place_hex, size_hex = values
+        *name_split, type, place_hex, size_hex = values
         place = int(place_hex, 16)
         size = int(size_hex, 16)
+
+        name = ' '.join(name_split)
         
         output_file.write("{" + f'.name = "{name}", .type = "{type}", .place = {place}, .size = {size}' + "},\n")
 
