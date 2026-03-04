@@ -28,6 +28,7 @@ class IncrementalMarkNodesTest4 final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(initChangedFunctionsAndCountColors); }
+
 private:
 	void initChangedFunctionsAndCountColors() {
 		// Place artifacts under the build directory (CTest working dir)
@@ -89,25 +90,29 @@ private:
 		);
 
 
-		// Check the location of .o object in artifacts before compilation, it should be present because of previous compilation step
+		// Check the location of .o object in artifacts before compilation, it should be present
+		// because of previous compilation step
 		compiler::driver::KeyOf_CompileModule key{
 			.module_id    = module,
 			.backend_type = compiler::driver::BackendType::LLVM,
 		};
 
-		auto output_name
-				= key.queryStablePerfectHash().toStringHex() + ".o";
+		auto output_name = key.queryStablePerfectHash().toStringHex() + ".o";
 
-		auto collection   = 
-			global_state::getRootCollection()->
-				subCollectionAtOrNew(base::StrID("query"))->
-					subCollectionAtOrNew(base::StrID(
-						base::strConcat("query", compiler::driver::CompileModule::getID().asInt()).c_str())
-					);
+		auto collection
+			= global_state::getRootCollection()
+		          ->subCollectionAtOrNew(base::StrID("query"))
+		          ->subCollectionAtOrNew(base::StrID(
+					  base::strConcat("query", compiler::driver::CompileModule::getID().asInt())
+						  .c_str()
+				  ));
 		auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
 
-		// vaidate that .o file from previous compilation is present before we run the compilation with changed source code
-		assertTrue(output_maybe.has_value(), "Output file should be present in artifacts before compilation");
+		// vaidate that .o file from previous compilation is present before we run the compilation
+		// with changed source code
+		assertTrue(
+			output_maybe.has_value(), "Output file should be present in artifacts before compilation"
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			(void) ctx.query<driver::CompileModule>(key);
@@ -137,12 +142,16 @@ private:
 		ASSERT_TRUE(green_dep_count > red_dep_count);
 
 		// Save artifacts (writes previous graph blob to artifacts)
-		// Because the compilation should fail, the .o from prev compilation should be deleted from disc
-		// Check that there is no .o file in artifacts after compilation
+		// Because the compilation should fail, the .o from prev compilation should be deleted from
+		// disc Check that there is no .o file in artifacts after compilation
 		auto output_maybe2 = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
 
-		// vaidate that .o file from previous compilation is present before we run the compilation with changed source code
-		assertFalse(output_maybe2.has_value(), "Output file should be deleted from artifacts after failed compilation");
+		// vaidate that .o file from previous compilation is present before we run the compilation
+		// with changed source code
+		assertFalse(
+			output_maybe2.has_value(),
+			"Output file should be deleted from artifacts after failed compilation"
+		);
 		driver::exit();
 
 		// delete the artifacts directory after test
