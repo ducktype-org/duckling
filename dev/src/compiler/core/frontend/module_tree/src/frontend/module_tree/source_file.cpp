@@ -11,6 +11,8 @@
 
 #include <filesystem/file.hpp>
 
+#include <mutex>
+
 namespace {
 	/**
 	 * @brief A value pair storing the information about a file.
