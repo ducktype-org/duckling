@@ -15,6 +15,10 @@ pub enum PackageType {
 }
 
 impl PackageType {
+    /// *deepen* `self`, as in „get type for my dependencies”.
+    ///
+    /// This is mainly used for printing errors, so we can distinguish between transient and direct
+    /// dependencies.
     pub fn deepen(&self) -> Self {
         match self {
             Self::RootPackage => Self::DirectDependency,
