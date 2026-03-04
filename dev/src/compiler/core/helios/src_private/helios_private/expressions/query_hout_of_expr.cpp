@@ -565,14 +565,8 @@ namespace compiler::helios::code {
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
-			auto element_unlocked = element.unlockOpt(ctx);
-			if (element_unlocked.empty()) {
-				// PST should have reported parsing error for this, so we just return failure here.
-				return query::Failed();
-			}
-
 			PstExprToHoutExprVisitor visitor(ctx);
-			element_unlocked.value()->acceptExprVisitor(visitor);
+			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
 			return query::Failed();
