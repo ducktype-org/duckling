@@ -1,4 +1,6 @@
-use std::process::Command;
+use std::{ffi::OsStr, process::Command};
+
+use itertools::Itertools;
 
 use super::Compiler;
 use crate::{
@@ -66,11 +68,22 @@ impl<'duck> Compiler for DefaultCompiler<'duck> {
         let mut builder = DefaultCompiler::new_default_bulder();
         DefaultCompiler::set_compilation_kind(&mut builder, CompilationKind::CompilePackage);
         DefaultCompiler::set_package_name(&mut builder, package);
+        let source_dir = package.package().source_directory();
+        if !source_dir.is_dir() {
+            qp_bail!(
+                "package `{}` doesn't have a `src/` directory (expected `{}` to be a directory)",
+                package.package().as_freeze_dep(),
+                source_dir.display()
+            )
+        }
         DefaultCompiler::set_src_dir(&mut builder, package);
         DefaultCompiler::set_package_artifacts_dir(&mut builder, package);
         DefaultCompiler::set_profile_arguments(&mut builder, package, profile);
         // Duckc doesn't support parallel compilations on the same artifacts directory.
         let _lock = package.package().artifacts_dir().lock(ShouldBlock::Yes).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", package.package().as_freeze_dep()))?;
+        self.duck_ctx
+            .console()
+            .info_verbose(format!("Running `{}`", get_command_as_string(&builder)));
         let code = builder.status().context("failed to spawn duckc")?;
         if !code.success() {
             qp_bail!(
@@ -110,4 +123,14 @@ fn bail_if_has_explicit_aliases(package: &CompilerPackage) -> QuackResult<()> {
         qp_bail_internal!("package `{desc}` has aliased dependencies, which is not yet supported")
     }
     Ok(())
+}
+
+fn get_command_as_string(command: &Command) -> String {
+    let base = command.get_program().display();
+    let args = command.get_args().map(OsStr::display).join(" ");
+    if !args.is_empty() {
+        format!("{base} {args}")
+    } else {
+        base.to_string()
+    }
 }
