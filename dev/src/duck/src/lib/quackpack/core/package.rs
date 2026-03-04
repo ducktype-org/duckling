@@ -55,6 +55,10 @@ impl Package {
         &self.inner.root
     }
 
+    pub fn source_directory(&self) -> PathBuf {
+        self.inner.root.join("src")
+    }
+
     pub fn manifest_path(&self) -> &Path {
         &self.inner.manifest_path
     }

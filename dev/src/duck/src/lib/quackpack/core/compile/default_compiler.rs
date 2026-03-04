@@ -38,6 +38,10 @@ impl DefaultCompiler<'_> {
         builder.arg("-n").arg(name);
     }
 
+    fn set_src_dir(builder: &mut Command, package: &CompilerPackage) {
+        builder.arg(package.package().source_directory());
+    }
+
     fn set_package_artifacts_dir(builder: &mut Command, package: &CompilerPackage) {
         let dir = package.package().artifacts_dir();
         builder.arg("-a").arg(dir);
@@ -61,6 +65,7 @@ impl<'duck> Compiler for DefaultCompiler<'duck> {
         let mut builder = DefaultCompiler::new_default_bulder();
         DefaultCompiler::set_compilation_kind(&mut builder, CompilationKind::CompilePackage);
         DefaultCompiler::set_package_name(&mut builder, package);
+        DefaultCompiler::set_src_dir(&mut builder, package);
         DefaultCompiler::set_package_artifacts_dir(&mut builder, package);
         DefaultCompiler::set_profile_arguments(&mut builder, package, profile);
         let code = builder.status().context("failed to spawn duckc")?;
