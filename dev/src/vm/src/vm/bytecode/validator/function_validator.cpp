@@ -106,8 +106,11 @@ public:
 		  tod_map(&tod_map),
 		  type_metadata(&type_metadata) {
 		push(base::StrID("ret_val"), signature.result_type.str);
-		for (auto [idx, param]: std::views::enumerate(signature.parameters))
+		usize idx = 0;
+		for (const auto& param: signature.parameters) {
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
+			++idx;
+		}
 	}
 
 	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }

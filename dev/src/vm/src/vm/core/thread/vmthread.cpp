@@ -227,7 +227,8 @@ namespace vm {
 			}
 		);
 
-		for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
+		usize argv_index = 0;
+		for (const auto& arg: args) {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
@@ -280,6 +281,7 @@ namespace vm {
 					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
 				}
 			);
+			++argv_index;
 		}
 
 		start_function.bc.insert(

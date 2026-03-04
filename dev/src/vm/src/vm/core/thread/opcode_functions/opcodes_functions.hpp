@@ -259,8 +259,11 @@ namespace vm {
 			// Find type index
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
-			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt->getID() == wanted_type_id) alternative_index = static_cast<usize>(idx);
+			usize idx               = 0;
+			for (const auto& alt: alternatives) {
+				if (alt->getID() == wanted_type_id) alternative_index = idx;
+				++idx;
+			}
 
 			// Write the type tag
 			auto variant_block_data_view

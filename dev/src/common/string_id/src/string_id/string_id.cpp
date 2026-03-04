@@ -42,7 +42,11 @@ namespace base {
 		// On macOS, function-local statics and some global statics use pthread_mutex for
 		// initialization guards, which can fail during early static initialization before
 		// the C++ runtime is ready.
-		std::shared_mutex* mutex = new std::shared_mutex();
+		// std::shared_mutex* mutex = new std::shared_mutex();
+		std::shared_mutex& getMutex() {
+			static std::shared_mutex mutex;
+			return mutex;
+		}
 	}
 
 	/**
@@ -77,14 +81,14 @@ namespace base {
 
 		// Fast path: check if string already exists under shared lock
 		{
-			std::shared_lock lock(*mutex);
+			std::shared_lock lock(getMutex());
 			if (auto id = getToIDMap()->atMaybe(data)) {
 				this->id = **id;
 				return;
 			}
 		}
 
-		std::unique_lock lock(*mutex);
+		std::unique_lock lock(getMutex());
 
 		if (auto id = getToIDMap()->atMaybe(data)) {
 			this->id = **id;
@@ -126,13 +130,13 @@ namespace base {
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
-		std::shared_lock lock(*mutex);
+		std::shared_lock lock(getMutex());
 		return to_data_map[id];
 	}
 
 	void StrID::dumpData(std::ostream& out) {
 		i32              i = 0;
-		std::shared_lock lock(*mutex);
+		std::shared_lock lock(getMutex());
 		for (auto v: to_data_map) {
 			if (v) out << i << ": " << v->stringView() << "\n";
 			i++;
