@@ -63,7 +63,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     )
 endfunction()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # JIT_ENABLED nie działa
+if(JIT_ENABLED)
     add_library(mock_stencils OBJECT tests/mock_stencils.c)
     target_compile_options(mock_stencils PRIVATE
         -fPIC
@@ -72,27 +72,18 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # JIT_ENABLED nie działa
     )
     process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
     duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
-endif()
 
-add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
-target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
-file(GLOB vm_common_include_dirs
-    "${CMAKE_SOURCE_DIR}/src/common/*/src"
-    "${CMAKE_SOURCE_DIR}/src/common/*/*/src"
-)
-target_include_directories(cp-stencils_bc PRIVATE
-    ${CMAKE_SOURCE_DIR}/src/base/src
-    ${vm_common_include_dirs}
-    ${CMAKE_SOURCE_DIR}/src/vm/src
-    $<TARGET_PROPERTY:JSON,INTERFACE_INCLUDE_DIRECTORIES>
-)
 
-if(true)
+    add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
+    target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
+    target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
+
     if(NOT JIT_LLVM_LLC)
         find_program(JIT_LLVM_LLC NAMES llc-19 llc REQUIRED)
     endif()
 
     set(cp_stencils "${CMAKE_CURRENT_BINARY_DIR}/wrapper")
+        
     # compile to binary
     add_custom_command(
         OUTPUT ${cp_stencils}
@@ -104,7 +95,8 @@ if(true)
             ${cp_stencils}
         COMMAND_EXPAND_LISTS
         DEPENDS cp-stencils_bc
-    )
+     )
+        
     process_to_binary("${cp_stencils}" copy-and-patch.cpp "wrapper")
     add_custom_target(
         wrapper-binary-artifacts-target
@@ -113,6 +105,7 @@ if(true)
             ${CMAKE_CURRENT_BINARY_DIR}/wrapper-text
     )
     add_files(copy-and-patch.cpp)
-endif()
 
-set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
+    set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
+
+endif()
