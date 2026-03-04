@@ -163,7 +163,7 @@ namespace vm::loader::compiler {
 		// Label positions in high bytecode, used only for graph traversing
 		// in this function. Not used when lowering to microbytecode.
 		base::HashMap<base::StrID, usize> label_positions{};
-		usize idx = 0;
+		usize                             idx = 0;
 		for (const auto& instr: ctx.function.body) {
 			instr_match(instr) {
 				instr_case(code::instructions::Op_label, label) {

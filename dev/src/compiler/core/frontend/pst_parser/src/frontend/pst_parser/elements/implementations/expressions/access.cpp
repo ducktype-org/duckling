@@ -3,7 +3,6 @@
 #include "../../hierarchy/expressions/template_specifier.hpp"
 #include "expressions_errors.hpp"
 #include "preamble.hpp"
-#include <sstream>
 
 namespace pst::expr {
 

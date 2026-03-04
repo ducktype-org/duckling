@@ -191,9 +191,9 @@ namespace pst {
 		 */
 		PST(Box<tokenizer::TokenSource> file,
 		    PSTContext&&                pst_ctx,
-		    hashing::ComponentHash      hash_ctx = {})
-
-	requires true: file(std::move(file)), hash_ctx_info(std::move(hash_ctx)) {
+		    hashing::ComponentHash      hash_ctx = {}):
+			  file(std::move(file)),
+			  hash_ctx_info(std::move(hash_ctx)) {
 			if (getLogger()->bad()) return;
 			parse(makeParserContext(std::move(pst_ctx)));
 		}
@@ -201,9 +201,7 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {})
-
-	requires true:
+		PST(const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}):
 			  file(tokenizer::makeTokenSource(path)),
 			  hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
@@ -212,7 +210,7 @@ namespace pst {
 
 		static PST fromContents(
 			std::string_view contents, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
-	) requires true {
+		) {
 			return PST(contents, makeParserContext(std::move(pst_ctx)), std::move(hash_ctx));
 		}
 
