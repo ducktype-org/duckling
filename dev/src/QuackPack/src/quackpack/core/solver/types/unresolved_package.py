@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import override
@@ -108,7 +106,9 @@ class UnresolvedPackageGit(UnresolvedPackage):
     @override
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, UnresolvedPackageGit) and self.id == other.id and self.version == other.version
+            isinstance(other, UnresolvedPackageGit)
+            and self.id == other.id
+            and self.version == other.version
         )
 
     @override

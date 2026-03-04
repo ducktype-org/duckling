@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Iterator
 from dataclasses import dataclass
 
@@ -27,8 +25,11 @@ class PackageWithFlagsDependency:
 
     @staticmethod
     def from_dependency(
-        parent_package: PackageWithFlags, dependency: Dependency, id_resolvents: IdResolvents
+        parent_package: PackageWithFlags,
+        dependency: Dependency,
+        id_resolvents: IdResolvents,
     ) -> PackageWithFlagsDependency:
         return PackageWithFlagsDependency(
-            parent_package, UnresolvedId.from_dependency(dependency).resolve(id_resolvents)
+            parent_package,
+            UnresolvedId.from_dependency(dependency).resolve(id_resolvents),
         )

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import NoReturn
 import click
 import pathlib
@@ -38,8 +36,7 @@ class BashCommandError(Exception):
         super().__init__(
             "\n\tBash command `%s` %s\n\thas failed with an exit code: %s, because:\n"
             "[STDOUT]:%s\n"
-            "[STDERR]:%s"
-            % (command, at_str, exit_code, stdout_str, stderr_str)
+            "[STDERR]:%s" % (command, at_str, exit_code, stdout_str, stderr_str)
         )
         self.command = command
         self.exit_code = exit_code

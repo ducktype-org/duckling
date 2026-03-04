@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Self, cast
@@ -73,7 +71,9 @@ class TOMLConfig:
             current_stack.append(name)
             next = current.item(name)
             if not next.is_table():
-                raise InvalidKeyType(f"config key `{format(current_stack)}` is not a table")
+                raise InvalidKeyType(
+                    f"config key `{format(current_stack)}` is not a table"
+                )
             current = cast(AbstractTable, next).value
         assert False, "broken loop"
 
@@ -97,7 +97,9 @@ class TOMLConfig:
                 current[name] = {}
             next = current.item(name)
             if not next.is_table():
-                raise InvalidKeyType(f"config key `{format(current_stack)}` is not a table")
+                raise InvalidKeyType(
+                    f"config key `{format(current_stack)}` is not a table"
+                )
             current = cast(AbstractTable, next).value
         current[last_key] = value
 
@@ -140,7 +142,9 @@ class TOMLConfig:
         if ret is None:
             return None
         if not isinstance(ret, str):
-            raise QuackPackError(f"{self._make_location_error()}expected key `{source}` to point at a string")
+            raise QuackPackError(
+                f"{self._make_location_error()}expected key `{source}` to point at a string"
+            )
         return ret.unwrap()
 
     def get_path(self, source: str) -> Path | None:

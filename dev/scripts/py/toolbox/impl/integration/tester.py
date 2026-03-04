@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from .test_loader import Case, Test, TestNode, load_tests
@@ -28,13 +26,13 @@ DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
 
 def tester_impl(
-        clean: bool,
-        dry: bool,
-        filter: str,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: str | Path,
-        build_dir: str,
+    clean: bool,
+    dry: bool,
+    filter: str,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: str | Path,
+    build_dir: str,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -86,13 +84,13 @@ def tester_impl(
 
 
 def run_test(
-        test: Test,
-        path: str,
-        filter: str,
-        dry: bool,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: Path,
+    test: Test,
+    path: str,
+    filter: str,
+    dry: bool,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: Path,
 ) -> TestStatistics:
     """
     Runs a test from `Test` object.
@@ -107,7 +105,7 @@ def run_test(
             verbose=verbose,
         )
     stats = TestStatistics([], [], [])
-    simplified_filter = filter[len(path) + 1:]
+    simplified_filter = filter[len(path) + 1 :]
     log_info(f"===== {path} =====")
     for i, case in enumerate(test.cases):
         if not case.name.startswith(simplified_filter):
@@ -170,7 +168,7 @@ def log_test_out_differs(test, case, message, got, expected, log_file, verbose):
 
 
 def run_case(
-        test: Test, case: Case, dry: bool, verbose: bool, log_file: Path
+    test: Test, case: Case, dry: bool, verbose: bool, log_file: Path
 ) -> Success | Failure | Disabled:
     """
     Runs a test case from `Case` object.
@@ -213,7 +211,7 @@ def run_case(
     # Run test.
     log_info_if_needed("Running the test case...", dry, verbose)
     test_output, test_err = dit_exec_command(
-        f"timeout {case.timeout}s sh -c \'{case.run}\'",
+        f"timeout {case.timeout}s sh -c '{case.run}'",
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,
@@ -291,14 +289,14 @@ def clean_test(test: Test, path: str, dry: bool, verbose: bool):
 
 
 def run_tests(
-        node: TestNode,
-        filter: str,
-        tree: list[str],
-        clean: bool,
-        dry: bool,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: Path,
+    node: TestNode,
+    filter: str,
+    tree: list[str],
+    clean: bool,
+    dry: bool,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: Path,
 ) -> TestStatistics:
     """
     A recursive function for running all tests.

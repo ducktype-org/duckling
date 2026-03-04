@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -18,7 +16,9 @@ def _check_valid_semver(input: str) -> None:
         try:
             as_int = int(part)
         except ValueError:
-            raise ValueError(f"{name} version is not a valid integer: got `{part}`") from None
+            raise ValueError(
+                f"{name} version is not a valid integer: got `{part}`"
+            ) from None
         if as_int < 0:
             raise ValueError(f"{name} version is negative")
         # Skip patch.

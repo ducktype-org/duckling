@@ -38,12 +38,8 @@ namespace base {
 
 		constinit bool any_buffer_exits = false;
 
-		// @note: Use a pointer to avoid static initialization mutex issues on macOS.
-		// On macOS, function-local statics and some global statics use pthread_mutex for
-		// initialization guards, which can fail during early static initialization before
-		// the C++ runtime is ready.
-		// std::shared_mutex* mutex = new std::shared_mutex();
 		std::shared_mutex& getMutex() {
+			// @note: On macOS std::shared_mutex does not have constexpr constructor.
 			static std::shared_mutex mutex;
 			return mutex;
 		}

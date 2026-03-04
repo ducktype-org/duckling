@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -69,10 +67,18 @@ class GlobalContext:
         config_path = config_filepath(env)
         user_config = TOMLConfig.create_from_filepath(config_path)
 
-        return cls(console=console, error_console=error_console, user_config=user_config, env=env)
+        return cls(
+            console=console,
+            error_console=error_console,
+            user_config=user_config,
+            env=env,
+        )
 
     def download_dir(self) -> Path:
-        return self.user_config.get_path("cache.download_dir") or download_dir(self.env).expanduser()
+        return (
+            self.user_config.get_path("cache.download_dir")
+            or download_dir(self.env).expanduser()
+        )
 
     def ensure_download_dir(self) -> Path:
         ret = self.download_dir()
@@ -80,7 +86,10 @@ class GlobalContext:
         return ret
 
     def artifacts_dir(self) -> Path:
-        return self.user_config.get_path("cache.artifacts_dir") or artifacts_dir(self.env).expanduser()
+        return (
+            self.user_config.get_path("cache.artifacts_dir")
+            or artifacts_dir(self.env).expanduser()
+        )
 
     def ensure_artifacts_dir(self) -> Path:
         ret = self.artifacts_dir()
@@ -88,7 +97,10 @@ class GlobalContext:
         return ret
 
     def metadata_db(self) -> Path:
-        return self.user_config.get_path("cache.metadata_db_path") or metadata_db(self.env).expanduser()
+        return (
+            self.user_config.get_path("cache.metadata_db_path")
+            or metadata_db(self.env).expanduser()
+        )
 
     def ensure_metadata_db(self) -> Path:
         ret = self.metadata_db()
@@ -96,7 +108,10 @@ class GlobalContext:
         return ret
 
     def fetcher_lockfile(self) -> Path:
-        return self.user_config.get_path("cache.fetcher_lockfile") or fetcher_lockfile(self.env).expanduser()
+        return (
+            self.user_config.get_path("cache.fetcher_lockfile")
+            or fetcher_lockfile(self.env).expanduser()
+        )
 
     def ensure_fetcher_lockfile(self) -> Path:
         ret = self.fetcher_lockfile()
@@ -118,10 +133,16 @@ class GlobalContext:
         return self.user_config.get_bool("security.typos.enabled") or SHOULD_FIX_TYPOS
 
     def typos_distance(self) -> int:
-        return self.user_config.get_int("security.typos.max_distance") or DEFAULT_TYPO_TOLERANCE_DISTANCE
+        return (
+            self.user_config.get_int("security.typos.max_distance")
+            or DEFAULT_TYPO_TOLERANCE_DISTANCE
+        )
 
     def storage_dir(self) -> Path:
-        return self.user_config.get_path("storage.dir") or storage_dir(self.env).expanduser()
+        return (
+            self.user_config.get_path("storage.dir")
+            or storage_dir(self.env).expanduser()
+        )
 
     def ensure_storage_dir(self) -> Path:
         ret = self.storage_dir()
@@ -129,10 +150,16 @@ class GlobalContext:
         return ret
 
     def storage_tmp_lifetime(self) -> int:
-        return self.user_config.get_int("storage.temporary_lifetime") or DEFAULT_STORAGE_TMP_LIFETIME_SECONDS
+        return (
+            self.user_config.get_int("storage.temporary_lifetime")
+            or DEFAULT_STORAGE_TMP_LIFETIME_SECONDS
+        )
 
     def global_venv_dir(self) -> Path:
-        return self.user_config.get_path("global_venv") or global_venv_dir(self.env).expanduser()
+        return (
+            self.user_config.get_path("global_venv")
+            or global_venv_dir(self.env).expanduser()
+        )
 
     def ensure_global_venv_dir(self) -> Path:
         ret = self.global_venv_dir()
@@ -146,4 +173,7 @@ class GlobalContext:
         return self.user_config.get_table("aliases") or {}
 
     def builds_from_source(self) -> bool:
-        return self.user_config.get_bool("packaging.build_from_source") or SHOULD_BUILD_FROM_SOURCE
+        return (
+            self.user_config.get_bool("packaging.build_from_source")
+            or SHOULD_BUILD_FROM_SOURCE
+        )
