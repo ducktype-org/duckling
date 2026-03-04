@@ -106,7 +106,7 @@ namespace compiler::driver {
 		}
 
 		static std::string getModuleOutputName(const QKey& key) {
-			return getModuleFullName(key.module_id) + typeExtension(key.backend_type);
+			return key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
