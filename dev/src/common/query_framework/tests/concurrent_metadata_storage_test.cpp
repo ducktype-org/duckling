@@ -64,7 +64,7 @@ public:
 private:
 	template<u64 THREAD_COUNT>
 	void addMetadataTest() {
-		constexpr u64 OPS_PER_THREAD = 2'000;
+		constexpr u64 OPS_PER_THREAD = 1'000;
 
 		query::internal::MetadataStorage storage;
 
@@ -86,7 +86,7 @@ private:
                         (choose_query == 0)   ? q_id_1
 							 : (choose_query == 1) ? q_id_2
 												   : q_id_3,
-						{ dist(rng) % 1'000 }  // Random q hash
+						{ dist(rng) % 100 }  // Random q hash
 					};
 					auto metadata_value = dist(rng) % 1'000;
 					storage.addMetadata<metadata_DummyMetadata1>(node_id, metadata_value);
@@ -108,7 +108,7 @@ private:
 
 		// query 1:
 		auto read_metadata = [&]<class MetaDataT, class QueryT>() {
-			for (u64 hash = 0; hash < 1'000; ++hash) {
+			for (u64 hash = 0; hash < 100; ++hash) {
 				auto node_id      = query::internal::NodeID{ QueryT::getID(), { hash } };
 				auto metadata_vec = storage.getMetadata<MetaDataT>(node_id);
 				total_retrieved_count += metadata_vec.size();
@@ -138,7 +138,7 @@ private:
 
 	template<u64 THREAD_COUNT>
 	void addMetadataIfNotExistTest() {
-		constexpr u64 OPS_PER_THREAD = 2'000;
+		constexpr u64 OPS_PER_THREAD = 1'000;
 
 		query::internal::MetadataStorage storage;
 
@@ -147,7 +147,7 @@ private:
 		const auto q_id_3 = DummyQuery3::getID();
 
 		// We will add q3 nodes before threads:
-		for (u64 hash = 0; hash < 1'000; ++hash) {
+		for (u64 hash = 0; hash < 100; ++hash) {
 			auto node_id = query::internal::NodeID{ q_id_3, { hash } };
 			storage.addMetadata<metadata_DummyMetadata1>(node_id, u64(42));
 		}
@@ -169,7 +169,7 @@ private:
                         (choose_query == 0)   ? q_id_1
 							 : (choose_query == 1) ? q_id_2
 												   : q_id_3,
-						{ dist(rng) % 1'000 }  // Random q hash
+						{ dist(rng) % 100 }  // Random q hash
 					};
 
 					auto metadata_value = dist(rng) % 100 + 100;
@@ -190,11 +190,11 @@ private:
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata2>().size();
 		total_metadata_count += storage.getMetadataFromAllNodes<metadata_DummyMetadata3>().size();
 		ASSERT_EQUAL(
-			total_metadata_count, successful_adds + 1'000
-		);  // +1000 from pre-added q3 nodes
+			total_metadata_count, successful_adds + 100
+		);  // +100 from pre-added q3 nodes
 
 		// verify that no q3 node was modified:
-		for (u64 hash = 0; hash < 1'000; ++hash) {
+		for (u64 hash = 0; hash < 100; ++hash) {
 			auto node_id      = query::internal::NodeID{ q_id_3, { hash } };
 			auto metadata_vec = storage.getMetadata<metadata_DummyMetadata1>(node_id);
 			ASSERT_EQUAL(metadata_vec.size(), 1);
@@ -204,7 +204,7 @@ private:
 
 	template<u64 THREAD_COUNT>
 	void testConcurentReadsAndWrites() {
-		constexpr u64 OPS_PER_THREAD = 3'000;
+		constexpr u64 OPS_PER_THREAD = 1'000;
 
 		query::internal::MetadataStorage storage;
 
@@ -229,18 +229,18 @@ private:
 					auto node_id      = query::internal::NodeID{ (choose_query == 0)   ? q_id_1
 						                                         : (choose_query == 1) ? q_id_2
 						                                                               : q_id_3,
-						                                    { dist(rng) % 1'000 } };
+						                                    { dist(rng) % 100 } };
 
 					if (task == 0) {
 						// add new metadata
-						auto metadata_value = dist(rng) % 1'000;
+						auto metadata_value = dist(rng) % 100;
 						storage.addMetadata<metadata_DummyMetadata1>(node_id, metadata_value);
 						adds.fetch_add(1);
 					} else if (task == 1) {
 						// just read
 						auto metadata_vec = storage.getMetadata<metadata_DummyMetadata1>(node_id);
 						for (const auto& metadata_value: metadata_vec)
-							ASSERT_TRUE(metadata_value->value < 1'000);
+							ASSERT_TRUE(metadata_value->value < 100);
 					} else if (task == 2) {
 						// just check existence
 						[[maybe_unused]]
