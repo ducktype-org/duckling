@@ -155,10 +155,12 @@ namespace query::internal {
 					qfe.what()
 				);
 
+				// If provide throws we need to delete artifact from disk from prev compilation
+				if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK)
+					QueryImplType::deleteFromDisc(key);
+
 				if constexpr (QueryImplType::USES_QRESULT
 				              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
-					if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK)
-						QueryImplType::deleteFromDisc(key);
 					return QueryImplType::store(perfect_hash, query::Failed(), acd);
 				} else {
 					CORE_PANIC(qfe.what());

@@ -22,7 +22,6 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ok_bad.hpp>
 
-#include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
