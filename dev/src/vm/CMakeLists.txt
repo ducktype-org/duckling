@@ -89,6 +89,9 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
         ${jit_dependency}
     )
     make_module(JitDep USES llvm_helpers Base Diagnostic)
+    target_compile_options(JitDep PRIVATE
+        --embed-dir=${CMAKE_BINARY_DIR}
+    )
     target_include_directories(JitDep PRIVATE ${LLVM_INCLUDE_DIRS})
 
     target_include_directories(MainVM PRIVATE $<TARGET_PROPERTY:JitDep,INTERFACE_INCLUDE_DIRECTORIES>)
@@ -112,12 +115,14 @@ function(add_vm_variant suffix compile_def)
 
     if (JIT_ENABLED)
         # Additionall llvm dependecies.
+        add_dependencies(${lib_thread_vm_name} wrapper-binary-artifacts-target)
         make_module(${lib_thread_vm_name} USES llvm_helpers ${vm_dependencies})
         target_include_directories(${lib_thread_vm_name} PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name} ${llvm_libs})
 
         # Setup list of all bitcode dependencies (from inside of VM - dependant to VM variant).
         add_library(${lib_thread_vm_name}_bc OBJECT ${vm_config_dependent_sources})
+        add_dependencies(${lib_thread_vm_name}_bc wrapper-binary-artifacts-target)
         make_module(${lib_thread_vm_name}_bc USES llvm_helpers ${vm_dependencies})
         target_include_directories(${lib_thread_vm_name}_bc PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name}_bc ${llvm_libs})
@@ -132,6 +137,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND ${JIT_LLVM_LINKER}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
+                $<TARGET_OBJECTS:cp-stencils_bc>
                 ${vm_dep_objects_bc}
                 -o ${common_bc}.tmp
             COMMAND ${JIT_LLVM_OPT}
@@ -143,7 +149,7 @@ function(add_vm_variant suffix compile_def)
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
             BYPRODUCTS ${common_bc}.tmp
-            DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc ${vm_dep_bc_targets}
+            DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc cp-stencils_bc ${vm_dep_bc_targets}
             COMMENT "Full O3 + LTO + Aggressive Inline for ${suffix}"
         )
 
