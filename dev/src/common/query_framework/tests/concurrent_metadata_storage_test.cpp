@@ -56,9 +56,9 @@ public:
 		TESTER_ADD_TEST(addMetadataIfNotExistTest<2>);
 		TESTER_ADD_TEST(addMetadataIfNotExistTest<4>);
 
-		TESTER_ADD_TEST(testConcurentReadsAndWrites<1>);
-		TESTER_ADD_TEST(testConcurentReadsAndWrites<2>);
-		TESTER_ADD_TEST(testConcurentReadsAndWrites<4>);
+		TESTER_ADD_TEST(testConcurrentReadsAndWrites<1>);
+		TESTER_ADD_TEST(testConcurrentReadsAndWrites<2>);
+		TESTER_ADD_TEST(testConcurrentReadsAndWrites<4>);
 	}
 
 private:
@@ -203,7 +203,7 @@ private:
 	}
 
 	template<u64 THREAD_COUNT>
-	void testConcurentReadsAndWrites() {
+	void testConcurrentReadsAndWrites() {
 		constexpr u64 OPS_PER_THREAD = 1'000;
 
 		query::internal::MetadataStorage storage;
