@@ -1,4 +1,5 @@
 function(process_to_binary binary_file destination_file binary_artifact_prefix)
+    set(extra_deps ${ARGN})
     get_filename_component(
         destination_file_abs "${destination_file}"
         ABSOLUTE BASE_DIR
@@ -16,7 +17,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     add_custom_command(
         OUTPUT ${linked_out}
         COMMAND ${CMAKE_CXX_COMPILER} -r ${flto} -Bsymbolic-functions ${binary_file} -o ${linked_out}
-        DEPENDS ${binary_file}
+        DEPENDS ${binary_file} ${extra_deps}
     )
     add_custom_command(
         OUTPUT ${nm_out}
@@ -69,7 +70,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # JIT_ENABLED nie działa
         -fno-plt
         -fno-semantic-interposition
     )
-    process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils")
+    process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
     duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
 endif()
 
