@@ -232,8 +232,8 @@ namespace query::internal {
 	 * where the is no data to delete.
 	 */
 	template<typename Impl>
-	concept HasDeleteFromDiscWithSignature = requires(const typename Impl::QKey& key_hash) {
-		{ Impl::deleteFromDisc(key_hash) } -> std::same_as<bool>;
+	concept HasDeleteFromDiscWithSignature = requires(const typename Impl::QKey& q_key) {
+		{ Impl::deleteFromDisc(q_key) } -> std::same_as<bool>;
 	};
 }
 
