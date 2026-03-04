@@ -292,8 +292,6 @@ namespace compiler::repl {
 			std::vector<std::string> statement_sources;
 			bool                     has_parse_errors = false;
 
-
-			// CORE_DEV_LOG(REPL, "Extracting expression\n");
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto main_file = ctx.query<frontend::QueryMainSourceFile>(probe_module_id);
 				auto pst       = getFilePST(ctx, main_file);

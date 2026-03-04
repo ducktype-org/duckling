@@ -44,7 +44,7 @@ namespace compiler::frontend {
 	struct ReplData final {
 		/**
 		 * Parent REPL module in chronological order.
-		 * Optional - only set for non-first REPL modules.
+		 * Optional - only empty for first REPL module.
 		 */
 		base::Optional<ModuleID> m_repl_module_parent;
 	};
@@ -167,8 +167,8 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]]
 		base::Optional<ModuleID> getReplModuleParent() const {
-			if (m_repl_data.has_value()) return m_repl_data->m_repl_module_parent;
-			return {};
+			CORE_ASSERT(m_repl_data.has_value(), ...);
+			return m_repl_data->m_repl_module_parent;
 		}
 
 		/**
