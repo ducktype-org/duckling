@@ -2680,7 +2680,7 @@ private:
 			assertEqual(
 				initial_value_expr->origin.isGenerated(),
 				is_generated,
-				"Generated origin does not match for variable "
+				base::strConcat("Generated origin does not match for variable ", name.strView())
 			);
 		};
 		check_var_init_expr_origin(base::StrID("var1"), false);
@@ -2724,6 +2724,14 @@ private:
 				fun->origin.getSourcePosition(),
 				pst_fun->getSourcePosition(),
 				base::strConcat("The function origin is not the PST of the function", name.strView())
+			);
+			assertEqual(
+				fun->origin.getPSTElement().value().illegalAccess().value()->getHash(),
+				pst_fun->getHash(),
+				base::strConcat(
+					"The function origin PST element does not match the PST function for ",
+					name.strView()
+				)
 			);
 		};
 
