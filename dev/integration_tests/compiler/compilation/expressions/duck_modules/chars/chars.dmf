@@ -1,6 +1,6 @@
-// Basic character arithmetic tests
+# Basic character arithmetic tests
 
-fun test_char_comparisons() {
+fun test_char_comparisons() = {
     const a: char = 'a';
     const b: char = 'b';
 
@@ -12,32 +12,32 @@ fun test_char_comparisons() {
     const neq: bool = a != b;
 
     if (not lt or not le or gt or ge or eq or not neq) {
-        builtin_output_str("bad");
+        builtin_output_string("bad");
     }
 }
 
-fun test_char_difference() {
+fun test_char_difference() = {
     const a: char = 'a';
     const d: char = 'd';
 
-    const diff: u8 = d - a;  // Should be 3
+    const diff: u8 = d - a;  # 3
     if (diff != 3) {
-        builtin_output_str("bad");
+        builtin_output_string("bad");
     }
 }
 
-fun test_char_int_addition() {
+fun test_char_int_addition() = {
     const a: char = 'a';
 
-    // Character + integer should return char
-    const d1: char = a + 3;        // Should be 'd'
-    const d2: char = 3 + a;        // Should be 'd' (commutative)
+    # Character + integer should return char
+    const d1: char = a + 3;        # 'd'
+    const d2: char = 3 + a;        # 'd'
 
     if (d1 != 'd' or d2 != 'd') {
-        builtin_output_str("bad");
+        builtin_output_string("bad");
     }
 
-    // Test with different integer types
+    # Test with different integer types
     const b1: char = a + 1i8;
     const b2: char = a + 1u8;
     const b3: char = a + 1i16;
@@ -51,42 +51,42 @@ fun test_char_int_addition() {
 
     if (b1 != 'b' or b2 != 'b' or b3 != 'b' or b4 != 'b' or
         b5 != 'b' or b6 != 'b' or b7 != 'b' or b8 != 'b') {
-        builtin_output_str("bad");
+        builtin_output_string("bad");
     }
 }
 
-// Something more fun.
+# Something more fun.
 
 fun process_character() -> () = {
-    builtin_output_str("Enter a character: ");
+    builtin_output_string("Enter a character: ");
     var c = builtin_input_char();
 
     if ('a' <= c <= 'z') {
-        builtin_output_str("The provided character is lowercase.\n");
-        builtin_output_str("Its uppercase counterpart is: ");
+        builtin_output_string("The provided character is lowercase.\n");
+        builtin_output_string("Its uppercase counterpart is: ");
         builtin_output_char(c - 'a' + 'A');
-        builtin_output_str("\n");
+        builtin_output_string("\n");
     } else if ('A' <= c <= 'Z') {
-        builtin_output_str("The provided character is uppercase.\n");
-        builtin_output_str("Its lowercase counterpart is: ");
+        builtin_output_string("The provided character is uppercase.\n");
+        builtin_output_string("Its lowercase counterpart is: ");
         builtin_output_char(c - 'A' + 'a');
-        builtin_output_str("\n");
+        builtin_output_string("\n");
     } else {
-        builtin_output_str("The provided character is not a letter.\n");
+        builtin_output_string("The provided character is not a letter.\n");
     }
 }
 
 fun main() -> i64 = {
-    // Start with the basic tests
+    # Start with the basic tests
     test_char_comparisons();
     test_char_difference();
     test_char_int_addition();
 
-    // Now do something interesting.
+    # Now do something interesting.
     var reps = 3;
     while (reps > 0) {
         process_character();
         reps = reps - 1;
-    };
+    }
     return 0;
 }
