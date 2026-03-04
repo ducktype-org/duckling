@@ -8,12 +8,10 @@
 
 // NOLINTBEGIN
 
-#include <sys/types.h>
-
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 // Definition of the Duckling string representation.
 struct str {
