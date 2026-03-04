@@ -141,7 +141,7 @@ namespace lsp {
 	}
 
 	std::string getDiagnosticJsonFromCompiler(const fs::File& file) {
-		auto source_files = frontend::SourceFile::getSourceFilesfromFile(file);
+		auto source_files = frontend::SourceFile::getSourceFilesFromFile(file);
 		CORE_ASSERT(
 			not source_files.empty(),
 			"File must be associated with at least one SourceFile in the ModuleTree"
