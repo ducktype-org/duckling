@@ -11,6 +11,7 @@ enum class CfOccurrenceKind {
     Label,
     Jump,
     ConditionalJump,
+    Ret,
 };
 
 struct CfOccurrence {
@@ -20,10 +21,6 @@ struct CfOccurrence {
     CfOccurrence(usize position, CfOccurrenceKind kind): position(position), kind(kind) {}
 };
 
-struct DetectedLoop {
-    usize start_position;
-    usize end_position;
-};
 /**
  * @brief Collects all label and jump instruction occurrences in a function body.
  * Returns a sorted vector of control flow occurrences in the order they appear.
@@ -32,6 +29,14 @@ struct DetectedLoop {
  * @return Vector of control flow occurrences (labels and jumps)
  */
 std::vector<CfOccurrence> collectControlFlowOccurrences(const code::Function& function);
+
+/**
+ * @brief Returns a sorted vector of basic block beginning positions with last postion equal to function body size
+ *
+ * @param function The function to analyze
+ * @return Sorted vector of basic block beginning positions with last postion equal to function body size
+ */
+std::vector<usize> collectBasicBlockBeginnings(const code::Function& function);
 
 } // namespace vm::jit
 
