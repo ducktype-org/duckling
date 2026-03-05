@@ -138,7 +138,9 @@ namespace pst {
 		}
 
 		/**
-		 * @brief This is a helper concept for Statements that behave similarly to flow control elements as in they can have a code block or a sub-statement. They have to be handled differently for fallbacks.
+		 * @brief This is a helper concept for Statements that behave similarly to flow control
+		 * elements as in they can have a code block or a sub-statement. They have to be handled
+		 * differently for fallbacks.
 		 */
 		template<class T>
 		concept FlowControlLike
