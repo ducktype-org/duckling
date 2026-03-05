@@ -841,7 +841,6 @@ namespace compiler::frontend {
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
 		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesFromFile(file);
-		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
 		for (auto& source_file: source_files) source_file->update();
 	}
 
