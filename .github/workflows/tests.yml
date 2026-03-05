@@ -310,6 +310,11 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
 
+      - name: Integration Tests Multithreaded
+        id: integration-tests
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} 
+
       - name: Test Coverage After Integration Tests
         id: test-coverage-itests
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
