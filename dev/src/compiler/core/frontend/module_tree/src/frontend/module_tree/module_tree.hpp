@@ -167,7 +167,9 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]]
 		base::Optional<ModuleID> getReplModuleParent() const {
-			CORE_ASSERT(m_repl_data.has_value(), ...);
+			CORE_ASSERT(
+				m_repl_data.has_value(), "repl data of a node with parent should have value!"
+			);
 			return m_repl_data->m_repl_module_parent;
 		}
 
