@@ -40,7 +40,6 @@ namespace pst {
 	}
 
 	LangElement::HashAlg& If::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, optional_name);
 		addToHash(partial_hash, else_body.has_value());
 		return partial_hash;
 	}

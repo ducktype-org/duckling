@@ -11,6 +11,8 @@
  */
 #pragma once
 
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
@@ -88,6 +90,16 @@ namespace query::internal {
 			CORE_PANIC("getStrIDValue() called on non-StrID metadata type");
 			CORE_UNREACHABLE();
 		}
+
+		/**
+		 * @brief Pretty print the metadata for debugging.
+		 * @param os The output stream to print to.
+		 */
+		virtual void prettyPrint(std::ostream& os) const {
+			// Print that pretty print is not implemented for this type
+			os << "BaseMetadata (type: " << getTypeID().strView()
+			   << ") - prettyPrint not implemented.\n";
+		}
 	};
 
 	/**
@@ -121,14 +133,14 @@ namespace query::internal {
 		 */
 		using TypeID = BaseMetadata::TypeID;
 
-		using TypeMap = base::StableHashMap<TypeID, std::vector<Box<BaseMetadata>>>;
+		using TypeMap = concurrent::ConHashMap<TypeID, std::vector<Box<BaseMetadata>>>;
 
 		/**
 		 * @brief The main storage map: NodeID -> TypeMap
 		 * For each NodeID, it stores a map of TypeID to vectors of metadata instances.
 		 * This allows multiple metadata instances of the same type per NodeID.
 		 */
-		using MetadataMap = base::StableHashMap<NodeID, TypeMap>;
+		using MetadataMap = concurrent::ConHashMap<NodeID, TypeMap>;
 
 		/**
 		 * @brief This actually stores the metadata.
@@ -136,11 +148,11 @@ namespace query::internal {
 		MetadataMap storage;
 
 	public:
-		MetadataStorage()                  = default;
-		MetadataStorage(MetadataStorage&&) = default;
+		MetadataStorage()                           = default;
+		MetadataStorage(MetadataStorage&&) noexcept = default;
 
-		MetadataStorage& operator=(MetadataStorage&&)      = delete;
 		MetadataStorage(const MetadataStorage&)            = delete;
+		MetadataStorage& operator=(MetadataStorage&&)      = delete;
 		MetadataStorage& operator=(const MetadataStorage&) = delete;
 
 		/**
@@ -160,14 +172,60 @@ namespace query::internal {
 			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
 			// Get or create the node's metadata map
-			if (!storage.contains(node_id)) storage.put(node_id, {});
-			auto& node_map = *storage.atMaybe(node_id).value();
+			storage.maybePutAndUpdate(node_id, {}, [&](Ref<TypeMap> node_map) {
+				// Get or create the type's vector
+				node_map->maybePutAndUpdate(
+					type_id,
+					{},
+					[&metadata](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
+						metadata_vector->push_back(std::move(metadata));
+					}
+				);
+			});
+		}
 
-			// Get or create the type's vector
-			if (!node_map.contains(type_id)) node_map.put(type_id, {});
-			auto& type_vec = *node_map.atMaybe(type_id).value();
+		/**
+		 * @brief Add a metadata instance to a node only if no metadata of this type exists.
+		 *
+		 * Use this method when you know that for a given node you want only one metadata
+		 * instance of this type, but the same code path might be executed multiple times
+		 *
+		 * This is more efficient than checking hasMetadata() + addMetadata() separately,
+		 * and ensures atomicity of the check-and-add operation.
+		 *
+		 * @tparam MetadataT The metadata type (must derive from BaseMetadata and have TYPE_ID)
+		 * @tparam Args Argument types for constructing the metadata
+		 * @param node_id The NodeID to attach metadata to
+		 * @param args Arguments forwarded to MetadataT constructor
+		 * @return true if metadata was added, false if metadata of this type already exists
+		 */
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, BaseMetadata>
+		bool addMetadataIfNotExists(NodeID node_id, Args&&... args) {
+			TypeID type_id = MetadataT::TYPE_ID;
 
-			type_vec.push_back(std::move(metadata));
+			// Create the metadata instance
+			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
+
+			bool was_added = false;
+
+			// Get or create the node's metadata map
+			storage.maybePutAndUpdate(node_id, {}, [&](Ref<TypeMap> node_map) {
+				// Get or create the type's vector
+				node_map->maybePutAndUpdate(
+					type_id,
+					{},
+					[&metadata, &was_added](Ref<std::vector<Box<BaseMetadata>>> metadata_vector) {
+						if (metadata_vector->empty()) {
+							// no metadata exists, so we add
+							metadata_vector->push_back(std::move(metadata));
+							was_added = true;
+						}
+					}
+				);
+			});
+
+			return was_added;
 		}
 
 		/**
@@ -184,20 +242,66 @@ namespace query::internal {
 			std::vector<CRef<MetadataT>> result;
 			TypeID                       type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage.atMaybe(node_id);
-			if (!node_it.has_value()) return result;
+			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map) {
+				node_map->maybeCallOn(
+					type_id,
+					[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+						result.reserve(type_vec->size());
+						for (const auto& metadata_ptr: *type_vec) {
+							// Safe downcast - we know the type matches because we used type id as key
+							const auto* typed_ptr
+								= static_cast<const MetadataT*>(metadata_ptr.get());
+							result.push_back(CRef<MetadataT>(typed_ptr));
+						}
+					}
+				);
+			});
 
-			const auto& node_map = *node_it.value();
-			auto        type_it  = node_map.atMaybe(type_id);
-			if (!type_it.has_value()) return result;
+			return result;
+		}
 
-			const auto& type_vec = *type_it.value();
-			result.reserve(type_vec.size());
+		/**
+		 * @brief Structure to hold metadata with its associated NodeID.
+		 * @tparam MetadataT The metadata type.
+		 */
+		template<typename MetadataT>
+		struct MetadataInfo final {
+			NodeID          node_id;
+			CRef<MetadataT> value;
+		};
 
-			for (const auto& metadata_ptr: type_vec) {
-				// Safe downcast - we know the type matches because we used type id as key
-				const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
-				result.push_back(CRef<MetadataT>(typed_ptr));
+		/**
+		 * @brief Get all metadata of a specific type from all nodes.
+		 *
+		 * Efficiently iterates through all nodes once, collecting metadata of the given type.
+		 *
+		 * @tparam MetadataT The metadata type to retrieve
+		 * @return std::vector<MetadataInfo<MetadataT>> Metadata with associated NodeIDs.
+		 *         Returns empty vector if no metadata of this type exists.
+		 */
+		template<typename MetadataT>
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
+		std::vector<MetadataInfo<MetadataT>> getMetadataFromAllNodes() const {
+			std::vector<MetadataInfo<MetadataT>> result;
+			TypeID                               type_id = MetadataT::TYPE_ID;
+
+			// Single pass through all nodes
+			// note that iteration here locks storage
+			for (const auto& [node_id, node_map]: storage) {
+				node_map.maybeCallOn(
+					type_id,
+					[&result, node_id](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+						for (const auto& metadata_ptr: *type_vec) {
+							// Safe downcast - we know the type matches because we used type id as key
+							const auto* typed_ptr
+								= static_cast<const MetadataT*>(metadata_ptr.get());
+							result.push_back(MetadataInfo<MetadataT>{
+								.node_id = node_id,
+								.value   = CRef<MetadataT>(typed_ptr),
+							});
+						}
+					}
+				);
 			}
 
 			return result;
@@ -215,14 +319,20 @@ namespace query::internal {
 		bool hasMetadata(NodeID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage.atMaybe(node_id);
-			if (!node_it.has_value()) return false;
+			bool result = false;
 
-			const auto& node_map = *node_it.value();
-			auto        type_it  = node_map.atMaybe(type_id);
-			if (!type_it.has_value()) return false;
+			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map) {
+				node_map->maybeCallOn(
+					type_id,
+					[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+						result = !type_vec->empty();  // this will set result to true only if there
+					                                  // is at least one metadata of this type
+					}
+				);
+			});
 
-			return !type_it.value()->empty();
+
+			return result;
 		}
 
 		/**
@@ -237,14 +347,18 @@ namespace query::internal {
 		usize getMetadataCount(NodeID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage.atMaybe(node_id);
-			if (!node_it.has_value()) return 0;
+			usize result = 0;
 
-			const auto& node_map = *node_it.value();
-			auto        type_it  = node_map.atMaybe(type_id);
-			if (!type_it.has_value()) return 0;
+			storage.maybeCallOn(node_id, [&](CRef<TypeMap> node_map) {
+				node_map->maybeCallOn(
+					type_id,
+					[&result](CRef<std::vector<Box<BaseMetadata>>> type_vec) {
+						result = type_vec->size();
+					}
+				);
+			});
 
-			return type_it.value()->size();
+			return result;
 		}
 
 		/**
@@ -271,11 +385,6 @@ namespace query::internal {
 		void clearNodeMetadata(NodeID node_id);
 
 		/**
-		 * @brief Clear all metadata storage.
-		 */
-		void clear();
-
-		/**
 		 * @brief Check if storage is empty.
 		 * @return true if no metadata is stored
 		 */
@@ -284,6 +393,9 @@ namespace query::internal {
 
 		/**
 		 * @brief Serialize all metadata to a byte vector.
+		 * \parallel This method should not race, but might behave weirdly if metadata is being
+		 * concurrently modified during serialization, as there is no large lock in place. It should
+		 * be used in a context where we can guarantee no concurrent modifications.
 		 *
 		 * Format (optimized with type name table and StrID table):
 		 *
@@ -320,6 +432,15 @@ namespace query::internal {
 		 * @return MetadataStorage The deserialized storage
 		 */
 		static MetadataStorage deserialize(std::span<const std::byte> data);
+
+		/**
+		 * @brief Pretty print the metadata storage for debugging.
+		 * \parallel This method should not race, but might behave weirdly if metadata is being
+		 * concurrently modified during printing, as there is no large lock in place. It should be
+		 * used in a context where we can guarantee no concurrent modifications.
+		 * @param os The output stream to print to.
+		 */
+		void prettyPrint(std::ostream& os) const;
 	};
 
 }  // namespace query

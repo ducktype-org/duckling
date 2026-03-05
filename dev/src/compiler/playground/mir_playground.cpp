@@ -8,9 +8,10 @@
 #include <query_framework/entry/query_entry_point.hpp>
 
 void printContextErrors() {
-	if (query::Context::int_logger.messageCount() > 0) {
+	auto logger = query::Context::dumpToOneLoggerAndClear();
+	if (logger->messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::int_logger.dumpLog(true, std::cerr);
+		logger->dumpLog(true, std::cerr);
 	}
 }
 

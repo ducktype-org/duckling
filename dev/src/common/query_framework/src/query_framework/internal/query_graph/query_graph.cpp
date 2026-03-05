@@ -7,23 +7,36 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
+#include <query_framework/module_flags/module_flags.hpp>
+
 #include <cstring>
 #include <iomanip>
 #include <ostream>
 #include <queue>
 #include <ranges>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace query::internal {
 
 	QueryGraph::QueryGraph():
-		  node_deps(base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()) {}
+		  node_deps(base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()),
+		  node_reverse_deps(base::makeBox<concurrent::ConHashMap<NodeID, std::vector<NodeID>>>()) {}
 
 	void QueryGraph::addDependency(NodeID from, NodeID to) {
 		CORE_ASSERT(
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
+
+		if (track_reverse_graph) {
+			node_reverse_deps->maybePutAndUpdate(
+				to,
+				std::vector<NodeID>{},
+				[from](Ref<std::vector<NodeID>> deps) { deps->emplace_back(from); }
+			);
+		}
+
 		auto children_data = node_deps->atMaybe(from).value();
 		auto children      = children_data->getHolder();
 		children->push_back(to);
@@ -331,5 +344,61 @@ namespace query::internal {
 		auto& deps        = *it.value();
 		auto  deps_holder = deps.getHolder();
 		return !deps_holder->empty();
+	}
+
+	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
+	) const {
+		CORE_ASSERT(
+			track_reverse_graph,
+			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
+		);
+
+		std::vector<NodeID>        queue{ start_nodes.begin(), start_nodes.end() };
+		std::unordered_set<NodeID> visited;
+
+		while (not queue.empty()) {
+			auto node = queue.back();
+			queue.pop_back();
+
+			if (visited.contains(node)) continue;
+			visited.insert(node);
+
+			if_opt_some(node_reverse_deps->atMaybe(node), its_reverse_deps) {
+				for (auto& new_node: *its_reverse_deps) queue.push_back(new_node);
+			}
+		}
+
+		return QueryGraph::Dependents{ .dependents_recursive = { visited.begin(), visited.end() } };
+	}
+
+	void QueryGraph::eraseNodes(const QueryGraph::Dependents& nodes_to_erase) {
+		CORE_ASSERT(
+			track_reverse_graph,
+			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
+		);
+
+
+		for (const auto& node: nodes_to_erase.dependents_recursive) {
+			// A(input) <- B <- C
+			//        D <--┘
+			// deps(B) = {A, D}
+			// rev_deps(A) = {B}
+			// rev_deps(D) = {B}
+
+			// Some inputs may have no dependencies at all when in Language Server mode (e.g. no
+			// queries were executed between reparsings).
+			if_opt_some(node_deps->atMaybe(node), node_deps_children_data) {
+				auto removed_node_deps = node_deps_children_data->getHolder();
+
+				for (const auto& dep: *removed_node_deps) {
+					if_opt_some(node_reverse_deps->atMaybe(dep), its_reverse_deps) {
+						std::erase(*its_reverse_deps, node);
+					}
+				}
+			}
+
+			node_deps->erase(node);
+			node_reverse_deps->erase(node);
+		}
 	}
 }
