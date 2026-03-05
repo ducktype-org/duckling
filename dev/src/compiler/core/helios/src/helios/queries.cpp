@@ -27,6 +27,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
@@ -238,7 +239,8 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: *stmts.unlock(ctx)) stmt.unlock(ctx)->acceptVisitor(*this);
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts))
+					stmt.unlock(ctx)->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>
@@ -278,7 +280,7 @@ namespace compiler::helios {
 						"This should not happen"
 					);
 
-					for (const auto& stmt: *fun_body.unlock(ctx))
+					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
 						stmt.unlock(ctx)->acceptVisitor(*this);
 				}
 			}
@@ -622,7 +624,7 @@ namespace compiler::helios {
 			query::Context& ctx, const Container& container, tsh::SymbolType<> return_type
 		) {
 			code::CodeBlock block({});
-			for (const auto& stmt: *container.unlock(ctx)) {
+			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
 
