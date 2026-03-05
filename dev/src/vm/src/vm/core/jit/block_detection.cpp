@@ -21,13 +21,17 @@ std::vector<CfOccurrence> collectControlFlowOccurrences(const low::LowFuncData& 
         switch(opcode) {
             case low::MicroOpcode::jmp_label: {
                 out.push_back(CfOccurrence{index, CfOccurrenceKind::Jump});
-                out.push_back(CfOccurrence{index + arg0, CfOccurrenceKind::JumpDestination});
+                if (index + arg0 < function.bc.size()) {
+                    out.push_back(CfOccurrence{index + arg0, CfOccurrenceKind::JumpDestination});
+                }
                 break;
             }
             case low::MicroOpcode::jmpIf_label:
             case low::MicroOpcode::jmpIfNot_label: {
                 out.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
-                out.push_back(CfOccurrence{index + arg0, CfOccurrenceKind::JumpDestination});
+                if (index + arg0 < function.bc.size()) {
+                    out.push_back(CfOccurrence{index + arg0, CfOccurrenceKind::JumpDestination});
+                }
                 break;
             }
             case low::MicroOpcode::ret:
