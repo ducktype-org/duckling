@@ -151,6 +151,19 @@ Tests:
           String: "0\n0\n0\n0\n0\n0\n"
         ExitCode: 0
 
+  zero_init:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "0\n0\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "0\n0\n"
+        ExitCode: 0
+
   strings:
     Cases:
       llvm:

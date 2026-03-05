@@ -3,16 +3,11 @@ fun main() -> i64 = {
     builtin_output_i64(i); # 0
     var b: i32;
     builtin_output_i64(b); # 0
-
-    var arr: i32[2];
-    builtin_output_i64(b); # 0
-
     var f: f64;
-    # builtin_output_f64(f); # 0.0
 
-    # var arr: i32[1];
-    # builtin_output_i64(arr[0]); # 0
-    # builtin_output_i64(arr[1]); # 0
+    # @TODO: #1916 Add an array zero init case here, once it's possible to examine it contents.
+    # @TODO: #1560 Add a records zero init case here, once it's possible to examine it contents.
+    # Also, one both are added, remove this test and unify it with `default_init`/
 
     return 0;
 }
