@@ -3,6 +3,7 @@
 #include "access.hpp"
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
+#include "elements/lang_state_unmethods.hpp"
 #include "pst_id.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -29,6 +30,8 @@ namespace pst {
 	class PstVisitor;
 
 	class StablePosition;
+
+	class LangParserState;
 
 	/**
 	 * @brief Base Element for all of the PST elements.
@@ -74,8 +77,8 @@ namespace pst {
 
 		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
-		explicit LangElement(const dia::SourcePosition& position):
-			  source_position(position),
+		explicit LangElement(const LangParserState& state):
+			  source_position(internal::getPosition(state)),
 			  id(PstID::next()) {}
 
 		LangElement(const LangElement&) = delete;

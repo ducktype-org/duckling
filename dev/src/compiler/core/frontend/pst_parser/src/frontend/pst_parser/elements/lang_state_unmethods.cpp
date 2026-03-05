@@ -6,7 +6,7 @@
 #include "implementations/preamble.hpp"
 
 namespace pst::internal {
-	dia::SourcePosition getPosition(LangParserState& state) { return state.getPosition(); }
+	dia::SourcePosition getPosition(const LangParserState& state) { return state.getPosition(); }
 
 	void parseExprIntoHolder(
 		LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length

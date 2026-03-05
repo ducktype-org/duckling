@@ -29,7 +29,7 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
 
-		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {
+		explicit CodeBlock(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::CodeBlock;
 		}
 

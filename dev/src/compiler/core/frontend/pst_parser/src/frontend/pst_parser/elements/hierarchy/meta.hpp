@@ -4,6 +4,7 @@
 #include "../../lang_parser_element.hpp"
 #include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
+#include "../lang_state_unmethods.hpp"
 
 #include <diagnostic/source_position.hpp>
 #include <string_id/string_id.hpp>
@@ -22,7 +23,7 @@ namespace pst {
 	 */
 	class NotStmt: public LangElement {
 	public:
-		explicit NotStmt(const dia::SourcePosition& position): LangElement(position) {}
+		explicit NotStmt(const LangParserState& state): LangElement(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -108,8 +109,8 @@ namespace pst {
 		Prefixes prefixes;
 		bool     implicit_return{};
 
-		Stmt(StmtKind kind, const dia::SourcePosition& position):
-			  LangElement(position),
+		Stmt(StmtKind kind, const LangParserState& state):
+			  LangElement(internal::getPosition(state)),
 			  kind(kind) {}
 
 		static PrefixBoxes collectPrefixes(LangParserState& state);
@@ -208,7 +209,7 @@ namespace pst {
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                                   \
-	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) { \
+	class_name(const LangParserState& state): Stmt(StmtKind::class_name, state) { \
 		this->element_kind = element_kind_;                                                 \
 	}
 
@@ -217,7 +218,7 @@ namespace pst {
 	 */
 	class ClassStmt: public Stmt {
 	protected:
-		ClassStmt(StmtKind kind, const dia::SourcePosition& pos): Stmt(kind, pos) {}
+		ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
 
 	protected:
 		HashAlg& addGenericDataToHash(HashAlg&) const override;

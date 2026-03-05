@@ -27,7 +27,7 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
 
-		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {
+		explicit ClassBlock(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::ClassBlock;
 		}
 

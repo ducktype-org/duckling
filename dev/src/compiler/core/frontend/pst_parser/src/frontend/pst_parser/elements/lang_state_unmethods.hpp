@@ -13,7 +13,7 @@ namespace pst {
 
 	// These are needed to not include parser state definition
 	namespace internal {
-		dia::SourcePosition getPosition(LangParserState& state);
+		dia::SourcePosition getPosition(const LangParserState& state);
 		void                parseExprIntoHolder(
 						   LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length
 					   );
