@@ -161,11 +161,12 @@ namespace compiler::helios {
 				variant_case(PstSymbolData, pst_data) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
 					if (kind(key) == SymbolKind::Function
-					    or kind(key) == SymbolKind::FunctionDeclaration)
+					    or kind(key) == SymbolKind::FunctionDeclaration
+					    or kind(key) == SymbolKind::Method)
 						return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
-					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
+					pst_data.getElement().unlock(ctx)->acceptVisitor(visitor);
 
 					return visitor.symbol_type_qresult;
 				}

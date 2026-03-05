@@ -9,6 +9,7 @@
 #include <vm/core/thread/vmvalue.hpp>
 
 #include <expected>
+#include <mutex>
 
 namespace {
 	using namespace compiler::helios;
@@ -267,9 +268,10 @@ namespace {
 
 	std::expected<void, VmEvaluationError> loadLirFunctions(
 		CompTimeDVM&                                      comptime_dvm,
-		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
+		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
+		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
@@ -366,6 +368,9 @@ namespace compiler::helios {
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	) {
+		static std::mutex vm_evaluation_mutex;
+		std::scoped_lock  lock(vm_evaluation_mutex);
+
 		// @note: comptime_dvm is initialized (spawns the DVM compile-time evaluation process and
 		// initializes it) once upon the first call to executeInVm and its lifetime extends for the
 		// duration of the program. When deinitialized, it kills the spawned process.
@@ -376,7 +381,7 @@ namespace compiler::helios {
 				"Failed to initialize the comptime DVM process."
 			));
 
-		if (auto res = loadLirFunctions(comptime_dvm, lir_functions); !res)
+		if (auto res = loadLirFunctions(comptime_dvm, lir_functions, ctx); !res)
 			return std::unexpected(res.error());
 
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)

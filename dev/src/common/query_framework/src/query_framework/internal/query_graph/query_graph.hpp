@@ -133,21 +133,21 @@ namespace query::internal {
 			 * become dangling after the move.
 			 */
 			ChildrenData moveFrom() {
-				IF_BUILD_TYPE_DEV({
-					// this sets the original lock to nullptr,
-					// we have to do it first:
-					auto moved_1 = std::move(*children);
+				// this sets the original lock to nullptr,
+				// we have to do it first:
+				auto moved_1 = std::move(*children);
 
+				IF_BUILD_TYPE_DEV({
 					bool was_released_check = was_released.test_and_set(std::memory_order_acquire);
 					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
 
 					// we unlock not on *children, as that object is moved from, but on this local
 					// one no one else can see (yet):
 					moved_1.lock->unlock();
-
-					// we move again, to actually return the children data:
-					return std::move(moved_1);
 				})
+
+				// we move again, to actually return the children data:
+				return std::move(moved_1);
 			}
 
 			~ChildrenDataHolderImpl() {
@@ -161,6 +161,17 @@ namespace query::internal {
 		};
 
 		base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;
+
+		/**
+		 * Graph that tracks the reversed relation to `node_deps`.
+		 * Only used if @p track_reverse_graph is true.
+		 *
+		 * Currently only used by the Language Server.
+		 *
+		 * Does not take part in any of the additional logic like serialization
+		 * or deserialization.
+		 */
+		base::Box<concurrent::ConHashMap<NodeID, std::vector<NodeID>>> node_reverse_deps;
 
 		/*
 		 * for direct access to node_deps
@@ -282,9 +293,33 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Get all Nodes in the graph.
-		 * @return A vector of all NodeIDs in the graph.
+		 * @brief Helper to keep the output of the `getDependentNodes`
+		 * function in a single struct, as it should be the transitive closure of
+		 * the dependent nodes.
 		 */
+		struct Dependents {
+			std::vector<NodeID> dependents_recursive;
+		};
+
+		/**
+		 * @brief Gets the set of all nodes that are (transitively) dependent on any of the given
+		 * start nodes, including the start nodes themselves.
+		 *
+		 * @warning This method should not be used when the query graph is being concurrently
+		 * modified.
+		 */
+		[[nodiscard]] Dependents getDependentNodes(const std::vector<NodeID>& start_nodes) const;
+
+		/**
+		 * @brief Erase the given nodes from the graph. The nodes to erase should be obtained
+		 * from getDependentNodes() to ensure all dependent nodes are erased.
+		 *
+		 * @warning This method should not be used when the query graph is being concurrently
+		 * modified.
+		 * @note This is for Language Server.
+		 */
+		void eraseNodes(const Dependents& nodes_to_erase);
+
 		[[nodiscard]] std::vector<NodeID> getAllNodes() const;
 
 		/** @brief Check if a node has any dependencies. */

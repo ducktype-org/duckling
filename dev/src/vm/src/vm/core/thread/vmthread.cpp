@@ -1,4 +1,3 @@
-
 #include "vmthread.hpp"
 
 #include "kill_process_exception.hpp"
@@ -16,6 +15,7 @@
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/concurrency/gil.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -338,6 +338,7 @@ namespace vm {
 	Ref<VmValue> VMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
+		keepOrAcquireGil();
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
@@ -379,6 +380,7 @@ namespace vm {
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
+		process.getGIL().release();
 
 		return exit_value_storage.value();
 	}
@@ -477,14 +479,13 @@ namespace vm {
 			    && global->ctor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->ctor_name.value()))
+					                        .atMaybe(global->ctor_name.value())
 					                        .expect(
 												"Called function does not exist: "
 												+ global->ctor_name.value().str()
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					const auto       exit_value     = executeFunction(start_function, func);
-					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}
@@ -524,8 +525,7 @@ namespace vm {
 												+ global->dtor_name.value().str()
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					const auto       exit_value     = executeFunction(start_function, func);
-					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}
@@ -620,6 +620,31 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
+	void VMThread::safeRun(
+		CRef<low::LowVMProgram> program,
+		const std::string&      func_name,
+		const RunArguments&     run_arguments
+	) {
+		try {
+			run(program, func_name, run_arguments);
+		} catch (const exceptions::VMRuntimeException& e) {
+			std::cerr << "VMThread has panicked: " << e.what() << "\n";
+			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+		}
+	}
+
+	void VMThread::runNoSpawn(
+		CRef<low::LowVMProgram> program,
+		const std::string&      func_name,
+		const RunArguments&     run_arguments
+	) {
+		// @TODO: #2040 Make this function check if anyone else is executing anything,
+		// or simplify the state checking, perhaps remove state from thread and move all the state
+		// to the process?
+		safeRun(program, func_name, run_arguments);
+		waitForRunningResponse();
+	}
+
 	bool VMThread::spawnThreadAndRun(
 		CRef<low::LowVMProgram> program,
 		const std::string&      func_name,
@@ -628,14 +653,7 @@ namespace vm {
 		if (exec_thread)  // There is already a thread running.
 			return false;
 
-		exec_thread = std::thread([this, program, func_name, run_arguments] {
-			try {
-				run(program, func_name, run_arguments);
-			} catch (const exceptions::VMRuntimeException& e) {
-				std::cerr << "VMThread has panicked: " << e.what() << "\n";
-				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-			}
-		});
+		exec_thread = std::thread(&VMThread::safeRun, this, program, func_name, run_arguments);
 		return waitForRunningResponse();
 	}
 
@@ -657,5 +675,27 @@ namespace vm {
 
 	bool VMThread::waitForRunningResponse() {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
+	}
+
+	void VMThread::keepOrAcquireGil() {
+		if (has_gil) {
+			// Check if you can hold it longer - releasing policy
+			// If you can't hold it longer then
+			// 1. say
+			if (!process.getGIL().shouldRelease()) return;
+			has_gil = false;
+			// 2. release gil
+			process.getGIL().release();
+			// 3. yield - to not reacquire instantly
+			std::this_thread::yield();
+		}
+		// Try to acquire GIL
+		process.getGIL().acquire();
+		has_gil = true;
+	}
+
+	void VMThread::releaseGil() {
+		has_gil = false;
+		process.getGIL().release();
 	}
 }

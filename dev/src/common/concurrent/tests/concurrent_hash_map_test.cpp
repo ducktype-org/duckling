@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <random>
+#include <set>
 #include <unordered_map>
 
 // strConcat specializations for result types used in race testing
@@ -47,8 +48,6 @@ class ConcurrentTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		concurrent::worker::setWorkerCount(4);
-
 		TESTER_ADD_TEST(hashMapSingleThreadTest1);
 
 		TESTER_ADD_TEST(singleThreadedRandomTest<0>);
@@ -70,6 +69,10 @@ public:
 		TESTER_ADD_TEST(multiThreadedSimpleTest3<2>);
 		TESTER_ADD_TEST(multiThreadedSimpleTest3<4>);
 
+		TESTER_ADD_TEST(multiThreadedMoveConstructorTest<1>);
+		TESTER_ADD_TEST(multiThreadedMoveConstructorTest<2>);
+		TESTER_ADD_TEST(multiThreadedMoveConstructorTest<4>);
+
 		TESTER_ADD_TEST(multiThreadedEraseTest<1>);
 		TESTER_ADD_TEST(multiThreadedEraseTest<2>);
 		TESTER_ADD_TEST(multiThreadedEraseTest<4>);
@@ -80,6 +83,14 @@ public:
 		TESTER_ADD_TEST(constIteratorTest);
 		TESTER_ADD_TEST(multiThreadedSizeTest);
 
+		TESTER_ADD_TEST(multiThreadedExtractTest<1>);
+		TESTER_ADD_TEST(multiThreadedExtractTest<2>);
+		TESTER_ADD_TEST(multiThreadedExtractTest<4>);
+
+		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<1>);
+		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<2>);
+		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<4>);
+
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<1>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<2>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<4>);
@@ -88,6 +99,9 @@ public:
 
 		TESTER_ADD_TEST(hashMapRaceTest);
 	}
+
+protected:
+	void beforeAll() override { concurrent::worker::setWorkerCount(4); }
 
 private:
 	void testGetAllKeyValuePairs() {
@@ -137,9 +151,9 @@ private:
 		ASSERT_TRUE(*map.atMaybe(3).value() == 35);
 
 
-		map.maybePutAndUpdate(4, 40, [](int& v) { v += 5; });
+		map.maybePutAndUpdate(4, 40, [](Ref<int> v) { *v += 5; });
 		ASSERT_TRUE(map.getCopy(4) == 45);
-		map.maybePutAndUpdate(1, 100, [](int& v) { v += 5; });
+		map.maybePutAndUpdate(1, 100, [](Ref<int> v) { *v += 5; });
 		ASSERT_TRUE(map.getCopy(1) == 15);
 
 		map.maybePut(5, 50);
@@ -267,7 +281,7 @@ private:
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map]() {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++)
-					map.maybePutAndUpdate(1ULL, 0ULL, [](u64& v) { v += 10; });
+					map.maybePutAndUpdate(1ULL, 0ULL, [](Ref<u64> v) { *v += 10; });
 			});
 		}
 
@@ -302,6 +316,70 @@ private:
 
 		// we should have the last update from one of the threads:
 		ASSERT_TRUE(map.getCopy(1) >= (OPS_PER_THREAD - 1) * thread_count);
+	}
+
+	template<u64 thread_count>
+	void multiThreadedMoveConstructorTest() {
+		constexpr u64 OPS_PER_THREAD = 100'000;
+
+		concurrent::ConHashMap<u64, u64>                 map;
+		base::Optional<concurrent::ConHashMap<u64, u64>> moved_map_opt;
+
+		// All the threads will be writing to the map while the first thread will move-construct
+		// moved_map_opt from the map in the middle of the computation.
+
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			threads.emplace_back([&map, &moved_map_opt, thread_id]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					if (thread_id == 0 && j == OPS_PER_THREAD / 2) {
+						// move-construct moved_map_opt from map in the middle of the computation
+						moved_map_opt.emplace(std::move(map));
+					}
+
+					u64 key = j * thread_count + thread_id;
+					map.put(key, key * 10);
+				}
+			});
+		}
+
+		for (auto& t: threads) t.join();
+
+		// Validate state:
+		ASSERT_TRUE(moved_map_opt.has_value());
+		ASSERT_EQUAL(moved_map_opt->size() + map.size(), thread_count * OPS_PER_THREAD);
+
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+				u64 key = j * thread_count + thread_id;
+				if (moved_map_opt->contains(key)) {
+					ASSERT_EQUAL(moved_map_opt->getCopy(key), key * 10);
+					ASSERT_TRUE(!map.contains(key));
+				} else {
+					ASSERT_TRUE(map.contains(key));
+					ASSERT_EQUAL(map.getCopy(key), key * 10);
+					ASSERT_TRUE(!moved_map_opt->contains(key));
+				}
+			}
+		}
+
+		// Test iteration:
+		std::set<std::pair<u64, u64>> all_pairs;
+
+		for (auto [key, value]: *moved_map_opt) {
+			ASSERT_TRUE(!all_pairs.contains(std::make_pair(key, value)));
+			all_pairs.emplace(key, value);
+		}
+
+		ASSERT_EQUAL(all_pairs.size(), moved_map_opt->size());
+
+		for (auto [key, value]: map) {
+			ASSERT_TRUE(!all_pairs.contains(std::make_pair(key, value)));
+			all_pairs.emplace(key, value);
+		}
+
+		ASSERT_EQUAL(all_pairs.size(), thread_count * OPS_PER_THREAD);
 	}
 
 	/**
@@ -368,11 +446,11 @@ private:
 		ASSERT_EQUAL(map.size(), 4ULL);
 
 		// maybePutAndUpdate on existing key should not change size
-		map.maybePutAndUpdate(1, 0, [](int& v) { v += 1; });
+		map.maybePutAndUpdate(1, 0, [](Ref<int> v) { *v += 1; });
 		ASSERT_EQUAL(map.size(), 4ULL);
 
 		// maybePutAndUpdate on new key should increment size
-		map.maybePutAndUpdate(5, 50, [](int& v) { v += 1; });
+		map.maybePutAndUpdate(5, 50, [](Ref<int> v) { *v += 1; });
 		ASSERT_EQUAL(map.size(), 5ULL);
 
 		// erase existing key should decrement size
@@ -508,6 +586,156 @@ private:
 		for (int i = 0; i < N; i++) expected += i * 10;
 
 		for (auto& s: sums) ASSERT_EQUAL(s.load(), expected);
+	}
+
+	template<u64 thread_count>
+	void multiThreadedExtractTest() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 KEY_RANGE      = 5'000;
+
+		concurrent::ConHashMap<u64, u64> map;
+
+		// fill the map
+		for (u64 i = 0; i < KEY_RANGE; i++) map.put(i, i * 10);
+
+		// Each thread tries to extract keys [0, KEY_RANGE).
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+		std::vector<std::vector<std::pair<u64, u64>>> extracted_values(thread_count);
+
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			threads.emplace_back([&map, &extracted_values, thread_id]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					u64  key       = (j * thread_id * 1'000'000'007) % KEY_RANGE;
+					auto extracted = map.extract(key);
+					if (extracted) extracted_values[thread_id].emplace_back(key, extracted.value());
+				}
+			});
+		}
+		for (auto& t: threads) t.join();
+
+		// Verify that each key was extracted at most once and that the extracted value is correct.
+		std::vector<bool> extracted_keys(KEY_RANGE, false);
+		u64               total_extracted = 0;
+
+		for (const auto& thread_values: extracted_values) {
+			for (const auto& [key, value]: thread_values) {
+				ASSERT_TRUE(key < KEY_RANGE);
+				ASSERT_TRUE(value == key * 10);
+				ASSERT_TRUE(!extracted_keys[key]);
+
+				extracted_keys[key] = true;
+				total_extracted++;
+			}
+		}
+
+		// Verify that remaining keys in the map are correct and were not extracted.
+		ASSERT_TRUE(total_extracted + map.size() == KEY_RANGE);
+		u64 remaining_in_map = 0;
+		u64 expected_size    = map.size();
+		for (auto [key, value]: map) {
+			ASSERT_TRUE(key < KEY_RANGE);
+			ASSERT_TRUE(value == key * 10);
+			ASSERT_TRUE(!extracted_keys[key]);
+			remaining_in_map++;
+		}
+		ASSERT_EQUAL(remaining_in_map, expected_size);
+
+		// Double check it with other map operations to ensure no extracted keys are still accessible.
+		for (u64 key = 0; key < KEY_RANGE; key++) {
+			if (extracted_keys[key]) {
+				ASSERT_TRUE(!map.contains(key));
+				ASSERT_TRUE(map.atMaybe(key).empty());
+			} else {
+				ASSERT_TRUE(map.contains(key));
+				ASSERT_TRUE(map.atMaybe(key).has_value());
+				ASSERT_TRUE(map.getCopy(key) == key * 10);
+			}
+		}
+	}
+
+	template<u64 thread_count>
+	void multiThreadedMaybeCallOnTest() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 KEY_RANGE      = 5'000;
+
+		concurrent::ConHashMap<u64, u64> map;
+
+		// fill the map
+		for (u64 i = 0; i < KEY_RANGE; i++) map.put(i, i * 10);
+
+		// Each thread tries to maybeCallOn keys [0, KEY_RANGE * 3).
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+		std::vector<std::vector<std::pair<u64, u64>>> accessed_values(thread_count);
+		std::vector<std::vector<std::pair<u64, u64>>> const_accessed_values(thread_count);
+
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			threads.emplace_back([&map, &accessed_values, &const_accessed_values, thread_id]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					u64 key = (j * thread_id * 1'000'000'007) % (KEY_RANGE * 3);
+
+					// we also add to map here in range [KEY_RANGE, KEY_RANGE*2) to test that
+					// maybeCallOn can see new keys added by other threads:
+					auto add_key = (key % KEY_RANGE) + KEY_RANGE;
+					map.maybePut(add_key, add_key * 100);
+
+					map.maybeCallOn(key, [&accessed_values, thread_id, key](Ref<u64> value_ref) {
+						accessed_values[thread_id].emplace_back(key, *value_ref);
+						if (*value_ref == key * 10)
+							*value_ref += 1;  // if it's an original value, update it
+					});
+
+					// also test const variant of maybeCallOn:
+					const auto& cmap  = map;
+					auto        c_key = (key * 1'000'000'009) % (KEY_RANGE * 3);
+					cmap.maybeCallOn(
+						c_key,
+						[&const_accessed_values, thread_id, c_key](CRef<u64> value_ref) {
+							const_accessed_values[thread_id].emplace_back(c_key, *value_ref);
+						}
+					);
+				}
+			});
+		}
+		for (auto& t: threads) t.join();
+
+		// Verify that accessed keys are correct and that original values were updated.
+		for (const auto& thread_values: accessed_values) {
+			for (const auto& [key, value]: thread_values) {
+				if (key < KEY_RANGE) {
+					// original keys should have been updated to key*10 + 1
+					ASSERT_TRUE(value == key * 10 || value == key * 10 + 1);
+					ASSERT_TRUE(map.contains(key));
+					ASSERT_EQUAL(map.getCopy(key), key * 10 + 1);
+
+				} else if (key < KEY_RANGE * 2) {
+					// maybePut should have added keys in [KEY_RANGE, KEY_RANGE*2) with value = key*100
+					ASSERT_TRUE(value == key * 100);
+					ASSERT_TRUE(map.contains(key));
+					ASSERT_EQUAL(map.getCopy(key), key * 100);
+				} else {
+					// keys >= KEY_RANGE*2 should not be present
+					fail("Accessed key that should not be present: " + std::to_string(key));
+				}
+			}
+		}
+
+		// Verify that const maybeCallOn accessed the keys with correct values.
+		for (const auto& thread_values: const_accessed_values) {
+			for (const auto& [key, value]: thread_values) {
+				if (key < KEY_RANGE) {
+					// original keys should have been accessed with value = key * 10 or key * 10 + 1
+					ASSERT_TRUE(value == key * 10 or value == key * 10 + 1);
+				} else if (key < KEY_RANGE * 2) {
+					// maybePut should have added keys in [KEY_RANGE, KEY_RANGE*2) with value = key*100
+					ASSERT_TRUE(value == key * 100);
+				} else {
+					// keys >= KEY_RANGE*2 should not be present
+					fail("Accessed const key that should not be present: " + std::to_string(key));
+				}
+			}
+		}
 	}
 
 	/**

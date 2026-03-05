@@ -12,7 +12,6 @@ use crate::{
         },
         schemas::manifest::{CompilerOptions, Manifest as ManifestSchema},
     },
-    static_str_id,
 };
 
 use super::Scope;
@@ -35,15 +34,15 @@ pub(crate) fn parse(
     debug!("package name is `{name}`, version is `{version}`");
     let root_description = RootDescription::new(name.into(), version);
     let mut scope = Scope::new();
-    scope.push(static_str_id!("dependencies"));
+    scope.push("dependencies".into());
     let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, &mut scope)?;
     scope.pop();
 
-    scope.push(static_str_id!("dev_dependencies"));
+    scope.push("dev_dependencies".into());
     let dev_deps = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, &mut scope)?;
     scope.pop();
 
-    scope.push(static_str_id!("features"));
+    scope.push("features".into());
     let features = parse_features(schema.features.as_ref())
         .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
     scope.pop();

@@ -47,7 +47,8 @@ private:
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
-				.incremental           = { .enabled = true }
+				.incremental           = { .enabled = true },
+				.execution_options     = {},
             }
         );
 
@@ -123,9 +124,6 @@ private:
 
 		// Save artifacts (writes previous graph blob to artifacts)
 		driver::exit();
-
-		// delete the artifacts directory after test
-		std::filesystem::remove_all(artifacts_path.getPath());
 	}
 };
 

@@ -3,6 +3,7 @@ mod manifest;
 mod package_ctx;
 mod package_loader;
 mod solver;
+pub mod storage;
 mod venv_config;
 mod version;
 pub use manifest::*;

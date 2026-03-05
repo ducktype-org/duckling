@@ -7,6 +7,7 @@
 #include "source_file.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/worker/worker_manager.hpp>
 #include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -18,6 +19,8 @@
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -122,18 +125,26 @@ namespace compiler::frontend {
 		return FileAccessLocked(m_main_source_file.value()->getFileID());
 	}
 
-	std::vector<FileAccessLocked> ModuleTree::getSourceFiles() const {
-		std::vector<FileAccessLocked> out;
-		out.reserve(m_source_files.size());
-		for (const auto& file: m_source_files) out.emplace_back(file->getFileID());
-		return out;
+	SourceFilesAccessLocked ModuleTree::getSourceFiles() const {
+		std::vector<FileAccessLocked> files;
+		files.reserve(m_source_files.size());
+		for (const auto& file: m_source_files) files.emplace_back(file->getFileID());
+		return { getModuleID(), std::move(files) };
 	}
 
-	std::vector<ModuleAccessLocked> ModuleTree::getSubmodules() const {
-		std::vector<ModuleAccessLocked> out;
-		out.reserve(m_submodules.size());
-		for (const auto& [name, module]: m_submodules) out.emplace_back(module->getModuleID());
-		return out;
+	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
+		std::vector<ModuleAccessLocked> submodules;
+		submodules.reserve(m_submodules.size());
+		for (const auto& [name, submodule]: m_submodules)
+			submodules.emplace_back(submodule->getModuleID());
+		return { getModuleID(), std::move(submodules) };
+	}
+
+	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID name) const {
+		base::Optional<ModuleID> child;
+		if (auto maybe = m_submodules.atMaybe(name); maybe.has_value())
+			child = (*maybe.value())->getModuleID();
+		return ModuleChildAccessLocked(getModuleID(), name, child);
 	}
 
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
@@ -161,14 +172,14 @@ namespace compiler::frontend {
 		else
 			output << indent << "├> Missing main module file!\n";
 
-		for (const auto& file_ref: getSourceFiles())
+		for (const auto& file_ref: getSourceFiles().illegalAccess())
 			output << indent << "├= " << getFileRef(file_ref.illegalAccess().getID())->file.name()
 				   << '\n';
 
 		for (const auto& [ext, files]: getOtherFiles())
 			for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
 
-		for (const auto& submodule_ref: getSubmodules())
+		for (const auto& submodule_ref: getSubmodules().illegalAccess())
 			output << getModuleRef(submodule_ref.illegalAccess().getID())
 						  ->prettyPrint(indentation + 3);
 
@@ -179,7 +190,7 @@ namespace compiler::frontend {
 		// If ModuleHash is invalid, then children are also invalid
 		if (!m_path_component_hash.has_value()) {
 			// m_hash should not have value if path component hash is invalid
-			// The are calculaten in the same function: updateModuleHash()
+			// The are calculated in the same function: updateModuleHash()
 			CORE_ASSERT(!m_hash.has_value(), "Module hash have value!");
 
 			// assert if children are invalid too
@@ -232,11 +243,10 @@ namespace compiler::frontend {
 		// If a Module has a main source file
 		hashing::addToHash(partial, hasMainSourceFile());
 
-		// The number of SourceFiles
-		hashing::addToHash(partial, m_source_files.size());
-
-		// Number of SubModules
-		hashing::addToHash(partial, m_submodules.size());
+		// We do not need to add source files count or submodule count here,
+		// Because there is a separate SideInput for that
+		// And there is no other way to get those counts
+		// Only by calling unlock on SourceFilesAccessLocked or SubmodulesAccessLocked
 
 		// We do not need to add a module name and package_name, since they are already in the path
 		// component hash
@@ -428,6 +438,11 @@ namespace compiler::frontend {
 		m_parent = parent;
 	}
 
+	void ModuleTreeBuilder::setReplModule(const ReplData& repl_data) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		m_repl_data = repl_data;
+	}
+
 	void ModuleTreeBuilder::setPackageID(std::string_view package_id) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
@@ -456,6 +471,9 @@ namespace compiler::frontend {
 
 		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for every module tree!");
 		module_ref->m_package_id = m_package_id;
+
+		// Set REPL-specific attributes
+		module_ref->m_repl_data = m_repl_data;
 
 		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
@@ -556,7 +574,7 @@ namespace compiler::frontend {
 		);
 
 		// we need to detect cycles as someone could accidentally create one
-		// for example if module A is parent of B in oryginal module tree
+		// for example if module A is parent of B in original module tree
 		// and function addSubmodule(B, A) is called
 		// we would have a cycle A -> B -> A
 		// this is a programer error, because cycle is not possible in standard module tree from
@@ -753,7 +771,7 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// Chenge the parent of all submodules to the parent of the removed module
+		// Change the parent of all submodules to the parent of the removed module
 		for (auto& [_, submodule]: module->m_submodules) {
 			if (parent.has_value()) {
 				parent.value()->m_submodules.put(submodule->getName(), submodule);
@@ -822,7 +840,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
+		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesFromFile(file);
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
 		for (auto& source_file: source_files) source_file->update();
 	}
@@ -837,6 +855,64 @@ namespace compiler::frontend {
 
 	ModuleID createModuleTree(const fs::File& file, std::string_view package_id) {
 		return ModuleTreeBuilder::create(file, package_id)->getModuleID();
+	}
+
+	void parseAllFilesInModuleTree(ModuleID module_id) {
+		CORE_ASSERT(
+			query::Context::getState().activeQueryCount() == 0,
+			"parseAllFilesInModuleTree called from within a query!"
+		);
+
+		// First collect all files to be parsed.
+		std::vector<FileID> files_to_parse;
+		auto                collect_files = [&](this auto&& self, ModuleID mid) -> void {
+            auto module_tree = GetModuleID_Functor::get(mid);
+            if (module_tree->hasMainSourceFile())
+                files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
+            for (const auto& file: module_tree->getSourceFiles().illegalAccess())
+                files_to_parse.push_back(file.illegalAccess().getID());
+            for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
+                self(submodule.illegalAccess().getID());
+		};
+		collect_files(module_id);
+
+		if (files_to_parse.empty()) return;
+
+		// Now parse them concurrently.
+		std::mutex              wait_mtx;
+		std::condition_variable wait_cv;
+		std::atomic<usize>      next_file_id{ 0 };
+		bool                    all_files_parsed = false;
+		auto&                   manager          = concurrent::worker::WorkerManager::get();
+
+		auto schedule_next_file_parsing = [&](concurrent::worker::WRef worker) {
+			usize idx = next_file_id.fetch_add(1, std::memory_order_relaxed);
+
+			if (idx < files_to_parse.size()) {
+				FileID file_id = files_to_parse[idx];
+
+				worker->scheduleTask([&, file_id](concurrent::worker::WRef) {
+					auto file_ref
+						= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+							file_id
+						);
+					file_ref->getPST();
+				});
+			} else if (idx == files_to_parse.size() + concurrent::worker::getWorkerCount() - 1) {
+				std::lock_guard<std::mutex> lock(wait_mtx);
+				all_files_parsed = true;
+				wait_cv.notify_one();
+			}
+		};
+
+		manager.setNoTasksCallback(schedule_next_file_parsing);
+
+		// Wait until all files are parsed.
+		std::unique_lock lock(wait_mtx);
+		wait_cv.wait(lock, [&] { return all_files_parsed; });
+
+		// Clear the call back if all files are parsed.
+		manager.setNoTasksCallback([](concurrent::worker::WRef) {});
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {
@@ -893,7 +969,7 @@ namespace compiler::frontend {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			const auto&         module_tree = GetModuleID_Functor::get(key);
 			std::vector<FileID> out;
-			for (const auto& file: module_tree->getSourceFiles())
+			for (const auto& file: module_tree->getSourceFiles().unlock(ctx))
 				out.emplace_back(file.unlock(ctx).getID());
 			return out;
 		}
@@ -911,7 +987,7 @@ namespace compiler::frontend {
 			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			PResult out{};
-			for (const auto& module: module_tree->getSubmodules()) {
+			for (const auto& module: module_tree->getSubmodules().unlock(ctx)) {
 				auto module_id  = module.unlock(ctx).getID();
 				auto module_ref = getModuleRef(module_id);
 				out.put(module_ref->getName(), module_id);

@@ -1,5 +1,6 @@
 #include "time_stats.hpp"
 
+#include <time_stats/module_flags/module_flags.hpp>
 #include <timer/timer.hpp>
 
 #include <array>
@@ -16,17 +17,24 @@ namespace time_stats {
 		 * Following arrays are used to store time statistics and active status
 		 * of each category.
 		 *
-		 * \parallel They will have to be made thread-safe if time tracking from multiple threads
-		 * is to be supported (perhaps via thread-local storage).
+		 * \parallel This need to stay thread-safe.
 		 */
 		constinit std::array<timer::AtomicDuration, TIME_CATEGORIES_COUNT> time_statistics{};
-		constinit std::array<std::atomic<bool>, TIME_CATEGORIES_COUNT>     is_category_active{};
+
+		/**
+		 * @note This is intentionally thread local, as it is valid for each thread to track the
+		 * same category at the same time.
+		 */
+		constinit thread_local std::array<bool, TIME_CATEGORIES_COUNT> is_category_active{};
 	}
 
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):
 		  category(category),
 		  ended(false) {
-		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(true);
+		if (not ENABLE_TIME_STATS) return;  // intentionally do nothing.
+
+		bool was_active = is_category_active.at(std::to_underlying(category));
+		is_category_active.at(std::to_underlying(category)) = true;
 
 		CORE_ASSERT(
 			not was_active,
@@ -38,12 +46,15 @@ namespace time_stats {
 	}
 
 	void TrackCategoryTime::end() {
+		if (not ENABLE_TIME_STATS) return;  // intentionally do nothing.
+
 		// multiple calls to end() do nothing:
 		if (ended) return;
 
 		measurement.endMeasurement();
 
-		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
+		bool was_active = is_category_active.at(std::to_underlying(category));
+		is_category_active.at(std::to_underlying(category)) = false;
 
 		CORE_ASSERT(
 			was_active,
@@ -58,12 +69,16 @@ namespace time_stats {
 	}
 
 	TrackCategoryTime::~TrackCategoryTime() {
+		if (not ENABLE_TIME_STATS) return;  // intentionally do nothing.
+
 		// we don't do anything if already ended:
 		if (ended) return;
 
 		measurement.endMeasurement();
 
-		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
+		bool was_active = is_category_active.at(std::to_underlying(category));
+		is_category_active.at(std::to_underlying(category)) = false;
+
 		CORE_ASSERT_NOEXCEPT(
 			was_active,
 			"Ending time tracking of inactive category ",
@@ -80,6 +95,11 @@ namespace time_stats {
 
 	void prettyPrintTimeStatistics() {
 		std::cerr << "=== Time statistics collected by compiler time_stats module ===\n\n";
+
+		if (not ENABLE_TIME_STATS) {
+			std::cerr << "Time statistics collection is disabled. No statistics to show.\n";
+			return;
+		}
 
 		std::cerr << "Driver initialization time: ";
 		timer::printAs(

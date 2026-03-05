@@ -2,6 +2,7 @@
 
 #include "options.hpp"
 
+#include <concurrent/module_flags/worker_count.hpp>
 #include <diagnostic_interactive/logger.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
@@ -12,6 +13,7 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -79,6 +81,8 @@ namespace compiler::driver {
 			auto maybe_query_col = root->subCollectionAtMaybe(base::StrID("query"));
 
 			if (maybe_query_col.has_value()) {
+				// Get the "query" collection from artifacts, which should contain the previous
+				// query graph and metadata.
 				auto query_col = maybe_query_col.value();
 
 				// Load previous query graph
@@ -86,23 +90,45 @@ namespace compiler::driver {
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
-					auto                  inputs = collectAllPstElementHashesFromGlobalPackages();
-					query::external::setPreviousGraphFromRawBytes(span, std::move(inputs));
+					query::external::setPreviousGraphFromRawBytes(span);
+				} else {
+					// No previous graph found. This can happen if this is the first compilation or
+					// if artifacts from previous compilation were deleted. This is not an error.
+					return;
 				}
 
-				// Load previous metadata (must be after graph)
+				// Load previous metadata (must be called after graph)
 				auto maybe_metadata_blob
 					= query_col->blobArtifactAtMaybe(base::StrID("query_metadata"));
-				if (maybe_metadata_blob.has_value()) {
-					auto                  view = maybe_metadata_blob.value()->getDataView();
-					std::span<const byte> span(view.getBegin(), view.size());
-					query::external::setPreviousMetadataFromRawBytes(span);
-				}
+
+				// Metadata should exist if graph exists, even if it's empty.
+				CORE_ASSERT(
+					maybe_metadata_blob.has_value(),
+					"Previous query graph found but no metadata blob found in artifacts. "
+					"This indicates a corrupted state in artifacts."
+				);
+
+				auto                  view = maybe_metadata_blob.value()->getDataView();
+				std::span<const byte> span(view.getBegin(), view.size());
+				query::external::setPreviousMetadataFromRawBytes(span);
+
+				// We need to parse all files before compilation to collect all PST elements.
+				for (auto mid: global_state::getPackages())
+					compiler::frontend::parseAllFilesInModuleTree(mid.root_module);
+
+				// Collect all Inputs and Side inputs and perform red-green sweep.
+				// This must be called after loading both the graph and metadata, as metadata
+				// contains information about which nodes are inputs and their associated hashes.
+				query::external::markPreviousGraphNodesInputs(collectInputDataFromGlobalPackages());
 			}
 		}
 
 		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
 			if (inc_options.enabled) {
+				CORE_ASSERT(
+					!global_state::getPackages().empty(),
+					"Main package must be set before handling incremental compilation"
+				);
 				driver::enable_incremental_compilation = true;
 				loadPreviousQueryGraphIfExists();
 			} else {
@@ -112,6 +138,10 @@ namespace compiler::driver {
 
 		void handleBackendOptions(const global_state::BackendOptions& backend_options) {
 			global_state::setters::setBackendOptions(backend_options);
+		}
+
+		void handleExecutionOptions(const options_types::ExecutionOptions& execution_options) {
+			concurrent::worker::setWorkerCount(execution_options.worker_count);
 		}
 	}
 
@@ -137,13 +167,17 @@ namespace compiler::driver {
 				package_compilation_options
 			) {
 				handleDebugOptions(package_compilation_options.debug_options);
+				handleExecutionOptions(package_compilation_options.execution_options);
+
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 				handlePackageOptions(package_compilation_options.main_package_info);
+
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
 				handleDebugOptions(repl_options.debug_options);
+				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

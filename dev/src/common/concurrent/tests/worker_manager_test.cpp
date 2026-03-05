@@ -19,12 +19,13 @@ class WorkerManagerTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		setWorkerCount(4);
 		TESTER_ADD_TEST(basicFunctionalityTest);
 		TESTER_ADD_TEST(taskPoolFibonacciTest);
 	}
 
 protected:
+	void beforeAll() override { setWorkerCount(4); }
+
 	void fail(std::string_view err, bool critical = true) override {
 		concurrent::runOrTimeout(WorkerManager::get().testPrivateAccessReloadState, [&] {
 			message(
@@ -141,8 +142,8 @@ private:
 					results.put(i, result);
 
 					// Update the task count for this worker
-					worker_task_counts.maybePutAndUpdate(worker, 0ULL, [](u64& count_ref) {
-						count_ref++;
+					worker_task_counts.maybePutAndUpdate(worker, 0ULL, [](Ref<u64> count_ref) {
+						*count_ref += 1;
 					});
 				}
 			);

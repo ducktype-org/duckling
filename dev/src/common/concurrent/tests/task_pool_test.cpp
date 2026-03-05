@@ -14,16 +14,17 @@ class TaskPoolTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		concurrent::worker::setWorkerCount(10);
 		TESTER_ADD_TEST(basicFunctionalityTest);
-		TESTER_ADD_TEST(testFibbonaciSchedule);
-		TESTER_ADD_TEST(testFibbonaciScheduleReversed);
-		TESTER_ADD_TEST(testFibbonaciQuery);
-		TESTER_ADD_TEST(testFibbonaciScheduleAndQuery);
-		TESTER_ADD_TEST(testGibbonaci);
+		TESTER_ADD_TEST(testFibonacciSchedule);
+		TESTER_ADD_TEST(testFibonacciScheduleReversed);
+		TESTER_ADD_TEST(testFibonacciQuery);
+		TESTER_ADD_TEST(testFibonacciScheduleAndQuery);
+		TESTER_ADD_TEST(testGibonacci);
 	}
 
 protected:
+	void beforeAll() override { concurrent::worker::setWorkerCount(10); }
+
 	void fail(std::string_view err, bool critical = true) override {
 		concurrent::runOrTimeout(
 			concurrent::worker::WorkerManager::get().testPrivateAccessReloadState,
@@ -56,7 +57,7 @@ private:
 		ASSERT_EQUAL(completed_tasks.load(std::memory_order_relaxed), TASK_COUNT);
 	}
 
-	void testFibbonaciSchedule() {
+	void testFibonacciSchedule() {
 		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
@@ -104,7 +105,7 @@ private:
 		std::cout << "Execution completed.\n";
 	}
 
-	void testFibbonaciScheduleReversed() {
+	void testFibonacciScheduleReversed() {
 		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
@@ -153,7 +154,7 @@ private:
 		std::cout << "Execution completed.\n";
 	}
 
-	void testFibbonaciQuery() {
+	void testFibonacciQuery() {
 		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
@@ -199,7 +200,7 @@ private:
 		std::cout << "Execution completed.\n";
 	}
 
-	void testFibbonaciScheduleAndQuery() {
+	void testFibonacciScheduleAndQuery() {
 		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
@@ -246,7 +247,7 @@ private:
 		std::cout << "Execution completed.\n";
 	}
 
-	void testGibbonaci() {
+	void testGibonacci() {
 		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> gib_cache;
