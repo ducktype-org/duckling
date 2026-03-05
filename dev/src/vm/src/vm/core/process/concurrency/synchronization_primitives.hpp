@@ -1,9 +1,8 @@
 #include <base/collections/maps.hpp>
+#include <base/collections/object_pool.hpp>
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 #include "condition_variable.hpp"
-
-#include <vm/core/process/concurrency/object_pool.hpp>
 
 #include <mutex>
 
@@ -13,7 +12,7 @@ namespace vm {
 		/**
 		 * @brief Pool for mutexes used in the process.
 		 */
-		ObjectPool<std::mutex> mutex_pool;
+		base::ObjectPool<std::mutex> mutex_pool;
 
 
 		i64 next_cv_id = 0;
@@ -28,7 +27,7 @@ namespace vm {
 		/**
 		 * @brief Getter for mutexes in the pool.
 		 */
-		SharedBox<std::mutex> getMutex(i64 mutex_id);
+		Ref<std::mutex> getMutex(i64 mutex_id);
 
 		/**
 		 * @brief Adds new mutex into pool.
