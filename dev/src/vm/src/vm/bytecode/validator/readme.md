@@ -39,18 +39,9 @@ working copy. The verification process works as follows:
     - checking whether the types of declared global variables exist in the program,
     - if a global variable was declared with a constructor or destructor, we check if the specified function (which serves as a constructor/destructor) exists in the program.
 5.  **Validating and injecting functions:**
-    This stage consists of two steps. First, the `TypeContext` — a high level set of types — is translated into a **temporary** low level type representation called `TypeMetadata`. This representation is crucial for function verification as it contains the built v-tables for object and interface types which are needed for statically verifying method calls on objects (`virtual_call_lptr_method`).
+    This stage is dedicated to statically verifying functions. Each function is individually analyzed by `FunctionValidator` in the full context of the program's types (including the newly injected ones). If the verification is successful, the new function is added to the program state. More detailed explanation of `FunctionValidator`'s functionality is described below.
 
-    Notably, the `TypeMetadata` used for verification is built from scratch and used only for verification
-    purposes. After the verification phase the built `TypeMetadata` is thrown away and rebuilt again in the
-    `Compiler` module. This is a temporary approach which will change in the future. For more info on why
-    it's done like this please refer to #1306.
-    <!-- @TODO: #1306 Change this paragraph when implemented. -->
-
-    The second step is statically verifying functions. Each function is individually analyzed by `FunctionValidator` in the full context of the program's types (including the newly injected ones). If the
-    verification is successful, the new function is added to the program state.
-    More detailed explanation of `FunctionValidator`'s functionality
-    is described below.
+    Note: Type metadata is now built once during the compilation phase in the `Compiler` module by the `TypeBuilder`, rather than being built temporarily during validation.
 6.  If all the above steps are successful, the internal state is updated, and
     the operation ends with success. Otherwise, the working copy is discarded,
     and an exception with error information is thrown.

@@ -108,8 +108,24 @@ It operates based on an "execution strategy" that can be one of several modes:
 
 Before each instruction, it's checked whether the execution strategy has changed.
 
+#### Concurrency and Global Interpreter Lock (GIL)
+When a process has multiple threads executing DVM bytecode concurrently, the `VMThread` participates in the
+Global Interpreter Lock (GIL) mechanism to ensure safe execution. Key aspects include:
+  *   **GIL Acquisition:** When a `VMThread` begins executing bytecode instructions, it acquires the GIL from
+      the parent process, ensuring exclusive access to the interpreter.
+  *   **GIL Management:** At regular intervals (typically every instruction or at yield points), the thread
+      checks whether it should release the GIL to allow other waiting threads to execute. This is done via
+      the `keepOrAcquireGil()` method which implements a timeout-based release policy.
+  *   **GIL Release:** When blocking operations occur (such as waiting for mutexes), the thread explicitly
+      releases the GIL via `releaseGil()` to allow other threads to make progress.
+  *   **Synchronization Primitives:** `VMThread`s use synchronization primitives like mutexes managed by the
+      parent `VMProcess`. These are accessible to DVM programs through built-in functions like
+      `builtin_lock_mutex`, `builtin_unlock_mutex`, etc.
+
+For more details, see the [Concurrency module documentation](../process/concurrency/readme.md).
+
 #### Handling Blocking Operations
-When a program needs to perform a blocking operation, such as waiting for user input, it is the `VMThread` that
+When a program needs to perform a blocking operation, such as waiting for user input or acquiring a mutex, it is the `VMThread` that
 pauses its execution loop and waits for the necessary data to become available before resuming.
 
 
