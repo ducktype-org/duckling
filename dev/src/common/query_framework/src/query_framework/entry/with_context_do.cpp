@@ -12,12 +12,11 @@ namespace query::utils {
 			std::function<std::any(query::Context&)> value;
 			usize                                    id;
 
-			// @TODO: #2036 this should be atomic
-			static inline usize next_id = 0;
+			static inline std::atomic<usize> next_id = 0;
 
 			KeyFor_DoWithContext(std::function<std::any(query::Context&)> value):
 				  value(std::move(value)),
-				  id(next_id++) {}
+				  id(next_id.fetch_add(1)) {}
 
 			[[nodiscard]]
 			u64 queryUnstablePerfectHash() const {
