@@ -643,11 +643,10 @@ namespace compiler::helios {
 			auto value_holder = expand->getValue().unlock(ctx);
 			auto value = value_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 			if (value.has_value()) {
-				// @TODO: #1880 Add proper expand context handling
 				return pst::PST<pst::Stmt>::fromExpand(
 					expand->getSourcePosition(),
 					value.value()->getValue().str(),
-					pst::LangParserContext::programBaseContext()
+					makeBox<pst::LangParserContext>(expand->getContext())
 				);
 			} else
 				CORE_PANIC("Expand argument is not exactly a single string.");
