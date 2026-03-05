@@ -9,6 +9,7 @@
  * - `strSplit`
  * - `strReplaceAll`
  * - `unescapeString`
+ * - `escapeString`
  *
  * ### Usage
  * @include str_utils_example.cpp
