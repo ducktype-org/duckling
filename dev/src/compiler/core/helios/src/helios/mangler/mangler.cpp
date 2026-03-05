@@ -22,6 +22,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
@@ -236,7 +237,8 @@ namespace compiler::helios::mangler {
 			// @TODO: #1568 use type mangling for parameter and return types.
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function
-			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
+			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
+			    or kind(symbol_id) == SymbolKind::Method) {
 				ret = "F";
 
 				const auto& fun_decl
@@ -249,9 +251,9 @@ namespace compiler::helios::mangler {
 				}
 
 				ret += "E";
-			} else if (kind(symbol_id) == SymbolKind::Method) {
-				// @future: add methods when they are implemented
-				ret = "Ftodo_method_typeE";
+			} else {
+				CORE_USER_LOG("Tried to mangle non function-like symbol as a function-like.");
+				CORE_UNREACHABLE();
 			}
 
 			return ret;

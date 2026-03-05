@@ -268,9 +268,10 @@ namespace {
 
 	std::expected<void, VmEvaluationError> loadLirFunctions(
 		CompTimeDVM&                                      comptime_dvm,
-		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
+		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
+		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
@@ -368,7 +369,7 @@ namespace compiler::helios {
 				"Failed to initialize the comptime DVM process."
 			));
 
-		if (auto res = loadLirFunctions(comptime_dvm, lir_functions); !res)
+		if (auto res = loadLirFunctions(comptime_dvm, lir_functions, ctx); !res)
 			return std::unexpected(res.error());
 
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)

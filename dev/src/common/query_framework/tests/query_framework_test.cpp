@@ -71,6 +71,8 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 		cache.insert({ key_hash, { .data = res, .acd = acd } });
 		return res;
 	}
+
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash) > 0; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
@@ -99,6 +101,8 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 	}
 
 	QUERY_AUTO_CACHE_CONSTRUCT
+
+	static auto erase([[maybe_unused]] KHash key_hash) -> bool { return false; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
@@ -441,6 +445,8 @@ struct IMPLEMENT_QUERY(StableHashTest, u64) {
 		cache.put(key_hash, { .data = res, .acd = acd });
 		return cache.at(key_hash)->data;
 	}
+
+	static auto erase([[maybe_unused]] KHash key_hash) -> bool { return false; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(StableHashTest);

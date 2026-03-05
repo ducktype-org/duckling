@@ -490,7 +490,6 @@ clah::Clah getClahForMain() {
 									   },
 								   }
 							   );
-
 							   compiler::repl::ReplSession session;
 							   int                         result = session.run();
 							   compiler::driver::exit();
@@ -532,7 +531,8 @@ int main(int argc, const char* argv[]) {
 	} catch (...) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
-			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
+			{ "Unexpected Exception not inheriting from std::exception was "
+		      "caught.\n",
 		      printer::Color::Default },
 		});
 		return 1;

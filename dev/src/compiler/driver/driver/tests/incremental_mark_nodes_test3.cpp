@@ -124,9 +124,6 @@ private:
 
 		// Save artifacts (writes previous graph blob to artifacts)
 		driver::exit();
-
-		// delete the artifacts directory after test
-		std::filesystem::remove_all(artifacts_path.getPath());
 	}
 };
 

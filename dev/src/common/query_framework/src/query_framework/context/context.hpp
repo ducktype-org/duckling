@@ -7,6 +7,7 @@
 #include "context_fd.hpp"  // IWYU pragma: keep
 
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/logger_fwd.hpp>
 #include <diagnostic_interactive/placeholder.hpp>  // @TODO: #1887 move to outer query-invocation layer
 
 #include <base/extend_cpp/defer.hpp>
@@ -137,18 +138,6 @@ namespace query {
 		};
 
 	public:
-		// @TODO: Make the context (and thus the logger) be propagated through query calls,
-		// so that all queries run on the same file / in the same compilation thread / whatever
-		// use a single, *non-static* logger object.
-		/**
-		 * @name Logs storage
-		 * @brief Global/vector-backed logging facility.
-		 * \parallel Current implementation uses a global vector; not thread-safe; serialize or
-		 * buffer per-thread.
-		 */
-		static dia_int::Logger int_logger;
-
-
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
 
@@ -286,12 +275,24 @@ namespace query {
 		}
 
 		/**
-		 * Log message to be shown to the user.
-		 * @param message The dia::Message to be logged.
+		 * @brief Logs a diagnostic message for the current query node.
+		 * Is thread safe.
 		 */
-		void log(Box<dia::Message> message);
-
 		void logInt(Box<dia_int::MessageBase> diagnostic);
+
+		/**
+		 * @brief Collect all diagnostics from the main query state into the provided output vector.
+		 * @warning This method is not thread safe.
+		 * It must not be called concurrently with any method that modifies the underlying collection.
+		 */
+		static void collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output);
+
+		/**
+		 * @brief Dump all loggers from all nodes into a single logger and clear them from the state.
+		 * @warning This method is not thread safe.
+		 * It must not be called concurrently with any method that modifies the underlying collection.
+		 */
+		static Box<dia_int::Logger> dumpToOneLoggerAndClear();
 
 		/**
 		 * @brief Returns a const reference to the main query state.

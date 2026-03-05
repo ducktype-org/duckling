@@ -69,6 +69,8 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 		cache.put(key_hash, { .data = res, .acd = acd });
 		return res;
 	}
+
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash) > 0; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(MyQuery);
@@ -89,6 +91,8 @@ struct IMPLEMENT_QUERY(Query2, std::string) {
 		// Here explicit conversion to QResult in not needed, but is left as an example:
 		return QResult{ std::move(p_res) };
 	}
+
+	static auto erase([[maybe_unused]] KHash key_hash) -> bool { return false; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
