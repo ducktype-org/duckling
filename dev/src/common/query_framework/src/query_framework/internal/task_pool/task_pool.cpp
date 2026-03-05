@@ -51,6 +51,12 @@ namespace query::internal {
 		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
+	void TaskPool::invalidateTask(NodeID id) {
+		std::lock_guard lock(pool_mutex);
+		auto val = task_status_map.extract(id);
+		CORE_ASSERT(val.value() == TaskStatus::Done, "Invalidating a task that is not done is not supported");
+	}
+
 	void TaskPool::waitExecutionCompletion() {
 		std::unique_lock lock(pool_mutex);
 		task_completed_cv.wait(lock, [this] {

@@ -146,6 +146,8 @@ namespace query::internal {
 		 */
 		void waitForTask(NodeID id);
 
+		void invalidateTask(NodeID id);
+
 	private:
 		/**
 		 * @brief Try to steal a task from the global pool.

@@ -207,7 +207,7 @@ private:
 		query::entryPoint<DummyQuery1>({ 3 });
 
 		auto  state = query::internal::ContextAccess::getState();
-		auto& graph = state->getGraphMutable();
+		auto& graph = state->getGraph();
 		ASSERT_EQUAL(graph.getAllNodes().size(), 5 + 5 + 4 + 3);
 
 		auto node_1_1 = query::internal::makeNodeID<DummyQuery1>(query::U64Key{ 1 });
