@@ -1,5 +1,6 @@
 add_files(
 	jit_compiler.cpp
+	block_detection.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
