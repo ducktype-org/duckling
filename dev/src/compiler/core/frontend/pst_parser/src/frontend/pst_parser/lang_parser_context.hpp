@@ -18,6 +18,10 @@ namespace pst {
 			  class_name(class_name),
 			  block_order(block_order) {}
 
+		LangParserContext(CRef<LangParserContext> other):
+			  class_name(other->class_name),
+			  block_order(other->block_order) {}
+
 		static Box<LangParserContext> programBaseContext() {
 			return base::makeBox<LangParserContext>(base::StrID(""), BlockOrderType::Unordered);
 		}
