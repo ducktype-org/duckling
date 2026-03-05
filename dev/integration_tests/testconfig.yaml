@@ -1,3 +1,4 @@
 SubDirs:
     - compiler
     - duck
+    - repl
