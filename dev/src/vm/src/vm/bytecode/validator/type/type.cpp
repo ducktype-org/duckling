@@ -6,8 +6,6 @@
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type/concrete_types.hpp>
-#include <vm/bytecode/validator/type/defined_type.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -174,11 +172,11 @@ void valid_type::ValidType::defineOpaque(Bytes size) {
 	}
 }
 
-valid_type::concrete::Structure valid_type::ValidType::finalizeStructureData(
+valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 	ValidTypeMap& types, const defined::DefinedStructure& structure
 ) const {
 	std::vector<std::pair<base::StrID, valid_type::ValidTypeID>> fields;
-	base::Optional<concrete::InheritanceMetadata>                inheritance_metadata;
+	base::Optional<finalized::InheritanceMetadata>               inheritance_metadata;
 	if (!structure.forwarded_inheritance_data.has_value()) {
 		// In this case we are finalizing a structure that does not have inheritance metadata, so
 		// we just fill the fields from the structure definition.
@@ -206,27 +204,27 @@ valid_type::concrete::Structure valid_type::ValidType::finalizeStructureData(
 
 		// 2. Fill the data
 		const auto translated_kind = std::visit(
-			[](const auto& kind) -> decltype(concrete::InheritanceMetadata::kind) {
+			[](const auto& kind) -> decltype(finalized::InheritanceMetadata::kind) {
 				using T = std::decay_t<decltype(kind)>;
 				if constexpr (std::is_same_v<T, defined::InheritanceDefinitionData::ClassKind>) {
-					return concrete::InheritanceMetadata::ClassKind{
+					return finalized::InheritanceMetadata::ClassKind{
 						.extends     = kind.extends,
 						.is_abstract = kind.is_abstract,
 					};
 				} else if constexpr (std::is_same_v<
 										 T,
 										 defined::InheritanceDefinitionData::InterfaceKind>) {
-					return concrete::InheritanceMetadata::InterfaceKind{};
+					return finalized::InheritanceMetadata::InterfaceKind{};
 				}
 			},
 			prev_imd.kind
 		);
 
-		concrete::InheritanceMetadata imd = { .super_types       = { getID() },
-			                                  .implements        = implements,
-			                                  .available_methods = {},
-			                                  .vtable            = {},
-			                                  .kind              = translated_kind };
+		finalized::InheritanceMetadata imd = { .super_types       = { getID() },
+			                                   .implements        = implements,
+			                                   .available_methods = {},
+			                                   .vtable            = {},
+			                                   .kind              = translated_kind };
 
 		variant_match(prev_imd.kind) {
 			variant_case(defined::InheritanceDefinitionData::ClassKind, class_kind) {
@@ -234,22 +232,22 @@ valid_type::concrete::Structure valid_type::ValidType::finalizeStructureData(
 					opt_some(superclass_id) {
 						auto superclass = types.at(superclass_id);
 						CORE_ASSERT(
-							superclass->isKind<concrete::Structure>(),
+							superclass->isKind<finalized::Structure>(),
 							"Superclass must be a structure"
 						);
-						const auto& super_structure = superclass->getKindAs<concrete::Structure>();
+						const auto& super_structure = superclass->getKindAs<finalized::Structure>();
 						const auto& super_imd       = super_structure.inheritance_metadata.expect(
                             "Superclass must have inheritance metadata"
                         );
 
 						// Fields. Superclass fields are inserted before subclass fields.
-						for (const auto& field: superclass->getKindAs<concrete::Structure>().fields)
+						for (const auto& field: superclass->getKindAs<finalized::Structure>().fields)
 							fields.emplace_back(field.name, field.type);
 						// Super types
 						imd.super_types.insert(
-							superclass->getKindAs<concrete::Structure>()
+							superclass->getKindAs<finalized::Structure>()
 								.inheritance_metadata->super_types.begin(),
-							superclass->getKindAs<concrete::Structure>()
+							superclass->getKindAs<finalized::Structure>()
 								.inheritance_metadata->super_types.end()
 						);
 						// Virtual methods
@@ -276,8 +274,8 @@ valid_type::concrete::Structure valid_type::ValidType::finalizeStructureData(
 		// super types to this type's super types.
 		for (auto& i: implements) {
 			auto interface = types.at(i);
-			CORE_ASSERT(interface->isKind<concrete::Structure>(), "Interface must be a structure");
-			const auto& interface_structure = interface->getKindAs<concrete::Structure>();
+			CORE_ASSERT(interface->isKind<finalized::Structure>(), "Interface must be a structure");
+			const auto& interface_structure = interface->getKindAs<finalized::Structure>();
 			const auto& interface_imd       = interface_structure.inheritance_metadata.expect(
                 "Interface must have inheritance metadata"
             );
@@ -309,12 +307,12 @@ valid_type::concrete::Structure valid_type::ValidType::finalizeStructureData(
 	}
 
 	// 4. Put the data into the type
-	concrete::Structure new_structure;
+	finalized::Structure new_structure;
 	for (const auto& [field_name, field_type]: fields)
 		new_structure.fields.insert(
-			concrete::Field{ .offset = valid_type::TypeSize(Bytes(0), 0),
-		                     .name   = field_name,
-		                     .type   = field_type },
+			finalized::Field{ .offset = valid_type::TypeSize(Bytes(0), 0),
+		                      .name   = field_name,
+		                      .type   = field_type },
 			field_name
 		);
 	new_structure.inheritance_metadata = std::move(inheritance_metadata);
@@ -338,19 +336,19 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedPrimitive, primitive) {
 			this->size                  = valid_type::TypeSize(primitive.size, 0);
 			this->is_trivially_copyable = true;
-			state = Finalized{ .kind = concrete::Primitive{ primitive.size } };
+			state = Finalized{ .kind = finalized::Primitive{ primitive.size } };
 		}
 		variant_case(defined::DefinedPointer, pointer) {
 			this->size                  = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = true;
-			state                       = Finalized{ .kind = concrete::Pointer{ pointer.inner } };
+			state                       = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
 		}
 		variant_case(defined::DefinedFixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
 			this->size                  = inner_type->getSize() * fixed_size_table.element_count;
 			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
-			state                       = Finalized{ .kind = concrete::FixedSizeTable{
+			state                       = Finalized{ .kind = finalized::FixedSizeTable{
 														 .inner         = fixed_size_table.inner,
 														 .element_count = fixed_size_table.element_count } };
 		}
@@ -360,21 +358,21 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			/// through this object. Dynamic table is only accessed by a pointer.
 			this->size                  = valid_type::TypeSize(Bytes(0), 0);
 			this->is_trivially_copyable = false;
-			state = Finalized{ .kind = concrete::DynamicTable{ .inner = dynamic_table.inner } };
+			state = Finalized{ .kind = finalized::DynamicTable{ .inner = dynamic_table.inner } };
 		}
 		variant_case(defined::DefinedOpaque, opaque) {
 			// Opaque type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize(opaque.size, 0);
 			this->is_trivially_copyable = true;
-			state                       = Finalized{ .kind = concrete::Opaque{ opaque.size } };
+			state                       = Finalized{ .kind = finalized::Opaque{ opaque.size } };
 		}
 		variant_case(defined::DefinedFunction, function) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind
-                               = concrete::Function{ .parameters = std::move(function.parameters),
-				                                                           .result     = function.result } };
+                               = finalized::Function{ .parameters = std::move(function.parameters),
+				                                                            .result     = function.result } };
 		}
 		variant_case(defined::DefinedVariant, variant) {
 			// log_256(x) = log_2(x) / log_2(256) = log_2(x) / 8.0
@@ -400,7 +398,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			}
 			this->size = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
 			this->is_trivially_copyable = false;
-			state                       = Finalized{ .kind = concrete::Variant{
+			state                       = Finalized{ .kind = finalized::Variant{
 														 .type_tag_size = type_tag_size,
 														 .alternatives  = std::move(variant.alternatives),
                                } };
@@ -448,19 +446,19 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 	// This method assumes all dependent types are already finalized, so we can query their
 	// instantiability.
 	variant_match(getKind()) {
-		variant_case(concrete::Primitive, primitive) {
+		variant_case(finalized::Primitive, primitive) {
 			if (name == "void") is_instantiable = false;
 		}
-		variant_case(concrete::Pointer, pointer) {
+		variant_case(finalized::Pointer, pointer) {
 			// Any pointer is instantiable.
 			is_instantiable = true;
 		}
-		variant_case(concrete::FixedSizeTable, fixed_size_table) {
+		variant_case(finalized::FixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			is_instantiable = inner_type->isInstantiable();
 		}
-		variant_case(concrete::DynamicTable, dynamic_table) { is_instantiable = false; }
-		variant_case(concrete::Structure, structure) {
+		variant_case(finalized::DynamicTable, dynamic_table) { is_instantiable = false; }
+		variant_case(finalized::Structure, structure) {
 			is_instantiable = std::ranges::all_of(structure.fields, [&](const auto& field) {
 				auto field_type = types.at(field.type);
 				return field_type->isInstantiable();
@@ -469,11 +467,11 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 				= structure.inheritance_metadata
 			          .map([](const auto& imd) {
 						  variant_match(imd.kind) {
-							  variant_case(concrete::InheritanceMetadata::ClassKind, class_kind) {
+							  variant_case(finalized::InheritanceMetadata::ClassKind, class_kind) {
 								  return class_kind.is_abstract;
 							  }
 							  variant_case(
-								  concrete::InheritanceMetadata::InterfaceKind, interface_kind
+								  finalized::InheritanceMetadata::InterfaceKind, interface_kind
 							  ) {
 								  return true;
 							  }
@@ -483,15 +481,15 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 			          .copyValueOr(false);
 			is_instantiable &= !is_abstract;
 		}
-		variant_case(concrete::Variant, variant) {
+		variant_case(finalized::Variant, variant) {
 			is_instantiable
 				= std::ranges::all_of(variant.alternatives, [&](const auto& alternative) {
 					  auto alternative_type = types.at(alternative);
 					  return alternative_type->isInstantiable();
 				  });
 		}
-		variant_case(concrete::Function, function) { is_instantiable = true; }
-		variant_case(concrete::Opaque, opaque) {
+		variant_case(finalized::Function, function) { is_instantiable = true; }
+		variant_case(finalized::Opaque, opaque) {
 			// Opaque types are instantiable, because otherwise there would be no way to call a
 			// function that takes or returns an opaque. They are however immutable, because there
 			// are not operations on opaque types except copying and passing to functions.
@@ -505,7 +503,7 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 	variant_match(state) {
 		variant_case(Finalized, finalized) {
 			CORE_ASSERT(
-				!std::holds_alternative<concrete::DynamicTable>(finalized.kind),
+				!std::holds_alternative<finalized::DynamicTable>(finalized.kind),
 				"Tried to get size of a dynamic table"
 			);
 			return size;
@@ -524,7 +522,7 @@ bool valid_type::ValidType::isInstantiable() const {
 	}
 }
 
-[[nodiscard]] valid_type::ConcreteTypeVariant valid_type::ValidType::getKind() const {
+[[nodiscard]] valid_type::FinalizedTypeVariant valid_type::ValidType::getKind() const {
 	variant_match(state) {
 		variant_case(Finalized, finalized) { return finalized.kind; }
 		variant_default { CORE_PANIC("Tried to get kind of a type that was not finalized"); }

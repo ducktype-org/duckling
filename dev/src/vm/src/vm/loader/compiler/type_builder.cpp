@@ -17,9 +17,9 @@ namespace {
 	 * vtable.
 	 */
 	base::Optional<vm::InheritanceMetadata> buildInheritanceMetadata(
-		vm::TypeMetadata&                                type_metadata,
-		const vm::code::valid_type::ValidType&           type,
-		const vm::code::valid_type::concrete::Structure& structure
+		vm::TypeMetadata&                                 type_metadata,
+		const vm::code::valid_type::ValidType&            type,
+		const vm::code::valid_type::finalized::Structure& structure
 	) {
 		match_optional(structure.inheritance_metadata) {
 			opt_some(prev_imd) {
@@ -45,7 +45,7 @@ namespace {
 				vm::InheritanceMetadata::Kind kind;
 				variant_match(prev_imd.kind) {
 					variant_case(
-						vm::code::valid_type::concrete::InheritanceMetadata::ClassKind, class_kind
+						vm::code::valid_type::finalized::InheritanceMetadata::ClassKind, class_kind
 					) {
 						kind = vm::InheritanceMetadata::Class{
 							.is_abstract = class_kind.is_abstract,
@@ -53,7 +53,7 @@ namespace {
 						};
 					}
 					variant_case(
-						vm::code::valid_type::concrete::InheritanceMetadata::InterfaceKind,
+						vm::code::valid_type::finalized::InheritanceMetadata::InterfaceKind,
 						interface_kind
 					) {
 						kind = vm::InheritanceMetadata::Interface{};
@@ -93,26 +93,26 @@ namespace {
 			const auto& type             = types_ctx.at(type_id);
 			const auto& type_at_metadata = type_metadata->at(type->getName());
 			variant_match(type->getKind()) {
-				variant_case(vm::code::valid_type::concrete::Primitive, data) {
+				variant_case(vm::code::valid_type::finalized::Primitive, data) {
 					type_at_metadata->definePrimitive(data.size);
 				}
-				variant_case(vm::code::valid_type::concrete::Pointer, data) {
+				variant_case(vm::code::valid_type::finalized::Pointer, data) {
 					// Note the interesting cast from valid_type::ValidTypeID to vm::TypeID.
 					// This is by convention, they have to be the same.
 					type_at_metadata->definePointer(type_metadata->at(vm::TypeID(data.inner.asInt())
 					));
 				}
-				variant_case(vm::code::valid_type::concrete::FixedSizeTable, data) {
+				variant_case(vm::code::valid_type::finalized::FixedSizeTable, data) {
 					type_at_metadata->defineFixedSizeTable(
 						type_metadata->at(vm::TypeID(data.inner.asInt())), data.element_count
 					);
 				}
-				variant_case(vm::code::valid_type::concrete::DynamicTable, data) {
+				variant_case(vm::code::valid_type::finalized::DynamicTable, data) {
 					type_at_metadata->defineDynamicTable(
 						type_metadata->at(vm::TypeID(data.inner.asInt()))
 					);
 				}
-				variant_case(vm::code::valid_type::concrete::Structure, data) {
+				variant_case(vm::code::valid_type::finalized::Structure, data) {
 					std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
@@ -123,14 +123,14 @@ namespace {
 						= buildInheritanceMetadata(*type_metadata, *type, data);
 					type_at_metadata->defineData(fields, inh_metadata);
 				}
-				variant_case(vm::code::valid_type::concrete::Variant, data) {
+				variant_case(vm::code::valid_type::finalized::Variant, data) {
 					std::vector<vm::TypeRef> variants;
 					variants.reserve(data.alternatives.size());
 					for (auto& variant: data.alternatives)
 						variants.emplace_back(type_metadata->at(vm::TypeID(variant.asInt())));
 					type_at_metadata->defineVariant(variants);
 				}
-				variant_case(vm::code::valid_type::concrete::Function, data) {
+				variant_case(vm::code::valid_type::finalized::Function, data) {
 					std::vector<vm::TypeCRef> parameters;
 					parameters.reserve(data.parameters.size());
 					for (auto& param: data.parameters)
@@ -139,7 +139,7 @@ namespace {
 						parameters, type_metadata->at(vm::TypeID(data.result.asInt()))
 					);
 				}
-				variant_case(vm::code::valid_type::concrete::Opaque, opaque) {
+				variant_case(vm::code::valid_type::finalized::Opaque, opaque) {
 					type_at_metadata->defineOpaque(opaque.size);
 				}
 				variant_default { CORE_PANIC("Unhandled type during type building"); }

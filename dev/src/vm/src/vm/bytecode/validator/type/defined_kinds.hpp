@@ -14,8 +14,8 @@
 namespace vm::code::valid_type {
 	/**
 	 * @brief Temporary representation of a type during definition phase. This is used to store
-	 * data about a type before we have all the information needed to finalize it, like field
-	 * offsets for structured types or inheritance metadata. After we have all the information
+	 * data about a type before we have all the information needed to finalize it, like type
+	 * sizes for structure fields or inheritance metadata. After we have all the information
 	 * needed to finalize a type, we convert this to a concrete type during finalization.
 	 */
 	namespace defined {
@@ -64,8 +64,14 @@ namespace vm::code::valid_type {
 			 */
 			std::unordered_set<ValidTypeID> implements;
 
+			/**
+			 * @brief Virtual methods declared just in this structure.
+			 */
 			base::HashMap<base::StrID, ValidTypeID> new_virtual_methods;
 
+			/**
+			 * @brief New implementations provided in this structure.
+			 */
 			base::HashMap<base::StrID, base::StrID> implementations;
 
 			/**
@@ -135,5 +141,4 @@ namespace vm::code::valid_type {
 	concept DefinedType = base::IsOneOf<T, DEFINED_TYPE_LIST>;
 
 	using DefinedTypeVariant = std::variant<std::monostate, DEFINED_TYPE_LIST>;
-
 }

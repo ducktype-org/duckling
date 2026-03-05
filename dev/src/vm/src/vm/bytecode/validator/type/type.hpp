@@ -6,8 +6,8 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/bytecode/validator/type/concrete_types.hpp>
-#include <vm/bytecode/validator/type/defined_type.hpp>
+#include <vm/bytecode/validator/type/defined_kinds.hpp>
+#include <vm/bytecode/validator/type/finalized_kinds.hpp>
 #include <vm/bytecode/validator/type/type_id.hpp>
 #include <vm/bytecode/validator/type/type_map.hpp>
 #include <vm/bytecode/validator/type/type_size.hpp>
@@ -38,7 +38,7 @@ namespace vm::code::valid_type {
 		};
 
 		struct Finalized {
-			ConcreteTypeVariant kind;
+			FinalizedTypeVariant kind;
 		};
 
 		std::variant<Declared, Defined, Finalizing, Finalized> state = Declared{};
@@ -129,7 +129,7 @@ namespace vm::code::valid_type {
 			}
 		}
 
-		[[nodiscard]] ConcreteTypeVariant getKind() const;
+		[[nodiscard]] FinalizedTypeVariant getKind() const;
 
 		[[nodiscard]] bool isInstantiable() const;
 
@@ -150,7 +150,7 @@ namespace vm::code::valid_type {
 		/**
 		 * @brief Helper function for finalize. Fills inheritance metadata for structures.
 		 */
-		concrete::Structure finalizeStructureData(
+		finalized::Structure finalizeStructureData(
 			ValidTypeMap& types, const defined::DefinedStructure& structure
 		) const;
 

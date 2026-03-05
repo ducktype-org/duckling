@@ -12,7 +12,7 @@
 #include <unordered_set>
 
 namespace vm::code::valid_type {
-	namespace concrete {
+	namespace finalized {
 		/**
 		 * @brief Primitive type representation.
 		 */
@@ -170,13 +170,13 @@ namespace vm::code::valid_type {
 		};
 	}
 
-#define CONCRETE_TYPE_LIST                                                                    \
-	concrete::Primitive, concrete::Pointer, concrete::FixedSizeTable, concrete::DynamicTable, \
-		concrete::Structure, concrete::Variant, concrete::Function, concrete::Opaque
+#define CONCRETE_TYPE_LIST                                                                        \
+	finalized::Primitive, finalized::Pointer, finalized::FixedSizeTable, finalized::DynamicTable, \
+		finalized::Structure, finalized::Variant, finalized::Function, finalized::Opaque
 
 	template<class T>
 	concept ConcreteType = base::IsOneOf<T, CONCRETE_TYPE_LIST>;
 
-	using ConcreteTypeVariant = std::variant<std::monostate, CONCRETE_TYPE_LIST>;
+	using FinalizedTypeVariant = std::variant<std::monostate, CONCRETE_TYPE_LIST>;
 
 }
