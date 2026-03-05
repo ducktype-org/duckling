@@ -1,0 +1,18 @@
+fun main() -> i64 = {
+    var i: i64;
+    builtin_output_i64(i); # 0
+    var b: i32;
+    builtin_output_i64(b); # 0
+
+    var arr: i32[2];
+    builtin_output_i64(b); # 0
+
+    var f: f64;
+    # builtin_output_f64(f); # 0.0
+
+    # var arr: i32[1];
+    # builtin_output_i64(arr[0]); # 0
+    # builtin_output_i64(arr[1]); # 0
+
+    return 0;
+}
