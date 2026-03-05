@@ -82,6 +82,10 @@
 		inline constexpr explicit(true) operator T() const noexcept {                              \
 			return static_cast<T>(value);                                                          \
 		}                                                                                          \
+		template<typename T = BASE_T>                                                              \
+		inline constexpr T asInt() const noexcept {                                                \
+			return T(value);                                                                       \
+		}                                                                                          \
 		inline constexpr NAME operator+() const noexcept { return NAME(+value); }                  \
 		inline constexpr NAME operator-() const noexcept {                                         \
 			return NAME(static_cast<BASE_T>(-value));                                              \

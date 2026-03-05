@@ -11,6 +11,8 @@ namespace vm::code {
 	/**
 	 * @brief A simple container for types which doesn't allow duplicates. This structure is the
 	 * main entry point for type verification and building.
+	 * @note It is by definition valid,
+	 * so this function assumes that and doesn't perform any checks.
 	 */
 	class TypeContext final {
 	public:

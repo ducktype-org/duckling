@@ -94,7 +94,7 @@ namespace {
 			const auto& type_at_metadata = type_metadata->at(type->getName());
 			variant_match(type->getKind()) {
 				variant_case(vm::code::valid_type::concrete::Primitive, data) {
-					type_at_metadata->definePrimitive(static_cast<usize>(data.size));
+					type_at_metadata->definePrimitive(data.size);
 				}
 				variant_case(vm::code::valid_type::concrete::Pointer, data) {
 					// Note the interesting cast from valid_type::ValidTypeID to vm::TypeID.
@@ -140,7 +140,7 @@ namespace {
 					);
 				}
 				variant_case(vm::code::valid_type::concrete::Opaque, opaque) {
-					type_at_metadata->defineOpaque(static_cast<usize>(opaque.size));
+					type_at_metadata->defineOpaque(opaque.size);
 				}
 				variant_default { CORE_PANIC("Unhandled type during type building"); }
 			}

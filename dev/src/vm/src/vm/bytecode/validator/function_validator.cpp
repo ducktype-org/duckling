@@ -7,6 +7,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -204,8 +205,9 @@ class FunctionValidator {
 	 * - The first argument on the stack should be pointer which points to the same type as the
 	 *   pointer passed as the `obj_ptr` (an argument to `virtual_call_lptr_method`).
 	 *   Since virtual_method map contains only the signatures of methods, the implementations of
-	 * them may declare a pointer to a different type (only a pointer to SELF - subclass can differ).
-	 * Validating just the pointer type name like in normal function calls would simply don't work.
+	 *   them may declare a pointer to a different type (only a pointer to SELF - subclass can
+	 * differ). Validating just the pointer type name like in normal function calls would simply
+	 * don't work.
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better
@@ -294,7 +296,7 @@ class FunctionValidator {
 		CRef<valid_type::ValidType> entry = current_stack.at(local->var_name);             \
 		variant_match(entry->getKind()) {                                                  \
 			variant_case(valid_type::concrete::Primitive, primitive_type) {                \
-				if (static_cast<usize>(primitive_type.size) != (BIT_COUNT / 8))            \
+				if (base::bytes2bits(primitive_type.size).asInt() != BIT_COUNT)            \
 					throw InvalidArgumentSizeError(*local);                                \
 			}                                                                              \
 			variant_default { throw InvalidArgumentTypeError(*local); }                    \
@@ -307,7 +309,7 @@ class FunctionValidator {
 		CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);                          \
 		variant_match(type->getKind()) {                                                        \
 			variant_case(valid_type::concrete::Primitive, primitive_type) {                     \
-				if (static_cast<usize>(primitive_type.size) != (BIT_COUNT / 8))                 \
+				if (base::bytes2bits(primitive_type.size).asInt() != BIT_COUNT)                 \
 					throw InvalidArgumentSizeError(*global);                                    \
 			}                                                                                   \
 			variant_default { throw InvalidArgumentTypeError(*global); }                        \
@@ -1361,8 +1363,9 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
-		const {
+	void validateUpcast(
+		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+	) const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 
@@ -1379,16 +1382,7 @@ class FunctionValidator {
 				  })
 		          .copyValueOr(false);
 
-		if (!inherits) {
-			std::cout << "Source type: " << src_type->getName().strView() << "\n";
-			std::cout << "Source super types:\n";
-			if (auto src_struct = src_type->maybeGetKindAs<valid_type::concrete::Structure>())
-				for (auto super_type_id: src_struct.value()->inheritance_metadata->super_types)
-					std::cout << "  " << types_ctx.at(super_type_id)->getName().strView() << "\n";
-			std::cout << "Destination type: " << dst_type->getName().strView() << "\n";
-
-			throw InvalidUpcastError(instruction);
-		}
+		if (!inherits) throw InvalidUpcastError(instruction);
 	}
 
 	void validatePrimitiveCast(

@@ -3,6 +3,7 @@
 #include "kinds.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -15,13 +16,9 @@
 namespace vm {
 	class TypeMetadata;
 
-	/// Size of type in bytes
-	// @TODO: change to strongly typed int
-	using TypeSize = u64;
-
 	class Type final {
 	public:
-		constexpr static TypeSize POINTER_SIZE = sizeof(Pointer);
+		constexpr static TypeSize POINTER_SIZE = Bytes(sizeof(Pointer));
 
 		enum class Kind {
 			None,
@@ -164,7 +161,7 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<u64> getParameterCount() const;
 		[[nodiscard]]
-		base::Optional<u64> getParametersSize() const;
+		base::Optional<Bytes> getParametersSize() const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
 		[[nodiscard]]

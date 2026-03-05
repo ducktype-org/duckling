@@ -72,7 +72,7 @@ namespace vm::code {
 	class MissingFunctionalTypeError: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG = "Functional type is not declared for: ";
-		const base::StrID                       func_name;
+		const base::StrID                 func_name;
 
 		MissingFunctionalTypeError(base::StrID func_name):
 			  ValidationError(base::strConcat(ERR_MSG, func_name)),
@@ -105,7 +105,7 @@ namespace vm::code {
 	class TypeIsNotFunctionalError: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG = "Type is not functional: ";
-		const base::StrID                       type_name;
+		const base::StrID                 type_name;
 
 		TypeIsNotFunctionalError(base::StrID type_name):
 			  ValidationError(base::strConcat(ERR_MSG, type_name)),
@@ -115,19 +115,23 @@ namespace vm::code {
 	class CyclicDependencyError: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG = "Cyclic dependency detected: ";
-		const base::StrID                       type_name;
+		const TypeOfData                  type;
 
 		CyclicDependencyError(const TypeOfData& type):
 			  ValidationError(base::strConcat(ERR_MSG, typeName(type))),
-			  type_name(typeName(type)) {}
+			  type(type) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(type, type, return static_cast<const ElementBase*>(&type));
+		}
 	};
 
 #define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \
 	class NAME: public ValidationError {                                                \
 	public:                                                                             \
-		constexpr static std::string_view ERR_MSG = ERROR;                        \
-		const ELEMENT_TYPE                      new_element;                            \
-		const ELEMENT_TYPE                      previous_element;                       \
+		constexpr static std::string_view ERR_MSG = ERROR;                              \
+		const ELEMENT_TYPE                new_element;                                  \
+		const ELEMENT_TYPE                previous_element;                             \
                                                                                         \
 		NAME(ELEMENT_TYPE new_element, ELEMENT_TYPE previous_element):                  \
 			  ValidationError(ERR_MSG.data()),                                          \
@@ -319,7 +323,9 @@ namespace vm::code {
 		"Method implementation lacks its declaration as a virtual method: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
-	DEFINE_TYPE_ATTRIBUTE_ERROR(DuplicatedVariantAlternativeError, "This variant alternative is duplicated")
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		DuplicatedVariantAlternativeError, "This variant alternative is duplicated"
+	)
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"

@@ -87,7 +87,10 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) }).has_value());
+	auto res = vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) });
+	std::cerr << "Loading " << dbc_filename << (res ? " succeeded" : " failed") << '\n';
+	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
+	ASSERT_TRUE(res.has_value());
 }
 
 #define EXPECT_VOID(action)                          \

@@ -95,14 +95,17 @@ namespace vm::detail {
 #define VM_EXT_C_INTO_PARAMS(Type, VmType, Name)       , Type Name
 #define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , func_args->Name
 
-#define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                                        \
-	auto tp_##Name = vm::api::getType(pid, VmType);                                          \
-	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);                      \
-	if (tp_##Name->type->getSize() != vm::detail::safe_sizeof<Type>::VALUE)                  \
-		throw vm::ExtCArgumentSizeMismatch(                                                  \
-			#Type, vm::detail::safe_sizeof<Type>::VALUE, #VmType, tp_##Name->type->getSize() \
-		);                                                                                   \
-	vm_arg_type_size_sum += tp_##Name->type->getSize();
+#define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                               \
+	auto tp_##Name = vm::api::getType(pid, VmType);                                 \
+	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);             \
+	if (tp_##Name->type->getSize().asInt() != vm::detail::safe_sizeof<Type>::VALUE) \
+		throw vm::ExtCArgumentSizeMismatch(                                         \
+			#Type,                                                                  \
+			vm::detail::safe_sizeof<Type>::VALUE,                                   \
+			#VmType,                                                                \
+			tp_##Name->type->getSize().asInt()                                      \
+		);                                                                          \
+	vm_arg_type_size_sum += tp_##Name->type->getSize().asInt();
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2
 
@@ -159,7 +162,7 @@ namespace vm::detail {
 			usize vm_arg_type_size_sum = 0;                                                             \
 			VM_EXT_C_PLACE_VALIDATION(ResCType, ResVmType, result)                                      \
 			vm_arg_type_size_sum                                                                        \
-				-= tp_result->type->getSize(); /* undo what we've done to the sum */                    \
+				-= tp_result->type->getSize().asInt(); /* undo what we've done to the sum */            \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_PLACE_VALIDATION, __VA_ARGS__);                        \
 			vm::code::FuncSignature signature;                                                          \
 			signature.result_type = VM_EXT_C_VM_TYPE_NAME(ResVmType);                                   \

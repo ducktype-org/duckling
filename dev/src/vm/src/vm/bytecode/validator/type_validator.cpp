@@ -425,11 +425,7 @@ namespace {
 			status[name] = Visited;
 			variant_match(type) {
 				variant_case(PrimitiveType, primitive) {}
-				variant_case(PointerType, pointer) {
-					if (!tod_types.contains(pointer.inner))
-						throw UnknownSubtypeError(pointer, pointer.inner);
-					self(*tod_types.at(pointer.inner));
-				}
+				variant_case(PointerType, pointer) {}
 				variant_case(FixedSizeTableType, fixed_table) {
 					if (!tod_types.contains(fixed_table.inner))
 						throw UnknownSubtypeError(fixed_table, fixed_table.inner);
@@ -470,6 +466,7 @@ namespace {
 					for (auto& alternative: variant.variant_alternatives)
 						self(*tod_types.at(alternative));
 				}
+				variant_case(OpaqueType, opaque) {}
 				variant_default {
 					CORE_PANIC("Unhandled type during definition cycle check: ", typeToString(type));
 				}

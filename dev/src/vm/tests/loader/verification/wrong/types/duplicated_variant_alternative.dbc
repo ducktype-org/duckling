@@ -1,6 +1,6 @@
-type variant: my_var { }
+type variant: my_var { i64, i64 }
 
-# @TODO: #1659: Make it take no args
+# @TODO: #1659 Make it take no args
 function main { i64, ptr_argv } -> i64 {
     ret;
 }

@@ -17,6 +17,7 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/concurrency/gil.hpp>
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
@@ -104,7 +105,7 @@ namespace vm {
 			                             .bc               = {},
 			                             .local_stack_size = 0,
 			                             .arg_size         = 0,
-			                             .ret_size         = func.result_type->getSize(),
+			                             .ret_size         = func.result_type->getSize().asInt(),
 			                             .parameters       = {},
 			                             .result_type      = func.result_type };
 
@@ -119,7 +120,7 @@ namespace vm {
 		// the return value of the function. Void functions always return with the exit_code = 0.
 		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, result_type_id));
 
-		start_function.local_stack_size += func.result_type->getSize();
+		start_function.local_stack_size += func.result_type->getSize().asInt();
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			const auto& arg_value = func_args[i];
@@ -131,9 +132,9 @@ namespace vm {
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
 			);
-			start_function.local_stack_size += arg_type->getSize();
+			start_function.local_stack_size += arg_type->getSize().asInt();
 			start_function.parameters.push_back(arg_value->type);
-			start_function.arg_size += (arg_value->type->getSize());
+			start_function.arg_size += arg_value->type->getSize().asInt();
 		}
 
 
@@ -185,8 +186,9 @@ namespace vm {
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
 			                             .bc               = {},
 			                             .local_stack_size = 72,
-			                             .arg_size = i64_type->getSize() + argv_ptr_type->getSize(),
-			                             .ret_size = main_return_type->getSize(),
+			                             .arg_size         = i64_type->getSize().asInt()
+			                                       + argv_ptr_type->getSize().asInt(),
+			                             .ret_size    = main_return_type->getSize().asInt(),
 			                             .parameters  = { i64_type, argv_ptr_type },
 			                             .result_type = func.result_type };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/comptime/constexpr_cat.hpp>
+#include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
 
 #include <memory>

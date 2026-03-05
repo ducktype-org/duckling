@@ -120,11 +120,11 @@ struct nlohmann::adl_serializer<vm::VmValue> {
 	static void to_json(json& j, const vm::VmValue& v) {
 		j["type"]        = std::string(TypeParseTraits<vm::VmValue>::NAME.data());
 		j["data_type"]   = v.type->getName().str();
-		j["data_length"] = v.type->getSize();
+		j["data_length"] = v.type->getSize().asInt();
 		// Convert VmValue's bytes to HEX string
 		std::stringstream ss;
 		ss << std::hex;
-		for (size_t i = 0; i < v.type->getSize(); ++i)
+		for (size_t i = 0; i < v.type->getSize().asInt(); ++i)
 			ss << std::setw(2) << std::setfill('0') << static_cast<int>(v.getBytes()[i]);
 		j["data"] = ss.str();
 	}

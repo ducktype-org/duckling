@@ -6,6 +6,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 
 #include <algorithm>
 
@@ -114,7 +115,7 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset = Bytes(0), .type = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
@@ -176,7 +177,7 @@ namespace vm {
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
-				Offset offset = 0;
+				Offset offset(0);
 				for (auto& field: data.fields) {
 					field.offset = offset;
 					field.type->finalize();
@@ -188,12 +189,12 @@ namespace vm {
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
-				TypeSize data_size = 0;
+				TypeSize data_size(0);
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
 					data_size = std::max(data_size, alternative->getSize());
 				}
-				this->size = variant.type_tag_size_bytes + data_size;
+				this->size = data_size + TypeSize(variant.type_tag_size_bytes);
 				isInstantiableImpl(variant);
 			}
 		}
@@ -274,9 +275,9 @@ namespace vm {
 		});
 	}
 
-	base::Optional<u64> Type::getParametersSize() const {
+	base::Optional<Bytes> Type::getParametersSize() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
-			usize size = 0;
+			TypeSize size(0);
 			for (const auto& param: function->parameters) size += param->getSize();
 			return size;
 		});

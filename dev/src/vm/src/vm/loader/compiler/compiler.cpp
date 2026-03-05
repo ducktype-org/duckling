@@ -129,8 +129,8 @@ namespace vm::loader::compiler {
 
 			auto type_ref = low_program.types->at(type.type_name);
 			result.put(local.var_name, { .offset = curr_stack_size, .type = type_ref });
-			auto type_size = type_ref->getSize();
-			type_size_stack.push_back(type_ref->getSize());
+			auto type_size = type_ref->getSize().asInt();
+			type_size_stack.push_back(type_size);
 			if (type.type_name == "void") return;
 			curr_stack_size += type_size;
 			max_stack_size = std::max(max_stack_size, curr_stack_size);
@@ -276,7 +276,7 @@ namespace vm::loader::compiler {
 			for (const auto& param: signature.parameters) {
 				auto type = low_program.types->at(param.str);
 				parameters.emplace_back(type);
-				parameters_size += type->getSize();
+				parameters_size += type->getSize().asInt();
 			}
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
@@ -287,7 +287,7 @@ namespace vm::loader::compiler {
 			                      .local_stack_size = ctx.local_stack_size,
 			                      .arg_size         = parameters_size,
 			                      .ret_size
-			                      = low_program.types->at(signature.result_type)->getSize(),
+			                      = low_program.types->at(signature.result_type)->getSize().asInt(),
 			                      .parameters  = std::move(parameters),
 			                      .result_type = low_program.types->at(signature.result_type) },
 				function.name
@@ -344,7 +344,9 @@ namespace vm::loader::compiler {
 										   })
 			                             | std::ranges::to<std::vector<TypeCRef>>();
 			auto param_size_sum = std::ranges::fold_left(
-				params | std::views::transform([](const auto& param) { return param->getSize(); }),
+				params | std::views::transform([](const auto& param) {
+					return param->getSize().asInt();
+				}),
 				0,
 				std::plus()
 			);
