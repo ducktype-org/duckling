@@ -32,7 +32,7 @@ namespace tpc {
 	};
 
 	/**
-	 * @brief Implements higher level token stream interactions
+	 * @brief Implements higher level token stream interactions.
 	 */
 	class ParserState {
 	protected:
