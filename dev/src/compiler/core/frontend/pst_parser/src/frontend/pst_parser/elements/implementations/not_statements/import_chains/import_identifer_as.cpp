@@ -3,7 +3,7 @@
 
 namespace pst {
 	MBox<ImportIdentifierAs> ImportIdentifierAs::parse(LangParserState& state) {
-		auto out = makeBox<ImportIdentifierAs>(state.getPosition());
+		auto out = makeBox<ImportIdentifierAs>(state);
 
 		tpc::Identifier id;
 

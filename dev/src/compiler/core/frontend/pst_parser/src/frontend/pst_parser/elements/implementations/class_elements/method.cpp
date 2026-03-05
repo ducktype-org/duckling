@@ -5,8 +5,7 @@
 
 namespace pst {
 	MBox<Method> Method::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Method>(position);
+		auto out = makeBox<Method>(state);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 

@@ -11,8 +11,7 @@ namespace pst {
 	}
 
 	MBox<Class> Class::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Class>(position);
+		auto out = makeBox<Class>(state);
 
 		if (!assertStmtChoice<Class>(state, state[0].is(Keyword::Class))) return nullptr;
 

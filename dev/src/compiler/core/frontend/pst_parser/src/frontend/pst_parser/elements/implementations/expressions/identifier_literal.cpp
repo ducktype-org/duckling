@@ -7,7 +7,7 @@ namespace pst::expr {
 	MBox<ExprElement> IdentifierLiteral::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		auto out = makeBox<IdentifierLiteral>(state.getPosition());
+		auto out = makeBox<IdentifierLiteral>(state);
 
 		state.parse(out).one(&out->name);
 

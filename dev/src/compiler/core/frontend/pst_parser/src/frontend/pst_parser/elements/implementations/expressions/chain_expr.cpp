@@ -30,7 +30,7 @@ namespace pst::expr {
 		i64 fwd = toNextLink(state, length);
 		if (fwd == length) return Lower::parse(state, length);
 
-		auto out = makeBox<ChainExpr>(state.getPosition());
+		auto out = makeBox<ChainExpr>(state);
 
 		state.parse(out).with(&out->atom, Lower::parse, +fwd);
 		length -= fwd;

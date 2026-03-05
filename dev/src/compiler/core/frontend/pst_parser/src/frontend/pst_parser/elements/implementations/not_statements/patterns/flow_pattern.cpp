@@ -4,8 +4,7 @@
 
 namespace pst {
 	MBox<FlowPattern> FlowPattern::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<FlowPattern>(position);
+		auto out = makeBox<FlowPattern>(state);
 
 		state.parse(out).one(&out->pattern);
 

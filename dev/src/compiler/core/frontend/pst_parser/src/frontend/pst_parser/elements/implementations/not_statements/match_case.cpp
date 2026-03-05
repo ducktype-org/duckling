@@ -5,8 +5,7 @@
 namespace pst {
 
 	MBox<MatchCase> MatchCase::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<MatchCase>(position);
+		auto out = makeBox<MatchCase>(state);
 
 		if (!assertStmtChoice<MatchCase>(state, state[0].is(Keyword::Case))) return nullptr;
 

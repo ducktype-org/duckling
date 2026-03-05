@@ -6,8 +6,7 @@
 namespace pst {
 	// @TODO: make better
 	MBox<FunDecl> FunDecl::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<FunDecl>(position);
+		auto out = makeBox<FunDecl>(state);
 
 		if (!assertStmtChoice<FunDecl>(state, state[0].is(Keyword::FunDecl))) return nullptr;
 

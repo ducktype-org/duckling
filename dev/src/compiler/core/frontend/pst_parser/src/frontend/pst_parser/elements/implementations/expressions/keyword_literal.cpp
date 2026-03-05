@@ -7,7 +7,7 @@ namespace pst::expr {
 	MBox<ExprElement> KeywordLiteral::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		auto out = makeBox<KeywordLiteral>(state.getPosition());
+		auto out = makeBox<KeywordLiteral>(state);
 
 		state.parse(out).one(&out->keyword);
 

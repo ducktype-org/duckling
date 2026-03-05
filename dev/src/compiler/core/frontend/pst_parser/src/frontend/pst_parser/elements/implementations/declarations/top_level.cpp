@@ -10,7 +10,7 @@ namespace pst {
 			order_type != BlockOrderType::Undefined, "Parsing with an undefined ordering type"
 		);
 
-		auto out = makeBox<TopLevel>(state.getPosition());
+		auto out = makeBox<TopLevel>(state);
 
 		out->type = order_type;
 

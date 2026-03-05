@@ -5,8 +5,7 @@
 
 namespace pst {
 	MBox<Namespace> Namespace::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Namespace>(position);
+		auto out = makeBox<Namespace>(state);
 
 		if (!assertStmtChoice<Namespace>(state, state[0].is(Keyword::Namespace))) return nullptr;
 

@@ -6,8 +6,7 @@
 
 namespace pst {
 	MBox<SpecifierBlock> SpecifierBlock::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<SpecifierBlock>(position);
+		auto out = makeBox<SpecifierBlock>(state);
 
 		state.parse(out).withDef(&out->block);
 

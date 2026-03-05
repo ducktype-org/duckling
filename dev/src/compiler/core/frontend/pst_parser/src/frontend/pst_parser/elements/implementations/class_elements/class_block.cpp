@@ -9,8 +9,7 @@ namespace pst {
 			"Class block should have unordered order type"
 		);
 
-		auto position = state.getPosition();
-		auto out      = makeBox<ClassBlock>(position);
+		auto out = makeBox<ClassBlock>(state);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.logInt(makeBox<error::BlockStartError>(state.getPosition()));

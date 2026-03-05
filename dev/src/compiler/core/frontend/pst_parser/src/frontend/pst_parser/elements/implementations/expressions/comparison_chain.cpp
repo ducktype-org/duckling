@@ -16,7 +16,7 @@ namespace pst::expr {
 		i64 fwd = skipToOp(state, 0, length);
 		if (fwd == length) return Lower::parse(state, length);
 
-		auto out = makeBox<ComparisonChain>(state.getPosition());
+		auto out = makeBox<ComparisonChain>(state);
 
 		PST_WHILE(fwd < length) {
 			out->sub_expr.emplace_back(nullptr);

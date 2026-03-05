@@ -4,8 +4,7 @@
 
 namespace pst {
 	MBox<Field> Field::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Field>(position);
+		auto out = makeBox<Field>(state);
 
 		if (state[0].is(Keyword::Let)) {
 			out->is_mutable = false;

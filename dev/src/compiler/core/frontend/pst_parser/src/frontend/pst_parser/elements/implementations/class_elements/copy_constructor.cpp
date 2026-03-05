@@ -5,8 +5,7 @@
 
 namespace pst {
 	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<CopyConstructor>(position);
+		auto out = makeBox<CopyConstructor>(state);
 
 		state.parse(out).eatOne();
 

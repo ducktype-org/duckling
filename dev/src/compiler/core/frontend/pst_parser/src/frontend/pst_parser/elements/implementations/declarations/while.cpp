@@ -6,8 +6,7 @@
 
 namespace pst {
 	MBox<While> While::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<While>(position);
+		auto out = makeBox<While>(state);
 
 		if (!assertStmtChoice<While>(state, state[0].is(Keyword::While))) return nullptr;
 

@@ -4,7 +4,7 @@
 
 namespace pst {
 	MBox<CallArgument> CallArgument::parse(LangParserState& state) {
-		auto out = makeBox<CallArgument>(state.getPosition());
+		auto out = makeBox<CallArgument>(state);
 		if (state[1].is(lang_def::NamedOperator::Assign)) {
 			state.parse(out).one(&out->arg_name);
 			state.parse(out).one(lang_def::NamedOperator::Assign);

@@ -14,7 +14,7 @@ namespace pst::expr {
 		for (i64 i = 0; i < length; i++)
 			if (state[i].is(Special::Comma)) ends.push_back(i);
 		if (ends.empty()) return Lower::parse(state, length);
-		auto out   = makeBox<Comma>(pos);
+		auto out   = makeBox<Comma>(state);
 		i64  start = -1;
 
 		for (auto end: ends) {

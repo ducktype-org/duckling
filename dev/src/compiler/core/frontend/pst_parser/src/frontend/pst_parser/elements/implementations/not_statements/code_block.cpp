@@ -14,8 +14,7 @@ namespace pst {
 			order_type != BlockOrderType::Undefined, "Parsing with an undefined ordering type"
 		);
 
-		auto position = state.getPosition();
-		auto out      = makeBox<CodeBlock>(position);
+		auto out = makeBox<CodeBlock>(state);
 
 		out->type = order_type;
 

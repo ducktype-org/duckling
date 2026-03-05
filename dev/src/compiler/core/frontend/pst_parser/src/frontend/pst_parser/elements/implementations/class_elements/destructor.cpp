@@ -5,8 +5,7 @@
 
 namespace pst {
 	MBox<Destructor> Destructor::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Destructor>(position);
+		auto out = makeBox<Destructor>(state);
 
 		state.parse(out).eatOne();
 

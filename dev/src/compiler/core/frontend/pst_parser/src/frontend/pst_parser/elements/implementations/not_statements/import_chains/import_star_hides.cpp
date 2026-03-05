@@ -4,7 +4,7 @@
 
 namespace pst {
 	MBox<ImportStarHides> ImportStarHides::parse(LangParserState& state) {
-		auto out = makeBox<ImportStarHides>(state.getPosition());
+		auto out = makeBox<ImportStarHides>(state);
 
 		tpc::Identifier id;
 

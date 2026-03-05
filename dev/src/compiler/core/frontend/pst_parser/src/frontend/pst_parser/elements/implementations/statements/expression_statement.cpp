@@ -4,7 +4,7 @@
 
 namespace pst {
 	MBox<ExprStmt> ExprStmt::parse(LangParserState& state) {
-		auto out = makeBox<ExprStmt>(state.getPosition());
+		auto out = makeBox<ExprStmt>(state);
 		state.parse(out).one(&out->expr);
 		PST_RETURN out;
 	}

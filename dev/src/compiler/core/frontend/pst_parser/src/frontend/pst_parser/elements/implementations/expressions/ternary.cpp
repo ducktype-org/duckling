@@ -68,7 +68,7 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = makeBox<Ternary>(pos);
+		auto out = makeBox<Ternary>(state);
 
 		state.parse(out).one(Keyword::If);
 		state.parse(out).with(&out->condition, Lower::parse, then_fwd - 1);

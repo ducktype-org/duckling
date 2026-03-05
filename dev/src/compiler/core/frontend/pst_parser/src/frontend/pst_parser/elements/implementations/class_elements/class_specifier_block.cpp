@@ -10,8 +10,7 @@ namespace pst {
 	}
 
 	MBox<ClassSpecifierBlock> ClassSpecifierBlock::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<ClassSpecifierBlock>(position);
+		auto out = makeBox<ClassSpecifierBlock>(state);
 
 		state.parse(out).one(&out->block);
 

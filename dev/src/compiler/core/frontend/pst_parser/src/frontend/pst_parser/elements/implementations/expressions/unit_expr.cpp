@@ -15,7 +15,7 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<UnitExpr>(state.getPosition());
+		auto out = makeBox<UnitExpr>(state);
 
 		state.parse(out).goDown();
 		state.parse(out).goUpAndSkip();

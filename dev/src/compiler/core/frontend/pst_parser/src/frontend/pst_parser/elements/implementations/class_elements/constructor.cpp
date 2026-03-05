@@ -6,8 +6,7 @@
 
 namespace pst {
 	MBox<Constructor> Constructor::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Constructor>(position);
+		auto out = makeBox<Constructor>(state);
 
 		state.parse(out).eatOne();
 

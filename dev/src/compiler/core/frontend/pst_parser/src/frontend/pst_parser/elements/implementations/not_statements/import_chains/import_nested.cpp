@@ -5,7 +5,7 @@
 
 namespace pst {
 	MBox<ImportNested> ImportNested::parse(LangParserState& state) {
-		auto out = makeBox<ImportNested>(state.getPosition());
+		auto out = makeBox<ImportNested>(state);
 
 		tpc::Identifier id;
 		PST_WHILE(state[0].isIdentifier()) {

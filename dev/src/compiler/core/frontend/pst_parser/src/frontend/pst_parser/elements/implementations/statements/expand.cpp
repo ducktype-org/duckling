@@ -4,8 +4,7 @@
 
 namespace pst {
 	MBox<Expand> Expand::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Expand>(position, state.getContext());
+		auto out = makeBox<Expand>(state, state.getContext());
 
 		if (!assertStmtChoice<Expand>(state, state[0].is(Keyword::Expand))) return nullptr;
 

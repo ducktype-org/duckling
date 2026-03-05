@@ -11,8 +11,7 @@ namespace pst::expr {
 
 		if (!state[0].is(Keyword::Match)) return Lower::parse(state, length);
 
-		auto position = state.getPosition();
-		auto out      = makeBox<MatchExpr>(position);
+		auto out = makeBox<MatchExpr>(state);
 
 		if (!assertStmtChoice<MatchExpr>(state, state[0].is(Keyword::Match))) return nullptr;
 		state.parse(out).one(Keyword::Match);

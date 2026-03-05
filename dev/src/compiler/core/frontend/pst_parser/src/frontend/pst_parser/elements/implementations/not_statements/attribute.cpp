@@ -5,8 +5,7 @@
 namespace pst {
 
 	MBox<Attribute> Attribute::parse(LangParserState& state) {
-		auto           position = state.getPosition();
-		Box<Attribute> out      = makeBox<Attribute>(position);
+		Box<Attribute> out = makeBox<Attribute>(state);
 
 		if (!assertStmtChoice<Attribute>(state, state[0].is(Special::AtSign))) return nullptr;
 

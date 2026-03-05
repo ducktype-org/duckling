@@ -15,7 +15,7 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<BlockExpr>(state.getPosition());
+		auto out = makeBox<BlockExpr>(state);
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);

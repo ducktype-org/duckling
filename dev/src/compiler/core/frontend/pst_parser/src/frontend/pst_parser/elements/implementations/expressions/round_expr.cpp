@@ -18,7 +18,7 @@ namespace pst::expr {
 
 		if (state[0].getRecursive().size() == 0) return UnitExpr::parse(state, length);
 
-		auto out = makeBox<RoundExpr>(state.getPosition());
+		auto out = makeBox<RoundExpr>(state);
 
 		state.parse(out).goDown();
 		state.parse(out).with(&out->expr, Comma::parse, (i64) state.ctokens().size());

@@ -13,8 +13,7 @@ namespace pst {
 	}
 
 	MBox<For> For::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<For>(position);
+		auto out = makeBox<For>(state);
 
 		if (!assertStmtChoice<For>(state, state[0].is(Keyword::For))) return nullptr;
 

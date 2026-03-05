@@ -2,9 +2,9 @@
 
 #include "../statements/declaration.hpp"
 
-#define DECL_CHILD_CONSTRUCTOR(class_name, element_type_)                                   \
+#define DECL_CHILD_CONSTRUCTOR(class_name, element_type_)                         \
 	class_name(const LangParserState& state): Decl(StmtKind::class_name, state) { \
-		this->element_kind = element_type_;                                                 \
+		this->element_kind = element_type_;                                       \
 	}
 
 #define DECL_CHILD_CONSTRUCTOR_NO_KIND(class_name) \

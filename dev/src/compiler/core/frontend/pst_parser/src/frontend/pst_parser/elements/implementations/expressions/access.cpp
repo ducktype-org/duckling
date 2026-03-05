@@ -15,7 +15,7 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<Access>(state.getPosition());
+		auto out = makeBox<Access>(state);
 
 		out->type = state[0].getValue();
 

@@ -6,8 +6,7 @@
 namespace pst {
 
 	MBox<Pattern> Pattern::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Pattern>(position);
+		auto out = makeBox<Pattern>(state);
 
 		if (!assertStmtChoice<Pattern>(state, state[0].is(Keyword::Pattern))) return nullptr;
 

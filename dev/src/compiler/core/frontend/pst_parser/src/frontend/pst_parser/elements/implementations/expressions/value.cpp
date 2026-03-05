@@ -14,7 +14,7 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprNumericValue>(state.getPosition());
+		auto out = makeBox<ExprNumericValue>(state);
 		state.parse(out).one(&out->value);
 
 		if (length > 1) {

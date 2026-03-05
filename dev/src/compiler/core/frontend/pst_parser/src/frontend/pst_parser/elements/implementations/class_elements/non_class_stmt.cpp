@@ -4,8 +4,7 @@
 
 namespace pst {
 	MBox<NonClassStmt> NonClassStmt::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<NonClassStmt>(position);
+		auto out = makeBox<NonClassStmt>(state);
 
 		Keyword as_keyword = state[0].asKeyword();
 		CORE_ASSERT(

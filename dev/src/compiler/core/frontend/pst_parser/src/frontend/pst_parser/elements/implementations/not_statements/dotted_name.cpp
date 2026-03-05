@@ -7,8 +7,7 @@ namespace pst {
 	bool DottedName::getStar() const { return star; }
 
 	MBox<DottedName> DottedName::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<DottedName>(position);
+		auto out = makeBox<DottedName>(state);
 		do {
 			bool            is_id = state[0].isIdentifier();
 			tpc::Identifier next;
