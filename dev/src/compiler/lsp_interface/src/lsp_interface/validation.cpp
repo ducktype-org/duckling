@@ -141,7 +141,7 @@ namespace lsp {
 	}
 
 	std::string getDiagnosticJsonFromCompiler(const fs::File& file) {
-		auto source_files = frontend::SourceFile::getSourceFilesfromFile(file);
+		auto source_files = frontend::SourceFile::getSourceFilesFromFile(file);
 		if (source_files.empty()) return "{}";
 
 		auto root_module = getRootModule(

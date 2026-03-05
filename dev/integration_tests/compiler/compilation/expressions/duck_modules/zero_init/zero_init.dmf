@@ -1,0 +1,13 @@
+fun main() -> i64 = {
+    var i: i64;
+    builtin_output_i64(i); # 0
+    var b: i32;
+    builtin_output_i64(b); # 0
+    var f: f64;
+
+    # @TODO: #1916 Add an array zero init case here, once it's possible to write duckling code which examine it contents.
+    # @TODO: #1560 Add an records zero init case here, once it's possible to write duckling code which examine it contents.
+    # Also, once both are added, remove this test and unify it with `default_init`
+
+    return 0;
+}

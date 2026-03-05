@@ -99,7 +99,7 @@ namespace lsp {
 			CORE_ASSERT(
 				ext_is_ok(path.extension()), "Files should already have Duckling extensions."
 			);
-			auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
+			auto src_files = compiler::frontend::SourceFile::getSourceFilesFromFile(vfile);
 			for (auto& src_file: src_files) src_file->getPST();
 			return;
 		}
