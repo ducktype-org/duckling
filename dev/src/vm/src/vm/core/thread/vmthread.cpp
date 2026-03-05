@@ -590,8 +590,9 @@ namespace vm {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
-							.function_id  = index,  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+							.function_id   = index,  // Assuming function_id is int
+							.instr_number  = static_cast<u64>(instr - func.bc.data()),
+							.function_name = func.name });
 					}
 				}
 			}

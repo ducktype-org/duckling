@@ -48,9 +48,33 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
-			u64 function_id;
-			u64 instr_number;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
+			u64         function_id;
+			u64         instr_number;
+			base::StrID function_name;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id, function_name);
+		};
+
+		struct NumberOfCurrentStackFrames {
+			u64 number_of_stack_frames;
+		};
+
+		struct StackFrameData {
+			struct FrameVar {
+				u64         offset;
+				vm::Pointer pointer;
+				TypeCRef    type;
+			};
+
+			base::StrID           function_name;
+			std::vector<FrameVar> frame_vars;
+		};
+
+		struct PointerData {
+			base::ModRawView data;
+		};
+
+		struct Pointer {
+			vm::Pointer pointer;
 		};
 
 		using Boolean = bool;
@@ -65,5 +89,9 @@ namespace vm::api {
 		response::VmValue,
 		response::Boolean,
 		ThreadID,
+		response::NumberOfCurrentStackFrames,
+		response::StackFrameData,
+		response::PointerData,
+		response::Pointer,
 		ExitValue>;
 }

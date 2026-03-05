@@ -187,4 +187,34 @@ namespace vm::api {
 	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
 	 */
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
+
+	/**
+	 * @brief Get the number of current stack frames.
+	 * @return The response containing the number of stack frames or an API error.
+	 */
+	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
+		PID pid
+	);
+
+	/**
+	 * @brief Get the variables of a stack frame with a given index.
+	 * @return The response containing the variables of the stack frame or an API error.
+	 */
+	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
+		PID pid, u64 stack_frame_number
+	);
+
+	/**
+	 * @brief Get the data pointed to by a given pointer.
+	 * @return The response containing raw view of the data pointed to by the pointer or an API error.
+	 */
+	std::expected<response::PointerData, ApiError> debuggerGetPointerData(
+		PID pid, Pointer pointer, u64 size
+	);
+
+	/**
+	 * @brief Dereference a pointer once and return the resulting pointer.
+	 * @return The response containing the resulting pointer or an API error.
+	 */
+	std::expected<response::Pointer, ApiError> debuggerDereferencePointer(PID pid, Pointer pointer);
 }
