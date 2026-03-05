@@ -1,15 +1,13 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
-#include <base/pointers/shared_box.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
-
-#include <vm/core/process/exceptions.hpp>
 
 #include <queue>
 #include <vector>
 
-namespace vm {
+namespace base {
 
 	/**
 	 * @brief Universal pool for objects of any type.
@@ -25,9 +23,9 @@ namespace vm {
 	class ObjectPool final {
 	private:
 		/**
-		 * @brief Pool for objects used in the process.
+		 * @brief Pool for objects.
 		 */
-		std::vector<SharedBox<T>> object_pool;
+		std::vector<Ref<T>> object_pool;
 
 		/**
 		 * @brief Indicates which object_pool slots are currently unused.
@@ -50,6 +48,14 @@ namespace vm {
 		static constexpr i64 DEFAULT_MAX_OBJECTS = 1e6;
 
 	public:
+		struct ObjectDoesntExist: public LogicError {
+			ObjectDoesntExist(): LogicError("Object does not exist") {}
+		};
+
+		struct TooManyObjects: public LogicError {
+			TooManyObjects(): LogicError("Too many objects in the pool") {}
+		};
+
 		explicit ObjectPool(i64 max_objects = DEFAULT_MAX_OBJECTS): max_objects(max_objects) {}
 
 		/**
@@ -58,9 +64,9 @@ namespace vm {
 		 * @param max_objects Maximum number of objects allowed in the pool.
 		 *                    Defaults to DEFAULT_MAX_OBJECTS.
 		 */
-		SharedBox<T> get(i64 object_id) {
+		Ref<T> get(i64 object_id) {
 			if (object_id >= (i64) object_pool.size() || is_free.at((size_t) object_id))
-				throw exceptions::VMObjectDoesntExist();
+				throw ObjectDoesntExist();
 
 			return object_pool.at((size_t) object_id);
 		}
@@ -70,10 +76,9 @@ namespace vm {
 		 */
 		i64 add() {
 			if (free_ids.size() == 0) {
-				if ((i64) object_pool.size() >= max_objects) throw exceptions::VMTooManyObjects();
-
+				if ((i64) object_pool.size() >= max_objects) throw TooManyObjects();
 				free_ids.push((i64) object_pool.size());
-				object_pool.push_back(base::makeSharedBox<T>());
+				object_pool.push_back(new T);
 				is_free.push_back(false);
 			}
 
@@ -87,7 +92,7 @@ namespace vm {
 		 */
 		void remove(i64 object_id) {
 			if (object_id >= (i64) object_pool.size() || is_free.at((size_t) object_id))
-				throw exceptions::VMObjectDoesntExist();
+				throw ObjectDoesntExist();
 
 			is_free.at((size_t) object_id) = true;
 			free_ids.push(object_id);

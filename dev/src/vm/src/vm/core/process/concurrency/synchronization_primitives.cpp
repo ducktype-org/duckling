@@ -1,7 +1,7 @@
 #include "synchronization_primitives.hpp"
 
 namespace vm {
-	SharedBox<std::mutex> SynchronizationPrimitives::getMutex(i64 mutex_id) {
+	Ref<std::mutex> SynchronizationPrimitives::getMutex(i64 mutex_id) {
 		return mutex_pool.get(mutex_id);
 	}
 
