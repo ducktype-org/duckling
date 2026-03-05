@@ -60,11 +60,13 @@ void VmTestSuite::assertExecutionPanickedWith(
 		}
 		variant_default {
 			ASSERT_TRUE(!test_result.run_result.has_value());
-			fail(base::strConcat(
-				"Expected ",
-				TypeParseTraits<vm::api::ExecutionPanicked>::NAME.data(),
-				", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
-			));
+			fail(
+				base::strConcat(
+					"Expected ",
+					TypeParseTraits<vm::api::ExecutionPanicked>::NAME.data(),
+					", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
+				)
+			);
 		}
 	}
 }
@@ -88,7 +90,6 @@ void VmTestSuite::loadInvalidDbc(
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
 	auto res = vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) });
-	std::cerr << "Loading " << dbc_filename << (res ? " succeeded" : " failed") << '\n';
 	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
 	ASSERT_TRUE(res.has_value());
 }
