@@ -11,16 +11,12 @@ namespace pst {
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 
-		state.setFallback(state.ctokens().size());
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			state.parse(out).all(Keyword::If, &out->optional_name, &out->condition, &out->then_body);
 
-		state.setConstextBlockOrdering(BlockOrderType::Ordered);
-		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition, &out->then_body);
-
-		if (state.parse(out).tryEat(Keyword::Else)) {
-			state.parse(out).one(&out->else_body);
-		}
-
-		state.exitFallback();
+			if (state.parse(out).tryEat(Keyword::Else)) state.parse(out).one(&out->else_body);
+		})
 
 		PST_RETURN out;
 	}

@@ -148,11 +148,11 @@ namespace pst {
 
 		template<std::derived_from<Stmt> T>
 		requires FlowControlLike<T> MBox<T> parseStmt(LangParserState& state) {
-			state.setSoftFallback(isStatementBegin);
+			setSoftFallback(state, isStatementBegin);
 
 			MBox<T> out = T::parse(state);
 
-			state.exitSoftFallback();
+			exitSoftFallback(state);
 
 			PST_RETURN out;
 		}

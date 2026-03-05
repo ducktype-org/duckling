@@ -2,8 +2,8 @@
 
 #include "ordering.hpp"
 
-#include <token_parser_core/parser_state.hpp>
 #include <hashing/add_to_hash.hpp>
+#include <token_parser_core/parser_state.hpp>
 
 namespace pst {
 	class LangParserState;

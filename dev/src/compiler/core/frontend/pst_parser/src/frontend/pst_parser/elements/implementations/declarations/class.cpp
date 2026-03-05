@@ -21,13 +21,11 @@ namespace pst {
 		if (state.parse(out).tryEat(Keyword::Extends)) state.parse(out).one(&out->base);
 		if (state.parse(out).tryEat(Keyword::Implements)) state.parse(out).one(&out->implements);
 
-		state.setFallback(state.ctokens().size());
-
-		state.setContextClassName(out->name);
-		state.setConstextBlockOrdering(BlockOrderType::Unordered);
-		state.parse(out).one(&out->body);
-
-		state.exitFallback();
+		PST_NEW_CONTEXT({
+			state.setContextClassName(out->name);
+			state.setContextBlockOrdering(BlockOrderType::Unordered);
+			state.parse(out).one(&out->body);
+		})
 
 		PST_RETURN out;
 	}

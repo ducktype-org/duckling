@@ -27,15 +27,19 @@ namespace pst {
 		                                  ///< Original fallback is only reached when it is 0.
 		bool finalized = false;
 
-		template<class T>
-		friend class pst::PSTAutomatic;
-
 		void checkAllParsed();
 
 		void copyOwnContext();
 
 	private:
-		// These are methods that should only be used by automatic	
+		template<class T>
+		friend class pst::PSTAutomatic;
+		friend void fallbackLen(LangParserState& state, u64 length);
+		friend void exitFallback(LangParserState& state);
+		friend void setSoftFallback(LangParserState& state, TokenStreamCondition fun);
+		friend void exitSoftFallback(LangParserState& state);
+
+		// These are methods that should only be used by automatic
 
 		/**
 		 * @brief deletes current stream and makes last stream the current stream. Resets error
@@ -119,7 +123,7 @@ namespace pst {
 		CRef<LangParserContext> getContext() const;
 
 		void setContextClassName(base::StrID);
-		void setConstextBlockOrdering(BlockOrderType);
+		void setContextBlockOrdering(BlockOrderType);
 
 		/**
 		 * @brief Adds to the balance of skipped_entries

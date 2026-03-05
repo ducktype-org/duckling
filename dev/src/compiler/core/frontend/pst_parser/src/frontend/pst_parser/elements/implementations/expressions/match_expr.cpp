@@ -22,9 +22,9 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		state.goDown();
+		state.parse(out).goDown();
 		state.parse(out).one(&out->value_to_match);
-		state.goUpAndSkip();
+		state.parse(out).goUpAndSkip();
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.logInt(makeBox<MatchCurlyBracketError>(state.getPosition()));

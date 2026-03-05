@@ -152,7 +152,7 @@ namespace pst {
 						expr_length++;
 					}
 
-					state.setFallback(expr_length);
+					state.parse(out).fallbackLen(expr_length);
 
 					if (expr_length == 0) {
 						// Handle empty field errors with sensible ranges
@@ -176,7 +176,7 @@ namespace pst {
 						state.parse(out).assign(&out->elements.back(), std::move(box));
 					}
 
-					state.exitFallback();
+					state.parse(out).exitFallback();
 
 					if (isEnding(state.ctokens(), 0)) break;
 					if (isSeparator(state.ctokens(), 0)) {

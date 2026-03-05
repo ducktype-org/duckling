@@ -26,6 +26,10 @@
 #define PST_AUTOMATIC_SKIP(ret) \
 	if (state.isSkipping()) { return ret; }
 
+#define PST_NEW_CONTEXT(code)       \
+	state.parse(out).saveContext(); \
+	code state.parse(out).exitSoftFallback();
+
 namespace pst {
 	using lang_def::Keyword;
 	using lang_def::NamedOperator;
@@ -520,6 +524,15 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Sets a simple soft fallback that is only used to save context
+		 */
+		PSTAutomatic& saveContext() {
+			constexpr auto CONST_TRUE = [](const TokenStream&, i64) { return true; };
+
+			return setSoftFallback(CONST_TRUE);
+		}
+
+		/**
 		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the
 		 * after-error parsing short-cutting when exited.
 		 */
@@ -548,6 +561,19 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Setup a soft fallback for parsing. It limits resets the after-error parsing
+		 * short-cutting(using the condition) when exited.
+		 */
+		PSTAutomatic& setSoftFallback(std::function<TokenStreamCondition> fun) {
+			if (state.isSkipping()) {
+				state.skipEntry();
+				return *this;
+			}
+			state.setSoftFallback(fun);
+			return *this;
+		}
+
+		/**
 		 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when
 		 * exited.
 		 */
@@ -556,6 +582,18 @@ namespace pst {
 				if (!state.removeEntry()) return *this;
 			}
 			state.exitFallback();
+			return *this;
+		}
+
+		/**
+		 * @brief Exit a soft fallback for parsing. It resets the after-error parsing short-cutting
+		 * when exited.
+		 */
+		PSTAutomatic& exitSoftFallback() {
+			if (state.isSkipping()) {
+				if (!state.removeEntry()) return *this;
+			}
+			state.exitSoftFallback();
 			return *this;
 		}
 
@@ -616,4 +654,20 @@ namespace pst {
 	 * currently being parsed. For example in statement parsing.
 	 */
 	void exitFallback(LangParserState& state);
+
+	/**
+	 * @brief Setup a soft fallback for parsing. It resets the
+	 * after-error parsing short-cutting (using the condition) when exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is
+	 * currently being parsed. For example in statement parsing.
+	 */
+	void setSoftFallback(LangParserState& state, TokenStreamCondition fun);
+
+	/**
+	 * @brief Exit a soft fallback for parsing. It resets the after-error parsing short-cutting
+	 * (using the saved condition) when exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is
+	 * currently being parsed. For example in statement parsing.
+	 */
+	void exitSoftFallback(LangParserState& state);
 }

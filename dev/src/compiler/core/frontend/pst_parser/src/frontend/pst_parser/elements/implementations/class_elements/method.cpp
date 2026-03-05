@@ -13,12 +13,10 @@ namespace pst {
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
-		state.setFallback(state.ctokens().size());
-
-		state.setConstextBlockOrdering(BlockOrderType::Ordered);
-		state.parse(out).all(NamedOperator::Assign, &out->body);
-
-		state.exitFallback();
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			state.parse(out).all(NamedOperator::Assign, &out->body);
+		})
 
 		PST_RETURN out;
 	}

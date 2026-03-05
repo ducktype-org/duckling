@@ -18,12 +18,10 @@ namespace pst {
 		if (state.notEmpty()) state.logInt(makeBox<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
-		state.parse(out).fallbackLen(state.ctokens().size());
-
-		state.setConstextBlockOrdering(BlockOrderType::Ordered);
-		state.parse(out).all(NamedOperator::Assign, &out->body);
-
-		state.parse(out).exitFallback();
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			state.parse(out).all(NamedOperator::Assign, &out->body);
+		})
 
 		PST_RETURN out;
 	}
