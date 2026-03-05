@@ -1,3 +1,4 @@
+# Analyze and process the `binary_file`, preparing to embed in `destination_file`
 function(process_to_binary binary_file destination_file binary_artifact_prefix)
     set(extra_deps ${ARGN})
     get_filename_component(
@@ -13,24 +14,28 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
     find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
 
-
+    # Force resolution of local function calls (is it needed?)
     add_custom_command(
         OUTPUT ${linked_out}
         COMMAND ${CMAKE_CXX_COMPILER} -r ${flto} -Bsymbolic-functions ${binary_file} -o ${linked_out}
         DEPENDS ${binary_file} ${extra_deps}
     )
+
+    # Analyze and generate data from the binary
     add_custom_command(
         OUTPUT ${nm_out}
         COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py" "${linked_out}" "--output=${nm_out}"
         DEPENDS ${linked_out} ${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py
         VERBATIM
     )
+    set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
+    
+    # Strip other section (it is no longer in the ELF format)
     add_custom_command(
         OUTPUT ${text_out}
         COMMAND ${LLVM_OBJCOPY} -O binary --only-section=.text ${linked_out} ${text_out}
         DEPENDS ${linked_out}
     )
-    set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
     set_source_files_properties("${text_out}" PROPERTIES GENERATED TRUE)
 
     set(destination_scopes
@@ -38,6 +43,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         "${CMAKE_SOURCE_DIR}/src/vm"
     )
 
+    # Include data generated from the binary
     set_property(
         SOURCE "${destination_file_abs}"
         DIRECTORY ${destination_scopes}
@@ -46,6 +52,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         "${CMAKE_CURRENT_BINARY_DIR}"
     )
 
+    # Embed the binary
     set_property(
         SOURCE "${destination_file_abs}"
         DIRECTORY ${destination_scopes}
@@ -73,7 +80,7 @@ if(JIT_ENABLED)
     process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
     duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
 
-
+    # prepare to include it in the full LTO of opfuncs
     add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
     target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
     target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
@@ -107,5 +114,4 @@ if(JIT_ENABLED)
     add_files(copy-and-patch.cpp)
 
     set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
-
 endif()
