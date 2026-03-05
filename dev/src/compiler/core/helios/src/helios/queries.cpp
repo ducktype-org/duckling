@@ -623,8 +623,6 @@ namespace compiler::helios {
 		static auto queryCodeOfCodeBlock(
 			query::Context& ctx, const Container& container, tsh::SymbolType<> return_type
 		) {
-			std::cout << "Querying code of code block  with hash: ";
-			std::cout << container.unlock(ctx)->getHash() << std::endl;
 			code::CodeBlock block({});
 			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
