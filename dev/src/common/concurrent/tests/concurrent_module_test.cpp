@@ -1,6 +1,5 @@
 #include <concurrent/base/collections/hash_map.hpp>
-
-#include <base/extend_cpp/variant_match.hpp>
+#include <concurrent/race_tester/race_tester.hpp>
 
 #include <tester/tester.hpp>
 
@@ -10,9 +9,9 @@
 
 // strConcat specializations for result types used in race testing
 // These must be declared before including race_tester.hpp
-namespace base::internal {
+namespace base {
 	// Specialization for Optional<u64> — specific to hashMapRaceTest
-	inline void strConcat(std::string& out, const Optional<u64>& opt) {
+	static void strConcat(std::string& out, const Optional<u64>& opt) {
 		if (opt.empty()) {
 			out.append("Optional(empty)");
 		} else {
@@ -22,8 +21,6 @@ namespace base::internal {
 		}
 	}
 }
-
-#include <concurrent/race_tester/race_tester.hpp>
 
 template<usize Size>
 struct BigObject final {
@@ -645,8 +642,9 @@ private:
 		};
 
 		// Run the race test multiple times for confidence
-		const usize reps         = 100;
-		const usize worker_count = 2;
+		const usize reps           = 100;
+		const usize worker_count   = 2;
+		const usize ops_per_thread = 12;
 
 		for (usize rep = 0; rep < reps; ++rep) {
 			std::cerr << "\rRep: " << rep + 1 << " / " << reps;
@@ -667,9 +665,11 @@ private:
 				= [](u32, RaceTester::Executor_ executor) {
 					  std::minstd_rand rng(std::random_device{}());
 
-					  for (usize i = 0; i < 13; ++i) {
-						  Key   key   = rng() % 2;
-						  Value value = key * 10;
+					  for (usize i = 0; i < ops_per_thread; ++i) {
+						  // Use only one key because we want to test races on a single shard.
+					      // Running the test on multiple independent shards grows the search space.
+						  Key   key   = 1;
+						  Value value = rng() % 4;
 
 						  double op = static_cast<double>(rng() % 100) / 100.0;
 
