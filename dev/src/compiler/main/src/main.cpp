@@ -487,7 +487,7 @@ clah::Clah getClahForMain() {
 							   compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options     = getDebugOptionsFromClap(options),
-									   .execution_options = { 1 },
+									   .execution_options = {  .worker_count = 1 },
 								   }
 							   );
 							   compiler::repl::ReplSession session;
