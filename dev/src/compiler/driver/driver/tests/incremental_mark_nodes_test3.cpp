@@ -48,7 +48,7 @@ private:
 				},
 				.debug_options         = {},
 				.incremental           = { .enabled = true },
-				.execution_options = { .worker_count = 1 },
+				.execution_options     = { .worker_count = 1 },
             }
         );
 
