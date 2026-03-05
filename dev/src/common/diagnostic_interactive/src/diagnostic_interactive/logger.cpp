@@ -70,4 +70,10 @@ namespace dia_int {
 	}
 
 	bool Logger::bad() const { return has_error; }
+
+	void Logger::mergeWith(Logger&& other) {
+		std::ranges::move(other.diagnostics, std::back_inserter(diagnostics));
+		has_error = has_error || other.has_error;
+		auto _    = std::move(other);
+	}
 }

@@ -33,6 +33,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	Flag,
 	Optional,
 	DynamicArray,
+	StaticArray,
 	Tuple,
 	Variant,
 	Class,

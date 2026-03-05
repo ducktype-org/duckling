@@ -9,6 +9,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/lookup/interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
 	src_private/helios_private/expressions/function_calls/call_processing.cpp
+	src_private/helios_private/expressions/function_calls/square_call_processing.cpp
 	src_private/helios_private/expressions/function_calls/errors.cpp
 	src_private/helios_private/expressions/chain_expr.cpp
 	src_private/helios_private/expressions/query_hout_of_expr.cpp
@@ -32,6 +33,7 @@ add_library(HELIOS STATIC
 	src/helios/symbols/query_type_of_symbol.cpp
 	src/helios/symbols/query_class_symbol_data.cpp
 	src/helios/symbols/query_type_from_definition.cpp
+	src/helios/symbols/query_class_of_member.cpp
 	src/helios/symbols/symbol_abi.cpp
 	src/helios/utils/go_to_definition.cpp
 	src/helios/utils/get_expr_symid.cpp

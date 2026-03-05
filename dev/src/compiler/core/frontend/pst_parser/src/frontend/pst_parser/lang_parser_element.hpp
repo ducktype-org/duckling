@@ -5,6 +5,8 @@
 #include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
@@ -25,6 +27,8 @@ namespace pst {
 	class PSTAutomatic;
 
 	class PstVisitor;
+
+	class StablePosition;
 
 	/**
 	 * @brief Base Element for all of the PST elements.
@@ -78,10 +82,16 @@ namespace pst {
 		LangElement(LangElement&&)      = delete;
 
 		/**
-		 * @brief Position covering the whole element
+		 * @brief Position covering the whole element.
 		 */
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
+
+		/**
+		 * @brief The stable position of an element.
+		 */
+		[[nodiscard]]
+		StablePosition getStablePosition() const;
 
 		/**
 		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
@@ -223,10 +233,8 @@ namespace pst {
 		/**
 		 * @brief Map from stable hash to lang element for all created elements.
 		 * @note Used to view dependent tokens of node in the query graph and for HELIOS PST origin.
-		 * @TODO: #1974 When dealing with parallelization of elements parsing be careful with this
-		 * map.
 		 */
-		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
+		static concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
 
 		using InternalChild = Ref<LangElement>;
 
