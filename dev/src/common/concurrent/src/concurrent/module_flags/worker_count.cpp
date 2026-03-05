@@ -17,7 +17,7 @@ namespace concurrent::worker {
 	}
 
 	u64 getWorkerCount() {
-		auto count = worker_count.load();
+		auto count = worker_count.load(std::memory_order_relaxed);
 		if (count == 0) {
 			setWorkerCount(1);
 			count = 1;

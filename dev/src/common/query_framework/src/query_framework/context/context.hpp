@@ -174,7 +174,6 @@ namespace query {
 
 				return OthQuery::internal_load(dep_id.hash.val);
 			}
-			CORE_UNREACHABLE();
 		}
 
 		/**
