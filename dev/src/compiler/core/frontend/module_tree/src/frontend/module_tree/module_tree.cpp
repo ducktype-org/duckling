@@ -7,6 +7,7 @@
 #include "source_file.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/worker/worker_manager.hpp>
 #include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -18,6 +19,8 @@
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -435,6 +438,11 @@ namespace compiler::frontend {
 		m_parent = parent;
 	}
 
+	void ModuleTreeBuilder::setReplModule(const ReplData& repl_data) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		m_repl_data = repl_data;
+	}
+
 	void ModuleTreeBuilder::setPackageID(std::string_view package_id) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
@@ -463,6 +471,9 @@ namespace compiler::frontend {
 
 		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for every module tree!");
 		module_ref->m_package_id = m_package_id;
+
+		// Set REPL-specific attributes
+		module_ref->m_repl_data = m_repl_data;
 
 		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
@@ -829,7 +840,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
+		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesFromFile(file);
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
 		for (auto& source_file: source_files) source_file->update();
 	}
@@ -852,22 +863,56 @@ namespace compiler::frontend {
 			"parseAllFilesInModuleTree called from within a query!"
 		);
 
-		auto parse_all_files = [&](auto&& self, ModuleID module_id_internal) -> void {
-			auto module_tree = GetModuleID_Functor::get(module_id_internal);
-			if (module_tree->hasMainSourceFile())
-				GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					module_tree->getMainSourceFile().illegalAccess().getID()
-				)
-					->getPST();
-			for (const auto& file: module_tree->getSourceFiles().illegalAccess())
-				GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					file.illegalAccess().getID()
-				)
-					->getPST();
-			for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
-				self(self, submodule.illegalAccess().getID());
+		// First collect all files to be parsed.
+		std::vector<FileID> files_to_parse;
+		auto                collect_files = [&](this auto&& self, ModuleID mid) -> void {
+            auto module_tree = GetModuleID_Functor::get(mid);
+            if (module_tree->hasMainSourceFile())
+                files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
+            for (const auto& file: module_tree->getSourceFiles().illegalAccess())
+                files_to_parse.push_back(file.illegalAccess().getID());
+            for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
+                self(submodule.illegalAccess().getID());
 		};
-		parse_all_files(parse_all_files, module_id);
+		collect_files(module_id);
+
+		if (files_to_parse.empty()) return;
+
+		// Now parse them concurrently.
+		std::mutex              wait_mtx;
+		std::condition_variable wait_cv;
+		std::atomic<usize>      next_file_id{ 0 };
+		bool                    all_files_parsed = false;
+		auto&                   manager          = concurrent::worker::WorkerManager::get();
+
+		auto schedule_next_file_parsing = [&](concurrent::worker::WRef worker) {
+			usize idx = next_file_id.fetch_add(1, std::memory_order_relaxed);
+
+			if (idx < files_to_parse.size()) {
+				FileID file_id = files_to_parse[idx];
+
+				worker->scheduleTask([&, file_id](concurrent::worker::WRef) {
+					auto file_ref
+						= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+							file_id
+						);
+					file_ref->getPST();
+				});
+			} else if (idx == files_to_parse.size() + concurrent::worker::getWorkerCount() - 1) {
+				std::lock_guard<std::mutex> lock(wait_mtx);
+				all_files_parsed = true;
+				wait_cv.notify_one();
+			}
+		};
+
+		manager.setNoTasksCallback(schedule_next_file_parsing);
+
+		// Wait until all files are parsed.
+		std::unique_lock lock(wait_mtx);
+		wait_cv.wait(lock, [&] { return all_files_parsed; });
+
+		// Clear the call back if all files are parsed.
+		manager.setNoTasksCallback([](concurrent::worker::WRef) {});
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {

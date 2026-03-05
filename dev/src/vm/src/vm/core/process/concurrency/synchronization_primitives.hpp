@@ -2,6 +2,8 @@
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/core/process/concurrency/object_pool.hpp>
+
 #include <mutex>
 #include <condition_variable>
 
@@ -9,15 +11,9 @@ namespace vm {
 	class SynchronizationPrimitives final {
 	private:
 		/**
-		 * @brief ID of a new mutex that's gonna be added to mutex pool.
+		 * @brief Pool for mutexes used in the process.
 		 */
-		i64 next_mutex_id = 0;
-
-		/**
-		 * @brief Pool for mutexes used in the process. In the future they should be reusable.
-		 */
-		base::HashMap<i64, SharedBox<std::mutex>>
-			mutex_map;  // @TODO: #2109 Find better structure then map for storing mutexes.
+		ObjectPool<std::mutex> mutex_pool;
 
 
 		i64 next_cv_id = 0;

@@ -31,6 +31,8 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
 	VM_RUNTIME_EXCEPTION(VMFoundMemoryLeakException, "Memory leak detected");
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
-	VM_RUNTIME_EXCEPTION(VMMutexDoesntExist, "Mutex doesn\'t exist");
-	VM_RUNTIME_EXCEPTION(VMConditionVariableDoesntExist, "Condition variable doesn\'t exist");
+	VM_RUNTIME_EXCEPTION(VMObjectDoesntExist, "Object doesn\'t exist");
+	VM_RUNTIME_EXCEPTION(
+		VMTooManyObjects, "Maximum number of objects that can exist simultaneously has been exceeded"
+	);
 }

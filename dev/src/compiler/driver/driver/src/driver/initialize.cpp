@@ -2,6 +2,7 @@
 
 #include "options.hpp"
 
+#include <concurrent/module_flags/worker_count.hpp>
 #include <diagnostic_interactive/logger.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
@@ -19,8 +20,6 @@
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
-
-#include <iostream>
 
 namespace compiler::driver {
 
@@ -70,11 +69,6 @@ namespace compiler::driver {
 				package_info.package_path, package_info.package_name
 			);
 			global_state::setters::addMainPackage(root_module);
-
-			// We need to parse all files before compilation to collect all PST element
-			// @TODO: #1974 this should be done concurrently nad onlt if prev graph exists nad
-			// incremental compilation is enabled
-			compiler::frontend::parseAllFilesInModuleTree(root_module);
 		}
 
 		/**
@@ -118,8 +112,9 @@ namespace compiler::driver {
 				std::span<const byte> span(view.getBegin(), view.size());
 				query::external::setPreviousMetadataFromRawBytes(span);
 
-				// @TODO: #1974 We should parse PST concurrently here, before
-				// collectInputDataFromGlobalPackages()
+				// We need to parse all files before compilation to collect all PST elements.
+				for (auto mid: global_state::getPackages())
+					compiler::frontend::parseAllFilesInModuleTree(mid.root_module);
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
@@ -143,6 +138,10 @@ namespace compiler::driver {
 
 		void handleBackendOptions(const global_state::BackendOptions& backend_options) {
 			global_state::setters::setBackendOptions(backend_options);
+		}
+
+		void handleExecutionOptions(const options_types::ExecutionOptions& execution_options) {
+			concurrent::worker::setWorkerCount(execution_options.worker_count);
 		}
 	}
 
@@ -168,13 +167,17 @@ namespace compiler::driver {
 				package_compilation_options
 			) {
 				handleDebugOptions(package_compilation_options.debug_options);
+				handleExecutionOptions(package_compilation_options.execution_options);
+
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 				handlePackageOptions(package_compilation_options.main_package_info);
+
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
 				handleDebugOptions(repl_options.debug_options);
+				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
