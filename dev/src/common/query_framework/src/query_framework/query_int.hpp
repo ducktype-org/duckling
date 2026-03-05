@@ -37,24 +37,24 @@ namespace query::internal {
  * @param result_mp Type of the query result
  * @param query_data_mp Query data struct
  */
-#define DECLARE_QUERY_AUX(query_type, key_mp, result_mp, query_data_mp)                     \
-	struct query_type final {                                                               \
-		using QueryType = query_type;                                                       \
-		using QKey      = key_mp;                                                           \
-		using QResult   = result_mp;                                                        \
-                                                                                            \
-	private:                                                                                \
-		static auto                       internal_query(const QKey&) -> QResult;           \
+#define DECLARE_QUERY_AUX(query_type, key_mp, result_mp, query_data_mp)                            \
+	struct query_type final {                                                                      \
+		using QueryType = query_type;                                                              \
+		using QKey      = key_mp;                                                                  \
+		using QResult   = result_mp;                                                               \
+                                                                                                   \
+	private:                                                                                       \
+		static auto                       internal_query(const QKey&) -> QResult;                  \
 		static auto                       internal_load(::query::QueryStableHash hash) -> QResult; \
-		static auto                       internal_erase(::query::QueryStableHash) -> bool; \
-		static ::query::internal::QueryID id;                                               \
-		friend struct ::query::Context;                                                     \
-		friend struct ::query::internal::EntryPointHelper;                                  \
-                                                                                            \
-	public:                                                                                 \
-		static constexpr ::query::internal::QueryData QUERY_DATA          = query_data_mp;  \
-		static constexpr bool                         QUERY_INTERFACE_TAG = true;           \
-		static auto                                   getID() { return id; }                \
+		static auto                       internal_erase(::query::QueryStableHash) -> bool;        \
+		static ::query::internal::QueryID id;                                                      \
+		friend struct ::query::Context;                                                            \
+		friend struct ::query::internal::EntryPointHelper;                                         \
+                                                                                                   \
+	public:                                                                                        \
+		static constexpr ::query::internal::QueryData QUERY_DATA          = query_data_mp;         \
+		static constexpr bool                         QUERY_INTERFACE_TAG = true;                  \
+		static auto                                   getID() { return id; }                       \
 	};
 
 /**

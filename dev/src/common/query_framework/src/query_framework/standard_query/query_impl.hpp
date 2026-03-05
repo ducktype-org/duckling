@@ -124,8 +124,7 @@ namespace query::internal {
 		if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
 		try {
-			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK
-							&& QueryImplType::USES_QRESULT) {
+			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK && QueryImplType::USES_QRESULT) {
 				auto provide_result = QueryImplType::provide(context, key);
 				if (provide_result.hasFailed()) {
 					// Here we need to delete artifact from disk
@@ -133,9 +132,7 @@ namespace query::internal {
 				}
 				return QueryImplType::store(perfect_hash, provide_result, acd);
 			} else {
-				return QueryImplType::store(
-					perfect_hash, QueryImplType::provide(context, key), acd
-				);
+				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
 			}
 		} catch (const QueryFailedException& qfe) {
 			CORE_DEV_LOG(
@@ -150,7 +147,7 @@ namespace query::internal {
 				QueryImplType::deleteFromDisc(key);
 
 			if constexpr (QueryImplType::USES_QRESULT
-							&& QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
+			              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
 				return QueryImplType::store(perfect_hash, query::Failed(), acd);
 			} else {
 				CORE_PANIC(qfe.what());
@@ -247,9 +244,9 @@ namespace query::internal {
 	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                       \
 		return ::query::internal::standardQueryEntry<type>(key);                                                                         \
 	}                                                                                                                                    \
-	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                              \
-		return type::load(type::KHash(hash)).value().data;                                                                             \
-	}                                                                                                                                  \
+	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                                \
+		return type::load(type::KHash(hash)).value().data;                                                                               \
+	}                                                                                                                                    \
 	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                        \
 		return type::erase(type::KHash(hash));                                                                                           \
 	}                                                                                                                                    \
