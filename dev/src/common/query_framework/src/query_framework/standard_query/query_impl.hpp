@@ -101,7 +101,7 @@ namespace query::internal {
 		\*******************************************************************/
 
 
-		// @TODO: in the future we might want to guarantee that query operation are no-throw
+		// @TODO: #2195 in the future we might want to guarantee that query operation are no-throw
 		// apart from panics and similar stuff.
 		// We for sure need more control of what happens if query operation throws.
 

@@ -77,7 +77,7 @@ namespace query {
 				  callee(callee) {
 				main_query_state.addDependency(caller, callee);
 
-				// @TODO: #2026: Optimize it, we only need to add edge here, when the query is not ready.
+				// @TODO: #2026 Optimize it, we only need to add edge here, when the query is not ready.
 
 				// Here, the node should already exist in the active graph.
 				// We add edge from 'caller' to 'callee' to represent the dependency.

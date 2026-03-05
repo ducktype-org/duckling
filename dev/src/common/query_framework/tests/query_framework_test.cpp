@@ -1072,7 +1072,7 @@ private:
 		auto result = query::entryPoint<UsesQResultTest>({ 1 });
 		assertTrue(result.hasFailed(), "Expected error in UsesQResultTest");
 
-		// @TODO: #2138, decide what to do with commented parts of this test, likely remove them, as
+		// @TODO: #2138 decide what to do with commented parts of this test, likely remove them, as
 		// they test inner query entry panics.
 
 		// assertThrows<base::Panic>(
