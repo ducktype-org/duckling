@@ -11,8 +11,6 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/core/thread/low_program/utils.hpp>
-#include <vm/debugger/vm_debug_symb.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -24,6 +22,8 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/core/thread/low_program/utils.hpp>
+#include <vm/debugger/vm_debug_symb.hpp>
 #include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -103,14 +103,15 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	template<LoadProgramResT T>
-	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx, T* to_build) {
+	template<LoadMode load_mode>
+	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		if constexpr (std::is_same_v<T, vm::debugger::DebugContext>) {
-			for (const auto& instr: ctx.function.body) builder.addWithDebugSymb(instr, *to_build);
+		if constexpr (load_mode == LoadMode::FROM_DBC_FILE) {
+			for (const auto& instr: ctx.function.body)
+				builder.addWithDebugSymb(instr, instruction_mapping);
 
-			auto [micro_bytecode, label_map] = builder.buildWithDebug(*to_build);
+			auto [micro_bytecode, label_map] = builder.buildWithDebug(instruction_mapping);
 			linkLabelArguments(micro_bytecode, label_map);
 
 			return micro_bytecode;
@@ -270,10 +271,8 @@ namespace vm::loader::compiler {
 		ctx.local_stack_size = max_stack_size;
 	}
 
-	template<LoadProgramResT T>
-	void Compiler::compileNewFunctions(
-		const std::vector<code::Function>& new_functions, T* construct
-	) {
+	template<LoadMode load_mode>
+	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
 		// Forward declare all functions
 		for (const auto& function: new_functions)
 			program_ctx.function_forward_declarations.insert(function, function.name);
@@ -294,7 +293,7 @@ namespace vm::loader::compiler {
 				parameters_size += type->getSize();
 			}
 
-			low::MicroBytecode bytecode = lowerInstructions(ctx, construct);
+			low::MicroBytecode bytecode = lowerInstructions<load_mode>(ctx);
 
 			low_program.functions.insert(
 				low::LowFuncData{ .name             = function.name,
@@ -349,8 +348,7 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::compileNewExtCFunctions(
-		const std::vector<code::ExternalCFunction>& new_functions
+	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
 			program_ctx.ext_c_functions.insert(new_func, new_func.name);
@@ -377,13 +375,8 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	template<LoadProgramResT T>
-	T Compiler::recompile(const code::ValidProgram& high_program) {
-		T*                         addr = nullptr;
-		vm::debugger::DebugContext local_cpy;
-
-		if constexpr (std::is_same_v<T, vm::debugger::DebugContext>) addr = &local_cpy;
-
+	template<LoadMode load_mode>
+	void Compiler::recompile(const code::ValidProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
 
 		auto new_c_functions = high_program.extCFunctions()
@@ -399,15 +392,11 @@ namespace vm::loader::compiler {
 		auto new_functions = high_program.functions()
 		                   | std::views::drop(low_program.functions.size())
 		                   | std::ranges::to<std::vector<code::Function>>();
-		compileNewFunctions(new_functions, addr);
-
-		if constexpr (std::is_same_v<T, vm::debugger::DebugContext>) return local_cpy;
+		compileNewFunctions<load_mode>(new_functions);
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
 
-	template void                       Compiler::recompile(const code::ValidProgram&);
-	template vm::debugger::DebugContext Compiler::recompile(
-		const code::ValidProgram&
-	);
+	template void Compiler::recompile<LoadMode::NO_DBG_SYMB>(const code::ValidProgram&);
+	template void Compiler::recompile<LoadMode::FROM_DBC_FILE>(const code::ValidProgram&);
 }

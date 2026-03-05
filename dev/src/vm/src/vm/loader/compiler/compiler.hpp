@@ -3,8 +3,9 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/thread/low_program/utils.hpp>
+#include <vm/debugger/vm_debug_symb.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::loader::compiler {
@@ -43,8 +44,8 @@ namespace vm::loader::compiler {
 		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
 		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
 		 */
-		template <LoadProgramResT T = void>
-		T recompile(const code::ValidProgram& high_program);
+		template<LoadMode = LoadMode::NO_DBG_SYMB>
+		void recompile(const code::ValidProgram& high_program);
 
 		/**
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
@@ -99,6 +100,7 @@ namespace vm::loader::compiler {
 		 */
 		vm::low::LowVMProgram     low_program;
 		ProgramCompilationContext program_ctx;
+		FatMicroMapping           instruction_mapping;
 
 		/**
 		 * @brief Processes newly added types and adds them to the existing type_metadata.
@@ -127,8 +129,8 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		template <LoadProgramResT T = void>
-		void compileNewFunctions(const std::vector<code::Function>& new_functions, T* construct);
+		template<LoadMode = LoadMode::NO_DBG_SYMB>
+		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
@@ -163,8 +165,8 @@ namespace vm::loader::compiler {
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
-		template <LoadProgramResT T = void>
-		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx, T* to_build);
+		template<LoadMode load_mode = false>
+		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
 
 		/**
 		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)

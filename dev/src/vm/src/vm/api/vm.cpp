@@ -177,13 +177,19 @@ namespace vm::api {
 
 	std::expected<void, ApiError> debuggerPutBreakpoint(PID pid, u64 func_id, u64 instr_pos) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::DebuggerPutBreakpoint{ .function_id = func_id, .instr_number = instr_pos }))
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::DebuggerPutBreakpoint{ .function_id = func_id, .instr_number = instr_pos }
+			))
 		    .transform(ignoreResponse);
 	}
 
 	std::expected<void, ApiError> debuggerRemoveBreakpoint(PID pid, u64 func_id, u64 instr_pos) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::DebuggerPutBreakpoint{ .function_id = func_id, .instr_number = instr_pos }))
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::DebuggerPutBreakpoint{ .function_id = func_id, .instr_number = instr_pos }
+			))
 		    .transform(ignoreResponse);
 	}
 

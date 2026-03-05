@@ -58,17 +58,14 @@ namespace vm::loader {
 		/**
 		 * @brief Injects new code from given file paths to the current program state.
 		 */
-		template <LoadProgramResT T = void>
-		std::expected<T, LoaderLogger> loadAndCompile(
-			const std::vector<fs::File>& file_path
-		);
-		
+		template<LoadMode = LoadMode::NO_DBG_SYMB>
+		std::expected<void, LoaderLogger> loadAndCompile(const std::vector<fs::File>& file_path);
+
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
-		template <LoadProgramResT T = void>
-		std::expected<T, LoaderLogger> loadAndCompile(
-			const code::CodeCollection& code_collection
+		template<LoadMode = LoadMode::NO_DBG_SYMB>
+		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
 	};
 }

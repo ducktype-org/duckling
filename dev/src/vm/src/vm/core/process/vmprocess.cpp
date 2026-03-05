@@ -4,6 +4,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "vm/debugger/vm_debug_symb.hpp"
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -28,31 +29,25 @@ namespace vm {
 		return status;
 	}
 
-	template <loader::LoadProgramResT T>
+	template<loader::LoadMode load_mode>
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
 		std::unique_lock                          lock(rw_global);
-		std::expected<T, loader::LoaderLogger> code_result = [&] -> std::expected<T, loader::LoaderLogger> {
+		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
 				variant_case(std::vector<fs::File>, files) {
-					return loader.loadAndCompile<T>(files);
+					return loader.loadAndCompile<load_mode>(files);
 				}
 				variant_case(code::CodeCollection, code) {
-					return loader.loadAndCompile<T>(code);
+					return loader.loadAndCompile<load_mode>(code);
 				}
 			}
 			CORE_UNREACHABLE();
 		}();
 
 		if (code_result.has_value()) {
-			if constexpr (std::is_same_v<T, void>) {
-				return api::Response(api::response::Empty());
-			}
-			else {
-				return api::Response(api::response::DebugSymbols{.dbg_ctx = *code_result});
-				// return api::Response(api::response::DebugSymbols{});
-			}
+			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
 			code_result.error().dump(ss);
@@ -72,7 +67,7 @@ namespace vm {
 		if (orig_opcode == low::MicroOpcode::breakpoint)
 			return std::unexpected{ api::OtherError{
 				.error = "Breakpoint already present at given position" } };
-		
+
 		known_breakpoints.put(&instr, orig_opcode);
 
 		return api::Response(api::response::Empty());
@@ -84,16 +79,17 @@ namespace vm {
 		auto& instr
 			= const_cast<MicroInstruction&>(loaded_program->getFunctions()[func_id].bc[instr_pos]);
 
-		auto current_opcode = getInstructionOpcode(instr);
-		
-		if (current_opcode != low::MicroOpcode::breakpoint)
+		if (getInstructionOpcode(instr) != low::MicroOpcode::breakpoint)
 			return std::unexpected{ api::OtherError{
 				.error = "There is no breakpoint at given position" } };
-		
-		auto orig_opcode = known_breakpoints.atMaybe(&instr);
-		CORE_ASSERT(orig_opcode.has_value(), "for some reason, we don't know what was the original opcode of the instruction at given address");
 
-		instr = makeLowInstruction(**orig_opcode, instr.arg0, instr.arg1);
+		auto orig_opcode = known_breakpoints.atMaybeCopy(&instr);
+		if (orig_opcode.empty()) {
+			return std::unexpected{ api::OtherError{
+				.error = "original opcode of the instruction not found" } };
+		}
+
+		instr = makeLowInstruction(*orig_opcode, instr.arg0, instr.arg1);
 
 		return api::Response(api::response::Empty());
 	}
@@ -126,11 +122,9 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(
-					api::ApiError(
-						api::OtherError("Execution panicked with error: " + panicked.error_message)
-					)
-				);
+				return std::unexpected(api::ApiError(
+					api::OtherError("Execution panicked with error: " + panicked.error_message)
+				));
 			}
 			variant_default {
 				return std::unexpected(api::ApiError(api::OtherError("Unexpected run status!")));
@@ -139,7 +133,8 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::input(const api::request::Input& request) {
+	std::expected<api::Response, api::ApiError> VMProcess::input(const api::request::Input& request
+	) {
 		// @TODO: https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
 		io.inputStream() << request.input;
@@ -151,10 +146,8 @@ namespace vm {
 		auto lock = io.lock();
 		// Cannot read output from api when IO is being redirected
 		if (io_redirecter)
-			return std::unexpected(
-				api::ApiError{
-					api::IOError{ "Cannot read output from api when IO is being redirected" } }
-			);
+			return std::unexpected(api::ApiError{
+				api::IOError{ "Cannot read output from api when IO is being redirected" } });
 
 		if (isExecuting(status))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
@@ -230,11 +223,9 @@ namespace vm {
 			variant_case_novalue(api::request::Step) {
 				auto response = getMainVMThread().step();
 				if (!response)
-					return std::unexpected(
-						api::ApiError{
-							api::OtherError{ "step error" },
-						}
-					);
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "step error" },
+					});
 				return getMainVMThread().getCurrentPosition();
 			}
 
@@ -264,9 +255,8 @@ namespace vm {
 				});
 
 				if (!std::holds_alternative<api::Paused>(status))
-					return std::unexpected(
-						api::ApiError{ api::OtherError{ "unexpected status response" } }
-					);
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "unexpected status response" } });
 
 				return getMainVMThread().getCurrentPosition();
 			}
@@ -294,9 +284,8 @@ namespace vm {
 							opt_some(value) { return api::response::Type{ value }; }
 
 							opt_none {
-								return std::unexpected(
-									api::ApiError{ api::OtherError{ "Type not found" } }
-								);
+								return std::unexpected(api::ApiError{
+									api::OtherError{ "Type not found" } });
 							}
 						}
 					}
@@ -317,9 +306,8 @@ namespace vm {
 								return api::response::VmValue{ std::move(vm_value) };
 							}
 							opt_none {
-								return std::unexpected(
-									api::ApiError{ api::OtherError{ "Type not found" } }
-								);
+								return std::unexpected(api::ApiError{
+									api::OtherError{ "Type not found" } });
 							}
 						}
 					}
@@ -329,9 +317,8 @@ namespace vm {
 			variant_case_novalue(api::request::DebuggerGetNumberOfCurrentStackFrames) {
 				RuntimeData& runtime_data = getMainVMThread().runtime_data;
 				u64 frames = runtime_data.frame_stack_current - runtime_data.frame_stack_base + 1;
-				return api::Response(
-					api::response::NumberOfCurrentStackFrames{ .number_of_stack_frames = frames }
-				);
+				return api::Response(api::response::NumberOfCurrentStackFrames{
+					.number_of_stack_frames = frames });
 			}
 
 			variant_case(api::request::DebuggerGetStackFrameVars, request) {
@@ -343,17 +330,14 @@ namespace vm {
 				std::vector<api::response::StackFrameVars::FrameVar> frame_vars;
 				for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
 					Ref<Block> block = frame.block_stack[block_idx];
-					frame_vars.push_back(
-						api::response::StackFrameVars::FrameVar{ .offset  = offset,
-					                                             .pointer = Pointer(block, 0),
-					                                             .type = memory.getBlockType(block) }
-					);
+					frame_vars.push_back(api::response::StackFrameVars::FrameVar{
+						.offset  = offset,
+						.pointer = Pointer(block, 0),
+						.type    = memory.getBlockType(block) });
 				}
 
-				return api::Response(
-					api::response::StackFrameVars{ .function_name = frame.current_function->name,
-				                                   .frame_vars    = frame_vars }
-				);
+				return api::Response(api::response::StackFrameVars{
+					.function_name = frame.current_function->name, .frame_vars = frame_vars });
 			}
 
 			variant_case(api::request::DebuggerGetPointerData, request) {
@@ -368,9 +352,8 @@ namespace vm {
 			}
 
 			variant_case(api::request::DebuggerLoadFiles, load_request) {
-				return loadProgram<vm::debugger::DebugContext>(load_request.filenames).transform_error([](auto err) {
-					return api::ApiError{ err };
-				});
+				return loadProgram<loader::LoadMode::FROM_DBC_FILE>(load_request.filenames)
+				    .transform_error([](auto err) { return api::ApiError{ err }; });
 			}
 
 			variant_case(api::request::DebuggerPutBreakpoint, request) {
@@ -471,12 +454,10 @@ namespace vm {
 		std::unique_lock lock(rw_global);
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
-			variant_default return std::unexpected(
-				api::StateError(
-					executingStarted(getStatus()) ? "Execution did not complete"
-												  : "Execution did not start"
-				)
-			);
+			variant_default return std::unexpected(api::StateError(
+				executingStarted(getStatus()) ? "Execution did not complete"
+											  : "Execution did not start"
+			));
 		}
 		CORE_UNREACHABLE();
 	}

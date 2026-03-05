@@ -87,7 +87,7 @@ namespace vm {
 		 * @brief Loads the program from a given source into the current loader program state,
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
-		template <loader::LoadProgramResT T = void>
+		template<loader::LoadMode load_mode = loader::LoadMode::NO_DBG_SYMB>
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		);

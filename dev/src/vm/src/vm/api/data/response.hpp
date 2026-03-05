@@ -77,10 +77,6 @@ namespace vm::api {
 			vm::Pointer pointer;
 		};
 
-		struct DebugSymbols {
-			vm::debugger::DebugContext dbg_ctx;
-		};
-
 		using Boolean = bool;
 	}
 
@@ -96,6 +92,5 @@ namespace vm::api {
 		response::StackFrameVars,
 		response::PointerData,
 		response::Pointer,
-		response::DebugSymbols,
 		ExitValue>;
 }

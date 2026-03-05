@@ -1,31 +1,40 @@
 #pragma once
 
-#include <base/types/ints.hpp>
 #include <base/collections/maps.hpp>
+#include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
 
-
-namespace vm::debugger {
-
-	struct FileDebuggerContext {
-		// map between lines of the file and position in the code <func_id, instr no>
-		std::map<usize, std::pair<u64, u64>> lines;
-		/// @todo: check what other things in debugger are file-related
+namespace vm::loader {
+	enum class LoadMode {
+		NO_DBG_SYMB,
+		FROM_DBC_FILE,
 	};
+};
 
-	struct FunctionDebuggerContext {
-		/// label IDs used for setting named breakpoints.
-		base::HashMap<base::StrID, usize> label_to_offset{};
-		/// A mapping from a local variable's name to its offset on the function's local stack.
-		base::HashMap<base::StrID, usize> local_offset_map{};
-		/// @todo: Consider adding mapping from offset to variable name
-	};
-
+namespace vm::loader::compiler {
 	/**
-	* @brief Stores an optional debug symbols between fat bytecode to microcode
-	*/
-	struct DebugContext {
-		base::HashMap<fs::File, FileDebuggerContext> files_ctx;
-		base::HashMap<u64, FunctionDebuggerContext> funcs_ctx;
+	 * @brief Stores an debug symbols between fat bytecode to microcode
+	 */
+	struct FatMicroMapping {
+		// { func_id, intr_no }
+		using micro_pos = std::pair<usize, usize>;
+
+		struct FunctionCtx {
+			/// label IDs used for setting named breakpoints.
+			base::HashMap<base::StrID, usize> label_to_offset{};
+			/// A mapping from a local variable's name to its offset on the function's local stack.
+			base::HashMap<base::StrID, usize> local_offset_map{};
+			/// @todo: Consider adding mapping from offset to variable name
+		};
+
+		struct FileCtx {
+			// map between line and column of the file to micro_position
+			std::map<std::pair<usize, usize>, micro_pos> from_fat_to_micro;
+			/// @todo: check what other things in debugger are file-related
+		};
+
+		std::map<micro_pos, dia::SourcePosition> from_micro_to_fat;
+		base::HashMap<fs::File, FileCtx>         files_ctx;
+		base::HashMap<u64, FunctionCtx>          funcs_ctx;
 	};
 }
