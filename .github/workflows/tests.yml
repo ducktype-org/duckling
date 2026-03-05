@@ -308,12 +308,12 @@ jobs:
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --duckc-worker-count 1
 
       - name: Integration Tests Multithreaded
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} 
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --duckc-worker-count 4
 
       - name: Test Coverage After Integration Tests
         id: test-coverage-itests
