@@ -101,8 +101,6 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 	}
 
 	QUERY_AUTO_CACHE_CONSTRUCT
-
-	static auto erase([[maybe_unused]] KHash key_hash) -> bool { return false; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);

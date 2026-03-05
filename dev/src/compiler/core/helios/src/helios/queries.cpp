@@ -80,7 +80,7 @@ namespace compiler::helios {
 				// we postpone this past function scheduling, as
 				// appendClassConstructors may be time consuming.
 				appendClassConstructors(out.functions, class_sym, ctx);
-				if (appendClassMethodsWithFail(out.functions, sym, ctx)) {
+				if (appendClassMethodsWithFail(out.functions, class_sym, ctx)) {
 					is_failed = true;
 					continue;
 				}
