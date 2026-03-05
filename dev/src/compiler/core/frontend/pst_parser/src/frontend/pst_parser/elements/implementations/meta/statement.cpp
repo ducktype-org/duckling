@@ -137,6 +137,9 @@ namespace pst {
 			PST_RETURN out;
 		}
 
+		/**
+		 * @brief This is a helper concept for Statements that behave similarly to flow control elements as in they can have a code block or a sub-statement. They have to be handled differently for fallbacks.
+		 */
 		template<class T>
 		concept FlowControlLike
 			= std::same_as<T, If> || std::same_as<T, For> || std::same_as<T, While>;
