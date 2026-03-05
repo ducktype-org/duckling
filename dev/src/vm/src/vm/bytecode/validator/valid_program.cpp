@@ -8,8 +8,6 @@
 #include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
 
-vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
-
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program = ValidProgram();
 	program.insertTypes(getBuiltinTypes());
@@ -18,7 +16,7 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
 	return { .functions            = std::ranges::to<std::vector>(function_map),
-		     .types                = std::ranges::to<std::vector>(type_context.getPodTypes()),
+		     .types                = std::ranges::to<std::vector>(type_context.getTodTypes()),
 		     .global_data          = std::ranges::to<std::vector>(globals_map),
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }

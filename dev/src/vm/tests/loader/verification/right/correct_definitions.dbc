@@ -1,0 +1,32 @@
+type pointer: ptr_A ptr_B
+type pointer: ptr_B ptr_A
+
+type data: A {
+    fld: B
+}
+
+type data: B {
+    fld: A
+}
+
+type fun: foo { i64, fun_ptr } void
+
+type pointer: fun_ptr foo
+
+type data: Top {
+	l: i64,
+	r: Top
+}
+
+type data: X { y: Y }
+type data: Y { z: Z }
+type data: Z { x: X }
+
+type pointer: ptr_Val Value
+type variant: Value {
+    i64, ptr_Val
+}
+
+function main { i64, ptr_argv } -> i64 {
+	ret;
+}

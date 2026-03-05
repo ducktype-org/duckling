@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(refOnPrimitive);
 
 		// Type verification
+		TESTER_ADD_TEST(correctDefinitions)
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
@@ -299,6 +300,8 @@ private:
 			}
 		);
 	}
+
+	void correctDefinitions() { loadValidDbc("right/correct_definitions.dbc"); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/loader/verification/");

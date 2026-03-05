@@ -28,10 +28,10 @@ namespace vm::code {
 
 		[[nodiscard]] const valid_type::ValidTypeMap& getCurrentTypes() const;
 
-		[[nodiscard]] const ObjIdNameMap<TypeOfData>& getPodTypes() const;
+		[[nodiscard]] const ObjIdNameMap<TypeOfData>& getTodTypes() const;
 
 	private:
-		ObjIdNameMap<TypeOfData> pod_types;
+		ObjIdNameMap<TypeOfData> tod_types;
 
 		valid_type::ValidTypeMap types;
 	};

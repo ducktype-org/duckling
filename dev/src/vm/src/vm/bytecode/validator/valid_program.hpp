@@ -24,11 +24,6 @@ namespace vm::code {
 		ValidProgram& operator=(ValidProgram&&)      = default;
 
 		/**
-		 * @brief Creates a new ValidProgram with nothing inside.
-		 */
-		static ValidProgram empty();
-
-		/**
 		 * @brief Creates a new ValidProgram object with builtin types pre-inserted.
 		 */
 		static ValidProgram withBuiltins();

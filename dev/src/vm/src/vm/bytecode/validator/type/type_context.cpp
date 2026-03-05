@@ -109,10 +109,10 @@ void TypeContext::insertAndValidate(
 	std::vector<CRef<TypeOfData>> really_new_types;
 	for (const auto& type: new_types) {
 		const auto name = typeName(type);
-		if (pod_types.contains(name)) {
-			if (type != *pod_types.at(name)) throw DuplicatedTypeError(type, *pod_types.at(name));
+		if (tod_types.contains(name)) {
+			if (type != *tod_types.at(name)) throw DuplicatedTypeError(type, *tod_types.at(name));
 		} else {
-			pod_types.insert(type, name);
+			tod_types.insert(type, name);
 			types.insert(
 				vm::code::valid_type::ValidType::declareType(
 					name, valid_type::ValidTypeID(types.size())
@@ -126,10 +126,10 @@ void TypeContext::insertAndValidate(
 	// Validate
 	const std::vector<usize> new_types_id = really_new_types
 	                                      | std::views::transform([&](const auto& type) {
-												return pod_types.idOf(typeName(*type)).value();
+												return tod_types.idOf(typeName(*type)).value();
 											})
 	                                      | std::ranges::to<std::vector>();
-	detail::validateTypes(pod_types, new_types_id, function_signatures);
+	detail::validateTypes(tod_types, new_types_id, function_signatures);
 
 	// Define
 	for (const auto& type: really_new_types)
@@ -144,4 +144,4 @@ void TypeContext::insertAndValidate(
 
 const valid_type::ValidTypeMap& TypeContext::getCurrentTypes() const { return types; }
 
-const vm::ObjIdNameMap<TypeOfData>& vm::code::TypeContext::getPodTypes() const { return pod_types; }
+const vm::ObjIdNameMap<TypeOfData>& vm::code::TypeContext::getTodTypes() const { return tod_types; }

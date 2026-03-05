@@ -33,13 +33,13 @@ namespace {
 #endif
 	template<TypeOfDataConcept ExpectedType, ErrorFactoryConcept ErrorFactory>
 	const ExpectedType& getType(
-		const vm::ObjIdNameMap<TypeOfData>& types_ctx,
+		const vm::ObjIdNameMap<TypeOfData>& tod_types,
 		const base::StrID&                  name,
 		const TypeOfData&                   context_for_error,
 		const ErrorFactory&                 error_factory
 	) {
 		const TypeOfData& type_of_data
-			= *types_ctx.atMaybe(name).expect<UnknownSubtypeError>(context_for_error, name);
+			= *tod_types.atMaybe(name).expect<UnknownSubtypeError>(context_for_error, name);
 		if (const auto* specific_type = std::get_if<ExpectedType>(&type_of_data))
 			return *specific_type;
 		throw error_factory();
@@ -57,15 +57,15 @@ namespace {
 		base::HashMap<base::StrID, base::StrID>& fields,
 		const FieldableType&                     fieldable,
 		const TypeOfData&                        error_context,
-		const vm::ObjIdNameMap<TypeOfData>&      types_ctx
+		const vm::ObjIdNameMap<TypeOfData>&      tod_types
 	) {
 		if constexpr (std::is_same_v<FieldableType, ClassType>) {
 			if (fieldable.extends) {
 				const auto& super_class
-					= getType<ClassType>(types_ctx, *fieldable.extends, error_context, [&]() {
+					= getType<ClassType>(tod_types, *fieldable.extends, error_context, [&]() {
 						  return InvalidExtendsError(fieldable, *fieldable.extends);
 					  });
-				insertFieldsRecursive(fields, super_class, error_context, types_ctx);
+				insertFieldsRecursive(fields, super_class, error_context, tod_types);
 			}
 		}
 		for (const auto& field_type: fieldable.fields) {
@@ -85,22 +85,22 @@ namespace {
 		base::HashMap<base::StrID, base::StrID>& virtual_methods,
 		const InheritableType&                   inh,
 		const ErrorContextType&                  error_context_inh,
-		const vm::ObjIdNameMap<TypeOfData>&      types_ctx
+		const vm::ObjIdNameMap<TypeOfData>&      tod_types
 	) {
 		for (const auto& interface_name: inh.implements) {
-			const auto& interface = getType<InterfaceType>(types_ctx, interface_name, inh, [&]() {
+			const auto& interface = getType<InterfaceType>(tod_types, interface_name, inh, [&]() {
 				return InvalidImplementsError(inh, interface_name);
 			});
-			insertVirtualMethodsRecursive(virtual_methods, interface, error_context_inh, types_ctx);
+			insertVirtualMethodsRecursive(virtual_methods, interface, error_context_inh, tod_types);
 		}
 		if constexpr (std::is_same_v<InheritableType, ClassType>) {
 			if (inh.extends) {
 				const auto& super_class
-					= getType<ClassType>(types_ctx, *inh.extends, error_context_inh, [&]() {
+					= getType<ClassType>(tod_types, *inh.extends, error_context_inh, [&]() {
 						  return InvalidExtendsError(inh, *inh.extends);
 					  });
 				insertVirtualMethodsRecursive(
-					virtual_methods, super_class, error_context_inh, types_ctx
+					virtual_methods, super_class, error_context_inh, tod_types
 				);
 			}
 		}
@@ -121,26 +121,26 @@ namespace {
 		base::HashMap<base::StrID, base::StrID>& implementations,
 		const InheritableType&                   inh,
 		const ErrorContextType&                  error_context_inh,
-		const vm::ObjIdNameMap<TypeOfData>&      types_ctx
+		const vm::ObjIdNameMap<TypeOfData>&      tod_types
 	) {
 		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
-				types_ctx,
+				tod_types,
 				interface_name,
 				error_context_inh,
 				[&]() { return InvalidImplementsError(inh, interface_name); }
 			);
-			insertImplementationsRecursive(implementations, interface, error_context_inh, types_ctx);
+			insertImplementationsRecursive(implementations, interface, error_context_inh, tod_types);
 		}
 		if constexpr (std::is_same_v<InheritableType, ClassType>) {
 			if (inh.extends) {
 				const auto& super_class
-					= getType<ClassType>(types_ctx, *inh.extends, error_context_inh, [&]() {
+					= getType<ClassType>(tod_types, *inh.extends, error_context_inh, [&]() {
 						  return InvalidExtendsError(inh, *inh.extends);
 					  });
 				insertImplementationsRecursive(
-					implementations, super_class, error_context_inh, types_ctx
+					implementations, super_class, error_context_inh, tod_types
 				);
 			}
 		}
@@ -154,12 +154,12 @@ namespace {
 	void validateMethodFirstArgument(
 		const InheritableType&              inh,
 		const FunctionType&                 func_type,
-		const vm::ObjIdNameMap<TypeOfData>& types_ctx
+		const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		if (func_type.parameters.empty()) throw MethodFirstArgumentError(inh, func_type.name);
 		const auto& first_param_type_name = func_type.parameters[0];
 		const auto& first_param_type
-			= getType<PointerType>(types_ctx, first_param_type_name, inh, [&]() {
+			= getType<PointerType>(tod_types, first_param_type_name, inh, [&]() {
 				  return MethodFirstArgumentError(inh, func_type.name);
 			  });
 		if (first_param_type.inner != inh.name) throw MethodFirstArgumentError(inh, func_type.name);
@@ -173,12 +173,12 @@ namespace {
 		const InheritableType&              inh,
 		const FuncSignature&                func_signature,
 		base::StrID                         func_name,
-		const vm::ObjIdNameMap<TypeOfData>& types_ctx
+		const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		if (func_signature.parameters.empty()) throw MethodFirstArgumentError(inh, func_name);
 		const auto& first_param_type_name = func_signature.parameters[0];
 		const auto& first_param_type
-			= getType<PointerType>(types_ctx, first_param_type_name, inh, [&]() {
+			= getType<PointerType>(tod_types, first_param_type_name, inh, [&]() {
 				  return MethodFirstArgumentError(inh, func_name);
 			  });
 		if (first_param_type.inner != inh.name) throw MethodFirstArgumentError(inh, func_name);
@@ -209,13 +209,13 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateVMethodSignatures(
-		const InheritableType& inh, const vm::ObjIdNameMap<TypeOfData>& types_ctx
+		const InheritableType& inh, const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		for (const auto& vmethod: inh.virtual_methods) {
-			const auto& vmethod_type = getType<FunctionType>(types_ctx, vmethod.type, inh, [&]() {
+			const auto& vmethod_type = getType<FunctionType>(tod_types, vmethod.type, inh, [&]() {
 				return TypeIsNotFunctionalError(vmethod.type);
 			});
-			validateMethodFirstArgument(inh, vmethod_type, types_ctx);
+			validateMethodFirstArgument(inh, vmethod_type, tod_types);
 		}
 	}
 
@@ -226,7 +226,7 @@ namespace {
 	void validateImplementations(
 		const InheritableType&                           inh,
 		const base::HashMap<base::StrID, base::StrID>&   virtual_methods,
-		const vm::ObjIdNameMap<TypeOfData>&              types_ctx,
+		const vm::ObjIdNameMap<TypeOfData>&              tod_types,
 		const base::HashMap<base::StrID, FuncSignature>& functions
 	) {
 		base::HashMap<base::StrID, base::StrID> implementations;
@@ -240,14 +240,14 @@ namespace {
 
 			const auto& vmethod_name = virtual_methods[implementation.name];
 			const auto& impl_name    = implementation.type;
-			const auto& vmethod_type = getType<FunctionType>(types_ctx, vmethod_name, inh, [&]() {
+			const auto& vmethod_type = getType<FunctionType>(tod_types, vmethod_name, inh, [&]() {
 				return TypeIsNotFunctionalError(vmethod_name);
 			});
 			if (!functions.contains(impl_name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
 			const auto& impl_signature = functions.at(impl_name);
-			validateMethodFirstArgumentImpl(inh, impl_signature, impl_name, types_ctx);
+			validateMethodFirstArgumentImpl(inh, impl_signature, impl_name, tod_types);
 			validateMethodSignatureMatchImpl(inh, vmethod_type, impl_signature, impl_name);
 		}
 	}
@@ -259,10 +259,10 @@ namespace {
 	void validateAllMethodsImplemented(
 		const ClassType&                               clazz,
 		const base::HashMap<base::StrID, base::StrID>& virtual_methods,
-		const vm::ObjIdNameMap<TypeOfData>&            types_ctx
+		const vm::ObjIdNameMap<TypeOfData>&            tod_types
 	) {
 		base::HashMap<base::StrID, base::StrID> implementations;
-		insertImplementationsRecursive(implementations, clazz, clazz, types_ctx);
+		insertImplementationsRecursive(implementations, clazz, clazz, tod_types);
 
 		for (auto& [name, _]: virtual_methods)
 			if (!implementations.contains(name)) throw UnimplementedVirtualMethodError(clazz, name);
@@ -274,13 +274,13 @@ namespace {
 	 */
 	template<FieldableTypeConcept FieldableType>
 	void validateFieldDuplicatesAndSubtypeExistence(
-		const FieldableType& fieldable, const vm::ObjIdNameMap<TypeOfData>& types_ctx
+		const FieldableType& fieldable, const vm::ObjIdNameMap<TypeOfData>& tod_types
 	) {
 		for (auto& field: fieldable.fields)
-			if (!types_ctx.contains(field.type)) throw UnknownSubtypeError(fieldable, field.type);
+			if (!tod_types.contains(field.type)) throw UnknownSubtypeError(fieldable, field.type);
 
 		base::HashMap<base::StrID, base::StrID> fields;
-		insertFieldsRecursive(fields, fieldable, fieldable, types_ctx);
+		insertFieldsRecursive(fields, fieldable, fieldable, tod_types);
 	}
 
 	/**
@@ -301,7 +301,7 @@ namespace {
 	 */
 	void validateType(
 		const TypeOfData&                                type,
-		const vm::ObjIdNameMap<TypeOfData>&              types_ctx,
+		const vm::ObjIdNameMap<TypeOfData>&              tod_types,
 		const base::HashMap<base::StrID, FuncSignature>& functions
 	) {
 		variant_match(type) {
@@ -309,52 +309,57 @@ namespace {
 				if (primitive.size == 0) throw InvalidPrimitiveSizeError(primitive);
 			}
 			variant_case(PointerType, pointer) {
-				if (!types_ctx.contains(pointer.inner))
+				if (!tod_types.contains(pointer.inner))
 					throw UnknownSubtypeError(pointer, pointer.inner);
 			}
 			variant_case(FixedSizeTableType, fixed_table) {
-				if (!types_ctx.contains(fixed_table.inner))
+				if (!tod_types.contains(fixed_table.inner))
 					throw UnknownSubtypeError(fixed_table, fixed_table.inner);
 			}
 			variant_case(DynamicTableType, dynamic_table) {
-				if (!types_ctx.contains(dynamic_table.inner))
+				if (!tod_types.contains(dynamic_table.inner))
 					throw UnknownSubtypeError(dynamic_table, dynamic_table.inner);
 			}
 			variant_case(FunctionType, function) {
 				for (auto& param: function.parameters)
-					if (!types_ctx.contains(param)) throw UnknownSubtypeError(function, param);
-				if (!types_ctx.contains(function.result))
+					if (!tod_types.contains(param)) throw UnknownSubtypeError(function, param);
+				if (!tod_types.contains(function.result))
 					throw UnknownSubtypeError(function, function.result);
 			}
 			variant_case(VariantType, variant) {
-				for (auto& alternative: variant.variant_alternatives)
-					if (!types_ctx.contains(alternative))
-						throw UnknownSubtypeError(variant, alternative);
 				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
+				std::unordered_set<base::StrID> alternative_set;
+				for (auto& alternative: variant.variant_alternatives) {
+					if (!tod_types.contains(alternative))
+						throw UnknownSubtypeError(variant, alternative);
+					if (alternative_set.contains(alternative))
+						throw DuplicatedVariantAlternativeError(variant, alternative);
+					alternative_set.insert(alternative);
+				}
 			}
 			variant_case(DataType, data) {
-				validateFieldDuplicatesAndSubtypeExistence(data, types_ctx);
+				validateFieldDuplicatesAndSubtypeExistence(data, tod_types);
 			}
 			variant_case(InterfaceType, interface) {
 				base::HashMap<base::StrID, base::StrID> virtual_methods;
-				insertVirtualMethodsRecursive(virtual_methods, interface, interface, types_ctx);
+				insertVirtualMethodsRecursive(virtual_methods, interface, interface, tod_types);
 
 				validateImplementsDuplicates(interface);
-				validateVMethodSignatures(interface, types_ctx);
-				validateImplementations(interface, virtual_methods, types_ctx, functions);
+				validateVMethodSignatures(interface, tod_types);
+				validateImplementations(interface, virtual_methods, tod_types, functions);
 			}
 			variant_case(ClassType, clazz) {
 				// All virtual methods that can be implemented by this class (including superclass
 				// and interface vmethods as well).
 				base::HashMap<base::StrID, base::StrID> virtual_methods;
-				insertVirtualMethodsRecursive(virtual_methods, clazz, clazz, types_ctx);
+				insertVirtualMethodsRecursive(virtual_methods, clazz, clazz, tod_types);
 
-				validateFieldDuplicatesAndSubtypeExistence(clazz, types_ctx);
+				validateFieldDuplicatesAndSubtypeExistence(clazz, tod_types);
 				validateImplementsDuplicates(clazz);
-				validateVMethodSignatures(clazz, types_ctx);
-				validateImplementations(clazz, virtual_methods, types_ctx, functions);
+				validateVMethodSignatures(clazz, tod_types);
+				validateImplementations(clazz, virtual_methods, tod_types, functions);
 				if (!clazz.is_abstract)
-					validateAllMethodsImplemented(clazz, virtual_methods, types_ctx);
+					validateAllMethodsImplemented(clazz, virtual_methods, tod_types);
 			}
 			variant_case_novalue(OpaqueType) {}
 			variant_default {
@@ -363,12 +368,12 @@ namespace {
 		}
 	}
 
-	void validateHierarchyAcyclic(const vm::ObjIdNameMap<TypeOfData>& types_ctx) {
+	void validateHierarchyAcyclic(const vm::ObjIdNameMap<TypeOfData>& tod_types) {
 		// Check for cycles in hierarchy.
 		enum Status { Waiting, Visited, Done };
 
 		base::HashMap<base::StrID, Status> status;
-		for (const auto& [_t, _id, name]: types_ctx.allData()) status.put(name, Waiting);
+		for (const auto& [_t, _id, name]: tod_types.allData()) status.put(name, Waiting);
 
 		auto helper = [&](this auto self, const auto& type) {
 			auto name = typeName(type);
@@ -381,34 +386,34 @@ namespace {
 			variant_match(type) {
 				variant_case(ClassType, clazz) {
 					if_opt_some(clazz.extends, superclass) {
-						if (!types_ctx.contains(superclass))
+						if (!tod_types.contains(superclass))
 							throw InvalidExtendsError(clazz, superclass);
-						self(*types_ctx.at(superclass));
+						self(*tod_types.at(superclass));
 					}
 					for (auto iface: clazz.implements) {
-						if (!types_ctx.contains(iface)) throw InvalidImplementsError(clazz, iface);
-						self(*types_ctx.at(iface));
+						if (!tod_types.contains(iface)) throw InvalidImplementsError(clazz, iface);
+						self(*tod_types.at(iface));
 					}
 				}
 				variant_case(InterfaceType, interface) {
 					for (auto iface: interface.implements) {
-						if (!types_ctx.contains(iface))
+						if (!tod_types.contains(iface))
 							throw InvalidImplementsError(interface, iface);
-						self(*types_ctx.at(iface));
+						self(*tod_types.at(iface));
 					}
 				}
 			}
 			status[name] = Done;
 		};
-		for (const auto& [_t, _id, name]: types_ctx.allData()) helper(*types_ctx.at(name));
+		for (const auto& [_t, _id, name]: tod_types.allData()) helper(*tod_types.at(name));
 	}
 
-	void validateDefinitionsAcyclic(const vm::ObjIdNameMap<TypeOfData>& types_ctx) {
+	void validateDefinitionsAcyclic(const vm::ObjIdNameMap<TypeOfData>& tod_types) {
 		// Check for cycles in definitions.
 		enum Status { Waiting, Visited, Done };
 
 		base::HashMap<base::StrID, Status> status;
-		for (const auto& [_t, _id, name]: types_ctx.allData()) status.put(name, Waiting);
+		for (const auto& [_t, _id, name]: tod_types.allData()) status.put(name, Waiting);
 
 		auto helper = [&](this auto self, const TypeOfData& type) {
 			auto name = typeName(type);
@@ -419,40 +424,59 @@ namespace {
 
 			status[name] = Visited;
 			variant_match(type) {
+				variant_case(PrimitiveType, primitive) {}
 				variant_case(PointerType, pointer) {
-					if (!types_ctx.contains(pointer.inner))
+					if (!tod_types.contains(pointer.inner))
 						throw UnknownSubtypeError(pointer, pointer.inner);
-					self(*types_ctx.at(pointer.inner));
+					self(*tod_types.at(pointer.inner));
 				}
 				variant_case(FixedSizeTableType, fixed_table) {
-					if (!types_ctx.contains(fixed_table.inner))
+					if (!tod_types.contains(fixed_table.inner))
 						throw UnknownSubtypeError(fixed_table, fixed_table.inner);
-					self(*types_ctx.at(fixed_table.inner));
+					self(*tod_types.at(fixed_table.inner));
 				}
 				variant_case(DynamicTableType, dynamic_table) {
-					if (!types_ctx.contains(dynamic_table.inner))
+					if (!tod_types.contains(dynamic_table.inner))
 						throw UnknownSubtypeError(dynamic_table, dynamic_table.inner);
-					self(*types_ctx.at(dynamic_table.inner));
+					self(*tod_types.at(dynamic_table.inner));
+				}
+				variant_case(InterfaceType, interface) {}
+				variant_case(ClassType, clazz) {
+					for (auto& field: clazz.fields) {
+						if (!tod_types.contains(field.type))
+							throw UnknownSubtypeError(clazz, field.type);
+						self(*tod_types.at(field.type));
+					}
+				}
+				variant_case(DataType, data) {
+					for (auto& field: data.fields) {
+						if (!tod_types.contains(field.type))
+							throw UnknownSubtypeError(data, field.type);
+						self(*tod_types.at(field.type));
+					}
 				}
 				variant_case(FunctionType, function) {
 					for (auto& param: function.parameters)
-						if (!types_ctx.contains(param)) throw UnknownSubtypeError(function, param);
-					if (!types_ctx.contains(function.result))
+						if (!tod_types.contains(param)) throw UnknownSubtypeError(function, param);
+					if (!tod_types.contains(function.result))
 						throw UnknownSubtypeError(function, function.result);
-					for (auto& param: function.parameters) self(*types_ctx.at(param));
-					self(*types_ctx.at(function.result));
+					for (auto& param: function.parameters) self(*tod_types.at(param));
+					self(*tod_types.at(function.result));
 				}
 				variant_case(VariantType, variant) {
 					for (auto& alternative: variant.variant_alternatives)
-						if (!types_ctx.contains(alternative))
+						if (!tod_types.contains(alternative))
 							throw UnknownSubtypeError(variant, alternative);
 					for (auto& alternative: variant.variant_alternatives)
-						self(*types_ctx.at(alternative));
+						self(*tod_types.at(alternative));
+				}
+				variant_default {
+					CORE_PANIC("Unhandled type during definition cycle check: ", typeToString(type));
 				}
 			}
 			status[name] = Done;
 		};
-		for (const auto& [_t, _id, name]: types_ctx.allData()) helper(*types_ctx.at(name));
+		for (const auto& [_t, _id, name]: tod_types.allData()) helper(*tod_types.at(name));
 	}
 
 	/**
@@ -460,14 +484,14 @@ namespace {
 	 * same name in the whole program. This is needed to ensure that method lookup by name works
 	 * correctly.
 	 */
-	void validateMethodNameIsDeterministic(const vm::ObjIdNameMap<TypeOfData>& types_ctx) {
+	void validateMethodNameIsDeterministic(const vm::ObjIdNameMap<TypeOfData>& tod_types) {
 		// Maps method name to type name of the signature.
 		// All we need is to check the type names,
 		// because implementations must have as the first parameter a pointer to the object type,
 		// so this guarantees that they also come from the same tree.
 		base::HashMap<base::StrID, base::StrID> method_signatures;
-		for (const auto& [_t, _id, name]: types_ctx.allData()) {
-			const auto& type = *types_ctx.at(name);
+		for (const auto& [_t, _id, name]: tod_types.allData()) {
+			const auto& type = *tod_types.at(name);
 			variant_match(type) {
 				variant_case(ClassType, clazz) {
 					for (const auto& vmethod: clazz.virtual_methods) {
@@ -489,20 +513,20 @@ namespace {
 		}
 	}
 
-	void validateTypeIntegrity(const vm::ObjIdNameMap<TypeOfData>& types_ctx) {
-		validateDefinitionsAcyclic(types_ctx);
-		validateHierarchyAcyclic(types_ctx);
+	void validateTypeIntegrity(const vm::ObjIdNameMap<TypeOfData>& tod_types) {
+		validateDefinitionsAcyclic(tod_types);
+		validateHierarchyAcyclic(tod_types);
 	}
 
 }
 
 void vm::code::detail::validateTypes(
-	const ObjIdNameMap<TypeOfData>&                  types_ctx,
+	const ObjIdNameMap<TypeOfData>&                  tod_types,
 	const std::vector<usize>&                        new_types_id,
 	const base::HashMap<base::StrID, FuncSignature>& functions
 ) {
-	validateTypeIntegrity(types_ctx);
-	for (usize type_id: new_types_id) validateType(*types_ctx.at(type_id), types_ctx, functions);
+	validateTypeIntegrity(tod_types);
+	for (usize type_id: new_types_id) validateType(*tod_types.at(type_id), tod_types, functions);
 
-	validateMethodNameIsDeterministic(types_ctx);
+	validateMethodNameIsDeterministic(tod_types);
 }

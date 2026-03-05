@@ -19,7 +19,7 @@
 namespace vm::code {
 	class ValidationError: public base::LogicError {
 	public:
-		ValidationError(std::string reason): base::LogicError(std::move(reason)) {}
+		ValidationError(std::string reason): LogicError(std::move(reason)) {}
 
 		// Element causing the error.
 		[[nodiscard]] virtual base::Optional<CRef<ElementBase>> maybeElement() const { return {}; }
@@ -45,7 +45,7 @@ namespace vm::code {
 
 	class PathWithoutEndError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG
+		constexpr static std::string_view ERR_MSG
 			= "Not all code paths end with returns in function: ";
 		const base::StrID func_name;
 
@@ -56,7 +56,7 @@ namespace vm::code {
 
 	class VoidTypeArgumentError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG
+		constexpr static std::string_view ERR_MSG
 			= "Void type cannot be used as argument in function: ";
 		const base::StrID func_name;
 
@@ -71,7 +71,7 @@ namespace vm::code {
 	 */
 	class MissingFunctionalTypeError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
+		constexpr static std::string_view ERR_MSG = "Functional type is not declared for: ";
 		const base::StrID                       func_name;
 
 		MissingFunctionalTypeError(base::StrID func_name):
@@ -85,7 +85,7 @@ namespace vm::code {
 	 */
 	class MissingGlobalCtorDtorError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG = "Missing function declaration for ";
+		constexpr static std::string_view ERR_MSG = "Missing function declaration for ";
 
 		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
 			  ValidationError(base::strConcat(
@@ -104,7 +104,7 @@ namespace vm::code {
 	 */
 	class TypeIsNotFunctionalError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
+		constexpr static std::string_view ERR_MSG = "Type is not functional: ";
 		const base::StrID                       type_name;
 
 		TypeIsNotFunctionalError(base::StrID type_name):
@@ -114,7 +114,7 @@ namespace vm::code {
 
 	class CyclicDependencyError: public ValidationError {
 	public:
-		constexpr static const std::string_view ERR_MSG = "Cyclic dependency detected: ";
+		constexpr static std::string_view ERR_MSG = "Cyclic dependency detected: ";
 		const base::StrID                       type_name;
 
 		CyclicDependencyError(const TypeOfData& type):
@@ -125,7 +125,7 @@ namespace vm::code {
 #define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \
 	class NAME: public ValidationError {                                                \
 	public:                                                                             \
-		constexpr static const std::string_view ERR_MSG = ERROR;                        \
+		constexpr static std::string_view ERR_MSG = ERROR;                        \
 		const ELEMENT_TYPE                      new_element;                            \
 		const ELEMENT_TYPE                      previous_element;                       \
                                                                                         \
@@ -319,6 +319,7 @@ namespace vm::code {
 		"Method implementation lacks its declaration as a virtual method: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
+	DEFINE_TYPE_ATTRIBUTE_ERROR(DuplicatedVariantAlternativeError, "This variant alternative is duplicated")
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"

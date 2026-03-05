@@ -284,7 +284,6 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 	case State::Declared:
 		CORE_PANIC("Tried to finalize a type that was not defined");
 	case State::Defined:
-		state = State::Finalizing;
 		break;
 	case State::Finalized:
 		return;
