@@ -29,7 +29,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         VERBATIM
     )
     set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
-    
+
     # Strip other section (it is no longer in the ELF format)
     add_custom_command(
         OUTPUT ${text_out}
@@ -70,48 +70,46 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     )
 endfunction()
 
-if(JIT_ENABLED)
-    add_library(mock_stencils OBJECT tests/mock_stencils.c)
-    target_compile_options(mock_stencils PRIVATE
-        -fPIC
-        -fno-plt
-        -fno-semantic-interposition
-    )
-    process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
-    duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
+add_library(mock_stencils OBJECT tests/mock_stencils.c)
+target_compile_options(mock_stencils PRIVATE
+    -fPIC
+    -fno-plt
+    -fno-semantic-interposition
+)
+process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
+duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
 
-    # prepare to include it in the full LTO of opfuncs
-    add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
-    target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
-    target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
+# prepare to include it in the full LTO of opfuncs
+add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
+target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
+target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
-    if(NOT JIT_LLVM_LLC)
-        find_program(JIT_LLVM_LLC NAMES llc-19 llc REQUIRED)
-    endif()
-
-    set(cp_stencils "${CMAKE_CURRENT_BINARY_DIR}/wrapper")
-        
-    # compile to binary
-    add_custom_command(
-        OUTPUT ${cp_stencils}
-        COMMAND ${JIT_LLVM_LLC}
-            -filetype=obj
-            -O3
-            $<TARGET_OBJECTS:cp-stencils_bc>
-            -o
-            ${cp_stencils}
-        COMMAND_EXPAND_LISTS
-        DEPENDS cp-stencils_bc
-     )
-        
-    process_to_binary("${cp_stencils}" copy-and-patch.cpp "wrapper")
-    add_custom_target(
-        wrapper-binary-artifacts-target
-        DEPENDS
-            ${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm
-            ${CMAKE_CURRENT_BINARY_DIR}/wrapper-text
-    )
-    add_files(copy-and-patch.cpp)
-
-    set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
+if(NOT JIT_LLVM_LLC)
+    find_program(JIT_LLVM_LLC NAMES llc-19 llc REQUIRED)
 endif()
+
+set(cp_stencils "${CMAKE_CURRENT_BINARY_DIR}/wrapper")
+
+# compile to binary
+add_custom_command(
+    OUTPUT ${cp_stencils}
+    COMMAND ${JIT_LLVM_LLC}
+    -filetype=obj
+    -O3
+    $<TARGET_OBJECTS:cp-stencils_bc>
+    -o
+    ${cp_stencils}
+    COMMAND_EXPAND_LISTS
+    DEPENDS cp-stencils_bc
+)
+
+process_to_binary("${cp_stencils}" copy-and-patch.cpp "wrapper")
+add_custom_target(
+    wrapper-binary-artifacts-target
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm
+    ${CMAKE_CURRENT_BINARY_DIR}/wrapper-text
+)
+add_files(copy-and-patch.cpp)
+
+set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
