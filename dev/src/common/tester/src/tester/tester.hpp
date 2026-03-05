@@ -28,22 +28,22 @@
 		)                                                                                 \
 	)
 
-#define ASSERT_EQUAL_PRINT(expected, actual)                               \
-	assertEqual(                                                           \
-		expected,                                                          \
-		actual,                                                            \
-		base::strConcat(                                                   \
-			"Values not equal:\n\t\tIn line ",                             \
-			__LINE__,                                                      \
-			":\n\t\t\t",                                                   \
-			#expected,                                                     \
-			" != ",                                                        \
-			#actual,                                                       \
-			"\n\t\t\t",                                                    \
-			base::unescapeString(base::strConcat(expected)).value().value, \
-			" != ",                                                        \
-			base::unescapeString(base::strConcat(actual)).value().value    \
-		)                                                                  \
+#define ASSERT_EQUAL_PRINT(expected, actual)               \
+	assertEqual(                                           \
+		expected,                                          \
+		actual,                                            \
+		base::strConcat(                                   \
+			"Values not equal:\n\t\tIn line ",             \
+			__LINE__,                                      \
+			":\n\t\t\t",                                   \
+			#expected,                                     \
+			" != ",                                        \
+			#actual,                                       \
+			"\n\t\t\t",                                    \
+			base::escapeString(base::strConcat(expected)), \
+			" != ",                                        \
+			base::escapeString(base::strConcat(actual))    \
+		)                                                  \
 	)
 
 

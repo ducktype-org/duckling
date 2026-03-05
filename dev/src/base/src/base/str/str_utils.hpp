@@ -206,4 +206,11 @@ namespace base {
 	 * contains the unknown escape sequence.
 	 */
 	UnescapeResult unescapeString(std::string_view raw);
+
+	/**
+	 * @brief Escapes special characters in a string using C-style escape sequences.
+	 * @param raw The raw string to escape.
+	 * @return The escaped string.
+	 */
+	std::string escapeString(std::string_view raw);
 }
