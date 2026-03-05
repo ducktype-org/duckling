@@ -54,6 +54,7 @@ namespace query::internal {
 	void TaskPool::invalidateTask(NodeID id) {
 		std::lock_guard lock(pool_mutex);
 		auto val = task_status_map.extract(id);
+		CORE_ASSERT(val.has_value(), "Task must be present in the task pool");
 		CORE_ASSERT(val.value() == TaskStatus::Done, "Invalidating a task that is not done is not supported");
 	}
 
