@@ -58,7 +58,12 @@ namespace compiler::helios {
 		}
 		if (auto code_block_or_stmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
 			StmtList<> out;
-			for (auto&& e: *code_block_or_stmt.value()) out.emplace_back(e);
+			auto       code_block_or_stmt_val = code_block_or_stmt.value();
+			if (code_block_or_stmt_val->getType() == pst::CodeBlockOrStmt::Type::CodeBlock)
+				for (auto&& e: *code_block_or_stmt_val->getCodeBlock().unlock(ctx))
+					out.emplace_back(e);
+			else
+				out.emplace_back(code_block_or_stmt_val->getStmt());
 			return out;
 		}
 		if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {
