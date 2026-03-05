@@ -510,7 +510,7 @@ namespace compiler::helios {
 							},
 							{
 								base::StrID("builtin_output_char"),
-								ctx.query<tsh::QueryFunctionType>({ { i64_type }, char_type }),
+								ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type }),
 							},
 							{
 								base::StrID("builtin_input_i64"),

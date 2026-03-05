@@ -795,13 +795,15 @@ private:
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                          ->valueOrThrow();
 
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[3]);
 					compiler::mir::Instruction&   assignment
 						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
 
 					// If this test fails use the following to find the correct Instruction.
-					// mir_rep_good2.debugPrint(std::cerr);
-					// assignment.debugPrint(std::cerr);
+					mir_rep_good2.debugPrint(std::cerr);
+					std::cerr << "\n\n";
+					assignment.debugPrint(std::cerr);
+					std::cerr << "\n\n";
 					assertEqual(
 						compiler::mir::Operation::Assign,
 						assignment.operation,

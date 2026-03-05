@@ -60,6 +60,7 @@ namespace {
 					numeric.getStorage()
 				);
 			}
+			variant_case(char, value) { return DVMImmediate{ value }; }
 			variant_case(bool, value) { return DVMImmediate{ value }; }
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				// @TODO: #1728 remove this evil bit_cast

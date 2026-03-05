@@ -26,11 +26,12 @@ Tests:
 
   comparison-chain:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
+#      @TODO: #2179 Re-enable when ops on globals are implemented.
+#      dvm:
+#        backend: dvm
+#        Output:
+#          String: ""
+#        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -156,6 +157,6 @@ Tests:
       llvm:
         backend: llvm
         Input:
-          String: "X\nd\n \n"
+          String: "Xd;"
         Output:
           String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"

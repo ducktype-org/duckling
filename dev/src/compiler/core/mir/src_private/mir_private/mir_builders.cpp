@@ -194,7 +194,7 @@ namespace compiler::mir {
 	}
 
 	MIRLocalMutRef FunctionBuilder::addTmp(const helios::code::ReusableExpr& reusable_expr, const ScopeRef scope) {
-		auto expr_id     = reusable_expr.getID();
+		auto expr_id     = reusable_expr.inner->getID();
 		if (auto found = reusable_expr_locals.atMaybeCopy(expr_id); found.has_value())
 			return found.value();
 

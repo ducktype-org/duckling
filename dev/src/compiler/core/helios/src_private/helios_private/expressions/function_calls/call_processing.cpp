@@ -525,13 +525,9 @@ namespace compiler::helios::code {
 				match_optional(getSymRef(function)->getPSTDataOpt()) {
 					opt_some(pst_data) {
 						const auto decl   = pst_data->getElement().unlock(ctx);
-						auto       result = makeBox<FailedCandidateNote>(
+						return makeBox<FailedCandidateNote>(
                             getFunctionParamList(ctx, decl)->getSourcePosition()
                         );
-						result->addAttachedMessage(
-							createDetailedCallErrorMessage(ctx, source_positions, reason, true)
-						);
-						return result;
 					}
 					opt_none {
 						const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
@@ -543,6 +539,9 @@ namespace compiler::helios::code {
 				}
 				CORE_UNREACHABLE();
 			}();
+			candidate_note->addAttachedMessage(
+				createDetailedCallErrorMessage(ctx, source_positions, reason, true)
+			);
 
 			if (first_candidate_msg.empty())
 				first_candidate_msg.emplace(std::move(candidate_note));

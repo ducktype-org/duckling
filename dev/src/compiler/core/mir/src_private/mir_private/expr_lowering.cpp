@@ -133,20 +133,6 @@ namespace compiler::mir {
 			const auto res_left      = lowered_left.getResult(function);
 
 			// Fill the hole with the binary operation.
-			// Assume (for now?) that the arguments are of the same type,
-			// and the result is of the same type as the arguments.
-			const auto argument_type       = typeOfMIRValue(res_right, function.getContext());
-			const auto other_argument_type = typeOfMIRValue(res_left, function.getContext());
-			CORE_ASSERT(
-				argument_type.getType() == other_argument_type.getType(),
-				base::strConcat(
-					"Binary operator with different argument types. Left side is: '",
-					argument_type.toString(),
-					"' Right side is: '",
-					other_argument_type.toString(),
-					"'"
-				)
-			);
 			const auto      result_type = expr.expression_type.getSymbolType();
 			const Operation operation   = builtinBinaryToOperation(expr.operation);
 
@@ -324,10 +310,10 @@ namespace compiler::mir {
 						expr_scope,
 					});
 				}
-				auto comparison_hole = next_block->addHole();
+				auto comparison_hole = comparison_block->addHole();
 
 				// Now, lower the comparison
-				auto [comp_cont, comp_res] = lower_subexpr_with_result(comp.ref(), next_block);
+				auto [comp_cont, comp_res] = lower_subexpr_with_result(comp.ref(), comparison_block);
 
 				// Finally, fill in the comparison instruction.
 				// Remember to set construction flag for boolean_output only for the first comparison.

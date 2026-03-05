@@ -234,11 +234,10 @@ namespace compiler::helios::code {
 		  first_use(first_use) {}
 
 	void ReusableExpr::debugPrint(std::ostream& out) const {
-		if (first_use) {
+		if (first_use)
 			out << "[tmp](";
-		} else {
+		else
 			out << "[reuse](";
-		}
 		inner->debugPrint(out);
 		out << ")";
 	}
@@ -267,12 +266,23 @@ namespace compiler::helios::code {
 		  first_use(first_use) {}
 
 	tsh::AbstractType builtinOperationToReturnType(
-		query::Context&, const BuiltinBinary operation, const tsh::AbstractType argument_type
+		query::Context&         ctx,
+		const BuiltinBinary     operation,
+		const tsh::AbstractType lhs_type,
+		const tsh::AbstractType rhs_type
 	) {
 		using enum BuiltinBinary;
 		switch (operation) {
 		case IntegerAdd:
+			if ((lhs_type.getKind() == tsh::Kind::Char && rhs_type.getKind() == tsh::Kind::Integral)
+			    || (lhs_type.getKind() == tsh::Kind::Integral
+			        && rhs_type.getKind() == tsh::Kind::Char))
+				return tsh::getCharType();
+			return lhs_type;
 		case IntegerSub:
+			if (lhs_type.getKind() == tsh::Kind::Char && rhs_type.getKind() == tsh::Kind::Char)
+				return tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned);
+			return lhs_type;
 		case IntegerMul:
 		case IntegerDiv:
 		case IntegerMod:
@@ -283,7 +293,7 @@ namespace compiler::helios::code {
 		case FloatDiv:
 		case FloatMod:
 		case FloatPow:
-			return argument_type;
+			return lhs_type;
 		case IntegerLt:
 		case IntegerGt:
 		case IntegerLteq:
@@ -301,7 +311,7 @@ namespace compiler::helios::code {
 			return tsh::getBoolType();
 		case BooleanAnd:
 		case BooleanOr:
-			return argument_type;
+			return lhs_type;
 		default:
 			CORE_UNREACHABLE();
 		}
@@ -315,11 +325,15 @@ namespace compiler::helios::code {
 		Box<Expr>       rhs
 	):
 		  Expr(
-
 			  tsh::ExpressionType<>(
-				  // @TODO: Select type of expression based on result type of the operation.
+				  // @TODO: #2171 Select type of expression based on result type of the operation.
 				  tsh::SymbolType{
-					  builtinOperationToReturnType(ctx, operation, lhs->expression_type.getType()),
+					  builtinOperationToReturnType(
+						  ctx,
+						  operation,
+						  lhs->expression_type.getType(),
+						  rhs->expression_type.getType()
+					  ),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
