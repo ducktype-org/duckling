@@ -1,11 +1,13 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/validator/type/concrete_types.hpp>
+#include <vm/bytecode/validator/type/defined_type.hpp>
 #include <vm/bytecode/validator/type/type_id.hpp>
 #include <vm/bytecode/validator/type/type_map.hpp>
 #include <vm/bytecode/validator/type/type_size.hpp>
@@ -25,14 +27,21 @@ namespace vm::code::valid_type {
 	 * After finalization type is immutable. Type cannot be unfinalized.
 	 */
 	class ValidType final {
-		enum class State { Declared, Defined, Finalizing, Finalized } state = State::Declared;
-		// struct Declared {
+		struct Declared {};
 
-		// };
-		// struct Defined {
+		struct Defined {
+			DefinedTypeVariant kind;
+		};
 
-		// };
-		// std::variant<Declared, Defined> state = Declared{};
+		struct Finalizing {
+			DefinedTypeVariant kind;
+		};
+
+		struct Finalized {
+			ConcreteTypeVariant kind;
+		};
+
+		std::variant<Declared, Defined, Finalizing, Finalized> state = Declared{};
 
 	public:
 		/****************/
@@ -91,21 +100,33 @@ namespace vm::code::valid_type {
 
 		template<ConcreteType T>
 		[[nodiscard]]
-		const T& getKindAs() const {
-			return std::get<T>(kind);
+		base::Optional<CRef<T>> maybeGetKindAs() const {
+			variant_match(state) {
+				variant_case(ValidType::Finalized, finalized) {
+					if (!isKind<T>()) return {};
+					return &std::get<T>(finalized.kind);
+				}
+				variant_default { CORE_PANIC("Tried to get kind of a type that is not finalized"); }
+			}
 		}
 
 		template<ConcreteType T>
 		[[nodiscard]]
-		base::Optional<CRef<T>> maybeGetKindAs() const {
-			if (!isKind<T>()) return {};
-			return &std::get<T>(kind);
+		const T& getKindAs() const {
+			return *maybeGetKindAs<T>().expect("Tried to get kind of a type as the wrong type");
 		}
 
 		template<ConcreteType T>
 		[[nodiscard]]
 		bool isKind() const {
-			return std::holds_alternative<T>(kind);
+			variant_match(state) {
+				variant_case(ValidType::Finalized, finalized) {
+					return std::holds_alternative<T>(finalized.kind);
+				}
+				variant_default {
+					CORE_PANIC("Tried to check kind of a type that is not finalized");
+				}
+			}
 		}
 
 		[[nodiscard]] ConcreteTypeVariant getKind() const;
@@ -129,9 +150,9 @@ namespace vm::code::valid_type {
 		/**
 		 * @brief Helper function for finalize. Fills inheritance metadata for structures.
 		 */
-		void finalizeStructureInheritanceMetadata(
-			ValidTypeMap& types, concrete::Structure& structure
-		);
+		concrete::Structure finalizeStructureData(
+			ValidTypeMap& types, const defined::DefinedStructure& structure
+		) const;
 
 		/**
 		 * @brief Whether this type is instantiable. This is false for types that cannot be
@@ -155,7 +176,7 @@ namespace vm::code::valid_type {
 		base::StrID name;
 		ValidTypeID id;
 
-		ConcreteTypeVariant kind;
+		// ConcreteTypeVariant kind;
 	};
 
 }
