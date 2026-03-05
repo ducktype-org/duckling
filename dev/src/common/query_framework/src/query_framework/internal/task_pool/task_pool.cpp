@@ -52,7 +52,9 @@ namespace query::internal {
 	}
 
 	void TaskPool::invalidateTask(NodeID id) {
-		CORE_ASSERT(!id.q_id.getData().isInputQuery(), "Input query nodes are not present in the task pool.");
+		CORE_ASSERT(
+			!id.q_id.getData().isInputQuery(), "Input query nodes are not present in the task pool."
+		);
 
 		std::lock_guard lock(pool_mutex);
 		auto            val = task_status_map.extract(id);
