@@ -5,10 +5,10 @@
 
 namespace pst {
 	/**
-	 * @brief Simple expand macro
+	 * @brief Simple expand macro.
 	 */
 	class Expand final: public Stmt {
-		// This is context that is saved during parsing so that it can be restored on expansion
+		// This is context that is saved during parsing so that it can be restored on expansion.
 		Box<LangParserContext> context;
 		NAMED_CHILD(value, CommaExprHolder);
 
