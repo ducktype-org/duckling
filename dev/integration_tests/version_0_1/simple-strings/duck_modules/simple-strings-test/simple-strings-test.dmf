@@ -24,5 +24,18 @@ fun main() -> i64 = {
     # Test string concatenation via print
     print("line1\nline2\n");
 
+    # Test string concatenation via + operator
+    print(s+s);
+
+    # Test access to string elements at positions
+    print(s[0]);
+    print('\n');
+
+    # Test string mutability
+    s[0] = 'W';
+    # I am not sure what is supposed to be printed here
+    # print(s);
+
+
     return 0;
 }

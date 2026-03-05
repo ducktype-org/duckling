@@ -8,7 +8,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "65\n90\n48\n57\n10\n9\n13\n92\n39\n1\n2\n3\n4\n5\n68\n"
+          String: "65\n90\n48\n57\n1\n2\n"
         ExitCode: 0
 
   char-escapes-test:

@@ -33,9 +33,9 @@ fun main() -> i64 = {
     let a = 1;
     let b = 2;
     let c = 3;
-    print(f"a={a}\n");
-    print(f"b={b}\n");
-    print(f"c={c}\n");
+    print(f"a={a}\n");                      # a=1
+    print(f"b={b}\n");                      # b=2
+    print(f"c={c}\n");                      # c=3
     print(f"total={a + b + c}\n");          # total=6
 
     # Test f-string with string variable

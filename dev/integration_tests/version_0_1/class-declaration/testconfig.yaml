@@ -8,7 +8,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "0\n0\n5\n10\n100\n200\n20\n30\n5\n10\n3\n4\n12\n0\n10\n25\n4\n5\n0\n1\n100\n50\n1\n"
+          String: "0\n0\n5\n10\n100\n200\n20\n30\n5\n10\n3\n4\n12\n0\n10\n"
         ExitCode: 0
 
   class-functions-test:

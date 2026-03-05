@@ -8,5 +8,5 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "42\n15\n6\t8\nhello\n"
+          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\nNewline:\nEnd:\n15\n42\n"
         ExitCode: 0

@@ -32,7 +32,9 @@ fun main() -> i64 = {
     let x = 10;
     builtin_output_i64(x);              # 10
     if (true) {
-        let x = 20;  # shadows outer x
+        builtin_output_i64(x);          # 10
+        builtin_output_i64(x+1);        # 11
+        let x = 20;   # shadows outer x
         builtin_output_i64(x);          # 20
     }
     builtin_output_i64(x);              # 10 (outer still intact)

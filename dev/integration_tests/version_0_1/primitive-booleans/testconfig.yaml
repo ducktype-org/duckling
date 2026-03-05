@@ -8,5 +8,13 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n3\n5\n7\n9\n11\n100\n200\n12\n13\n"
+          String: "1\n3\n5\n7\n9\n11\n"
+        ExitCode: 0
+  boolean-expressions-test:
+    Description: Tests for primitive boolean types and operations.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "100\n200\n50\n20\n1\n2\n3\n4\n5\n10\n15\n"
         ExitCode: 0

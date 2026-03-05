@@ -1,8 +1,28 @@
+# Test for the print function
+# This test ensures that the print function handles various data types and formats correctly
+
 fun main() -> i64 = {
-    builtin_output_i64(42i64);
-    builtin_output_i32(15i32);
-    let a = 6;
-    print(f"{a}\t{4+4}\n");
-    print("hello\n")
+    # Test printing integers
+    print(123);
+    print("\n");
+    print(f"{123}\n");
+    
+
+    # Test printing floating-point numbers
+    print(f"{3.14159}\n");
+
+    # Test printing strings
+    print("Hello, Duckling!\n");
+
+    # Test printing special characters
+    print("Tab:\tNewline:\nEnd\n");
+
+    # Test printing expressions
+    print(f"{5 + 10}\n");
+
+    # Test printing variables
+    let x = 42;
+    print(f"{x}\n");
+
     return 0;
 }

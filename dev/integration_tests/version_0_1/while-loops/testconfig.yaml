@@ -9,7 +9,7 @@ Tests:
         backend: llvm
         Output:
           String: "5\n4\n5\n4\n5\n4\n5\n4\n2\n1\n5\n4\n2\n1\n5\n4\n2\n1\n"
-        ExitCode: 3
+        ExitCode: 0
   loops-performance:
     Description: Performance test for while loops.
     Cases:

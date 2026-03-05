@@ -8,7 +8,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "100\n5\n10\n50\n25\n3\n"
+          String: "4\n6\n6\n8\n25\n100\n50\n200\n"
         ExitCode: 0
 
   type-values-test:

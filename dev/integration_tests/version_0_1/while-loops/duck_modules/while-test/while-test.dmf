@@ -7,7 +7,7 @@ fun main() -> i64 = {
     while (a > 0) {
         if (a == 3)
             break;
-        builtin_output_i64(a);
+        builtin_output_i64(a);          # 5\n4\n
         a -= 1;
     }
     if (a != 3)
@@ -18,7 +18,7 @@ fun main() -> i64 = {
     while test_loop(a > 0) {
         if (a == 3)
             break test_loop;
-        builtin_output_i64(a);
+        builtin_output_i64(a);          # 5\n4\n
         a -= 1;
     }
     if (a != 3)
@@ -29,7 +29,7 @@ fun main() -> i64 = {
     while test_loop(a > 0) {
         if (a == 3)
             break;
-        builtin_output_i64(a);
+        builtin_output_i64(a);          # 5\n4\n
         a -= 1;
     }
     if (a != 3)
@@ -43,7 +43,7 @@ fun main() -> i64 = {
             a -= 1;
             continue;
         }
-        builtin_output_i64(a);
+        builtin_output_i64(a);          # 5\n4\n2\n1\n
         a -= 1;
     }
     if (a != 0)
@@ -56,7 +56,7 @@ fun main() -> i64 = {
             a -= 1;
             continue test_loop;
         }
-        builtin_output_i64(a);
+        builtin_output_i64(a);          # 5\n4\n2\n1\n
         a -= 1;
     }
     if (a != 0)
@@ -69,7 +69,7 @@ fun main() -> i64 = {
             a -= 1;
             continue;
         }
-        builtin_output_i64(a);
+        builtin_output_i64(a);          # 5\n4\n2\n1\n
         a -= 1;
     }
     if (a != 0)
@@ -81,5 +81,5 @@ fun main() -> i64 = {
         builtin_output_i64(-1);
         # should never be printed
     }
-    return 3;
+    return 0;
 }
