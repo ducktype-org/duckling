@@ -135,8 +135,8 @@ namespace vm::builtins {
 		thread.process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
 
-	void FunctionHandlers::builtinCreateCV(VMThread& thread) {
-		thread.process.getSynchronizationPrimitives().addCV();
+	i64 FunctionHandlers::builtinCreateCV(VMThread& thread) {
+		return thread.process.getSynchronizationPrimitives().addCV();
 	}
 
 	void FunctionHandlers::builtinWaitCV(VMThread& thread, i64 cv_id, i64 mutex_id) {
@@ -145,6 +145,7 @@ namespace vm::builtins {
 
 		thread.releaseGil();
 		//TODO: #2109 Possible UB if the mutex is not actually locked by this thread.
+		//TODO: #2109 If lock tries to accqquire other mutex than used before then we sould return error. 
 		std::unique_lock lock(*mutex, std::adopt_lock);
 		cv->wait(lock);
 		thread.keepOrAcquireGil();

@@ -21,8 +21,7 @@ namespace vm {
 		/**
 		 * @brief Pool for condition variables used in the process.
 		 */
-		base::HashMap<i64, SharedBox<std::condition_variable_any>>
-			cv_map;  // @TODO: #2109 Find better structure then map for storing condition variables.
+		ObjectPool<std::condition_variable_any> cv_pool;
 
 
 	public:
@@ -42,8 +41,19 @@ namespace vm {
 		void removeMutex(i64);
 
 
+		/**
+		 * @brief Getter for condition variables in the pool.
+		 */
 		SharedBox<std::condition_variable_any> getCV(i64 cv_id);
+		
+		/**
+		 * @brief Adds new condition variable into pool.
+		 */
 		i64 addCV();
+		
+		/**
+		 * @brief Removes condition variable from pool.
+		 */
 		void removeCV(i64);
 
 	};
