@@ -98,6 +98,9 @@ def install_llvm_impl(
         f"-DLLVM_TARGETS_TO_BUILD={targets}",
         f"-DLLVM_PARALLEL_LINK_JOBS={link_jobs}",
         f"-DLLVM_ENABLE_PROJECTS=\"clang\"",
+        # These options are required for VM's JIT to link properly
+        f"-DLLVM_ENABLE_RTTI=ON",
+        f"-DLLVM_ENABLE_EH=ON",
     ]
 
     # Add linker option only if a specific linker is selected

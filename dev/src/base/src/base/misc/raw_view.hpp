@@ -114,10 +114,13 @@ namespace base {
 		OwningView(OwningView&& view) noexcept { *this = std::move(view); }
 
 		OwningView& operator=(OwningView&& view) noexcept {
-			begin      = view.begin;
-			size       = view.size;
-			view.begin = nullptr;
-			view.size  = 0;
+			if (this != &view) {
+				delete[] begin;
+				begin      = view.begin;
+				size       = view.size;
+				view.begin = nullptr;
+				view.size  = 0;
+			}
 			return *this;
 		}
 

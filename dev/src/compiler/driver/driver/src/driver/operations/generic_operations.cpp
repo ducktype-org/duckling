@@ -105,6 +105,10 @@ namespace compiler::driver {
 			}
 		}
 
+		static std::string getModuleOutputName(const QKey& key) {
+			return key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+		}
+
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			moduleLog(key, "Recompiling");
 
@@ -115,8 +119,7 @@ namespace compiler::driver {
 			}
 			CRef lir_data = &lir_data_result->valueOrThrow();
 
-			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name = getModuleOutputName(key);
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
@@ -149,7 +152,7 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data);
+				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
 				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
@@ -168,8 +171,7 @@ namespace compiler::driver {
 		 * Returns Optional empty if the underlying file does not exist anymore.
 		 */
 		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
-			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name = getModuleOutputName(key);
 
 			auto collection   = getQueryArtifactsCollection();
 			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
@@ -183,6 +185,14 @@ namespace compiler::driver {
 
 			moduleLog(key, "Cached, loading artifact from disk");
 			return output;
+		}
+
+		static auto deleteFromDisc(const QKey& key) -> bool {
+			auto output_name = getModuleOutputName(key);
+
+			auto collection = getQueryArtifactsCollection();
+			moduleLog(key, "Deleting artifact from disk");
+			return collection->deleteFileArtifact(base::StrID(output_name.c_str()));
 		}
 	};
 
@@ -245,7 +255,7 @@ namespace compiler::driver {
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
 		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
+		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
 
 		vm::PID pid{};
 

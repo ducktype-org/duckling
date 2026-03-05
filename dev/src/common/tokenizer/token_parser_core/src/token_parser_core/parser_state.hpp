@@ -84,16 +84,10 @@ namespace tpc {
 
 		std::variant<Box<ParserContext>, CRef<ParserContext>> current_context;
 
-		ParserState(
-			TokenStream&&        tokens,
-			Box<ParserContext>&& ctx,
-			Ref<dia::Logger>     err,
-			Ref<dia_int::Logger> int_err
-		):
+		ParserState(TokenStream&& tokens, Box<ParserContext>&& ctx, Ref<dia_int::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
 			  current_context(std::move(ctx)),
-			  err(err),
 			  int_err(int_err) {}
 
 
@@ -116,14 +110,12 @@ namespace tpc {
 
 		// clang-format on
 
-		Ref<dia::Logger>     err;      ///< Stores parsing errors
 		Ref<dia_int::Logger> int_err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err):
+		ParserState(TokenStream&& tokens, Ref<dia_int::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
 			  current_context(makeBox<ParserContext>()),
-			  err(err),
 			  int_err(int_err) {}
 
 		/**
@@ -160,20 +152,6 @@ namespace tpc {
 		 * token.
 		 */
 		virtual void goUpAndSkip();
-
-		/**
-		 * @brief Logs an error relatively to the current token.
-		 * @note This version is deprecated in favor of the diagnostic Message system.
-		 */
-		[[deprecated]]
-		virtual void fail(i64 rel_pos, const std::string& message) {
-			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
-		}
-
-		/**
-		 * @brief Logs an error relatively to the current token.
-		 */
-		virtual void log(Box<dia::Message> message) { err->log(std::move(message)); }
 
 		virtual void logInt(Box<dia_int::MessageBase> message) { int_err->log(std::move(message)); }
 

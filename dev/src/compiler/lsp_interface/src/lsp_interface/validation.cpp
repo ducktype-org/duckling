@@ -1,6 +1,6 @@
 #include "validation.hpp"
 
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic_interactive/lsp_ui/lsp_ui.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -31,7 +31,7 @@ namespace lsp {
 		auto main_pst = main_file->getPST();
 		main_pst->getLogger()->collectDiagnostics(out);
 
-		for (const auto& file_ref: module->getSourceFiles()) {
+		for (const auto& file_ref: module->getSourceFiles().illegalAccess()) {
 			auto file
 				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					file_ref.illegalAccess().getID()
@@ -41,7 +41,7 @@ namespace lsp {
 		}
 
 		// Recurse into submodules
-		for (const auto& submodule_id_locked: module->getSubmodules()) {
+		for (const auto& submodule_id_locked: module->getSubmodules().illegalAccess()) {
 			auto submodule = getModuleRef(submodule_id_locked.illegalAccess().getID());
 			collectErrorsFromModuleTree(submodule, out);
 		}
@@ -63,7 +63,7 @@ namespace lsp {
 
 		if (main_file->getPST()->getLogger()->hasErrors()) return false;
 
-		for (const auto& file_ref: module->getSourceFiles()) {
+		for (const auto& file_ref: module->getSourceFiles().illegalAccess()) {
 			auto file
 				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					file_ref.illegalAccess().getID()
@@ -73,7 +73,7 @@ namespace lsp {
 
 		bool all_submodules_parsed_successfully = true;
 		// Recurse into submodules
-		for (const auto& submodule_id_locked: module->getSubmodules()) {
+		for (const auto& submodule_id_locked: module->getSubmodules().illegalAccess()) {
 			auto submodule = getModuleRef(submodule_id_locked.illegalAccess().getID());
 			all_submodules_parsed_successfully &= isModuleTreeParsedSuccessfully(submodule);
 		}
@@ -141,7 +141,7 @@ namespace lsp {
 	}
 
 	std::string getDiagnosticJsonFromCompiler(const fs::File& file) {
-		auto source_files = frontend::SourceFile::getSourceFilesfromFile(file);
+		auto source_files = frontend::SourceFile::getSourceFilesFromFile(file);
 		CORE_ASSERT(
 			not source_files.empty(),
 			"File must be associated with at least one SourceFile in the ModuleTree"
@@ -162,7 +162,7 @@ namespace lsp {
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-		query::Context::int_logger.collectDiagnostics(diagnostics);
+		query::Context::collectAllDiagnostic(diagnostics);
 
 		dia_int::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());
 

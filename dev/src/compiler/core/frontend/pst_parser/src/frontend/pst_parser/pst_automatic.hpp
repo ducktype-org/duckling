@@ -107,13 +107,15 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
-		 * @param result The place to store the parsed identifier.
+		 * @brief Parses a keyword to @p result. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed keyword.
 		 */
 		PSTAutomatic& one(tpc::Keyword* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isKeyword()) {
-				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+				state.logInt(makeBox<tpc::NoKeywordError>(
+					state.getPosition(), state.ctokens().peek().describe()
+				));
 				*result = Keyword::NotAKeyword;
 				return *this;
 			}
@@ -129,7 +131,9 @@ namespace pst {
 		PSTAutomatic& one(tpc::Identifier* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+				state.logInt(makeBox<tpc::NoIdentifierError>(
+					state.getPosition(), state.ctokens().peek().describe()
+				));
 				result->value = base::StrID("<error>");
 				return *this;
 			}
