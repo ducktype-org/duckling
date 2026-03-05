@@ -13,7 +13,7 @@ namespace vm {
 		 * @brief Main GIL mutex for a process.
 		 * It stems from assumption that only one thread can be executing DVM code at the time.
 		 */
-		std::recursive_timed_mutex gil;
+		std::timed_mutex gil;
 
 		/**
 		 * @brief Count of how many times GIL was exchanged between threads.
