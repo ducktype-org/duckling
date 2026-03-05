@@ -279,6 +279,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = 1,
+							},
 						}
 					);
 
@@ -349,10 +352,20 @@ clah::Clah getClahForMain() {
 							 "Disable incremental compilation (do not load previous query graph)."
 						 )
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
+
+
+					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -367,6 +380,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
@@ -442,7 +458,10 @@ clah::Clah getClahForMain() {
 									.backend_options = {},
 									.debug_options = getDebugOptionsFromClap(options),
 									.incremental = {.enabled = !options.isFlag("no-incremental") },
-						}
+									.execution_options = {
+										.worker_count = 1,
+									},
+}
 					);
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
@@ -467,10 +486,10 @@ clah::Clah getClahForMain() {
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
-									   .debug_options = getDebugOptionsFromClap(options),
+									   .debug_options     = getDebugOptionsFromClap(options),
+									   .execution_options = { 1 },
 								   }
 							   );
-
 							   compiler::repl::ReplSession session;
 							   int                         result = session.run();
 							   compiler::driver::exit();
@@ -512,7 +531,8 @@ int main(int argc, const char* argv[]) {
 	} catch (...) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
-			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
+			{ "Unexpected Exception not inheriting from std::exception was "
+		      "caught.\n",
 		      printer::Color::Default },
 		});
 		return 1;
