@@ -4,6 +4,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 namespace tpc {
+
 	TokenStream& ParserState::tokens() { return *current_stream; }
 
 	const TokenStream& ParserState::ctokens() const { return *current_stream; }
@@ -37,7 +38,7 @@ namespace tpc {
 			.post_jump     = 1,
 		});
 		current_stream = makeBox<TokenStream>(std::move(new_stream));
-		variant_match(fallback_stack.back().saved_context) {
+		variant_match(std::get<Fallback>(fallback_stack.back()).saved_context) {
 			variant_case(CRef<ParserContext>, ctx_ref) { current_context = ctx_ref; }
 			variant_case(Box<ParserContext>, ctx_ref) { current_context = ctx_ref.ref(); }
 		}
@@ -45,22 +46,26 @@ namespace tpc {
 
 	void ParserState::goUp() {
 		CORE_ASSERT(
-			!fallback_stack.empty() && fallback_stack.back().type == SubStreamType::Recursive,
+			!fallback_stack.empty() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
-		current_stream  = std::move(fallback_stack.back().saved_stream);
-		current_context = std::move(fallback_stack.back().saved_context);
+		auto& fallback  = std::get<Fallback>(fallback_stack.back());
+		current_stream  = std::move(fallback.saved_stream);
+		current_context = std::move(fallback.saved_context);
 		fallback_stack.pop_back();
 	}
 
 	void ParserState::goUpAndSkip() {
 		CORE_ASSERT(
-			!fallback_stack.empty() && fallback_stack.back().type == SubStreamType::Recursive,
+			!fallback_stack.empty() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
-		u64 fwd         = fallback_stack.back().post_jump;
-		current_stream  = std::move(fallback_stack.back().saved_stream);
-		current_context = std::move(fallback_stack.back().saved_context);
+		auto& fallback  = std::get<Fallback>(fallback_stack.back());
+		u64   fwd       = fallback.post_jump;
+		current_stream  = std::move(fallback.saved_stream);
+		current_context = std::move(fallback.saved_context);
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
 	}
