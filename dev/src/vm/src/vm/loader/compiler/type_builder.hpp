@@ -2,16 +2,10 @@
 
 #include <base/pointers/box.hpp>
 
-#include <vm/bytecode/validator/type/type_context.hpp>
+#include <vm/bytecode/validator/type/type_map.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace vm::code::detail {
-	/**
-	 * @brief Builds TypeMetadata from TypeContext. TypeContext is by definition valid,
-	 * so this function assumes that and doesn't perform any checks.
-	 */
-	Box<TypeMetadata> buildTypeMetadata(const TypeContext& types);
-
 	/**
 	 * @brief Expands the existing `type_metadata` with new_types.
 	 * @param type_metadata A reference TypeMetadata to fill with new types.
@@ -27,5 +21,5 @@ namespace vm::code::detail {
 	 * @note Assumes that the newly added types won't invalidate the state. Assumes types are
 	 * validated.
 	 */
-	void rebuildTypeMetadata(Ref<TypeMetadata> type_metadata, const TypeContext& types);
+	void rebuildTypeMetadata(Ref<TypeMetadata> type_metadata, const valid_type::ValidTypeMap& types);
 }

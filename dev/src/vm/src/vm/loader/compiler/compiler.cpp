@@ -315,7 +315,7 @@ namespace vm::loader::compiler {
 		auto new_types = ctx.getCurrentTypes() | std::views::drop(low_program.types->size());
 		if (std::ranges::empty(new_types)) return;
 
-		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx);
+		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx.getCurrentTypes());
 
 		// Update method ID to name maps, since new methods may have appeared after new types where
 		// added.

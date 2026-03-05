@@ -11,11 +11,14 @@ a new function is injected.
 ## Compilation process
 
 1.  **Building type metadata:**
-    - New types from the high-level `TypeContext` are translated into low-level `TypeMetadata`
+    - New types from the validated `ValidTypeMap` are translated into low-level `TypeMetadata`
     by the `TypeBuilder` module. This is done by calling `vm::code::detail::buildTypeMetadata()`
     for initial creation or `vm::code::detail::rebuildTypeMetadata()` for incremental updates.
     The `TypeMetadata` contains the cross-references and built v-tables for object and interface
-    types which are needed for runtime execution.
+    types which are needed for runtime execution. This translation has a few important steps:
+        - **Type Resolution**: All type names are resolved to direct references (`TypeRef` or `TypeCRef`). Previously, component types (e.g., types of fields in a data type) were held as a string representing the type name. After this step, all types keep the direct reference to the corresponding type object.
+        - **Field Layout**: For classes, the compiler computes the final in-memory layout by creating a flat list of all fields, including those inherited from superclasses.
+        - **V-Table Construction**: A critical step for object-oriented types is building the virtual method table. The compiler resolves the inheritance and implementation hierarchy to determine which function implementation corresponds to each virtual method. This v-table is then attached to the type's metadata, enabling dynamic dispatch at runtime.
     - An important note is that the previously existing `TypeMetadata` is not invalidated when
     `rebuildTypeMetadata()` is called. `TypeMetadata` is a structure which holds cross references
     against other types (for example a pointer type holds a direct reference to the inner type

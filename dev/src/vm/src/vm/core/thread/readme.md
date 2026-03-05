@@ -58,11 +58,15 @@ provides a executor architectures :
     the optimizer can move to the stack at any time if it needs the register for something else, resulting in slower memory access.
 
 The [`MicroInstruction`](./thread/low_program/instruction.hpp) struct is designed to accommodate all of the modes,
-using a `union` to store either an opcode index or a function pointer, while keeping the total instruction size fixed
+using an `#ifdef` to compile either an opcode index or a function pointer, while keeping the total instruction size fixed
 at 24 bytes (8 for the opcode/pointer and 16 for two 64-bit arguments).
 ```cpp
 struct MicroInstruction {
-  union { u64 nontc_opcode; OpFunTC* tc_opfun; };
+#ifdef USE_TAIL_CALLS
+  OpFunTC* tc_opfun;
+#else
+  u64 nontc_opcode;
+#endif
   u64 arg0;
   u64 arg1;
 };

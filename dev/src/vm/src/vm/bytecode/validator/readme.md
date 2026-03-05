@@ -148,7 +148,7 @@ inheritance and implementation structures.
     `implements` clause must correspond to an existing type definition within
     the context. The validator ensures there are no references to non-existent
     parent classes or interfaces.
-The hierarchy checks are run by the `vm::code::detail::validateTypesIntegrity()` function, which expects a whole set of VM program types (`TypeContext`).
+The hierarchy checks are run by the `vm::code::detail::validateTypes()` function, which expects a whole set of VM program types (`ObjIdNameMap<TypeOfData>`).
 
 #### Type-Specific Checks
 
@@ -207,28 +207,3 @@ individually against a set of rules.
 *   **Opaque types**:
     Nothing is verified with opaque types.
 This step is done by the `vm::code::detail::validateType()` function, which verifies a single type in the full context of types.
-
-### Type builder
-
-Once the verification step is done, the last step before the types reach the execution engine (`VMThread`) is the type building phase. This phase assumes correctness of the type set and translates the set of high-level types `TypeContext` (which stores `vm::code::TypeOfData` objects) into the low level representation `TypeMetadata` (which stores `vm::Type` objects). This translation has a few important steps:
-*   **Type Resolution**:
-    All type names are resolved to direct references (`TypeRef` or `TypeCRef`).
-    Previously, component types (e.g. types of fields in a data type) were held
-    as a string representing the type name. After this step, all types keep the
-    direct reference to the corresponding type object.
-*   **Field Layout**:
-    For classes, the validator computes the final in-memory layout by creating
-    a flat list of all fields, including those inherited from superclasses.
-*   **V-Table Construction**:
-    A critical step for object-oriented types is building the virtual method
-    table (which is a virtual method map in our case). The validator resolves
-    the inheritance and implementation hierarchy to determine which function
-    implementation corresponds to each virtual method. This v-table is then
-    attached to the type's metadata, enabling dynamic dispatch at runtime.
-
-Building of the low-level type set can be done in two ways:
-- `vm::code::detail::buildTypeMetadata()` builds the whole `TypeMetadata` object from the `TypeContext`. It assumes the `TypeContext` was verified beforehand.
-- `vm::code::detail::rebuildTypeMetadata()` on the other hand acts as an incremental builder
-of the `TypeMetadata`. It provides the functionality of "adding new types" to the existing `TypeMetadata`.
-
-The second, incremental method is important, because we don't want to lose the already used type metadata on every code injection, since the `vm::Block` used in runtime references the types which are stored in `TypeMetadata`. Rebuilding the whole type metadata from scratch on every injection would mean that all blocks created before the injection would store dangling references and become invalid. Because of that, during code injection we expand the existing context instead of replacing it completely to ensure the valid state of the blocks.

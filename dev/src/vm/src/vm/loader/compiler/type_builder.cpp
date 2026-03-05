@@ -5,6 +5,7 @@
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/type/type.hpp>
 #include <vm/bytecode/validator/type/type_context.hpp>
+#include <vm/bytecode/validator/type/type_map.hpp>
 #include <vm/core/process/type_metadata/inheritance_metadata.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -148,34 +149,11 @@ namespace {
 	}
 }
 
-Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& types) {
-	Box<vm::TypeMetadata> type_metadata = makeBox<vm::TypeMetadata>();
-
-	std::vector<CRef<valid_type::ValidType>> types_vec
-		= types.getCurrentTypes()
-	    | std::views::transform([](const auto& type) { return CRef(&type); })
-	    | std::ranges::to<std::vector>();
-
-	// Declare all types first.
-	declareTypes(type_metadata.refMut(), types_vec);
-
-	// Well-define every type.
-	defineTypes(
-		type_metadata.refMut(),
-		types.getCurrentTypes(),
-		types_vec | std::views::transform([](const auto& type) { return type->getID(); })
-			| std::ranges::to<std::vector>()
-	);
-
-	type_metadata->finalize();
-	return type_metadata;
-}
-
 void vm::code::detail::rebuildTypeMetadata(
-	Ref<vm::TypeMetadata> type_metadata, const TypeContext& types
+	Ref<vm::TypeMetadata> type_metadata, const valid_type::ValidTypeMap& types
 ) {
 	std::vector<CRef<valid_type::ValidType>> types_vec
-		= types.getCurrentTypes() | std::views::drop(type_metadata->size())
+		= types | std::views::drop(type_metadata->size())
 	    | std::views::transform([](const auto& type) { return CRef(&type); })
 	    | std::ranges::to<std::vector>();
 
@@ -185,12 +163,9 @@ void vm::code::detail::rebuildTypeMetadata(
 	// Declare new types.
 	declareTypes(type_metadata, types_vec);
 	// Well define new types.
-	defineTypes(
-		type_metadata,
-		types.getCurrentTypes(),
-		types_vec | std::views::transform([](const auto& type) { return type->getID(); })
-			| std::ranges::to<std::vector>()
-	);
+	defineTypes(type_metadata, types, types_vec | std::views::transform([](const auto& type) {
+										  return type->getID();
+									  }) | std::ranges::to<std::vector>());
 
 	type_metadata->finalize();
 }
