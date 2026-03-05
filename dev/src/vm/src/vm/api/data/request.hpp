@@ -95,13 +95,11 @@ namespace vm::api {
 		};
 
 		struct DebuggerPutBreakpoint {
-			u64 function_id;
-			u64 instr_number;
+			FatBytecodePosition pos;
 		};
 
 		struct DebuggerRemoveBreakpoint {
-			u64 function_id;
-			u64 instr_number;
+			FatBytecodePosition pos;
 		};
 	}
 

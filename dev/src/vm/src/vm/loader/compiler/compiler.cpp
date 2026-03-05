@@ -20,6 +20,7 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
@@ -107,7 +108,7 @@ namespace vm::loader::compiler {
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		if constexpr (load_mode == LoadMode::FROM_DBC_FILE) {
+		if constexpr (load_mode == LoadMode::DEBUG_DBC) {
 			for (const auto& instr: ctx.function.body)
 				builder.addWithDebugSymb(instr, instruction_mapping);
 
@@ -397,6 +398,26 @@ namespace vm::loader::compiler {
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
 
-	template void Compiler::recompile<LoadMode::NO_DBG_SYMB>(const code::ValidProgram&);
-	template void Compiler::recompile<LoadMode::FROM_DBC_FILE>(const code::ValidProgram&);
+	base::Optional<std::pair<usize, usize>> Compiler::translateToMicroPos(
+		const FatBytecodePosition& pos
+	) const {
+		auto& file_map = instruction_mapping.files_ctx[pos.file].from_fat_to_micro;
+		auto  it       = file_map.lower_bound(std::pair{ pos.line, pos.column });
+		if (it == file_map.end()) return {};
+		return it->second;
+	}
+
+	void Compiler::changeOpcode(usize func_id, usize instr_pos, low::MicroOpcode opc) {
+		auto& functions = low_program.functions;
+		if (!functions.contains(func_id)) return;
+
+		auto& microbytecode = functions[func_id].bc;
+		if (microbytecode.size() <= instr_pos) return;
+
+		auto& instr = microbytecode[instr_pos];
+		instr       = makeLowInstruction(opc, instr.arg0, instr.arg1);
+	}
+
+	template void Compiler::recompile<LoadMode::NORMAL>(const code::ValidProgram&);
+	template void Compiler::recompile<LoadMode::DEBUG_DBC>(const code::ValidProgram&);
 }

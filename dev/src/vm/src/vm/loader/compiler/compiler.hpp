@@ -3,6 +3,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/process/interface_types.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
 #include <vm/debugger/vm_debug_symb.hpp>
@@ -44,7 +45,7 @@ namespace vm::loader::compiler {
 		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
 		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
 		 */
-		template<LoadMode = LoadMode::NO_DBG_SYMB>
+		template<LoadMode = LoadMode::NORMAL>
 		void recompile(const code::ValidProgram& high_program);
 
 		/**
@@ -52,6 +53,11 @@ namespace vm::loader::compiler {
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
 		CRef<vm::low::LowVMProgram> getLowProgram() const;
+
+		base::Optional<std::pair<usize, usize>> translateToMicroPos(const FatBytecodePosition& pos
+		) const;
+
+		void changeOpcode(usize func_id, usize instr_pos, low::MicroOpcode opc);
 
 	private:
 		/**
@@ -129,7 +135,7 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		template<LoadMode = LoadMode::NO_DBG_SYMB>
+		template<LoadMode = LoadMode::NORMAL>
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
@@ -165,7 +171,7 @@ namespace vm::loader::compiler {
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
-		template<LoadMode load_mode = false>
+		template<LoadMode load_mode = LoadMode::NORMAL>
 		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
 
 		/**

@@ -4,14 +4,15 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "vm/debugger/vm_debug_symb.hpp"
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/interface_types.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
+#include <vm/debugger/vm_debug_symb.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
@@ -56,42 +57,77 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::OtherError> VMProcess::putBreakpoint(
-		u64 func_id, u64 instr_pos
-	) {
-		auto& instr
-			= const_cast<MicroInstruction&>(loaded_program->getFunctions()[func_id].bc[instr_pos]);
+	std::expected<api::Response, api::OtherError> VMProcess::putBreakpoint(FatBytecodePosition pos) {
+		variant_match(status) {
+			variant_case_novalue(api::Paused) {
+				auto maybe_micropos = translateToMicroPos(pos);
 
-		auto orig_opcode = getInstructionOpcode(instr);
+				if (maybe_micropos.empty()) {
+					return std::unexpected{ api::OtherError{
+						.error = "No known conversion from fat-bytecode position" } };
+				}
 
-		if (orig_opcode == low::MicroOpcode::breakpoint)
-			return std::unexpected{ api::OtherError{
-				.error = "Breakpoint already present at given position" } };
+				auto [func_id, instr_no] = *maybe_micropos;
 
-		known_breakpoints.put(&instr, orig_opcode);
+				auto& instr = loaded_program->getFunctions()[func_id].bc[instr_no];
 
-		return api::Response(api::response::Empty());
+				auto orig_opcode = getInstructionOpcode(instr);
+
+				if (orig_opcode == low::MicroOpcode::breakpoint)
+					return std::unexpected{ api::OtherError{
+						.error = "Breakpoint already present at given position" } };
+
+				known_breakpoints.put(&instr, orig_opcode);
+
+				loader.changeOpcode(func_id, instr_no, low::MicroOpcode::breakpoint);
+
+				return api::Response(api::response::Empty());
+			}
+			variant_default {
+				return std::unexpected(
+					api::OtherError{ "wrong execution status while putting breakpoint" } );
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	std::expected<api::Response, api::OtherError> VMProcess::removeBreakpoint(
-		u64 func_id, u64 instr_pos
+		FatBytecodePosition pos
 	) {
-		auto& instr
-			= const_cast<MicroInstruction&>(loaded_program->getFunctions()[func_id].bc[instr_pos]);
+		variant_match(status) {
+			variant_case_novalue(api::Paused) {
+				auto maybe_micropos = translateToMicroPos(pos);
 
-		if (getInstructionOpcode(instr) != low::MicroOpcode::breakpoint)
-			return std::unexpected{ api::OtherError{
-				.error = "There is no breakpoint at given position" } };
+				if (maybe_micropos.empty()) {
+					return std::unexpected{ api::OtherError{
+						.error = "No known conversion from fat-bytecode position" } };
+				}
 
-		auto orig_opcode = known_breakpoints.atMaybeCopy(&instr);
-		if (orig_opcode.empty()) {
-			return std::unexpected{ api::OtherError{
-				.error = "original opcode of the instruction not found" } };
+				auto [func_id, instr_no] = *maybe_micropos;
+
+				auto& instr = loaded_program->getFunctions()[func_id].bc[instr_no];
+
+				if (getInstructionOpcode(instr) != low::MicroOpcode::breakpoint)
+					return std::unexpected{ api::OtherError{
+						.error = "There is no breakpoint at given position" } };
+
+				auto orig_opcode = known_breakpoints.atMaybeCopy(&instr);
+				if (orig_opcode.empty()) {
+					return std::unexpected{ api::OtherError{
+						.error = "original opcode of the instruction not found" } };
+				}
+
+				loader.changeOpcode(func_id, instr_no, *orig_opcode);
+
+				return api::Response(api::response::Empty());
+			}
+			variant_default {
+				return std::unexpected(
+					api::OtherError{ "wrong execution status while removing breakpoint" } );
+			}
 		}
-
-		instr = makeLowInstruction(*orig_opcode, instr.arg0, instr.arg1);
-
-		return api::Response(api::response::Empty());
+		CORE_UNREACHABLE();
+		
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::runFunction(
@@ -352,18 +388,20 @@ namespace vm {
 			}
 
 			variant_case(api::request::DebuggerLoadFiles, load_request) {
-				return loadProgram<loader::LoadMode::FROM_DBC_FILE>(load_request.filenames)
+				return loadProgram<loader::LoadMode::DEBUG_DBC>(load_request.filenames)
 				    .transform_error([](auto err) { return api::ApiError{ err }; });
 			}
 
 			variant_case(api::request::DebuggerPutBreakpoint, request) {
-				return putBreakpoint(request.function_id, request.instr_number)
-				    .transform_error([](auto err) { return api::ApiError{ err }; });
+				return putBreakpoint(request.pos).transform_error([](auto err) {
+					return api::ApiError{ err };
+				});
 			}
 
 			variant_case(api::request::DebuggerRemoveBreakpoint, request) {
-				return removeBreakpoint(request.function_id, request.instr_number)
-				    .transform_error([](auto err) { return api::ApiError{ err }; });
+				return removeBreakpoint(request.pos).transform_error([](auto err) {
+					return api::ApiError{ err };
+				});
 			}
 
 			variant_case(api::request::StatusRequest, status_request) {
@@ -405,7 +443,8 @@ namespace vm {
 	VMProcess::VMProcess(const PID my_pid):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
-		  loaded_program(loader.getProgram()) {
+		  loaded_program(loader.getProgram()),
+		  compiler(loader.getCompiler()) {
 		vm_threads.emplace_back(*this);
 	}
 
@@ -413,7 +452,8 @@ namespace vm {
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
 		  debugger_event_fd(debugger_event_fd),
-		  loaded_program(loader.getProgram()) {
+		  loaded_program(loader.getProgram()),
+		  compiler(loader.getCompiler()) {
 		vm_threads.emplace_back(*this);
 	}
 
@@ -482,5 +522,23 @@ namespace vm {
 			return false;
 		}
 		return memory.validateMemoryState();
+	}
+
+	low::MicroOpcode VMProcess::underlyingOpcode(const MicroInstruction& instr) const {
+		auto guess = getInstructionOpcode(instr);
+		if (guess != low::MicroOpcode::breakpoint) [[likely]]
+			return guess;
+
+		auto guess2 = known_breakpoints.atMaybeCopy(&instr);
+		if (guess2.has_value()) [[likely]]
+			return *guess2;
+
+		return low::MicroOpcode::breakpoint;
+	}
+
+	base::Optional<std::pair<usize, usize>> VMProcess::translateToMicroPos(
+		const FatBytecodePosition& pos
+	) const {
+		return compiler->translateToMicroPos(pos);
 	}
 }

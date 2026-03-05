@@ -1,13 +1,15 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/types/ints.hpp>
+
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
 
 namespace vm::loader {
-	enum class LoadMode {
-		NO_DBG_SYMB,
-		FROM_DBC_FILE,
+	enum class LoadMode : uint8_t {
+		NORMAL,
+		DEBUG_DBC,
 	};
 };
 

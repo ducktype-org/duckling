@@ -12,6 +12,7 @@
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
@@ -71,6 +72,8 @@ namespace vm {
 		 */
 		CRef<low::LowVMProgram> loaded_program;
 
+		CRef<loader::compiler::Compiler> compiler;
+
 		Memory memory;
 
 		/**
@@ -87,16 +90,16 @@ namespace vm {
 		 * @brief Loads the program from a given source into the current loader program state,
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
-		template<loader::LoadMode load_mode = loader::LoadMode::NO_DBG_SYMB>
+		template<loader::LoadMode load_mode = loader::LoadMode::NORMAL>
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		);
 
-		base::HashMap<MicroInstruction*, low::MicroOpcode> known_breakpoints;
+		base::HashMap<const MicroInstruction*, low::MicroOpcode> known_breakpoints;
 
-		std::expected<api::Response, api::OtherError> putBreakpoint(u64 func_id, u64 instr_pos);
+		std::expected<api::Response, api::OtherError> putBreakpoint(FatBytecodePosition pos);
 
-		std::expected<api::Response, api::OtherError> removeBreakpoint(u64 func_id, u64 instr_pos);
+		std::expected<api::Response, api::OtherError> removeBreakpoint(FatBytecodePosition pos);
 
 		/**
 		 * @brief Creates new thread that runs a function.
@@ -207,6 +210,10 @@ namespace vm {
 		 */
 		Box<VmValue> createOwnedVmValue(TypeCRef type);
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
+
+		low::MicroOpcode underlyingOpcode(const MicroInstruction& instr) const;
+		base::Optional<std::pair<usize, usize>> translateToMicroPos(const FatBytecodePosition& pos
+		) const;
 
 		VMProcess(PID my_pid);
 		VMProcess(PID my_pid, int debugger_event_fd);

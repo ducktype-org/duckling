@@ -10,7 +10,6 @@
 #include <diagnostic/source_position.hpp>
 #include <string_id/string_id.hpp>
 
-#include "vm/debugger/vm_debug_symb.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -18,6 +17,7 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/debugger/vm_debug_symb.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/logger.hpp>
@@ -167,14 +167,20 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 	return compiler.getLowProgram();
 }
 
+void Loader::changeOpcode(usize func_id, usize instr_pos, low::MicroOpcode opc) {
+	compiler.changeOpcode(func_id, instr_pos, opc);
+}
+
+CRef<compiler::Compiler> Loader::getCompiler() const { return &compiler; }
+
 vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
 
 template std::expected<void, LoaderLogger> Loader::loadAndCompile<
-	LoadMode::NO_DBG_SYMB>(const std::vector<fs::File>&);
+	LoadMode::NORMAL>(const std::vector<fs::File>&);
 template std::expected<void, LoaderLogger> Loader::loadAndCompile<
-	LoadMode::FROM_DBC_FILE>(const std::vector<fs::File>&);
+	LoadMode::DEBUG_DBC>(const std::vector<fs::File>&);
 
 template std::expected<void, LoaderLogger> Loader::loadAndCompile<
-	LoadMode::NO_DBG_SYMB>(const code::CodeCollection&);
+	LoadMode::NORMAL>(const code::CodeCollection&);
 template std::expected<void, LoaderLogger> Loader::loadAndCompile<
-	LoadMode::FROM_DBC_FILE>(const code::CodeCollection&);
+	LoadMode::DEBUG_DBC>(const code::CodeCollection&);

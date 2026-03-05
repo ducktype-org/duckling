@@ -1,5 +1,7 @@
 #include "vm.hpp"
 
+#include <filesystem/file.hpp>
+
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/core/process/interface_types.hpp>
@@ -175,20 +177,26 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> debuggerPutBreakpoint(PID pid, u64 func_id, u64 instr_pos) {
+	std::expected<void, ApiError> debuggerPutBreakpoint(
+		PID pid, fs::File path, usize line, usize column
+	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
 				pid,
-				request::DebuggerPutBreakpoint{ .function_id = func_id, .instr_number = instr_pos }
+				request::DebuggerPutBreakpoint{ .pos
+		                                        = { .file = path, .line = line, .column = column } }
 			))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> debuggerRemoveBreakpoint(PID pid, u64 func_id, u64 instr_pos) {
+	std::expected<void, ApiError> debuggerRemoveBreakpoint(
+		PID pid, fs::File path, usize line, usize column
+	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
 				pid,
-				request::DebuggerPutBreakpoint{ .function_id = func_id, .instr_number = instr_pos }
+				request::DebuggerPutBreakpoint{ .pos
+		                                        = { .file = path, .line = line, .column = column } }
 			))
 		    .transform(ignoreResponse);
 	}

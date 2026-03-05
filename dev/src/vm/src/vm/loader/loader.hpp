@@ -55,16 +55,20 @@ namespace vm::loader {
 		 */
 		CRef<vm::low::LowVMProgram> getProgram() const;
 
+		CRef<compiler::Compiler> getCompiler() const;
+
+		void changeOpcode(usize func_id, usize instr_pos, low::MicroOpcode opc);
+
 		/**
 		 * @brief Injects new code from given file paths to the current program state.
 		 */
-		template<LoadMode = LoadMode::NO_DBG_SYMB>
+		template<LoadMode = LoadMode::NORMAL>
 		std::expected<void, LoaderLogger> loadAndCompile(const std::vector<fs::File>& file_path);
 
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
-		template<LoadMode = LoadMode::NO_DBG_SYMB>
+		template<LoadMode = LoadMode::NORMAL>
 		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
 	};

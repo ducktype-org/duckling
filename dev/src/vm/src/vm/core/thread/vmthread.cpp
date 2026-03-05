@@ -81,7 +81,7 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 		auto*      instr       = frame->instr;
 
-		auto opcode = std::to_underlying(getInstructionOpcode(*instr));
+		auto opcode = std::to_underlying(process.underlyingOpcode(*instr));
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
