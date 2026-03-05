@@ -35,14 +35,6 @@ namespace pst {
 	class LangParserState;
 	using TokenStreamCondition = bool(const TokenStream&, i64);
 
-	/**
-	 * @brief Forces pass by value. Sometimes usefull in parse templates
-	 */
-	template<typename T>
-	T fwdVal(T& t) {
-		return t;
-	}
-
 	template<typename State>
 	class PSTAutomatic {
 	protected:

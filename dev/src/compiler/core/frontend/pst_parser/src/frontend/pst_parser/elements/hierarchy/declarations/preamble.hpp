@@ -3,7 +3,7 @@
 #include "../statements/declaration.hpp"
 
 #define DECL_CHILD_CONSTRUCTOR(class_name, element_type_)                                   \
-	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) { \
+	class_name(const LangParserState& position): Decl(StmtKind::class_name, position) { \
 		this->element_kind = element_type_;                                                 \
 	}
 

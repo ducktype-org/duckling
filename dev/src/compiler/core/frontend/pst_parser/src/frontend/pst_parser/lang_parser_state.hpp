@@ -27,9 +27,41 @@ namespace pst {
 		                                  ///< Original fallback is only reached when it is 0.
 		bool finalized = false;
 
+		template<class T>
+		friend class pst::PSTAutomatic;
+
 		void checkAllParsed();
 
 		void copyOwnContext();
+
+	private:
+		// These are methods that should only be used by automatic	
+
+		/**
+		 * @brief deletes current stream and makes last stream the current stream. Resets error
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
+		 */
+		void goUp() override;
+		/**
+		 * @brief deletes current stream and makes last stream the current stream then skips one
+		 * token (the recursive token that was the source of the deleted stream). Resets error
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
+		 */
+		void goUpAndSkip() override;
+
+		/**
+		 * @brief Creates a new sub-stream of given length starting in the current token.
+		 */
+		void setFallback(u64 length);
+
+		/**
+		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
+		 */
+		void exitFallback();
 
 	public:
 		LangParserState(
@@ -68,32 +100,6 @@ namespace pst {
 			CORE_ASSERT(isFinalized(), "Parsing was not finalized before extracting imports");
 			return std::move(imports);
 		}
-
-		/**
-		 * @brief deletes current stream and makes last stream the current stream. Resets error
-		 * bit (additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
-		 */
-		void goUp() override;
-		/**
-		 * @brief deletes current stream and makes last stream the current stream then skips one
-		 * token (the recursive token that was the source of the deleted stream). Resets error
-		 * bit (additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
-		 */
-		void goUpAndSkip() override;
-
-		/**
-		 * @brief Creates a new sub-stream of given length starting in the current token.
-		 */
-		void setFallback(u64 length);
-
-		/**
-		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error
-		 * bit (additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
-		 */
-		void exitFallback();
 
 		/**
 		 * @brief Do final checks that everything is parsed.

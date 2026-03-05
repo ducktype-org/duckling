@@ -39,8 +39,12 @@ namespace pst {
 			state.parse(out).goUpAndSkip();
 		}
 
+		state.setFallback(state.ctokens().size());
+
 		state.setConstextBlockOrdering(BlockOrderType::Ordered);
 		state.parse(out).one(&out->body);
+
+		state.exitFallback();
 
 		PST_RETURN out;
 	}
