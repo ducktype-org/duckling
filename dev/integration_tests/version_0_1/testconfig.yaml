@@ -49,15 +49,16 @@ SubDirs:
   - first-class-typing
 #################################
 #         NOT WORKING
+# this is mainly due to the features not being implemented yet
 #################################
   - primitive-integers
-  - function-call # @TODO: fix advanced
-  - type-deduction # @TODO: fix advanced
-  - function-definition # @TODO: fix advanced
+  - function-call
+  - type-deduction
+  - function-definition
   - let-simple-declaration
   - alias-using-declaration
   - boolean-operators
-  - coercions # @TODO: investigate backend problems with casts
+  - coercions # @TODO: #2182
   - variable-simple-declaration
   - io-builtins
   - while-loops
