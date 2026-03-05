@@ -1,3 +1,8 @@
+if (JIT_ENABLED)
+	add_subdirectory(jit/)
+	set(jit_dependency ${jit_dependency} PARENT_SCOPE)
+endif ()
+
 add_files(
 		supervisor/supervisor.cpp
 		process/vmprocess.cpp
@@ -17,16 +22,11 @@ add_files(
 	thread/opcode_functions/opcodes_functions_impl_debug.cpp
 	thread/low_program/instruction.cpp
 	thread/vmthread.cpp
-    thread/vmvalue.cpp
+	thread/vmvalue.cpp
 	jit/jit_compiler.cpp
 	jit/block_detection.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
 
-add_files(
-	jit/opcodes_bitcode_source.cpp
-)
-
-set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)
 
