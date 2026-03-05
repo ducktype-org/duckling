@@ -64,7 +64,7 @@ namespace lsp {
 	) {
 		auto file = getFileFromVirtualRoot(virtual_root, path);
 
-		auto source_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+		auto source_files = compiler::frontend::SourceFile::getSourceFilesFromFile(file);
 
 		std::vector<query::external::InputData> previous_inputs;
 
