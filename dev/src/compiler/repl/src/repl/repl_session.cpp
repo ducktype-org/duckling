@@ -158,7 +158,19 @@ namespace compiler::repl {
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
 			CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
-			auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
+			// Use the last module ID for expression evaluation context
+			// Expressions are always evaluated in the context of a module, so history should not be
+			// empty
+			CORE_ASSERT(!m_history.empty(), "Expression evaluated with no module context");
+			auto eval_module_id = m_history.back().module_id;
+			auto module_name    = base::StrID(
+                base::strConcat(
+                    "repl_module_",
+                    frontend::ModuleTree::getPathComponentHash(eval_module_id).hash.toStringHex()
+                )
+                    .c_str()
+            );
+			auto load_result = compileAndLoad(ctx, hout_unit, module_name.strView(), m_dvm_pid);
 			if (!load_result.has_value()) {
 				error_message = "DVM load error: " + load_result.error();
 				std::cerr << error_message << "\n";
@@ -200,7 +212,14 @@ namespace compiler::repl {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
-			auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
+			auto module_name = base::StrID(
+				base::strConcat(
+					"repl_module_",
+					frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
+				)
+					.c_str()
+			);
+			auto load_result = compileAndLoad(ctx, hout_unit, module_name.strView(), m_dvm_pid);
 			if (!load_result.has_value()) {
 				error_message = "DVM load error: " + load_result.error();
 				std::cerr << error_message << "\n";
@@ -214,6 +233,50 @@ namespace compiler::repl {
 		if (had_error) return ReplResult::error(error_message);
 
 		return ReplResult::success(output_message);
+	}
+
+	/**
+	 * @brief Create a new REPL module with proper parent linkage.
+	 *
+	 * @param input The source code to compile into a module
+	 * @param history The REPL history containing previously created modules
+	 * @param line_counter The current REPL statement counter
+	 * @return A reference to the newly created module tree
+	 */
+	static base::Ref<frontend::ModuleTree> createReplModule(
+		const std::string& input, const std::vector<ReplStatement>& history, u64 line_counter
+	) {
+		auto builder = frontend::ModuleTreeBuilder::create();
+		builder->setPackageID(base::generateRandomString(32));
+
+		auto virtual_file = fs::FileManager::createRandomVirtualFile(input);
+		builder->setMainSourceFile(virtual_file);
+
+		std::string module_name = "repl_" + std::to_string(line_counter);
+		CORE_DEV_LOG(
+			REPL, "Creating module with name: ", module_name, " (counter=", line_counter, ")\n"
+		);
+
+		builder->setName(base::StrID(module_name.c_str()));
+
+		// Create ReplData with optional parent linkage
+		frontend::ReplData repl_data;
+		if (!history.empty()) {
+			auto last_module_id = history.back().module_id;
+			CORE_DEV_LOG(
+				REPL,
+				"Setting REPL parent to module #",
+				last_module_id.queryUnstablePerfectHash(),
+				"\n"
+			);
+			repl_data.m_repl_module_parent = last_module_id;
+		} else {
+			CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
+		}
+
+		builder->setReplModule(repl_data);
+
+		return builder->finalize();
 	}
 
 	ReplResult ReplSession::executeInput(std::string_view input) {
@@ -261,7 +324,20 @@ namespace compiler::repl {
 			ReplResult last_result = ReplResult::success();
 			for (const auto& stmt_source: statement_sources) {
 				CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
-				auto module_id = frontend::createModuleTreeFromContents(stmt_source);
+				auto module_ref = createReplModule(stmt_source, m_history, m_line_counter);
+				auto module_id  = module_ref->getModuleID();
+
+				CORE_DEV_LOG(REPL, "Creating module\n");
+				CORE_DEV_LOG(
+					REPL,
+					"Module created: #",
+					module_id.queryUnstablePerfectHash(),
+					", isRepl=",
+					module_ref->isReplModule(),
+					", hasParent=",
+					module_ref->getReplModuleParent().has_value(),
+					"\n"
+				);
 				m_history.emplace_back(stmt_source, module_id);
 				++m_line_counter;
 				last_result = executeSingleStatement(module_id);

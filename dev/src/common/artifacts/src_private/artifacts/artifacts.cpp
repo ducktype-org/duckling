@@ -70,6 +70,11 @@ artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(base::Str
 	return fileArtifactNewNoLock(artifact_name);
 }
 
+bool artifacts::ArtifactCollection::deleteFileArtifact(base::StrID artifact_name) {
+	WithLock lock(*this);
+	return deleteFileArtifactNoLock(artifact_name);
+}
+
 artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name
 ) {
 	WithLock lock(*this);
@@ -313,6 +318,15 @@ artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNewNoLock(bas
 	blob_artifacts.put(artifact_name, BlobArtifact{ .parent = this, .name = artifact_name });
 	blob_data.put(artifact_name, makeBox<Bytes>());
 	return blobArtifactAtNoLock(artifact_name);
+}
+
+bool artifacts::ArtifactCollection::deleteFileArtifactNoLock(base::StrID artifact_name) {
+	auto maybe_file_artifact = fileArtifactAtMaybeNoLock(artifact_name);
+	if (!maybe_file_artifact.has_value()) return false;
+	auto file_artifact = *maybe_file_artifact.value();
+	bool result        = fs::FileManager::deleteFile(file_artifact.file);
+	file_artifacts.erase(artifact_name);
+	return result;
 }
 
 artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNewNoLock(

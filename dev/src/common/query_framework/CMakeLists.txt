@@ -28,4 +28,5 @@ add_example(query_example examples/example.cpp USES QueryFramework)
 
 duck_add_test(common query_framework tests/query_framework_test.cpp USES QueryFramework)
 duck_add_test(common active_graph tests/active_graph_test.cpp USES QueryFramework)
+duck_add_test(common concurrent_metadata_storage tests/concurrent_metadata_storage_test.cpp USES QueryFramework)
 duck_add_test(common query_invalidation tests/query_invalidation_test.cpp USES QueryFramework)

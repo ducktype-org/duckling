@@ -40,15 +40,14 @@ private:
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
-                    .package_path = fs::FilePath(path("modules/incremental/changed_functions/functions_1")),
+                    .package_path = fs::FilePath(path("modules/incremental/changed_functions_mistake/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
             	.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
-				.incremental           = { .enabled = true },
-				.execution_options     = {},
+				.incremental           = { .enabled = true }
             }
         );
 
@@ -86,19 +85,39 @@ private:
 
 		// Compile module to trigger red-green sweep
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/incremental/changed_functions/functions_1")),
+			fs::File(path("modules/incremental/changed_functions_mistake/functions_1")),
 			"mark_nodes_test_package"
 		);
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
-		});
 
-		// Build a NodeID for the CompileModule query with the exact key we used
+		// Check the location of .o object in artifacts before compilation, it should be present
+		// because of previous compilation step
 		compiler::driver::KeyOf_CompileModule key{
 			.module_id    = module,
 			.backend_type = compiler::driver::BackendType::LLVM,
 		};
+
+		auto output_name = key.queryStablePerfectHash().toStringHex() + ".o";
+
+		auto collection
+			= global_state::getRootCollection()
+		          ->subCollectionAtOrNew(base::StrID("query"))
+		          ->subCollectionAtOrNew(base::StrID(
+					  base::strConcat("query", compiler::driver::CompileModule::getID().asInt())
+						  .c_str()
+				  ));
+		auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
+
+		// vaidate that .o file from previous compilation is present before we run the compilation
+		// with changed source code
+		assertTrue(
+			output_maybe.has_value(), "Output file should be present in artifacts before compilation"
+		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			(void) ctx.query<driver::CompileModule>(key);
+		});
+
 		query::internal::NodeID root_node{
 			compiler::driver::CompileModule::getID(),
 			query::internal::KeyHash{ key.queryStablePerfectHash() },
@@ -123,7 +142,20 @@ private:
 		ASSERT_TRUE(green_dep_count > red_dep_count);
 
 		// Save artifacts (writes previous graph blob to artifacts)
+		// Because the compilation should fail, the .o from prev compilation should be deleted from
+		// disc Check that there is no .o file in artifacts after compilation
+		auto output_maybe2 = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
+
+		// vaidate that .o file from previous compilation is present before we run the compilation
+		// with changed source code
+		assertFalse(
+			output_maybe2.has_value(),
+			"Output file should be deleted from artifacts after failed compilation"
+		);
 		driver::exit();
+
+		// delete the artifacts directory after test
+		std::filesystem::remove_all(artifacts_path.getPath());
 	}
 };
 
