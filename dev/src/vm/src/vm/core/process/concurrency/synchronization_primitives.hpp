@@ -1,6 +1,8 @@
+#pragma once
+
 #include <base/collections/maps.hpp>
 #include <base/collections/object_pool.hpp>
-#include <base/pointers/shared_box.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 #include "condition_variable.hpp"
 
@@ -20,7 +22,7 @@ namespace vm {
 		/**
 		 * @brief Pool for condition variables used in the process.
 		 */
-		ObjectPool<ConditionVariable> cv_pool;
+		base::ObjectPool<ConditionVariable> cv_pool;
 
 
 	public:
@@ -43,7 +45,7 @@ namespace vm {
 		/**
 		 * @brief Getter for condition variables in the pool.
 		 */
-		SharedBox<ConditionVariable> getCV(i64 cv_id);
+		base::Ref<ConditionVariable> getCV(i64 cv_id);
 		
 		/**
 		 * @brief Adds new condition variable into pool.
