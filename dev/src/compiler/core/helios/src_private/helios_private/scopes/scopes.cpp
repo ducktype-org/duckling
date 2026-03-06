@@ -311,17 +311,27 @@ namespace compiler::helios {
 		return visitor.out.value();
 	}
 
-	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
+	struct IMPLEMENT_QUERY(QueryScopesInModule, QueryScopesInModuleValue) {
+
+		/**
+		 * Helper struct used for accumulating the query output.
+		 */
+		struct Output final {
+			std::vector<ScopeID> scopes;
+			bool failed = false;
+		};
+
+
 		/**
 		 * @brief Gets scopes in a module.
 		 */
 		struct ScopeGrabPseudoVisitor final {
-			ScopeGrabPseudoVisitor(Ref<std::vector<ScopeID>> out, Context& ctx):
+			ScopeGrabPseudoVisitor(Ref<Output> out, Context& ctx):
 				  out(out),
 				  ctx(ctx) {}
 
-			Ref<std::vector<ScopeID>> out;
-			Context&                  ctx;
+			Ref<Output> out;
+			Context&   ctx;
 
 			template<class T>
 			ScopeID scopeOf(pst::Access<T> element) {
@@ -336,24 +346,40 @@ namespace compiler::helios {
 				// @todo
 				// some elements don't have a well defined scope yet leading to a panic
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->emplace_back(scopeOf(element));
-				for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
+					out->scopes.emplace_back(scopeOf(element));
+				for (auto child: element->viewChildren()) {
+					auto child_unlocked = child.unlockOpt(ctx);
+					if (!child_unlocked.has_value()) {
+						// PST element failed to parse, PST should have already reported the diagnostic.
+						out->failed = true;
+						continue;
+					}
+
+					this->visit(child.unlock(ctx));
+				}
 			}
 		};
 
-		static auto getScopes(Context& ctx, frontend::FileID file, Ref<std::vector<ScopeID>> out) {
-			auto root = getFilePST(ctx, file)->getRootElement().unlock(ctx);
+		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
+			auto root = getFilePST(ctx, file)->getRootElement();
+			auto root_unlocked = root.unlockOpt(ctx);
+			if (!root_unlocked.has_value()) {
+				// PST root failed to parse, PST should have already reported the diagnostic.
+				out->failed = true;
+				return;
+			}
 
 			ScopeGrabPseudoVisitor scope_grab(out, ctx);
-			scope_grab.visit(root);
+			scope_grab.visit(root_unlocked.value());
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// fetch scopes from main module file
 			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
 
-			std::vector<ScopeID> output;
-			output.reserve(1'024);  // there will usually be a lot of scopes
+	
+			Output output;
+			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
 
 			getScopes(ctx, main_file, &output);
 
@@ -362,15 +388,19 @@ namespace compiler::helios {
 			for (auto file: *source_files) getScopes(ctx, file, &output);
 
 			// eliminate duplicates with sort:
-			std::ranges::sort(output);
-			auto [unique_end, unique_last] = std::ranges::unique(output);
-			output.erase(unique_end, output.end());
+			std::ranges::sort(output.scopes);
+			auto [unique_end, unique_last] = std::ranges::unique(output.scopes);
+			output.scopes.erase(unique_end, output.scopes.end());
 
 			// validate output:
-			for (auto scope: output)
+			for (auto scope: output.scopes)
 				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
 
-			return output;
+			if (output.failed) {
+				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
+			} else {
+				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
+			}
 		}
 
 		QUERY_AUTO_CACHE_CREF

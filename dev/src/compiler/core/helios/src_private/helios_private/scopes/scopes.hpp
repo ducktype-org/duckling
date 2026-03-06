@@ -140,15 +140,31 @@ namespace compiler::helios {
 	);
 
 	/**
+	 * @brief Value type for the QueryScopesInModule query.
+	 * See the QueryScopesInModule query for details.
+	 */
+	struct QueryScopesInModuleValue final {
+		struct Success final {
+			std::vector<ScopeID> scopes;
+		};
+		struct Failure final {
+			std::vector<ScopeID> partial_scopes;
+		};
+
+		std::variant<Success, Failure> value;
+	};
+
+	/**
 	 * @brief Query all scopes defined in a given module.
-	 * Note: Not implemented yet.
+	 * @note This query returns QueryScopesInModuleValue which contains all scopes in the module or a partial list of scopes that where possible to obtain despite some other failures. Semantic of this failed state is the same of of failed QResult (i.e. errors where already reported), but we still want to return the scopes that we managed to obtain.
+	 *  This is because this query is used by the QueryModuleHOUT and if just fail here, then almost all of the compilation proces would be halted and practically all HELIOS diagnostics would not appear.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryScopesInModule,
 		frontend::ModuleID,
-		CRef<std::vector<ScopeID>>,
+		CRef<QueryScopesInModuleValue>,
 		({ .uses_qresult = false })
 	);
 
