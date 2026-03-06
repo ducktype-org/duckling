@@ -374,6 +374,20 @@ private:
 			1
 		);
 
+		// ========================== Lexer errors ==========================
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a = 1kg;
+					return 0;
+				}
+			)",
+			{ "literal", "unknown" },
+		      "`()`" },
+			1
+		);
+
 
 		// ========================== Comp time errors ==========================
 

@@ -397,6 +397,7 @@ namespace compiler::helios {
 				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
 
 			if (output.failed) {
+				std::cerr << "Failed\n";
 				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
 			} else {
 				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
