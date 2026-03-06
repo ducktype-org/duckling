@@ -35,22 +35,6 @@ namespace pst {
 		return partial_hash;
 	}
 
-	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
-		if (code_block)
-			return code_block.value().internal()->begin();
-		else if (stmt)
-			return stmt->give();
-		CORE_UNREACHABLE();
-	}
-
-	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
-		if (code_block)
-			return code_block.value().internal()->end();
-		else if (stmt)
-			return { stmt->give(), 1 };
-		CORE_UNREACHABLE();
-	}
-
 	CodeBlockOrStmt::Type CodeBlockOrStmt::getType() const {
 		if (stmt.has_value())
 			return Type::SingleStmt;
@@ -62,5 +46,10 @@ namespace pst {
 	AccessLocked<Stmt> CodeBlockOrStmt::getStmt() const {
 		CORE_ASSERT(stmt.has_value(), "No stmt present when getting single statement");
 		return stmt.value().give();
+	}
+
+	AccessLocked<CodeBlock> CodeBlockOrStmt::getCodeBlock() const {
+		CORE_ASSERT(code_block.has_value(), "No code block present when getting code block");
+		return code_block.value().give();
 	}
 }

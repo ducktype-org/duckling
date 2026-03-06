@@ -75,7 +75,10 @@ namespace lsp {
 	void getSemanticTokens(
 		pst::AccessLocked<pst::LangElement> element, std::vector<SemanticToken>& token_list
 	) {
+		if (not element.illegalAccess().has_value()) return;
+
 		auto unlocked = element.illegalAccess().value();
+
 		for (auto sub: unlocked->viewSubElements()) {
 			variant_match(sub) {
 				variant_case(pst::LangElement::SubToken, token) {
@@ -97,35 +100,14 @@ namespace lsp {
 	}
 
 	std::string getSemanticTokens(base::Ref<compiler::frontend::SourceFile> file) {
-		std::vector<SemanticToken> tokens;
-
-		auto pst = file->getPST();
-		// @TODO figure out logging strategy
-		if (pst->getLogger()->bad()) {
-			std::stringstream ss;
-			pst->getLogger()->dumpLog(true, ss);
-			std::cerr << ss.str() << "\n";
-		};
-
-		auto element = pst->getRootElement();
-		getSemanticTokens(element, tokens);
-
-		std::vector<std::string> token_strings(tokens.size());
-		for (usize i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
-
-		return jsonList(token_strings);
+		return getSemanticTokens(std::vector{ file });
 	}
 
 	std::string getSemanticTokens(const std::vector<base::Ref<compiler::frontend::SourceFile>>& files
 	) {
 		std::vector<SemanticToken> tokens;
 		for (auto& file: files) {
-			auto pst = file->getPST();
-			if (pst->getLogger()->bad()) {
-				std::stringstream ss;
-				pst->getLogger()->dumpLog(true, ss);
-				std::cerr << ss.str() << "\n";
-			};
+			auto pst     = file->getPST();
 			auto element = pst->getRootElement();
 			getSemanticTokens(element, tokens);
 		}
