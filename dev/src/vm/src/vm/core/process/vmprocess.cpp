@@ -309,9 +309,11 @@ namespace vm {
 
 			variant_case(api::request::DebuggerGetStackFrameData, request) {
 				RuntimeData& runtime_data = getMainVMThread().runtime_data;
-				Frame&       frame
-					= runtime_data
-				          .frame_stack_base[request.frame_index];  // TODO: assert it's a valid frame
+				u64 frames = runtime_data.frame_stack_current - runtime_data.frame_stack_base + 1;
+				if (request.frame_index >= frames)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "Frame index out of bounds" } });
+				Frame& frame = runtime_data.frame_stack_base[request.frame_index];
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
 				for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
