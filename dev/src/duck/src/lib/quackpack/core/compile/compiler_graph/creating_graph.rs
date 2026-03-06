@@ -34,7 +34,7 @@ impl DependencyGraph {
         })
     }
 
-    pub fn determine_compilation_order(&self) -> QuackResult<Vec<&DependencyNode>> {
+    pub fn reverse_topo_sort_order(&self) -> QuackResult<Vec<&DependencyNode>> {
         let mut order = vec![];
         let mut visited = HashSet::new();
         visit_impl(&self.root, &mut order, &mut visited)?;
@@ -164,10 +164,7 @@ impl CompilerGraph {
         let mut packages = HashMap::new();
         packages.insert(
             ctx.freeze.root().as_freeze_dep(),
-            RwLock::new(CompilerPackage::new(
-                ctx.package.package().clone(),
-                PackageType::RootPackage,
-            )),
+            CompilerPackage::new(ctx.package.package().clone(), PackageType::RootPackage),
         );
         for dep in ctx.freeze.dependencies() {
             let pkg_type = if ctx
@@ -182,9 +179,7 @@ impl CompilerGraph {
                 PackageType::TransientDependency
             };
             let package = parse_dependency(dep, &ctx.storage, ctx.duck_ctx, pkg_type)?;
-            let overwritten_entry = packages
-                .insert(dep.as_freeze_dep(), RwLock::new(package))
-                .is_some();
+            let overwritten_entry = packages.insert(dep.as_freeze_dep(), package).is_some();
             if overwritten_entry {
                 qp_bail!(
                     "malformed freezefile: duplicated dependency `{}`",

@@ -1,12 +1,11 @@
-use std::{path::Path, sync::Mutex};
+use std::path::Path;
 
 use tempfile::TempDir;
 
 use crate::{
-    DuckCtx, QuackResult, StrId,
+    DuckCtx,
     quackpack::core::{
         PackageLoader, Version,
-        compile::{Compiler, compiler_package::CompilerPackage},
         fetcher::Fetcher,
         storage::{
             freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
@@ -16,36 +15,6 @@ use crate::{
     },
     util_common::path_ops_ext::PathOpsExt,
 };
-
-#[derive(Default)]
-pub struct MockCompiler {
-    pub compilations: Mutex<Vec<Compilation>>,
-}
-
-#[derive(Eq, PartialEq, Debug)]
-pub struct Compilation {
-    pub root: StrId,
-    pub deps: Vec<StrId>,
-}
-
-impl Compiler for MockCompiler {
-    fn compile_package(
-        &self,
-        package: &CompilerPackage,
-        dependencies: &[&CompilerPackage],
-        _profile: StrId,
-    ) -> QuackResult<()> {
-        let mut compilations = self.compilations.lock().unwrap();
-        compilations.push(Compilation {
-            root: package.package().manifest().root_description().name(),
-            deps: dependencies
-                .iter()
-                .map(|dep| dep.package().manifest().root_description().name())
-                .collect(),
-        });
-        Ok(())
-    }
-}
 
 pub fn setup_mock_storage() -> (DuckCtx, TempDir) {
     let tmpdir_root = TempDir::new().unwrap();

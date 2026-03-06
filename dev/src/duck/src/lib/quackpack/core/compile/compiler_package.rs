@@ -2,9 +2,8 @@ use std::collections::HashSet;
 use std::fmt;
 
 use crate::{
-    QuackResult, QuackResultContext as _,
+    QuackResult, QuackResultContext,
     quackpack::core::{FeatureName, Package},
-    util_common::set_once::SetOnce,
 };
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -43,7 +42,6 @@ impl fmt::Display for PackageType {
 pub struct CompilerPackage {
     enabled_features: HashSet<FeatureName>,
     package: Package,
-    was_compiled: SetOnce,
     pkg_type: PackageType,
 }
 
@@ -53,16 +51,7 @@ impl CompilerPackage {
             enabled_features: HashSet::new(),
             package,
             pkg_type,
-            was_compiled: SetOnce::new(),
         }
-    }
-
-    pub fn was_compiled(&self) -> bool {
-        self.was_compiled.was_set()
-    }
-
-    pub fn mark_as_compiled(&mut self) {
-        self.was_compiled.set();
     }
 
     pub fn enabled_features(&self) -> &HashSet<FeatureName> {

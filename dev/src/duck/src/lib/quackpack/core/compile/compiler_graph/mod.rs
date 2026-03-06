@@ -1,20 +1,11 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::RwLock,
-};
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
-use tracing::debug;
 
 use crate::{
-    QuackResult, qp_bail_internal, qp_internal,
-    quackpack::core::{
-        compile::{BuildContext, compiler_package::CompilerPackage},
-        storage::freeze::FreezeDep,
-    },
+    QuackResult, qp_internal,
+    quackpack::core::{compile::compiler_package::CompilerPackage, storage::freeze::FreezeDep},
 };
-
-use super::Compiler;
 
 pub mod creating_graph;
 pub mod modifying_graph;
@@ -24,13 +15,19 @@ mod tests;
 
 #[derive(Debug)]
 pub struct AllPackages {
-    packages: HashMap<FreezeDep, RwLock<CompilerPackage>>,
+    packages: HashMap<FreezeDep, CompilerPackage>,
 }
 
 impl AllPackages {
-    pub fn package(&self, name: FreezeDep) -> QuackResult<&RwLock<CompilerPackage>> {
+    pub fn package(&self, name: FreezeDep) -> QuackResult<&CompilerPackage> {
         self.packages
             .get(&name)
+            .ok_or_else(|| qp_internal!("missing `{}` in a map", name))
+    }
+
+    pub fn package_mut(&mut self, name: FreezeDep) -> QuackResult<&mut CompilerPackage> {
+        self.packages
+            .get_mut(&name)
             .ok_or_else(|| qp_internal!("missing `{}` in a map", name))
     }
 }
@@ -58,8 +55,9 @@ impl DependencyGraph {
     }
 
     pub fn bail_if_has_cycles(&self) -> QuackResult<()> {
-        // NOTE: [`determine_compilation_order`] fails if it has encountered a cycle.
-        self.determine_compilation_order().map(drop)
+        // NOTE: [`reverse_topo_sort_order`](Self::reverse_topo_sort_order) fails,
+        // if it has encountered a cycle.
+        self.reverse_topo_sort_order().map(drop)
     }
 }
 
@@ -74,55 +72,15 @@ impl DependencyNode {
 }
 
 impl CompilerGraph {
-    pub fn package(&self, name: FreezeDep) -> QuackResult<&RwLock<CompilerPackage>> {
+    pub fn package(&self, name: FreezeDep) -> QuackResult<&CompilerPackage> {
         self.all_packages.package(name)
     }
 
-    pub fn compile<T: Compiler>(&self, compiler: &T, bctx: &BuildContext<'_>) -> QuackResult<()> {
-        for package in self.graph.determine_compilation_order()? {
-            self.compile_single_package(compiler, package, bctx)?;
-        }
-        Ok(())
+    pub fn package_mut(&mut self, name: FreezeDep) -> QuackResult<&mut CompilerPackage> {
+        self.all_packages.package_mut(name)
     }
 
-    fn compile_single_package<T: Compiler>(
-        &self,
-        compiler: &T,
-        node: &DependencyNode,
-        bctx: &BuildContext<'_>,
-    ) -> QuackResult<()> {
-        let lock = self.package(node.node)?;
-        debug!("locking `{}` for writing", node.node);
-        let mut package = lock.write().expect("panick'ed");
-        let mut deps_locks = vec![];
-        for dep in &node.dependencies {
-            deps_locks.push((self.package(dep.node)?, dep.node));
-        }
-        let deps_guards = deps_locks
-            .into_iter()
-            .map(|(lock, node)| {
-                debug!("locking `{}` for reading", node);
-                lock.read().expect("panick'ed")
-            })
-            .collect::<Vec<_>>();
-        let deps = deps_guards
-            .iter()
-            .map(|guard| {
-                let pkg: &CompilerPackage = guard;
-                pkg
-            })
-            .collect::<Vec<&CompilerPackage>>();
-        for dep in &deps {
-            if !dep.was_compiled() {
-                qp_bail_internal!(
-                    "`{}` `{}` was not compiled",
-                    dep.package_type(),
-                    dep.package().as_freeze_dep()
-                )
-            }
-        }
-        compiler.compile_package(&package, &deps, bctx.profile)?;
-        package.mark_as_compiled();
-        Ok(())
+    pub fn graph(&self) -> &DependencyGraph {
+        &self.graph
     }
 }

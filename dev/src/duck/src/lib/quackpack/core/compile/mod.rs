@@ -4,16 +4,15 @@ use crate::{
     DuckCtx, QuackResult, StrId,
     quackpack::core::{
         FeatureName, PackageCtx,
-        compile::default_compiler::DefaultCompiler,
         storage::{freeze::VenvFreeze, paths::Storage},
     },
 };
 
 pub mod compiler_graph;
 pub mod compiler_package;
-pub mod default_compiler;
+pub mod duckc;
 use compiler_graph::*;
-use compiler_package::*;
+use duckc::*;
 
 #[derive(Debug)]
 pub struct BuildContext<'duck> {
@@ -25,23 +24,12 @@ pub struct BuildContext<'duck> {
     pub profile: StrId,
 }
 
-pub fn compile<'duck>(bctx: BuildContext<'duck>) -> QuackResult<()> {
-    debug!("compiling `{bctx:?}`");
-    let mut graph = CompilerGraph::new_early(&bctx)?;
-    graph.populate_features(&bctx.used_features)?;
+pub fn compile<'duck>(bcx: BuildContext<'duck>) -> QuackResult<()> {
+    debug!("compiling `{bcx:?}`");
+    let mut graph = CompilerGraph::new_early(&bcx)?;
+    graph.populate_features(&bcx.used_features)?;
     graph.remove_disabled_dependencies()?;
-    let compiler = DefaultCompiler {
-        duck_ctx: bctx.duck_ctx,
-    };
-    graph.compile(&compiler, &bctx)?;
+    let duckc = Duckc::new(bcx.duck_ctx);
+    duckc.compile(&graph, CompilationType::OnlyRootPackage, &bcx)?;
     Ok(())
-}
-
-pub trait Compiler: Send + Sync {
-    fn compile_package(
-        &self,
-        package: &CompilerPackage,
-        dependencies: &[&CompilerPackage],
-        profile: StrId,
-    ) -> QuackResult<()>;
 }
