@@ -1,4 +1,5 @@
-#include <driver_private/collect_input.hpp>
+#include "collect_input.hpp"
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -176,15 +177,27 @@ namespace compiler::driver {
 			collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);
 	}
 
-	std::vector<query::external::InputData> collectInputDataFromGlobalPackages() {
+	namespace {
+		std::vector<query::external::InputData> collectInputDataFromGlobalPackagesImpl(
+			const LookupsMap& lookups_map
+		) {
+			std::vector<query::external::InputData> out;
+
+			const auto& packages = global_state::getPackages();
+			for (const auto& pkg: packages)
+				collectFromModule(lookups_map, pkg.root_module, base::Ref(&out));
+
+			return out;
+		}
+	}
+
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromPrevMetadata() {
 		// This function should only be called after loading previous graph and metadata.
 		CORE_ASSERT(
 			query::external::prevMetadataExists(),
 			"Previous metadata must be loaded before collecting input data. This indicates a bug "
 			"in driver initialization."
 		);
-
-		std::vector<query::external::InputData> out;
 
 		// Collect all metadata_ModuleLookup to recreate ModuleChildSideInput nodes.
 		// If a child that was looked up is in the same state as in the previous compilation
@@ -203,11 +216,19 @@ namespace compiler::driver {
 			query::external::getMetadataFromAllPrevNodes<frontend::metadata_ModuleLookup>()
 		);
 
-		const auto& packages = global_state::getPackages();
-		for (const auto& pkg: packages)
-			collectFromModule(lookups_map, pkg.root_module, base::Ref(&out));
+		return collectInputDataFromGlobalPackagesImpl(lookups_map);
+	}
 
-		return out;
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromCurrentMetadata() {
+		LookupsMap lookups_map = createLookupMap(
+			query::external::getMetadataFromAllNodes<frontend::metadata_ModuleLookup>()
+		);
+
+		return collectInputDataFromGlobalPackagesImpl(lookups_map);
+	}
+
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackages() {
+		return collectInputDataFromGlobalPackagesFromPrevMetadata();
 	}
 
 }  // namespace compiler::driver

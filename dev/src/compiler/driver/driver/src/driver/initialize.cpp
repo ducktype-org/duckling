@@ -5,7 +5,7 @@
 #include <concurrent/module_flags/worker_count.hpp>
 #include <diagnostic_interactive/logger.hpp>
 #include <driver/module_flags/module_flags.hpp>
-#include <driver_private/collect_input.hpp>
+#include <driver/incremental_utils/collect_input.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>

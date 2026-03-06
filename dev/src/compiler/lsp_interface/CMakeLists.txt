@@ -6,4 +6,4 @@ add_executable(lsp_daemon src/lsp_interface/lsp_daemon.cpp
                           src/lsp_interface/validation.cpp
                           src/lsp_interface/utils.cpp)
 
-target_link_libraries(lsp_daemon PUBLIC base64 Base Lexer PstParser Crow Clah HELIOS QueryFramework DiagnosticLspUI)
+target_link_libraries(lsp_daemon PUBLIC base64 Base Lexer PstParser Crow Clah HELIOS QueryFramework DiagnosticLspUI Driver)

@@ -107,7 +107,7 @@ void server(i32 port) {
 		const auto path    = base64::decode_into<std::string>(base64_path);
 		const auto content = base64::decode_into<std::string>(base64_content);
 
-		lsp::updateFileContent(virtual_root, path, content);
+		lsp::createFileFromVirtualRoot(virtual_root, path, content);
 
 		return crow::response(200, "OK");
 	});
