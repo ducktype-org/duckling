@@ -302,14 +302,14 @@ namespace vm {
 
 			variant_case_novalue(api::request::DebuggerGetNumberOfCurrentStackFrames) {
 				RuntimeData& runtime_data = getMainVMThread().runtime_data;
-				u64 frames = runtime_data.frame_stack_current - runtime_data.frame_stack_base + 1;
+				u64 frames = u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
 				return api::Response(api::response::NumberOfCurrentStackFrames{
 					.number_of_stack_frames = frames });
 			}
 
 			variant_case(api::request::DebuggerGetStackFrameData, request) {
 				RuntimeData& runtime_data = getMainVMThread().runtime_data;
-				u64 frames = runtime_data.frame_stack_current - runtime_data.frame_stack_base + 1;
+				u64 frames = u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
 				if (request.frame_index >= frames)
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "Frame index out of bounds" } });
@@ -335,7 +335,7 @@ namespace vm {
 
 			variant_case(api::request::DebuggerDereferencePointer, request) {
 				base::ModRawView view = memory.getPointerData(request.pointer, Type::POINTER_SIZE);
-				Pointer          pointer = safeReadPointerBytes<Pointer>(view.getBegin());
+				auto          pointer = safeReadPointerBytes<Pointer>(view.getBegin());
 				return api::Response(api::response::Pointer{ .pointer = pointer });
 			}
 
