@@ -154,6 +154,10 @@ function(add_vm_variant suffix compile_def)
 
         add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc})
         add_dependencies(JitDep CommonVMBitcode_${suffix})
+        set_target_properties(CommonVMBitcode_${suffix}
+            PROPERTIES
+                VM_COMMON_BC ${common_bc}
+        )
 
         add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
         

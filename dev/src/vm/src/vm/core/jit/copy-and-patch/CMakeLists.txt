@@ -96,11 +96,10 @@ add_custom_command(
     COMMAND ${JIT_LLVM_LLC}
     -filetype=obj
     -O3
-    $<TARGET_OBJECTS:cp-stencils_bc>
+    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>
     -o
     ${cp_stencils}
-    COMMAND_EXPAND_LISTS
-    DEPENDS cp-stencils_bc
+    DEPENDS CommonVMBitcode_sc
 )
 
 process_to_binary("${cp_stencils}" copy-and-patch.cpp "wrapper")
