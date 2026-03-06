@@ -1,11 +1,13 @@
 #include "memory/memory.hpp"
 #include "stencils/import_stencils.hpp"
 
-#include <vm/core/jit/jit_compiler.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit {
-	vm::JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
+	using JitOpFun = void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::VMThread*);
+
+	JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
 		PUSH_DIAGNOSTIC ALLOW_EXTENSIONS static constexpr char _bin[] = {
 #embed "wrapper-text" suffix(, )
 		};

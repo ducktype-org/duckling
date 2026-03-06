@@ -115,14 +115,12 @@ function(add_vm_variant suffix compile_def)
 
     if (JIT_ENABLED)
         # Additionall llvm dependecies.
-        add_dependencies(${lib_thread_vm_name} wrapper-binary-artifacts-target)
         make_module(${lib_thread_vm_name} USES llvm_helpers ${vm_dependencies})
         target_include_directories(${lib_thread_vm_name} PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name} ${llvm_libs})
 
         # Setup list of all bitcode dependencies (from inside of VM - dependant to VM variant).
         add_library(${lib_thread_vm_name}_bc OBJECT ${vm_config_dependent_sources})
-        add_dependencies(${lib_thread_vm_name}_bc wrapper-binary-artifacts-target)
         make_module(${lib_thread_vm_name}_bc USES llvm_helpers ${vm_dependencies})
         target_include_directories(${lib_thread_vm_name}_bc PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name}_bc ${llvm_libs})

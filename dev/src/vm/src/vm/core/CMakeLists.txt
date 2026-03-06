@@ -28,6 +28,7 @@ set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_S
 add_files(
     jit/opcode_definitions.cpp
     jit/copy-and-patch/memory/memory.cpp
+    jit/copy-and-patch/copy-and-patch.cpp
 )
 
 set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)

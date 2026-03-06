@@ -109,6 +109,3 @@ add_custom_target(
     ${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm
     ${CMAKE_CURRENT_BINARY_DIR}/wrapper-text
 )
-add_files(copy-and-patch.cpp)
-
-set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
