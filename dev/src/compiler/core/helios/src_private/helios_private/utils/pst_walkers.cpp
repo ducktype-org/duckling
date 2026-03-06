@@ -5,6 +5,8 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 
+#include <query_framework/query_errors.hpp>
+
 #include <base/except/exceptions.hpp>
 
 namespace compiler::helios {
@@ -49,7 +51,14 @@ namespace compiler::helios {
 	StmtList<> getStmtsFromStmtAggregate(
 		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
 	) {
-		auto elem = locked.unlock(ctx);
+		auto elem_optional = locked.unlockOpt(ctx);
+		if (!elem_optional.has_value()) {
+			// @TODO: #1753 this throw may be suboptimal
+			query::throwFailed();
+		}
+		
+		auto elem = elem_optional.value();
+
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
 			StmtList<> out;

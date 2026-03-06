@@ -652,7 +652,12 @@ namespace compiler::helios {
 			code::CodeBlock block({});
 			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
-				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
+				auto unlocked = stmt.unlockOpt(ctx);
+				if (!unlocked.has_value()) {
+					// @TODO: #1753 change here to grab errors from all statements.
+					query::throwFailed();
+				}
+				unlocked.value()->acceptVisitor(stmt_maker);
 
 				if (stmt_maker.is_failed) {
 					// @TODO: #1753 change here to grab errors from all statements.
