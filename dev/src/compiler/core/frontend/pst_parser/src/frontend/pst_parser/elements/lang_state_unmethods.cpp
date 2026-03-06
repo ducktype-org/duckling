@@ -9,7 +9,7 @@ namespace pst::internal {
 	dia::SourcePosition getPosition(const LangParserState& state) { return state.getPosition(); }
 
 	HashType getContextHash(const LangParserState& state) {
-		HashAlg partial_hash;	
+		HashAlg partial_hash;
 		addToHash(partial_hash, state.getContext());
 		return partial_hash.finalize();
 	}

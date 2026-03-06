@@ -5,22 +5,21 @@
 #include "elements_list.hpp"
 
 #include <base/pointers/box.hpp>
-#include <hashing/hashing_algorithms.hpp>
-#include <hashing/hash.hpp>
 
 #include <diagnostic/source_position.hpp>
-
+#include <hashing/hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
 
 namespace pst {
 	using ExprParseFun = MBox<ExprElement>(LangParserState&);
 
-	using HashAlg = hashing::StatefulHash<hashing::SHA256>;
+	using HashAlg  = hashing::StatefulHash<hashing::SHA256>;
 	using HashType = HashAlg::result_type;
 
 	// These are needed to not include parser state definition
 	namespace internal {
 		dia::SourcePosition getPosition(const LangParserState& state);
-		HashType getContextHash(const LangParserState& state);
+		HashType            getContextHash(const LangParserState& state);
 		void                parseExprIntoHolder(
 						   LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length
 					   );
