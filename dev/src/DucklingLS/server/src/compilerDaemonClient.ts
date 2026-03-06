@@ -156,7 +156,7 @@ export class CompilerDaemonClient {
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 
-		const response = fetch(`${this.ls_daemon_address}/put_file/${base64FilePath}/${base64FileContent}`);
+		const response = this.fetchWithRestart(`${this.ls_daemon_address}/put_file/${base64FilePath}/${base64FileContent}`, connection);
 
 		async function handleResponse(res: Response) {
 			if (res.status != 200) {
@@ -202,20 +202,8 @@ export class CompilerDaemonClient {
 		
 		const folders = (await connection.workspace.getWorkspaceFolders())?.map(folder => folder.uri) ?? [];
 		for (const folder of folders) {
-			try {
-				var base64FilePath: string = Buffer.from(uriToFilePath(folder)).toString('base64');
-				var response = fetch(`${this.ls_daemon_address}/init_directory/${base64FilePath}`);
-				var res = await response;
-				if (res.status != 200) {
-					throw new Error(`Error: ${res.status}`);
-				}
-			} catch (error) {
-				if (error instanceof Error) {
-					console.error(`Error processing file ${folder}: ${error.message}`);
-				} else {
-					console.error(`Error processing file ${folder}: ${String(error)}`);
-				}
-			}
+			var base64FilePath: string = Buffer.from(uriToFilePath(folder)).toString('base64');
+			await this.fetchWithRestart(`${this.ls_daemon_address}/init_directory/${base64FilePath}`, connection);
 		}
 
 		return;

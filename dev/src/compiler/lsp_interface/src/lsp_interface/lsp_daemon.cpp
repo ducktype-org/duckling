@@ -85,7 +85,7 @@ void server(i32 port) {
 	 * @param base64_content The base64 encoded content of the file.
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
-	CROW_ROUTE(app, "/put_file/<string>/<string>")
+	CROW_ROUTE(app, "/change_content/<string>/<string>")
 	([&virtual_root](const std::string& base64_path, const std::string& base64_content) {
 		const auto path    = base64::decode_into<std::string>(base64_path);
 		const auto content = base64::decode_into<std::string>(base64_content);
@@ -95,11 +95,45 @@ void server(i32 port) {
 		return crow::response(200, "OK");
 	});
 
-	CROW_ROUTE(app, "/put_file/<string>/")
+	/**
+	 * @brief Route to add or override a file in the virtual file system.
+	 * * URL: /put_file/[base64 relative path]/[base64 file contents]
+	 * @param base64_path The base64 encoded relative path of the file.
+	 * @param base64_content The base64 encoded content of the file.
+	 * @return crow::response The HTTP response indicating the result of the operation.
+	 */
+	CROW_ROUTE(app, "/add_file/<string>/<string>")
+	([&virtual_root](const std::string& base64_path, const std::string& base64_content) {
+		const auto path    = base64::decode_into<std::string>(base64_path);
+		const auto content = base64::decode_into<std::string>(base64_content);
+
+		lsp::updateFileContent(virtual_root, path, content);
+
+		return crow::response(200, "OK");
+	});
+
+
+	CROW_ROUTE(app, "/new_file/<string>/")
 	([&virtual_root](const std::string& base64_path) {
 		const auto path = base64::decode_into<std::string>(base64_path);
 
 		lsp::createFileFromVirtualRoot(virtual_root, path, "");
+
+		return crow::response(200, "OK");
+	});
+
+	/**
+	 * @brief Route to add or override a file in the virtual file system.
+	 * * URL: /put_file/[base64 relative path]/[base64 file contents]
+	 * @param base64_path The base64 encoded relative path of the file.
+	 * @param base64_content The base64 encoded content of the file.
+	 * @return crow::response The HTTP response indicating the result of the operation.
+	 */
+	CROW_ROUTE(app, "/remove_file/<string>")
+	([&virtual_root](const std::string& base64_path) {
+		const auto path    = base64::decode_into<std::string>(base64_path);
+
+		lsp::removeFileFromVirtualRoot(virtual_root, path);
 
 		return crow::response(200, "OK");
 	});

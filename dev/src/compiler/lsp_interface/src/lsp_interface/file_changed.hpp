@@ -28,4 +28,6 @@ namespace lsp {
 	void updateFileContent(
 		const fs::File& virtual_root, const std::string& path, const std::string& content
 	);
+
+	void removeFileFromVirtualRoot(const fs::File& virtual_root, const std::string& path);
 }

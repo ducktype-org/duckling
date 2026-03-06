@@ -85,4 +85,8 @@ namespace lsp {
 		// std::vector<query::external::InputData> invalidated_inputs;
 		query::external::invalidateQueries(std::move(new_inputs), { previous_inputs }, {});
 	}
+
+	void removeFileFromVirtualRoot(const fs::File& virtual_root, const std::string& path) {
+		
+	}
 }

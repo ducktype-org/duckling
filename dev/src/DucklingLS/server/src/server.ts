@@ -14,7 +14,9 @@ import {
 	CompletionItem,
 	Location,
 	_,
-	_Connection
+	_Connection,
+	FileChangeType,
+	DidChangeWatchedFilesNotification
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -98,6 +100,15 @@ connection.onInitialized(() => {
 			// Register for all configuration changes.
 			connection.client.register(DidChangeConfigurationNotification.type, undefined);
 		}
+		await connection.client.register(
+			DidChangeWatchedFilesNotification.type,
+			{
+				watchers: [
+					{ globPattern: "**/*.duck" },
+					{ globPattern: "**/*.dmf" }
+				]
+			}
+		);
 		if (hasWorkspaceFolderCapability) {
 			await compilerDaemonClient.putWorkspace(connection);
 			
@@ -183,8 +194,25 @@ documents.onDidChangeContent(change => {
 	});
 });
 
-connection.onDidChangeWatchedFiles(_change => {
+connection.onDidChangeWatchedFiles(change => {
 	console.log("We received an file change event");
+	for (const fileEvent of change.changes) {
+		switch (fileEvent.type) {
+
+			case FileChangeType.Created:
+				console.log("File created:", fileEvent.uri);
+
+				// optional: load file contents
+				compilerDaemonClient.putFile(fileEvent.uri, "", connection);
+				break;
+
+			case FileChangeType.Deleted:
+				console.log("File deleted:", fileEvent.uri);
+
+				// await compilerDaemonClient.removeFile(fileEvent.uri, connection);
+				break;
+		}
+	}
 });
 
 // This handler provides the initial list of the completion items.
