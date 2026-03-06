@@ -1,18 +1,18 @@
 
 #include <base/types/ints.hpp>
-
+#include <base/pointers/shared_box.hpp>
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
 
 namespace vm {
 
-	class ConditionVariable {
+	class ConditionVariable final{
 	private:
 		std::condition_variable_any cv;
 		std::atomic<std::mutex*> bound_mutex { nullptr };
 	public:
-		void wait(std::mutex &mutex);
+		void wait(SharedBox<std::mutex>& mutex);
 		void notifyOne();
 		void notifyAll();		
 	};

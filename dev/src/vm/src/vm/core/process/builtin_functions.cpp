@@ -146,19 +146,18 @@ namespace vm::builtins {
 		thread.releaseGil();
 		//TODO: #2109 Possible UB if the mutex is not actually locked by this thread.
 		//TODO: #2109 If lock tries to accqquire other mutex than used before then we sould return error. 
-		std::unique_lock lock(*mutex, std::adopt_lock);
-		cv->wait(lock);
+		cv->wait(mutex);
 		thread.keepOrAcquireGil();
 	}
 
 	void FunctionHandlers::builtinNotifyCV(VMThread& thread, i64 cv_id) {
 		auto cv = thread.process.getSynchronizationPrimitives().getCV(cv_id);
-		cv->notify_one();
+		cv->notifyOne();
 	}
 
 	void FunctionHandlers::builtinNotifyAllCV(VMThread& thread, i64 cv_id) {
 		auto cv = thread.process.getSynchronizationPrimitives().getCV(cv_id);
-		cv->notify_all();
+		cv->notifyAll();
 	}
 
 	void FunctionHandlers::builtinDestroyCV(VMThread& thread, i64 cv_id) {

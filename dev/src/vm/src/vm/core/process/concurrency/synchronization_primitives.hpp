@@ -1,11 +1,11 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
+#include "condition_variable.hpp"
 
 #include <vm/core/process/concurrency/object_pool.hpp>
 
 #include <mutex>
-#include <condition_variable>
 
 namespace vm {
 	class SynchronizationPrimitives final {
@@ -21,7 +21,7 @@ namespace vm {
 		/**
 		 * @brief Pool for condition variables used in the process.
 		 */
-		ObjectPool<std::condition_variable_any> cv_pool;
+		ObjectPool<ConditionVariable> cv_pool;
 
 
 	public:
@@ -44,7 +44,7 @@ namespace vm {
 		/**
 		 * @brief Getter for condition variables in the pool.
 		 */
-		SharedBox<std::condition_variable_any> getCV(i64 cv_id);
+		SharedBox<ConditionVariable> getCV(i64 cv_id);
 		
 		/**
 		 * @brief Adds new condition variable into pool.

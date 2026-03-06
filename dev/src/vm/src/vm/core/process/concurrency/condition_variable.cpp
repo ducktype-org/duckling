@@ -3,9 +3,10 @@
 #include <stdexcept>
 
 namespace vm {
-	void ConditionVariable::wait(std::mutex& mutex) {
+	void ConditionVariable::wait(SharedBox<std::mutex>& mutex) {
 		std::mutex* expected = nullptr;
-		if (!bound_mutex.compare_exchange_strong(expected, &mutex) && expected != &mutex) {
+		std::mutex* mutex_ptr = mutex.get();
+		if (!bound_mutex.compare_exchange_strong(expected, mutex_ptr) && expected != mutex_ptr) {
 			throw std::logic_error("ConditionVariable is already bound to a different mutex");
 		}
 

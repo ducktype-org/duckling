@@ -1,5 +1,4 @@
 #include "synchronization_primitives.hpp"
-#include <condition_variable>
 #include "base/pointers/shared_box.hpp"
 
 namespace vm {
@@ -11,7 +10,7 @@ namespace vm {
 
 	void SynchronizationPrimitives::removeMutex(i64 mutex_id) { mutex_pool.remove(mutex_id); }
 
-	SharedBox<std::condition_variable_any> SynchronizationPrimitives::getCV(i64 cv_id) {
+	SharedBox<ConditionVariable> SynchronizationPrimitives::getCV(i64 cv_id) {
 		return cv_pool.get(cv_id);
 	}
 
