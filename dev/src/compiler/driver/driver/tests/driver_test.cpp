@@ -64,9 +64,9 @@ protected:
 				.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
-				.debug_options         = {},
-				.incremental           = {},
-				.execution_options     = {},
+				.debug_options         = { },
+				.incremental           = { },
+				.execution_options     = { .worker_count = 1 },
 			}
 		);
 	}

@@ -168,7 +168,6 @@ namespace compiler::driver {
 			) {
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleExecutionOptions(package_compilation_options.execution_options);
-
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 				handlePackageOptions(package_compilation_options.main_package_info);
 
