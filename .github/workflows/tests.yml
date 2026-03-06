@@ -311,7 +311,7 @@ jobs:
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --duckc-worker-count 1
 
       - name: Integration Tests Multithreaded
-        id: integration-tests
+        id: integration-tests-multithreaded
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --duckc-worker-count 4
 
