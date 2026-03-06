@@ -1,13 +1,15 @@
-#include <concurrent/task_pool/task_pool.hpp>
+#include "task_pool.hpp"
+
 #include <concurrent/worker/worker.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <atomic>
+#include <iostream>
 #include <mutex>
 
-namespace concurrent::pool {
+namespace query::internal {
 
 	TaskPool::TaskPool():
 		  worker_manager(concurrent::worker::WorkerManager::get()),
@@ -16,8 +18,9 @@ namespace concurrent::pool {
 		for (auto worker: worker_manager.getAllWorkers())
 			worker_pools.emplace(worker, std::deque<Task>());
 
-		for (auto worker: worker_manager.getAllWorkers()) is_worker_free_map.emplace(worker, true);
+		for (auto worker: worker_manager.getAllWorkers()) is_worker_free_map.put(worker, true);
 
+		// @TODO: #2039 this links query task execution with workers manager logic.
 		worker_manager.setNoTasksCallback([this](auto wref) { onWorkerNoTasks(wref); });
 	}
 
@@ -26,13 +29,39 @@ namespace concurrent::pool {
 		flushWorkers();
 	}
 
-	void TaskPool::addInitialTasks(std::vector<Task> tasks) {
-		CORE_ASSERT(first_call, "addInitialTasks can only be called once and before execute()");
-		first_call = false;
+	void TaskPool::addTask(Task&& task) {
+		std::lock_guard lock(pool_mutex);
+
+		added_tasks.fetch_add(1);
+
+		auto free_worker_opt = getFreeWorkerUnlocked();
+		if (free_worker_opt.has_value()) {
+			free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](WRef) mutable {
+				tryExecuteTask(pt);
+			});
+			is_worker_free_map[free_worker_opt.value()] = false;
+			return;
+		} else {
+			addToGlobalPoolUnlocked(std::move(task));
+		}
+	}
+
+	void TaskPool::waitForTask(NodeID id) {
+		std::unique_lock lock(pool_mutex);
+		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
+	}
+
+	void TaskPool::invalidateTask(NodeID id) {
+		CORE_ASSERT(
+			!id.q_id.getData().isInputQuery(), "Input query nodes are not present in the task pool."
+		);
 
 		std::lock_guard lock(pool_mutex);
-		for (auto& task: tasks) global_pool.push_back(std::move(task));
-		added_tasks.fetch_add(tasks.size());
+		auto            val = task_status_map.extract(id);
+		CORE_ASSERT(val.has_value(), "Task must be present in the task pool");
+		CORE_ASSERT(
+			val.value() == TaskStatus::Done, "Invalidating a task that is not done is not supported"
+		);
 	}
 
 	void TaskPool::waitExecutionCompletion() {
@@ -44,37 +73,12 @@ namespace concurrent::pool {
 			);
 			return added_tasks.load() == completed_tasks.load();
 		});
-		is_executing.store(false);
-	}
-
-	void TaskPool::execute() {
-		CORE_ASSERT(
-			global_pool.size() > 0,
-			"No tasks to execute. Add tasks using addInitialTasks() before calling execute()."
-		);
-
-		is_executing.store(true);
-		std::unique_lock lock(pool_mutex);
-
-		auto              worker_refs           = worker_manager.getAllWorkers();
-		usize             n_tasks_to_distribute = std::min(global_pool.size(), worker_refs.size());
-		std::vector<Task> tasks_to_distribute;
-
-		for (usize i = 0; i < n_tasks_to_distribute; ++i) {
-			tasks_to_distribute.push_back(std::move(global_pool.front()));
-			global_pool.pop_front();
-		}
-
-		for (usize i = 0; i < n_tasks_to_distribute; ++i) {
-			auto& task = tasks_to_distribute[i];
-			worker_refs[i]->scheduleTask([this, pt = std::move(task)](worker::WRef) mutable {
-				tryExecuteTask(pt);
-			});
-			is_worker_free_map[worker_refs[i]] = false;
-		}
 	}
 
 	void TaskPool::query(const Task& task) {
+		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
+		// as ->query is performing a lot of operations even in such case
+
 		added_tasks.fetch_add(1);
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) {
@@ -92,11 +96,10 @@ namespace concurrent::pool {
 
 		auto change_status_result = task_status_map.maybePut(task.id, TaskStatus::InProgress);
 
-		// @TODO: #1973 integrate with query
 		// this insert decided who get's to do the task
 		if (change_status_result.toOpt().has_value()) {
 			// The key was inserted by us, we can execute the task
-			auto wd = worker::Worker::getCurrentWorker();
+			auto wd = concurrent::worker::Worker::getCurrentWorker();
 
 			task.work(wd);
 			{
@@ -109,7 +112,7 @@ namespace concurrent::pool {
 			return true;
 		}
 
-		// This line, although mabye counter intuitive on the first sight, is correct.
+		// This line, although maybe counter intuitive on the first sight, is correct.
 		// It's because we don't count task completion here, but rather the number of added tasks
 		// to the pool. Some tasks may be added multiple times, (but only one execution will
 		// happen), so we pair the numbers of added tasks with the number of tasks we taken out of
@@ -124,13 +127,13 @@ namespace concurrent::pool {
 
 	TaskHandle TaskPool::schedule(Task&& task) {
 		// This function is the most problematic in terms of using independent queues,
-		worker::WRef current_worker = worker::Worker::getCurrentWorker();
-		const auto   task_id        = task.id;
+		WRef       current_worker = concurrent::worker::Worker::getCurrentWorker();
+		const auto task_id        = task.id;
 
 		// This line is not needed, but it sometimes avoids scheduling duplicate tasks
 		if (task_status_map.contains(task_id)) return TaskHandle(*this, task_id);
 
-		// Now becasue we are adding a new task to the pool, we increment the added tasks counter.
+		// Now because we are adding a new task to the pool, we increment the added tasks counter.
 		added_tasks.fetch_add(1);
 
 		{
@@ -143,8 +146,9 @@ namespace concurrent::pool {
 
 			if (free_worker_opt.has_value()) {
 				// Schedule on a free worker
-				free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](worker::WRef
-				                                      ) mutable { tryExecuteTask(pt); });
+				free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](WRef) mutable {
+					tryExecuteTask(pt);
+				});
 				is_worker_free_map[free_worker_opt.value()] = false;
 				return TaskHandle(*this, task_id);
 
@@ -159,9 +163,13 @@ namespace concurrent::pool {
 		return TaskHandle(*this, task_id);
 	}
 
-	void TaskPool::await(TaskID id) {
+	void TaskPool::await(NodeID id) {
+		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
+		// as ->await is performing a lot of operations even in such case
+
 		std::unique_lock lock(pool_mutex);
-		auto task_opt = tryStealFromWorkerUnlocked(worker::Worker::getCurrentWorker(), id);
+		auto             task_opt
+			= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
 		if_opt_some(task_opt, task) {
 			lock.unlock();
 			tryExecuteTask(task);
@@ -170,8 +178,7 @@ namespace concurrent::pool {
 		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
-	bool TaskPool::isTaskDone(TaskID id) const {
-		// @TODO: #1973 integrate with query.
+	bool TaskPool::isTaskDone(NodeID id) const {
 		return task_status_map.contains(id) && task_status_map.getCopy(id) == TaskStatus::Done;
 	}
 
@@ -184,7 +191,7 @@ namespace concurrent::pool {
 		return std::nullopt;
 	}
 
-	base::Optional<Task> TaskPool::tryStealFromWorkerUnlocked(worker::WRef worker_ref) {
+	base::Optional<Task> TaskPool::tryStealFromWorkerUnlocked(WRef worker_ref) {
 		auto& worker_pool = worker_pools[worker_ref];
 		if (!worker_pool.empty()) {
 			Task task = std::move(worker_pool.front());
@@ -195,9 +202,7 @@ namespace concurrent::pool {
 		return std::nullopt;
 	}
 
-	base::Optional<Task> TaskPool::tryStealFromWorkerUnlocked(
-		worker::WRef worker_ref, TaskID task_id
-	) {
+	base::Optional<Task> TaskPool::tryStealFromWorkerUnlocked(WRef worker_ref, NodeID task_id) {
 		auto& worker_pool = worker_pools[worker_ref];
 		for (auto it = worker_pool.begin(); it != worker_pool.end(); ++it) {
 			if (it->id == task_id) {
@@ -212,13 +217,11 @@ namespace concurrent::pool {
 
 	void TaskPool::addToGlobalPoolUnlocked(Task&& task) { global_pool.push_back(std::move(task)); }
 
-	void TaskPool::addToWorkerPoolUnlocked(worker::WRef worker_ref, Task&& task) {
+	void TaskPool::addToWorkerPoolUnlocked(WRef worker_ref, Task&& task) {
 		worker_pools[worker_ref].push_back(std::move(task));
 	}
 
-	void TaskPool::onWorkerNoTasks(worker::WRef current_worker) {
-		if (!is_executing.load()) return;
-
+	void TaskPool::onWorkerNoTasks(WRef current_worker) {
 		base::Optional<Task> task_opt;
 		std::lock_guard      lock(pool_mutex);
 
@@ -235,8 +238,9 @@ namespace concurrent::pool {
 		}
 
 		if (task_opt.has_value()) {
-			current_worker->scheduleTask([this, pt = std::move(task_opt).value()](worker::WRef
-			                             ) mutable { tryExecuteTask(pt); });
+			current_worker->scheduleTask([this, pt = std::move(task_opt).value()](WRef) mutable {
+				tryExecuteTask(pt);
+			});
 			is_worker_free_map[current_worker] = false;
 		} else {
 			// There might be some tasks scheduled before this callback get's cpu time,
@@ -247,7 +251,7 @@ namespace concurrent::pool {
 
 	void TaskHandle::await() { pool.await(task_id); }
 
-	base::Optional<worker::WRef> TaskPool::getFreeWorkerUnlocked() const {
+	base::Optional<concurrent::worker::WRef> TaskPool::getFreeWorkerUnlocked() const {
 		for (const auto& [worker_ref, is_free]: is_worker_free_map)
 			if (is_free.load()) return worker_ref;
 		return std::nullopt;
@@ -274,4 +278,4 @@ namespace concurrent::pool {
 		for (auto& flag: flags)
 			while (!flag->load()) std::this_thread::yield();
 	}
-}  // namespace concurrent::pool
+}
