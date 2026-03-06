@@ -79,6 +79,7 @@ namespace pst {
 
 		explicit LangElement(const LangParserState& state):
 			  source_position(internal::getPosition(state)),
+			  context_hash(internal::getContextHash(state)),
 			  id(PstID::next()) {}
 
 		LangElement(const LangElement&) = delete;
@@ -249,6 +250,7 @@ namespace pst {
 		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
 
 		dia::SourcePosition source_position;
+		HashType context_hash;
 		std::vector<InternalSubElement>
 			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
 		base::Optional<AccessLocked<LangElement>>
