@@ -250,9 +250,8 @@ private:
 	}
 
 	void hashingAlgorithmsTest() {
-		SHA256                  h2;
-		[[maybe_unused]] SHA256 qwe{ 123 };
-		constexpr std::span     SP = "hello";
+		SHA256              h2;
+		constexpr std::span SP = "hello";
 		assertTrue(
 			std::is_same_v<SHA256::result_type, base::Bit256>,
 			"SHA256::result_type should be base::Bit256"
