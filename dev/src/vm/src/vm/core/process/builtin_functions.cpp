@@ -100,12 +100,8 @@ namespace vm::builtins {
 		return std::stoll(str_data);
 	}
 
-	std::string thread_ctx;
-
-	void setThreadCtx(std::string ctx) { thread_ctx = std::move(ctx); }
-
 	i64 FunctionHandlers::builtinStartThread(VMThread& thread) {
-		return i64{ vm::api::runFunction(thread.process.getPID(), thread_ctx).value() };
+		return i64{ vm::api::runFunction(thread.process.getPID(), thread.getThreadCtx()).value() };
 	}
 
 	void FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
