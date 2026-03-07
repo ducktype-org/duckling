@@ -213,7 +213,9 @@ namespace hashing {
 		constexpr result_type finalize() const noexcept {
 			SHA256 copy = *this;
 			copy.padAndProcess();
-			return copy.state;
+			std::array<u32, 8> ret{};
+			for (std::size_t i = 0; i < 8; ++i) ret.at(i) = copy.state.at(8 - 1 - i);
+			return ret;
 		}
 
 	private:
