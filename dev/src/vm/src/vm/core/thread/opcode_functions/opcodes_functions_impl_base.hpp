@@ -487,7 +487,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
 		{
 			auto& called_func = thread.executing_program->getFunctions()[instr->arg0];
-			builtins::setThreadCtx(called_func.name.str());
+            thread.setThreadCtx(called_func.name.str());
 		}
 		FUNCTION_CONT(1);
 	}
