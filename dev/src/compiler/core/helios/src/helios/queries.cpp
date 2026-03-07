@@ -27,6 +27,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
@@ -56,6 +57,9 @@ namespace compiler::helios {
 			// and return failure at the end if so.
 			bool is_failed = false;
 
+			std::vector<query::TaskHandle> scheduled_tasks;
+			std::vector<SymID>             class_symbols;
+
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
@@ -65,24 +69,32 @@ namespace compiler::helios {
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
+
 					// grab functions:
-					if (kind(sym) == SymbolKind::Function) {
-						// we "catch" failure here to continue gathering other functions:
-						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
-						if (hout_function->hasFailed()) {
-							is_failed = true;
-							continue;
-						} else {
-							out.functions.emplace_back(&hout_function->valueOrPanic());
-						}
-					}
-					if (kind(sym) == SymbolKind::Class) {
-						appendClassConstructors(out.functions, sym, ctx);
-						if (appendClassMethodsWithFail(out.functions, sym, ctx)) {
-							is_failed = true;
-							continue;
-						}
-					}
+					if (kind(sym) == SymbolKind::Function)
+						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
+					if (kind(sym) == SymbolKind::Class) class_symbols.emplace_back(sym);
+				}
+			}
+
+			for (auto class_sym: class_symbols) {
+				// we postpone this past function scheduling, as
+				// appendClassConstructors may be time consuming.
+				appendClassConstructors(out.functions, class_sym, ctx);
+				if (appendClassMethodsWithFail(out.functions, class_sym, ctx)) {
+					is_failed = true;
+					continue;
+				}
+			}
+
+			for (auto handler: scheduled_tasks) {
+				// we "catch" failure here to continue gathering other functions:
+				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
+				if (hout_function->hasFailed()) {
+					is_failed = true;
+					continue;
+				} else {
+					out.functions.emplace_back(&hout_function->valueOrPanic());
 				}
 			}
 
@@ -238,7 +250,8 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: *stmts.unlock(ctx)) stmt.unlock(ctx)->acceptVisitor(*this);
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts))
+					stmt.unlock(ctx)->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>
@@ -278,7 +291,7 @@ namespace compiler::helios {
 						"This should not happen"
 					);
 
-					for (const auto& stmt: *fun_body.unlock(ctx))
+					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
 						stmt.unlock(ctx)->acceptVisitor(*this);
 				}
 			}
@@ -622,7 +635,7 @@ namespace compiler::helios {
 			query::Context& ctx, const Container& container, tsh::SymbolType<> return_type
 		) {
 			code::CodeBlock block({});
-			for (const auto& stmt: *container.unlock(ctx)) {
+			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
 
