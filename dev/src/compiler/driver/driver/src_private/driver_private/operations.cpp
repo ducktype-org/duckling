@@ -45,7 +45,7 @@ namespace compiler::driver {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_function
 							= ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })
-						           ->valueOrThrow();
+						          ->valueOrThrow();
 						auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 						globals.emplace_back(LIRModuleGlobal{
 							.lir_global = lir_global,

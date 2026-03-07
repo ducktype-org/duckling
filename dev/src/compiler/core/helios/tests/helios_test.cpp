@@ -163,10 +163,6 @@ private:
 		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
 		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
 		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
-		auto val = getConstValueAs<bool>("TRUE_COMPARISON", root_scope);
-        std::cout << "\n[DEBUG] TRUE_COMPARISON: " << std::boolalpha << val << std::endl;
-        
-        ASSERT_EQUAL(true, val);
 		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
 		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
 
@@ -428,7 +424,8 @@ private:
 
 		const auto second_class = getChain("SecondClass", root_scope).back();
 		auto       second_class_info
-			= *query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)->valueOrThrow();
+			= *query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)
+		           ->valueOrThrow();
 
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
@@ -462,8 +459,8 @@ private:
 		);
 
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
-			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
-		          .valueOrPanic();
+			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
+		           .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		               // that it is successful
 	}
@@ -505,8 +502,8 @@ private:
 		// );
 
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
-			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
-		          .valueOrPanic();
+			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
+		           .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		               // that it is successful
 	}
@@ -758,7 +755,8 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/simple_scopes")));
 
 		auto houts
-			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
+			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic(
+			);
 
 		unsigned long functions = 0;
 		unsigned long glob_data = 0;
@@ -776,7 +774,8 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/hout_module")));
 
 		auto houts
-			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
+			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic(
+			);
 
 		unsigned long functions = 0;
 		unsigned long glob_data = 0;
@@ -794,7 +793,8 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/hout_simple_test")));
 
 		auto houts
-			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
+			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic(
+			);
 
 		for (const auto& hout: houts) {
 			for (const auto& fun: hout->functions) {
@@ -1008,35 +1008,37 @@ private:
 			= dynamic_cast<const compiler::helios::code::LiteralStringExpr*>(&*expr_str);
 		ASSERT_EQUAL("quack", expr_str_casted->value.str());
 
-        auto              sym_vref  = getChain("VREF", root_scope).back();
-        auto              tree_vref = getExprOfConst(sym_vref);
-        std::stringstream out_vref;
-        tree_vref->debugPrint(out_vref);
+		auto              sym_vref  = getChain("VREF", root_scope).back();
+		auto              tree_vref = getExprOfConst(sym_vref);
+		std::stringstream out_vref;
+		tree_vref->debugPrint(out_vref);
 
-        const auto int32_type    = getIntegralTypeNoContext(32, Signed);
-        const compiler::tsh::SymbolType<> expected_vref = st(int32_type)
-                                       .withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-                                       .withMutability(Immutable);
+		const auto                        int32_type = getIntegralTypeNoContext(32, Signed);
+		const compiler::tsh::SymbolType<> expected_vref
+			= st(int32_type)
+		          .withReferenceKind(compiler::tsh::ReferenceKind::Ref)
+		          .withMutability(Immutable);
 
-        const auto vref_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
-        ASSERT_EQUAL(expected_vref, *vref_type->valueOrThrow());
+		const auto vref_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
+		ASSERT_EQUAL(expected_vref, *vref_type->valueOrThrow());
 
-        auto              sym_vbox  = getChain("VBOX", root_scope).back();
-        auto              tree_vbox = getExprOfConst(sym_vbox);
-        std::stringstream out_vbox;
-        tree_vbox->debugPrint(out_vbox);
+		auto              sym_vbox  = getChain("VBOX", root_scope).back();
+		auto              tree_vbox = getExprOfConst(sym_vbox);
+		std::stringstream out_vbox;
+		tree_vbox->debugPrint(out_vbox);
 
-        const auto f16_type    = getFloatTypeNoContext(16);
-        const compiler::tsh::SymbolType<> expected_vbox = st(f16_type)
-                                     .withReferenceKind(compiler::tsh::ReferenceKind::Box)
-                                     .withMutability(Immutable);
+		const auto                        f16_type = getFloatTypeNoContext(16);
+		const compiler::tsh::SymbolType<> expected_vbox
+			= st(f16_type)
+		          .withReferenceKind(compiler::tsh::ReferenceKind::Box)
+		          .withMutability(Immutable);
 
-        const auto vbox_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
-        ASSERT_EQUAL(expected_vbox, *vbox_type->valueOrThrow());
-        auto              sym_vconst  = getChain("VCONST", root_scope).back();
-        auto              tree_vconst = getExprOfConst(sym_vconst);
-        std::stringstream out_vconst;
-        tree_vconst->debugPrint(out_vconst);
+		const auto vbox_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
+		ASSERT_EQUAL(expected_vbox, *vbox_type->valueOrThrow());
+		auto              sym_vconst  = getChain("VCONST", root_scope).back();
+		auto              tree_vconst = getExprOfConst(sym_vconst);
+		std::stringstream out_vconst;
+		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
 		const auto const_bool_type = st(bool_type).withMutability(Immutable);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
@@ -1525,8 +1527,9 @@ private:
 				ASSERT_EQUAL(
 					st(int32_type),
 					*ctx.query<compiler::helios::QueryTypeOfSymbol>(
-						compiler::helios::QueryTypeOfSymbol::QKey{ a_sym }
-					)->valueOrThrow()
+							compiler::helios::QueryTypeOfSymbol::QKey{ a_sym }
+					)
+						 ->valueOrThrow()
 				);
 
 				ASSERT_EQUAL(a_sym, a_param.helios_symbol);
@@ -1944,10 +1947,11 @@ private:
 				dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr1)->operation
 			);
 			ASSERT_EQUAL(
-    			compiler::helios::getIdentifierExprSymID(
-        			dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr2)->callee.ref()
-    			).value(),
-   				find_function(*hout_unit, base::StrID("foooo")).value()->declaration->original_symbol
+				compiler::helios::getIdentifierExprSymID(
+					dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr2)->callee.ref()
+				)
+					.value(),
+				find_function(*hout_unit, base::StrID("foooo")).value()->declaration->original_symbol
 			);
 			expr1->debugPrint(std::cerr);
 			std::cerr << '\n';
@@ -2429,7 +2433,7 @@ private:
 				"Trying to lift an unliftable tuple to a type should fail."
 			);
 			std::stringstream ss;
-			ctx.int_logger.terminalPrint(ss); 	
+			ctx.int_logger.terminalPrint(ss);
 			assertTrue(
 				ss.str().contains("cannot be converted"),
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
@@ -2547,7 +2551,8 @@ private:
 		check_function_origin(base::StrID("a"));
 		check_function_origin(base::StrID("b"));
 
-		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout->debugPrint(ctx); });
+		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout->debugPrint(ctx); }
+		);
 	}
 
 	void testScopeParentsAndDepth() {

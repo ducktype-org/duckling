@@ -678,9 +678,11 @@ namespace compiler::lir {
 				auto abi = [&]() -> helios::SymbolABI {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return *ctx.query<helios::QuerySymbolABI>(name.id)->valueOrPanicMsg(
-								"Handling errors in MIR is not supported yet"
-							).get();
+							return *ctx.query<helios::QuerySymbolABI>(name.id)
+							            ->valueOrPanicMsg(
+											"Handling errors in MIR is not supported yet"
+										)
+							            .get();
 						}
 						variant_case(mir::GlobalVariableCTOR, name) { return helios::DefaultAbi{}; }
 					}

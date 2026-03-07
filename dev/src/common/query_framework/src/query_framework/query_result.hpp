@@ -105,24 +105,14 @@ namespace query {
 		/**
 		 * @brief Access the value, panic on no value.
 		 */
-		constexpr CRef<Value> valueOrPanic() const& {
+		constexpr CRef<Value> valueOrPanic() const {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
 			return &std::get<Value>(storage);
 		}
 
-		constexpr const Value&& valueOrPanic() const&& {
-			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::move(std::get<Value>(storage));
-		}
-
-		constexpr Ref<Value> valueOrPanic() & {
+		constexpr Ref<Value> valueOrPanic() {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
 			return &std::get<Value>(storage);
-		}
-
-		constexpr Value&& valueOrPanic() && {
-			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::move(std::get<Value>(storage));
 		}
 
 		/**
@@ -157,6 +147,7 @@ namespace query {
 			if (!hasValue()) throwFailed("Result is empty.");
 			return &std::get<Value>(storage);
 		}
+
 		constexpr const Value&& valueOrThrow() const&& {
 			if (!hasValue()) throwFailed("Result is empty.");
 			return std::move(std::get<Value>(storage));
@@ -201,13 +192,12 @@ namespace query {
 #define UNPACK_QRESULT(var, new_value)                    \
 	auto&& RES_VAR_NAME = new_value;                      \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
-	var *RES_VAR_NAME.valueOrPanic()
+	var* RES_VAR_NAME.valueOrPanic()
 
 #define UNPACK_QRESULT_MOVE(var, new_value)               \
 	auto&& RES_VAR_NAME = new_value;                      \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
-	var std::move(RES_VAR_NAME).valueOrPanic()
-
+	var std::move(*(RES_VAR_NAME.valueOrPanic()))
 /**
  * Unpack a result from QResult or return the Failed state.
  * In situations where you have a CRef<QResult<...>>
@@ -251,12 +241,12 @@ namespace query {
 		     _qres_perform_match      = false)                          \
 	POP_DIAGNOSTIC
 
-#define qres_value(_value_name)                                                       \
-	PUSH_DIAGNOSTIC                                                                   \
-	NO_SHADOW                                                                         \
-	if (bool _qres_perform_if = _internal_qresult.hasValue())                         \
+#define qres_value(_value_name)                                                        \
+	PUSH_DIAGNOSTIC                                                                    \
+	NO_SHADOW                                                                          \
+	if (bool _qres_perform_if = _internal_qresult.hasValue())                          \
 		for (auto&& _value_name = *_internal_qresult.valueOrPanic(); _qres_perform_if; \
-		     _qres_perform_if   = false)                                              \
+		     _qres_perform_if   = false)                                               \
 	POP_DIAGNOSTIC
 
 #define qres_value_move(_value_name)                                                             \

@@ -51,13 +51,14 @@ private:
 			for (auto hout_glob: top_level->glob_data) {
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				variant_match(hout_glob.value) {
-                    variant_case(helios::HOUTGlobalVariable, var) {
+					variant_case(helios::HOUTGlobalVariable, var) {
 						auto mir_func = ctx.query<mir::LowerGlobalDataToMIRCtor>(
-											mir::LowerGlobalDataToMIRCtor::QKey{ hout_glob }
-										)->valueOrThrow();
+											   mir::LowerGlobalDataToMIRCtor::QKey{ hout_glob }
+						)
+						                    ->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>(
-											lir::LowerToLIRFunction::QKey{ mir_func }
-										);
+							lir::LowerToLIRFunction::QKey{ mir_func }
+						);
 						m.insertLirGlobal(
 							lir_glob,
 							// @TODO: #929 add legit dtors when implemented
@@ -89,13 +90,14 @@ private:
 					}
 				}
 			}
-			for (auto& fun : top_level->functions) {
+			for (auto& fun: top_level->functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>(
 					compiler::mir::LowerToMIRFunction::QKey{ fun }
 				);
 
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
-					compiler::lir::LowerToLIRFunction::QKey{ mir_fun->valueOrPanicMsg("Couldn't compile") }
+					compiler::lir::LowerToLIRFunction::QKey{
+						mir_fun->valueOrPanicMsg("Couldn't compile") }
 				);
 
 				m.insertLirFunction(lir_fun);

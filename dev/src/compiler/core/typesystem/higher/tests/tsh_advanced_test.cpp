@@ -41,7 +41,7 @@ private:
 			assertTrue(
 				my_class_interface->getElementsByName().size() == 4,
 				"There should be exactly four unique names."
-				
+
 			);
 			assertTrue(
 				my_class_interface->getElementsWithName(base::StrID("a")).size() == 1,

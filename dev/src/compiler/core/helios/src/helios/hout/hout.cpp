@@ -56,12 +56,12 @@ namespace compiler::helios {
 		out << "fun ";
 		out << original_name.strView() << " (" << original_symbol.queryUnstablePerfectHash() << ")";
 		out << " : " << "Return type: ";
-		out << this->return_type.getType().toString() << "\n";
+		out << this->return_type.toString() << "\n";
 		out << "Parameters: \n";
 		if (parameters.empty()) out << "  none\n";
 		for (auto& param: parameters) {
 			out << "  " << param.name.strView() << " : ";
-			out << param.type.getType().toString();
+			out << param.type.toString();
 			if (param.initial_value.has_value()) {
 				out << " = ";
 				param.initial_value.value()->debugPrint(out);
@@ -98,14 +98,14 @@ namespace compiler::helios {
 		std::stringstream out;
 		variant_match(value) {
 			variant_case(HOUTGlobalConst, const_value) {
-				out << "const " << prettyDebugPrint(helios_symbol, ctx) << " : " << type.getType().toString()
-					<< " = " << const_value.value.toString() << '\n';
+				out << "const " << prettyDebugPrint(helios_symbol, ctx) << " : "
+					<< type.toString() << " = " << const_value.value.toString() << '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
 				std::string decl
 					= type.getMutability() == tsh::Mutability::Mutable ? "var   " : "let   ";
-				out << decl << prettyDebugPrint(helios_symbol, ctx) << " : " << type.getType().toString()
-					<< " = ";
+				out << decl << prettyDebugPrint(helios_symbol, ctx) << " : "
+					<< type.toString() << " = ";
 				val.initial_value.get()->ref()->debugPrint(out);
 				out << '\n';
 			}

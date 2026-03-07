@@ -241,10 +241,10 @@ namespace compiler::helios::mangler {
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
-				ret += fun_decl->return_type.getType().toString();
+				ret += fun_decl->return_type.toString();
 
 				for (const auto& param: fun_decl->parameters) {
-					ret += param.type.getType().toString();
+					ret += param.type.toString();
 					ret += identifier(param.name.str());
 				}
 

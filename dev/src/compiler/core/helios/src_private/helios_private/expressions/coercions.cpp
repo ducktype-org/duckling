@@ -96,6 +96,7 @@ namespace compiler::helios {
 	CoercionQResult canCoerce(
 		query::Context& ctx, const tsh::SymbolType<> from, const tsh::SymbolType<> to
 	) {
+		if (from == to) return Coercion(from, to);
 		if (ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to }))
 			return Coercion(from, to);
 		return InvalidCoercion{};

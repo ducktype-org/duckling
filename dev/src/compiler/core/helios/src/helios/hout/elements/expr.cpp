@@ -170,7 +170,9 @@ namespace compiler::helios::code {
 		  Expr(expression_type, origin),
 		  value_type(value_type) {}
 
-	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.getType().toString(); }
+	void LiteralTypeExpr::debugPrint(std::ostream& out) const {
+		out << value_type.toString();
+	}
 
 	Box<Expr> LiteralTypeExpr::clone() const {
 		return makeBox<LiteralTypeExpr>(expression_type, origin, value_type);
@@ -771,7 +773,7 @@ namespace compiler::helios::code {
 		  target_type(target_type) {}
 
 	void CastExpr::debugPrint(std::ostream& out) const {
-		out << "cast[to=" << target_type.getType().toString() << "](";
+		out << "cast[to=" << target_type.toString() << "](";
 		source_expr->debugPrint(out);
 		out << ")";
 	}

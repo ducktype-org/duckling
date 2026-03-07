@@ -16,8 +16,9 @@ namespace compiler::tsh {
 	std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
 		std::stringstream res;
 		res << "(";
-		if (!types.empty()) res << types[0].getType().toString();
-		for (const auto& type: types | std::views::drop(1)) res << ", " << type.getType().toString();
+		if (!types.empty()) res << types[0].toString();
+		for (const auto& type: types | std::views::drop(1))
+			res << ", " << type.toString();
 		res << ")";
 
 		return res.str();
@@ -118,7 +119,7 @@ namespace compiler::tsh {
 		  pure(pure),
 		  free(free) {
 		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
-		               + result_type.getType().toString() + ")";
+		               + result_type.toString() + ")";
 	}
 
 	bool FunctionAbstractTypeImpl::isImplicitlyCoercible(
@@ -254,7 +255,8 @@ namespace compiler::tsh {
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
-		auto& base = (*ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow()).base;
+		auto& base
+			= (*ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow()).base;
 		if (base.has_value()) return { ClassAbstractType(base.value()) };
 		return {};
 	}

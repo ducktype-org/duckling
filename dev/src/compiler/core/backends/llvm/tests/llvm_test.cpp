@@ -65,7 +65,7 @@ private:
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
-						                     ->valueOrThrow();
+						                    ->valueOrThrow();
 						mir_func->debugPrint(std::cerr);
 						std::cerr << "\n\n\n";
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });

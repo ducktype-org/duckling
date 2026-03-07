@@ -38,11 +38,11 @@ namespace {
 		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_direct);
 		auto rhs_to_rhs = canCoerce(ctx, rhs_type, rhs_direct);
 
-		if (lhs_to_rhs.valueOrThrow().isValid() && rhs_to_rhs.valueOrThrow().isValid()) {
+		if (lhs_to_rhs.valueOrThrow()->isValid() && rhs_to_rhs.valueOrThrow()->isValid()) {
 			return std::make_tuple(
 				rhs_direct,
-				std::move(lhs_to_rhs.valueOrThrow()).getCoercion(),
-				std::move(rhs_to_rhs.valueOrThrow()).getCoercion()
+				std::move(lhs_to_rhs.valueOrThrow())->getCoercion(),
+				std::move(rhs_to_rhs.valueOrThrow())->getCoercion()
 			);
 		}
 
@@ -50,11 +50,11 @@ namespace {
 		auto lhs_to_lhs = canCoerce(ctx, lhs_type, lhs_direct);
 		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_direct);
 
-		if (lhs_to_lhs.valueOrThrow().isValid() && rhs_to_lhs.valueOrThrow().isValid()) {
+		if (lhs_to_lhs.valueOrThrow()->isValid() && rhs_to_lhs.valueOrThrow()->isValid()) {
 			return std::make_tuple(
 				lhs_direct,
-				std::move(lhs_to_lhs.valueOrThrow()).getCoercion(),
-				std::move(rhs_to_lhs.valueOrThrow()).getCoercion()
+				std::move(lhs_to_lhs.valueOrThrow())->getCoercion(),
+				std::move(rhs_to_lhs.valueOrThrow())->getCoercion()
 			);
 		}
 
@@ -76,7 +76,6 @@ namespace compiler::helios::code {
 		auto& [common_type, lhs_coercion, rhs_coercion] = common_type_res.value();
 
 		auto operation_kind = common_type.getType().getKind();
-
 
 		// @TODO: change to base::map when possible
 		const static std::map<std::pair<lexer::Operator, tsh::Kind>, BuiltinBinary> operators = {
@@ -118,7 +117,6 @@ namespace compiler::helios::code {
 			{ { keywordToStr(lang_def::Keyword::And), tsh::Kind::Bool }, BuiltinBinary::BooleanAnd },
 			{ { keywordToStr(lang_def::Keyword::Or), tsh::Kind::Bool }, BuiltinBinary::BooleanOr },
 		};
-
 		if (operators.contains({ op, operation_kind }))
 			return std::make_tuple(
 				operators.at({ op, operation_kind }),
@@ -145,8 +143,8 @@ namespace compiler::helios::code {
 			if (source_type.getRefKind() != tsh::ReferenceKind::Direct) {
 				auto direct_type = source_type.withReferenceKind(tsh::ReferenceKind::Direct);
 				auto res         = canCoerce(ctx, source_type, direct_type);
-				if (res.valueOrThrow().isValid())
-					return std::move(res.valueOrThrow()).getCoercion();
+				if (res.valueOrThrow()->isValid())
+					return std::move(res.valueOrThrow())->getCoercion();
 			}
 
 			// By default the coercion for unary builtins is empty.

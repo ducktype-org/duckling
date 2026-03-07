@@ -44,7 +44,7 @@ namespace compiler::helios::test_utils {
 										 );
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
 
-			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
+			auto symbol_path_variant = *symbol->getAsSingle().valueOrPanic();
 			CORE_ASSERT(
 				std::holds_alternative<SymbolList>(symbol_path_variant),
 				"Expected single symbol in chain lookup"
@@ -52,8 +52,8 @@ namespace compiler::helios::test_utils {
 			auto symbol_path = std::get<SymbolList>(symbol_path_variant);
 
 			for (auto&& elem: symbol_path) {
-				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrPanic();
-				result.appendList(*dealiased);
+				auto dealiased = *query::entryPoint<QueryDealias>(elem)->valueOrPanic();
+				result.appendList(dealiased);
 			}
 			first_symbol = false;
 		}
@@ -74,7 +74,7 @@ namespace compiler::helios::test_utils {
 
 	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
 		return *query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
-		    ->valueOrThrow();
+		            ->valueOrThrow();
 	}
 
 	Box<code::Expr> getExprOfConst(SymID sym) {
@@ -83,7 +83,9 @@ namespace compiler::helios::test_utils {
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
 				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
-				expr_tree.emplace((*query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic())->clone());
+				expr_tree.emplace(
+					(*query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic())->clone()
+				);
 			}
 
 		public:
@@ -106,7 +108,9 @@ namespace compiler::helios::test_utils {
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
 				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
-				expr_tree.emplace((*query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic())->clone());
+				expr_tree.emplace(
+					(*query::entryPoint<QueryHoutOfExpr>(expr)->valueOrPanic())->clone()
+				);
 			}
 
 		public:

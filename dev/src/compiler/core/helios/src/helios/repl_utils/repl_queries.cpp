@@ -48,14 +48,14 @@ namespace compiler::repl {
 			auto hout_expr   = (*hout_expr_result->valueOrPanic())->clone();
 			auto return_type = hout_expr->expression_type.getSymbolType();
 
-			CORE_DEV_LOG(REPL, "Expression return type: ", return_type.getType().toString(), "\n");
+			CORE_DEV_LOG(REPL, "Expression return type: ", return_type.toString(), "\n");
 
 			auto code_block = std::make_shared<helios::code::CodeBlock>();
 
 			// @TODO: #1817 Instead of returning the value, we should call a generic
 			// print() function here that works for any type. This would eliminate the need
 			// to return values and manually convert them based on type in repl_dvm_helpers.cpp
-			if (return_type.getType().toString() == "void") {
+			if (return_type.toString() == "void") {
 				CORE_DEV_LOG(REPL, "Creating ExprStmt for void expression\n");
 				auto void_expr_stmt = base::makeBox<helios::code::ExprStmt>(
 					helios::code::generatedOrigin(), std::move(hout_expr)

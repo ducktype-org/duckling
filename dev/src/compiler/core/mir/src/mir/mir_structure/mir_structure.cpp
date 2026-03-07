@@ -89,11 +89,11 @@ namespace compiler::mir {
 		os << "(";
 		std::string_view separator = "";
 		for (auto& type: this->parameter_types) {
-			os << separator << type.getType().toString();
+			os << separator << type.toString();
 			separator = ", ";
 		}
 		os << ")";
-		os << " -> " << this->return_type.getType().toString() << "\n";
+		os << " -> " << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {
 			os << "    ";
@@ -126,8 +126,8 @@ namespace compiler::mir {
 		variant_match(instr_params) {
 			variant_case_novalue(NoInstrParameters) { /* nothing */ }
 			variant_case(CastParameters, params) {
-				os << "from:" << params.source_type.getType().toString()
-				   << ", to:" << params.target_type.getType().toString();
+				os << "from:" << params.source_type.toString()
+				   << ", to:" << params.target_type.toString();
 			}
 		}
 		os << "},";
@@ -180,7 +180,7 @@ namespace compiler::mir {
 		if (detailed) {
 			os << ": Helios Name: " << getName().strView();
 			os << ", Type: ";
-			os << type.getType().toString();
+			os << type.toString();
 			os << ", Lifetime Scope: " << scope.value()->id;
 			if (parameter_index.has_value()) os << ", Parameter Index: " << parameter_index.value();
 		}
@@ -191,7 +191,7 @@ namespace compiler::mir {
 		if (detailed) {
 			os << ": Unstable hash: " << helios_id.queryUnstablePerfectHash();
 			os << ", Type: ";
-			os << type.getType().toString();
+			os << type.toString();
 		}
 	}
 
@@ -243,7 +243,7 @@ namespace compiler::mir {
 
 		if (detailed) {
 			os << ": Type: ";
-			os << type.getType().toString();
+			os << type.toString();
 		}
 	}
 

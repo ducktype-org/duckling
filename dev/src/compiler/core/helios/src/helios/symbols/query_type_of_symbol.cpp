@@ -51,7 +51,8 @@ namespace compiler::helios {
 					setFailed();
 				} else {
 					setTypeOfSymbol(tsh::deductions::declarationTypeFromProvidedType(
-						type_ctv.valueOrThrow()->get<tsh::SymbolType<>>().value(), expected_mutability
+						type_ctv.valueOrThrow()->get<tsh::SymbolType<>>().value(),
+						expected_mutability
 					));
 				}
 			}
@@ -96,9 +97,9 @@ namespace compiler::helios {
 					);
 				} else if (stmt->getValue().has_value()) {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
-										  { stmt->getValue().value().unlock(ctx)->getExpr() }
+										 { stmt->getValue().value().unlock(ctx)->getExpr() }
 					)
-					                   ->valueOrThrow();
+					                  ->valueOrThrow();
 
 					const auto& expr_type = (*parsed)->expression_type;
 					setTypeOfSymbol(

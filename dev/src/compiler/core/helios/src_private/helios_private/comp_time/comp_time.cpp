@@ -444,15 +444,15 @@ namespace compiler::helios {
 					result = query::Failed();
 					return;
 				}
-				auto prev_value = evaluated.valueOrThrow();
+				auto prev_value = *evaluated.valueOrThrow();
 				for (auto [next_expr, comp]: zip(evaluated_exprs | drop(1), chain_expr.operators)) {
 					if (next_expr.hasFailed()) {
 						result = query::Failed();
 						return;
 					}
 
-					auto next_value = next_expr.valueOrThrow();
-					if (!compare(*prev_value, *next_value, comp)) {
+					auto next_value = *next_expr.valueOrThrow();
+					if (!compare(prev_value, next_value, comp)) {
 						result = CompileTimeValue{ false };
 						return;
 					}
@@ -520,7 +520,7 @@ namespace compiler::helios {
 				if (sub_result.hasFailed()) {
 					result = query::Failed();
 					return;
-				}	
+				}
 				result = *sub_result.valueOrThrow();
 			}
 
@@ -636,7 +636,7 @@ namespace compiler::helios {
 			for (const SymID& func_id: *dependencies) {
 				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
-				auto mir_func = ctx.query<mir::LowerToMIRFunction>({ &*hout_func })->valueOrThrow();
+				auto mir_func = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
 
 				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &*mir_func });
 

@@ -283,9 +283,9 @@ namespace compiler::helios::code {
 				// Retrieve constructors of the class.
 				// @TODO: #1290 Handle auxiliary constructors.
 				auto class_type = query_ctx.query<QueryTypeFromDefinition>({ symbol })
-                                      ->valueOrThrow()
-                                      ->getType()
-                                      .template as<tsh::ClassAbstractType>();
+				                      ->valueOrThrow()
+				                      ->getType()
+				                      .template as<tsh::ClassAbstractType>();
 				const auto& ctor
 					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type })
 				          ->valueOrThrow();

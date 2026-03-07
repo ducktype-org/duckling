@@ -100,7 +100,9 @@ namespace compiler::helios {
 			// @TODO: #1290 Handle auxiliary constructors.
 
 			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()->getType().template as<tsh::ClassAbstractType>();
+			                            ->valueOrThrow()
+			                            ->getType()
+			                            .template as<tsh::ClassAbstractType>();
 			const auto& implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
 			out_functions.emplace_back(implicit_ctor);
@@ -216,7 +218,8 @@ namespace compiler::helios {
 			void visitReturn(pst::Access<pst::Return> stmt) final {
 				if (auto val = stmt->getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
-					                ->valueOrThrow()->ref();
+					                ->valueOrThrow()
+					                ->ref();
 					output(expr->expression_type.getSymbolType());
 				}
 			}
@@ -296,14 +299,15 @@ namespace compiler::helios {
 				}
 				// Deduce return type if not provided.
 				else {
-					ret_type = *ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
+					ret_type
+						= *ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
 				}
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
 				for (auto param: *param_list.unlock(ctx)) {
-					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-					auto  param_name   = name(param_symbol);
+					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
+					auto param_name   = name(param_symbol);
 					auto param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
 
@@ -313,9 +317,10 @@ namespace compiler::helios {
 					} else {
 						auto initial_value
 							= (*getHoutOfExprWithExpectedType(
-								  ctx, value.value().unlock(ctx)->getExpr(), *param_type
-							)
-						          .valueOrThrow()).clone();
+									ctx, value.value().unlock(ctx)->getExpr(), *param_type
+							   )
+						            .valueOrThrow())
+						          .clone();
 
 						parameters.emplace_back(
 							param_name, *param_type, std::move(initial_value), param_symbol
@@ -351,7 +356,9 @@ namespace compiler::helios {
 
 			// Get class data
 			const auto class_type = ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
-			                            ->valueOrThrow()->getType().template as<tsh::ClassAbstractType>();
+			                            ->valueOrThrow()
+			                            ->getType()
+			                            .template as<tsh::ClassAbstractType>();
 
 			const SymID class_symbol    = class_type.getSymbol();
 			auto        class_interface = class_type.getInterface(ctx);
@@ -456,7 +463,9 @@ namespace compiler::helios {
 					}
 					variant_case(builtin::BuiltinFunctionData, builtin) {
 						const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ key })
-						                              ->valueOrThrow()->getType().template as<tsh::FunctionAbstractType>();
+						                              ->valueOrThrow()
+						                              ->getType()
+						                              .template as<tsh::FunctionAbstractType>();
 						const auto return_type = builtin_type.getResultType();
 						auto       parameters  = std::vector<code::Parameter>{};
 						for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
@@ -612,7 +621,8 @@ namespace compiler::helios {
 				auto var = assignment->getVariables();
 				auto val = assignment->getValue();
 
-				auto location_expr = (*ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow())->clone();
+				auto location_expr
+					= (*ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow())->clone();
 
 				// If left side of the assignment is a ref/box, we have to dereference it and store
 				// the value in the memory pointed by the ref/box.
@@ -743,15 +753,13 @@ namespace compiler::helios {
 				} else {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(
-							ctx, stmt->getValue().value().unlock(ctx)->getExpr(), *symbol_type
+							  ctx, stmt->getValue().value().unlock(ctx)->getExpr(), *symbol_type
 						)
-							.valueOrThrow()->clone();
+					          .valueOrThrow()
+					          ->clone();
 
 					output(code::VariableStmt(
-						code::pstOrigin(stmt), 
-						std::move(initial_value_coerced), 
-						*symbol_type, 
-						symbol
+						code::pstOrigin(stmt), std::move(initial_value_coerced), *symbol_type, symbol
 					));
 				}
 			}
