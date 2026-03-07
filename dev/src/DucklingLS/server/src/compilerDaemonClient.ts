@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from "child_process";
 import * as net from 'net';
-import { Connection, CompletionItem, TextDocumentPositionParams, Diagnostic } from "vscode-languageserver";
+import { Connection, CompletionItem, TextDocumentPositionParams, Diagnostic, WorkspaceFolder } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
 import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
 import * as fs from 'fs';
@@ -102,6 +102,7 @@ export class CompilerDaemonClient {
 	
 	public async restart(connection: Connection): Promise<void> {
 		this.ls_daemon_process.kill();
+		let workspace_folders = await connection.workspace.getWorkspaceFolders() ?? [];
 
 		// Wait max 2 seconds for the process to exit
 		for (let i = 0; i < 20; i++) {
@@ -111,7 +112,8 @@ export class CompilerDaemonClient {
 		
 		this.startupPromise = this.startup();
 		await this.waitForReady(connection);
-		await this.putWorkspace(connection);
+		await this.addWorkspace(connection, workspace_folders);
+		
 	}
 
 	// This function is called when the server is closed
@@ -150,26 +152,29 @@ export class CompilerDaemonClient {
 	}
 
 	// This function is called to update the file in the daemon
-	public async putFile(filePath: string, fileContent: string, connection: Connection): Promise<void> {
+	private async sendFileRequest(endpoint: string, connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
+		const response = await this.fetchWithRestart(`${this.ls_daemon_address}${endpoint}`, connection);
+		if (response.status !== 200) {
+			const text = await response.text();
+			console.error(`Error in sendFileRequest: ${response.status} ${response.statusText} - ${text}`);
+			throw new Error(`Error: ${response.status} ${response.statusText} - ${text}`);
+		}
+	}
 
+	public async changeContent(filePath: string, fileContent: string, connection: Connection): Promise<void> {
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
+		await this.sendFileRequest(`/change_content/${base64FilePath}/${base64FileContent}`, connection);
+	}
 
-		const response = this.fetchWithRestart(`${this.ls_daemon_address}/put_file/${base64FilePath}/${base64FileContent}`, connection);
+	public async newFile(filePath: string, connection: Connection): Promise<void> {
+		await this.changeContent(filePath, "", connection)
+	}
 
-		async function handleResponse(res: Response) {
-			if (res.status != 200) {
-				const text = await res.text();
-				throw new Error(`Error: ${res.status} ${text}`);
-			}
-		}
-
-		function handleCatch(error: any) {
-			console.error(error);
-		}
-
-		return response.then(handleResponse).catch(handleCatch);
+	public async deleteFile(filePath: string, connection: Connection): Promise<void> {
+		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
+		await this.sendFileRequest(`/remove_file/${base64FilePath}`, connection);
 	}
 
 	// Used for debug in various places
@@ -196,17 +201,19 @@ export class CompilerDaemonClient {
 		return;
 	}
 
-	// This function is called to update the workspace in the daemon
-	public async putWorkspace(connection: Connection): Promise<void> {
+	// Register workspace roots with the daemon (called once on init).
+	public async addWorkspace(connection: Connection, workspaceFolders: WorkspaceFolder[]): Promise<void> {
 		await this.waitForReady(connection);
-		
-		const folders = (await connection.workspace.getWorkspaceFolders())?.map(folder => folder.uri) ?? [];
-		for (const folder of folders) {
-			var base64FilePath: string = Buffer.from(uriToFilePath(folder)).toString('base64');
-			await this.fetchWithRestart(`${this.ls_daemon_address}/init_directory/${base64FilePath}`, connection);
+		for (const folder of workspaceFolders) {
+			const base64Path = Buffer.from(uriToFilePath(folder.uri)).toString('base64');
+			await this.fetchWithRestart(`${this.ls_daemon_address}/add_workspace/${base64Path}`, connection);
 		}
+	}
 
-		return;
+	// Lazily initialise the package owning filePath when the user opens it.
+	public async openFile(filePath: string, connection: Connection): Promise<void> {
+		const base64Path = Buffer.from(uriToFilePath(filePath)).toString('base64');
+		await this.sendFileRequest(`/open_file/${base64Path}`, connection);
 	}
 
 	// This function is called to get the semantic tokens from the daemon for a file

@@ -52,7 +52,7 @@ const semanticTokensLegend = {
 };
 
 // Initial setup of the language server
-connection.onInitialize((params: InitializeParams) => {
+connection.onInitialize(async (params: InitializeParams) => {
 	const capabilities = params.capabilities;
 
 	// Does the client support the `workspace/configuration` request?
@@ -81,12 +81,14 @@ connection.onInitialize((params: InitializeParams) => {
 		}
 	};
 
+
 	if (hasWorkspaceFolderCapability) {
 		result.capabilities.workspace = {
 			workspaceFolders: {
 				supported: true
 			}
 		};
+		await compilerDaemonClient.addWorkspace(connection, params.workspaceFolders ?? []);
 	}
 
 	// Preload keywords for autocompletion
@@ -97,7 +99,6 @@ connection.onInitialize((params: InitializeParams) => {
 connection.onInitialized(() => {
 	initPromise = (async () => {
 		if (hasConfigurationCapability) {
-			// Register for all configuration changes.
 			connection.client.register(DidChangeConfigurationNotification.type, undefined);
 		}
 		await connection.client.register(
@@ -110,34 +111,17 @@ connection.onInitialized(() => {
 			}
 		);
 		if (hasWorkspaceFolderCapability) {
-			await compilerDaemonClient.putWorkspace(connection);
-			
+			// Register workspace roots so the daemon can bound upward search.
+			const folders = (await connection.workspace.getWorkspaceFolders()) ?? [];
+			await compilerDaemonClient.addWorkspace(connection, folders);
+
 			connection.workspace.onDidChangeWorkspaceFolders(async _event => {
-				await compilerDaemonClient.putWorkspace(connection);
+				await compilerDaemonClient.addWorkspace(connection, _event.added);
 				console.log("Workspace folder change event received.");
 			});
-		} else {
-			console.log("NO WORKSPACE CAPABILITY");
 		}
 	})();
 });
-
-// Register the handler for semantic tokens
-connection.onRequest("textDocument/semanticTokens/full", (params) => 
-	handleSemanticTokensFull(params, documents, compilerDaemonClient, connection)
-);
-
-connection.onRequest("duckling/restart", async () => {
-    connection.window.showInformationMessage("Restarting Duckling Daemon...");
-    await compilerDaemonClient.restart(connection);
-    connection.window.showInformationMessage("Duckling Daemon Restarted");
-});
-
-connection.onDefinition(
-	async (params: TextDocumentPositionParams): Promise<Location | Location[] | null> => {
-        return await handleDefinition(params, documents, compilerDaemonClient, connection);
-    }
-);
 
 // The example settings
 interface ExampleSettings {
@@ -180,6 +164,29 @@ export function getDocumentSettings(resource: string): Thenable<ExampleSettings>
 	return result;
 }
 
+// Lazily initialise the package when a file is opened, then sync content.
+documents.onDidOpen(async e => {
+	await compilerDaemonClient.openFile(e.document.uri, connection);
+});
+
+// Register the handler for semantic tokens
+connection.onRequest("textDocument/semanticTokens/full", (params) => 
+	handleSemanticTokensFull(params, documents, compilerDaemonClient, connection)
+);
+
+connection.onRequest("duckling/restart", async () => {
+    connection.window.showInformationMessage("Restarting Duckling Daemon...");
+    await compilerDaemonClient.restart(connection);
+	documents.all().forEach(document => compilerDaemonClient.openFile(document.uri, connection));
+    connection.window.showInformationMessage("Duckling Daemon Restarted");
+});
+
+connection.onDefinition(
+	async (params: TextDocumentPositionParams): Promise<Location | Location[] | null> => {
+        return await handleDefinition(params, documents, compilerDaemonClient, connection);
+    }
+);
+
 // Only keep settings for open documents
 documents.onDidClose(e => {
 	documentSettings.delete(e.document.uri);
@@ -188,7 +195,7 @@ documents.onDidClose(e => {
 // This handler is called when the IDE detects a change in the document
 documents.onDidChangeContent(change => {
 	// The document has changed, so we need to update it in the compiler daemon
-	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
+	compilerDaemonClient.changeContent(change.document.uri, change.document.getText(), connection).then(() => {
 		// Revalidate the document
 		validateDuckling(change.document, connection, compilerDaemonClient);
 	});
@@ -201,15 +208,13 @@ connection.onDidChangeWatchedFiles(change => {
 
 			case FileChangeType.Created:
 				console.log("File created:", fileEvent.uri);
-
-				// optional: load file contents
-				compilerDaemonClient.putFile(fileEvent.uri, "", connection);
+				compilerDaemonClient.newFile(fileEvent.uri, connection);
 				break;
 
 			case FileChangeType.Deleted:
 				console.log("File deleted:", fileEvent.uri);
-
-				// await compilerDaemonClient.removeFile(fileEvent.uri, connection);
+				compilerDaemonClient.deleteFile(fileEvent.uri, connection);
+				documents.all().forEach(document => validateDuckling(document, connection, compilerDaemonClient));
 				break;
 		}
 	}

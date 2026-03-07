@@ -7,10 +7,11 @@
 #include <query_framework/external/api.hpp>
 
 namespace lsp {
+
 	/**
 	 * @brief Create a file in the virtual file system with the given content.
 	 */
-	fs::File createFileFromVirtualRoot(
+	void addFile(
 		const fs::File& virtual_root, const std::string& path, const std::string& content
 	);
 
@@ -29,5 +30,21 @@ namespace lsp {
 		const fs::File& virtual_root, const std::string& path, const std::string& content
 	);
 
-	void removeFileFromVirtualRoot(const fs::File& virtual_root, const std::string& path);
+	void removeFile(const fs::File& virtual_root, const std::string& path);
+
+	/**
+	 * @brief Register a workspace root directory. Used later by openFile to bound
+	 * upward module-root search.
+	 */
+	void addWorkspace(const fs::FilePath& absolute_physical_path);
+
+	/**
+	 * @brief Lazily initialise the package that owns `absolute_path`.
+	 *
+	 * Walks up the real filesystem from the file, stopping at the nearest
+	 * registered workspace root. The topmost directory with a matching
+	 * dir/dir.dmf is treated as the package root and loaded into the VFS +
+	 * module tree if not already present.
+	 */
+	void openFile(const fs::FilePath& absolute_physical_path);
 }

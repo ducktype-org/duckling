@@ -7,6 +7,7 @@
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/internal/query_graph/query_state.hpp>
+#include <query_framework/internal/query_metadata/metadata_storage.hpp>
 #include <query_framework/utils/query_hash.hpp>
 
 #include <cstddef>
@@ -123,12 +124,11 @@ namespace query::external {
 	std::vector<MetadataInfo<MetadataT>> getMetadataFromAllNodesImpl() {
 		auto state = ::query::internal::ContextAccess::getState();
 
-		auto storage = [&]() {
-			if constexpr (Kind == MetadataStorageKind ::Previous)
-				return state->getPreviousMetadataStorage();
-			else
-				return state->getMetadataStorage();
-		}();
+		base::Optional<CRef<query::internal::MetadataStorage>> storage;
+		if constexpr (Kind == MetadataStorageKind ::Previous)
+			storage = state->getPreviousMetadataStorage();
+		else
+			storage = state->getMetadataStorage();
 
 		if (!storage.has_value()) return {};
 

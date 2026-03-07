@@ -36,7 +36,7 @@ namespace {
 	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used
 	 * during PST construction/association; must be safe if PST is built concurrently.
 	 */
-	inline static concurrent::ConHashMap<pst::PstID, compiler::frontend::FileID>
+	inline static concurrent::ConHashMap<pst::LangElement::HashType, compiler::frontend::FileID>
 		root_element_file_back_map;
 
 	/**
@@ -529,7 +529,7 @@ namespace compiler::frontend {
 
 		// Remove entry from root_element_file_back_map if exists
 		if (auto root_id = file->getPST()->getRootElement().illegalAccess(); root_id.has_value())
-			root_element_file_back_map.erase(root_id.value()->getID());
+			root_element_file_back_map.erase(root_id.value()->getHash());
 
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(file);
@@ -1008,7 +1008,7 @@ namespace compiler::frontend {
 				file_id
 			);
 		auto pst              = file->getPST();
-		auto root_id          = pst->getRootElement().unlock(ctx)->getID();
+		auto root_id          = pst->getRootElement().unlock(ctx)->getHash();
 		auto maybe_put_result = root_element_file_back_map.maybePut(root_id, file_id);
 		if (!maybe_put_result) {
 			// If the key already exists, assert that it maps to the same value
@@ -1029,7 +1029,7 @@ namespace compiler::frontend {
 
 		// this access depends on the global state that might
 		// become a problem in incremental compilation:
-		auto file_id = root_element_file_back_map.getCopy(element.unlock(ctx)->getID());
+		auto file_id = root_element_file_back_map.getCopy(element.unlock(ctx)->getHash());
 		return getFileRef(file_id)->getModule().unlock(ctx).getID();
 	}
 }

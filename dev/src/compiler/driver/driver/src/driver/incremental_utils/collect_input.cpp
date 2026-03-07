@@ -72,6 +72,23 @@ namespace compiler::driver {
 			return lookups_map;
 		}
 	}
+	
+	void collectQueryInputsFromPst(
+		CRef<pst::PST<>> pst_ref, std::vector<query::external::InputData>& out
+	) {
+		auto root = pst_ref->getRootElement();
+		if (auto maybe_root = root.illegalAccess()) {
+			auto root_unlocked = maybe_root.value();
+			out.emplace_back(pst::internal::PSTAccessSideInput::getID(), root_unlocked->getHash());
+		}
+
+		auto elems = pst::viewAllSubTreeElements(root);
+		for (auto& el: elems)
+			if (auto maybe_elem = el.illegalAccess()) {
+				auto ptr = maybe_elem.value();
+				out.emplace_back(pst::internal::PSTAccessSideInput::getID(), ptr->getHash());
+			}
+	}
 
 	/**
 	 * @brief Collect all input data (QueryID + hash) from the global packages.
@@ -124,20 +141,6 @@ namespace compiler::driver {
 			}
 		}
 
-		auto collect_from_pst = [&](auto& pst_ref) {
-			auto root = pst_ref->getRootElement();
-			if (auto maybe = root.illegalAccess()) {
-				auto el = maybe.value();
-				out->emplace_back(pst::internal::PSTAccessSideInput::getID(), el->getHash());
-			}
-			auto elems = pst::viewAllSubTreeElements(root);
-			for (auto& el: elems)
-				if (auto maybe = el.illegalAccess()) {
-					auto ptr = maybe.value();
-					out->emplace_back(pst::internal::PSTAccessSideInput::getID(), ptr->getHash());
-				}
-		};
-
 		// Process main source file if present
 		if (module_ref->hasMainSourceFile()) {
 			auto sf = module_ref->getMainSourceFile();
@@ -153,7 +156,7 @@ namespace compiler::driver {
 			out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
 
 			auto pst = sf_mut->getPST();
-			collect_from_pst(pst);
+			collectQueryInputsFromPst(pst, *out);
 		}
 
 		// Process other source files
@@ -169,7 +172,7 @@ namespace compiler::driver {
 			out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
 
 			auto pst = sf_mut->getPST();
-			collect_from_pst(pst);
+			collectQueryInputsFromPst(pst, *out);
 		}
 
 		// Recurse into submodules

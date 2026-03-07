@@ -684,6 +684,7 @@ namespace compiler::helios {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 						"Module not found", import_stmt->getSourcePosition()
 					));
+					output(scope(key));
 					return;
 				}
 

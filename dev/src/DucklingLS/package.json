@@ -29,9 +29,9 @@
                     "duckling"
                 ],
                 "extensions": [
-                    ".rift",
                     ".dl",
-                    ".duckling",
+                    ".duck",
+                    ".🦆",
                     ".dmf"
                 ],
                 "configuration": "./language-configuration.json"

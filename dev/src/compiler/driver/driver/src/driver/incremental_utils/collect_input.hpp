@@ -8,6 +8,12 @@
 #include <vector>
 
 namespace compiler::driver {
+	/**
+	 * Collect PST access side inputs for root and all subtree elements.
+	 */
+	void collectQueryInputsFromPst(
+		CRef<pst::PST<>> pst_ref, std::vector<query::external::InputData>& out
+	);
 
 	/**
 	 * Collect InputData using module lookup metadata from previous metadata storage.

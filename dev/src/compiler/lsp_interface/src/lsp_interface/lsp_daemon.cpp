@@ -16,12 +16,13 @@ PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst wa
 POP_DIAGNOSTIC;
 
 #include "export_keywords.hpp"
-#include "file_changed.hpp"
+#include "files_managment.hpp"
 #include "go_to_definition.hpp"
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
 #include "validation.hpp"
 
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -40,9 +41,9 @@ POP_DIAGNOSTIC;
  * @param port The port number to run the server on.
  */
 void server(i32 port) {
-	crow::SimpleApp                           app;
-	lsp::ExportKeywords                       lsp;
-	std::unordered_map<std::string, fs::File> files;
+	crow::SimpleApp     app;
+	lsp::ExportKeywords lsp;
+
 	auto virtual_root = fs::FileManager::getVirtualRootDirectory();
 
 	/**
@@ -62,19 +63,25 @@ void server(i32 port) {
 	([lsp]() { return crow::response(200, lsp.getAllJson()); });
 
 
-	/** @brief Route to init a directory contents recursively in the virtual file system.
-	 * * URL: /init_directory/[base64 path]
-	 * @param base64_path The base64 encoded absolute path of the root directory of the workspace.
-	 * @return crow::response The HTTP response indicating the result of the operation.
+	/** @brief Register a workspace root so openFile knows when to stop walking upward.
+	 * URL: /add_workspace/[base64 absolute path]
 	 */
-	CROW_ROUTE(app, "/init_directory/<string>")
+	CROW_ROUTE(app, "/add_workspace/<string>")
+	([](const std::string& base64_path) {
+		const auto         path  = fs::FilePath(base64::decode_into<std::string>(base64_path));
+		const fs::FilePath slash = "/";
+		lsp::addWorkspace(slash / path);
+		return crow::response(200, "OK");
+	});
+
+	/** @brief Lazily initialise the package that owns the opened file.
+	 * URL: /open_file/[base64 absolute path]
+	 */
+	CROW_ROUTE(app, "/open_file/<string>")
 	([&virtual_root](const std::string& base64_path) {
-		const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path));
-
-		auto virtual_path = lsp::initFiles(path, virtual_root);
-		lsp::initModules(virtual_path);
-		lsp::initPSTs(virtual_path);
-
+		const auto         path  = fs::FilePath(base64::decode_into<std::string>(base64_path));
+		const fs::FilePath slash = "/";
+		lsp::openFile(slash / path);
 		return crow::response(200, "OK");
 	});
 
@@ -90,7 +97,25 @@ void server(i32 port) {
 		const auto path    = base64::decode_into<std::string>(base64_path);
 		const auto content = base64::decode_into<std::string>(base64_content);
 
-		lsp::updateFileContent(virtual_root, path, content);
+		auto file_path = virtual_root.getFilePath().join(path);
+		lsp::openFile(file_path.toPhysicalPath());
+
+		if (!file_path.exists()) lsp::addFile(virtual_root, path, "");
+		else lsp::updateFileContent(virtual_root, path, content);
+
+		return crow::response(200, "OK");
+	});
+
+	CROW_ROUTE(app, "/change_content/<string>/")
+	([&virtual_root](const std::string& base64_path) {
+		const auto path = base64::decode_into<std::string>(base64_path);
+
+		auto file_path = virtual_root.getFilePath().join(path);
+		lsp::openFile(file_path.toPhysicalPath());
+		if (!file_path.exists()) lsp::addFile(virtual_root, path, "");
+
+		lsp::updateFileContent(virtual_root, path, "");
+
 
 		return crow::response(200, "OK");
 	});
@@ -107,17 +132,7 @@ void server(i32 port) {
 		const auto path    = base64::decode_into<std::string>(base64_path);
 		const auto content = base64::decode_into<std::string>(base64_content);
 
-		lsp::createFileFromVirtualRoot(virtual_root, path, content);
-
-		return crow::response(200, "OK");
-	});
-
-
-	CROW_ROUTE(app, "/new_file/<string>/")
-	([&virtual_root](const std::string& base64_path) {
-		const auto path = base64::decode_into<std::string>(base64_path);
-
-		lsp::createFileFromVirtualRoot(virtual_root, path, "");
+		lsp::addFile(virtual_root, path, content);
 
 		return crow::response(200, "OK");
 	});
@@ -131,9 +146,9 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/remove_file/<string>")
 	([&virtual_root](const std::string& base64_path) {
-		const auto path    = base64::decode_into<std::string>(base64_path);
+		const auto path = base64::decode_into<std::string>(base64_path);
 
-		lsp::removeFileFromVirtualRoot(virtual_root, path);
+		lsp::removeFile(virtual_root, path);
 
 		return crow::response(200, "OK");
 	});
@@ -227,7 +242,7 @@ void server(i32 port) {
 		return crow::response(200, "OK");
 	});
 
-	app.port(base::safeIntConv<u16>(port)).run();
+	app.port(base::safeIntConv<u16>(port)).concurrency(1).run();
 }
 
 /**
@@ -282,7 +297,8 @@ int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clah = getLspDaemonCLI();
 
-	query::track_reverse_graph = true;
+	query::track_reverse_graph                     = true;
+	compiler::frontend::use_module_modifier_remove = true;
 
 	init::InitObject _;
 

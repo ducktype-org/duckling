@@ -1,5 +1,7 @@
 #include "packages.hpp"
 
+#include <algorithm>
+
 namespace global_state {
 
 	namespace {
@@ -18,6 +20,17 @@ namespace global_state {
 	namespace setters {
 		void addPackage(compiler::frontend::ModuleID root_module) {
 			packages.push_back({ root_module });
+		}
+
+		void removePackage(compiler::frontend::ModuleID root_module) {
+			bool removed_main = !packages.empty() && packages.front().root_module == root_module;
+
+			auto it = std::remove_if(packages.begin(), packages.end(), [&](const PackageInfo& pkg) {
+				return pkg.root_module == root_module;
+			});
+			packages.erase(it, packages.end());
+
+			if (removed_main) main_package_set = false;
 		}
 
 		void addMainPackage(compiler::frontend::ModuleID root_module) {
