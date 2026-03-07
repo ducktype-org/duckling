@@ -48,9 +48,6 @@ function producer {} -> void {
 			mov_lopq_gopq       wait_lock_full, lock;
 			call_builtinfunc    builtin_wait_cv;
 			deinit;
-			init_lany_type      relock_after_wait, mutex;
-			mov_lopq_gopq       relock_after_wait, lock;
-			call_builtinfunc    builtin_lock_mutex;
 			jmp_label           WaitSpaceInit;
 
 		label HaveSpacePrep;
@@ -129,9 +126,6 @@ function consumer {} -> void {
 			mov_lopq_gopq       wait_lock_empty, lock;
 			call_builtinfunc    builtin_wait_cv;
 			deinit;
-			init_lany_type      relock_after_wait, mutex;
-			mov_lopq_gopq       relock_after_wait, lock;
-			call_builtinfunc    builtin_lock_mutex;
 			jmp_label           WaitDataInit;
 
 		label   ConsumePrep;
@@ -185,6 +179,7 @@ function consumer {} -> void {
 }
 
 function main { i64, ptr_argv } -> i64 {
+
 	init_lany_type              m_init, mutex;
 	call_builtinfunc            builtin_create_mutex;
 	mov_gopq_lopq               lock, m_init;
