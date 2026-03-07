@@ -41,16 +41,10 @@ namespace base {
 		[[nodiscard]] std::string toStringHex() const;
 
 		/*
-		 * @brief Converts the Bit256 to a u64 by taking the least significant 64 bits.
-		 * Use this only when Bit256 was created from single u64 value.
+		 * @brief Converts the Bit256 to a u64 by taking the least significant 64 bits and
+		 * discarding the rest
 		 */
-		constexpr explicit operator u64() const RELEASE_NOEXCEPT {
-			CORE_ASSERT(
-				data.at(1) == 0 && data.at(2) == 0 && data.at(3) == 0,
-				"Bit256 value too large to convert to u64"
-			);
-			return data.at(0);
-		}
+		constexpr operator u64() const RELEASE_NOEXCEPT { return data.at(0); }
 
 		constexpr bool operator<(const Bit256& other) const noexcept {
 			for (usize i = 4;
