@@ -147,6 +147,7 @@ public:
 private:
 	void hashingAlgorithmsTest() {
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
+		assertTrue(hash_algorithm<SHA256>, "SHA256 should be a hashing algorithm");
 
 		constexpr auto ARR = std::array{ 1, 2, 3 };
 		SHA256         h;
@@ -172,9 +173,9 @@ private:
 
 		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
 
-		constexpr auto RES1 = hasher(X{});
-		constexpr auto RES2 = hasher(S{});
-		assertTrue(RES1 != RES2, "hashes should differ");
+		const auto res_1 = hasher(X{});
+		const auto res_2 = hasher(S{});
+		assertTrue(res_1 != res_2, "hashes should differ");
 
 		my_map::unordered_map<std::string, int> m;
 		m["hello"] = 42;
@@ -194,6 +195,17 @@ private:
 	}
 
 	void sha256Test() {
+		constexpr auto HASH_VALUE_SIMPLE
+			= hashing::StatefulHash<hashing::SHA256>{}(std::byte{ 0x42 }).finalize();
+		std::cerr << HASH_VALUE_SIMPLE << '\n' << HASH_VALUE_SIMPLE.toStringHex() << '\n';
+		assertEqual(
+			HASH_VALUE_SIMPLE.toStringHex(),
+			"df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+			"SHA256 hash of a byte 0x42 does not match expected value:\nExpected:\n"
+			"df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c\nComputed:\n"
+				+ HASH_VALUE_SIMPLE.toStringHex()
+		);
+
 		constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::SHA256>{}(
 										7,
 										type2{},
@@ -214,7 +226,6 @@ private:
 										42
 		)
 		                                .finalize();
-
 
 		const std::string expected_hash
 			= "cc29a5e32052f1e78ce5933758b457e9829c84322bfa1e8e2794ae1456a274a0";

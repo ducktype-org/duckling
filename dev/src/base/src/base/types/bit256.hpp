@@ -10,16 +10,35 @@
 namespace base {
 	/**
 	 * Bit256 is a 256-bit integer type used for example for SHA-256 hash values.
-	 * It is represented as an array of 4 64-bit integers.
+	 * The value is represented in an array of 4 u64s as a number in base 2^64, with the lowest
+	 * letter in data[0]
 	 */
 	struct Bit256 {
 		std::array<u64, 4> data = {};
 
 		constexpr Bit256() = default;
 
+		/**
+		 * @param bytes an array of 32 bytes that will be interpreted as a 256-bit number written in
+		 * base 2^8 with the lowest letter in bytes[0]
+		 */
+		constexpr Bit256(const std::array<uint8_t, 32>& bytes) noexcept {
+			for (size_t i = 0; i < 4; ++i) {
+				data.at(i) = 0;
+				for (size_t j = 0; j < 8; ++j) {
+					data.at(i) <<= 8;
+					data.at(i) |= bytes.at(i * 8 + j);
+				}
+			}
+		}
+
+		/**
+		 * @param arr an array of u32 that will be interpreted as a 256-bit number written in base
+		 * 2^32 with the lowest letter in arr[0]
+		 */
 		constexpr Bit256(const std::array<u32, 8>& arr) noexcept {
 			for (size_t i = 0; i < 4; ++i)
-				data.at(i) = (static_cast<u64>(arr.at(i * 2)) << 32) | arr.at(i * 2 + 1);
+				data.at(i) = (static_cast<u64>(arr.at(i * 2 + 1)) << 32) | arr.at(i * 2);
 		}
 
 		constexpr Bit256(const std::array<u64, 4>& arr) noexcept: data(arr) {}
@@ -31,6 +50,39 @@ namespace base {
 		constexpr Bit256(u64 a, u64 b) noexcept: data{ a, b, 0, 0 } {}
 
 		constexpr Bit256(u64 a) noexcept: data{ a, 0, 0, 0 } {}
+
+		/**
+		 * Constructor taking a hex string starting with 0x
+		 */
+		constexpr Bit256(std::string_view hex): Bit256() {
+			CORE_ASSERT(hex.size() <= 66, "Bit256 string too long");
+			CORE_ASSERT(
+				hex.starts_with("0x") || hex.starts_with("0X"), "Bit256 string must start with 0x"
+			);
+			// Remove "0x" prefix
+			hex = hex.substr(2);
+			for (std::size_t i = 0; hex.size() > 0; ++i) {
+				const auto len = std::min(16uz, hex.size());
+				auto       end = hex.substr(hex.size() - len, len);
+				hex            = hex.substr(0, hex.size() - len);
+
+				u64 value = 0;
+				for (const char c: end) {
+					value <<= 4;
+					if (c >= '0' && c <= '9')
+						value |= static_cast<u64>(c - '0');
+					else if (c >= 'a' && c <= 'f')
+						value |= static_cast<u64>(c - 'a' + 10);
+					else if (c >= 'A' && c <= 'F')
+						value |= static_cast<u64>(c - 'A' + 10);
+					else
+						CORE_ASSERT(
+							false, "Invalid character \'" + std::string(1, c) + "\' in Bit256 string"
+						);
+				}
+				data.at(i) = value;
+			}
+		}
 
 		constexpr bool operator==(const Bit256& other) const noexcept = default;
 		constexpr bool operator!=(const Bit256& other) const noexcept = default;
@@ -57,11 +109,53 @@ namespace base {
 
 		constexpr bool operator>(const Bit256& other) const noexcept { return other < *this; }
 
+		friend constexpr Bit256 operator^(const Bit256& lhs, const Bit256& rhs) noexcept {
+			Bit256 result;
+			for (usize i = 0; i < result.data.size(); ++i)
+				result.data.at(i) = lhs.data.at(i) ^ rhs.data.at(i);
+			return result;
+		}
+
+		constexpr Bit256& operator^=(const Bit256& other) noexcept { return *this = *this ^ other; }
+
+		constexpr Bit256& operator^=(unsigned char other) noexcept {
+			data.at(0) ^= other;
+			return *this;
+		}
+
+		friend constexpr Bit256 operator+(const Bit256& lhs, const Bit256& rhs) noexcept {
+			Bit256 result;
+			u64    carry = 0;
+			for (usize i = 0; i < result.data.size(); ++i) {
+				const u64 sum     = lhs.data.at(i) + rhs.data.at(i) + carry;
+				result.data.at(i) = sum;
+				carry             = (sum < lhs.data.at(i)) || (carry && sum == lhs.data.at(i));
+			}
+			return result;
+		}
+
+		constexpr Bit256& operator+=(const Bit256& other) noexcept { return *this = *this + other; }
+
+		friend Bit256 operator*(const Bit256& lhs, const Bit256& rhs) noexcept;
+
+		Bit256& operator*=(const Bit256& other) noexcept { return *this = *this * other; }
+
 		/**
 		 * @brief Outputs the Bit256 object to a stream in the format {a, b, c, d}.
 		 */
 		friend std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256);
 	};
+
+	// We use inline namespace to allow `using namespace base::literals` and also have the operator
+	// in `base` namespace
+	inline namespace literals {
+		/**
+		 * Literal in hex starting with 0x
+		 */
+		constexpr Bit256 operator""_Bit256(const char* str, size_t len) {
+			return std::string_view(str, len);
+		}
+	}
 }
 
 namespace std {
