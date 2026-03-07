@@ -11,27 +11,9 @@ class ExtractSingleExpressionTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testEmptyInput);
-
-		TESTER_ADD_TEST(testSingleArithmeticExpr);
-		TESTER_ADD_TEST(testSingleFunctionCall);
-		TESTER_ADD_TEST(testSingleAssignment);
-		TESTER_ADD_TEST(testSingleMethodCall);
-
-		TESTER_ADD_TEST(testSingleConstDecl);
-		TESTER_ADD_TEST(testSingleVarDecl);
-		TESTER_ADD_TEST(testSingleFunDecl);
-		TESTER_ADD_TEST(testSingleClassDecl);
-		TESTER_ADD_TEST(testSingleNamespaceDecl);
-		TESTER_ADD_TEST(testSingleImport);
-		TESTER_ADD_TEST(testSingleUsing);
-		TESTER_ADD_TEST(testSingleAlias);
-		TESTER_ADD_TEST(testSingleWhile);
-		TESTER_ADD_TEST(testSingleThrow);
-
-		TESTER_ADD_TEST(testTwoExpressionStmts);
-		TESTER_ADD_TEST(testExpressionThenDefinition);
-		TESTER_ADD_TEST(testDefinitionThenExpression);
-		TESTER_ADD_TEST(testTwoDefinitions);
+		TESTER_ADD_TEST(testSingleExpressionStatement);
+		TESTER_ADD_TEST(testSingleNonExpressionStatement);
+		TESTER_ADD_TEST(testMultipleStatements);
 	}
 
 private:
@@ -49,95 +31,42 @@ private:
 		assertFalse(extract("").has_value(), "Expected empty for empty input");
 	}
 
-	void testSingleArithmeticExpr() {
+	void testSingleExpressionStatement() {
 		assertTrue(extract("1 + 5;").has_value(), "Arithmetic expression should be an ExprStmt");
-	}
-
-	void testSingleFunctionCall() {
 		assertTrue(extract("foo();").has_value(), "Function call should be an ExprStmt");
-	}
-
-	void testSingleAssignment() {
 		assertTrue(extract("x = 42;").has_value(), "Assignment should be an ExprStmt");
-	}
-
-	void testSingleMethodCall() {
 		assertTrue(extract("obj.method(arg);").has_value(), "Method call should be an ExprStmt");
 	}
 
-	void testSingleConstDecl() {
+	void testSingleNonExpressionStatement() {
+		assertFalse(extract("const X: W = 5;").has_value(), "Expected empty for const declaration");
+		assertFalse(extract("var x: i32 = 5;").has_value(), "Expected empty for var declaration");
 		assertFalse(
-			extract("const X: W = 5;").has_value(), "Expected empty for a single const declaration"
+			extract("fun foo() = {}").has_value(), "Expected empty for function declaration"
 		);
-	}
-
-	void testSingleVarDecl() {
+		assertFalse(extract("class Foo {}").has_value(), "Expected empty for class declaration");
 		assertFalse(
-			extract("var x: i32 = 5;").has_value(), "Expected empty for a single var declaration"
+			extract("namespace Foo {}").has_value(), "Expected empty for namespace declaration"
 		);
+		assertFalse(extract("import X as x;").has_value(), "Expected empty for import statement");
+		assertFalse(extract("using X;").has_value(), "Expected empty for using statement");
+		assertFalse(extract("alias X = X;").has_value(), "Expected empty for alias declaration");
+		assertFalse(extract("while (a) {}").has_value(), "Expected empty for while statement");
+		assertFalse(extract("throw 123;").has_value(), "Expected empty for throw statement");
 	}
 
-	void testSingleFunDecl() {
+	void testMultipleStatements() {
 		assertFalse(
-			extract("fun foo() = {}").has_value(), "Expected empty for a single function declaration"
+			extract("foo(); bar();").has_value(), "Expected empty for two expression statements"
 		);
-	}
-
-	void testSingleClassDecl() {
-		assertFalse(
-			extract("class Foo {}").has_value(), "Expected empty for a single class declaration"
-		);
-	}
-
-	void testSingleNamespaceDecl() {
-		assertFalse(
-			extract("namespace Foo {}").has_value(),
-			"Expected empty for a single namespace declaration"
-		);
-	}
-
-	void testSingleImport() {
-		assertFalse(extract("import X as x;").has_value(), "Expected empty for an import statement");
-	}
-
-	void testSingleUsing() {
-		assertFalse(extract("using X;").has_value(), "Expected empty for a using statement");
-	}
-
-	void testSingleAlias() {
-		assertFalse(extract("alias X = X;").has_value(), "Expected empty for an alias declaration");
-	}
-
-	void testSingleWhile() {
-		assertFalse(extract("while (a) {}").has_value(), "Expected empty for a while statement");
-	}
-
-	void testSingleThrow() {
-		assertFalse(extract("throw 123;").has_value(), "Expected empty for a throw statement");
-	}
-
-	void testTwoExpressionStmts() {
-		assertFalse(
-			extract("foo(); bar();").has_value(),
-			"Expected empty for two consecutive expression statements"
-		);
-	}
-
-	void testExpressionThenDefinition() {
 		assertFalse(
 			extract("1 + 5; var x: i32 = 5;").has_value(),
 			"Expected empty for expression followed by definition"
 		);
-	}
-
-	void testDefinitionThenExpression() {
 		assertFalse(
 			extract("var x: i32 = 5; 1 + 5;").has_value(),
 			"Expected empty for definition followed by expression"
 		);
-	}
-
-	void testTwoDefinitions() {
 		assertFalse(
 			extract("fun foo() = {} fun bar() = {}").has_value(),
 			"Expected empty for two function definitions"
