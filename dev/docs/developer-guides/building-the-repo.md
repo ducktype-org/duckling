@@ -39,23 +39,35 @@ sudo pacman -Sy python python-pip python-click doxygen graphviz lcov --noconfirm
 
 First of all, the toolbox requires at least Python3.12, while macOS default Python is Python3.9.
 Secondly, there are two ways of installing clang on MacOS:
-1. using official Apple clang provided by Xcode,
-2. installing it from the Homebrew.
+1. installing it from the Homebrew.
+1. ~~using official Apple clang provided by Xcode,~~
 
-You need to have at least Xcode 16.3 (clang version string `17.0.0`, run `clang --version` to check), so that it corresponds to the upstream clang 19.
-You can check the mapping between Apple and LLVM versions [on the English Xcode Wikipedia page](https://en.wikipedia.org/wiki/Xcode#Toolchain_versions).
+~~You need to have at least Xcode 17.3 (clang version string `17.0.0`, run `clang --version` to check), so that it corresponds to the upstream clang 19.~~
+~~You can check the mapping between Apple and LLVM versions [on the English Xcode Wikipedia page](https://en.wikipedia.org/wiki/Xcode#Toolchain_versions).~~
+
+> [!IMPORTANT]
+> Duckling requires Clang from LLVM/Homebrew in order to compile the project.
+>
+> Apple Clang is not yet supported.
+
 ```bash
 # For macOS clang
-xcode-select --install
+# xcode-select --install
 
 # For LLVM clang
-brew install llvm@19
+brew install llvm@22
 ```
 
 ```bash
 # Install remaining dependencies
-brew install cmake ninja graphviz lcov doxygen python@3.12 clang-format
+brew install cmake ninja graphviz lcov doxygen python@3.12 clang-format llvm@19
 ```
+
+> [!NOTE]
+> You may have noticed, that there are two different versions of LLVM.
+>
+> This is intended, as LLVM 19 is required by the compiler to generate code,
+> while LLVM 22 is required to provide clang 22 for compiling the project itself.
 
 Also, unlike many Linuxes, Homebrew doesn't provide a lot of Python packages in their repositories.
 Therefore, you have to create a local virtual environment and use it when running the toolbox.
@@ -92,7 +104,7 @@ Similarly, you can get help for a specific command:
 
 Below are the most common commands that you will use when building the project.
 
-> **Tip**  
+> **Tip**
 > If you want a more in-depth look at the inner workings of the build system
 > you can look at the Python code that makes up the `toolbox.py` script.
 
@@ -118,7 +130,7 @@ This:
 
 ### [Optional, but recommended] Installing custom LLVM library
 
-```bash	
+```bash
 ./toolbox.py install-llvm
 ```
 
@@ -156,8 +168,6 @@ To prevent that set the LLVM directory **before** executing the above command.
 export LLVM_DIR=${HOMEBREW_PREFIX}/opt/llvm@19
 ```
 
-It's also possible to add it to the `$CMAKE_PREFIX_PATH` variable, but this can resolve in compiling with the upstream clang instead of the Apple one.
-
 Also, ICU bundled with Apple Xcode doesn't provide the `<unicode/unistr.h>` header, therefore you are advised to install it with the Homebrew too.
 
 ```bash
@@ -170,6 +180,24 @@ Set the `$ICU_ROOT` variable **before** executing the `setup-build` toolbox comm
 ```bash
 export ICU_ROOT=${HOMEBREW_PREFIX}/opt/icu4c
 ```
+
+You also need to set clang 22 from LLVM as your main compiler.
+This can be done in one of two ways:
+1. Add LLVM 22 binaries to the path:
+```bash
+export PATH="${HOMEBREW_PREFIX}/opt/llvm@22/bin:${PATH}"
+```
+2. In `setup-build` prompts type full path to the clang 22 compiler (probably `/opt/homebrew/opt/llvm@22/bin/clang`).
+
+> [!TIP]
+> You may get some CMake errors about clang and LLVM versions mismatch.
+> You can provide an extra argument to the `setup-build` command, `--clang-for-builtins <path-to-the-clang-19>` in order to work around them.
+>
+> It is important to use `clang-19` (from the `llvm@19` package, probably `/opt/homebrew/opt/llvm@19/bin/clang`).
+> Otherwise you'll get LLVM errors in very late stages of the compiler.
+
+> [!IMPORTANT]
+> On macOS, only compiling the compiler (the `duckc` target) is supported.
 
 
 ## Compiling the project
