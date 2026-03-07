@@ -8,10 +8,10 @@ use crate::{
     },
 };
 
-pub mod compiler_graph;
+pub mod compiler_dag;
 pub mod compiler_package;
 pub mod duckc;
-use compiler_graph::*;
+use compiler_dag::*;
 use duckc::*;
 
 #[derive(Debug)]
@@ -26,7 +26,7 @@ pub struct BuildContext<'duck> {
 
 pub fn compile<'duck>(bcx: BuildContext<'duck>) -> QuackResult<()> {
     debug!("compiling `{bcx:?}`");
-    let mut graph = CompilerGraph::new_early(&bcx)?;
+    let mut graph = CompilerDag::new_early(&bcx)?;
     graph.populate_features(&bcx.used_features)?;
     graph.remove_disabled_dependencies()?;
     let duckc = Duckc::new(bcx.duck_ctx);

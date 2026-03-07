@@ -1,5 +1,5 @@
 mod setup;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use setup::*;
 
@@ -9,7 +9,7 @@ use crate::{
         PackageLoader,
         compile::{
             BuildContext,
-            compiler_graph::{CompilerGraph, DependencyNode},
+            compiler_dag::{CompilerDag, DependencyNode},
         },
         storage::paths::Storage,
     },
@@ -29,31 +29,45 @@ fn creates_valid_initial_graph() {
         used_features: vec![],
         profile: "debug".into(),
     };
-    let graph = CompilerGraph::new_early(&bcx).unwrap();
+    let graph = CompilerDag::new_early(&bcx).unwrap();
+    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.graph.root,
-        DependencyNode {
-            node: "root 1.0.0".parse().unwrap(),
-            dependencies: vec![DependencyNode {
-                node: "foo 1.0.0".parse().unwrap(),
-                dependencies: vec![DependencyNode {
-                    node: "bar 1.0.0".parse().unwrap(),
-                    dependencies: vec![DependencyNode {
-                        node: "baz 1.0.0".parse().unwrap(),
-                        dependencies: vec![]
-                    }]
-                }]
-            },],
-        }
+        graph.dag.dag,
+        HashMap::from_iter([
+            (
+                "root 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec![
+                    "foo 1.0.0".parse().unwrap(),
+                    "bar 1.0.0".parse().unwrap()
+                ])
+            ),
+            (
+                "foo 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec!["baz 1.0.0".parse().unwrap()])
+            ),
+            (
+                "bar 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec!["baz 1.0.0".parse().unwrap()])
+            ),
+            ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+        ])
     );
     let order = graph
-        .graph
+        .dag
         .reverse_topo_sort_order()
         .unwrap()
         .iter()
-        .map(|node| node.node.to_string())
+        .map(|node| node.to_string())
         .collect::<Vec<_>>();
-    assert_eq!(order, ["baz 1.0.0", "bar 1.0.0", "foo 1.0.0", "root 1.0.0"])
+    let order_as_str = order.iter().map(String::as_str).collect::<Vec<_>>();
+    let order1 = ["baz 1.0.0", "bar 1.0.0", "foo 1.0.0", "root 1.0.0"];
+    let order2 = ["baz 1.0.0", "foo 1.0.0", "bar 1.0.0", "root 1.0.0"];
+    let is_order1 = order_as_str == order1;
+    let is_order2 = order_as_str == order2;
+    assert!(
+        is_order1 || is_order2,
+        "order `{order:?}` is not a valid topo sort order"
+    );
 }
 
 #[test]
@@ -67,36 +81,36 @@ fn expands_valid_features1() {
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
-        used_features: vec!["use_bar".into()],
+        used_features: vec!["use_foo_with_baz".into()],
         profile: "debug".into(),
     };
-    let mut graph = CompilerGraph::new_early(&bcx).unwrap();
+    let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
-        .package("root 1.0.0".parse().unwrap())
+        .package(&"root 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let foo_features = graph
-        .package("foo 1.0.0".parse().unwrap())
+        .package(&"foo 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let bar_features = graph
-        .package("bar 1.0.0".parse().unwrap())
+        .package(&"bar 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let baz_features = graph
-        .package("baz 1.0.0".parse().unwrap())
+        .package(&"baz 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
-    assert_eq!(root_features, HashSet::from(["use_bar".into()]));
-    assert_eq!(foo_features, HashSet::from(["use_bar".into()]));
+    assert_eq!(root_features, HashSet::from(["use_foo_with_baz".into()]));
+    assert_eq!(foo_features, HashSet::from(["use_baz".into()]));
     assert!(bar_features.is_empty());
     assert!(baz_features.is_empty());
 }
@@ -112,42 +126,36 @@ fn expands_valid_features2() {
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
-        used_features: vec!["full".into()],
+        used_features: vec!["use_bar_with_baz".into()],
         profile: "debug".into(),
     };
-    let mut graph = CompilerGraph::new_early(&bcx).unwrap();
+    let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
-        .package("root 1.0.0".parse().unwrap())
+        .package(&"root 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let foo_features = graph
-        .package("foo 1.0.0".parse().unwrap())
+        .package(&"foo 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let bar_features = graph
-        .package("bar 1.0.0".parse().unwrap())
+        .package(&"bar 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let baz_features = graph
-        .package("baz 1.0.0".parse().unwrap())
+        .package(&"baz 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
-    assert_eq!(
-        root_features,
-        HashSet::from(["use_bar".into(), "full".into()])
-    );
-    assert_eq!(
-        foo_features,
-        HashSet::from(["use_bar".into(), "use_bar_with_baz".into()])
-    );
+    assert_eq!(root_features, HashSet::from(["use_bar_with_baz".into()]));
+    assert!(foo_features.is_empty());
     assert_eq!(bar_features, HashSet::from(["use_baz".into()]));
     assert!(baz_features.is_empty());
 }
@@ -163,39 +171,43 @@ fn expands_valid_features3() {
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
-        used_features: vec!["baz_without_bar".into()],
+        used_features: vec!["full".into()],
         profile: "debug".into(),
     };
-    let mut graph = CompilerGraph::new_early(&bcx).unwrap();
+    let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
-        .package("root 1.0.0".parse().unwrap())
+        .package(&"root 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let foo_features = graph
-        .package("foo 1.0.0".parse().unwrap())
+        .package(&"foo 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let bar_features = graph
-        .package("bar 1.0.0".parse().unwrap())
+        .package(&"bar 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
 
     let baz_features = graph
-        .package("baz 1.0.0".parse().unwrap())
+        .package(&"baz 1.0.0".parse().unwrap())
         .unwrap()
         .enabled_features()
         .clone();
-    assert_eq!(root_features, HashSet::from(["baz_without_bar".into()]));
     assert_eq!(
-        foo_features,
-        HashSet::from(["use_bar".into(), "use_bar_with_baz".into()])
+        root_features,
+        HashSet::from([
+            "use_foo_with_baz".into(),
+            "full".into(),
+            "use_bar_with_baz".into()
+        ])
     );
+    assert_eq!(foo_features, HashSet::from(["use_baz".into()]),);
     assert_eq!(bar_features, HashSet::from(["use_baz".into()]));
     assert!(baz_features.is_empty());
 }
@@ -214,7 +226,7 @@ fn errors_with_nonexistent_features() {
         used_features: vec!["nonexistent".into()],
         profile: "debug".into(),
     };
-    let mut graph = CompilerGraph::new_early(&bcx).unwrap();
+    let mut graph = CompilerDag::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -237,18 +249,24 @@ fn removes_inactive_deps1() {
         used_features: vec![],
         profile: "debug".into(),
     };
-    let mut graph = CompilerGraph::new_early(&bcx).unwrap();
+    let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies().unwrap();
+    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.graph.root,
-        DependencyNode {
-            node: "root 1.0.0".parse().unwrap(),
-            dependencies: vec![DependencyNode {
-                node: "foo 1.0.0".parse().unwrap(),
-                dependencies: vec![],
-            },],
-        }
+        graph.dag.dag,
+        HashMap::from_iter([
+            (
+                "root 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec![
+                    "foo 1.0.0".parse().unwrap(),
+                    "bar 1.0.0".parse().unwrap()
+                ])
+            ),
+            ("foo 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+            ("bar 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+            ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+        ])
     );
 }
 
@@ -263,24 +281,30 @@ fn removes_inactive_deps2() {
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
-        used_features: vec!["use_bar".into()],
+        used_features: vec!["use_foo_with_baz".into()],
         profile: "debug".into(),
     };
-    let mut graph = CompilerGraph::new_early(&bcx).unwrap();
+    let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies().unwrap();
+    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.graph.root,
-        DependencyNode {
-            node: "root 1.0.0".parse().unwrap(),
-            dependencies: vec![DependencyNode {
-                node: "foo 1.0.0".parse().unwrap(),
-                dependencies: vec![DependencyNode {
-                    node: "bar 1.0.0".parse().unwrap(),
-                    dependencies: vec![],
-                }]
-            },],
-        }
+        graph.dag.dag,
+        HashMap::from_iter([
+            (
+                "root 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec![
+                    "foo 1.0.0".parse().unwrap(),
+                    "bar 1.0.0".parse().unwrap()
+                ])
+            ),
+            (
+                "foo 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec!["baz 1.0.0".parse().unwrap()])
+            ),
+            ("bar 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+            ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+        ])
     );
 }
 
@@ -295,27 +319,30 @@ fn removes_inactive_deps3() {
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
-        used_features: vec!["full".into()],
+        used_features: vec!["use_bar_with_baz".into()],
         profile: "debug".into(),
     };
-    let mut graph = CompilerGraph::new_early(&bcx).unwrap();
+    let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies().unwrap();
+    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.graph.root,
-        DependencyNode {
-            node: "root 1.0.0".parse().unwrap(),
-            dependencies: vec![DependencyNode {
-                node: "foo 1.0.0".parse().unwrap(),
-                dependencies: vec![DependencyNode {
-                    node: "bar 1.0.0".parse().unwrap(),
-                    dependencies: vec![DependencyNode {
-                        node: "baz 1.0.0".parse().unwrap(),
-                        dependencies: vec![]
-                    }]
-                }]
-            },],
-        }
+        graph.dag.dag,
+        HashMap::from_iter([
+            (
+                "root 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec![
+                    "foo 1.0.0".parse().unwrap(),
+                    "bar 1.0.0".parse().unwrap()
+                ])
+            ),
+            ("foo 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+            (
+                "bar 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec!["baz 1.0.0".parse().unwrap()])
+            ),
+            ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+        ])
     );
 }
 
@@ -330,27 +357,33 @@ fn removes_inactive_deps4() {
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
-        used_features: vec!["baz_without_bar".into()],
+        used_features: vec!["full".into()],
         profile: "debug".into(),
     };
-    let mut graph = CompilerGraph::new_early(&bcx).unwrap();
+    let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies().unwrap();
+    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.graph.root,
-        DependencyNode {
-            node: "root 1.0.0".parse().unwrap(),
-            dependencies: vec![DependencyNode {
-                node: "foo 1.0.0".parse().unwrap(),
-                dependencies: vec![DependencyNode {
-                    node: "bar 1.0.0".parse().unwrap(),
-                    dependencies: vec![DependencyNode {
-                        node: "baz 1.0.0".parse().unwrap(),
-                        dependencies: vec![]
-                    }]
-                }]
-            },],
-        }
+        graph.dag.dag,
+        HashMap::from_iter([
+            (
+                "root 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec![
+                    "foo 1.0.0".parse().unwrap(),
+                    "bar 1.0.0".parse().unwrap()
+                ])
+            ),
+            (
+                "foo 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec!["baz 1.0.0".parse().unwrap()])
+            ),
+            (
+                "bar 1.0.0".parse().unwrap(),
+                DependencyNode::new(vec!["baz 1.0.0".parse().unwrap()])
+            ),
+            ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
+        ])
     );
 }
 
@@ -368,7 +401,7 @@ fn cycle_in_freeze() {
         used_features: vec![],
         profile: "debug".into(),
     };
-    let err = CompilerGraph::new_early(&bcx).unwrap_err();
+    let err = CompilerDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         "malformed freezefile: cycle `root 1.0.0` -> `foo 1.0.0` -> `bar 1.0.0` -> `foo 1.0.0`"
@@ -389,7 +422,7 @@ fn missing_direct_dep_in_freeze() {
         used_features: vec![],
         profile: "debug".into(),
     };
-    let err = CompilerGraph::new_early(&bcx).unwrap_err();
+    let err = CompilerDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         "malformed freezefile: missing direct dependency `foo 1.0.0`"
@@ -410,9 +443,9 @@ fn missing_transitive_dep_in_freeze() {
         used_features: vec![],
         profile: "debug".into(),
     };
-    let err = CompilerGraph::new_early(&bcx).unwrap_err();
+    let err = CompilerDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
-        "malformed freezefile: missing transitive dependency `bar 1.0.0`"
+        "malformed freezefile: missing transitive dependency `baz 1.0.0`"
     );
 }

@@ -8,7 +8,8 @@ use itertools::Itertools;
 use super::compiler_package::CompilerPackage;
 use crate::quackpack::core::Package;
 use crate::quackpack::core::compile::BuildContext;
-use crate::quackpack::core::compile::compiler_graph::{CompilerGraph, DependencyNode};
+use crate::quackpack::core::compile::compiler_dag::CompilerDag;
+use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
@@ -41,7 +42,7 @@ impl Duckc {
 
     pub fn compile(
         &self,
-        graph: &CompilerGraph,
+        graph: &CompilerDag,
         compilation_type: CompilationType,
         bcx: &BuildContext<'_>,
     ) -> QuackResult<()> {
@@ -52,11 +53,12 @@ impl Duckc {
 
     fn compile_root_package_only(
         &self,
-        graph: &CompilerGraph,
+        graph: &CompilerDag,
         bcx: &BuildContext<'_>,
     ) -> QuackResult<()> {
-        let this = graph.package(graph.graph().root().node())?;
-        bail_if_has_deps(graph.graph().root().dependencies())?;
+        let this = graph.package(&graph.dag().root())?;
+        let deps = graph.dag().dependencies_for_package(&graph.dag().root())?;
+        bail_if_has_deps(deps.dependencies())?;
         bail_if_has_explicit_aliases(this)?;
         let this = this.package();
         let mut builder = DuckcProcessBuilder::new(self);
@@ -83,7 +85,7 @@ impl Duckc {
     }
 }
 
-fn bail_if_has_deps(dependencies: &[DependencyNode]) -> QuackResult<()> {
+fn bail_if_has_deps(dependencies: &[FreezeDep]) -> QuackResult<()> {
     if !dependencies.is_empty() {
         qp_bail_internal!("external dependencies are not (yet) supported by duckc")
     }
