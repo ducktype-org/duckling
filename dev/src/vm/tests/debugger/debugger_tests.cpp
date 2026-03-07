@@ -17,6 +17,7 @@ public:
 		TESTER_ADD_TEST(killTest);
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(executesStepByStep);
+		TESTER_ADD_TEST(vmApiMemory);
 	}
 
 
@@ -119,6 +120,71 @@ private:
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
 		                              .value();                  // "Get current position failed"
 		return execution_position.instr_number;
+	}
+
+	/**
+	 * @brief Checks if the vm api functions related to memory and stack frames work correctly.
+	 * Checks the number of stack frames, then resumes the program and checks if it finishes
+	 * correctly.
+	 */
+	void vmApiMemory() {
+		auto pid = loadProgram("breakpoint.dbc");
+
+		vm::api::run(pid).value();  // "Run failed (1)"
+
+		auto execution_position
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
+		assertEqual(6, execution_position.instr_number, "Line number is not correct");
+
+		auto num_frames_response = vm::api::debuggerGetNumberOfStackFrames(pid).value(
+		);  // "Get number of stack frames failed"
+		assertEqual(
+			2, num_frames_response.number_of_stack_frames, "Number of stack frames is not correct"
+		);
+
+		auto error_response = vm::api::debuggerGetStackFrameData(pid, 2);
+		assertFalse(error_response.has_value(), "Getting stack frame data should have failed");
+
+		vm::api::resume(pid).value();  // "Resume failed (1)"
+
+		execution_position
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (2)"
+		assertEqual(10, execution_position.instr_number, "Line number is not correct (2)");
+
+		num_frames_response = vm::api::debuggerGetNumberOfStackFrames(pid).value(
+		);  // "Get number of stack frames failed (2)"
+		assertEqual(
+			2,
+			num_frames_response.number_of_stack_frames,
+			"Number of stack frames is not correct (2)"
+		);
+
+		auto stack_frame_data
+			= vm::api::debuggerGetStackFrameData(pid, 1).value();  // "Get stack frame data failed"
+		assertEqual("main", stack_frame_data.function_name, "Function name is not correct");
+
+		for (const auto& var: stack_frame_data.frame_vars) {
+			if (var.offset == 0) {
+				assertEqual(var.type->getName(), "i64", "Variable type is not correct");
+				auto pointer_data_response
+					= vm::api::debuggerGetPointerData(pid, var.pointer, var.type->getSize())
+				          .value();  // "Get pointer data failed"
+				auto value = vm::safeReadPointerBytes<i64>(pointer_data_response.data.getBegin());
+				assertEqual(0, value, "Variable value is not correct");
+			}
+			if (var.type->getName() == "ptr") {
+				auto response = vm::api::debuggerDereferencePointer(pid, var.pointer)
+				                    .value();  // "Dereference pointer failed"
+				assertTrue(response.pointer.isNull(), "Pointer should be null");
+			}
+		}
+
+		vm::api::resume(pid).value();                                  // "Resume failed (2)"
+
+		vm::api::join(pid).value();                                    // "Join failed (1)"
+
+		auto exit_code_response = vm::api::getExitValue(pid).value();  // "Get exit value failed"
+		assertEqual(0, exit_code_response->readBytes<i64>(), "Exit value is not correct");
 	}
 };
 
