@@ -67,73 +67,84 @@ namespace query {
 		private:
 			internal::NodeID caller;
 			internal::NodeID callee;
+			bool             active_graph_operations;
 
 
 		public:
 			QueryGraphHandler(
-				Context& this_context, internal::NodeID caller, internal::NodeID callee
+				Context&         this_context,
+				internal::NodeID caller,
+				internal::NodeID callee,
+				bool             active_graph_operations
 			):
 				  caller(caller),
-				  callee(callee) {
+				  callee(callee),
+				  active_graph_operations(active_graph_operations) {
 				main_query_state.addDependency(caller, callee);
 
-				// @TODO: #2026 Optimize it, we only need to add edge here, when the query is not ready.
+				if (active_graph_operations) {
+					// @TODO: #2026 Optimize it, we only need to add edge here, when the query is
+					// not ready.
 
-				// Here, the node should already exist in the active graph.
-				// We add edge from 'caller' to 'callee' to represent the dependency.
-				// Important note #1945:
-				// Current cycle detection algorithm works only when we use wait-on-await strategy.
-				// For other strategies we will have to additionally register special "working-on"
-				// edges. Also note, that we should not add any edges when scheduling queries.
-				// Scheduling acts as if the schedule operation came from outside the query
-				// framework.
-				main_query_state.getActiveGraph()->setEdge(caller, callee);
-				auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
+					// Here, the node should already exist in the active graph.
+					// We add edge from 'caller' to 'callee' to represent the dependency.
+					// Important note #1945:
+					// Current cycle detection algorithm works only when we use wait-on-await
+					// strategy. For other strategies we will have to additionally register special
+					// "working-on" edges. Also note, that we should not add any edges when
+					// scheduling queries. Scheduling acts as if the schedule operation came from
+					// outside the query framework.
+					main_query_state.getActiveGraph()->setEdge(caller, callee);
+					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
 
-				if (maybe_cycle.has_value()) {
-					// we hit a cycle!
-					// for now just panic
-					// @TODO: #1888 change that
+					if (maybe_cycle.has_value()) {
+						// we hit a cycle!
+						// for now just panic
+						// @TODO: #1888 change that
 
-					this_context.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-						base::strConcat(
+						this_context.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+							base::strConcat(
+								"Query cycle detected involving query node:",
+								caller.q_id.asInt(),
+								".",
+								caller.hash.val.toStringHex()
+							),
+							base::strConcat(
+								"The cycle:\n",
+								[&maybe_cycle]() -> std::string {
+									std::string result;
+									auto        cycle = maybe_cycle.value();
+									for (auto node_id: cycle.cycle_nodes) {
+										result += "  - Query node ";
+										result += base::strConcat(
+											node_id.q_id.asInt(),
+											".",
+											node_id.hash.val.toStringHex(),
+											"\n"
+										);
+									}
+									return result;
+								}()
+							)
+						));
+						CORE_ASSERT(
+							false,
 							"Query cycle detected involving query node:",
 							caller.q_id.asInt(),
 							".",
 							caller.hash.val.toStringHex()
-						),
-						base::strConcat(
-							"The cycle:\n",
-							[&maybe_cycle]() -> std::string {
-								std::string result;
-								auto        cycle = maybe_cycle.value();
-								for (auto node_id: cycle.cycle_nodes) {
-									result += "  - Query node ";
-									result += base::strConcat(
-										node_id.q_id.asInt(),
-										".",
-										node_id.hash.val.toStringHex(),
-										"\n"
-									);
-								}
-								return result;
-							}()
-						)
-					));
-					CORE_ASSERT(
-						false,
-						"Query cycle detected involving query node:",
-						caller.q_id.asInt(),
-						".",
-						caller.hash.val.toStringHex()
-					);
+						);
+					}
 				}
 			}
 
 			~QueryGraphHandler() {
-				// We remove the edge after the query call is done.
-				// This is because active graph only tracks currently active queries and dependencies.
-				main_query_state.getActiveGraph()->removeEdge(caller);
+				if (active_graph_operations) {
+					// We remove the edge after the query call is done.
+					// This is because active graph only tracks currently active queries and
+					// dependencies.
+					main_query_state.getActiveGraph()->removeEdge(caller);
+				}
 			}
 		};
 
@@ -160,14 +171,15 @@ namespace query {
 
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
-			QueryGraphHandler graph_handler(*this, my_node, dep_id);
-
 			this->active = false;
 			defer({ this->active = true; });
 
 			if constexpr (OthQuery::QUERY_DATA.isInputQuery()) {
+				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
 				return OthQuery::internal_query(key);
 			} else {
+				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
+
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
 					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
@@ -214,7 +226,7 @@ namespace query {
 				"Task handle query ID does not match the awaited query type."
 			);
 
-			QueryGraphHandler graph_handler(*this, my_node, handle.getID());
+			QueryGraphHandler graph_handler(*this, my_node, handle.getID(), true);
 
 			this->active = false;
 			defer({ this->active = true; });
