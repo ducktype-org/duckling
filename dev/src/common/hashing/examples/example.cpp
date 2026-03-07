@@ -88,7 +88,7 @@ int main() {
 
 	// but we can specify the algorithm explicitly as a template parameter
 	// it's also possible to get the hash value at compile time
-	constexpr auto H = Hash < SHA256{}(type2{});
+	constexpr auto H = Hash<SHA256>{}(type2{});
 	std::cout << H << '\n';  // some 256-bit number
 
 	struct type3 {
