@@ -50,14 +50,6 @@ namespace lsp {
 			}
 		}
 
-		fs::File writeToFileFromVirtualRoot(
-			const fs::File& virtual_root, const std::string& path, const std::string& content
-		) {
-			auto file = getFileFromVirtualRoot(virtual_root, path);
-			file.writeToFile(content);
-			return file;
-		}
-
 		std::vector<query::external::InputData> collectAllCurrentInputs() {
 			return compiler::driver::collectInputDataFromGlobalPackagesFromCurrentMetadata();
 		}
@@ -252,16 +244,29 @@ namespace lsp {
 
 		auto source_files = compiler::frontend::SourceFile::getSourceFilesFromFile(file);
 
-		file = writeToFileFromVirtualRoot(virtual_root, path, content);
+
+		std::vector<query::external::InputData> previous_inputs;
+
+		for (auto& source_file: source_files) {
+			auto pst = source_file->getPST();
+			compiler::driver::collectQueryInputsFromPst(pst, previous_inputs);
+		}
+		
+		file.writeToFile(content);
 		compiler::frontend::ModuleTreeModifier::fileModified(file);
 
 		std::vector<query::external::InputData> new_inputs;
+		
 		for (auto& source_file: source_files) {
 			auto pst = source_file->getPST();
 			compiler::driver::collectQueryInputsFromPst(pst, new_inputs);
 		}
 
-		query::external::invalidateQueries(std::move(new_inputs), {}, {});
+		std::vector<query::external::InputData> invalidated_inputs;
+		query::external::invalidateQueries(std::move(new_inputs), {previous_inputs}, {&invalidated_inputs});
+		for (const auto& input: invalidated_inputs) {
+			std::cerr << "Invalidated input with QueryID: " << input.q_id.getData().name << " and hash: " << input.hash << "\n";
+		}
 	}
 
 	void removeFile(const fs::File& virtual_root, const std::string& path) {
