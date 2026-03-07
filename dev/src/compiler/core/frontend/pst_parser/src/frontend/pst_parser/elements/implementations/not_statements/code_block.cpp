@@ -73,7 +73,8 @@ namespace pst {
 			auto ordered = hashing::ComponentHash(path, "ordered");
 			calcIndexedListChildPath<Stmt>({ statements }, ordered);
 		} else if (type == BlockOrderType::Unordered) {
-			calcOrderedListChildPath(statements, path);
+			auto unordered = hashing::ComponentHash(path, "unordered");
+			calcOrderedListChildPath(statements, unordered);
 		}
 	}
 
