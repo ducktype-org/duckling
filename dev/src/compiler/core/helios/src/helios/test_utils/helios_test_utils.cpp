@@ -35,15 +35,16 @@ namespace compiler::helios::test_utils {
 		SymbolList result;
 		bool       first_symbol = true;
 		for (auto&& sym: symbols) {
-			auto               symbol_qresult = first_symbol
-			                                      ? query::entryPoint<QueryLookupInScopeAndParents>(
-                                          { scope, base::StrID(sym.c_str()), true }
-                                      )
-			                                      : query::entryPoint<QueryLookupInSymbol>(
-                                          { result.back(), base::StrID(sym.c_str()), false }
+			auto symbol_qresult = first_symbol
+			                        ? query::entryPoint<QueryLookupInScopeAndParents>(
+										  { scope, base::StrID(sym.c_str()), true }
+									  )
+			                        : query::entryPoint<QueryLookupInSymbol>(
+										  { result.back(), base::StrID(sym.c_str()), false }
 
-                                      );
-			CRef<LookupResult> symbol         = &symbol_qresult->valueOrThrow();
+									  );
+
+			CRef<LookupResult> symbol = &symbol_qresult->valueOrThrow();
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
 
 			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
