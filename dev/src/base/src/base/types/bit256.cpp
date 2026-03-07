@@ -12,26 +12,27 @@ namespace base {
 		return ret;
 	}
 
-	Bit256& Bit256::operator*=(const Bit256& other) noexcept {
-		Bit256 ret{};
+	Bit256 operator*(const Bit256& lhs, const Bit256& rhs) noexcept {
 #if defined(__SIZEOF_INT128__)
-		for (usize i = 0; i < data.size(); ++i) {
+		Bit256 ret{};
+		for (usize i = 0; i < lhs.data.size(); ++i) {
 			__uint128_t carry = 0;
-			for (usize j = 0; j < data.size(); ++j) {
-				if (i + j >= data.size()) break;
-				const __uint128_t sum = static_cast<__uint128_t>(data.at(i)) * other.data.at(j)
+			for (usize j = 0; j < rhs.data.size(); ++j) {
+				if (i + j >= rhs.data.size()) break;
+				const __uint128_t sum = static_cast<__uint128_t>(lhs.data.at(i)) * rhs.data.at(j)
 				                      + ret.data.at(i + j) + carry;
 				ret.data.at(i + j) = static_cast<u64>(sum);
 				carry              = sum >> 64;
 			}
 		}
+		return ret;
 #else
 		std::array<u32, 8> a{}, b{};
 		for (size_t i = 0; i < 4; ++i) {
-			a.at(2 * i)     = static_cast<u32>(data.at(i));
-			a.at(2 * i + 1) = static_cast<u32>(data.at(i) >> 32);
-			b.at(2 * i)     = static_cast<u32>(other.data.at(i));
-			b.at(2 * i + 1) = static_cast<u32>(other.data.at(i) >> 32);
+			a.at(2 * i)     = static_cast<u32>(lhs.data.at(i));
+			a.at(2 * i + 1) = static_cast<u32>(lhs.data.at(i) >> 32);
+			b.at(2 * i)     = static_cast<u32>(rhs.data.at(i));
+			b.at(2 * i + 1) = static_cast<u32>(rhs.data.at(i) >> 32);
 		}
 
 		std::array<u32, 8> ret_halves{};
@@ -49,10 +50,8 @@ namespace base {
 			ret.data.at(i) = static_cast<u64>(ret_halves.at(2 * i))
 			               | (static_cast<u64>(ret_halves.at(2 * i + 1)) << 32);
 		}
-
+		return ret_halves;
 #endif
-		*this = Bit256(ret);
-		return *this;
 	}
 
 	std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256) {

@@ -12,6 +12,8 @@ namespace base {
 	 * Bit256 is a 256-bit integer type used for example for SHA-256 hash values.
 	 * It is represented as an array of 4 64-bit integers.
 	 */
+	// @todo @taw3e8 add descriptions of how does this type represents the values and how
+	// constructors work
 	struct Bit256 {
 		std::array<u64, 4> data = {};
 
@@ -103,28 +105,36 @@ namespace base {
 
 		constexpr bool operator>(const Bit256& other) const noexcept { return other < *this; }
 
-		constexpr Bit256& operator^=(const Bit256& other) noexcept {
-			for (usize i = 0; i < data.size(); ++i) data.at(i) ^= other.data.at(i);
-			return *this;
+		friend constexpr Bit256 operator^(const Bit256& lhs, const Bit256& rhs) noexcept {
+			Bit256 result;
+			for (usize i = 0; i < result.data.size(); ++i)
+				result.data.at(i) = lhs.data.at(i) ^ rhs.data.at(i);
+			return result;
 		}
+
+		constexpr Bit256& operator^=(const Bit256& other) noexcept { return *this = *this ^ other; }
 
 		constexpr Bit256& operator^=(unsigned char other) noexcept {
 			data.at(0) ^= other;
 			return *this;
 		}
 
-		constexpr Bit256& operator+=(const Bit256& other) noexcept {
+		friend constexpr Bit256 operator+(const Bit256& lhs, const Bit256& rhs) noexcept {
 			Bit256 result;
 			u64    carry = 0;
-			for (usize i = 0; i < data.size(); ++i) {
-				const u64 sum     = data.at(i) + other.data.at(i) + carry;
+			for (usize i = 0; i < result.data.size(); ++i) {
+				const u64 sum     = lhs.data.at(i) + rhs.data.at(i) + carry;
 				result.data.at(i) = sum;
-				carry             = (sum < data.at(i)) || (carry && sum == data.at(i));
+				carry             = (sum < lhs.data.at(i)) || (carry && sum == lhs.data.at(i));
 			}
-			return *this = result;
+			return result;
 		}
 
-		Bit256& operator*=(const Bit256& other) noexcept;
+		constexpr Bit256& operator+=(const Bit256& other) noexcept { return *this = *this + other; }
+
+		friend Bit256 operator*(const Bit256& lhs, const Bit256& rhs) noexcept;
+
+		Bit256& operator*=(const Bit256& other) noexcept { return *this = *this * other; }
 
 		/**
 		 * @brief Outputs the Bit256 object to a stream in the format {a, b, c, d}.
