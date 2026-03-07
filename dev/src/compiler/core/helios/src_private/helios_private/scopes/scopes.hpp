@@ -113,9 +113,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>, ({ .uses_qresult = false })
-	);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({}));
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
@@ -123,10 +121,7 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryLookupInScopeAndParents,
-		KeyOf_LookupInScope,
-		CRef<LookupResult>,
-		({ .uses_qresult = false })
+		QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	/**
