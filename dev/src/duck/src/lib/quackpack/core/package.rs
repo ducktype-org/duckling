@@ -23,6 +23,7 @@ impl Package {
         manifest_path: PathBuf,
     ) -> Self {
         let artifacts_dir = root.join(".duck_build");
+        let source_directory = root.join("src");
         Self {
             inner: Arc::new(PackageInner {
                 original_content,
@@ -31,6 +32,7 @@ impl Package {
                 root,
                 manifest_path,
                 artifacts_dir,
+                source_dir: source_directory,
             }),
         }
     }
@@ -55,15 +57,15 @@ impl Package {
         &self.inner.root
     }
 
-    pub fn source_directory(&self) -> PathBuf {
-        self.inner.root.join("src")
+    pub fn source_directory(&self) -> &Path {
+        &self.inner.source_dir
     }
 
     pub fn manifest_path(&self) -> &Path {
         &self.inner.manifest_path
     }
 
-    pub fn artifacts_dir(&self) -> &Path {
+    pub fn artifacts_directory(&self) -> &Path {
         &self.inner.artifacts_dir
     }
 
@@ -83,6 +85,7 @@ struct PackageInner {
     root: PathBuf,
     manifest_path: PathBuf,
     artifacts_dir: PathBuf,
+    source_dir: PathBuf,
 }
 
 #[cfg(test)]

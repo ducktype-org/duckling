@@ -74,7 +74,7 @@ impl Duckc {
         }
         builder.set_src_dir(this).set_package_artifacts_dir(this);
 
-        let _lock = this.artifacts_dir().lock(ShouldBlock::Yes).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
+        let _lock = this.artifacts_directory().lock(ShouldBlock::Yes).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
         bcx.duck_ctx
             .console()
             .info_verbose(format!("Running `{}`", builder));
@@ -133,7 +133,7 @@ impl DuckcProcessBuilder {
     }
 
     pub fn set_package_artifacts_dir(&mut self, package: &Package) -> &mut Self {
-        let dir = package.artifacts_dir();
+        let dir = package.artifacts_directory();
         self.inner.arg("-a").arg(dir);
         self
     }

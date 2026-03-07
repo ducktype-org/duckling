@@ -397,7 +397,7 @@ fn missing_direct_dep_in_freeze() {
 }
 
 #[test]
-fn missing_transient_dep_in_freeze() {
+fn missing_transitive_dep_in_freeze() {
     let (ctx, root) = setup_mock_storage();
     let qp_ctx = QpCtx::new(&ctx);
     let package =
@@ -405,7 +405,7 @@ fn missing_transient_dep_in_freeze() {
     let bcx = BuildContext {
         duck_ctx: &ctx,
         package: &package,
-        freeze: freeze_without_transient_dep(),
+        freeze: freeze_without_transitive_dep(),
         storage: Storage::new(ctx.duck_home()),
         used_features: vec![],
         profile: "debug".into(),
@@ -413,6 +413,6 @@ fn missing_transient_dep_in_freeze() {
     let err = CompilerGraph::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
-        "malformed freezefile: missing transient dependency `bar 1.0.0`"
+        "malformed freezefile: missing transitive dependency `bar 1.0.0`"
     );
 }

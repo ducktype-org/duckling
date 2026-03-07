@@ -258,7 +258,7 @@ pub fn freeze_without_direct_dep() -> VenvFreeze {
     )
 }
 
-pub fn freeze_without_transient_dep() -> VenvFreeze {
+pub fn freeze_without_transitive_dep() -> VenvFreeze {
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),

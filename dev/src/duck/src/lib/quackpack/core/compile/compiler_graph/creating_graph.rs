@@ -176,7 +176,7 @@ impl CompilerGraph {
             {
                 PackageType::DirectDependency
             } else {
-                PackageType::TransientDependency
+                PackageType::TransitiveDependency
             };
             let package = parse_dependency(dep, &ctx.storage, ctx.duck_ctx, pkg_type)?;
             let overwritten_entry = packages.insert(dep.as_freeze_dep(), package).is_some();

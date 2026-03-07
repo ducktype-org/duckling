@@ -10,19 +10,19 @@ use crate::{
 pub enum PackageType {
     RootPackage,
     DirectDependency,
-    TransientDependency,
+    TransitiveDependency,
 }
 
 impl PackageType {
     /// *deepen* `self`, as in „get type for my dependencies”.
     ///
-    /// This is mainly used for printing errors, so we can distinguish between transient and direct
+    /// This is mainly used for printing errors, so we can distinguish between transitive and direct
     /// dependencies.
     pub fn deepen(&self) -> Self {
         match self {
             Self::RootPackage => Self::DirectDependency,
-            Self::DirectDependency => Self::TransientDependency,
-            Self::TransientDependency => Self::TransientDependency,
+            Self::DirectDependency => Self::TransitiveDependency,
+            Self::TransitiveDependency => Self::TransitiveDependency,
         }
     }
 }
@@ -32,7 +32,7 @@ impl fmt::Display for PackageType {
         let text = match self {
             Self::RootPackage => "root package",
             Self::DirectDependency => "direct dependency",
-            Self::TransientDependency => "transient dependency",
+            Self::TransitiveDependency => "transitive dependency",
         };
         write!(f, "{}", text)
     }
