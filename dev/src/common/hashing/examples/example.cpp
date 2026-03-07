@@ -83,13 +83,13 @@ int main() {
 	m[2] = 3;
 	std::cout << m[1] << ' ' << m[2] << '\n';  // 2 3
 
-	// by default fnva_64 algorithm is used
-	std::cout << Hash{}(type1{}) << '\n';  // some 64-bit number
+	// by default the DefaultHashAlgorithm is used
+	std::cout << Hash{}(type1{}) << '\n';
 
 	// but we can specify the algorithm explicitly as a template parameter
 	// it's also possible to get the hash value at compile time
-	constexpr auto H = Hash<Fnv1a_32>{}(type2{});
-	std::cout << H << '\n';  // some 32-bit number
+	constexpr auto H = Hash < SHA256{}(type2{});
+	std::cout << H << '\n';  // some 256-bit number
 
 	struct type3 {
 		int x{ 123 }, y{ 456 };
@@ -112,7 +112,7 @@ int main() {
 	hasher2(7, std::string{ "hello" }, 42);
 
 	constexpr auto HASH_VALUE
-		= hashing::StatefulHash<hashing::Fnv1a_64>{}(7, type2{}, 7, std::string{ "hello" }, 42)
+		= hashing::StatefulHash<hashing::SHA256>{}(7, type2{}, 7, std::string{ "hello" }, 42)
 	          .finalize();
 	std::cout << "stateful hash:\n"
 			  << hasher2.finalize() << "\n\t(constexpr) hash value: " << HASH_VALUE << '\n';
