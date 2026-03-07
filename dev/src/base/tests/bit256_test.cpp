@@ -43,7 +43,7 @@ public:
 		);
 
 		base::Bit256 hex_bit
-			= "0xFEDCBA9876543210AA77AA77AA77AA770123456789ABCDEFBB55BB55BB55BB55"_Bit256;
+			= "0xFeDcBA9876543210aa77AA77aa77AA770123456789ABCDEFbb55Bb55BB55Bb55"_Bit256;
 		assertTrue(
 			hex_bit.data[3] == 0xFE'DC'BA'98'76'54'32'10
 				&& hex_bit.data[2] == 0xAA'77'AA'77'AA'77'AA'77
@@ -80,7 +80,7 @@ public:
 		);
 
 		base::Bit256 bit2
-			= "0x603b5e62d77850a8a8592d066a263c893a9a8fca2c3af6d3e949f95e9c3f2905"_Bit256;
+			= "0x603b5E62d77850A8a8592d066a263C893A9a8fca2c3aF6d3e949f95e9C3f2905"_Bit256;
 		assertTrue(
 			bit2.toStringHex() == "603b5e62d77850a8a8592d066a263c893a9a8fca2c3af6d3e949f95e9c3f2905",
 			"toStringHex failed. Expected:\n"
@@ -103,7 +103,7 @@ public:
 		base::Bit256 bit3
 			= "0x603b5e62d77850a8a8592d066a263c893a9a8fca2c3af6d3e949f95e9c3f2905"_Bit256;
 		base::Bit256 bit4
-			= "0x9e80e21e00e871e0699c2a10e30f8ca9b58d3d35c3a0e5cdd113d3c45d620264"_Bit256;
+			= "0x9e80E21e00e871e0699c2a10e30f8CA9b58d3d35c3a0e5cdd113d3C45D620264"_Bit256;
 		bit3 += bit4;
 		assertTrue(
 			bit3 == "0xfebc4080d860c28911f557174d35c932f027ccffefdbdca1ba5dcd22f9a12b69"_Bit256,
