@@ -21,6 +21,12 @@ LLVM_INCLUDE_END()
 llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun);
 
 /**
+ * @brief Returns the name of the corresponding LLVM function for the given opcode.
+ * @note Required because LLVM modules "disappear" upon materialization.
+ */
+std::string llvmGetFunName(const vm::low::MicroOpcode &fun);
+
+/**
  * @brief Returns LLJIT instance.
  * @note For now it is stored in opcodes_bitcode_source but it will change.
  */

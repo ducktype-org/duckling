@@ -59,6 +59,9 @@ static ExitOnError exit_on_err;
 /// @brief For each MicroOpcode stores calculated llvm::Function*.
 static std::unordered_map<vm::low::MicroOpcode, llvm::Function*> func_map;
 
+/// @brief For each MicroOpcode stores the name of its corresponding llvm::Function*.
+static std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
+
 namespace {
 	/**
 	 * @brief Extracts function name from its mangled version. It should be string
@@ -116,6 +119,7 @@ void llvmInit() {
 				name             = name.substr(3);  // delete op_
 				auto opcode      = getOpcode(name);
 				func_map[opcode] = &F;
+				lfunc_name_map[opcode] = F.getName().str();
 			}
 		}
 	}
@@ -129,6 +133,11 @@ void llvmInit() {
 llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun) {
 	CORE_ASSERT(func_map.contains(fun), "Opcode function not found in LLVM module");
 	return func_map.at(fun);
+}
+
+std::string llvmGetFunName(const vm::low::MicroOpcode& fun) {
+	CORE_ASSERT(lfunc_name_map.contains(fun), "Opcode function not found in LLVM module");
+	return lfunc_name_map.at(fun);
 }
 
 llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }

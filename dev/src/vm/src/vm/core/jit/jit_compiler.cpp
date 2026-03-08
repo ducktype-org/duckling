@@ -29,8 +29,7 @@ namespace vm::jit {
 		llvm::FunctionType*          opfun_ty
 	) {
 		for (const vm::MicroInstruction& mi: bitcode) {
-			llvm::Function* opfun      = llvmGetFun(vm::getInstructionOpcode(mi));
-			std::string     opfun_name = opfun->getName().str();
+			std::string opfun_name = llvmGetFunName(vm::getInstructionOpcode(mi));
 
 			llvm::Function* callee = module->getFunction(opfun_name);
 			if (!callee) {
