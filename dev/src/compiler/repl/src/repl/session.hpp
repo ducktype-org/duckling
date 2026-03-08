@@ -13,6 +13,7 @@
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
@@ -151,6 +152,17 @@ namespace compiler::repl {
 		 * @return ReplResult indicating success or error
 		 */
 		ReplResult handleDefinition(frontend::ModuleID module_id);
+
+		/**
+		 * @brief Compile and execute a single instruction (if/while/for/block) in the REPL.
+		 *
+		 * Wraps the instruction in a synthetic void function, compiles it to DVM bytecode,
+		 * executes it, and reports the outcome.
+		 *
+		 * @param stmt The instruction statement to execute
+		 * @return ReplResult indicating success or error
+		 */
+		ReplResult handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt);
 
 		/**
 		 * @brief Initialize the DVM process for code execution.

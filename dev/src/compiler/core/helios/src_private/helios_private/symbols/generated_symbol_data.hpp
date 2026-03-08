@@ -86,7 +86,26 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		std::variant<ImplicitConstructor, BuiltinOperator, Parameter, SelfParameter, Variable, ReplExpressionWrapper>
+		/**
+		 * Represents a compiler-generated function wrapper for REPL instructions.
+		 * This is used to wrap a single REPL instruction (if/while/for/block) in a
+		 * synthetic void function so the DVM can execute it via runFunction.
+		 */
+		struct ReplInstructionWrapper final {
+			u64 counter;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		std::variant<
+			ImplicitConstructor,
+			BuiltinOperator,
+			Parameter,
+			SelfParameter,
+			Variable,
+			ReplExpressionWrapper,
+			ReplInstructionWrapper>
 			data;
 
 		explicit GeneratedSymbolData(const std::variant<
@@ -95,7 +114,8 @@ namespace compiler::helios::houtgen {
 									 Parameter,
 									 SelfParameter,
 									 Variable,
-									 ReplExpressionWrapper>& data);
+									 ReplExpressionWrapper,
+									 ReplInstructionWrapper>& data);
 
 		[[nodiscard]]
 		base::Bit256                          queryUnstablePerfectHash() const;

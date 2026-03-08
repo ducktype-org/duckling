@@ -1,6 +1,5 @@
 #include "session.hpp"
 
-#include <driver/operations/generic_operations.hpp>
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -58,16 +57,24 @@ namespace compiler::repl {
 
 	ReplResult ReplSession::executeSingleStatement(frontend::ModuleID module_id) {
 		base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
+		base::Optional<pst::AccessLocked<pst::Stmt>>     instr_stmt_opt;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
 			auto pst       = getFilePST(ctx, main_file);
 			auto root      = pst->getRootElement();
 			expr_stmt_opt  = pst::extractSingleExpression(ctx, root);
+			if (!expr_stmt_opt.has_value())
+				instr_stmt_opt = pst::extractSingleInstruction(ctx, root);
 		});
 
 		if (expr_stmt_opt.has_value()) {
 			CORE_DEV_LOG(REPL, "Processing statement as expression\n");
 			return handleExpression(expr_stmt_opt.value());
+		}
+
+		if (instr_stmt_opt.has_value()) {
+			CORE_DEV_LOG(REPL, "Processing statement as instruction\n");
+			return handleInstruction(instr_stmt_opt.value());
 		}
 
 		CORE_DEV_LOG(REPL, "Processing statement as definition\n");
@@ -178,6 +185,75 @@ namespace compiler::repl {
 					std::cout << "Function executed.\n";
 				else
 					std::cout << "=> " << run_result.value() << "\n";
+			} else {
+				error_message = "Runtime error: " + run_result.error();
+				std::cerr << error_message << "\n";
+				had_error = true;
+				return;
+			}
+		});
+
+		if (had_error) return ReplResult::error(error_message);
+
+		return ReplResult::success(output_message);
+	}
+
+	ReplResult ReplSession::handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt) {
+		std::string output_message;
+		std::string error_message;
+		bool        had_error = false;
+
+		base::Optional<helios::HOUTFunction> instr_wrapper;
+		std::string                          wrapper_func_name;
+
+		CORE_DEV_LOG(REPL, "Starting handleInstruction\n");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			CORE_DEV_LOG(REPL, "Querying QueryReplInstructionWrapper\n");
+			instr_wrapper = ctx.query<QueryReplInstructionWrapper>({ .stmt    = stmt,
+			                                                         .counter = m_inputs_counter });
+
+			CORE_DEV_LOG(REPL, "Getting mangled name\n");
+			auto mangled_name = helios::mangler::getSimpleMangledName(
+				ctx, instr_wrapper->declaration->original_symbol
+			);
+			wrapper_func_name = mangled_name.strView();
+			CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
+		});
+
+		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
+		helios::HOUTUnit hout_unit;
+		hout_unit.functions.emplace_back(&instr_wrapper.value());
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+
+			CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
+			CORE_ASSERT(!m_history.empty(), "Instruction evaluated with no module context");
+			auto eval_module_id = m_history.back().module_id;
+			auto module_name    = base::StrID(
+                base::strConcat(
+                    "repl_module_",
+                    frontend::ModuleTree::getPathComponentHash(eval_module_id).hash.toStringHex()
+                )
+                    .c_str()
+            );
+			auto load_result = compileAndLoad(ctx, hout_unit, module_name.strView(), m_dvm_pid);
+			if (!load_result.has_value()) {
+				error_message = "DVM load error: " + load_result.error();
+				std::cerr << error_message << "\n";
+				had_error = true;
+				return;
+			}
+
+			CORE_DEV_LOG(REPL, "Instruction compiled and loaded to DVM\n");
+
+			// Instructions always return unit — run and join without reading an exit value.
+			auto run_result = vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
+			                      .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
+			                      .transform_error(vm::api::errorToString);
+			if (run_result.has_value()) {
+				std::cout << "Instruction executed.\n";
 			} else {
 				error_message = "Runtime error: " + run_result.error();
 				std::cerr << error_message << "\n";

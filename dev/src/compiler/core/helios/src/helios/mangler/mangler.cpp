@@ -298,6 +298,14 @@ namespace compiler::helios::mangler {
 							) {
 								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
 							}
+							variant_case(
+								houtgen::GeneratedSymbolData::ReplInstructionWrapper,
+								repl_instr_wrapper
+							) {
+								return base::strConcat(
+									"__repl_instr_wrapper_", repl_instr_wrapper.counter
+								);
+							}
 							// Other cases of generated symbols cannot be functions.
 						}
 					}
