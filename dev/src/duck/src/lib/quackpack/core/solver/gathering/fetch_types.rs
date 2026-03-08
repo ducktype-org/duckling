@@ -57,18 +57,21 @@ pub struct NotPinnedSuccess {
     pub fetched_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
 }
 
+/// Type representing a failed fetch.
 #[derive(Debug)]
 pub enum FetchFailure {
     Pinned(PinnedFailure),
     NotPinned(NotPinnedFailure),
 }
 
+/// Failed fetch of a single package's manifest.
 #[derive(Debug)]
 pub struct PinnedFailure {
     pub origin_location: InternedLocation,
     pub origin_version: Version,
 }
 
+/// Failed fetch of manifests of all packages from a location.
 #[derive(Debug)]
 pub struct NotPinnedFailure {
     pub origin_location: InternedLocation,
