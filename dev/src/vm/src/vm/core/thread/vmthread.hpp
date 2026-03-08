@@ -142,7 +142,7 @@ namespace vm {
 		 */
 		BlockingQueue<api::ProcStatus> execution_response_queue;
 
-        std::string thread_ctx = "";
+		std::string thread_ctx = "";
 
 #ifdef ENABLE_JIT
 		jit::JitData jit_data;
@@ -322,12 +322,11 @@ namespace vm {
 		/**
 		 * @brief Sets name of the function that will be used in builtin spawn thread.
 		 */
-        void setThreadCtx(std::string);
+		void setThreadCtx(std::string);
 
 		/**
 		 * @brief Gets name of the function that will be used in builtin spawn thread.
 		 */
-        std::string getThreadCtx();
-
+		std::string getThreadCtx();
 	};
 }
