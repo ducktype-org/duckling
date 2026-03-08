@@ -108,6 +108,8 @@ namespace compiler::backend_vm::internal {
 		/// Other ///
 		case Assign:
 			return SimpleOperation{ OpKind::mov };
+		case ZeroInitialize:
+			return NoOpOperation{};
 		case Call:
 			return SimpleOperation{ OpKind::call };
 
