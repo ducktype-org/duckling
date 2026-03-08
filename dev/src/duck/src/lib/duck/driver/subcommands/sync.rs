@@ -10,7 +10,6 @@ pub fn get_parser() -> Command {
     subcommand("sync")
         .about("Synchronize the current venv")
         .arg(flag("frozen", "Don't update the freezefile"))
-        .arg(flag("offline", "Don't perform any network requests"))
         .arg(
             flag(
                 "overwrite",
@@ -33,7 +32,6 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
         global: matches.get_flag("global"),
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
-        offline: matches.get_flag("offline"),
         strict_errors: matches.get_flag("external_errors"),
     };
     sync(ctx, options)

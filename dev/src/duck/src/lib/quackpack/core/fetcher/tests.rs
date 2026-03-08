@@ -201,7 +201,7 @@ mod private {
         let server = create_mock_server().await;
         let fetcher = Fetcher::new(&ctx).unwrap();
         let response = fetcher
-            .get_package_all_metadata(&server.uri().parse().unwrap(), "foo".into(), false)
+            .get_package_all_metadata(&server.uri().parse().unwrap(), "foo".into())
             .await
             .unwrap();
         let FetcherResponse::Some(response) = response else {
@@ -209,14 +209,11 @@ mod private {
         };
         assert_eq!(response.packages_metadata.len(), 2);
         let FetcherResponse::Some(fetched_from_cache) = fetcher
-            .get_package_metadata(
-                &types::PackageWithUrl {
-                    id: "foo".into(),
-                    version: Version::new(1, 2, 5),
-                    url: server.uri().parse().unwrap(),
-                },
-                true,
-            )
+            .get_package_metadata(&types::PackageWithUrl {
+                id: "foo".into(),
+                version: Version::new(1, 2, 5),
+                url: server.uri().parse().unwrap(),
+            })
             .await
             .unwrap()
         else {
@@ -230,14 +227,11 @@ mod private {
         let server = create_mock_server().await;
         let fetcher = Fetcher::new(&ctx).unwrap();
         let err = fetcher
-            .get_package_metadata(
-                &types::PackageWithUrl {
-                    id: "foo".into(),
-                    version: Version::new(1, 2, 5),
-                    url: server.uri().parse().unwrap(),
-                },
-                false,
-            )
+            .get_package_metadata(&types::PackageWithUrl {
+                id: "foo".into(),
+                version: Version::new(1, 2, 5),
+                url: server.uri().parse().unwrap(),
+            })
             .await
             .unwrap_err();
         assert_eq!(

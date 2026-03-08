@@ -10,7 +10,6 @@ pub struct SyncOptions {
     pub global: bool,
     pub overwrite: bool,
     pub frozen: bool,
-    pub offline: bool,
     pub strict_errors: bool,
 }
 

@@ -77,7 +77,6 @@ impl<'duck> Fetcher<'duck> {
     pub async fn get_package_metadata(
         &self,
         package: &types::PackageWithUrl,
-        offline: bool,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
         let span = span!(Level::DEBUG, "metadata", package = ?package);
         let _guard = span.enter();
@@ -86,7 +85,7 @@ impl<'duck> Fetcher<'duck> {
             return Ok(FetcherResponse::Some(cached));
         }
         debug!("cache miss");
-        if offline {
+        if self.ctx.is_offline() {
             return Ok(FetcherResponse::Offline);
         }
         let result = self.ducknest_client.get_exact_metadata(package).await?;
@@ -107,11 +106,10 @@ impl<'duck> Fetcher<'duck> {
         &self,
         url: &Url,
         package_name: StrId,
-        offline: bool,
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         let span = span!(Level::DEBUG, "all metadata", package = %package_name, url = %url);
         let _guard = span.enter();
-        if offline {
+        if self.ctx.is_offline() {
             let package = PackageWithUrl {
                 id: package_name,
                 version: 1.into(),

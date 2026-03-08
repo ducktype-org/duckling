@@ -4,7 +4,6 @@ use crate::quackpack::subcommands::sync::SyncOptions;
 #[cfg_attr(test, derive(Default))]
 pub struct SolverMode {
     pub supress_foreign_manifests_errors: bool,
-    pub offline: bool,
     pub frozen: bool,
 }
 
@@ -12,7 +11,6 @@ impl From<SyncOptions> for SolverMode {
     fn from(value: SyncOptions) -> Self {
         Self {
             supress_foreign_manifests_errors: value.strict_errors,
-            offline: value.offline,
             frozen: value.frozen,
         }
     }

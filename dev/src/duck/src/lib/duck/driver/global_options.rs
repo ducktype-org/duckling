@@ -29,13 +29,33 @@ impl FromStr for Color {
 }
 
 #[derive(Debug)]
-pub struct GlobalCliOptions {
+pub struct GlobalOptions {
+    cli_options: CliOptions,
+    offline: bool,
+}
+
+#[derive(Debug)]
+pub struct CliOptions {
     verbose: bool,
     quiet: bool,
     color: Color,
 }
 
-impl GlobalCliOptions {
+impl GlobalOptions {
+    pub fn from_matches(matches: &ArgMatches) -> QuackResult<Self> {
+        Ok(Self {
+            cli_options: CliOptions::from_matches(matches)?,
+            offline: matches.get_flag("offline"),
+        })
+    }
+
+    pub fn update_context(&self, ctx: &mut DuckCtx) {
+        self.cli_options.update_context(ctx);
+        ctx.set_offline(self.offline);
+    }
+}
+
+impl CliOptions {
     pub fn from_matches(matches: &ArgMatches) -> QuackResult<Self> {
         let quiet = matches.get_flag("quiet");
         let verbose = matches.get_flag("verbose");

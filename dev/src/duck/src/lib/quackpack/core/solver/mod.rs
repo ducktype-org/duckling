@@ -131,7 +131,7 @@ impl<'duck> Solver<'duck, Prepared> {
             .collect();
         let mut prev_freeze_manifests = self
             .current_freeze
-            .get_prev_freeze_manifests(&gatherer, self.mode.offline)
+            .get_prev_freeze_manifests(&gatherer)
             .await?;
         prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
         let (maximal_valid_freeze, is_root_satisfied) = self

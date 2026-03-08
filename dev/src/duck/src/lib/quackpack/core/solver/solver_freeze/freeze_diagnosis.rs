@@ -22,7 +22,6 @@ impl SolverFreeze {
     pub async fn get_prev_freeze_manifests<'duck, GitAccessImpl: GitAccess>(
         &self,
         gatherer: &'duck Gatherer<'duck, GitAccessImpl>,
-        offline: bool,
     ) -> QuackResult<HashMap<ExpandedPackage, Box<Manifest>>> {
         let mut tasks = vec![];
         for pkg in self.package_freezes.keys() {
@@ -30,7 +29,7 @@ impl SolverFreeze {
                 continue;
             }
             if let Ok(request) = pkg.create_manifest_request() {
-                tasks.push(Box::pin(gatherer.fetch(request, offline)));
+                tasks.push(Box::pin(gatherer.fetch(request)));
             }
         }
         let results = join_all(tasks).await;

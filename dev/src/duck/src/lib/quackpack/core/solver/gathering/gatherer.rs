@@ -88,9 +88,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                     .get_request_action(request.clone())?
                     .dump_errors(&mut errors);
                 match action {
-                    RequestAction::Fetch => {
-                        fetches.push(Box::pin(self.fetch(request, mode.offline)))
-                    }
+                    RequestAction::Fetch => fetches.push(Box::pin(self.fetch(request))),
                     RequestAction::More {
                         requests: new_requests,
                     } => requests.extend(new_requests),
@@ -162,26 +160,22 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
     }
 
     /// Helper for [`Gatherer::explore()`], performs a fetch.
-    pub async fn fetch(
-        &self,
-        request: ManifestsRequest,
-        offline: bool,
-    ) -> GathererResult<FetchResponse> {
+    pub async fn fetch(&self, request: ManifestsRequest) -> GathererResult<FetchResponse> {
         match request {
             ManifestsRequest::Pinned(pinned_request) => {
-                self.fetch_registry_pinned(pinned_request, offline).await
+                self.fetch_registry_pinned(pinned_request).await
             }
             ManifestsRequest::NotPinned(not_pinned_request) => {
                 match not_pinned_request.location.as_ref() {
                     Location::Registry { url, real_name } => Ok(self
-                        .fetch_registry_not_pinned(&not_pinned_request, url, *real_name, offline)
+                        .fetch_registry_not_pinned(&not_pinned_request, url, *real_name)
                         .await),
                     Location::Git {
                         url,
                         branch_or_tag,
                         rev,
                     } => {
-                        self.fetch_git(&not_pinned_request, url, *branch_or_tag, *rev, offline)
+                        self.fetch_git(&not_pinned_request, url, *branch_or_tag, *rev)
                             .await
                     }
                     Location::Local { path } => self.fetch_local(&not_pinned_request, path),
@@ -192,11 +186,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
 
     /// Helper for [`Gatherer::explore()`], performs a pinned registry fetch
     /// (registry fetch with a specified version).
-    async fn fetch_registry_pinned(
-        &self,
-        request: PinnedRequest,
-        offline: bool,
-    ) -> GathererResult<FetchResponse> {
+    async fn fetch_registry_pinned(&self, request: PinnedRequest) -> GathererResult<FetchResponse> {
         let fetch_failure = || {
             FetchResponse::Failed(FetchFailure::Pinned(PinnedFailure {
                 origin_location: request.location,
@@ -213,7 +203,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         };
         let fetcher_response: GathererComputation<Option<FetcherResponse<registry::Manifest>>> =
             self.fetcher
-                .get_package_metadata(&pkg_to_fetch, offline)
+                .get_package_metadata(&pkg_to_fetch)
                 .await
                 .into();
         let Some(fetcher_response) = fetcher_response.0 else {
@@ -250,7 +240,6 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         request: &NotPinnedRequest,
         url: &Url,
         real_name: StrId,
-        offline: bool,
     ) -> GathererComputation<FetchResponse> {
         let fetch_failure = || {
             FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
@@ -262,7 +251,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         };
         let fetcher_response: GathererComputation<Option<FetcherResponse<MultiMetadata>>> = self
             .fetcher
-            .get_package_all_metadata(url, real_name, offline)
+            .get_package_all_metadata(url, real_name)
             .await
             .into();
         let Some(fetcher_response) = fetcher_response.0 else {
@@ -311,7 +300,6 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         url: &Url,
         branch_or_tag: BranchOrTag,
         rev: Option<StrId>,
-        offline: bool,
     ) -> GathererResult<FetchResponse> {
         let fetch_failure = || {
             FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
@@ -328,7 +316,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                 FetchSuccess::NotPinned(success),
             )));
         }
-        if offline {
+        if self.ctx.is_offline() {
             return Ok(GathererComputation::only_success(fetch_failure()));
         }
 

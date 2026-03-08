@@ -486,7 +486,6 @@ dependencies:
 
         let mode = SolverMode {
             supress_foreign_manifests_errors: true,
-            offline: false,
             frozen: false,
         };
         let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, mode);
