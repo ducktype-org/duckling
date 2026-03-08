@@ -5,19 +5,14 @@
 
 #pragma once
 
-#ifdef USE_REPLXX
-	#include "frontend_implementations/replxx.hpp"
-#else
-	#include "frontend_implementations/minimal.hpp"
-#endif
-
 #include <string>
 
-
 #ifdef USE_REPLXX
-using impl_t = compiler::repl::FrontendReplxxImplementation;
+	#include "frontend_implementations/replxx.hpp"
+using FrontendImplementationType = compiler::repl::FrontendReplxxImplementation;
 #else
-using impl_t = compiler::repl::FrontendMinImplementation;
+using FrontendImplementationType = compiler::repl::FrontendMinImplementation;
+	#include "frontend_implementations/minimal.hpp"
 #endif
 
 namespace compiler::repl {
@@ -53,7 +48,7 @@ namespace compiler::repl {
 		void        printHelp() const;
 
 	private:
-		impl_t m_impl;
+		FrontendImplementationType m_impl;
 	};  // class ReplFrontend
 
 }  // namespace compiler::repl
