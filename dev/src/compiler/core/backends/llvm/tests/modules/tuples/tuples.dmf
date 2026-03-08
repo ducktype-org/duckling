@@ -1,0 +1,8 @@
+fun main() = {
+    var a = (1, 2);
+    var b = a;
+
+    a = (3, 4);
+
+    var c = (a, b, 0.5);
+}

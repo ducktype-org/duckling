@@ -1,0 +1,10 @@
+var a: (bool, i32) = (true, 42);
+var b = (false, 1, 2., "3");
+var c = a;
+var d: (bool, i32, f32, str) = b;
+var e = ((1, 0.), (3.5, 4));
+var f = (a, b, c, d);
+
+fun main() = {
+    return 0;
+}

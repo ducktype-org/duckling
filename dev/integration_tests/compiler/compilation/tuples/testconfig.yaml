@@ -1,0 +1,8 @@
+Tests:
+  simple:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
