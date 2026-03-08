@@ -16,6 +16,7 @@ PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst wa
 POP_DIAGNOSTIC;
 
 #include "export_keywords.hpp"
+#include "file_changed.hpp"
 #include "go_to_definition.hpp"
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
@@ -68,18 +69,13 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/init_directory/<string>")
 	([&virtual_root](const std::string& base64_path) {
-		try {
-			const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path));
+		const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path));
 
-			auto virtual_path = lsp::initFiles(path, virtual_root);
-			lsp::initModules(virtual_path);
-			lsp::initPSTs(virtual_path);
+		auto virtual_path = lsp::initFiles(path, virtual_root);
+		lsp::initModules(virtual_path);
+		lsp::initPSTs(virtual_path);
 
-			return crow::response(200, "OK");
-		} catch (const std::exception& e) {
-			std::cerr << e.what();
-			return crow::response(400, e.what());
-		}
+		return crow::response(200, "OK");
 	});
 
 	/**
@@ -91,25 +87,21 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/put_file/<string>/<string>")
 	([&virtual_root](const std::string& base64_path, const std::string& base64_content) {
-		try {
-			const auto path    = base64::decode_into<std::string>(base64_path);
-			const auto content = base64::decode_into<std::string>(base64_content);
+		const auto path    = base64::decode_into<std::string>(base64_path);
+		const auto content = base64::decode_into<std::string>(base64_content);
 
-			lsp::putFile(virtual_root, path, content);
+		lsp::updateFileContent(virtual_root, path, content);
 
-			return crow::response(200, "OK");
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+		return crow::response(200, "OK");
 	});
 
 	CROW_ROUTE(app, "/put_file/<string>/")
 	([&virtual_root](const std::string& base64_path) {
-		try {
-			const auto path = base64::decode_into<std::string>(base64_path);
+		const auto path = base64::decode_into<std::string>(base64_path);
 
-			lsp::putFile(virtual_root, path, "");
+		lsp::createFileFromVirtualRoot(virtual_root, path, "");
 
-			return crow::response(200, "OK");
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+		return crow::response(200, "OK");
 	});
 
 	/**
@@ -121,21 +113,17 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/get_errors/<string>")
 	([&virtual_root](const std::string& base64_path) {
-		try {
-			const auto relative_path = base64::decode_into<std::string>(base64_path);
-			auto       path          = virtual_root.getFilePath().join(relative_path);
-			if (not path.exists()) return crow::response(404, "File not found");
+		const auto relative_path = base64::decode_into<std::string>(base64_path);
+		auto       path          = virtual_root.getFilePath().join(relative_path);
+		if (not path.exists()) return crow::response(404, "File not found");
 
-			const auto file     = fs::File(path);
-			auto       json_str = lsp::getDiagnosticJsonFromCompiler(file);
-			CROW_LOG_INFO << "Diagnostics:\n" << json_str;
-			crow::response res(200, json_str);
-			res.set_header("Content-Type", "application/json");
-			return res;
-		} catch (const std::exception& e) {
-			CROW_LOG_ERROR << e.what();
-			return crow::response(400, e.what());
-		}
+		const auto file     = fs::File(path);
+		auto       json_str = lsp::getDiagnosticJsonFromCompiler(file);
+		CROW_LOG_INFO << "Diagnostics:\n" << json_str;
+
+		crow::response res(200, json_str);
+		res.set_header("Content-Type", "application/json");
+		return res;
 	});
 
 	/**
@@ -147,17 +135,15 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/get_semantic_tokens/<string>")
 	([&virtual_root](const std::string& base64_path) {
-		try {
-			const auto relative_path = base64::decode_into<std::string>(base64_path);
-			const auto path          = virtual_root.getFilePath().join(relative_path);
+		const auto relative_path = base64::decode_into<std::string>(base64_path);
+		const auto path          = virtual_root.getFilePath().join(relative_path);
 
-			if (!path.exists()) return crow::response(404, "File not found");
+		if (!path.exists()) return crow::response(404, "File not found");
 
-			const auto file        = fs::File(path);
-			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+		const auto file        = fs::File(path);
+		const auto file_vector = compiler::frontend::SourceFile::getSourceFilesFromFile(file);
 
-			return crow::response(200, lsp::getSemanticTokens(file_vector));
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+		return crow::response(200, lsp::getSemanticTokens(file_vector));
 	});
 
 	/**
@@ -169,29 +155,26 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
 	([&virtual_root](const std::string& base64_path, const uint& offset) {
-		try {
-			const auto relative_path = base64::decode_into<std::string>(base64_path);
-			const auto path          = virtual_root.getFilePath().join(relative_path);
+		const auto relative_path = base64::decode_into<std::string>(base64_path);
+		const auto path          = virtual_root.getFilePath().join(relative_path);
 
-			if (!path.exists()) return crow::response(404, "File not found");
+		if (!path.exists()) return crow::response(404, "File not found");
 
-			const auto               file = fs::File(path);
-			std::vector<std::string> out;
+		const auto               file = fs::File(path);
+		std::vector<std::string> out;
 
-			query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
-				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
-				for (auto& src_file: src_files) {
-					auto pst        = src_file->getPST();
-					auto pst_root   = pst->getRootElement();
-					auto element    = lsp::findElement(pst_root, offset, true);
-					auto definition = lsp::findDefinition(element, ctx);
-					if (definition.has_value())
-						out.push_back("{" + definition.value().toJSON() + "}");
-				}
-			});
+		query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
+			auto src_files = compiler::frontend::SourceFile::getSourceFilesFromFile(file);
+			for (auto& src_file: src_files) {
+				auto pst        = src_file->getPST();
+				auto pst_root   = pst->getRootElement();
+				auto element    = lsp::findElement(pst_root, offset, true);
+				auto definition = lsp::findDefinition(element, ctx);
+				if (definition.has_value()) out.push_back("{" + definition.value().toJSON() + "}");
+			}
+		});
 
-			return crow::response(200, lsp::jsonList(out));
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+		return crow::response(200, lsp::jsonList(out));
 	});
 
 
@@ -202,14 +185,12 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/debug/<string>")
 	([&virtual_root](const std::string& arg) {
-		try {
-			// put here whatever you want for debugging
-			// use virtual_root to access the virtual file system
-			std::cerr << "Debug arg: " << arg << "\n";
-			std::cerr << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
+		// put here whatever you want for debugging
+		// use virtual_root to access the virtual file system
+		std::cerr << "Debug arg: " << arg << "\n";
+		std::cerr << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
 
-			return crow::response(200, "OK");
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+		return crow::response(200, "OK");
 	});
 
 	app.port(base::safeIntConv<u16>(port)).run();

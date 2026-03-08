@@ -1,4 +1,5 @@
 add_executable(lsp_daemon src/lsp_interface/lsp_daemon.cpp
+                          src/lsp_interface/file_changed.cpp
                           src/lsp_interface/export_keywords.cpp
                           src/lsp_interface/semantic_tokens.cpp
                           src/lsp_interface/go_to_definition.cpp

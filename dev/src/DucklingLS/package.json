@@ -18,7 +18,7 @@
         "commands": [
             {
                 "command": "duckling.restartServer",
-                "title": "DucklingLS: Restart languge server"
+                "title": "DucklingLS: Restart language server"
             }
         ],
         "languages": [
@@ -62,7 +62,7 @@
                         "messages",
                         "verbose"
                     ],
-                    "default": "off",
+                    "default": "messages",
                     "description": "Traces the communication between VS Code and the Duckling language server."
                 }
             }

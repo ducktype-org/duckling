@@ -60,9 +60,9 @@ namespace lsp {
 
 	Definition::Definition(const pst::LangElement* element) {
 		auto source_position = element->getSourcePosition();
-		this->uri            = source_position.getSource()->getFile().getFilePath().uri();
-		this->start          = source_position.getStartLineColumn();
-		this->end            = source_position.getEndLineColumn();
+		this->uri   = source_position.getSource()->getFile().getFilePath().toPhysicalPath().uri();
+		this->start = source_position.getStartLineColumn();
+		this->end   = source_position.getEndLineColumn();
 	}
 
 	pst::AccessLocked<pst::LangElement> findElement(
