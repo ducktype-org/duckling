@@ -440,9 +440,7 @@ private:
 		assertTrue(has_i16_to_i64, "Expected sext/zext i16-> i64 in IR");
 	}
 
-	void tuplesTest() {
-		runTestForModule("modules/tuples");
-	}
+	void tuplesTest() { runTestForModule("modules/tuples"); }
 };
 
 
