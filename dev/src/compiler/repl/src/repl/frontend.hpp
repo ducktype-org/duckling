@@ -41,11 +41,32 @@ namespace compiler::repl {
 		ReplFrontend();
 		~ReplFrontend() = default;
 
-		void        printWelcome() const;
+		/**
+		 * @brief Prints the welcome message when starting the REPL.
+		 */
+		void printWelcome() const;
+
+		/**
+		 * @brief Blocks and waits for the user to enter next piece of input.
+		 *
+		 * @return The string of input provided by the user.
+		 */
 		std::string readLine();
-		void        printHistory() const;
-		void        clearHistory();
-		void        printHelp() const;
+
+		/**
+		 * @brief Prints the history of previously entered inputs.
+		 */
+		void printHistory() const;
+
+		/**
+		 * @brief Clears the history of previously entered inputs.
+		 */
+		void clearHistory();
+
+		/**
+		 * @brief Prints the help message with available commands and controls.
+		 */
+		void printHelp() const;
 
 	private:
 		FrontendImplementationType m_impl;
