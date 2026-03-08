@@ -91,7 +91,7 @@ namespace pst {
 
 	void LangElement::calcHash() {
 		hash = calcStableHash().finalize();
-		pst_hash_map.emplace(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+		pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
 	}
@@ -178,11 +178,12 @@ namespace pst {
 		CORE_PANIC("PstVisitor not supported for " + elementType());
 	}
 
-	base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> LangElement::pst_hash_map{};
+	concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>>
+		LangElement::pst_hash_map{};
 
 	AccessLocked<LangElement> LangElement::getByStableHash(query::QueryStableHash stable_hash) {
 		CORE_ASSERT(pst_hash_map.contains(stable_hash), "Invalid stable hash");
-		return pst_hash_map.at(stable_hash);
+		return *pst_hash_map.at(stable_hash);
 	}
 
 	StablePosition LangElement::getStablePosition() const { return { getHash(), {} }; }

@@ -44,8 +44,9 @@ namespace concurrent::tester {
 
 			[[nodiscard]]
 			std::string toString() const {
+				using base::internal::strConcat;
 				std::string result_str = "";
-				VISIT(result, r, base::internal::strConcat(result_str, r));
+				VISIT(result, r, strConcat(result_str, r));
 				return "returns " + result_str;
 			}
 		};

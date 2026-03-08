@@ -501,6 +501,16 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				import foo;
+
+				let x = foo.z;
+			)",
+			{ "Module not found." },
+			1
+		);
+
 
 		// =========================== Not-yet-implemented errors ==========================
 		// Note: just remove the tests when the features are implemented.
