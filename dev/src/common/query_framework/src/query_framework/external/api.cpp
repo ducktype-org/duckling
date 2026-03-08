@@ -101,9 +101,11 @@ namespace query::external {
 
 		// Step 3: Erase values of the invalidated nodes from their cache
 		for (const auto& node: nodes_to_invalidate.dependents_recursive) {
-			std::cout << "Invalidating node with QueryID: " << node.q_id.getData().name << " and hash: " << node.hash.val
-			          << "\n";
-			node.q_id.getData().cache_data.erase_function(node.hash.val);
+			if (not node.q_id.getData().isInputQuery()) {
+				internal::ContextAccess::getState()->getTaskPool()->invalidateTask(node);
+				node.q_id.getData().cache_data.erase_function(node.hash.val);
+			}
+
 			state->getMetadataStorageMutable()->clearNodeMetadata(node);
 			state->clearDiagnosticForNode(node);
 		}

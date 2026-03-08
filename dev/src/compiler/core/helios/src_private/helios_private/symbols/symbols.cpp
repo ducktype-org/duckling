@@ -55,7 +55,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
+	DECLARE_QUERY(QueryLinkedScope, SymID, query::QResult<ScopeID>, ({}));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -605,7 +605,7 @@ namespace compiler::helios {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInSymbol, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->common.kind) {
 			case SymbolKind::Using:
@@ -620,7 +620,7 @@ namespace compiler::helios {
 				// when QueryLookupInSymbol will get more and more
 				// per-symbol-kind cases.
 
-				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
+				UNPACK_QRESULT(auto linked_scope =, ctx.query<QueryLinkedScope>(key.symbol));
 				return *HInterface::ofScope(linked_scope)
 				            .lookup(ctx, key.name, { key.follow_wildcards });
 			}
@@ -636,16 +636,16 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
-	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-		struct QueryLinkedScopeVisitor final: pst::PstVisitorPanicky {
+	struct IMPLEMENT_QUERY(QueryLinkedScope, query::QResult<ScopeID>) {
+		struct QueryLinkedScopeVisitor final: pst::PstVisitorEmpty {
 			query::Context& ctx;
 			QKey            key;
 
 			QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
 
-			base::Optional<ScopeID> result_scope;
+			base::Optional<query::QResult<ScopeID>> result_scope;
 
-			void output(ScopeID out) {
+			void output(query::QResult<ScopeID> out) {
 				CORE_ASSERT(result_scope.empty(), "Output already set");
 				result_scope.emplace(out);
 			}
@@ -682,9 +682,9 @@ namespace compiler::helios {
 
 				if (!maybe_imported_module.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Module not found", import_stmt->getSourcePosition()
+						"Module not found.", import_stmt->getSourcePosition()
 					));
-					output(scope(key));
+					output(query::Failed());
 					return;
 				}
 
@@ -709,8 +709,16 @@ namespace compiler::helios {
 				key.ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
-			default:
-				throw base::NotYetImplemented("Getting linked scope for some SymbolKind...");
+			default: {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"Linked scope for this symbol kind is not implemented yet: ",
+						key.ref->common.kind
+					),
+					stmt(ctx, key.ref).value()->getSourcePosition()
+				));
+				return query::Failed();
+			}
 			}
 		}
 

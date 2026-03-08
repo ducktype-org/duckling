@@ -582,7 +582,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
 
-	struct IMPLEMENT_QUERY(QueryLookupInScope, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInScope, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
@@ -602,8 +602,9 @@ namespace compiler::helios {
 			for (const auto& sym: *symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto wild_result
+						auto wild_result_qresult
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
+						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
 						if (!wild_result->isEmpty())
 							result.children.push_back(wild_result->toNode(sym));
 					}
@@ -666,24 +667,25 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);
 
-	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			auto result = ctx.query<QueryLookupInScope>(key);
+			UNPACK_QRESULT_CREF(auto result =, ctx.query<QueryLookupInScope>(key));
 
 			if (key.scope.ref->parent.has_value()) {
 				auto parent = key.scope.ref->parent.value();
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				LookupResult parent_result = *ctx.query<QueryLookupInScopeAndParents>(
-					{ parent, key.name, key.with_wildcards }
+				UNPACK_QRESULT_CREF(
+					LookupResult parent_result =,
+					ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards })
 				);
 
-				parent_result.merge(*result);
+				parent_result.merge(std::move(result));
 
 				return parent_result;
 			} else {
-				return *result;
+				return result;
 			}
 		}
 

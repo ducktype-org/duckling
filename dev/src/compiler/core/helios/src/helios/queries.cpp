@@ -57,6 +57,9 @@ namespace compiler::helios {
 			// and return failure at the end if so.
 			bool is_failed = false;
 
+			std::vector<query::TaskHandle> scheduled_tasks;
+			std::vector<SymID>             class_symbols;
+
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
@@ -66,24 +69,32 @@ namespace compiler::helios {
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
+
 					// grab functions:
-					if (kind(sym) == SymbolKind::Function) {
-						// we "catch" failure here to continue gathering other functions:
-						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
-						if (hout_function->hasFailed()) {
-							is_failed = true;
-							continue;
-						} else {
-							out.functions.emplace_back(&hout_function->valueOrPanic());
-						}
-					}
-					if (kind(sym) == SymbolKind::Class) {
-						appendClassConstructors(out.functions, sym, ctx);
-						if (appendClassMethodsWithFail(out.functions, sym, ctx)) {
-							is_failed = true;
-							continue;
-						}
-					}
+					if (kind(sym) == SymbolKind::Function)
+						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
+					if (kind(sym) == SymbolKind::Class) class_symbols.emplace_back(sym);
+				}
+			}
+
+			for (auto class_sym: class_symbols) {
+				// we postpone this past function scheduling, as
+				// appendClassConstructors may be time consuming.
+				appendClassConstructors(out.functions, class_sym, ctx);
+				if (appendClassMethodsWithFail(out.functions, class_sym, ctx)) {
+					is_failed = true;
+					continue;
+				}
+			}
+
+			for (auto handler: scheduled_tasks) {
+				// we "catch" failure here to continue gathering other functions:
+				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
+				if (hout_function->hasFailed()) {
+					is_failed = true;
+					continue;
+				} else {
+					out.functions.emplace_back(&hout_function->valueOrPanic());
 				}
 			}
 
@@ -365,12 +376,8 @@ namespace compiler::helios {
 				// Set return type if provided.
 				if (ret.has_value()) {
 					const auto ret_type_ctv
-						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr());
-					if (ret_type_ctv.hasFailed()) {
-						// we just fail here, because we can't continue without type
-						return;
-					}
-					ret_type = ret_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 					origin   = code::multiplePstOrigin({ param_list.unlock(ctx),
 					                                     ret.value().unlock(ctx) });
 				}
