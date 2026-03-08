@@ -363,9 +363,7 @@ clah::Clah getClahForMain() {
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
-
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
-
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -461,7 +459,7 @@ clah::Clah getClahForMain() {
 									.execution_options = {
 										.worker_count = 1,
 									},
-}
+						}
 					);
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
@@ -486,8 +484,10 @@ clah::Clah getClahForMain() {
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
-									   .debug_options     = getDebugOptionsFromClap(options),
-									   .execution_options = { 1 },
+									   .debug_options = getDebugOptionsFromClap(options),
+									   .execution_options = {
+										   .worker_count = 1,
+									   },
 								   }
 							   );
 							   compiler::repl::ReplSession session;

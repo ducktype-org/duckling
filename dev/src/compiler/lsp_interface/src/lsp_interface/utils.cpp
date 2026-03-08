@@ -112,12 +112,4 @@ namespace lsp {
 		CORE_UNREACHABLE();
 	}
 
-	void putFile(const fs::File& virtual_root, const std::string& path, const std::string& content) {
-		if (!virtual_root.getFilePath().join(path).exists())
-			fs::FileManager::createVirtualFile(virtual_root.getFilePath().join(path), "");
-
-		auto file = fs::File(virtual_root.getFilePath().join(path));
-		file.writeToFile(content);
-		compiler::frontend::ModuleTreeModifier::fileModified(file);
-	}
 }
