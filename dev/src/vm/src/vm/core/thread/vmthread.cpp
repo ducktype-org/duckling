@@ -700,11 +700,7 @@ namespace vm {
 	}
 
 
-    void VMThread::setThreadCtx(std::string name){
-        thread_ctx = std::move(name);
-    } 
+	void VMThread::setThreadCtx(std::string name) { thread_ctx = std::move(name); }
 
-    std::string VMThread::getThreadCtx(){
-        return thread_ctx;
-    }
+	std::string VMThread::getThreadCtx() { return thread_ctx; }
 }
