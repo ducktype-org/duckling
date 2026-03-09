@@ -22,7 +22,7 @@ pub fn get_parser() -> Command {
                 .conflicts_with("overwrite"),
         )
         .arg(flag(
-            "external_errors",
+            "external-errors",
             "Halt computation after encountering errors in foreign manifests",
         ))
 }
@@ -32,7 +32,7 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
         global: matches.get_flag("global"),
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
-        strict_errors: matches.get_flag("external_errors"),
+        strict_errors: matches.get_flag("external-errors"),
     };
     sync(ctx, options)
 }
