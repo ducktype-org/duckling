@@ -384,66 +384,73 @@ private:
 				}
 			)",
 			{ "literal", "unknown" },
-		      "`()`" },
+		      "`()`"
+	}
+
+					  ,
 			1
 		);
 
 
-		// ========================== Comp time errors ==========================
+					  // ========================== Comp time errors ==========================
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				const a: f64 = 1.0 / 0.0;
 				fun main() -> i64 = 0;
 			)",
-			{ "Division", "zero" },
-			1
-		);
+						  { "Division", "zero" },
+						  1
+					  );
 
 
-		// ============================ Other errors ============================
-		checkForErrorOnCompileModule(
-			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
-		);
-		checkForErrorOnCompileModule(
-			R"(fun a() = 1000i8;)", { "Literal doesn't fit in the declared signed integer type." }, 1
-		);
-		checkForErrorOnCompileModule(
-			R"(
+					  // ============================ Other errors ============================
+					  checkForErrorOnCompileModule(
+						  R"(fun a() = 100000000000000000000000;)",
+						  { "Numeric literal value is too large" },
+						  1
+					  );
+					  checkForErrorOnCompileModule(
+						  R"(fun a() = 1000i8;)",
+						  { "Literal doesn't fit in the declared signed integer type." },
+						  1
+					  );
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					builtin_output_string("This is an unknown escape sequence: \c");
 					return 0;
 				}
 			)",
-			{ "unknown escape sequence" },
-			1
-		);
+						  { "unknown escape sequence" },
+						  1
+					  );
 
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					var x = 1;
 					const y = x;
    					return 0;
 				}
 			)",
-			{ "cannot be evaluated at compile-time", "const y = x" },
-			1
-		);
+						  { "cannot be evaluated at compile-time", "const y = x" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					let x: i64;
 				}
 			)",
-			{ "Immutable variables must have an initial value." },
-			1
-		);
+						  { "Immutable variables must have an initial value." },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					var n = 42;
                     if (true) {
@@ -452,175 +459,177 @@ private:
                     }
 				}
 			)",
-			{ "Variable name is ambiguous, because it has been defined multiple times.",
-		      "Found declaration:" },
-			1
-		);
+						  { "Variable name is ambiguous, because it has been defined multiple "
+	                        "times.",
+	                        "Found declaration:" },
+						  1
+					  );
 
-		// ============================ Static Arrays ============================
-		checkForErrorOnCompileModule(
-			R"(
+					  // ============================ Static Arrays ============================
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main(n: u64) = {
 					var arr: i32[n];
 				}
 			)",
-			{ "Expression cannot be evaluated at compile-time." },
-			1
-		);
+						  { "Expression cannot be evaluated at compile-time." },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-			{ "Type `f32` cannot be converted to type `const u64`." },
-			1
-		);
+						  { "Type `f32` cannot be converted to type `const u64`." },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				const ARR_TYPE = i32[-2];
 			)",
-			{ "Value cannot be converted to type `const u64` at compile-time." },
-			1
-		);
+						  { "Value cannot be converted to type `const u64` at compile-time." },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() = {
 					var arr: i32[5];
 					var x = arr[1, 2];
 				}
 			)",
-			{ "Array index/size must be exactly one expression" },
-			1
-		);
+						  { "Array index/size must be exactly one expression" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() = {
 					var arr: i32[5];
 					arr["index"] = 1;
 				}
 			)",
-			{ "Type `string` cannot be converted to type `const i64`." },
-			1
-		);
+						  { "Type `string` cannot be converted to type `const i64`." },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				const NOT_A_TYPE = 10;
 				const ARR = NOT_A_TYPE[5];
 			)",
-			{ "Index operator base must be indexable." },
-			1
-		);
+						  { "Index operator base must be indexable." },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				import foo;
 
 				let x = foo.z;
 			)",
-			{ "Module not found." },
-			1
-		);
+						  { "Module not found." },
+						  1
+					  );
 
 
-		// =========================== Not-yet-implemented errors ==========================
-		// Note: just remove the tests when the features are implemented.
+					  // =========================== Not-yet-implemented errors
+	                  // ========================== Note: just remove the tests when the features
+	                  // are implemented.
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					var x: i64 = 0;
 					x++;
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "Suffix" },
-			1
-		);
+						  { "Feature not implemented", "Suffix" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					while (true) {
 						break;
 					}
 				}
 			)",
-			{ "Feature not implemented", "break" },
-			1
-		);
+						  { "Feature not implemented", "break" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					while (true) {
 						continue;
 					}
 				}
 			)",
-			{ "Feature not implemented", "continue" },
-			1
-		);
+						  { "Feature not implemented", "continue" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					defer 1;
 				}
 			)",
-			{ "Feature not implemented", "defer" },
-			1
-		);
+						  { "Feature not implemented", "defer" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					while (true) {
 						redo;
 					}
 				}
 			)",
-			{ "Feature not implemented", "redo" },
-			1
-		);
+						  { "Feature not implemented", "redo" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					for (i in 0) { }
 				}
 			)",
-			{ "Feature not implemented", "for" },
-			1
-		);
+						  { "Feature not implemented", "for" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					fun foo() = 0;
 				}
 			)",
-			{ "Feature not implemented", "Nested", "function" },
-			1
-		);
+						  { "Feature not implemented", "Nested", "function" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun main() -> i64 = {
 					var a: i64 = 0;
 					a += 1;
 					return a;
 				}
 			)",
-			{ "Feature not implemented" },
-			1
-		);
+						  { "Feature not implemented" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				fun foo() = {
 					var a: i64 = 0;
 					&a;
@@ -630,12 +639,12 @@ private:
 
 				const bar = foo();
 			)",
-			{ "Feature not implemented", "pointer types" },
-			1
-		);
+						  { "Feature not implemented", "pointer types" },
+						  1
+					  );
 
-		checkForErrorOnCompileModule(
-			R"(
+					  checkForErrorOnCompileModule(
+						  R"(
 				class A { x: i64 = 0; }
 				const a = A();
 
@@ -643,135 +652,131 @@ private:
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "compile time evaluation" },
-			1
+						  { "Feature not implemented", "compile time evaluation" },
+						  1
+					  );
+
+}
+
+void testErrorBadExpr() {
+	using namespace compiler::helios;
+
+	auto [_, root_scope]
+		= test_utils::getModule(fs::File(path("test_modules/error_generating/bad_expr")));
+
+
+	// Stuff in this fails on the HOUT creation level instead of during the evaluation.
+	// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+
+	ASSERT_TRUE(
+		query::entryPoint<QueryConstValueOf>(test_utils::getChain("InvalidExpr", root_scope).back())
+			.hasFailed()
+	);
+
+	try {
+		test_utils::getConstValueAs<i64>("InvalidSym", root_scope);
+		CORE_PANIC("Should throw.");
+	} catch (query::internal::QueryFailedException& err) {
+		// Since this branch was chosen, everything worked well.
+	}
+
+	try {
+		test_utils::getConstValueAs<i64>("C", root_scope);
+		CORE_PANIC("Should throw.");
+	} catch (query::internal::QueryFailedException& err) {
+		// Since this branch was chosen, everything worked well.
+	}
+
+	// This fails on the HOUT creation level instead of during the evaluation.
+	// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+	try {
+		test_utils::getConstValueAs<bool>("InvalidCompMiddle", root_scope);
+		CORE_PANIC("Should throw.");
+	} catch (query::internal::QueryFailedException& err) {
+		// Since this branch was chosen, everything worked well.
+	}
+
+	try {
+		test_utils::getConstValueAs<bool>("InvalidCompFirst", root_scope);
+		CORE_PANIC("Should throw.");
+	} catch (query::internal::QueryFailedException& err) {
+		// Since this branch was chosen, everything worked well.
+	}
+
+	try {
+		test_utils::getConstValueAs<f32>("INVALID_ADD", root_scope);
+		CORE_PANIC("Should throw.");
+	} catch (query::internal::QueryFailedException& err) {
+		// Since this branch was chosen, everything worked well.
+	}
+
+	try {
+		test_utils::getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
+		CORE_PANIC("Should throw.");
+	} catch (query::internal::QueryFailedException& err) {
+		// Since this branch was chosen, everything worked well.
+	}
+
+	try {
+		test_utils::getConstValueAs<bool>("INVALID_MODULO", root_scope);
+		CORE_PANIC("Should throw.");
+	} catch (query::internal::QueryFailedException& err) {
+		// Since this branch was chosen, everything worked well.
+	}
+}
+
+void testDiagnosticErrorsCorrectness() {
+	using namespace helios::code;
+	using namespace helios;
+	using dia_int::testDiagnosticMessage;
+
+	std::stringstream ss;
+
+	query::utils::withContextDo([&](query::Context& ctx) {
+		using enum tsh::IntegralAbstractType::Signedness;
+		const auto int32_type
+			= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
+		auto st = tsh::SymbolType{
+			int32_type,
+			tsh::ReferenceKind::Direct,
+			tsh::Mutability::Mutable,
+		};
+
+		// UndefinedBinaryOperatorError
+		testDiagnosticMessage<UndefinedBinaryOperatorError>(
+			ss,
+			dia::SourcePosition::fakePosition(),
+			"+",
+			makeBox<InteractiveType>(ctx, st),
+			makeBox<InteractiveType>(ctx, st)
 		);
-	}
 
-	void testErrorBadExpr() {
-		using namespace compiler::helios;
+		// UndefinedUnaryOperatorError
+		testDiagnosticMessage<UndefinedUnaryOperatorError>(
+			ss, dia::SourcePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
+		);
 
-		auto [_, root_scope]
-			= test_utils::getModule(fs::File(path("test_modules/error_generating/bad_expr")));
+		// InvalidNumericLiteralError
+		testDiagnosticMessage<InvalidNumericLiteralError>(ss, dia::SourcePosition::fakePosition());
 
+		// NumericLiteralTooLargeError
+		testDiagnosticMessage<NumericLiteralTooLargeError>(ss, dia::SourcePosition::fakePosition());
 
-		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+		// LiteralDoesNotFitError
+		testDiagnosticMessage<LiteralDoesNotFitError>(
+			ss, dia::SourcePosition::fakePosition(), "signed integer"
+		);
 
-		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
-						test_utils::getChain("InvalidExpr", root_scope).back()
-		)
-		                .hasFailed());
+		// SingleStmtFunctionMustBeExprError
+		testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
 
-		try {
-			test_utils::getConstValueAs<i64>("InvalidSym", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<i64>("C", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		// This fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		try {
-			test_utils::getConstValueAs<bool>("InvalidCompMiddle", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<bool>("InvalidCompFirst", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<f32>("INVALID_ADD", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<bool>("INVALID_MODULO", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-	}
-
-	void testDiagnosticErrorsCorrectness() {
-		using namespace helios::code;
-		using namespace helios;
-		using dia_int::testDiagnosticMessage;
-
-		std::stringstream ss;
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			using enum tsh::IntegralAbstractType::Signedness;
-			const auto int32_type
-				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			auto st = tsh::SymbolType{
-				int32_type,
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
-
-			// UndefinedBinaryOperatorError
-			testDiagnosticMessage<UndefinedBinaryOperatorError>(
-				ss,
-				dia::SourcePosition::fakePosition(),
-				"+",
-				makeBox<InteractiveType>(ctx, st),
-				makeBox<InteractiveType>(ctx, st)
-			);
-
-			// UndefinedUnaryOperatorError
-			testDiagnosticMessage<UndefinedUnaryOperatorError>(
-				ss, dia::SourcePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
-			);
-
-			// InvalidNumericLiteralError
-			testDiagnosticMessage<InvalidNumericLiteralError>(
-				ss, dia::SourcePosition::fakePosition()
-			);
-
-			// NumericLiteralTooLargeError
-			testDiagnosticMessage<NumericLiteralTooLargeError>(
-				ss, dia::SourcePosition::fakePosition()
-			);
-
-			// LiteralDoesNotFitError
-			testDiagnosticMessage<LiteralDoesNotFitError>(
-				ss, dia::SourcePosition::fakePosition(), "signed integer"
-			);
-
-			// SingleStmtFunctionMustBeExprError
-			testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
-				ss, dia::SourcePosition::fakePosition()
-			);
-
-			// ImmutableVariableNoInitError
-			testDiagnosticMessage<ImmutableVariableNoInitError>(
-				ss, dia::SourcePosition::fakePosition()
-			);
-		});
-	}
-};
+		// ImmutableVariableNoInitError
+		testDiagnosticMessage<ImmutableVariableNoInitError>(ss, dia::SourcePosition::fakePosition());
+	});
+}
+}
+;
 
 TESTER_COMMON_MAIN("/src/compiler/core/helios/tests/")

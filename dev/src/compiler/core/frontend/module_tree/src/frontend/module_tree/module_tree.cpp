@@ -1007,12 +1007,12 @@ namespace compiler::frontend {
 			= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				file_id
 			);
-		auto pst              = file->getPST();
-		auto root_optional          = pst->getRootElement().unlockOpt(ctx);
+		auto pst           = file->getPST();
+		auto root_optional = pst->getRootElement().unlockOpt(ctx);
 
 		if (root_optional.has_value()) {
 			auto root_id = root_optional.value()->getID();
-			
+
 			auto maybe_put_result = root_element_file_back_map.maybePut(root_id, file_id);
 			if (!maybe_put_result) {
 				// If the key already exists, assert that it maps to the same value

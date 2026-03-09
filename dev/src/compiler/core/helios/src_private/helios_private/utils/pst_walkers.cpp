@@ -5,9 +5,9 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 
-#include <query_framework/query_errors.hpp>
-
 #include <base/except/exceptions.hpp>
+
+#include <query_framework/query_errors.hpp>
 
 namespace compiler::helios {
 
@@ -56,7 +56,7 @@ namespace compiler::helios {
 			// @TODO: #1753 this throw may be suboptimal
 			query::throwFailed();
 		}
-		
+
 		auto elem = elem_optional.value();
 
 		// @TODO: dont use dynamic_cast's here, but a visitor

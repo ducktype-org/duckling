@@ -312,26 +312,22 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryScopesInModule, QueryScopesInModuleValue) {
-
 		/**
 		 * Helper struct used for accumulating the query output.
 		 */
 		struct Output final {
 			std::vector<ScopeID> scopes;
-			bool failed = false;
+			bool                 failed = false;
 		};
-
 
 		/**
 		 * @brief Gets scopes in a module.
 		 */
 		struct ScopeGrabPseudoVisitor final {
-			ScopeGrabPseudoVisitor(Ref<Output> out, Context& ctx):
-				  out(out),
-				  ctx(ctx) {}
+			ScopeGrabPseudoVisitor(Ref<Output> out, Context& ctx): out(out), ctx(ctx) {}
 
 			Ref<Output> out;
-			Context&   ctx;
+			Context&    ctx;
 
 			template<class T>
 			ScopeID scopeOf(pst::Access<T> element) {
@@ -361,7 +357,7 @@ namespace compiler::helios {
 		};
 
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
-			auto root = getFilePST(ctx, file)->getRootElement();
+			auto root          = getFilePST(ctx, file)->getRootElement();
 			auto root_unlocked = root.unlockOpt(ctx);
 			if (!root_unlocked.has_value()) {
 				// PST root failed to parse, PST should have already reported the diagnostic.
@@ -377,7 +373,7 @@ namespace compiler::helios {
 			// fetch scopes from main module file
 			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
 
-	
+
 			Output output;
 			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
 

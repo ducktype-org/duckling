@@ -63,11 +63,10 @@ namespace compiler::helios {
 				}
 				variant_case(QueryScopesInModuleValue::Failure, failure) {
 					scopes_to_process = &failure.partial_scopes;
-					is_failed = true;  // we mark the whole query as failed, even if we have some scopes
+					is_failed
+						= true;  // we mark the whole query as failed, even if we have some scopes
 				}
-				variant_default {
-					CORE_UNREACHABLE();
-				}
+				variant_default { CORE_UNREACHABLE(); }
 			}
 
 			HOUTUnit out;
@@ -648,7 +647,7 @@ namespace compiler::helios {
 			code::CodeBlock block({});
 			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
-				auto unlocked = stmt.unlockOpt(ctx);
+				auto          unlocked = stmt.unlockOpt(ctx);
 				if (!unlocked.has_value()) {
 					// @TODO: #1753 change here to grab errors from all statements.
 					query::throwFailed();
