@@ -213,7 +213,9 @@ namespace hashing {
 		constexpr result_type finalize() const noexcept {
 			SHA256 copy = *this;
 			copy.padAndProcess();
-			return copy.state;
+			std::array<u32, 8> ret{};
+			std::ranges::copy(copy.state.rbegin(), copy.state.rend(), ret.begin());
+			return ret;
 		}
 
 	private:
