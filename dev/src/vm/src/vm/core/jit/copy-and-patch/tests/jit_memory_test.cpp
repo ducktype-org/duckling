@@ -57,7 +57,7 @@ private:
 		auto foo_code = find_func("simple_function_plus_1");
 
 		auto memory = JitMemory::allocate(foo_code.size);
-		std::memcpy(memory.memory, stencils.binary.data() + foo_code.place, foo_code.size);
+		std::ranges::copy(stencils.stencil_binary(foo_code), memory.memory);
 		memory.mark_executable();
 		auto simple = memory.into_func<int(int)>();
 		for (int i = 0; i < 10; ++i) ASSERT_EQUAL(std::invoke(simple, i), i + 1);
@@ -67,7 +67,7 @@ private:
 		auto foo_code = find_func("recursive_fibonacci");
 
 		auto memory = JitMemory::allocate(foo_code.size);
-		std::memcpy(memory.memory, stencils.binary.data() + foo_code.place, foo_code.size);
+		std::ranges::copy(stencils.stencil_binary(foo_code), memory.memory);
 		memory.mark_executable();
 		auto fibonacci = memory.into_func<int(int)>();
 		ASSERT_EQUAL(std::invoke(fibonacci, 0), 1);
