@@ -458,6 +458,7 @@ private:
 			1
 		);
 
+		// We don't see any query errors here, because they are logged by the PST:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
@@ -465,8 +466,8 @@ private:
 					return 0;
 				}
 			)",
-			{ "Empty expression" },
-			1
+			{ },
+			0
 		);
 
 		// check for multiple errors:
