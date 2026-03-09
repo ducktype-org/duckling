@@ -862,7 +862,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]] Source getSource() const { return source; }
 
-		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
+		[[nodiscard]] bool carriesInformation(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 

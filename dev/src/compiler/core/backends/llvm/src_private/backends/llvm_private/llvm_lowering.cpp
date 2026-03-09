@@ -848,11 +848,13 @@ namespace compiler::backend_llvm {
 					builder.CreateStore(val, alloca);
 					return alloca;
 				}
-				variant_default {
-					CORE_PANIC(
-						"Cannot get pointer to LIRValue: variant is BlockRef or FunctionLiteral"
-					);
+				variant_case(lir::FunctionLiteral, func) {
+					llvm::Value* val = loadLIRValue(lir_location, builder);
+					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_func_ptr");
+					builder.CreateStore(val, alloca);
+					return alloca;
 				}
+				variant_default { CORE_PANIC("Cannot get pointer to BlockRef"); }
 			}
 			CORE_UNREACHABLE();
 		}

@@ -591,7 +591,7 @@ private:
 				"Type template for List should have kind TypeTemplate."
 			);
 
-			assertFalse(
+			assertTrue(
 				list_template_type.carriesInformation(ctx),
 				"Type templates should not carry information."
 			);
