@@ -62,7 +62,8 @@ private:
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 			auto logger = query::Context::dumpToOneLoggerAndClear();
 
-			// @TODO: #2213: we should do something smarted here, and see if the sum of pst and query errors is ok:
+			// @TODO: #2213: we should do something smarted here, and see if the sum of pst and
+			// query errors is ok:
 			assertTrue(
 				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
 			);
