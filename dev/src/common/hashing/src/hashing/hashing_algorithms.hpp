@@ -150,7 +150,7 @@ namespace hashing {
 			SHA256 copy = *this;
 			copy.padAndProcess();
 			std::array<u32, 8> ret{};
-			for (std::size_t i = 0; i < 8; ++i) ret.at(i) = copy.state.at(8 - 1 - i);
+			std::ranges::copy(copy.state.rbegin(), copy.state.rend(), ret.begin());
 			return ret;
 		}
 

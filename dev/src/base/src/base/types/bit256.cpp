@@ -1,5 +1,7 @@
 #include "bit256.hpp"
 
+#include <ranges>
+
 namespace base {
 	Bit256::Bit256(std::string_view hex): Bit256() {
 		CORE_ASSERT(hex.size() <= 66, "Bit256 string too long");
@@ -34,11 +36,9 @@ namespace base {
 	std::string Bit256::toStringHex() const {
 		std::string ret;
 		ret.reserve(64);
-		for (std::size_t i = data.size() - 1; i < data.size(); --i) {
-			const auto& d = data.at(i);
+		for (const auto& d: std::views::reverse(data))
 			for (int j = 0; j < 16; ++j)
 				ret += std::string_view("0123456789abcdef").at(((d >> (60 - j * 4)) & 0xF));
-		}
 		return ret;
 	}
 
