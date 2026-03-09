@@ -382,15 +382,16 @@ namespace compiler::helios {
 				}
 				// Deduce return type if not provided.
 				else {
-					ret_type = *ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					ret_type
+						= *ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
+					origin = code::pstOrigin(param_list.unlock(ctx));
 				}
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
 				for (auto param: *param_list.unlock(ctx)) {
-					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
-					auto  param_name   = name(param_symbol);
+					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
+					auto param_name   = name(param_symbol);
 					auto param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
 
@@ -742,7 +743,8 @@ namespace compiler::helios {
 				auto var = assignment->getVariables();
 				auto val = assignment->getValue();
 
-				auto location_expr = (*ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow())->clone();
+				auto location_expr
+					= (*ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow())->clone();
 
 				// If left side of the assignment is a ref/box, we have to dereference it and store
 				// the value in the memory pointed by the ref/box.
@@ -873,8 +875,9 @@ namespace compiler::helios {
 
 					// @TODO: #1921 This is not a proper way to handle default initialization. Make
 					// it better.
-					auto initial_value
-						= makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), *symbol_type);
+					auto initial_value = makeBox<code::DefaultValueExpr>(
+						ctx, code::generatedOrigin(), *symbol_type
+					);
 					output(code::VariableStmt(
 						code::pstOrigin(stmt), std::move(initial_value), *symbol_type, symbol
 					));

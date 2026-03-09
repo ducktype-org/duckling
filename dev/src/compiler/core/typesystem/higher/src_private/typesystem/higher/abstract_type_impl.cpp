@@ -17,8 +17,7 @@ namespace compiler::tsh {
 		std::stringstream res;
 		res << "(";
 		if (!types.empty()) res << types[0].toString();
-		for (const auto& type: types | std::views::drop(1))
-			res << ", " << type.toString();
+		for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
 		res << ")";
 
 		return res.str();

@@ -498,7 +498,8 @@ namespace compiler::helios {
 				// @TODO: check if "If" defines any variables in its condition
 				output(std::vector<SymID>{});
 			}
-				// and add them here.
+
+			// and add them here.
 
 			void visitWhile(pst::Access<pst::While>) override {
 				// Scope of "while →(...)← {}"
@@ -690,7 +691,7 @@ namespace compiler::helios {
 					ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards })
 				);
 
-				LookupResult combined_result = *parent_result; 
+				LookupResult combined_result = *parent_result;
 
 				combined_result.merge(*result);
 

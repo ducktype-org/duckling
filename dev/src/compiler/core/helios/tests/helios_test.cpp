@@ -474,7 +474,7 @@ private:
 
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
-		          .valueOrPanic();
+		           .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		               // that it is successful
 	}
@@ -500,21 +500,22 @@ private:
 		ASSERT_EQUAL(c_type, st(class_with_member_abstract_type));
 
 		auto c_member_symbol = getChain("c_member", root_scope).back();
-		auto c_member_type = *query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_symbol)
-		                         ->valueOrThrow();
+		auto c_member_type
+			= *query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_symbol)
+		           ->valueOrThrow();
 
 		ASSERT_EQUAL(c_member_type, st(first_class_abstract_type));
 
 		auto c_member_a_symbol = getChain("c_member_a", root_scope).back();
 		auto c_member_a_type
 			= *query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
-		          ->valueOrThrow();
+		           ->valueOrThrow();
 		auto expected_type = st(getIntegralTypeNoContext(64, Signed));
 		ASSERT_EQUAL(c_member_a_type, expected_type);
 
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
-		          .valueOrPanic();
+		           .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		               // that it is successful
 	}
@@ -538,8 +539,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
-			CRef<LookupResult> a_result
-				= h_interface.lookup(ctx, base::StrID("a"))->valueOrPanic();
+			CRef<LookupResult> a_result = h_interface.lookup(ctx, base::StrID("a"))->valueOrPanic();
 			ASSERT_TRUE(a_result->isSingle());
 			auto a_symbol = a_result->leaves.at(0);
 
@@ -770,7 +770,8 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/simple_scopes")));
 
 		auto houts
-			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
+			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic(
+			);
 
 		unsigned long functions = 0;
 		unsigned long glob_data = 0;
@@ -788,7 +789,8 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/hout_module")));
 
 		auto houts
-			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
+			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic(
+			);
 
 		unsigned long functions = 0;
 		unsigned long glob_data = 0;
@@ -806,7 +808,8 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/hout_simple_test")));
 
 		auto houts
-			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
+			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic(
+			);
 
 		for (const auto& hout: houts) {
 			for (const auto& fun: hout->functions) {
@@ -1944,7 +1947,7 @@ private:
 
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= *query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
-		          .valueOrPanic();
+		           .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		               // that it is successful
 	}
@@ -2742,7 +2745,8 @@ private:
 		check_function_origin(base::StrID("a"));
 		check_function_origin(base::StrID("b"));
 
-		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout->debugPrint(ctx); });
+		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout->debugPrint(ctx); }
+		);
 	}
 
 	void testScopeParentsAndDepth() {

@@ -211,8 +211,9 @@ private:
 			ASSERT_EQUAL(foo_mir->block_order.size(), 7);
 			ASSERT_EQUAL(foo_mir->local_list.size(), 5);
 
-			auto get_block_terminator
-				= [&](u64 block_id) -> const auto& { return foo_mir->blocks[BlockID(block_id)].terminator; };
+			auto get_block_terminator = [&](u64 block_id) -> const auto& {
+				return foo_mir->blocks[BlockID(block_id)].terminator;
+			};
 			auto get_block_successors = [&](u64 block_id) {
 				return getTerminatorSuccessors(get_block_terminator(block_id));
 			};

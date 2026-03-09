@@ -129,8 +129,8 @@ namespace compiler::helios {
 						return;
 					}
 
-					const auto  index_ctv  = index_res.valueOrThrow();
-					auto        maybe_size = index_ctv-> template get<NumericValue>();
+					const auto index_ctv  = index_res.valueOrThrow();
+					auto       maybe_size = index_ctv->template get<NumericValue>();
 
 					// Index has to be a comp-time evaluated integral constant.
 					if (maybe_size && maybe_size->isIntegral()) {
@@ -791,7 +791,7 @@ namespace compiler::helios {
 
 				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
-				auto mir_func = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
+				auto mir_func  = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
 
 				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 

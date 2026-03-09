@@ -45,7 +45,7 @@ namespace compiler::repl {
 
 		CRef lir_data
 			= ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_unique_name })
-		           ->valueOrPanic();
+		          ->valueOrPanic();
 
 		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data, ctx);
 

@@ -172,9 +172,7 @@ namespace compiler::helios::code {
 		  Expr(expression_type, origin),
 		  value_type(value_type) {}
 
-	void LiteralTypeExpr::debugPrint(std::ostream& out) const {
-		out << value_type.toString();
-	}
+	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.toString(); }
 
 	Box<Expr> LiteralTypeExpr::clone() const {
 		return makeBox<LiteralTypeExpr>(expression_type, origin, value_type);
