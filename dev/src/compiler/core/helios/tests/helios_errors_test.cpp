@@ -59,7 +59,9 @@ private:
 			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 			auto logger = query::Context::dumpToOneLoggerAndClear();
-			assertTrue(logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged.");
+			assertTrue(
+				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
+			);
 
 			std::stringstream logged_messages;
 			logger->terminalPrint(logged_messages);
@@ -384,7 +386,7 @@ private:
 					return 0;
 				}
 			)",
-			{ },
+			{},
 			0
 		);
 
@@ -466,7 +468,7 @@ private:
 					return 0;
 				}
 			)",
-			{ },
+			{},
 			0
 		);
 
