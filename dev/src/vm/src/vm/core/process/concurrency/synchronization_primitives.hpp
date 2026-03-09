@@ -11,22 +11,22 @@ namespace vm {
 		/**
 		 * @brief Pool for mutexes used in the process.
 		 */
-		base::ObjectPool<std::mutex> mutex_pool;
+		base::StableObjectPool<std::mutex, u64, false> mutex_pool;
 
 	public:
 		/**
 		 * @brief Getter for mutexes in the pool.
 		 */
-		Ref<std::mutex> getMutex(i64 mutex_id);
+		Ref<std::mutex> getMutex(usize mutex_id);
 
 		/**
 		 * @brief Adds new mutex into pool.
 		 */
-		i64 addMutex();
+		usize addMutex();
 
 		/**
 		 * @brief Removes mutex from pool.
 		 */
-		void removeMutex(i64);
+		void removeMutex(usize);
 	};
 }

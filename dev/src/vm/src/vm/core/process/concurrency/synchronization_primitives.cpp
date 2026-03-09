@@ -1,11 +1,11 @@
 #include "synchronization_primitives.hpp"
 
 namespace vm {
-	Ref<std::mutex> SynchronizationPrimitives::getMutex(i64 mutex_id) {
-		return mutex_pool.get(mutex_id);
+	Ref<std::mutex> SynchronizationPrimitives::getMutex(usize mutex_id) {
+		return mutex_pool.maybeGet(mutex_id).expect("Mutex does not exist");
 	}
 
-	i64 SynchronizationPrimitives::addMutex() { return mutex_pool.add(); }
+	usize SynchronizationPrimitives::addMutex() { return mutex_pool.add(); }
 
-	void SynchronizationPrimitives::removeMutex(i64 mutex_id) { mutex_pool.remove(mutex_id); }
+	void SynchronizationPrimitives::removeMutex(usize mutex_id) { mutex_pool.remove(mutex_id); }
 }
