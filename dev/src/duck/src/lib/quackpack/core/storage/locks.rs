@@ -108,6 +108,7 @@ impl CleanLock {
     }
 }
 
+#[derive(Debug)]
 /// Counterpart to [`CleanLock`], which blocks latter from being acquired.
 /// In practice this is shared form of [`CleanLock`].
 ///
