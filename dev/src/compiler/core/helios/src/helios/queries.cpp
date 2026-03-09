@@ -391,12 +391,8 @@ namespace compiler::helios {
 				// Set return type if provided.
 				if (ret.has_value()) {
 					const auto ret_type_ctv
-						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr());
-					if (ret_type_ctv.hasFailed()) {
-						// we just fail here, because we can't continue without type
-						return;
-					}
-					ret_type = ret_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 					origin   = code::multiplePstOrigin({ param_list.unlock(ctx),
 					                                     ret.value().unlock(ctx) });
 				}
