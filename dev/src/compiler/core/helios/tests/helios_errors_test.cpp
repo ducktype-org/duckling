@@ -468,6 +468,22 @@ private:
 			1
 		);
 
+		// check for multiple errors:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+
+				fun foo() -> i64 = {
+					return "a";
+				}
+			)",
+			{},
+			2
+		);
+
 		// ============================ Static Arrays ============================
 		checkForErrorOnCompileModule(
 			R"(
