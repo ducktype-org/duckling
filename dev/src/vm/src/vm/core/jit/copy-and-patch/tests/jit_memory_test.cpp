@@ -2,8 +2,11 @@
 #include "../memory/memory.hpp"
 #include "../stencils/import_stencils.hpp"
 
-#include <base/preproc/diagnostics.hpp>
+#include <dlfcn.h>
+#include <unistd.h>
+
 #include <base/pointers/box.hpp>
+#include <base/preproc/diagnostics.hpp>
 
 #include <tester/tester.hpp>
 
@@ -19,6 +22,8 @@ public:
 		TESTER_ADD_TEST(testSimple);
 		TESTER_ADD_TEST(testRecursive);
 		TESTER_ADD_TEST(testCallingSimple);
+		TESTER_ADD_TEST(testCallingRecursive);
+		TESTER_ADD_TEST(testCallingLibc);
 	}
 
 private:
@@ -73,23 +78,77 @@ private:
 		ASSERT_EQUAL(std::invoke(fibonacci, 5), 8);
 	}
 
-	void testCallingSimple() {
-		auto foo_code = find_func("calling_simple_odd");
+	constexpr static char full_elf[] = {
+#embed "stencils.so" suffix(, )
+	};
 
-		auto memory = JitMemory::allocate(foo_code.size);
-		std::memcpy(memory.memory, stencils.binary.data() + foo_code.place, foo_code.size);
-		memory.mark_executable();
-		auto simple = memory.into_func<int(int)>();
+	void testCallingSimple() {
+		int fd = memfd_create("lib", 0);
+		if (fd == -1) {
+			perror("memfd_create");
+			return;
+		}
+
+		// 2. Write the library bytes to the memory file
+		if (write(fd, full_elf, sizeof(full_elf)) != (ssize_t) sizeof(full_elf)) {
+			perror("write");
+			close(fd);
+			return;
+		}
+		lseek(fd, 0, SEEK_SET);
+
+		char path[64];
+		sprintf(path, "/proc/self/fd/%d", fd);
+		void* handle = dlopen(path, RTLD_LAZY);
+		if (!handle) {
+			fprintf(stderr, "dlopen failed: %s\n", dlerror());
+			close(fd);
+			return;
+		}
+
+		void* sym_loc = dlsym(handle, "calling_simple_odd");
+		if (!sym_loc) {
+			fprintf(stderr, "dlopen failed: %s\n", dlerror());
+			close(fd);
+			return;
+		}
+
+		auto simple = reinterpret_cast<int (*)(int)>(sym_loc);
 		for (int i = 0; i < 10; ++i) ASSERT_EQUAL(std::invoke(simple, i), 2 * i + 1);
 	}
 
 	void testCallingRecursive() {
-		auto foo_code = find_func("calling_fibonacci_sum");
+		int fd = memfd_create("lib", 0);
+		if (fd == -1) {
+			perror("memfd_create");
+			return;
+		}
 
-		auto memory = JitMemory::allocate(foo_code.size);
-		std::memcpy(memory.memory, stencils.binary.data() + foo_code.place, foo_code.size);
-		memory.mark_executable();
-		auto fibonacci_sum = memory.into_func<int(int)>();
+		// 2. Write the library bytes to the memory file
+		if (write(fd, full_elf, sizeof(full_elf)) != (ssize_t) sizeof(full_elf)) {
+			perror("write");
+			close(fd);
+			return;
+		}
+		lseek(fd, 0, SEEK_SET);
+
+		char path[64];
+		sprintf(path, "/proc/self/fd/%d", fd);
+		void* handle = dlopen(path, RTLD_LAZY);
+		if (!handle) {
+			fprintf(stderr, "dlopn failed: %s\n", dlerror());
+			close(fd);
+			return;
+		}
+
+		void* sym_loc = dlsym(handle, "calling_fibonacci_sum");
+		if (!sym_loc) {
+			fprintf(stderr, "dlopen failed: %s\n", dlerror());
+			close(fd);
+			return;
+		}
+
+		auto fibonacci_sum = reinterpret_cast<int (*)(int)>(sym_loc);
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 0), 1);
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 1), 2);
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 2), 6);
@@ -97,14 +156,38 @@ private:
 	}
 
 	void testCallingLibc() {
-		auto foo_code = find_func("calling_fibonacci_sum");
+		int fd = memfd_create("lib", 0);
+		if (fd == -1) {
+			perror("memfd_create");
+			return;
+		}
 
-		auto memory = JitMemory::allocate(foo_code.size);
-		std::memcpy(memory.memory, stencils.binary.data() + foo_code.place, foo_code.size);
-		memory.mark_executable();
-		auto calling_libc = memory.into_func<int*(int)>();
+		// 2. Write the library bytes to the memory file
+		if (write(fd, full_elf, sizeof(full_elf)) != (ssize_t) sizeof(full_elf)) {
+			perror("write");
+			close(fd);
+			return;
+		}
+		lseek(fd, 0, SEEK_SET);
 
-		auto from_jit_memory = base::Box<int>::fromPointer(calling_libc(100));
+		char path[64];
+		sprintf(path, "/proc/self/fd/%d", fd);
+		void* handle = dlopen(path, RTLD_LAZY);
+		if (!handle) {
+			fprintf(stderr, "dlopn failed: %s\n", dlerror());
+			close(fd);
+			return;
+		}
+
+		void* sym_loc = dlsym(handle, "calling_libc");
+		if (!sym_loc) {
+			fprintf(stderr, "dlopen failed: %s\n", dlerror());
+			close(fd);
+			return;
+		}
+
+		auto calling_libc    = reinterpret_cast<int* (*) (int)>(sym_loc);
+		auto from_jit_memory = base::Box<int>::fromPointer(std::invoke(calling_libc, 100));
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL(from_jit_memory.get()[i], i);
 	}
 };
