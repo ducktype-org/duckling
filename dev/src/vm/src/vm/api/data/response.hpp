@@ -61,9 +61,9 @@ namespace vm::api {
 
 		struct StackFrameData {
 			struct FrameVar {
-				u64         offset;
+				u64          offset;
 				api::Pointer pointer;
-				TypeID      type;
+				TypeID       type;
 			};
 
 			base::StrID           function_name;

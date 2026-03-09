@@ -96,7 +96,7 @@ namespace vm::api {
 
 		struct DebuggerGetPointerData {
 			api::Pointer pointer;
-			u64     size;
+			u64          size;
 		};
 
 		struct DebuggerDereferencePointer {

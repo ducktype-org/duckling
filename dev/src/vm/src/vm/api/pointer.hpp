@@ -14,7 +14,7 @@ namespace vm::api {
 		vm::Pointer pointer;
 
 		Pointer(vm::Pointer pointer): pointer(pointer) {}
-		
+
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Pointer, pointer);
 
 		friend class vm::VMProcess;

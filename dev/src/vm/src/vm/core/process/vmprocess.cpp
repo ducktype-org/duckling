@@ -305,10 +305,12 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						// +1 because frame_stack_current points to the current frame, not the next free slot
+						// +1 because frame_stack_current points to the current frame, not the next
+						// free slot
 						RuntimeData& runtime_data = getMainVMThread().runtime_data;
 						u64          frames
-							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base)
+						    + 1;
 						return api::Response(api::response::NumberOfCurrentStackFrames{
 							.number_of_stack_frames = frames });
 					}
@@ -322,7 +324,8 @@ namespace vm {
 					opt_none {
 						RuntimeData& runtime_data = getMainVMThread().runtime_data;
 						u64          frames
-							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base)
+						    + 1;
 						if (request.frame_index >= frames)
 							return std::unexpected(api::ApiError{
 								api::OtherError{ "Frame index out of bounds" } });
@@ -338,7 +341,8 @@ namespace vm {
 						}
 
 						return api::Response(api::response::StackFrameData{
-							.function_name = frame.current_function->name, .frame_vars = frame_vars });
+							.function_name = frame.current_function->name,
+							.frame_vars    = frame_vars });
 					}
 				}
 			}
@@ -348,7 +352,8 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						base::ModRawView view = memory.getPointerData(request.pointer.pointer, request.size);
+						base::ModRawView view
+							= memory.getPointerData(request.pointer.pointer, request.size);
 						return api::Response(api::response::PointerData{ .data = view });
 					}
 				}
@@ -359,9 +364,12 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						base::ModRawView view = memory.getPointerData(request.pointer.pointer, Type::POINTER_SIZE.asInt());
-						auto             pointer = safeReadPointerBytes<Pointer>(view.getBegin());
-						return api::Response(api::response::Pointer{ .pointer = api::Pointer(pointer) });
+						base::ModRawView view = memory.getPointerData(
+							request.pointer.pointer, Type::POINTER_SIZE.asInt()
+						);
+						auto pointer = safeReadPointerBytes<Pointer>(view.getBegin());
+						return api::Response(api::response::Pointer{ .pointer
+						                                             = api::Pointer(pointer) });
 					}
 				}
 			}
@@ -375,7 +383,9 @@ namespace vm {
 						match_optional(res) {
 							opt_some(type) {
 								return api::Response(api::response::TypeInfo{
-									.name = type->getName(), .size = type->getSize(), .kind = type->getKind() });
+									.name = type->getName(),
+									.size = type->getSize(),
+									.kind = type->getKind() });
 							}
 
 							opt_none {
