@@ -4,7 +4,6 @@
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
-#include "base/str/str_utils.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -176,8 +175,6 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		const bool main_has_args = !func.parameters.empty();
-
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
 			                             .bc               = {},
 			                             .local_stack_size = 72,
@@ -284,7 +281,7 @@ namespace vm {
 		);
 
 		// Pass the command line arguments only if main signature specifies it.
-		if (main_has_args) {
+		if (!func.parameters.empty()) {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
