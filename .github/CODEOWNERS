@@ -3,7 +3,6 @@
 * @ducktype-org/core-dev
 
 # QuackPack is also owned by the quackpack-dev:
-/dev/src/QuackPack/ @ducktype-org/core-dev @ducktype-org/quackpack-dev
 /dev/src/duck/ @ducktype-org/core-dev @ducktype-org/quackpack-dev
 
 # Integrated tests can be also modified by quackpack-dev
