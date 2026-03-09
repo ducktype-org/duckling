@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::Itertools;
-use tokio::sync::RwLock;
+use std::sync::RwLock;
 use tracing::debug;
 
 use crate::{StrId, duck::util::terminal::Terminal};
@@ -74,14 +74,14 @@ impl DownloadingPackagesProgressBarManager {
         }
     }
 
-    pub async fn start_download_of(&self, pkg: StrId) {
+    pub fn start_download_of(&self, pkg: StrId) {
         if !self.to_download.contains(&pkg) {
             debug!(
                 "can't start a download of `{pkg}`, because it was not declared as a package to download"
             );
             return;
         }
-        let mut state = self.state.write().await;
+        let mut state = self.state.write().expect("panick'ed");
         if state.reverse_map.contains_key(&pkg) {
             debug!("download of package `{pkg}` has already started");
             return;
@@ -103,14 +103,14 @@ impl DownloadingPackagesProgressBarManager {
         drop(state);
     }
 
-    pub async fn finish_download_of(&self, pkg: StrId) {
+    pub fn finish_download_of(&self, pkg: StrId) {
         if !self.to_download.contains(&pkg) {
             debug!(
                 "can't finish a download of `{pkg}`, because it was not declared as a package to download"
             );
             return;
         }
-        let mut state = self.state.write().await;
+        let mut state = self.state.write().expect("panick'ed");
 
         let Some(id) = state.reverse_map.remove(&pkg) else {
             debug!("download of package `{pkg}` hasn't started");
