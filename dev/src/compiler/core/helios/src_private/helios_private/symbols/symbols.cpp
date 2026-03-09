@@ -55,7 +55,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
+	DECLARE_QUERY(QueryLinkedScope, SymID, query::QResult<ScopeID>, ({}));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -85,6 +85,10 @@ namespace compiler::helios {
 
 				case pst::ElementKind::Class:
 				case pst::ElementKind::Fun:
+				case pst::ElementKind::ClassBlock:
+				case pst::ElementKind::ClassMethod:
+				case pst::ElementKind::ClassSpecial:
+				case pst::ElementKind::ClassSpecifierBlock:
 				case pst::ElementKind::If:
 				case pst::ElementKind::While:
 				case pst::ElementKind::For:
@@ -98,7 +102,9 @@ namespace compiler::helios {
 					return self(el->getParent().value().unlock(ctx));
 
 				default:
-					CORE_PANIC("Unexpected pst path of variable");
+					CORE_PANIC(base::strConcat(
+						"Unexpected element kind for variable symbol: ", el->elementType()
+					));
 				}
 			},
 			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
@@ -107,13 +113,13 @@ namespace compiler::helios {
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->getPSTData()->scope; }
+	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
 
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-			variant_case_novalue(builtin::BuiltinFunctionData) { return base::Optional<ScopeID>{}; }
-			variant_case_novalue(houtgen::GeneratedSymbolData) { return base::Optional<ScopeID>{}; }
+			variant_case_novalue(builtin::BuiltinFunctionData) { return {}; }
+			variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();
@@ -269,17 +275,33 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::Import: {
-			// For now only non-wildcard import exist
-			auto import = stmt.dynamicCast<pst::Import>().value();
-			return SymbolData::makePSTSymbolData(
-				{
-					.name        = import->getAlias(),
-					.kind        = SymbolKind::Import,
-					.is_wildcard = false,
-					.is_alias    = false,
-				},
-				pst_data
-			);
+			// For now we assume that only two types of import exists:
+			// import a.b.c;
+			// import a.b.c as d;
+
+			auto import       = stmt.dynamicCast<pst::Import>().value();
+			auto import_chain = import->getImportChain().unlock(ctx);
+			if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
+				base::StrID name;
+				if (import_as.value()->isImportAs())
+					name = import_as.value()->asWhat().value();
+				else
+					name = import_as.value()->getNames().back().value;
+
+				return SymbolData::makePSTSymbolData(
+					{
+						.name        = name,
+						.kind        = SymbolKind::Import,
+						.is_wildcard = false,
+						.is_alias    = false,
+					},
+					pst_data
+				);
+			} else {
+				throw base::NotYetImplemented(
+					"Not handled type of import chain in makeSymbolFromStatement"
+				);
+			}
 		}
 		case pst::StmtKind::Method: {
 			auto method = stmt.dynamicCast<pst::Method>().value();
@@ -360,7 +382,7 @@ namespace compiler::helios {
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
 	}
 
-	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymbolData) {
+	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
@@ -375,13 +397,27 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
+			if (key.element.unlock(ctx)->getElementKind() == pst::ElementKind::NonClassStmt) {
+				// @TODO: #2087 remove this branch, when non-class statements will be properly supported.
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Non-class statements inside classes are not supported yet.",
+					key.element.unlock(ctx)->getSourcePosition(),
+					"",
+					"here"
+				));
+				return query::Failed();
+			} else if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](auto presult) -> QResult {
+			if (presult->hasFailed())
+				return query::Failed();
+			else
+				return SymID{ presult->valueOrPanic() };
+		})
 
 	private:
 		/**
@@ -393,7 +429,11 @@ namespace compiler::helios {
 
 			std::vector<SymID> out;
 
-			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
+			for (auto& [key, cache_entry]: cache) {
+				if (cache_entry.data.hasFailed()) continue;
+
+				out.push_back(SymID(cache_entry.data.valueOrPanic()));
+			}
 			return out;
 		}
 
@@ -565,7 +605,7 @@ namespace compiler::helios {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInSymbol, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->common.kind) {
 			case SymbolKind::Using:
@@ -580,7 +620,7 @@ namespace compiler::helios {
 				// when QueryLookupInSymbol will get more and more
 				// per-symbol-kind cases.
 
-				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
+				UNPACK_QRESULT(auto linked_scope =, ctx.query<QueryLinkedScope>(key.symbol));
 				return *HInterface::ofScope(linked_scope)
 				            .lookup(ctx, key.name, { key.follow_wildcards });
 			}
@@ -596,16 +636,16 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
-	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-		struct QueryLinkedScopeVisitor final: pst::PstVisitorPanicky {
+	struct IMPLEMENT_QUERY(QueryLinkedScope, query::QResult<ScopeID>) {
+		struct QueryLinkedScopeVisitor final: pst::PstVisitorEmpty {
 			query::Context& ctx;
 			QKey            key;
 
 			QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
 
-			base::Optional<ScopeID> result_scope;
+			base::Optional<query::QResult<ScopeID>> result_scope;
 
-			void output(ScopeID out) {
+			void output(query::QResult<ScopeID> out) {
 				CORE_ASSERT(result_scope.empty(), "Output already set");
 				result_scope.emplace(out);
 			}
@@ -628,13 +668,29 @@ namespace compiler::helios {
 
 			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
-				auto imported_module = frontend::getRelativeModule(
-										   ctx, module(scope(key)), import_stmt->getModulePath()
-				)
-				                           .value();
+
+				auto names = import_stmt.dynamicCast<pst::Import>()
+				                 .value()
+				                 ->getImportChain()
+				                 .dynamicCast<pst::ImportIdentifierAs>()
+				                 .unlock(ctx)
+				                 ->getNames();
+				std::vector<base::StrID> module_path{ names.begin(), names.end() };
+
+				auto maybe_imported_module
+					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
+
+				if (!maybe_imported_module.has_value()) {
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Module not found.", import_stmt->getSourcePosition()
+					));
+					output(query::Failed());
+					return;
+				}
 
 				// Here we don't access just root scope, because root scopes are currently empty:
-				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
+				auto linked_scope
+					= queryRootScopeOfMainModuleFile(ctx, maybe_imported_module.value());
 
 				output(linked_scope);
 			}
@@ -653,8 +709,16 @@ namespace compiler::helios {
 				key.ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
-			default:
-				throw base::NotYetImplemented("Getting linked scope for some SymbolKind...");
+			default: {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"Linked scope for this symbol kind is not implemented yet: ",
+						key.ref->common.kind
+					),
+					stmt(ctx, key.ref).value()->getSourcePosition()
+				));
+				return query::Failed();
+			}
 			}
 		}
 
@@ -865,7 +929,7 @@ namespace compiler::helios {
 		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
 	}
 
-	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, std::vector<SymID>) {
+	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
 		struct HoutFunctionCallCollector final:
 			  public code::HoutStmtVisitorEmpty,
 			  public code::HoutExprVisitorEmpty {
@@ -965,12 +1029,42 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-			const auto& function_body   = fun_hout_result->body;
+			variant_match(getSymRef(key)->other) {
+				variant_case_novalue(PstSymbolData) {
+					// Just a pst function
+					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
 
-			HoutFunctionCallCollector visitor;
-			for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
-			return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+					const auto& function_body = fun_hout_result->body;
+
+					HoutFunctionCallCollector visitor;
+					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+					return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+				}
+
+				variant_case(builtin::BuiltinFunctionData, btd_data) {
+					// Builtin functions have no dependencies
+					return {};
+				}
+
+				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"QueryDirectFunctionCalls is not implemented for generated symbols "
+							"yet. ",
+							"The symbol in question is: ",
+							getSymRef(key)->common.name,
+							". "
+							"This usually means that a class was used inside compile time "
+							"evaluation."
+						),
+						std::nullopt
+					));
+					return query::Failed();
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
+
+			CORE_UNREACHABLE();
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -978,7 +1072,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
 
-	struct IMPLEMENT_QUERY(QueryTransitiveFunctionCalls, std::vector<SymID>) {
+	struct IMPLEMENT_QUERY(QueryTransitiveFunctionCalls, query::QResult<std::vector<SymID>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function,
@@ -998,7 +1092,8 @@ namespace compiler::helios {
 
 				all_dependencies.push_back(current_func);
 
-				auto direct_dependencies = ctx.query<QueryDirectFunctionCalls>(current_func);
+				Ref direct_dependencies
+					= ctx.query<QueryDirectFunctionCalls>(current_func)->valueOrThrow();
 
 				for (const SymID& dependency: *direct_dependencies) {
 					if (!visited_functions.contains(dependency)) {

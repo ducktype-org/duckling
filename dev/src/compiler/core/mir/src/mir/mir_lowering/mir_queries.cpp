@@ -195,9 +195,11 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-				base::strConcat("The function `", function.name, "` is missing a return statement")
-			));
+			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
+				"The function `",
+				function.name,
+				"` is missing a return statement or does not always return."
+			)));
 			return query::Failed();
 		}
 	}
@@ -260,7 +262,7 @@ namespace compiler::mir {
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
 
-			if (validateFunction(function_reachable).isBad()) return query::Failed();
+			if (validateFunction(ctx, function_reachable).isBad()) return query::Failed();
 
 			return function_reachable;
 		}
@@ -285,6 +287,8 @@ namespace compiler::mir {
 			UNPACK_QRESULT_MOVE(
 				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
 			);
+
+			if (validateFunction(ctx, function_no_func_end).isBad()) return query::Failed();
 
 			return function_no_func_end;
 		}

@@ -19,8 +19,8 @@ namespace vm::loader::parser {
 
 	class F8ParserState final: public tpc::ParserState {
 	public:
-		F8ParserState(tpc::TokenStream&& stream, Ref<dia::Logger> err, Ref<dia_int::Logger> err_int):
-			  tpc::ParserState(std::move(stream), err, err_int) {}
+		F8ParserState(tpc::TokenStream&& stream, Ref<dia_int::Logger> err_int):
+			  tpc::ParserState(std::move(stream), err_int) {}
 
 		tpc::GenericAutomatic<F8ParserState> parse();
 	};

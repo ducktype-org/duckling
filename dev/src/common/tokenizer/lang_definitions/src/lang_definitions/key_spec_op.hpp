@@ -35,6 +35,7 @@ namespace lang_def {
 		Class,
 		Namespace,
 		Import,
+		Hides,
 		As,
 		Using,
 		Alias,
@@ -145,7 +146,7 @@ namespace lang_def {
 		Private,
 		Protected,
 		Static,
-		This,
+		Self,
 		Extends,
 		Implements,
 

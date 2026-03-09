@@ -50,8 +50,6 @@ namespace concurrent {
 			return result;
 		}
 
-		using KeyValuePair = typename HashMapType::KeyValuePair;
-
 		/**
 		 * RAII lock for a given shard.
 		 *
@@ -96,13 +94,46 @@ namespace concurrent {
 
 
 	public:
+		using KeyValuePair = typename HashMapType::KeyValuePair;
+
 		ConHashMap(): shards(SHARD_COUNT) {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
 				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
 		}
 
 		ConHashMap(const ConHashMap&) = delete;
-		ConHashMap(ConHashMap&&)      = delete;
+
+		/**
+		 * Move constructor.
+		 * After this operation, the @p source map is left in an empty but valid state.
+		 *
+		 * Underneath this performs the following:
+		 * * It moves the content of each shard by transferring the ownership,
+		 *   i.e. the shards remain in the same place in memory, and their constructors are
+		 *   not called.
+		 * * It generates new locks for the new map. This way if other threads try to access the
+		 *   source map during the move, they will be properly synchronized and will not
+		 *   cause data races or access to invalid memory.
+		 *
+		 * @note This operation is thread safe, but beware that moves perform a large lock on the
+		 * map, and may in general be bug prone when done accidentally.
+		 */
+		ConHashMap(ConHashMap&& source) noexcept: ConHashMap() {
+			// No one should access the source map during this operation
+			WithAllShardsLock lock(source);
+
+			// Transfer ownership of each shard's content to the new map.
+			// Note that locks are initialized in the constructor initializer list.
+			// Linter wants the following line to be placed in init-list. We can't do that, since
+			// we need to lock the source map first.
+			shards = std::move(source.shards);  // NOLINT
+			elements_count.store(source.elements_count.load());
+
+			// Leave the source map in an empty but valid state
+			source.shards.clear();
+			source.shards.resize(SHARD_COUNT);
+			source.elements_count.store(0);
+		}
 
 		~ConHashMap() = default;
 
@@ -114,7 +145,7 @@ namespace concurrent {
 		 * @returns A reference to the inserted key-value pair.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			auto          result
 				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
@@ -141,9 +172,7 @@ namespace concurrent {
 		}
 
 		/**
-		 * Performs atomically a following sequence:
-		 * 1. Inserts key->value into the container if key does not exist.
-		 * 2. Calls f with reference to the value associated with the key.
+		 * Inserts key->value into the container if key does not exist.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void putOrAssign(const K& key, D&& value) RELEASE_NOEXCEPT {
@@ -169,6 +198,28 @@ namespace concurrent {
 			auto inserted = shards[lock.shard_index].maybePut(key, std::forward<D>(value));
 			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
 			f(Ref<DATA_T>(&shards[lock.shard_index][key]));
+		}
+
+		/**
+		 * Calls f with reference to the value associated with the key if the key exists.
+		 */
+		template<typename K = KEY_T, typename Func>
+		void maybeCallOn(const K& key, Func f) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+
+			auto data = shards[lock.shard_index].atMaybe(key);
+			if (data.has_value()) f(Ref<DATA_T>(data.value()));
+		}
+
+		/**
+		 * Calls f with const reference to the value associated with the key if the key exists.
+		 */
+		template<typename K = KEY_T, typename Func>
+		void maybeCallOn(const K& key, Func f) const RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+
+			auto data = shards[lock.shard_index].atMaybe(key);
+			if (data.has_value()) f(CRef<DATA_T>(data.value()));
 		}
 
 		/**
@@ -223,7 +274,7 @@ namespace concurrent {
 		}
 
 		[[nodiscard]]
-		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].contains(key);
 		}
@@ -231,11 +282,51 @@ namespace concurrent {
 		/**
 		 * Atomically erases the given key->value pair from the map.
 		 */
-		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto erase(const KEY_T& key) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			bool          erased = shards[lock.shard_index].erase(key);
 			if (erased) elements_count.fetch_sub(1, std::memory_order_relaxed);
 			return erased;
+		}
+
+		/**
+		 * Atomically erases the key-value pair if the key exists and the predicate returns true.
+		 */
+		template<typename Predicate>
+		bool eraseIf(const KEY_T& key, Predicate pred) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			auto&         shard = shards[lock.shard_index];
+
+			auto opt_ref = shard.atMaybe(key);
+			if (opt_ref.has_value()) {
+				if (pred(opt_ref.value())) {
+					if (shard.erase(key)) {
+						elements_count.fetch_sub(1, std::memory_order_relaxed);
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		/**
+		 * Atomically extracts the given value from the map, that is:
+		 * 1. Moves out the value associated with the key and returns it.
+		 * 2. Erases the key->value pair from the map.
+		 */
+		base::Optional<DATA_T> extract(const KEY_T& key) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+
+			auto at_maybe = shards[lock.shard_index].atMaybe(key);
+			if (!at_maybe.has_value()) {
+				// data was already not present
+				return base::Optional<DATA_T>{};
+			} else {
+				DATA_T value = std::move(*at_maybe.value());
+				shards[lock.shard_index].erase(key);
+				elements_count.fetch_sub(1, std::memory_order_relaxed);
+				return base::Optional<DATA_T>{ std::move(value) };
+			}
 		}
 
 		/**

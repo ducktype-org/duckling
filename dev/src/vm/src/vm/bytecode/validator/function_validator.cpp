@@ -1134,6 +1134,7 @@ class FunctionValidator {
 			instr_case_novalue(Op_call_func) {}
 			instr_case_novalue(Op_call_builtinfunc) {}
 			instr_case_novalue(Op_call_cfunc) {}
+			instr_case_novalue(Op_set_threadctx) {}
 			instr_case(Op_virtual_call_lptr_method, instr) {
 				// For a method all to be valid, the called method has to be declared as a virtual
 				// method in this inheritable or it's superclasses or interfaces.

@@ -215,11 +215,21 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Pattern, false> two_params_pattern{ "pattern Point(a: T, b: T) = {}" };
 	Example<pst::Pattern, false> trailing_comma_pattern{ "pattern Point(a: T,) = {}" };
 
-	Example<pst::If, true> simple_if{ "if (a == b) {c = d;}" };
-	Example<pst::If, true> simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
-	Example<pst::If, true> simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
+	Example<pst::If, true>  simple_if{ "if (a == b) {c = d;}" };
+	Example<pst::If, true>  simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
+	Example<pst::If, true>  simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
+	Example<pst::If, false> empty_if_condition{ "if () {}" };
 
-	Example<pst::Import, true> simple_import{ "import std.math.sqrt as sqrt" };
+	Example<pst::Import, true>  simple_import{ "import std.math.sqrt as sqrt" };
+	Example<pst::Import, false> empty_import{ "import" };
+	Example<pst::Import, false> empty_nested_import{ "import ()" };
+	Example<pst::Import, false> empty_star_import{ "import .*" };
+	Example<pst::Import, true>  nested_import{ "import A.B.(C,)" };
+	Example<pst::Import, true>  nested_import2{ "import A.B.(C,(D, E),)" };
+	Example<pst::Import, false> missing_period_import{ "import A.B(C,(D, E),)" };
+	Example<pst::Import, false> empty_nested_ard_import{ "import A.B.(C,(D, E),,)" };
+	Example<pst::Import, true>  as_import{ "import A.B.C as D" };
+	Example<pst::Import, true>  hides_import{ "import A.B.* hides D , G, C" };
 
 	Example<pst::Namespace, true> simple_namespace{ "namespace name {}" };
 

@@ -8,6 +8,54 @@
 #include <query_framework/context/context.hpp>
 
 namespace compiler::helios {
+	namespace {
+		Box<code::Expr> handleReferenceKindCoercion(
+			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
+		) {
+			auto origin    = expr->origin.generatedFrom();
+			auto from_kind = expr->expression_type.getSymbolType().getRefKind();
+			auto to_kind   = to.getRefKind();
+
+			if (from_kind == to_kind) return std::move(expr);
+
+			if (from_kind == tsh::ReferenceKind::Direct) {
+				// --- From Direct ---
+				if (to_kind == tsh::ReferenceKind::Ref)
+					// Should be explicit: var x: ref T = &T;
+					CORE_PANIC("Illegal Direct -> Ref coercion, should be caught earlier");
+				else if (to_kind == tsh::ReferenceKind::Box) {
+					// var x: box T = T(); -> Implicit box creation.
+					return makeBox<code::BoxOfExpr>(ctx, origin, std::move(expr));
+				}
+			} else if (from_kind == tsh::ReferenceKind::Ref) {
+				// --- From Reference ---
+				if (to_kind == tsh::ReferenceKind::Direct) {
+					// var x: T = ref_T; -> Dereference the rhs.
+					// @TODO: #2000 Call a copy constructor here in the future.
+					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
+				} else if (to_kind == tsh::ReferenceKind::Box) {
+					// var x: box T = ref_T; -> Creating a box from a ref, requires to perform a
+					// copy of the inner ref value. Since we can't just take ownership from a
+					// reference, thus we first dereference the rhs.
+					// @TODO: #2000 Call a copy constructor here in the future.
+					auto dereferenced = makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
+					return makeBox<code::BoxOfExpr>(ctx, origin, std::move(dereferenced));
+				}
+			} else if (from_kind == tsh::ReferenceKind::Box) {
+				// --- From Box ---
+				if (to_kind == tsh::ReferenceKind::Direct)
+					// var x: T = box_T; -> Dereference the rhs.
+					// @TODO: #2000 Call a copy constructor here in the future.
+					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
+				else if (to_kind == tsh::ReferenceKind::Ref)
+					// Should be explicit: var x: ref T = &box_T;
+					CORE_PANIC("Illegal Box -> Ref coercion, should be caught earlier");
+			}
+
+			return std::move(expr);
+		}
+	}
+
 	IncompatibleTypesError::IncompatibleTypesError(
 		dia::SourcePosition  source_position,
 		Box<InteractiveType> actual_type,
@@ -21,29 +69,8 @@ namespace compiler::helios {
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
-		auto current_expr       = std::move(from);
+		auto current_expr       = handleReferenceKindCoercion(ctx, std::move(from), to);
 		auto source_symbol_type = current_expr->expression_type.getSymbolType();
-
-		// If we are coercing from a reference type (`ref T` or `box T`) to a direct
-		// type (`U`), we must first dereference the source expression.
-		if (source_symbol_type.getRefKind() != tsh::ReferenceKind::Direct
-		    && to.getRefKind() == tsh::ReferenceKind::Direct) {
-			current_expr = makeBox<code::DerefExpr>(
-				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
-			);
-			source_symbol_type = current_expr->expression_type.getSymbolType();
-			// If underlying types differ, proceed with the standard coercion.
-		}
-
-		// If `from` is direct and `to` is a box, create a BoxOfExpression.
-		if (source_symbol_type.getRefKind() == tsh::ReferenceKind::Direct
-		    && to.getRefKind() == tsh::ReferenceKind::Box) {
-			current_expr = makeBox<code::BoxOfExpr>(
-				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
-			);
-			source_symbol_type = current_expr->expression_type.getSymbolType();
-			// If underlying types differ, proceed with the standard coercion.
-		}
 
 		auto source_type = source_symbol_type.getType();
 

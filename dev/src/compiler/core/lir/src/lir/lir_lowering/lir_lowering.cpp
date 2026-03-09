@@ -90,6 +90,8 @@ namespace compiler::lir {
 			return Operation::AddressOf;
 		case mir::Operation::AllocBox:
 			return Operation::AllocBox;
+		case mir::Operation::ZeroInitialize:
+			return Operation::ZeroInitialize;
 
 		// Control Flow
 		case mir::Operation::ReturnValue:
@@ -245,6 +247,17 @@ namespace compiler::lir {
 								LIRPlace::Projection::field(field.field_id)
 							);
 						}
+						variant_case(mir::MIRPlace::IndexProjection, index) {
+							auto maybe_lir_index = getLocation(*index.index);
+							CORE_ASSERT(
+								maybe_lir_index.has_value(),
+								"Array index must carry information (cannot be Unit/Void)"
+							);
+
+							lir_projection_chain.push_back(
+								LIRPlace::Projection::index(maybe_lir_index.value())
+							);
+						}
 						variant_case_novalue(mir::MIRPlace::DerefProjection) {
 							lir_projection_chain.push_back(LIRPlace::Projection::deref());
 						}
@@ -281,7 +294,7 @@ namespace compiler::lir {
 			 * @param loc The MIR location.
 			 * @return The optional LIR location, possibly discarded.
 			 */
-			base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) {
+			[[nodiscard]] base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) const {
 				// Discard information-less location.
 				if (!loc.carriesInformation(ctx)) return {};
 
@@ -369,7 +382,8 @@ namespace compiler::lir {
 			 * @param locs The MIR location.
 			 * @return The LIR locations, possibly with some discarded.
 			 */
-			std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs) {
+			[[nodiscard]] std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs
+			) const {
 				std::vector<LIRValue> result;
 				result.reserve(locs.size());
 				for (const auto& loc: locs)
@@ -484,6 +498,16 @@ namespace compiler::lir {
 						auto output = getOutput(mir_instruction.output);
 						curr_block->instructions.emplace_back(
 							Operation::Assign, output, std::vector{ lir_arg.value() }
+						);
+					}
+					return curr_block;
+				}
+				case mir::Operation::ZeroInitialize: {
+					auto output = getOutput(mir_instruction.output);
+
+					if (output.has_value()) {
+						curr_block->instructions.emplace_back(
+							Operation::ZeroInitialize, output, std::vector<LIRValue>{}
 						);
 					}
 					return curr_block;

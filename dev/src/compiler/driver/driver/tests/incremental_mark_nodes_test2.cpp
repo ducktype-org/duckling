@@ -41,14 +41,15 @@ private:
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
-                    .package_path = fs::FilePath(path("modules/functions_1")),
+                    .package_path = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
             	.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
-				.incremental           = { .enabled = true }
+				.incremental           = { .enabled = true },
+				.execution_options     = { .worker_count = 1 },
             }
         );
 
@@ -58,6 +59,7 @@ private:
 		auto prev = prev_opt.value();
 
 		// Verify node colors: previously-leaf nodes are green and dependency count checks hold
+		// This also test that non-existing ChildSideInput that submodules depend on is marked green
 		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
 		ASSERT_TRUE(
 			prev_colors->size() != 0
@@ -82,7 +84,8 @@ private:
 
 		// Compile the module again to trigger loadFromDisc and use the previous graph
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_1")), "mark_nodes_test_package"
+			fs::File(path("modules/incremental/org_functions/functions_1")),
+			"mark_nodes_test_package"
 		);
 
 		// Build a NodeID for the CompileModule query with the exact key we used

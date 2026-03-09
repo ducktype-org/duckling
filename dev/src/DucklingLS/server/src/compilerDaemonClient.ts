@@ -1,15 +1,24 @@
 import { spawn, ChildProcess } from "child_process";
+import * as net from 'net';
 import { Connection, CompletionItem, TextDocumentPositionParams, Diagnostic } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
 import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
-import { initPromise, initComplete } from './server';
 import * as fs from 'fs';
 import * as path from 'path';
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
-const DAEMON_PORT = "14369";
-const DAEMON_ADRESS = "http://localhost:" + DAEMON_PORT;
+
+function findFreePort(): Promise<number> {
+	return new Promise((resolve, reject) => {
+		const server = net.createServer();
+		server.listen(0, '127.0.0.1', () => {
+			const port = (server.address() as net.AddressInfo).port;
+			server.close(() => resolve(port));
+		});
+		server.on('error', reject);
+	});
+}
 
 export interface Token {
 	line: number;
@@ -50,18 +59,27 @@ async function fetchWithTimeout(
  * The endpoints are defined in the compiler daemon.
  */
 export class CompilerDaemonClient {
-	private process: ChildProcess;
+	private ls_daemon_process!: ChildProcess;
+	private port: number = 0;
+	private ls_daemon_address: string = '';
+	private startupPromise: Promise<void>;
 
 	constructor() {
-		this.process = this.startProcess();
+		this.startupPromise = this.startup();
 	}
 
-	private startProcess(): ChildProcess {
+	private async startup(): Promise<void> {
+		this.port = await findFreePort();
+		this.ls_daemon_address = `http://localhost:${this.port}`;
+		this.ls_daemon_process = this.startServerBinary();
+	}
+
+	private startServerBinary(): ChildProcess {
 		const logPath = path.join(__dirname, 'daemon.log');
 		const logStream = fs.createWriteStream(logPath);
 		const childProcess = spawn(
 			BINARY_PATH + "lsp_daemon", 
-			["start", "-p", DAEMON_PORT], 
+			["start", "-p", this.port.toString()], 
 			{stdio: ["ignore", "pipe", "pipe"], detached: false} // This is necessary for the server to remain responsive
 		);
 		childProcess.stdout?.on("data", (data) => {
@@ -83,37 +101,48 @@ export class CompilerDaemonClient {
 	}
 	
 	public async restart(connection: Connection): Promise<void> {
-		this.process.kill();
+		this.ls_daemon_process.kill();
 
 		// Wait max 2 seconds for the process to exit
 		for (let i = 0; i < 20; i++) {
-			if (this.process.exitCode !== null) break;
-			console.log("Waiting for compiler daemon to exit...");
+			if (this.ls_daemon_process.exitCode !== null) break;
 			await new Promise(resolve => setTimeout(resolve, 100));
 		}
 		
-		this.process = this.startProcess();
+		this.startupPromise = this.startup();
 		await this.waitForReady(connection);
 		await this.putWorkspace(connection);
 	}
 
 	// This function is called when the server is closed
 	public async exit(): Promise<void> {
-		this.process.kill();
+		this.ls_daemon_process.kill();
+	}
+
+	// Fetches a URL, and if the daemon returns 500 it restarts the daemon and retries once
+	private async fetchWithRestart(url: string, connection: Connection): Promise<Response> {
+		const response = await fetch(url);
+		if (response.status === 500) {
+			connection.sendNotification('window/showMessage', {type: 1, message: 'DucklingLS daemon error, restarting...'});
+			await this.restart(connection);
+			return fetch(url);
+		}
+		return response;
 	}
 
 	// This function is called to make sure the daemon is ready
 	private async waitForReady(connection: Connection): Promise<void> {
+		await this.startupPromise;
 		console.log("Checking if compiler daemon is ready...");
-		for (let i = 0; i < 10; i++){
-			const response = await fetchWithTimeout(`${DAEMON_ADRESS}/status`, {}, 500);
+		for (let i = 0; i < 30; i++){
+			const response = await fetchWithTimeout(`${this.ls_daemon_address}/status`, {}, 100);
 
 			if (response && response.status == 200) {
 				console.log("Compiler daemon is ready.");
 				return;
 			} else {
 				console.log("Compiler daemon not ready yet, retrying...");
-				await new Promise(resolve => setTimeout(resolve, 500));
+				await new Promise(resolve => setTimeout(resolve, 1000));
 			}
 		}
 
@@ -123,15 +152,11 @@ export class CompilerDaemonClient {
 	// This function is called to update the file in the daemon
 	public async putFile(filePath: string, fileContent: string, connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
-		if (!initComplete) {
-			console.log("Waiting for init to complete...");
-			await initPromise;
-		}
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 
-		const response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
+		const response = fetch(`${this.ls_daemon_address}/put_file/${base64FilePath}/${base64FileContent}`);
 
 		async function handleResponse(res: Response) {
 			if (res.status != 200) {
@@ -153,7 +178,7 @@ export class CompilerDaemonClient {
 		console.log("Debugging in progress...")
 		try {
 			const base64Arg: string = Buffer.from(arg).toString('base64');
-			const response = await fetch(`${DAEMON_ADRESS}/debug/${base64Arg}`);
+			const response = await fetch(`${this.ls_daemon_address}/debug/${base64Arg}`);
 			if (!response.ok) {
 				console.log("Call debug failed");
 				throw new Error(`Error: ${response.status} ${response.statusText}`);
@@ -179,7 +204,7 @@ export class CompilerDaemonClient {
 		for (const folder of folders) {
 			try {
 				var base64FilePath: string = Buffer.from(uriToFilePath(folder)).toString('base64');
-				var response = fetch(`${DAEMON_ADRESS}/init_directory/${base64FilePath}`);
+				var response = fetch(`${this.ls_daemon_address}/init_directory/${base64FilePath}`);
 				var res = await response;
 				if (res.status != 200) {
 					throw new Error(`Error: ${res.status}`);
@@ -199,50 +224,28 @@ export class CompilerDaemonClient {
 	// This function is called to get the semantic tokens from the daemon for a file
 	public async getSemanticTokens(filePath: string, connection: Connection): Promise<Token[]> {
 		await this.waitForReady(connection);
-		if (!initComplete) {
-			console.log("Waiting for init to complete...");
-			await initPromise;
-		}
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 
-		try {
-			const response = await fetch(`${DAEMON_ADRESS}/get_semantic_tokens/${base64FilePath}`);
-			
-			// Print the response status and headers
-			console.log(`Response status: ${response.status}`);
-			const headers: { [key: string]: string } = {};
-			response.headers.forEach((value, key) => {
-				headers[key] = value;
-			});
-			console.log(`Response headers: ${JSON.stringify(headers)}`);
-	
-			if (!response.ok) {
-				console.log("Response not ok!!!!!!!");
-				throw new Error(`Error: ${response.status} ${response.statusText}`);
-			}
-
-			const jsonResponse = await response.json();
-			console.log(`getSemanticTokens response: ${JSON.stringify(jsonResponse)}\n`);
-
-			// Assuming the response is a JSON array of Token elements
-			const tokens: Token[] = jsonResponse.map((token: any) => ({
-				line: token.line,
-				startCharacter: token.startCharacter,
-				length: token.length,
-				tokenType: token.tokenType,
-				tokenModifiers: token.tokenModifiers
-			}));
-			
-			return tokens;
-		} catch (error) {
-			if (error instanceof Error) {
-				console.error(`getSemanticTokens error: ${error.message}`);
-			} else {
-				console.error(`getSemanticTokens error: ${String(error)}`);
-			}
+		const response = await this.fetchWithRestart(`${this.ls_daemon_address}/get_semantic_tokens/${base64FilePath}`, connection);
+		
+		if (!response.ok) {
+			console.error(`getSemanticTokens error: ${response.status} ${response.statusText}`);
 			return [];
 		}
+
+		const jsonResponse = await response.json();
+
+		// Assuming the response is a JSON array of Token elements
+		const tokens: Token[] = jsonResponse.map((token: any) => ({
+			line: token.line,
+			startCharacter: token.startCharacter,
+			length: token.length,
+			tokenType: token.tokenType,
+			tokenModifiers: token.tokenModifiers
+		}));
+		
+		return tokens;
 	}
 
 	// This function is called to get the errors from the daemon for a file
@@ -251,28 +254,21 @@ export class CompilerDaemonClient {
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 
-		try {
-			const response = await fetch(`${DAEMON_ADRESS}/get_errors/${base64FilePath}`);
+		const response = await this.fetchWithRestart(`${this.ls_daemon_address}/get_errors/${base64FilePath}`, connection);
 
-			if (!response.ok) {
-				console.log("getErrors response not ok");
-				throw new Error(`Error: ${response.status} ${response.statusText}`);
-			}
-
-			const jsonResponse = await response.json();
-			
-			return jsonResponse as Record<string, Diagnostic[]>;
-		} catch (error) {
-			console.error(error);
+		if (!response.ok) {
+			console.error(`getErrors error: ${response.status} ${response.statusText}`);
 			return {};
 		}
+
+		return await response.json() as Record<string, Diagnostic[]>;
 	}
 
 	// This function is called to get all of the keywords from the daemon
 	public async getKeywords(connection: Connection): Promise<LSPKeywordData> {
 		await this.waitForReady(connection);
 
-		const response = fetch(`${DAEMON_ADRESS}/export_keywords`);
+		const response = fetch(`${this.ls_daemon_address}/export_keywords`);
 
 		function handleResponse(res: Response) {
 			return res.text();
@@ -295,42 +291,22 @@ export class CompilerDaemonClient {
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const line: string = (_textDocumentPosition.position.line).toString();
 		const offset: string = (_textDocumentPosition.position.character).toString();
-		const response = fetch(`${DAEMON_ADRESS}/get_completion_items/${base64FilePath}/${line}/${offset}`);
+		const response = fetch(`${this.ls_daemon_address}/get_completion_items/${base64FilePath}/${line}/${offset}`);
 
 		return [];
 	}
 
 	public async getDefinition(_textDocumentPosition: TextDocumentPositionParams, offset: number, connection: Connection): Promise<Location | Location[] | null> {
+		return [];
 		await this.waitForReady(connection);
 		const base64FilePath: string = Buffer.from(uriToFilePath(_textDocumentPosition.textDocument.uri)).toString('base64');
-		const response = await fetch(`${DAEMON_ADRESS}/get_definitions/${base64FilePath}/${offset.toString()}`);
+		const response = await this.fetchWithRestart(`${this.ls_daemon_address}/get_definitions/${base64FilePath}/${offset.toString()}`, connection);
 		
-
-		//
-		//
-		// 
-		// What we want from the daemon is a json array of locations
-		// The locations are then converted to Location objects
-		// For the exact format, see jsonResponse.map below
-		//
-		//
-		//
-
-		// Print the response status and headers
-		console.log(`Response status: ${response.status}`);
-		const headers: { [key: string]: string } = {};
-		response.headers.forEach((value, key) => {
-			headers[key] = value;
-		});
-		console.log(`Response headers: ${JSON.stringify(headers)}`);
-
 		if (!response.ok) {
-			console.log("Response not ok!!!!!!!");
 			throw new Error(`Error: ${response.status} ${response.statusText}`);
 		}
 
 		const jsonResponse = await response.json();
-		console.log(`get_definition response: ${JSON.stringify(jsonResponse)}\n`);
 		
 		// Ther response MUST be a JSON object by now, otherwise the request will fail
 

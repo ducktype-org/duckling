@@ -7,6 +7,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -85,6 +86,7 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::Import:
+		case pst::ElementKind::ImportIdentifierAs:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -137,6 +139,10 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassSpecifierBlock:
 			return ElementScopeKind::Transparent;
 
+		// @TODO: #2087 this is a mock, figure out proper handling of non-class statements
+		case pst::ElementKind::NonClassStmt:
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::If:
 		case pst::ElementKind::While:
 		case pst::ElementKind::For:
@@ -174,9 +180,7 @@ namespace compiler::helios {
 			CORE_UNREACHABLE();
 
 		default:
-			throw base::NotYetImplemented(
-				base::strConcat("PST element scope kind for: ", element->elementType())
-			);
+			CORE_PANIC("PST element scope kind for: ", element->elementType());
 		}
 		CORE_UNREACHABLE();
 	}
@@ -386,7 +390,7 @@ namespace compiler::helios {
 			for (const auto& stmt: list) {
 				switch (stmt.unlock(ctx)->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+					auto sym_id = *ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 					symbols.emplace_back(sym_id);
 					break;
 				}
@@ -402,7 +406,13 @@ namespace compiler::helios {
 					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
+						symbols.emplace_back(*sym_id);
+					} else if (auto import_opt
+					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
+						// Import has DeclType::Transparent as it can intrude many different
+						// symbols. This is currently handled the same way as DeclType::Symbol.
+						auto sym_id = *ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
 						symbols.emplace_back(sym_id);
 					} else {
 						CORE_PANIC(
@@ -446,7 +456,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *fun->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(*ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -456,7 +466,15 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *meth->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(*ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
+
+				out.emplace_back(ctx.query<houtgen::QueryGeneratedSymbol>({
+					.name = base::StrID("self"),
+					.generated_symbol_data
+					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::SelfParameter{
+						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
+						.scope         = key } },
+				}));
 
 				output(std::move(out));
 			}
@@ -470,7 +488,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+					out.emplace_back(*ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
 				output(std::move(out));
 			}
@@ -478,13 +496,20 @@ namespace compiler::helios {
 			void visitIf(pst::Access<pst::If>) override {
 				// Scope of "if →(...)← {}"
 				// @TODO: check if "If" defines any variables in its condition
-				// and add them here.
 				output(std::vector<SymID>{});
 			}
+				// and add them here.
 
 			void visitWhile(pst::Access<pst::While>) override {
 				// Scope of "while →(...)← {}"
 				// @TODO: check if "While" defines any variables in its condition
+				// and add them here.
+				output(std::vector<SymID>{});
+			}
+
+			void visitFor(pst::Access<pst::For>) override {
+				// Scope of "for →(...)← {}"
+				// @TODO: #2096 add for loop variables to the scope
 				// and add them here.
 				output(std::vector<SymID>{});
 			}
@@ -566,7 +591,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
 
-	struct IMPLEMENT_QUERY(QueryLookupInScope, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInScope, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
@@ -586,8 +611,9 @@ namespace compiler::helios {
 			for (const auto& sym: *symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto wild_result
+						auto wild_result_qresult
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
+						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result =, wild_result_qresult);
 						if (!wild_result->isEmpty())
 							result.children.push_back(wild_result->toNode(sym));
 					}
@@ -618,11 +644,10 @@ namespace compiler::helios {
 			auto value_holder = expand->getValue().unlock(ctx);
 			auto value = value_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 			if (value.has_value()) {
-				// @TODO: #1880 Add proper expand context handling
 				return pst::PST<pst::Stmt>::fromExpand(
 					expand->getSourcePosition(),
 					value.value()->getValue().str(),
-					pst::LangParserContext::programBaseContext()
+					makeBox<pst::LangParserContext>(expand->getContext())
 				);
 			} else
 				CORE_PANIC("Expand argument is not exactly a single string.");
@@ -645,26 +670,31 @@ namespace compiler::helios {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key)->data);
 		}
+
+		static auto erase(KHash key) -> bool { return cache.erase(key); }
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);
 
-	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			auto result = ctx.query<QueryLookupInScope>(key);
+			UNPACK_QRESULT_CREF(auto result =, ctx.query<QueryLookupInScope>(key));
 
 			if (key.scope.ref->parent.has_value()) {
 				auto parent = key.scope.ref->parent.value();
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				LookupResult parent_result = *ctx.query<QueryLookupInScopeAndParents>(
-					{ parent, key.name, key.with_wildcards }
+				UNPACK_QRESULT_CREF(
+					auto parent_result =,
+					ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards })
 				);
 
-				parent_result.merge(*result);
+				LookupResult combined_result = *parent_result; 
 
-				return parent_result;
+				combined_result.merge(*result);
+
+				return combined_result;
 			} else {
 				return *result;
 			}

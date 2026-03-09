@@ -2,7 +2,6 @@ use std::path::{Path, PathBuf};
 
 use tracing::debug;
 
-use rustvil::fs::PathExt;
 use url::Url;
 
 use super::Scope;
@@ -12,6 +11,7 @@ use crate::{
         core::{BranchOrTag, Git, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
     },
+    util_common::path_ops_ext::PathOpsExt,
 };
 
 use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
@@ -258,9 +258,7 @@ fn resolve_local_dep_root(
             home.display(),
         )
     };
-    let expanded = Path::new(manifest_root)
-        .expand_user_with(home)
-        .with_context(|| format!("failed to expand the tildes from the path `{manifest_root}`"))?;
+    let expanded = Path::new(manifest_root).expand_user_with(home)?;
     if expanded.is_absolute() {
         Ok((expanded.to_path_buf(), false))
     } else {

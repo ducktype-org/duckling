@@ -225,6 +225,10 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("Dynamic array type interface not yet implemented");
 	}
 
+	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Static array type interface not yet implemented");
+	}
+
 	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context&) const {
 		throw base::NotYetImplemented("Tuple type interface not yet implemented");
 	}

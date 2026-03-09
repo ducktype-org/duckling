@@ -35,15 +35,20 @@ namespace compiler::helios {
 	}
 
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
-		const SymID symbol, const tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
+		const SymID                  symbol,
+		const tsh::SymbolType<>      ret_type,
+		std::vector<code::Parameter> parameters,
+		code::ElementOrigin          origin
 	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
-		  parameters(std::move(parameters)) {
+		  parameters(std::move(parameters)),
+		  origin(origin) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
-			"Symbol is not a function or function declaration"
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
+				or kind(symbol) == SymbolKind::Method,
+			"Symbol is not a function, function declaration nor method"
 		);
 	}
 
@@ -98,14 +103,14 @@ namespace compiler::helios {
 		std::stringstream out;
 		variant_match(value) {
 			variant_case(HOUTGlobalConst, const_value) {
-				out << "const " << prettyDebugPrint(helios_symbol, ctx) << " : "
-					<< type.toString() << " = " << const_value.value.toString() << '\n';
+				out << "const " << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString()
+					<< " = " << const_value.value.toString() << '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
 				std::string decl
 					= type.getMutability() == tsh::Mutability::Mutable ? "var   " : "let   ";
-				out << decl << prettyDebugPrint(helios_symbol, ctx) << " : "
-					<< type.toString() << " = ";
+				out << decl << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString()
+					<< " = ";
 				val.initial_value.get()->ref()->debugPrint(out);
 				out << '\n';
 			}
@@ -123,21 +128,24 @@ namespace compiler::helios {
 		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
 			  switch (data_type) {
 			  case HOUTGlobalDataType::Variable: {
+				  auto var_decl = stmt(ctx, symbol)->dynamicCast<pst::Variable>().value();
+
 				  // Get the initial value and type of the variable.
-				  const auto initial_value_pst = stmt(ctx, symbol)
-			                                         ->dynamicCast<pst::Variable>()
-			                                         .value()
-			                                         ->getValue()
-			                                         .value()
-			                                         .unlock(ctx)
-			                                         ->getExpr();
-				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-				  auto       initial_value_hout_coerced
-					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, *variable_type)
-			                .valueOrThrow();
+				  const auto variable_type = *ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+				  auto       initial_value = [&]() -> Box<code::Expr> {
+                      if (auto maybe_initial_pst = var_decl->getValue()) {
+                          auto initial_value_pst = maybe_initial_pst.value().unlock(ctx)->getExpr();
+                          return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
+                              .valueOrThrow();
+                      } else {
+                          return makeBox<code::DefaultValueExpr>(
+                              ctx, code::generatedOrigin(), variable_type
+                          );
+                      }
+				  }();
 
 				  return HOUTGlobalVariable{
-					  std::make_shared<Box<code::Expr>>(std::move(initial_value_hout_coerced))
+					  std::make_shared<Box<code::Expr>>(std::move(initial_value))
 				  };
 			  }
 			  case HOUTGlobalDataType::Constant:

@@ -332,7 +332,6 @@ fn parent_features_to_consider<'a>(
 mod test {
     use std::path::PathBuf;
 
-    use rustvil::fs::PathExt;
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
@@ -342,6 +341,7 @@ mod test {
             parse_manifest,
             types_common::{ExpandedLocation, Location},
         },
+        util_common::path_ops_ext::PathOpsExt,
     };
 
     use super::*;
@@ -429,7 +429,7 @@ metadata:
         let main_pkg = (exp_pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
-        assert!(output.new_features == HashMap::new());
+        assert!(output.new_features.is_empty());
         assert!(
             output.new_edges
                 == HashMap::from([(

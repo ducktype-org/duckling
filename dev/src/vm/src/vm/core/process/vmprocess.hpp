@@ -3,10 +3,13 @@
 #include "interface_types.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/concurrency/gil.hpp>
+#include <vm/core/process/concurrency/synchronization_primitives.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -50,6 +53,9 @@ namespace vm {
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
+
+		GIL                       gil;
+		SynchronizationPrimitives synchronization_primitives;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
@@ -107,7 +113,7 @@ namespace vm {
 		/**
 		 * @brief Joins the executing thread.
 		 */
-		std::expected<api::Response, api::ApiError> join();
+		std::expected<api::Response, api::ApiError> join(api::ThreadID thread_id);
 
 		/**
 		 * @brief Stops the executing thread (by joining it).
@@ -165,8 +171,22 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> detach();
 
+		/**
+		 * @brief Returns first thread in thread queue.
+		 */
 		VMThread& getMainVMThread();
 
+		/**
+		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
+		 * then it returns main thread
+		 */
+		VMThread& getVMThreadByID(api::ThreadID thread_id);
+
+		/**
+		 * @brief Returns reference to either existing empty thread or
+		 * creates new thread without worker and returns it
+		 */
+		VMThread& getEmptyThread();
 
 	public:
 		void setStatus(const api::ProcStatus& new_status) noexcept;
@@ -208,5 +228,8 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
+
+		GIL&                       getGIL();
+		SynchronizationPrimitives& getSynchronizationPrimitives();
 	};
 }

@@ -52,7 +52,10 @@ namespace compiler::helios::houtgen {
                 = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
             });
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
-				code::generatedOrigin(), std::nullopt, result_symbol_type, result_symbol
+				code::generatedOrigin(),
+				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), result_symbol_type),
+				result_symbol_type,
+				result_symbol
 			)));
 
 			// - Assign each field from the corresponding parameter.
