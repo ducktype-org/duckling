@@ -9,19 +9,19 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Constructor>(position, ctx);
 
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		if (state[0].isBracketGroup(Token::Round))
 			out->kind = tpc::Identifier{ .value = base::StrID("create") };
 		else {
 			tpc::Identifier ident;
-			state.parse(out).all(NamedOperator::Period, &ident);
+			PARSE().all(NamedOperator::Period, &ident);
 			out->kind = ident;
 		}
 
-		state.parse(out).one(&out->params);
-		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).all(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+		PARSE().one(&out->params);
+		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->inits);
+		PARSE().all(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
 
 		PST_RETURN out;
 	}

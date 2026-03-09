@@ -8,24 +8,24 @@ namespace pst {
 
 		tpc::Identifier id;
 
-		state.parse(out).all(&id);
+		PARSE().all(&id);
 		out->names.push_back(id);
 
 		PST_WHILE(state[0].is(NamedOperator::Period)) {
-			state.parse(out).all(NamedOperator::Period, &id);
+			PARSE().all(NamedOperator::Period, &id);
 			out->names.push_back(id);
 		}
 
-		state.parse(out).one(NamedOperator::PeriodStar);
+		PARSE().one(NamedOperator::PeriodStar);
 
-		if (state.parse(out).tryEat(Keyword::Hides)) {
+		if (PARSE().tryEat(Keyword::Hides)) {
 			out->hides.emplace();
 
-			state.parse(out).all(&id);
+			PARSE().all(&id);
 			out->hides->push_back(id);
 
 			PST_WHILE(state[0].is(Special::Comma)) {
-				state.parse(out).all(Special::Comma, &id);
+				PARSE().all(Special::Comma, &id);
 				out->hides->push_back(id);
 			}
 		}

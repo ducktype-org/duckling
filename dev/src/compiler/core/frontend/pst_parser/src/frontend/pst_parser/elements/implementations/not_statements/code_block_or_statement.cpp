@@ -9,14 +9,14 @@ namespace pst {
 		auto out = makeBox<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
 			MBox<CodeBlock> block;
-			state.parse(out).with(&block, CodeBlock::parse, fwdVal(code_block_order_type));
+			PARSE().with(&block, CodeBlock::parse, fwdVal(code_block_order_type));
 			if (!block) return nullptr;
-			state.parse(out).assign(&out->code_block, std::move(block));
+			PARSE().assign(&out->code_block, std::move(block));
 		} else {
 			MBox<Stmt> stmt;
-			state.parse(out).one(&stmt);
+			PARSE().one(&stmt);
 			if (!stmt) return nullptr;
-			state.parse(out).assign(&out->stmt, std::move(stmt));
+			PARSE().assign(&out->stmt, std::move(stmt));
 		}
 
 		PST_RETURN out;

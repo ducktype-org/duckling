@@ -9,7 +9,7 @@ namespace pst {
 
 		auto position = state.getPosition();
 		auto out      = makeBox<WildcardPattern>(position);
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 		PST_RETURN out;
 	}
 

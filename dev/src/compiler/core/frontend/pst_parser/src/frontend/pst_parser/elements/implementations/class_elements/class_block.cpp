@@ -12,18 +12,18 @@ namespace pst {
 			return nullptr;
 		}
 
-		state.parse(out).goDown();
+		PARSE().goDown();
 
 		PST_WHILE(state.notEmpty()) {
 			MBox<ClassStmt> stmt;
-			state.parse(out).with(&stmt, ClassStmt::parse, ctx);
+			PARSE().with(&stmt, ClassStmt::parse, ctx);
 			if (stmt) {
 				out->statements.emplace_back(nullptr);
-				state.parse(out).assign(&out->statements.back(), std::move(stmt));
+				PARSE().assign(&out->statements.back(), std::move(stmt));
 			}
 		}
 
-		state.parse(out).goUpAndSkip();
+		PARSE().goUpAndSkip();
 
 		out->fillSymbols();
 

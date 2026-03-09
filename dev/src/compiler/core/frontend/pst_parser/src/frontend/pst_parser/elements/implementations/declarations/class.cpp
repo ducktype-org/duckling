@@ -16,12 +16,12 @@ namespace pst {
 
 		if (!assertStmtChoice<Class>(state, state[0].is(Keyword::Class))) return nullptr;
 
-		state.parse(out).all(Keyword::Class, &out->name);
+		PARSE().all(Keyword::Class, &out->name);
 
-		if (state.parse(out).tryEat(Keyword::Extends)) state.parse(out).one(&out->base);
-		if (state.parse(out).tryEat(Keyword::Implements)) state.parse(out).one(&out->implements);
+		if (PARSE().tryEat(Keyword::Extends)) PARSE().one(&out->base);
+		if (PARSE().tryEat(Keyword::Implements)) PARSE().one(&out->implements);
 
-		state.parse(out).with(&out->body, ClassBlock::parse, { .name = out->name });
+		PARSE().with(&out->body, ClassBlock::parse, { .name = out->name });
 
 		PST_RETURN out;
 	}

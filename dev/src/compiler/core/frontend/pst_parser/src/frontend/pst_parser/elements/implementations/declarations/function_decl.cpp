@@ -11,10 +11,10 @@ namespace pst {
 
 		if (!assertStmtChoice<FunDecl>(state, state[0].is(Keyword::FunDecl))) return nullptr;
 
-		state.parse(out).all(Keyword::FunDecl, &out->name);
-		state.parse(out).one(&out->params);
+		PARSE().all(Keyword::FunDecl, &out->name);
+		PARSE().one(&out->params);
 
-		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
+		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 
 		PST_RETURN out;
 	}

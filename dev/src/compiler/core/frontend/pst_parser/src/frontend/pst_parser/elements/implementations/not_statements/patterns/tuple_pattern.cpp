@@ -7,7 +7,7 @@ namespace pst {
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Round)) return nullptr;
 		auto position = state.getPosition();
 		auto out      = makeBox<TuplePattern>(position);
-		state.parse(out).one(&out->elements);
+		PARSE().one(&out->elements);
 		PST_RETURN out;
 	}
 

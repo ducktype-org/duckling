@@ -28,12 +28,12 @@ namespace pst::expr {
 		if (!found) return Lower::parse(state, length);
 		auto out = makeBox<Assignment>(pos);
 
-		state.parse(out).with(&out->variables, Lower::parse, +place);
+		PARSE().with(&out->variables, Lower::parse, +place);
 
 		out->type = state[0].getValue();
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
-		state.parse(out).with(&out->value, Lower::parse, length - place - 1);
+		PARSE().with(&out->value, Lower::parse, length - place - 1);
 
 		PST_RETURN out;
 	}

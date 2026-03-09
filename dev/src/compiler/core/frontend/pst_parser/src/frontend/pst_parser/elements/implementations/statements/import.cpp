@@ -10,7 +10,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Import>(state, state[0].is(Keyword::Import))) return nullptr;
 
-		state.parse(out).all(Keyword::Import, &out->import_chain);
+		PARSE().all(Keyword::Import, &out->import_chain);
 
 		state.addImport(out.ref());
 		PST_RETURN out;

@@ -8,14 +8,14 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<CopyConstructor>(position, ctx);
 
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		out->kind = Keyword::Copy;
-		state.parse(out).all(NamedOperator::Period, Keyword::Copy);
+		PARSE().all(NamedOperator::Period, Keyword::Copy);
 
-		state.parse(out).one(&out->params);
-		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+		PARSE().one(&out->params);
+		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->inits);
+		PARSE().one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
 
 		PST_RETURN out;
 	}

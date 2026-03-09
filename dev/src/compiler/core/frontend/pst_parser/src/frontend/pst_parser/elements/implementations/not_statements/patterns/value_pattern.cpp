@@ -12,7 +12,7 @@ namespace pst {
 
 		auto position = state.getPosition();
 		auto out      = makeBox<ValuePattern>(position);
-		state.parse(out).one(&out->expression);
+		PARSE().one(&out->expression);
 
 		PST_RETURN out;
 	}

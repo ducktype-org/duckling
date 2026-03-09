@@ -11,7 +11,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
 
-		state.parse(out).all(Keyword::Alias, &out->name, NamedOperator::Assign, &out->points_to);
+		PARSE().all(Keyword::Alias, &out->name, NamedOperator::Assign, &out->points_to);
 
 		if (out->points_to.internal()->getStar())
 			state.logInt(makeBox<AliasStarError>(out->source_position));

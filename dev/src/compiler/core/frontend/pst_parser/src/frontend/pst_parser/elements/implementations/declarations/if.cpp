@@ -11,13 +11,13 @@ namespace pst {
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 
-		state.parse(out)
+		PARSE()
 			.all(Keyword::If, &out->optional_name, &out->condition)
 			.withDef(&out->then_body, BlockOrderType::Ordered);
 		;
 
-		if (state.parse(out).tryEat(Keyword::Else))
-			state.parse(out).withDef(&out->else_body, BlockOrderType::Ordered);
+		if (PARSE().tryEat(Keyword::Else))
+			PARSE().withDef(&out->else_body, BlockOrderType::Ordered);
 
 		PST_RETURN out;
 	}

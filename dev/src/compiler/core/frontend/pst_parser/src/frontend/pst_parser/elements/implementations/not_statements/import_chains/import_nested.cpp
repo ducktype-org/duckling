@@ -9,10 +9,10 @@ namespace pst {
 
 		tpc::Identifier id;
 		PST_WHILE(state[0].isIdentifier()) {
-			state.parse(out).all(&id, NamedOperator::Period);
+			PARSE().all(&id, NamedOperator::Period);
 			out->names.push_back(id);
 		}
-		state.parse(out).one(&out->nested_import);
+		PARSE().one(&out->nested_import);
 
 		return out;
 	}

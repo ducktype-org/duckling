@@ -15,7 +15,7 @@ namespace pst::expr {
 		auto out      = makeBox<MatchExpr>(position);
 
 		if (!assertStmtChoice<MatchExpr>(state, state[0].is(Keyword::Match))) return nullptr;
-		state.parse(out).one(Keyword::Match);
+		PARSE().one(Keyword::Match);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
 			state.logInt(makeBox<MatchRoundBracketError>(state.getPosition()));
@@ -23,22 +23,22 @@ namespace pst::expr {
 		}
 
 		state.goDown();
-		state.parse(out).one(&out->value_to_match);
+		PARSE().one(&out->value_to_match);
 		state.goUpAndSkip();
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.logInt(makeBox<MatchCurlyBracketError>(state.getPosition()));
 			return nullptr;
 		}
-		state.parse(out).goDown();
+		PARSE().goDown();
 
 		PST_WHILE(true) {
 			if (state[0].is(Keyword::Case)) {
 				MBox<MatchCase> match_case;
-				state.parse(out).one(&match_case);
+				PARSE().one(&match_case);
 				if (match_case) {
 					out->cases.emplace_back(nullptr);
-					state.parse(out).assign(&out->cases.back(), std::move(match_case));
+					PARSE().assign(&out->cases.back(), std::move(match_case));
 				}
 			} else {
 				break;
@@ -47,7 +47,7 @@ namespace pst::expr {
 		// A non-case in a match expression.
 		if (state.notEmpty()) state.logInt(makeBox<NotACaseExpression>(state.getPosition()));
 
-		state.parse(out).goUpAndSkip();
+		PARSE().goUpAndSkip();
 		PST_RETURN out;
 	}
 

@@ -17,7 +17,7 @@ namespace pst::expr {
 
 		auto out = makeBox<BlockExpr>(state.getPosition());
 
-		state.parse(out).withDef(&out->block, BlockOrderType::Ordered);
+		PARSE().withDef(&out->block, BlockOrderType::Ordered);
 
 		PST_RETURN out;
 	}

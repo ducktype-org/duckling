@@ -12,9 +12,9 @@ namespace pst {
 			return nullptr;
 		}
 
-		state.parse(out).goDown();
-		state.parse(out).one(&out->expr);
-		state.parse(out).goUpAndSkip();
+		PARSE().goDown();
+		PARSE().one(&out->expr);
+		PARSE().goUpAndSkip();
 
 		PST_RETURN out;
 	}

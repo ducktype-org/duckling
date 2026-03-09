@@ -10,7 +10,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Block>(state, state[0].is(Keyword::Block))) return nullptr;
 
-		state.parse(out)
+		PARSE()
 			.all(Keyword::Block, &out->optional_name)
 			.withDef(&out->code_block, BlockOrderType::Unordered);
 

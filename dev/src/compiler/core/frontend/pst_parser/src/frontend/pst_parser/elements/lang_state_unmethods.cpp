@@ -11,7 +11,7 @@ namespace pst::internal {
 	void parseExprIntoHolder(
 		LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length
 	) {
-		state.parse(out).autoFallbackLen(length).with(&out->expr, parse_fun);
+		PARSE().autoFallbackLen(length).with(&out->expr, parse_fun);
 	}
 
 	bool isSentinel(LangParserState& state, i64 fwd) {

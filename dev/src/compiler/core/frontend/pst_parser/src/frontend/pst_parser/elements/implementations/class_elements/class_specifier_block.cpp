@@ -15,7 +15,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<ClassSpecifierBlock>(position, ctx);
 
-		state.parse(out).with(&out->block, ClassBlock::parse, out->getContext());
+		PARSE().with(&out->block, ClassBlock::parse, out->getContext());
 
 		PST_RETURN out;
 	}

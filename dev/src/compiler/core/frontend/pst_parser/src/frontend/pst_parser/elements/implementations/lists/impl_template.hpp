@@ -134,7 +134,7 @@ namespace pst {
 					));
 					return nullptr;
 				}
-				state.parse(out).goDown();
+				PARSE().goDown();
 			}
 
 			usize expr_length{};
@@ -170,17 +170,17 @@ namespace pst {
 					}
 
 					MBox<ListElements> box;
-					state.parse(out).template with<ListElements>(&box, ParsingClass::parse);
+					PARSE().template with<ListElements>(&box, ParsingClass::parse);
 					if (box.toOpt()) {
 						out->elements.emplace_back(nullptr);
-						state.parse(out).assign(&out->elements.back(), std::move(box));
+						PARSE().assign(&out->elements.back(), std::move(box));
 					}
 
 					state.exitFallback();
 
 					if (isEnding(state.ctokens(), 0)) break;
 					if (isSeparator(state.ctokens(), 0)) {
-						state.parse(out).eatOne();
+						PARSE().eatOne();
 						if (isEnding(state.ctokens(), 0) && ALLOW_TRAILING_SEPARATOR) break;
 					} else
 						state.logInt(makeBox<NoSeparatorError<getName>>(state.getPosition()));
@@ -189,7 +189,7 @@ namespace pst {
 
 			// Handle closing brackets
 			if constexpr (BRACKETS != lexer::Token::BracketType::None)
-				state.parse(out).goUpAndSkip();
+				PARSE().goUpAndSkip();
 
 			PST_RETURN out;
 		}

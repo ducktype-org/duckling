@@ -9,7 +9,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Expand>(state, state[0].is(Keyword::Expand))) return nullptr;
 
-		state.parse(out).all(Keyword::Expand, &out->value);
+		PARSE().all(Keyword::Expand, &out->value);
 
 		PST_RETURN out;
 	}

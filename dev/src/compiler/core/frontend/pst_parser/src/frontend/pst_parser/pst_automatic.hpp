@@ -26,6 +26,9 @@
 #define PST_AUTOMATIC_SKIP(ret) \
 	if (state.isSkipping()) { return ret; }
 
+#define PARSE() \
+	state.parse(out)
+
 namespace pst {
 	using lang_def::Keyword;
 	using lang_def::NamedOperator;

@@ -10,20 +10,20 @@ namespace pst {
 
 		if (!assertStmtChoice<MatchCase>(state, state[0].is(Keyword::Case))) return nullptr;
 
-		state.parse(out).all(Keyword::Case, &out->pattern);
+		PARSE().all(Keyword::Case, &out->pattern);
 
 		bool if_case = false;
 		do {
 			MatchCase::CaseBranch current_branch;
-			if (state.parse(out).tryEat(Keyword::If)) {
-				state.parse(out).all(
+			if (PARSE().tryEat(Keyword::If)) {
+				PARSE().all(
 					&current_branch.condition,
 					NamedOperator::Assign,
 					&current_branch.result,
 					Special::Semicolon
 				);
 				if_case = true;
-			} else if (state.parse(out).tryEat(NamedOperator::Assign)) {
+			} else if (PARSE().tryEat(NamedOperator::Assign)) {
 				if (if_case) {  // Unconditioned branch after a conditioned branch.
 					state.logInt(
 						makeBox<UnconditionedBranchAfterConditionedError>(state.getPosition())
@@ -31,7 +31,7 @@ namespace pst {
 					return nullptr;
 				}
 
-				state.parse(out).all(&current_branch.result, Special::Semicolon);
+				PARSE().all(&current_branch.result, Special::Semicolon);
 				out->branches.push_back(std::move(current_branch));
 				break;
 			} else {

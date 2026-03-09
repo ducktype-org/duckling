@@ -10,8 +10,8 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<DeconstructorPattern>(position);
 
-		state.parse(out).one(&out->deconstructor_name);
-		state.parse(out).one(&out->arguments);
+		PARSE().one(&out->deconstructor_name);
+		PARSE().one(&out->arguments);
 		PST_RETURN out;
 	}
 

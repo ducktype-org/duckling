@@ -70,14 +70,14 @@ namespace pst::expr {
 
 		auto out = makeBox<Ternary>(pos);
 
-		state.parse(out).one(Keyword::If);
-		state.parse(out).with(&out->condition, Lower::parse, then_fwd - 1);
+		PARSE().one(Keyword::If);
+		PARSE().with(&out->condition, Lower::parse, then_fwd - 1);
 
-		state.parse(out).one(Keyword::Then);
-		state.parse(out).with(&out->if_true, Lower::parse, else_fwd - then_fwd - 1);
+		PARSE().one(Keyword::Then);
+		PARSE().with(&out->if_true, Lower::parse, else_fwd - then_fwd - 1);
 
-		state.parse(out).one(Keyword::Else);
-		state.parse(out).with(&out->if_false, Lower::parse, length - else_fwd - 1);
+		PARSE().one(Keyword::Else);
+		PARSE().with(&out->if_false, Lower::parse, length - else_fwd - 1);
 		PST_RETURN out;
 	}
 
