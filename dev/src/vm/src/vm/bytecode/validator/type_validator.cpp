@@ -327,7 +327,7 @@ namespace {
 					throw UnknownSubtypeError(function, function.result);
 			}
 			variant_case(VariantType, variant) {
-				if (variant.variant_alternatives.empty() || variant.variant_alternatives.size() == 1)
+				if (variant.variant_alternatives.size() < 2)
 					throw TooFewVariantAlternativesError(variant);
 				std::unordered_set<base::StrID> alternative_set;
 				for (auto& alternative: variant.variant_alternatives) {
