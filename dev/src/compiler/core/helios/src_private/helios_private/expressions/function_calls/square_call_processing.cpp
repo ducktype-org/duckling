@@ -1,5 +1,7 @@
 #include "square_call_processing.hpp"
 
+#include "helios/hout/origin.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
@@ -57,7 +59,7 @@ namespace compiler::helios::code {
 
 			return makeBox<IndexExpr>(
 				ctx,
-				current_expr->origin.extended(index_pst.unlock(ctx)),
+				pstOrigin(current_expr->origin, index_pst.unlock(ctx)),
 				std::move(current_expr),
 				std::move(index_expr)
 			);
@@ -105,9 +107,8 @@ namespace compiler::helios::code {
 			auto arg_res = getHoutOfExprWithExpectedType(ctx, arg_pst, expected_index_arg_type);
 			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
 
-			return makeBox<IndexExpr>(
-				ctx, base->origin.extended(arg_pst.unlock(ctx)), std::move(base), std::move(arg_expr)
-			);
+			auto total_origin = pstOrigin(base->origin, arg_pst.unlock(ctx));
+			return makeBox<IndexExpr>(ctx, total_origin, std::move(base), std::move(arg_expr));
 		}
 	}
 

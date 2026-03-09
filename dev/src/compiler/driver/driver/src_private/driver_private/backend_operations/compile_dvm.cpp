@@ -9,10 +9,12 @@
 #include <time_stats/time_stats.hpp>
 
 namespace compiler::driver {
-	vm::code::CodeCollection compileLIRModuleToDVM(CRef<LIRModuleData> data) {
+	vm::code::CodeCollection compileLIRModuleToDVM(
+		CRef<LIRModuleData> data, query::Context& query_ctx
+	) {
 		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
-		backend_vm::Module module(data->module_id);
+		backend_vm::DVMCodeBuilder module(query_ctx);
 
 		for (const auto& global: data->globals)
 			module.insertLirGlobal(global.lir_global, global.global_ctor, global.global_dtor);

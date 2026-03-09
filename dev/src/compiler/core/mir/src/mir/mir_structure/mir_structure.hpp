@@ -40,9 +40,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	ListPop,
 	ListLen,
 
-	/** 
+	/**
 		FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR
-		@TODO: #1894 This approach may be temporary and depends on how we handle 
+		@TODO: #1894 This approach may be temporary and depends on how we handle
 		destructors in the future. Remove the comment if the approach changes.
 	 */
 	BoxAlloc,
@@ -84,7 +84,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,
-	
+
 
 	/** Operations on meta types for compile time function evaluation */
 	MetaCreateBox,
@@ -97,7 +97,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
-	
+
 	ZeroInitialize,
 
 	/** See readme.md for more info about destruct. */
@@ -775,4 +775,4 @@ namespace compiler::mir {
 
 }
 
-ID_STD_HASH(compiler::mir::LocalID)
+ID_STD_HASH(compiler::mir::LocalID);

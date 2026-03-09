@@ -124,7 +124,7 @@ struct nlohmann::adl_serializer<vm::VmValue> {
 		// Convert VmValue's bytes to HEX string
 		std::stringstream ss;
 		ss << std::hex;
-		for (size_t i = 0; i < v.type->getSize(); ++i)
+		for (size_t i = 0; i < v.type->getSize().asInt(); ++i)
 			ss << std::setw(2) << std::setfill('0') << static_cast<int>(v.getBytes()[i]);
 		j["data"] = ss.str();
 	}

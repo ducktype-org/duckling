@@ -7,11 +7,10 @@
 
 namespace compiler::backend_vm {
 
-	Module::Module(base::StrID module_id):
-		  module_id(module_id),
-		  program_context(makeBox<internal::ProgramLoweringContext>()) {}
+	DVMCodeBuilder::DVMCodeBuilder(query::Context& query_ctx):
+		  program_context(makeBox<internal::ProgramLoweringContext>(query_ctx)) {}
 
-	vm::code::CodeCollection Module::build() const {
+	vm::code::CodeCollection DVMCodeBuilder::build() const {
 		match_optional(program_context->validateAndProduceProgram()) {
 			opt_some(program) return program;
 			opt_err(error) CORE_PANIC("Failed to validate DVM module: ", error);
@@ -19,15 +18,15 @@ namespace compiler::backend_vm {
 		CORE_UNREACHABLE();
 	}
 
-	void Module::insertLirFunction(CRef<lir::Function> lir_function) {
+	void DVMCodeBuilder::insertLirFunction(CRef<lir::Function> lir_function) {
 		program_context->lowerAndKeepLirFunction(lir_function);
 	}
 
-	void Module::insertExternCFunction(const vm::code::ExternalCFunction& extern_func) {
+	void DVMCodeBuilder::insertExternCFunction(const vm::code::ExternalCFunction& extern_func) {
 		program_context->insertExternCFunction(extern_func);
 	}
 
-	void Module::insertLirGlobal(
+	void DVMCodeBuilder::insertLirGlobal(
 		const lir::LIRGlobal&               lir_global,
 		base::Optional<CRef<lir::Function>> global_ctor,
 		base::Optional<CRef<lir::Function>> global_dtor
@@ -35,7 +34,7 @@ namespace compiler::backend_vm {
 		program_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
 	}
 
-	void Module::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
+	void DVMCodeBuilder::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
 		program_context->insertRawBytecodeDefinitions(bytecode);
 	}
 }

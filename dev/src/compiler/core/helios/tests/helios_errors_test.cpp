@@ -43,7 +43,9 @@ private:
 	 *
 	 * It creates a virtual file from the `module_content` argument
 	 * and creates a module tree from it every function call.
-
+	 *
+	 * @TODO: #2213 Add PST errors handling here.
+	 *
 	 * @param module_content The content of the module main source file.
 	 * @param present_phrases List of phrases that should be present in the logged errors.
 	 * @param logged_msg_count Expected number of logged error messages.
@@ -56,15 +58,20 @@ private:
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 		query::utils::withContextDo([&](query::Context& ctx) {
-			ctx.int_logger.clear();
 			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
-			assertTrue(ctx.int_logger.hasErrors(), "Expected errors to be logged.");
+			auto logger = query::Context::dumpToOneLoggerAndClear();
+
+			// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
+			// query errors is ok:
+			assertTrue(
+				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
+			);
 
 			std::stringstream logged_messages;
-			ctx.int_logger.terminalPrint(logged_messages);
+			logger->terminalPrint(logged_messages);
 			std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
-			auto msg_count = ctx.int_logger.messageCount();
+			auto msg_count = logger->messageCount();
 			assertEqual(
 				msg_count,
 				logged_msg_count,
@@ -376,7 +383,7 @@ private:
 				    builtin_output_i64(1);
 				    return u;
 				}
-				
+
 				fun main() -> i64 = {
 					foo(unitType);
 					return 0;
@@ -385,6 +392,20 @@ private:
 			{ "The given argument type `const type` cannot be converted to the expected type "
 		      "`()`" },
 			1
+		);
+
+		// ========================== Lexer errors ==========================
+
+		// // We don't see errors here, because they are produced by the lexer, not query:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a = 1kg;
+					return 0;
+				}
+			)",
+			{},
+			0
 		);
 
 
@@ -438,6 +459,60 @@ private:
 				}
 			)",
 			{ "Immutable variables must have an initial value." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var n = 42;
+                    if (true) {
+                        var n = 24;
+                        builtin_output_i64(n);
+                    }
+				}
+			)",
+			{ "Variable name is ambiguous, because it has been defined multiple times.",
+		      "Found declaration:" },
+			1
+		);
+
+		// We don't see any query errors here, because they are logged by the PST:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+			)",
+			{},
+			0
+		);
+
+		// Check for multiple errors, note that we only see 1 error, because the other one is logged
+		// by the PST.
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+
+				fun foo() -> i64 = {
+					return "a";
+				}
+			)",
+			{},
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				import foo;
+
+				let x = foo.z;
+			)",
+			{ "Module not found." },
 			1
 		);
 
@@ -555,8 +630,11 @@ private:
 			1
 		);
 
-		// =========================== Not-yet-implemented errors ==========================
-		// Note: just remove the tests when the features are implemented.
+
+		// ========================= Not-yet-implemented errors =========================
+
+		// Note: just remove the tests when the features
+		// are implemented.
 
 		checkForErrorOnCompileModule(
 			R"(
@@ -633,6 +711,46 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "Nested", "function" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: i64 = 0;
+					a += 1;
+					return a;
+				}
+			)",
+			{ "Feature not implemented" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					var a: i64 = 0;
+					&a;
+
+					return a;
+				}
+
+				const bar = foo();
+			)",
+			{ "Feature not implemented", "pointer types" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { x: i64 = 0; }
+				const a = A();
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "compile time evaluation" },
 			1
 		);
 	}

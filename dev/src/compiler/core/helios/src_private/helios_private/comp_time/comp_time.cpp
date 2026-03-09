@@ -11,10 +11,13 @@
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -866,12 +869,31 @@ namespace compiler::helios {
 		) {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
-			auto dependencies = ctx.query<QueryTransitiveFunctionCalls>(function_sym_id);
+			Ref dependencies
+				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
 
 			LIRBuildResult result;
 			result.functions.reserve(dependencies->size());
 
 			for (const SymID& func_id: *dependencies) {
+				if (getSymRef(func_id)->getPSTDataOpt().empty()) {
+					// This path is not implemented yet.
+					// Figure out how to change this check if you hit this one when adding new feature.
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Evaluating a function in DVM at compile time which was generated "
+							"automatically. "
+							"This likely means that the function was a compiler generated class "
+							"constructor. "
+							"The failure happened for the symbol `",
+							name(func_id),
+							"`."
+						),
+						std::nullopt
+					));
+					return query::Failed();
+				}
+
 				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();

@@ -268,9 +268,10 @@ namespace {
 
 	std::expected<void, VmEvaluationError> loadLirFunctions(
 		CompTimeDVM&                                      comptime_dvm,
-		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
+		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
+		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
@@ -309,15 +310,12 @@ namespace {
 		auto ctx_vm_value = std::move(response->vm_value);
 		ctx_vm_value->writeBytes(&ctx);
 
-		if (!vm::api::runFunction(pid, "comptime_set_ctx", { ctx_vm_value.refMut() }))
+		if (!vm::api::runFunctionAwait(pid, "comptime_set_ctx", { ctx_vm_value.refMut() }))
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
 				"Failed to initialize the global context on DVM."
 			));
-		if (!vm::api::join(pid))
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
-			));
+
 		ctx_vm_value->freeData();
 		return {};
 	}
@@ -334,28 +332,19 @@ namespace {
 			= owned_args | std::views::transform([](auto& value) { return value.refMut(); })
 		    | std::ranges::to<vm::FunctionRunArguments>();
 
-		if (!vm::api::runFunction(pid, func_name, args))
+		auto maybe_exit_value = vm::api::runFunctionAwait(pid, func_name, args);
+
+		if (!maybe_exit_value.has_value())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
 				"Failed to run a function '" + func_name + "' on VM."
 			));
 
-		if (!vm::api::join(pid))
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
-			));
-
 		// Free the owned arguments.
 		for (const auto& arg: owned_args) arg->freeData();
 
-		auto exit_value = vm::api::getExitValue(pid);
-		if (!exit_value)
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::GetExitValueFailed,
-				"Failed to get exit value from VM after function execution."
-			));
-
-		return vmValueToCtv(return_type, exit_value.value());
+		auto exit_value = maybe_exit_value.value();
+		return vmValueToCtv(return_type, exit_value);
 	}
 }
 
@@ -380,7 +369,7 @@ namespace compiler::helios {
 				"Failed to initialize the comptime DVM process."
 			));
 
-		if (auto res = loadLirFunctions(comptime_dvm, lir_functions); !res)
+		if (auto res = loadLirFunctions(comptime_dvm, lir_functions, ctx); !res)
 			return std::unexpected(res.error());
 
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)

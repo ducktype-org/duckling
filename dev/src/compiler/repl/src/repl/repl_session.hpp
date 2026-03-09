@@ -13,15 +13,16 @@
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <query_framework/context/context_fd.hpp>
+
 #include <vm/core/process/interface_types.hpp>
 
-#include <string>
+#include <string_view>
 #include <vector>
 
 namespace compiler::repl {
@@ -51,18 +52,19 @@ namespace compiler::repl {
 		 * @param line The input line from the user
 		 * @return ReplResult indicating success, error, or exit status
 		 */
-		ReplResult processLine(const std::string& line);
+		ReplResult processLine(std::string_view line);
 
 		/**
-		 * @brief Execute user-provided code as either an expression or definition.
+		 * @brief Execute user-provided code, splitting it into individual statements.
 		 *
-		 * Creates a module from the input, parses it as PST, and determines whether
-		 * it's a single expression (to be evaluated) or a definition (to be loaded).
+		 * Parses the full input to validate syntax and extract statement boundaries,
+		 * then creates a separate module for each top-level statement and executes
+		 * them in order. Stops at the first error.
 		 *
-		 * @param input The code to execute
+		 * @param input The code to execute (may contain multiple statements)
 		 * @return ReplResult with execution outcome and optional message
 		 */
-		ReplResult executeInput(const std::string& input);
+		ReplResult executeInput(std::string_view input);
 
 		/**
 		 * @brief Get the history of all statements entered in this REPL session.
@@ -121,7 +123,7 @@ namespace compiler::repl {
 		 * @param line The input line to check
 		 * @return true if the line is a command (starts with '/'), false otherwise
 		 */
-		[[nodiscard]] bool isCommand(const std::string& line) const;
+		[[nodiscard]] bool isCommand(std::string_view line) const;
 
 		/**
 		 * @brief Process and execute a REPL command.
@@ -134,22 +136,22 @@ namespace compiler::repl {
 		 * @param line The command line to process (must start with '/')
 		 * @return true if the command was recognized and handled, false if unrecognized
 		 */
-		bool handleCommand(const std::string& line);
+		bool handleCommand(std::string_view line);
 
 		/**
-		 * @brief Extracts a single expression statement from the PST root, if present.
+		 * @brief Execute a single statement module.
 		 *
-		 * This determines whether the user input is a standalone expression that should
-		 * be evaluated and printed, versus a definition (function, variable, etc.) that
-		 * should be loaded into the environment.
+		 * Determines whether the module contains a lone expression (to be evaluated
+		 * and printed) or a definition (to be loaded into the environment) and routes
+		 * accordingly.
 		 *
-		 * @param ctx Query context for PST access
-		 * @param root The PST root element to examine
-		 * @return Optional containing the ExprStmt if input is a single expression, empty otherwise
+		 * @note This function works only on single statements. Splitting the input into statements
+		 * is the responsibility of executeInput().
+		 *
+		 * @param module_id Already-created module for this statement
+		 * @return ReplResult with execution outcome
 		 */
-		[[nodiscard]] base::Optional<pst::AccessLocked<pst::ExprStmt>> extractSingleExpression(
-			query::Context& ctx, const pst::AccessLocked<pst::LangElement>& root
-		) const;
+		ReplResult executeSingleStatement(frontend::ModuleID module_id);
 
 		/**
 		 * @brief Compile and execute a single expression, then print its result.

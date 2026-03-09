@@ -27,12 +27,15 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+#include "base/str/str_utils.hpp"
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -46,17 +49,33 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto scopes = ctx.query<QueryScopesInModule>(key);
-
-			HOUTUnit out;
-
 			// We want to continue gathering other entities
 			// even if some function queries fail,
 			// so we store in this variable whether any failure occurred,
 			// and return failure at the end if so.
 			bool is_failed = false;
 
-			for (auto scope: *scopes) {
+			MCRef<std::vector<ScopeID>> scopes_to_process;
+
+			auto scopes_in_module = ctx.query<QueryScopesInModule>(key);
+			variant_match(scopes_in_module->value) {
+				variant_case(QueryScopesInModuleValue::Success, success) {
+					scopes_to_process = &success.scopes;
+				}
+				variant_case(QueryScopesInModuleValue::Failure, failure) {
+					scopes_to_process = &failure.partial_scopes;
+					is_failed
+						= true;  // we mark the whole query as failed, even if we have some scopes
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
+
+			HOUTUnit out;
+
+			std::vector<query::TaskHandle> scheduled_tasks;
+			std::vector<SymID>             class_symbols;
+
+			for (auto scope: *scopes_to_process) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
 				for (auto sym: *symbols_in_scope) {
@@ -65,24 +84,32 @@ namespace compiler::helios {
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
+
 					// grab functions:
-					if (kind(sym) == SymbolKind::Function) {
-						// we "catch" failure here to continue gathering other functions:
-						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
-						if (hout_function->hasFailed()) {
-							is_failed = true;
-							continue;
-						} else {
-							out.functions.emplace_back(&hout_function->valueOrPanic());
-						}
-					}
-					if (kind(sym) == SymbolKind::Class) {
-						appendClassConstructors(out.functions, sym, ctx);
-						if (appendClassMethodsWithFail(out.functions, sym, ctx)) {
-							is_failed = true;
-							continue;
-						}
-					}
+					if (kind(sym) == SymbolKind::Function)
+						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
+					if (kind(sym) == SymbolKind::Class) class_symbols.emplace_back(sym);
+				}
+			}
+
+			for (auto class_sym: class_symbols) {
+				// we postpone this past function scheduling, as
+				// appendClassConstructors may be time consuming.
+				appendClassConstructors(out.functions, class_sym, ctx);
+				if (appendClassMethodsWithFail(out.functions, class_sym, ctx)) {
+					is_failed = true;
+					continue;
+				}
+			}
+
+			for (auto handler: scheduled_tasks) {
+				// we "catch" failure here to continue gathering other functions:
+				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
+				if (hout_function->hasFailed()) {
+					is_failed = true;
+					continue;
+				} else {
+					out.functions.emplace_back(&hout_function->valueOrPanic());
 				}
 			}
 
@@ -238,7 +265,8 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: *stmts.unlock(ctx)) stmt.unlock(ctx)->acceptVisitor(*this);
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts))
+					stmt.unlock(ctx)->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>
@@ -278,7 +306,7 @@ namespace compiler::helios {
 						"This should not happen"
 					);
 
-					for (const auto& stmt: *fun_body.unlock(ctx))
+					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
 						stmt.unlock(ctx)->acceptVisitor(*this);
 				}
 			}
@@ -363,12 +391,8 @@ namespace compiler::helios {
 				// Set return type if provided.
 				if (ret.has_value()) {
 					const auto ret_type_ctv
-						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr());
-					if (ret_type_ctv.hasFailed()) {
-						// we just fail here, because we can't continue without type
-						return;
-					}
-					ret_type = ret_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 					origin   = code::multiplePstOrigin({ param_list.unlock(ctx),
 					                                     ret.value().unlock(ctx) });
 				}
@@ -622,9 +646,14 @@ namespace compiler::helios {
 			query::Context& ctx, const Container& container, tsh::SymbolType<> return_type
 		) {
 			code::CodeBlock block({});
-			for (const auto& stmt: *container.unlock(ctx)) {
+			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
-				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
+				auto          unlocked = stmt.unlockOpt(ctx);
+				if (!unlocked.has_value()) {
+					// @TODO: #1753 change here to grab errors from all statements.
+					query::throwFailed();
+				}
+				unlocked.value()->acceptVisitor(stmt_maker);
 
 				if (stmt_maker.is_failed) {
 					// @TODO: #1753 change here to grab errors from all statements.
@@ -724,10 +753,13 @@ namespace compiler::helios {
 
 			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
 				auto op = assignment->getAssignmentType();
-				CORE_ASSERT(
-					op == base::StrID("=") || op == base::StrID("+=") || op == base::StrID("-="),
-					"Unsupported assignment type"
-				);
+				if (op != base::StrID("=") && op != base::StrID("+=") && op != base::StrID("-=")) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat("This assignment type: '", op, "'."),
+						assignment->getSourcePosition()
+					));
+					query::throwFailed();
+				}
 
 				auto var = assignment->getVariables();
 				auto val = assignment->getValue();
@@ -823,7 +855,14 @@ namespace compiler::helios {
 						return;
 					}
 				}
-				CORE_UNREACHABLE();
+
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"'", op, "' assignment for type: '", location_type.toString(), "'."
+					),
+					assignment->getSourcePosition()
+				));
+				query::throwFailed();
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
