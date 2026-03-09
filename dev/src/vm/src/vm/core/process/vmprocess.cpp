@@ -301,44 +301,69 @@ namespace vm {
 			}
 
 			variant_case_novalue(api::request::DebuggerGetNumberOfCurrentStackFrames) {
-				RuntimeData& runtime_data = getMainVMThread().runtime_data;
-				u64          frames
-					= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
-				return api::Response(api::response::NumberOfCurrentStackFrames{
-					.number_of_stack_frames = frames });
+				std::shared_lock lock(rw_global);
+				match_optional(assertProcessCanRespond()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						// +1 because frame_stack_current points to the current frame, not the next free slot
+						RuntimeData& runtime_data = getMainVMThread().runtime_data;
+						u64          frames
+							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+						return api::Response(api::response::NumberOfCurrentStackFrames{
+							.number_of_stack_frames = frames });
+					}
+				}
 			}
 
 			variant_case(api::request::DebuggerGetStackFrameData, request) {
-				RuntimeData& runtime_data = getMainVMThread().runtime_data;
-				u64          frames
-					= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
-				if (request.frame_index >= frames)
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "Frame index out of bounds" } });
-				Frame& frame = runtime_data.frame_stack_base[request.frame_index];
+				std::shared_lock lock(rw_global);
+				match_optional(assertProcessCanRespond()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						RuntimeData& runtime_data = getMainVMThread().runtime_data;
+						u64          frames
+							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+						if (request.frame_index >= frames)
+							return std::unexpected(api::ApiError{
+								api::OtherError{ "Frame index out of bounds" } });
+						Frame& frame = runtime_data.frame_stack_base[request.frame_index];
 
-				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
-					Ref<Block> block = frame.block_stack[block_idx];
-					frame_vars.push_back(api::response::StackFrameData::FrameVar{
-						.offset  = offset,
-						.pointer = Pointer(block, 0),
-						.type    = memory.getBlockType(block)->getID() });
+						std::vector<api::response::StackFrameData::FrameVar> frame_vars;
+						for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
+							Ref<Block> block = frame.block_stack[block_idx];
+							frame_vars.push_back(api::response::StackFrameData::FrameVar{
+								.offset  = offset,
+								.pointer = Pointer(block, 0),
+								.type    = memory.getBlockType(block)->getID() });
+						}
+
+						return api::Response(api::response::StackFrameData{
+							.function_name = frame.current_function->name, .frame_vars = frame_vars });
+					}
 				}
-
-				return api::Response(api::response::StackFrameData{
-					.function_name = frame.current_function->name, .frame_vars = frame_vars });
 			}
 
 			variant_case(api::request::DebuggerGetPointerData, request) {
-				base::ModRawView view = memory.getPointerData(request.pointer, request.size);
-				return api::Response(api::response::PointerData{ .data = view });
+				std::shared_lock lock(rw_global);
+				match_optional(assertProcessCanRespond()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						base::ModRawView view = memory.getPointerData(request.pointer, request.size);
+						return api::Response(api::response::PointerData{ .data = view });
+					}
+				}
 			}
 
 			variant_case(api::request::DebuggerDereferencePointer, request) {
-				base::ModRawView view = memory.getPointerData(request.pointer, Type::POINTER_SIZE);
-				auto             pointer = safeReadPointerBytes<Pointer>(view.getBegin());
-				return api::Response(api::response::Pointer{ .pointer = pointer });
+				std::shared_lock lock(rw_global);
+				match_optional(assertProcessCanRespond()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						base::ModRawView view = memory.getPointerData(request.pointer, Type::POINTER_SIZE);
+						auto             pointer = safeReadPointerBytes<Pointer>(view.getBegin());
+						return api::Response(api::response::Pointer{ .pointer = pointer });
+					}
+				}
 			}
 
 			variant_case(api::request::DebuggerGetTypeInfo, request) {
