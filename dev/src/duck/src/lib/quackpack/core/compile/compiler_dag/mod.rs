@@ -59,12 +59,6 @@ impl DependencyDag {
             .get(package)
             .with_context_internal(|| format!("missing `{}` in a dag", package))
     }
-
-    pub fn bail_if_has_cycles(&self) -> QuackResult<()> {
-        // NOTE: [`reverse_topo_sort_order`](Self::reverse_topo_sort_order) fails,
-        // if it has encountered a cycle.
-        self.reverse_topo_sort_order().map(drop)
-    }
 }
 
 impl DependencyNode {

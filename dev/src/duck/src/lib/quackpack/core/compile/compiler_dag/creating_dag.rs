@@ -104,36 +104,6 @@ impl DependencyDag {
         }
         visit_impl(root, dag, &mut states, &mut order)
     }
-
-    pub fn reverse_topo_sort_order(&self) -> QuackResult<Vec<FreezeDep>> {
-        let mut order = vec![];
-        let mut visited = HashSet::new();
-
-        fn visit_impl(
-            current: FreezeDep,
-            dag: &HashMap<FreezeDep, DependencyNode>,
-            order: &mut Vec<FreezeDep>,
-            visited: &mut HashSet<FreezeDep>,
-        ) -> QuackResult<()> {
-            let inserted_new_entry = visited.insert(current);
-            if !inserted_new_entry {
-                return Err(bail_cycle_message(order));
-            }
-            for dep in dag
-                .get(&current)
-                .expect("we've verified that there are dependencies")
-                .dependencies()
-            {
-                if !visited.contains(dep) {
-                    visit_impl(*dep, dag, order, visited)?;
-                }
-            }
-            order.push(current);
-            Ok(())
-        }
-        visit_impl(self.root, &self.dag, &mut order, &mut visited)?;
-        Ok(order)
-    }
 }
 
 impl DependencyNode {
@@ -201,8 +171,8 @@ fn parse_dependency(
 
 impl CompilerDag {
     pub fn new_early(ctx: &BuildContext<'_>) -> QuackResult<Self> {
+        // `new` checks for cycles.
         let graph = DependencyDag::new(&ctx.freeze)?;
-        graph.bail_if_has_cycles()?;
         let mut packages = HashMap::new();
         packages.insert(
             ctx.freeze.root().as_freeze_dep(),

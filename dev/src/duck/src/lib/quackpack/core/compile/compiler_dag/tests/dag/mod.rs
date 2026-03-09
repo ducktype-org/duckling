@@ -52,22 +52,6 @@ fn creates_valid_initial_graph() {
             ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
         ])
     );
-    let order = graph
-        .dag
-        .reverse_topo_sort_order()
-        .unwrap()
-        .iter()
-        .map(|node| node.to_string())
-        .collect::<Vec<_>>();
-    let order_as_str = order.iter().map(String::as_str).collect::<Vec<_>>();
-    let order1 = ["baz 1.0.0", "bar 1.0.0", "foo 1.0.0", "root 1.0.0"];
-    let order2 = ["baz 1.0.0", "foo 1.0.0", "bar 1.0.0", "root 1.0.0"];
-    let is_order1 = order_as_str == order1;
-    let is_order2 = order_as_str == order2;
-    assert!(
-        is_order1 || is_order2,
-        "order `{order:?}` is not a valid topo sort order"
-    );
 }
 
 #[test]

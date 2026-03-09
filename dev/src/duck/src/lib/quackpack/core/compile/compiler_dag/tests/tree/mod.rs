@@ -49,14 +49,6 @@ fn creates_valid_initial_graph() {
             ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
         ])
     );
-    let order = graph
-        .dag
-        .reverse_topo_sort_order()
-        .unwrap()
-        .iter()
-        .map(|node| node.to_string())
-        .collect::<Vec<_>>();
-    assert_eq!(order, ["baz 1.0.0", "bar 1.0.0", "foo 1.0.0", "root 1.0.0"])
 }
 
 #[test]
