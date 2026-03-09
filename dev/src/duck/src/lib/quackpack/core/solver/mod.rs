@@ -19,6 +19,7 @@
 pub mod gathering;
 pub mod git_access;
 pub mod solver_freeze;
+pub mod solver_mode;
 pub mod solving;
 pub mod types_common;
 pub mod util;
@@ -27,32 +28,27 @@ pub mod util;
 mod tests;
 
 use std::{
-    cell::OnceCell,
     collections::{HashMap, HashSet},
     marker::PhantomData,
+    path::PathBuf,
     sync::Arc,
 };
 
 use tokio::sync::Mutex;
 
 use crate::{
-    QpCtx, QuackResult, qp_bail_internal,
+    QpCtx, QuackResult, qp_bail, qp_bail_internal,
     quackpack::core::{
         FeatureName, Manifest, PackageCtx,
         fetcher::Fetcher,
-        gathering::gatherer::Gatherer,
+        gathering::{gatherer::Gatherer, gatherer_state::GatheredInfo},
         git_access::GitAccess,
         solver_freeze::SolverFreeze,
+        solver_mode::SolverMode,
         solving::solver_engine::{SolverEngine, SolverInput},
         types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
     },
 };
-
-#[derive(Clone, Copy, Debug)]
-pub enum SolverMode {
-    Merciful,
-    Strict,
-}
 
 pub trait SolverState {}
 
@@ -70,9 +66,19 @@ pub struct Solver<'duck, State: SolverState> {
     root_pkg: ExpandedPackage,
     root_pkg_features: HashSet<FeatureName>,
     current_freeze: SolverFreeze,
-    gathered_info: OnceCell<SolverInput>,
+    gathered_info: Option<SolverInput>,
     state: PhantomData<State>,
     mode: SolverMode,
+}
+
+pub struct SolverAnswer {
+    pub new_freeze: SolverFreeze,
+    pub pkgs_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+}
+
+pub enum ShouldRunSolverEngine<'duck> {
+    No(SolverAnswer),
+    Yes(Box<Solver<'duck, Prepared>>),
 }
 
 impl<'duck> Solver<'duck, Prepared> {
@@ -102,32 +108,101 @@ impl<'duck> Solver<'duck, Prepared> {
                 .collect(),
             fetcher,
             current_freeze,
-            gathered_info: OnceCell::new(),
+            gathered_info: None,
             state: PhantomData,
             mode,
         }
     }
 
-    /// Prepares the [`Solver`] for running the engine by constructing [`SolverInput`].
+    /// Determines if all the transitive dependencies of the root package are satisfied.
+    /// If not, prepares the [`Solver`] for running the engine by constructing [`SolverInput`].
     pub async fn prepare_solving<GitAccessImpl: GitAccess>(
-        mut self,
+        self,
         git_access: Arc<Mutex<GitAccessImpl>>,
-    ) -> QuackResult<Solver<'duck, Prepared>> {
+    ) -> QuackResult<ShouldRunSolverEngine<'duck>> {
         let gatherer = Gatherer::new(self.qp_ctx, self.fetcher, git_access);
 
-        let mut root_manifest = self.root_package_ctx.package().manifest().clone();
+        let root_manifest = self.root_package_ctx.package().manifest().clone();
+        let root_features = root_manifest
+            .features()
+            .all_features()
+            .keys()
+            .copied()
+            .collect();
         let mut prev_freeze_manifests = self
             .current_freeze
             .get_prev_freeze_manifests(&gatherer)
             .await?;
         prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
-        let maximal_valid_freeze = self
+        let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
             .find_maximal_correct_dep_solution(&prev_freeze_manifests)?;
-        let Some(root_freeze) = maximal_valid_freeze
-            .package_freezes
-            .get(&maximal_valid_freeze.main_pkg)
-        else {
+
+        if is_root_satisfied {
+            let trimmed = maximal_valid_freeze
+                .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
+            return Ok(ShouldRunSolverEngine::No(SolverAnswer {
+                new_freeze: trimmed,
+                pkgs_manifests: prev_freeze_manifests,
+            }));
+        } else if self.mode.frozen {
+            qp_bail!(
+                "Solver activated with the --frozen option but the main package dependencies were not satisfied inside the found freeze"
+            )
+        }
+
+        let root_path = self.root_package_ctx.package().root_directory().into();
+        let gathered_info = Self::run_solver_gatherer(
+            &gatherer,
+            root_manifest,
+            root_path,
+            root_features,
+            &maximal_valid_freeze,
+            self.mode,
+        )
+        .await?;
+        let solver_input = SolverInput::from_freeze_and_gathered_info(
+            &maximal_valid_freeze,
+            prev_freeze_manifests,
+            gathered_info,
+        );
+        Ok(ShouldRunSolverEngine::Yes(Box::new(Solver {
+            qp_ctx: self.qp_ctx,
+            fetcher: self.fetcher,
+            root_package_ctx: self.root_package_ctx,
+            root_pkg: self.root_pkg,
+            root_pkg_features: self.root_pkg_features,
+            current_freeze: maximal_valid_freeze,
+            gathered_info: Some(solver_input),
+            state: PhantomData,
+            mode: self.mode,
+        })))
+    }
+
+    /// Helper for [`Self::prepare_solving`].
+    /// Runs the [`Gatherer`], to fetch all potentially necessary manifests.
+    async fn run_solver_gatherer<GitAccessImpl: GitAccess>(
+        gatherer: &Gatherer<'duck, GitAccessImpl>,
+        root_manifest: Manifest,
+        root_path: PathBuf,
+        root_features: HashSet<FeatureName>,
+        freeze: &SolverFreeze,
+        mode: SolverMode,
+    ) -> QuackResult<GatheredInfo> {
+        let root_manifest_for_gathering =
+            Self::prepare_root_manifest_for_gathering(root_manifest, freeze)?;
+        gatherer
+            .explore(root_path, root_manifest_for_gathering, root_features, mode)
+            .await
+    }
+
+    /// Helper for [`Self::run_solver_gatherer`].
+    /// Retains only unsatisfied dependencies in the root package's manifest, so that it can be used in gathering.
+    fn prepare_root_manifest_for_gathering(
+        mut root_manifest: Manifest,
+        freeze: &SolverFreeze,
+    ) -> QuackResult<Manifest> {
+        let Some(root_freeze) = freeze.package_freezes.get(&freeze.main_pkg) else {
             qp_bail_internal!("Maximal valid freeze without main package freeze")
         };
         for dep in root_freeze.dependencies_realization.keys() {
@@ -136,47 +211,22 @@ impl<'duck> Solver<'duck, Prepared> {
                 .all_dependencies_mut()
                 .remove(dep);
         }
-
-        let root_path = self.root_package_ctx.package().root_directory().into();
-        let root_features = root_manifest
-            .features()
-            .all_features()
-            .keys()
-            .copied()
-            .collect();
-        let gathered_info = gatherer
-            .explore(root_path, root_manifest, root_features, self.mode)
-            .await?;
-        let solver_input = SolverInput::from_freeze_and_gathered_info(
-            &maximal_valid_freeze,
-            prev_freeze_manifests,
-            gathered_info,
-        );
-        self.current_freeze = maximal_valid_freeze;
-        _ = self.gathered_info.set(solver_input);
-        Ok(Solver {
-            qp_ctx: self.qp_ctx,
-            fetcher: self.fetcher,
-            root_package_ctx: self.root_package_ctx,
-            root_pkg: self.root_pkg,
-            root_pkg_features: self.root_pkg_features,
-            current_freeze: self.current_freeze,
-            gathered_info: self.gathered_info,
-            state: PhantomData,
-            mode: self.mode,
-        })
+        Ok(root_manifest)
     }
 }
 
 impl<'duck> Solver<'duck, Prepared> {
-    pub fn solve(mut self) -> QuackResult<(SolverFreeze, HashMap<ExpandedPackage, Box<Manifest>>)> {
-        let Some(input) = self.gathered_info.take() else {
+    pub fn solve(self) -> QuackResult<SolverAnswer> {
+        let Some(input) = self.gathered_info else {
             qp_bail_internal!("Tried to run solver without input specified");
         };
         let manifests = input.gathered_manifests.clone();
         let solver_output =
             SolverEngine::run_engine(input, &(self.root_pkg, self.root_pkg_features))?;
         let new_freeze = self.current_freeze.new_freeze(&manifests, solver_output)?;
-        Ok((new_freeze, manifests))
+        Ok(SolverAnswer {
+            new_freeze,
+            pkgs_manifests: manifests,
+        })
     }
 }
