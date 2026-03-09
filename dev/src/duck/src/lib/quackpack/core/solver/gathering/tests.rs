@@ -421,10 +421,10 @@ mod private {
     use crate::{
         QpCtx,
         quackpack::core::{
-            SolverMode,
             fetcher::Fetcher,
             gathering::gatherer::Gatherer,
             parse_manifest,
+            solver_mode::SolverMode,
             types_common::{
                 ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
                 Location,
@@ -465,7 +465,7 @@ dependencies:
                 root_path.clone(),
                 root_manifest.manifest().clone(),
                 HashSet::new(),
-                SolverMode::Strict,
+                SolverMode::default(),
             )
             .await
             .unwrap();
@@ -598,7 +598,7 @@ dependencies:
                 root_path.clone(),
                 root_manifest.manifest().clone(),
                 HashSet::new(),
-                SolverMode::Strict,
+                SolverMode::default(),
             )
             .await
             .unwrap();
@@ -667,7 +667,7 @@ features:
                 root_path.clone(),
                 root_manifest.manifest().clone(),
                 ["my_feature".into()].into(),
-                SolverMode::Strict,
+                SolverMode::default(),
             )
             .await
             .unwrap();
@@ -756,7 +756,7 @@ dependencies:
                 root_path.clone(),
                 root_manifest.manifest().clone(),
                 [].into(),
-                SolverMode::Strict,
+                SolverMode::default(),
             )
             .await
             .unwrap();
