@@ -1,9 +1,9 @@
 # Code Loading
 This file presents a brief overview of the architecture of the process of loading,
 verifying, and compiling bytecode in the system designed by ZPP 3.2. This file
-contains just the overview of the verification stage. 
+contains just the overview of the verification stage.
 
-The details of this process are described more throughly in 
+The details of this process are described more throughly in
 [Bytecode Validation](../bytecode/validator/readme.md).
 [Compiler](compiler/readme.md).
 
@@ -14,7 +14,7 @@ determined the structure and behavior of the individual system components:
     The system must allow for the addition of new code fragments (functions, types,
     global data) to an already running virtual machine process without the need
     for its restart. Every such operation must be transactional — in case of an
-    error, the system reverts to the previous, correct state and provides the user 
+    error, the system reverts to the previous, correct state and provides the user
     with the appropriate error.
 -   **Support for multi-file programs:**
     The architecture must support programs composed of many separate source files
@@ -45,7 +45,7 @@ The parser builds a syntax tree based on the token stream, with the `ParsedFile`
 structure as its root. Each source file is represented by one such structure. It
 is a high-level, direct abstraction of the file's content, containing only
 information that can be read from it without deeper semantic analysis. At this
-stage, functions, opcodes and global variables are still identified by plain strings 
+stage, functions, opcodes and global variables are still identified by plain strings
 (their names). Types are stored in a `TypeOfData` variant.
 Structures like virtual tables (v-tables) are not yet built.
 
@@ -53,10 +53,10 @@ Structures like virtual tables (v-tables) are not yet built.
 After parsing all the files that are part of the program, their contents are
 combined into a single `CodeCollection` structure, which represents the source code
 and types of the entire program. This structure is the main input for the
-validation module. This structure can also serve the role of the input to the VM. 
+validation module. This structure can also serve the role of the input to the VM.
 The duckling compiler builds this structure directly and loads it via the `loadCode`
-endpoint which allows for skipping the lexing and parsing stage. In 
-[builders](../bytecode/builders/readme.md) you can read more about a module which 
+endpoint which allows for skipping the lexing and parsing stage. In
+[builders](../bytecode/builders/readme.md) you can read more about a module which
 helps in building the `CodeCollection` directly.
 
 This structure stores the program in the fat bytecode form and may contain bytecode which is considered invalid. It serves as a simple container for DVMs code.
@@ -78,9 +78,9 @@ For more detailed explanation see [Bytecode Validation](../bytecode/validator/re
 
 ### Low-level machine program ([`vm::code::LowVMProgram`](../core/thread/low_program/low_program.hpp))
 After successful validation, `ValidProgram` is passed to the compiler, which
-translates it into `LowVMProgram` — a low-level and understandable for the 
-execution module representation. At this stage, all symbolic names are replaced 
-by their numeric counterparts required for the fast operation of the execution 
+translates it into `LowVMProgram` — a low-level and understandable for the
+execution module representation. At this stage, all symbolic names are replaced
+by their numeric counterparts required for the fast operation of the execution
 module:
 -   **Instructions**
     previously stored as variants are translated into indices in an
@@ -99,10 +99,10 @@ virtual machine's execution module — `VMProcess`.
 ### Representation of Types
 During loading, the way types are represented in the program also changes.
 Initially, in the `ParsedFile` structure, types are represented by the
-`TypeOfData` variant. Each DVM type (a member of the mentioned variant) contains only the information read from the file (e.g., names of base types and component types, method names, field names, etc. are represented as a `string`). The full set of `TypeOfData` types is stored in the `TypeContext` type set, which serves as the entry point for static verification and is later translated into a low level type set called `TypeMetadata`.
+`TypeOfData` variant. Each DVM type (a member of the mentioned variant) contains only the information read from the file (e.g., names of base types and component types, method names, field names, etc. are represented as a `string`). The full set of `TypeOfData` types is temporarily stored in the `TypeContext` type set during static verification, where it is validated and translated into a safe, validated intermediate structure called `ValidTypeMap`.
 
-After passing through the [type validator](../bytecode/validator/readme.md), 
-the `TypeContext` set is translated into `TypeMetadata`. Each type is translated to a corresponding `vm::Type` - fully expanded objects, enriched with all
+During the [compilation phase](compiler/readme.md),
+the `ValidTypeMap` is translated into `TypeMetadata`. Each type is translated to a corresponding `vm::Type` - fully expanded objects, enriched with all
 the information needed at runtime, such as built virtual method tables
 (v-tables), fields inherited from superclasses, and direct references to
 component types (other `Type` objects) instead of their names.
@@ -118,10 +118,10 @@ consistent, high-level representation of the same code in the form of a
 The data flow is initiated by an API request to load code — `loadFiles` or `loadCode`.
 1.  `VMProcess` receives the request and passes it to its `Loader` object.
 2.  The `Loader` processes the file(s), verifies the code through the
-    `TypeValidator` and `FunctionValidator` modules (see [bytecode validation](../bytecode/validator/readme.md)), 
+    `TypeValidator` and `FunctionValidator` modules (see [bytecode validation](../bytecode/validator/readme.md)),
     and tries to inject it into its internal state (`ValidProgram`).
-3.  If the operation succeeds, the `Loader` updates its state, and passes the 
-    updated high-level program to the `Compiler`. The `Compiler` compiles newly added functions, 
+3.  If the operation succeeds, the `Loader` updates its state, and passes the
+    updated high-level program to the `Compiler`. The `Compiler` compiles newly added functions,
     globals, types expands its internal state with their low-level representations. After
     this step, the compiler returns an updated `LowVMProgram` structure to `VMProcess`.
 4.  `VMProcess` replaces its old version of the executable code with the new one.
@@ -134,8 +134,8 @@ The data flow is initiated by an API request to load code — `loadFiles` or `lo
 Basically, executing `loadFiles` or `loadCode` tries to "inject" new code into the current
 `VMProcess` state and succeeds only if the whole state (the old state + the
 newly injected code) represents a valid program. If this fails, one of the
-errors is thrown and the state is not updated. When `VMProcess` receives an 
-execution request (`run`/`runFunction`), it starts a thread (`VMThread`) on 
+errors is thrown and the state is not updated. When `VMProcess` receives an
+execution request (`run`/`runFunction`), it starts a thread (`VMThread`) on
 the currently stored `LowVMProgram` object.
 
 ## Low level responsibilities of each module on the pipeline
@@ -146,7 +146,7 @@ of the key modules involved in the loading process.
 ### VMProcess
 
 `VMProcess` is the main module for managing the loading and execution of code.
-It handles `loadFiles` and `loadCode` requests coming from the external API (through the supervisor) which may come either from a user or the duckling compiler itself. 
+It handles `loadFiles` and `loadCode` requests coming from the external API (through the supervisor) which may come either from a user or the duckling compiler itself.
 
 -   `VMProcess` keeps the current state of the `LowVMProgram` which is the current
     low level representation (executable on the machine) of the code. It's
@@ -155,8 +155,8 @@ It handles `loadFiles` and `loadCode` requests coming from the external API (thr
     responsible for loading the code of this process.
 
 If the `loadFile` request comes from a user, it contains a list of paths to files with
-a text representation of the bytecode. Otherwise, if the request comes from 
-the compiler, it contains code provided immediately in the form of a `vm::code::CodeCollection` 
+a text representation of the bytecode. Otherwise, if the request comes from
+the compiler, it contains code provided immediately in the form of a `vm::code::CodeCollection`
 structure, which allows to skip the tokenization and parsing stage. The contents of this request are passed to `VMProcess` loader module which tries to inject the given code into the current state.
 
 
@@ -173,7 +173,7 @@ request works as follows:
     and errors are thrown in that case.
 3.  Having `CodeCollection`, it tries to inject the new code into its internal
     `ValidProgram` object. This operation performs the actual static
-    verification of the injected code and is described in detail in 
+    verification of the injected code and is described in detail in
     [Bytecode Validation](../bytecode/validator/readme.md).
 4.  `ValidProgram` may throw an exception if the new code violates correctness
     rules. This error is propagated up to `VMProcess`.
@@ -187,7 +187,7 @@ request works as follows:
 ### Compiler
 The compiler is the last module in the loading pipeline. Its task is to
 translate the high-level, verified program representation into a low-level,
-executable representation of bytecode (`LowVMProgram`). Since the compiler 
-receives a program with a guarantee of correctness, the compilation process 
-cannot fail and does not need to contain any validation logic. The process of 
-compilation is described in [compiler](./compiler/readme.md). 
+executable representation of bytecode (`LowVMProgram`). Since the compiler
+receives a program with a guarantee of correctness, the compilation process
+cannot fail and does not need to contain any validation logic. The process of
+compilation is described in [compiler](./compiler/readme.md).
