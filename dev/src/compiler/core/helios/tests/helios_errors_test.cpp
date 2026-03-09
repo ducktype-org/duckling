@@ -43,7 +43,9 @@ private:
 	 *
 	 * It creates a virtual file from the `module_content` argument
 	 * and creates a module tree from it every function call.
-
+	 *
+	 * @TODO: #2213 Add PST errors handling here.
+	 *
 	 * @param module_content The content of the module main source file.
 	 * @param present_phrases List of phrases that should be present in the logged errors.
 	 * @param logged_msg_count Expected number of logged error messages.
@@ -59,7 +61,12 @@ private:
 			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 			auto logger = query::Context::dumpToOneLoggerAndClear();
-			assertTrue(logger->hasErrors(), "Expected errors to be logged.");
+
+			// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
+			// query errors is ok:
+			assertTrue(
+				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
+			);
 
 			std::stringstream logged_messages;
 			logger->terminalPrint(logged_messages);
@@ -374,6 +381,20 @@ private:
 			1
 		);
 
+		// ========================== Lexer errors ==========================
+
+		// // We don't see errors here, because they are produced by the lexer, not query:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a = 1kg;
+					return 0;
+				}
+			)",
+			{},
+			0
+		);
+
 
 		// ========================== Comp time errors ==========================
 
@@ -440,6 +461,35 @@ private:
 			)",
 			{ "Variable name is ambiguous, because it has been defined multiple times.",
 		      "Found declaration:" },
+			1
+		);
+
+		// We don't see any query errors here, because they are logged by the PST:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+			)",
+			{},
+			0
+		);
+
+		// Check for multiple errors, note that we only see 1 error, because the other one is logged
+		// by the PST.
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+
+				fun foo() -> i64 = {
+					return "a";
+				}
+			)",
+			{},
 			1
 		);
 
@@ -512,8 +562,10 @@ private:
 		);
 
 
-		// =========================== Not-yet-implemented errors ==========================
-		// Note: just remove the tests when the features are implemented.
+		// ========================= Not-yet-implemented errors =========================
+
+		// Note: just remove the tests when the features
+		// are implemented.
 
 		checkForErrorOnCompileModule(
 			R"(
