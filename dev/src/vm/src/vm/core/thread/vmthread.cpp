@@ -108,12 +108,8 @@ namespace vm {
 			                             .parameters       = {},
 			                             .result_type      = func.result_type };
 
-		u64         result_type_id     = func.result_type->getID().asInt();
-		const auto& funcs              = executing_program->getFunctions();
-		u64         called_function_id = 0;
-		for (u64 i = 0; i < funcs.size(); i++)
-			if (func.name == funcs[i].name) called_function_id = i;
-
+		u64       result_type_id     = func.result_type->getID().asInt();
+		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
 
 		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
@@ -190,7 +186,6 @@ namespace vm {
 			                             .result_type      = func.result_type };
 
 		// TypeIDs to pass to opcodes.
-		u64 func_ret_type_id = main_return_type->getID().asInt();
 		u64 argv_type_id     = argv_type->getID().asInt();
 		u64 argv_ptr_type_id = argv_ptr_type->getID().asInt();
 		u64 i64_type_id      = i64_type->getID().asInt();
@@ -201,12 +196,13 @@ namespace vm {
 		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
 
 		// Initialize the needed data first - argc and argv dynamic table.
+		// Note that `argv` and `argc` are always initialized even if `main` take no arguments. This
+		// is for the offsets to not get changed when generating the start function.
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(
-					init_lany_type, 0, func_ret_type_id
-				),  // [0, 8) program ret_val
+				// Program return value is fixes to return `i64`.
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, i64_type_id),  // [0, 8) program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
 					init_lany_type, 8, argv_ptr_type_id
 				),  // [8, 24) *argv_internal
@@ -286,6 +282,7 @@ namespace vm {
 			MAKE_BYTECODE_INSTRUCTION(init_lany_type, 40, i64_type_id)  // [40, 48) main ret_val
 		);
 
+		// Pass the command line arguments only if main signature specifies it.
 		if (main_has_args) {
 			start_function.bc.insert(
 				start_function.bc.end(),

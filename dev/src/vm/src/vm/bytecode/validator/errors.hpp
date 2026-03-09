@@ -18,7 +18,7 @@
 namespace vm::code {
 	class ValidationError: public base::LogicError {
 	public:
-		ValidationError(const std::string& reason): base::LogicError(std::move(reason)) {}
+		ValidationError(const std::string& reason): base::LogicError(reason) {}
 
 		// Element causing the error.
 		[[nodiscard]] virtual base::Optional<CRef<ElementBase>> maybeElement() const { return {}; }
