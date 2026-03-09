@@ -384,8 +384,6 @@ private:
 				}
 			)",
 			{ "literal", "unknown" },
-
-
 			1
 		);
 
@@ -459,6 +457,17 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+			)",
+			{ "Empty expression" },
+			1
+		);
+
 		// ============================ Static Arrays ============================
 		checkForErrorOnCompileModule(
 			R"(
@@ -528,8 +537,9 @@ private:
 		);
 
 
-		// =========================== Not-yet-implemented errors
-		// ========================== Note: just remove the tests when the features
+		// ========================= Not-yet-implemented errors =========================
+
+		// Note: just remove the tests when the features
 		// are implemented.
 
 		checkForErrorOnCompileModule(
