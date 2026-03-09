@@ -20,6 +20,6 @@ namespace vm::api {
 		friend class vm::VMProcess;
 
 	public:
-		bool isNull() const { return pointer.isNull(); }
+		[[nodiscard]] bool isNull() const { return pointer.isNull(); }
 	};
 }
