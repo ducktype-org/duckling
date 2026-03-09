@@ -5,12 +5,18 @@ use std::collections::{HashMap, HashSet};
 use itertools::Itertools;
 
 use crate::{
-    QuackResult, QuackResultContext,
+    QuackError, QuackResult, QuackResultContext,
     quackpack::core::{compile::compiler_package::CompilerPackage, storage::freeze::FreezeDep},
 };
 
 pub mod creating_dag;
 pub mod modifying_dag;
+
+/// Common helper for creating a consistent error.
+fn bail_cycle_message(cycle: &[FreezeDep]) -> QuackError {
+    let cycle = cycle.iter().map(|dep| format!("`{}`", dep)).join(" -> ");
+    QuackError::error(format!("malformed freezefile: cycle {cycle}"))
+}
 
 #[cfg(test)]
 mod tests;
@@ -72,6 +78,51 @@ impl DependencyDag {
         self.dag
             .get(package)
             .with_context_internal(|| format!("missing `{}` in a dag", package))
+    }
+
+    /// Sort topologically this DAG.
+    ///
+    /// This method returns an error, if it encounters a cycle.
+    pub fn topo_sort_order(&self) -> QuackResult<Vec<FreezeDep>> {
+        #[derive(Debug, Eq, PartialEq)]
+        enum State {
+            Entered,
+            Left,
+        }
+
+        let mut states = HashMap::new();
+        let mut order = vec![];
+        fn visit_impl(
+            current: FreezeDep,
+            dag: &HashMap<FreezeDep, DependencyNode>,
+            states: &mut HashMap<FreezeDep, State>,
+            order: &mut Vec<FreezeDep>,
+        ) -> QuackResult<()> {
+            let previous_state = states.insert(current, State::Entered);
+            debug_assert_ne!(
+                previous_state,
+                Some(State::Left),
+                "we shouldn't revisit nodes"
+            );
+            if previous_state == Some(State::Entered) {
+                return Err(bail_cycle_message(order));
+            }
+            let deps = dag
+                .get(&current)
+                .expect("we've verified that there are dependencies");
+            for dep in deps.dependencies() {
+                if states.get(dep) != Some(&State::Left) {
+                    visit_impl(*dep, dag, states, order)?;
+                }
+            }
+
+            states.insert(current, State::Left);
+            order.push(current);
+            Ok(())
+        }
+        visit_impl(self.root, &self.dag, &mut states, &mut order)?;
+        order.reverse();
+        Ok(order)
     }
 }
 

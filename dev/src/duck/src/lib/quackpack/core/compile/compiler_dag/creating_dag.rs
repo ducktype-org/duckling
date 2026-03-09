@@ -3,7 +3,7 @@
 use tracing::debug;
 
 use crate::{
-    DuckCtx, QpCtx, QuackError, QuackResultContext, qp_bail, qp_bail_internal,
+    DuckCtx, QpCtx, QuackResultContext, qp_bail, qp_bail_internal,
     quackpack::core::{
         PackageLoader,
         compile::{BuildContext, compiler_package::PackageType},
@@ -14,12 +14,6 @@ use crate::{
         },
     },
 };
-
-/// Common helper for creating a consistent error.
-fn bail_cycle_message(cycle: &[FreezeDep]) -> QuackError {
-    let cycle = cycle.iter().map(|dep| format!("`{}`", dep)).join(" -> ");
-    QuackError::error(format!("malformed freezefile: cycle {cycle}"))
-}
 
 use super::*;
 
@@ -78,7 +72,7 @@ impl DependencyDag {
         root: FreezeDep,
         dag: &HashMap<FreezeDep, DependencyNode>,
     ) -> QuackResult<()> {
-        #[derive(Eq, PartialEq)]
+        #[derive(Debug, Eq, PartialEq)]
         enum State {
             Entered,
             Left,
@@ -94,6 +88,11 @@ impl DependencyDag {
         ) -> QuackResult<()> {
             order.push(current);
             let previous_state = states.insert(current, State::Entered);
+            debug_assert_ne!(
+                previous_state,
+                Some(State::Left),
+                "we shouldn't revisit nodes"
+            );
             if previous_state == Some(State::Entered) {
                 return Err(bail_cycle_message(order));
             }

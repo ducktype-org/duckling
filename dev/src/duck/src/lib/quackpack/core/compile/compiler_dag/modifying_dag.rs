@@ -47,7 +47,7 @@ impl CompilerDag {
         let root_package = self.package_mut(&self.dag.root())?;
         root_package.add_new_features(root_features.iter().copied())?;
 
-        fn visit_impl(
+        fn populate_impl(
             current: FreezeDep,
             dag: &HashMap<FreezeDep, DependencyNode>,
             packages: &mut AllPackages,
@@ -75,12 +75,18 @@ impl CompilerDag {
                 };
                 let entry = packages.package_mut(dep)?;
                 entry.add_new_features(enabled_features)?;
-                visit_impl(*dep, dag, packages)?;
             }
             Ok(())
         }
 
-        visit_impl(self.dag.root(), &self.dag.dag, &mut self.all_packages)
+        let order = self
+            .dag
+            .topo_sort_order()
+            .expect("we've verified that there are no cycles");
+        for dep in order {
+            populate_impl(dep, &self.dag.dag, &mut self.all_packages)?;
+        }
+        Ok(())
     }
 
     /// Removes disabled dependency from the graph.
