@@ -38,8 +38,9 @@ public:
 			"Multi-argument constructor failed"
 		);
 
-		base::Bit256 hex_bit
-			= base::Bit256{ "0xFeDcBA9876543210aa77AA77aa77AA770123456789ABCDEFbb55Bb55BB55Bb55" };
+		base::Bit256 hex_bit{
+			"0xFeDcBA9876543210aa77AA77aa77AA770123456789ABCDEFbb55Bb55BB55Bb55"
+		};
 		assertTrue(
 			hex_bit.data[3] == 0xFE'DC'BA'98'76'54'32'10
 				&& hex_bit.data[2] == 0xAA'77'AA'77'AA'77'AA'77
@@ -48,7 +49,7 @@ public:
 			"Hex string constructor failed"
 		);
 
-		base::Bit256 hex_bit2 = base::Bit256("0x11111111111111112222222222222222");
+		base::Bit256 hex_bit2("0x11111111111111112222222222222222");
 		assertTrue(
 			hex_bit2.data[3] == 0x0 && hex_bit2.data[2] == 0x0
 				&& hex_bit2.data[1] == 0x11'11'11'11'11'11'11'11
