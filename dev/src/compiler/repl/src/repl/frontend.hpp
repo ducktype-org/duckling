@@ -11,8 +11,8 @@
 	#include "frontend_implementations/replxx.hpp"
 using FrontendImplementationType = compiler::repl::FrontendReplxxImplementation;
 #else
-using FrontendImplementationType = compiler::repl::FrontendMinImplementation;
 	#include "frontend_implementations/minimal.hpp"
+using FrontendImplementationType = compiler::repl::FrontendMinImplementation;
 #endif
 
 namespace compiler::repl {
