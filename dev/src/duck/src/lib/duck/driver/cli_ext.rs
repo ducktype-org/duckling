@@ -79,6 +79,10 @@ pub trait CommandExt: Sized {
         )
     }
 
+    fn add_offline(self) -> Self {
+        self._arg_impl(flag("offline", "Don't perform any network requests"))
+    }
+
     fn add_jobs(self) -> Self {
         self._arg_impl(
             optional(

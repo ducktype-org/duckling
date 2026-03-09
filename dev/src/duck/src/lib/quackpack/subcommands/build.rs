@@ -1,9 +1,12 @@
 use crate::{
     DuckCtx, QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        FeatureName, PackageCtx,
-        compile::{self, BuildContext},
-        storage::{SyncOptions, sync, venv_id::ToVenvId},
+    quackpack::{
+        core::{
+            FeatureName, PackageCtx,
+            compile::{self, BuildContext},
+            storage::{sync, venv_id::ToVenvId},
+        },
+        subcommands::sync::SyncOptions,
     },
 };
 
