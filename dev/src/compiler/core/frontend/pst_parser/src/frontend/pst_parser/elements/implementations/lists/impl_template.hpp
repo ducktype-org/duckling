@@ -188,8 +188,7 @@ namespace pst {
 			}
 
 			// Handle closing brackets
-			if constexpr (BRACKETS != lexer::Token::BracketType::None)
-				PARSE().goUpAndSkip();
+			if constexpr (BRACKETS != lexer::Token::BracketType::None) PARSE().goUpAndSkip();
 
 			PST_RETURN out;
 		}

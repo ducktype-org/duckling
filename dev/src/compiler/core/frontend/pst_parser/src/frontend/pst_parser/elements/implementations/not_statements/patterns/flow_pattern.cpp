@@ -15,8 +15,7 @@ namespace pst {
 			out->as_identifier = temp_ident;
 		}
 
-		if (PARSE().tryEat(NamedOperator::Colon))
-			PARSE().one(&out->type_constraint);
+		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->type_constraint);
 		PST_RETURN out;
 	}
 
