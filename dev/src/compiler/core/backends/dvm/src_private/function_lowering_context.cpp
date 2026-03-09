@@ -5,8 +5,6 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
-#include "base/except/exceptions.hpp"
-
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
