@@ -105,24 +105,48 @@ namespace vm::jit {
 			);
 
 			// Determine the kind of terminator needed for the block
-			low::MicroOpcode last_opcode = getInstructionOpcode(function_to_compile.bc[end - 1]);
+			const vm::MicroInstruction& last_instr = function_to_compile.bc[end - 1];
+			low::MicroOpcode last_opcode = getInstructionOpcode(last_instr);
 			switch (last_opcode) {
 				case low::MicroOpcode::jmp_label: {
-					u64 last_arg0 = function_to_compile.bc[end - 1].arg0;
-					usize target_block_idx = instr_to_block(end - 1 + last_arg0);
+					usize target_block_idx = instr_to_block(end - 1 + last_instr.arg0);
 					ir_builder.CreateBr(llvm_blocks[target_block_idx]);
 					break;
 				}
-				// case low::MicroOpcode::jmpIf_label:
-				// case low::MicroOpcode::jmpIfNot_label: {
-				//	u64 last_arg0 = function_to_compile.bc[end - 1].arg0;
-				//	usize target_block_idx = instr_to_block(end - 1 + last_arg0);
-				// 	llvm::Value* condition = ir_builder.CreateICmpEQ(
-				// 		???flaga, llvm::ConstantInt::get(v_instr->getType(), last_opcode == low::MicroOpcode::jmpIf_label ? 0 : 1)
-				// 	);
-				// 	ir_builder.CreateCondBr(condition, llvm_blocks[target_block_idx], llvm_blocks[block_idx + 1]);
-				// 	break;
-				// }
+				case low::MicroOpcode::jmpIf_label:
+				case low::MicroOpcode::jmpIfNot_label: {
+					if (block_idx + 1 < llvm_blocks.size()) {
+						usize target_block_idx = instr_to_block(end - 1 + last_instr.arg0);
+
+						// Get pointer to flags field in frame
+						llvm::StructType* frame_ty = llvm::StructType::create(llvm_ctx, "vm::Frame");
+						llvm::PointerType* frame_ptr_ty = llvm::PointerType::getUnqual(frame_ty);
+						llvm::Value* frame_ptr = ir_builder.CreateLoad(frame_ptr_ty, v_frame);
+						llvm::Value* flags_ptr = ir_builder.CreateStructGEP(frame_ty, frame_ptr, 0);
+
+						// Access flags.flag (field index 0 in FlagData)
+						llvm::StructType* flag_data_ty = llvm::StructType::create(llvm_ctx, "vm::FlagData");
+						llvm::Value* flag_ptr = ir_builder.CreateStructGEP(flag_data_ty, flags_ptr, 0);
+
+						// Load the flag value
+						llvm::Value* flag_value = ir_builder.CreateLoad(
+							ir_builder.getInt1Ty(),
+							flags_ptr
+						);
+
+						if (last_opcode == low::MicroOpcode::jmpIfNot_label) {
+							flag_value = ir_builder.CreateNot(flag_value);
+						}
+
+						// Create conditional branch
+						ir_builder.CreateCondBr(
+							flag_value,
+							llvm_blocks[target_block_idx],
+							llvm_blocks[block_idx + 1]
+						);
+					}
+					break;
+				}
 				case low::MicroOpcode::ret:
 				case low::MicroOpcode::ret_tailcall_func: {
 					ir_builder.CreateRetVoid();
