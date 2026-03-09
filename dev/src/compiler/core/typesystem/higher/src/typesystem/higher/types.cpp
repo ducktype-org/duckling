@@ -114,14 +114,6 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getSource();
 	}
 
-	bool TypeTemplateAbstractType::isBuiltin(BuiltinKind kind) const {
-		variant_match(getSource()) {
-			variant_case(BuiltinKind, builtin_kind) return builtin_kind == kind;
-			variant_default return false;
-		}
-		CORE_UNREACHABLE();
-	}
-
 	usize StaticArrayAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
 	/*****************\

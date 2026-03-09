@@ -549,11 +549,6 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]] Source getSource() const;
 
-		/**
-		 * @brief Checks if the template is a specific built-in kind.
-		 * @return True if the template matches the specified built-in kind.
-		 */
-		[[nodiscard]] bool isBuiltin(BuiltinKind kind) const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(TypeTemplateAbstractType)
 

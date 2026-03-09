@@ -591,11 +591,6 @@ private:
 				"Type template for List should have kind TypeTemplate."
 			);
 
-			assertTrue(
-				list_template_type.isBuiltin(TypeTemplateAbstractType::BuiltinKind::List),
-				"Template should be identified as a built-in List."
-			);
-
 			assertFalse(
 				list_template_type.carriesInformation(ctx),
 				"Type templates should not carry information."

@@ -112,8 +112,8 @@ namespace compiler::helios {
 			 * @brief Evaluates indexing operations performed on meta types
 			 *
 			 * This includes:
-			 * - For dynamic arrays: converting an untyped dynamic array placeholder `List[Unit]`
-			 * into a typed array (e.g., `List[T]`) when the index provided is a meta type.
+			 * - For type templates: specializing a TypeTemplate with a type when the index provided
+			 * is a meta type. Currently only implemented for the builtin List type.
 			 * - For static arrays: constructs a static array type with a fixed size `Int[10]` when
 			 * the index is a integral constant.
 			 *
@@ -128,42 +128,90 @@ namespace compiler::helios {
 				base::Optional<dia::SourcePosition> index_expr_position
 			) -> query::QResult<ctv::CompileTimeValue> {
 				auto base_abs = base_type.getType();
-
-				if (base_abs.getKind() == tsh::Kind::TypeTemplate) {
+				switch (base_abs.getKind()) {
+				case tsh::Kind::TypeTemplate: {
+					// If base is a TypeTemplate type, we expect a meta in the index expression. It
+					// specializes the type template.
 					auto template_type = base_abs.as<tsh::TypeTemplateAbstractType>();
-					if (template_type.isBuiltin(tsh::TypeTemplateAbstractType::BuiltinKind::List)) {
-						if (auto maybe_elem_type = index_ctv.get<tsh::SymbolType<>>()) {
-							auto typed_dynamic_array
-								= ctx.query<tsh::QueryDynamicArrayType>({ maybe_elem_type.value() });
-							return CompileTimeValue{ tsh::SymbolType<>{
-								typed_dynamic_array,
-								base_type.getRefKind(),
-								base_type.getMutability() } };
+					auto elem_type     = index_ctv.get<tsh::SymbolType<>>().value();
+
+					variant_match(template_type.getSource()) {
+						variant_case(tsh::TypeTemplateAbstractType::BuiltinKind, builtin) {
+							switch (builtin) {
+							case tsh::TypeTemplateAbstractType::BuiltinKind::List: {
+								auto typed_dynamic_array
+									= ctx.query<tsh::QueryDynamicArrayType>({ elem_type });
+								return CompileTimeValue{ tsh::SymbolType<>{
+									typed_dynamic_array,
+									base_type.getRefKind(),
+									base_type.getMutability() } };
+							}
+							default: {
+								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+									base::strConcat(
+										"Evaluating type indexing at compile time for type: '",
+										template_type.toString(),
+										"'."
+									),
+									index_expr_position
+								));
+								return query::Failed();
+							}
+							}
+						}
+						variant_default {
+							ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+								base::strConcat(
+									"Evaluating type indexing at compile time for type: '",
+									template_type.toString(),
+									"'."
+								),
+								index_expr_position
+							));
+							return query::Failed();
 						}
 					}
-					return query::Failed();
+					CORE_UNREACHABLE();
 				}
-
-				// If base is meta, then the index should be an integral constant. Then this
-				// expression creates a new static array type.
-				if (auto maybe_size = index_ctv.get<NumericValue>()) {
-					if (maybe_size->isIntegral()) {
-						usize size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
+				case tsh::Kind::Meta: {
+					// If base is meta, then the index should be an integral constant. Then this
+					// expression creates a new static array type.
+					auto maybe_size = index_ctv.get<NumericValue>().value();
+					if (maybe_size.isIntegral()) {
+						usize size = static_cast<usize>(maybe_size.coerceTo<u64>().value());
 						return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
 					}
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Tried creating a static array type with a non integral size.",
+						index_expr_position.value()  // TODOP: Unsafe unwrap heree
+					));
+					return query::Failed();
 				}
-
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat(
-						"Evaluating index expressions with base type: '",
-						base_type.toString(),
-						"' at compile time."
-					),
-					index_expr_position
-				));
-
-				// If none of the patterns matched, this is an error.
-				return query::Failed();
+				default: {
+					// TODOP: Fix this.
+					// If base is meta, then the index should be an integral constant. Then this
+					// expression creates a new static array type.
+					auto maybe_size = index_ctv.get<NumericValue>().value();
+					if (maybe_size.isIntegral()) {
+						usize size = static_cast<usize>(maybe_size.coerceTo<u64>().value());
+						return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
+					}
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Tried creating a static array type with a non integral size.",
+						index_expr_position.value()  // TODOP: Unsafe unwrap heree
+					));
+					return query::Failed();
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Evaluating type indexing at compile time for type: '",
+							base_type.toString(),
+							"'."
+						),
+						index_expr_position
+					));
+					return query::Failed();
+				}
+				}
 			}
 
 			void visitIndexExpr(const code::IndexExpr& expr) final {
