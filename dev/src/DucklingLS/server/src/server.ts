@@ -39,10 +39,9 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 
-export let initComplete = false;
-export let initPromise: Promise<void>;
+let initPromise: Promise<void>;
 
-// Storing LSPT for documents
+// Storing LSP for documents
 
 // Semantic tokens legend
 const semanticTokensLegend = {
@@ -109,9 +108,7 @@ connection.onInitialized(() => {
 		} else {
 			console.log("NO WORKSPACE CAPABILITY");
 		}
-	})().then(() => {
-		initComplete = true;
-	});
+	})();
 });
 
 // Register the handler for semantic tokens

@@ -128,7 +128,7 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-  
+
   coercions:
     Cases:
       dvm:
@@ -144,11 +144,25 @@ Tests:
 
   default_init:
     Cases:
-      # @TODO: #2079 Add a DVM case when possible.
+      # @TODO: #1916 When arrays are handled in DVM, add a DVM case.
+      # @TODO: #1560 When records are handled in DVM, add a DVM case.
       llvm:
         backend: llvm
         Output:
           String: "0\n0\n0\n0\n0\n0\n"
+        ExitCode: 0
+
+  zero_init:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "0\n0\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "0\n0\n"
         ExitCode: 0
 
   strings:
@@ -156,6 +170,6 @@ Tests:
       llvm:
         backend: llvm
         Input:
-         String: "Test"
+          String: "Test"
         Output:
           String: "Test\nHello, world!\n"

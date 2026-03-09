@@ -57,7 +57,7 @@ namespace compiler::helios::code {
 
 			return makeBox<IndexExpr>(
 				ctx,
-				current_expr->origin.extended(index_pst.unlock(ctx)),
+				pstOrigin(current_expr->origin, index_pst.unlock(ctx)),
 				std::move(current_expr),
 				std::move(index_expr)
 			);
@@ -99,7 +99,7 @@ namespace compiler::helios::code {
 			auto arg_res = getHoutOfExprWithExpectedType(ctx, arg_pst, u64_type);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> arg_expr =, arg_res);
 
-			auto total_origin = base->origin.extended(call_expr);
+			auto total_origin = pstOrigin(base->origin, call_expr);
 			return makeBox<IndexExpr>(
 				ctx,
 				total_origin,

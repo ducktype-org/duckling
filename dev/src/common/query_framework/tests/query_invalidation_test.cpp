@@ -207,7 +207,7 @@ private:
 		query::entryPoint<DummyQuery1>({ 3 });
 
 		auto  state = query::internal::ContextAccess::getState();
-		auto& graph = state->getGraphMutable();
+		auto& graph = state->getGraph();
 		ASSERT_EQUAL(graph.getAllNodes().size(), 5 + 5 + 4 + 3);
 
 		auto node_1_1 = query::internal::makeNodeID<DummyQuery1>(query::U64Key{ 1 });
@@ -264,7 +264,15 @@ private:
 		// We invalidate the inputs.
 		// We check which inputs are not present in the new inputs among the previous inputs
 		// and in this case the {input_1, input_2} are missing.
-		query::external::invalidateQueries({ input_3, input_4, input_5 });
+		std::vector<query::external::InputData> invalidated_inputs;
+		query::external::invalidateQueries(
+			{ input_3, input_4, input_5 }, {}, { &invalidated_inputs }
+		);
+
+		ASSERT_TRUE(std::ranges::find(invalidated_inputs, input_1) != invalidated_inputs.end());
+		ASSERT_TRUE(std::ranges::find(invalidated_inputs, input_2) != invalidated_inputs.end());
+		ASSERT_TRUE(invalidated_inputs.size() == 2);
+
 
 		ASSERT_EQUAL(graph.getAllNodes().size(), 3 + 3 + 2 + 1);
 
@@ -297,7 +305,15 @@ private:
 		// This should invalidate the missing inputs from the selected previous inputs.
 		// Here the `input_1` is missing from new inputs compared to the previous selected inputs
 		// and all its dependents should be invalidated.
-		query::external::invalidateQueries({ input_2 }, { { input_1, input_2 } });
+
+		invalidated_inputs.clear();
+
+		query::external::invalidateQueries(
+			{ input_2 }, { { input_1, input_2 } }, { &invalidated_inputs }
+		);
+
+		ASSERT_TRUE(std::ranges::find(invalidated_inputs, input_1) != invalidated_inputs.end());
+		ASSERT_TRUE(invalidated_inputs.size() == 1);
 
 		ASSERT_EQUAL(graph.getAllNodes().size(), 4 + 4 + 3 + 2);
 

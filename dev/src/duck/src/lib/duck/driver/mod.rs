@@ -2,7 +2,7 @@ use clap::{Command, crate_name, crate_version};
 
 pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
-pub mod global_cli_options;
+pub mod global_options;
 pub mod run;
 pub mod styles;
 pub mod subcommands;
@@ -18,6 +18,7 @@ fn cli() -> Command {
         .add_quiet()
         .add_chdir()
         .add_color()
+        .add_offline()
         .allow_external_subcommands(true)
         .subcommands(subcommands::subcommands())
         .styles(get_styles())
