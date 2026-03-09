@@ -1,6 +1,36 @@
 #include "bit256.hpp"
 
 namespace base {
+	Bit256::Bit256(std::string_view hex): Bit256() {
+		CORE_ASSERT(hex.size() <= 66, "Bit256 string too long");
+		CORE_ASSERT(
+			hex.starts_with("0x") || hex.starts_with("0X"), "Bit256 string must start with 0x"
+		);
+		// Remove "0x" prefix
+		hex = hex.substr(2);
+		for (std::size_t i = 0; hex.size() > 0; ++i) {
+			const auto len = std::min(16uz, hex.size());
+			auto       end = hex.substr(hex.size() - len, len);
+			hex            = hex.substr(0, hex.size() - len);
+
+			u64 value = 0;
+			for (const char c: end) {
+				value <<= 4;
+				if (c >= '0' && c <= '9')
+					value |= static_cast<u64>(c - '0');
+				else if (c >= 'a' && c <= 'f')
+					value |= static_cast<u64>(c - 'a' + 10);
+				else if (c >= 'A' && c <= 'F')
+					value |= static_cast<u64>(c - 'A' + 10);
+				else
+					CORE_ASSERT(
+						false, "Invalid character \'" + std::string(1, c) + "\' in Bit256 string"
+					);
+			}
+			data.at(i) = value;
+		}
+	}
+
 	std::string Bit256::toStringHex() const {
 		std::string ret;
 		ret.reserve(64);
@@ -10,48 +40,6 @@ namespace base {
 				ret += std::string_view("0123456789abcdef").at(((d >> (60 - j * 4)) & 0xF));
 		}
 		return ret;
-	}
-
-	Bit256 operator*(const Bit256& lhs, const Bit256& rhs) noexcept {
-#if defined(__SIZEOF_INT128__)
-		Bit256 ret{};
-		for (usize i = 0; i < lhs.data.size(); ++i) {
-			__uint128_t carry = 0;
-			for (usize j = 0; j < rhs.data.size(); ++j) {
-				if (i + j >= rhs.data.size()) break;
-				const __uint128_t sum = static_cast<__uint128_t>(lhs.data.at(i)) * rhs.data.at(j)
-				                      + ret.data.at(i + j) + carry;
-				ret.data.at(i + j) = static_cast<u64>(sum);
-				carry              = sum >> 64;
-			}
-		}
-		return ret;
-#else
-		std::array<u32, 8> a{}, b{};
-		for (size_t i = 0; i < 4; ++i) {
-			a.at(2 * i)     = static_cast<u32>(lhs.data.at(i));
-			a.at(2 * i + 1) = static_cast<u32>(lhs.data.at(i) >> 32);
-			b.at(2 * i)     = static_cast<u32>(rhs.data.at(i));
-			b.at(2 * i + 1) = static_cast<u32>(rhs.data.at(i) >> 32);
-		}
-
-		std::array<u32, 8> ret_halves{};
-		for (size_t i = 0; i < 8; ++i) {
-			u64 carry = 0;
-			for (size_t j = 0; j < 8; ++j) {
-				if (i + j >= 8) break;
-				const u64 sum = static_cast<u64>(a.at(i)) * b.at(j) + ret_halves.at(i + j) + carry;
-				ret_halves.at(i + j) = static_cast<u32>(sum);
-				carry                = sum >> 32;
-			}
-		}
-
-		for (size_t i = 0; i < 4; ++i) {
-			ret.data.at(i) = static_cast<u64>(ret_halves.at(2 * i))
-			               | (static_cast<u64>(ret_halves.at(2 * i + 1)) << 32);
-		}
-		return ret_halves;
-#endif
 	}
 
 	std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256) {

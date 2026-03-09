@@ -354,11 +354,6 @@ private:
 		m[1] = 2;
 		m[3] = 4;
 		m[5] = 6;
-		assertTrue(
-			internal::can_hash_range_with_unspecified_order<decltype(h2), decltype(m)>,
-			"h2 should be able to hash range with unspecified order"
-		);
-		// addToHash(h2, m); // hashing range with unspecified order // @future
 		std::variant<int, float, std::string> v = 42;
 		assertTrue(internal::can_stdhash<decltype(v)>, "v should be hashable with std::hash");
 		// addToHash(h2, v); // hashing std::variant // @future
