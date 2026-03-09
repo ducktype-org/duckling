@@ -396,6 +396,7 @@ namespace compiler::helios {
 				std::cerr << "Failed\n";
 				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
 			} else {
+				CORE_PANIC("aha!");
 				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
 			}
 		}
