@@ -5,6 +5,7 @@
 
 #include <base/pointers/box.hpp>
 
+#include <vm/api/pointer.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
@@ -61,7 +62,7 @@ namespace vm::api {
 		struct StackFrameData {
 			struct FrameVar {
 				u64         offset;
-				vm::Pointer pointer;
+				api::Pointer pointer;
 				TypeID      type;
 			};
 
@@ -74,7 +75,7 @@ namespace vm::api {
 		};
 
 		struct Pointer {
-			vm::Pointer pointer;
+			api::Pointer pointer;
 		};
 
 		struct TypeInfo {

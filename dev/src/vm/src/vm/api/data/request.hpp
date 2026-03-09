@@ -5,6 +5,7 @@
 #include <filesystem/file.hpp>
 
 #include <vm/api/data/response.hpp>
+#include <vm/api/pointer.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/pointer.hpp>
@@ -94,12 +95,12 @@ namespace vm::api {
 		};
 
 		struct DebuggerGetPointerData {
-			Pointer pointer;
+			api::Pointer pointer;
 			u64     size;
 		};
 
 		struct DebuggerDereferencePointer {
-			Pointer pointer;
+			api::Pointer pointer;
 		};
 
 		struct DebuggerGetTypeInfo {

@@ -333,7 +333,7 @@ namespace vm {
 							Ref<Block> block = frame.block_stack[block_idx];
 							frame_vars.push_back(api::response::StackFrameData::FrameVar{
 								.offset  = offset,
-								.pointer = Pointer(block, 0),
+								.pointer = api::Pointer(vm::Pointer(block, 0)),
 								.type    = memory.getBlockType(block)->getID() });
 						}
 
@@ -348,7 +348,7 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						base::ModRawView view = memory.getPointerData(request.pointer, request.size);
+						base::ModRawView view = memory.getPointerData(request.pointer.pointer, request.size);
 						return api::Response(api::response::PointerData{ .data = view });
 					}
 				}
@@ -359,9 +359,9 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						base::ModRawView view = memory.getPointerData(request.pointer, Type::POINTER_SIZE.asInt());
+						base::ModRawView view = memory.getPointerData(request.pointer.pointer, Type::POINTER_SIZE.asInt());
 						auto             pointer = safeReadPointerBytes<Pointer>(view.getBegin());
-						return api::Response(api::response::Pointer{ .pointer = pointer });
+						return api::Response(api::response::Pointer{ .pointer = api::Pointer(pointer) });
 					}
 				}
 			}
