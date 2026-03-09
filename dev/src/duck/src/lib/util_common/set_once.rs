@@ -1,7 +1,7 @@
 //! A value which can only be set once.
 //!
 //! Precisely, this looks like a [`bool`], but with a major difference: initially it is always `false`,
-//! and can only set to `true`.
+//! and can only be set to `true`.
 
 use std::fmt;
 
