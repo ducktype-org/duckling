@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 int simple_function_plus_1(int x) {
 	return x + 1;
@@ -17,14 +18,18 @@ int recursive_fibonacci(int x) {
 
 int calling_fibonacci_sum(int x) {
 	int output = 0;
-	for (int i = 0; i <= x; ++i) output += recursive_fibonacci(x) * recursive_fibonacci(x);
+	
+	for (int i = 0; i <= x; ++i) {
+		int fib = recursive_fibonacci(i);
+		output += fib * fib;
+	}
 	return output;
 }
 
 int* calling_libc(int x) {
 	int* output = calloc(sizeof(int), x);
 	for (int i = 0; i < x; ++i) {
-		output[i] = x;
+		output[i] = i;
 	}
 	return output;
 }
