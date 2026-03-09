@@ -172,7 +172,7 @@ private:
 				assertEqual(var_type_info.name, base::StrID("i64"), "Variable type is not correct");
 
 				auto pointer_data_response
-					= vm::api::debuggerGetPointerData(pid, var.pointer, var_type_info.size)
+					= vm::api::debuggerGetPointerData(pid, var.pointer, var_type_info.size.asInt())
 				          .value();  // "Get pointer data failed"
 				auto value = vm::safeReadPointerBytes<i64>(pointer_data_response.data.getBegin());
 				assertEqual(0, value, "Variable value is not correct");

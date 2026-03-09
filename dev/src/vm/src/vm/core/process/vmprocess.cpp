@@ -359,7 +359,7 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						base::ModRawView view = memory.getPointerData(request.pointer, Type::POINTER_SIZE);
+						base::ModRawView view = memory.getPointerData(request.pointer, Type::POINTER_SIZE.asInt());
 						auto             pointer = safeReadPointerBytes<Pointer>(view.getBegin());
 						return api::Response(api::response::Pointer{ .pointer = pointer });
 					}
