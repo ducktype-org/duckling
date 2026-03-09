@@ -15,8 +15,6 @@ namespace vm {
 
 	i64 SynchronizationPrimitives::addCV() { return cv_pool.add(); }
 
-	void SynchronizationPrimitives::removeCV(i64 cv_id) {
-		cv_pool.remove(cv_id);
-	}
+	void SynchronizationPrimitives::removeCV(i64 cv_id) { cv_pool.remove(cv_id); }
 
 }

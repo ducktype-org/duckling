@@ -1,10 +1,11 @@
 #pragma once
 
+#include "condition_variable.hpp"
+
 #include <base/collections/maps.hpp>
 #include <base/collections/object_pool.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
-#include "condition_variable.hpp"
 
 #include <mutex>
 
@@ -46,16 +47,15 @@ namespace vm {
 		 * @brief Getter for condition variables in the pool.
 		 */
 		base::Ref<ConditionVariable> getCV(i64 cv_id);
-		
+
 		/**
 		 * @brief Adds new condition variable into pool.
 		 */
 		i64 addCV();
-		
+
 		/**
 		 * @brief Removes condition variable from pool.
 		 */
 		void removeCV(i64);
-
 	};
 }
