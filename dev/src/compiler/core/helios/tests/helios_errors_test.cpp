@@ -472,7 +472,8 @@ private:
 			0
 		);
 
-		// Check for multiple errors, note that we only see 1 error, because the other one is logged by the PST.
+		// Check for multiple errors, note that we only see 1 error, because the other one is logged
+		// by the PST.
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
