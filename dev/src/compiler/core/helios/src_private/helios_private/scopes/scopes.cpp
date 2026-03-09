@@ -343,15 +343,18 @@ namespace compiler::helios {
 				// some elements don't have a well defined scope yet leading to a panic
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
 					out->scopes.emplace_back(scopeOf(element));
+
 				for (auto child: element->viewChildren()) {
 					auto child_unlocked = child.unlockOpt(ctx);
-					if (!child_unlocked.has_value()) {
-						// PST element failed to parse, PST should have already reported the diagnostic.
-						out->failed = true;
-						continue;
-					}
 
-					this->visit(child.unlock(ctx));
+					// Note: we might use out->failed here, when implementing
+					// custom logic for most common PST elements (it might improve performance)
+					CORE_ASSERT(
+						child_unlocked.has_value(),
+						"View children should only contain valid element (no null ptrs)"
+					);
+
+					this->visit(child_unlocked.value());
 				}
 			}
 		};
@@ -359,7 +362,7 @@ namespace compiler::helios {
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
 			auto root          = getFilePST(ctx, file)->getRootElement();
 			auto root_unlocked = root.unlockOpt(ctx);
-			if (!root_unlocked.has_value()) {
+			if (root_unlocked.empty()) {
 				// PST root failed to parse, PST should have already reported the diagnostic.
 				out->failed = true;
 				return;
@@ -372,7 +375,6 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// fetch scopes from main module file
 			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-
 
 			Output output;
 			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
@@ -393,7 +395,7 @@ namespace compiler::helios {
 				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
 
 			if (output.failed) {
-				std::cerr << "Failed\n";
+				CORE_PANIC("aha!");
 				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Failure{ .partial_scopes = std::move(output.scopes), }, };
 			} else {
 				return QueryScopesInModuleValue{ .value = QueryScopesInModuleValue::Success{ .scopes = std::move(output.scopes), }, };
