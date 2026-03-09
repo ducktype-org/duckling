@@ -62,10 +62,12 @@ public:
 };
 
 namespace my_map {
+	using Hasher = decltype([](auto x) { return Hash<>{}(x).data.at(0); });
+
 	template<
 		class Key,
 		class T,
-		class Hash  = Hash<>,
+		class Hash  = Hasher,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
 
