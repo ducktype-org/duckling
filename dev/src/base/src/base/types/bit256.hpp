@@ -87,14 +87,6 @@ namespace base {
 
 		constexpr bool operator>(const Bit256& other) const noexcept { return other < *this; }
 
-		// @todo: #1357 -- remove in that mission
-		friend constexpr Bit256 operator^(const Bit256& lhs, const Bit256& rhs) noexcept {
-			Bit256 result;
-			for (usize i = 0; i < result.data.size(); ++i)
-				result.data.at(i) = lhs.data.at(i) ^ rhs.data.at(i);
-			return result;
-		}
-
 		/**
 		 * @brief Outputs the Bit256 object to a stream in the format {a, b, c, d}.
 		 */
