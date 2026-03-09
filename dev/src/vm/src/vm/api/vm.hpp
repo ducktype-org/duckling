@@ -217,4 +217,10 @@ namespace vm::api {
 	 * @return The response containing the resulting pointer or an API error.
 	 */
 	std::expected<response::Pointer, ApiError> debuggerDereferencePointer(PID pid, Pointer pointer);
+
+	/**
+	 * @brief Get the name, size and kind of a given type.
+	 * @return The response containing the type info or an API error.
+	 */
+	std::expected<response::TypeInfo, ApiError> debuggerGetTypeInfo(PID pid, TypeID type_id);
 }

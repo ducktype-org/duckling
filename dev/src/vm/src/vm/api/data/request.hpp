@@ -101,6 +101,10 @@ namespace vm::api {
 		struct DebuggerDereferencePointer {
 			Pointer pointer;
 		};
+
+		struct DebuggerGetTypeInfo {
+			TypeID type_id;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -123,6 +127,7 @@ namespace vm::api {
 		request::DebuggerGetStackFrameData,
 		request::DebuggerGetPointerData,
 		request::DebuggerDereferencePointer,
+		request::DebuggerGetTypeInfo,
 		request::Input,
 		request::Output,
 		request::Attach,

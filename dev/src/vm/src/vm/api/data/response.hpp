@@ -62,7 +62,7 @@ namespace vm::api {
 			struct FrameVar {
 				u64         offset;
 				vm::Pointer pointer;
-				TypeCRef    type;
+				TypeID      type;
 			};
 
 			base::StrID           function_name;
@@ -75,6 +75,12 @@ namespace vm::api {
 
 		struct Pointer {
 			vm::Pointer pointer;
+		};
+
+		struct TypeInfo {
+			base::StrID    name;
+			TypeSize       size;
+			vm::Type::Kind kind;
 		};
 
 		using Boolean = bool;
@@ -93,5 +99,6 @@ namespace vm::api {
 		response::StackFrameData,
 		response::PointerData,
 		response::Pointer,
+		response::TypeInfo,
 		ExitValue>;
 }

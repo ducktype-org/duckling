@@ -323,7 +323,7 @@ namespace vm {
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset  = offset,
 						.pointer = Pointer(block, 0),
-						.type    = memory.getBlockType(block) });
+						.type    = memory.getBlockType(block)->getID() });
 				}
 
 				return api::Response(api::response::StackFrameData{
@@ -339,6 +339,27 @@ namespace vm {
 				base::ModRawView view = memory.getPointerData(request.pointer, Type::POINTER_SIZE);
 				auto             pointer = safeReadPointerBytes<Pointer>(view.getBegin());
 				return api::Response(api::response::Pointer{ .pointer = pointer });
+			}
+
+			variant_case(api::request::DebuggerGetTypeInfo, request) {
+				std::shared_lock lock(rw_global);
+				match_optional(assertProcessCanRespond()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						auto res = loaded_program->getTypes().atMaybe(request.type_id);
+						match_optional(res) {
+							opt_some(type) {
+								return api::Response(api::response::TypeInfo{
+									.name = type->getName(), .size = type->getSize(), .kind = type->getKind() });
+							}
+
+							opt_none {
+								return std::unexpected(api::ApiError{
+									api::OtherError{ "Type not found" } });
+							}
+						}
+					}
+				}
 			}
 
 			variant_case(api::request::StatusRequest, status_request) {
