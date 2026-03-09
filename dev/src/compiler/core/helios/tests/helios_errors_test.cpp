@@ -472,7 +472,7 @@ private:
 			0
 		);
 
-		// check for multiple errors:
+		// Check for multiple errors, note that we only see 1 error, because the other one is logged by the PST.
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
@@ -485,7 +485,7 @@ private:
 				}
 			)",
 			{},
-			2
+			1
 		);
 
 		// ============================ Static Arrays ============================
