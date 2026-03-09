@@ -1,3 +1,5 @@
+//! Entrypoints for creating a new [`CompilerDag`] and friends.
+
 use tracing::debug;
 
 use crate::{
@@ -13,6 +15,7 @@ use crate::{
     },
 };
 
+/// Common helper for creating a consistent error.
 fn bail_cycle_message(cycle: &[FreezeDep]) -> QuackError {
     let cycle = cycle.iter().map(|dep| format!("`{}`", dep)).join(" -> ");
     QuackError::error(format!("malformed freezefile: cycle {cycle}"))
@@ -21,6 +24,9 @@ fn bail_cycle_message(cycle: &[FreezeDep]) -> QuackError {
 use super::*;
 
 impl DependencyDag {
+    /// Create new [`DependencyDag`] from the given freeze.
+    ///
+    /// This method checks that the graph is complete, and that it is, in fact, a DAG.
     pub fn new(freeze: &VenvFreeze) -> QuackResult<Self> {
         let root = freeze.root();
         let mut dag = HashMap::new();
@@ -39,12 +45,14 @@ impl DependencyDag {
         Ok(Self { root, dag })
     }
 
+    /// Helpers for [`new`](Self::new).
     fn check_is_dag(root: FreezeDep, dag: &HashMap<FreezeDep, DependencyNode>) -> QuackResult<()> {
         Self::check_is_complete_graph(root, dag)?;
         Self::check_no_cycles(root, dag)?;
         Ok(())
     }
 
+    /// Checks, whether `graph` rooted at `root` is complete.
     fn check_is_complete_graph(
         root: FreezeDep,
         graph: &HashMap<FreezeDep, DependencyNode>,
@@ -65,6 +73,7 @@ impl DependencyDag {
         Ok(())
     }
 
+    /// Checks, that the `graph` rooted at `root` doesn't have cycles.
     fn check_no_cycles(
         root: FreezeDep,
         dag: &HashMap<FreezeDep, DependencyNode>,
@@ -107,6 +116,7 @@ impl DependencyDag {
 }
 
 impl DependencyNode {
+    /// Creates a new [`DependencyNode`] with the given dependencies.
     pub fn new(dependencies: impl IntoIterator<Item = FreezeDep>) -> Self {
         Self {
             dependencies: dependencies.into_iter().collect(),
@@ -114,6 +124,7 @@ impl DependencyNode {
     }
 }
 
+/// Parses the dependency from the freezefile using data in the storage.
 fn parse_dependency(
     dep: &FreezePackage,
     storage: &Storage,
@@ -170,6 +181,11 @@ fn parse_dependency(
 }
 
 impl CompilerDag {
+    /// Creates a new *early* [`CompilerDag`] from the given [`BuildContext`].
+    ///
+    /// *early* means that:
+    /// - no features are expanded (including the root package),
+    /// - no disabled dependencies are removed.
     pub fn new_early(ctx: &BuildContext<'_>) -> QuackResult<Self> {
         // `new` checks for cycles.
         let graph = DependencyDag::new(&ctx.freeze)?;

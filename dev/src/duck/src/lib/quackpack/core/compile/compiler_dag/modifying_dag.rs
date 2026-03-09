@@ -1,3 +1,5 @@
+//! Helpers for modifying an existing [`CompilerDag`] (and its members).
+
 use tracing::debug;
 
 use crate::quackpack::core::FeatureName;
@@ -5,6 +7,7 @@ use crate::quackpack::core::FeatureName;
 use super::*;
 
 impl DependencyDag {
+    /// Same as [`CompilerDag::remove_disabled_dependencies`].
     pub fn remove_disabled_dependencies(&mut self, packages: &AllPackages) -> QuackResult<()> {
         for (k, v) in self.dag.iter_mut() {
             let mut to_remove = HashSet::new();
@@ -39,6 +42,7 @@ impl DependencyDag {
 }
 
 impl CompilerDag {
+    /// Recursively populate enabled features, starting from the root of the graph.
     pub fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
         let root_package = self.package_mut(&self.dag.root())?;
         root_package.add_new_features(root_features.iter().copied())?;
@@ -79,6 +83,12 @@ impl CompilerDag {
         visit_impl(self.dag.root(), &self.dag.dag, &mut self.all_packages)
     }
 
+    /// Removes disabled dependency from the graph.
+    ///
+    /// Note that currently they stay as keys in [`DependencyDag`], although no [`DependencyNode`]
+    /// should point at them.
+    ///
+    /// This method should be called __after__ [`populate_features`](Self::populate_features).
     pub fn remove_disabled_dependencies(&mut self) -> QuackResult<()> {
         self.dag.remove_disabled_dependencies(&self.all_packages)
     }

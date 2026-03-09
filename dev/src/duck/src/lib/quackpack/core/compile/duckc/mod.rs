@@ -1,38 +1,34 @@
+//! Main interaction with the compiler.
+//!
+//! It ~~supports~~ will support different types of interactions and compilation types,
+//! but right now it supports only compiling the root package and fork&exec communication.
+//!
+//! Notable objects are:
+//! - [`Duckc`][]: object with all required informations for communicating with the compiler,
+//! - [`compilation_type`][]: supported types of compilations,
+//! - [`process_builder`][]: [`Command`](std::process::Command) backed backend for fork&exec
+//!   communication with the compiler.
+
 mod compilation_type;
-use std::process::Command;
-use std::{ffi::OsStr, fmt};
+mod process_builder;
 
 pub use compilation_type::CompilationType;
-use itertools::Itertools;
 
+use super::BuildContext;
 use super::compiler_package::CompilerPackage;
-use crate::quackpack::core::Package;
-use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::compiler_dag::CompilerDag;
 use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum DuckcSubcommand {
-    CompilePackage,
-}
-
-impl DuckcSubcommand {
-    fn as_argument(&self) -> &'static str {
-        match self {
-            Self::CompilePackage => "compile_package",
-        }
-    }
-}
-
 #[derive(Debug)]
+/// Data holder of all required in order to execute the compiler.
 pub struct Duckc {
     program_name: StrId,
 }
 
 impl Duckc {
+    /// Create new [`Duckc`] from the [`DuckCtx`].
     pub fn new(ctx: &DuckCtx) -> Self {
         let _ = ctx;
         Self {
@@ -40,6 +36,7 @@ impl Duckc {
         }
     }
 
+    /// Compile the `graph` with the given `compilation_type` and `bcx`.
     pub fn compile(
         &self,
         graph: &CompilerDag,
@@ -51,6 +48,7 @@ impl Duckc {
         }
     }
 
+    /// Specific steps for compiling only the root package using [`process_builder`] backend.
     fn compile_root_package_only(
         &self,
         graph: &CompilerDag,
@@ -61,9 +59,9 @@ impl Duckc {
         bail_if_has_deps(deps.dependencies())?;
         bail_if_has_explicit_aliases(this)?;
         let this = this.package();
-        let mut builder = DuckcProcessBuilder::new(self);
+        let mut builder = process_builder::DuckcProcessBuilder::new(self);
         builder
-            .set_subcommand(DuckcSubcommand::CompilePackage)
+            .set_subcommand(process_builder::DuckcSubcommand::CompilePackage)
             .set_package_name(this);
 
         let source_dir = this.source_directory();
@@ -85,6 +83,7 @@ impl Duckc {
     }
 }
 
+/// Helper for checking not yet supported features of the compiler.
 fn bail_if_has_deps(dependencies: &[FreezeDep]) -> QuackResult<()> {
     if !dependencies.is_empty() {
         qp_bail_internal!("external dependencies are not (yet) supported by duckc")
@@ -92,6 +91,7 @@ fn bail_if_has_deps(dependencies: &[FreezeDep]) -> QuackResult<()> {
     Ok(())
 }
 
+/// Helper for checking not yet supported features of the compiler.
 fn bail_if_has_explicit_aliases(package: &CompilerPackage) -> QuackResult<()> {
     let manifest = package.package().manifest();
     if manifest
@@ -104,59 +104,4 @@ fn bail_if_has_explicit_aliases(package: &CompilerPackage) -> QuackResult<()> {
         qp_bail_internal!("package `{desc}` has aliased dependencies, which is not yet supported")
     }
     Ok(())
-}
-
-#[derive(Debug)]
-pub struct DuckcProcessBuilder {
-    inner: Command,
-}
-
-impl DuckcProcessBuilder {
-    pub fn new(duckc: &Duckc) -> Self {
-        Self {
-            inner: Command::new(duckc.program_name),
-        }
-    }
-
-    pub fn set_subcommand(&mut self, subcmd: DuckcSubcommand) -> &mut Self {
-        self.inner.arg(subcmd.as_argument());
-        self
-    }
-
-    pub fn set_package_name(&mut self, package: &Package) -> &mut Self {
-        let name = package.manifest().root_description().name();
-        self.inner.arg("-n").arg(name);
-        self
-    }
-
-    pub fn set_src_dir(&mut self, package: &Package) -> &mut Self {
-        self.inner.arg(package.source_directory());
-        self
-    }
-
-    pub fn set_package_artifacts_dir(&mut self, package: &Package) -> &mut Self {
-        let dir = package.artifacts_directory();
-        self.inner.arg("-a").arg(dir);
-        self
-    }
-
-    pub fn execute(&mut self, package_name: impl fmt::Display) -> QuackResult<()> {
-        let code = self.inner.status().context("failed to spawn duckc")?;
-        if !code.success() {
-            qp_bail!("failed to compile package `{package_name}`")
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Display for DuckcProcessBuilder {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let command_name = self.inner.get_program().display();
-        let args = self.inner.get_args().map(OsStr::display).join(" ");
-        if !args.is_empty() {
-            write!(f, "{command_name} {args}")
-        } else {
-            write!(f, "{command_name}")
-        }
-    }
 }

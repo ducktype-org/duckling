@@ -1,3 +1,9 @@
+//! Main entrypoint for compiling an entire project.
+//!
+//! Notable modules are:
+//! - [`compiler_dag`][]: creating and modifying dependency graphs; notably, it checks for cycles,
+//!   expands features, and removes disabled dependencies,
+//! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
 use tracing::debug;
 
 use crate::{
@@ -15,6 +21,7 @@ use compiler_dag::*;
 use duckc::*;
 
 #[derive(Debug)]
+/// All informations required to compile a project.
 pub struct BuildContext<'duck> {
     pub duck_ctx: &'duck DuckCtx,
     pub package: &'duck PackageCtx<'duck>,
@@ -24,6 +31,7 @@ pub struct BuildContext<'duck> {
     pub profile: StrId,
 }
 
+/// Compile project inside the [`BuildContext`].
 pub fn compile<'duck>(bcx: BuildContext<'duck>) -> QuackResult<()> {
     debug!("compiling `{bcx:?}`");
     let mut graph = CompilerDag::new_early(&bcx)?;
