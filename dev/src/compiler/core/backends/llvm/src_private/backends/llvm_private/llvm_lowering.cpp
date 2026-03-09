@@ -684,8 +684,8 @@ namespace compiler::backend_llvm {
 			};
 
 			// A GEP constructor invoked when encountering a deref projection or when we went
-			// through all projections. Creates a GEP from all projection indicies up to this point
-			// so `load` can be performed on calculated address.
+			// through all projections. Creates a GEP from all projection indices up to this point
+			// so `load` can be performed on the calculated address.
 			auto flush_gep = [&]() {
 				// Skip if GEP has no arguments.
 				if (gep_indices.empty()) return;
@@ -1152,7 +1152,7 @@ namespace compiler::backend_llvm {
 				llvm::Value* list_ptr
 					= loadLIRValueToPointer(lir_instruction.arguments.at(0), builder);
 
-				// Get the size if the List element. Needed to pass to the generic
+				// Get the size of the List element. Needed to pass to the generic
 				// `builtin_list_push`/'builtin_list_pop' builtins.
 				auto get_elem_size = [&]() {
 					const auto& params

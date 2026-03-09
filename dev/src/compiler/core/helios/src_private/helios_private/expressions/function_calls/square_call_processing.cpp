@@ -87,10 +87,12 @@ namespace compiler::helios::code {
 				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
 					if (literal_type_expr->value_type.getType().getKind()
 					    == tsh::Kind::TypeTemplate) {
-						return tsh::SymbolType<>{ tsh::getMetaType(),
+						return tsh::SymbolType<>{
+							tsh::getMetaType(),
 
-							                      tsh::ReferenceKind::Direct,
-							                      tsh::Mutability::Immutable };
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Immutable,
+						};
 					}
 				}
 				return tsh::SymbolType<>{

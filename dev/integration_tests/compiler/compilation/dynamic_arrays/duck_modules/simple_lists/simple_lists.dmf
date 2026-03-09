@@ -1,11 +1,11 @@
 fun printList(list: ref List[i64]) -> () = {
-    builtin_output_i64(8888888888888888888);
+    builtin_output_string("8888888888888888888\n");
     var i = 0;
     while (i < len list) {
         builtin_output_i64(list[i]);
         i = i + 1;
     }
-    builtin_output_i64(8888888888888888888);
+    builtin_output_string("8888888888888888888\n");
 }
 
 fun listByRef(list: ref List[i64]) -> () = {
@@ -32,12 +32,12 @@ fun main() -> i32 = {
     arr += 444; 
     arr += 555; 
     
-    builtin_output_i64(i64(len arr));
+    builtin_output_u64(len arr);
 
     printList(&arr);
     
     arr -= 3;
-    builtin_output_i64(i64(len arr));
+    builtin_output_u64(len arr);
     printList(&arr);
 
     arr += 999;

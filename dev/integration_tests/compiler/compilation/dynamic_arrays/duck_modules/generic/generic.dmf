@@ -4,7 +4,7 @@ class Point {
 }
 
 fun printSeparator() -> () = {
-    builtin_output_i64(888888888888888);
+    builtin_output_string("888888888888888\n");
 }
 
 fun printMatrix(list: ref List[i32[3]]) -> () = {
@@ -28,7 +28,7 @@ fun integersTest() -> () = {
     builtin_output_i64(integers[0]); # 111
     builtin_output_i64(integers[1]); # 222
     builtin_output_i64(integers[2]); # 333
-    builtin_output_i64(i64(len integers)); # 3
+    builtin_output_u64(len integers); # 3
     printSeparator();
 }
 
@@ -41,7 +41,7 @@ fun floatsTest() -> () = {
     builtin_output_f64(floats[0]);
     builtin_output_f64(floats[1]);
     builtin_output_f64(floats[2]);
-    builtin_output_i64(i64(len floats)); # 3
+    builtin_output_u64(len floats); # 3
     printSeparator();
 }
 
@@ -87,8 +87,8 @@ fun dynamicArraysTest() -> () = {
     nested += inner1;
     nested += inner2;
     
-    builtin_output_i64(i64(len nested[0])); # 2
-    builtin_output_i64(i64(len nested[1])); # 1
+    builtin_output_u64(len nested[0]); # 2
+    builtin_output_u64(len nested[1]); # 1
     
     builtin_output_i64(nested[0][0]); # 1
     builtin_output_i64(nested[0][1]); # 2
@@ -96,7 +96,7 @@ fun dynamicArraysTest() -> () = {
     
     nested[1] += 4;
 
-    builtin_output_i64(i64(len nested[1])); # 2
+    builtin_output_u64(len nested[1]); # 2
     builtin_output_i64(nested[0][0]); # 1
     builtin_output_i64(nested[0][1]); # 2
     builtin_output_i64(nested[1][0]); # 3
@@ -109,7 +109,7 @@ fun dynamicArraysTest() -> () = {
     # which would perform a deep copy instead of just the bit-wise copy.
     inner2 += 123; 
 
-    builtin_output_i64(i64(len nested[1])); # 2
+    builtin_output_u64(len nested[1]); # 2
 
     printSeparator();
 }
