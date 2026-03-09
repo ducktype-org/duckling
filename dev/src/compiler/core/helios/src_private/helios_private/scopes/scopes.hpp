@@ -153,11 +153,11 @@ namespace compiler::helios {
 	/**
 	 * @brief Query all scopes defined in a given module.
 	 * @note This query returns QueryScopesInModuleValue which contains all scopes in the module or
-	 * a partial list of scopes that where possible to obtain despite some other failures. The semantics
-	 * of this failed state are the same as of a failed QResult (i.e. errors were already reported),
-	 * but we still want to return the scopes that we managed to obtain. This is because this query
-	 * is used by the QueryModuleHOUT and if we just failed here, then almost all of the compilation
-	 * process would be halted and practically no HELIOS diagnostics would appear.
+	 * a partial list of scopes that where possible to obtain despite some other failures. The
+	 * semantics of this failed state are the same as of a failed QResult (i.e. errors were already
+	 * reported), but we still want to return the scopes that we managed to obtain. This is because
+	 * this query is used by the QueryModuleHOUT and if we just failed here, then almost all of the
+	 * compilation process would be halted and practically no HELIOS diagnostics would appear.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
