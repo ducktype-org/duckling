@@ -14,10 +14,12 @@
 
 // we can use the Hash as a drop-in replacement for std::hash, for example in std::unordered_map
 namespace my_map {
+	using Hasher = decltype([](auto&& x) { return hashing::Hash<>{}(x).data.at(0); });
+
 	template<
 		class Key,
 		class T,
-		class Hash  = hashing::Hash<>,
+		class Hash  = Hasher,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
 	using unordered_map = std::unordered_map<Key, T, Hash, Pred, Alloc>;

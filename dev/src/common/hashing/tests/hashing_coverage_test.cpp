@@ -67,7 +67,7 @@ public:
 };
 
 namespace my_map {
-	using Hasher = decltype([](auto x) { return Hash<>{}(x).data.at(0); });
+	using Hasher = decltype([](auto&& x) { return Hash<>{}(x).data.at(0); });
 
 	template<
 		class Key,
