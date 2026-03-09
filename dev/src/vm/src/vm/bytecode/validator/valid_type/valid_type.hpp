@@ -153,6 +153,8 @@ namespace vm::code::valid_type {
 		 * @brief Whether this type is trivially copyable/POD(plain old data). This is true for
 		 * types that can be copied with a simple memory copy, like primitives, opaques and
 		 * fixed-size tables of trivially copyable types.
+		 * This also means, that if a type requires maintaining block structure in the "Safe"
+		 * mode, it is not trivially copyable.
 		 */
 		bool is_trivially_copyable = true;
 
