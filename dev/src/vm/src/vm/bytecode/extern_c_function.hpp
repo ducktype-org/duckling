@@ -105,7 +105,7 @@ namespace vm::detail {
 			#VmType,                                                                \
 			tp_##Name->type->getSize().asInt()                                      \
 		);                                                                          \
-	vm_arg_type_size_sum += tp_##Name->type->getSize().asInt();
+	vm_arg_type_size_sum += tp_##Name->type->getSize();
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2
 
@@ -159,20 +159,20 @@ namespace vm::detail {
 			});                                                                                         \
 		}                                                                                               \
 		static vm::code::FuncSignature getSignature(vm::PID pid) {                                      \
-			usize vm_arg_type_size_sum = 0;                                                             \
+			Bytes vm_arg_type_size_sum(0);                                                              \
 			VM_EXT_C_PLACE_VALIDATION(ResCType, ResVmType, result)                                      \
 			vm_arg_type_size_sum                                                                        \
-				-= tp_result->type->getSize().asInt(); /* undo what we've done to the sum */            \
+				-= tp_result->type->getSize(); /* undo what we've done to the sum */                    \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_PLACE_VALIDATION, __VA_ARGS__);                        \
 			vm::code::FuncSignature signature;                                                          \
 			signature.result_type = VM_EXT_C_VM_TYPE_NAME(ResVmType);                                   \
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \
-				vm_arg_type_size_sum == sizeof(FunctionData)                                            \
-					|| (vm_arg_type_size_sum == 0 && sizeof(FunctionData) == 1),                        \
+				vm_arg_type_size_sum.asInt() == sizeof(FunctionData)                                    \
+					|| (vm_arg_type_size_sum.asInt() == 0 && sizeof(FunctionData) == 1),                \
 				"FunctionData\'s fields alignment does not match stack structure in the VM: ",          \
-				vm_arg_type_size_sum,                                                                   \
+				vm_arg_type_size_sum.asInt(),                                                           \
 				"!=",                                                                                   \
 				sizeof(FunctionData)                                                                    \
 			);                                                                                          \

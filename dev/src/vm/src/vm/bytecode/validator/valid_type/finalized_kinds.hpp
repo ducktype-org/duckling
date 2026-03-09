@@ -5,8 +5,8 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/bytecode/validator/type/type_id.hpp>
-#include <vm/bytecode/validator/type/type_size.hpp>
+#include <vm/bytecode/validator/valid_type/type_size.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <unordered_set>
@@ -130,27 +130,15 @@ namespace vm::code::valid_type {
 			 * @note Only classes and interfaces have this metadata.
 			 */
 			base::Optional<InheritanceMetadata> inheritance_metadata;
-
-			// private:
-			// 	friend class Type;
-
-			// 	struct DefinitionData {};
-
-			// 	/**
-			// 	 * @brief During type definition, we need to forward some data for inheritance
-			// metadata
-			// 	 * construction during finalization. This field is used for that.
-			// 	 */
-			// 	base::Optional<DefinitionData> forwarded_definition_data;
 		};
 
 		/**
 		 * @brief Variant type representation.
 		 */
 		struct Variant final {
-			Bytes type_tag_size;
+			Bytes type_tag_size;  /// Number of bytes needed for the type tag - e.g. 1, 2, 4, 8
 			std::vector<ValidTypeID>
-				alternatives;  /// Order matters, as it determines type tag values.
+				alternatives;     /// Order matters, as it determines type tag values.
 		};
 
 		/**

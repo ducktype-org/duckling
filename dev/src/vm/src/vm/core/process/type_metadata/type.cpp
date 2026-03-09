@@ -115,13 +115,13 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ .offset = Bytes(0), .type = sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset = Offset(0), .type = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
 	}
 
-	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
+	void Type::defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		CORE_ASSERT(variants_definitions.size() != 0, "Cannot define variant with no alternatives");
 		state = State::Defined;
@@ -130,17 +130,8 @@ namespace vm {
 		auto variant = kind::Variant{};
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
-		// log_256(x) = log_2(x) / log_2(256) = log_2(x) / 8.0
-		const auto needed_bytes
-			= ceil(log2(static_cast<double>(variants_definitions.size())) / 8.0);
-
-		// Need to get a power of 2 - 1, 2, 4, 8, 16 etc
-		// 2 ** (ceil(log2(needed_bytes)))
-		const auto rounded_to_power_of_2
-			= static_cast<usize>(std::pow(2, ceil(log2(needed_bytes))));
-
-		variant.type_tag_size_bytes = rounded_to_power_of_2;
-		kind                        = variant;
+		variant.type_tag_size = type_tag_size;
+		kind                  = variant;
 	}
 
 	void Type::defineFunction(std::vector<TypeCRef> parameters, TypeCRef result) {
@@ -194,7 +185,7 @@ namespace vm {
 					alternative->finalize();
 					data_size = std::max(data_size, alternative->getSize());
 				}
-				this->size = data_size + TypeSize(variant.type_tag_size_bytes);
+				this->size = variant.type_tag_size + data_size;
 				isInstantiableImpl(variant);
 			}
 		}
@@ -277,7 +268,7 @@ namespace vm {
 
 	base::Optional<Bytes> Type::getParametersSize() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
-			TypeSize size(0);
+			Bytes size(0);
 			for (const auto& param: function->parameters) size += param->getSize();
 			return size;
 		});
@@ -296,9 +287,9 @@ namespace vm {
 		});
 	}
 
-	base::Optional<usize> Type::getTypeTagSizeBytes() const {
+	base::Optional<Bytes> Type::getTypeTagSizeBytes() const {
 		return get<kind::Variant>().map([](CRef<kind::Variant> variant) {
-			return variant->type_tag_size_bytes;
+			return variant->type_tag_size;
 		});
 	}
 

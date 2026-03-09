@@ -5,8 +5,8 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/bytecode/validator/type/type_id.hpp>
-#include <vm/bytecode/validator/type/type_size.hpp>
+#include <vm/bytecode/validator/valid_type/type_size.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <unordered_set>

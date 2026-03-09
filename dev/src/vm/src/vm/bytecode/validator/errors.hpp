@@ -10,7 +10,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type/type.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #include <string_view>
@@ -277,7 +277,9 @@ namespace vm::code {
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
 	DEFINE_TYPE_ERROR(InvalidPrimitiveSizeError, "Primitive type cannot have size 0: ");
-	DEFINE_TYPE_ERROR(EmptyVariantError, "This variant type is empty: ");
+	DEFINE_TYPE_ERROR(
+		TooFewVariantAlternativesError, "Variants should have at least two alternatives: "
+	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidImplementsError,
 		"This object can implement only existing interfaces other than itself: "

@@ -4,15 +4,15 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type/type.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code {
 	/**
 	 * @brief A simple container for types which doesn't allow duplicates. This structure is the
 	 * main entry point for type verification and building.
-	 * @note It is by definition valid,
-	 * so this function assumes that and doesn't perform any checks.
+	 * @note `TypeContext` always contains a valid set of types if `insertAndValidate` didn't throw
+	 * any errors.
 	 */
 	class TypeContext final {
 	public:

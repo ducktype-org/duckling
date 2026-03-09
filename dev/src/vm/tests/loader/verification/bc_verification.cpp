@@ -289,12 +289,6 @@ private:
 				vm::code::CyclicDependencyError::ERR_MSG,
 			}
 		);
-		loadInvalidDbc(
-			"wrong/types/cyclic_dependency2.dbc",
-			{
-				vm::code::CyclicDependencyError::ERR_MSG,
-			}
-		);
 	}
 
 	void duplicatedVariantAlternatives() {

@@ -3,9 +3,9 @@
 #include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
-#include <vm/bytecode/validator/type/type.hpp>
-#include <vm/bytecode/validator/type/type_context.hpp>
-#include <vm/bytecode/validator/type/type_map.hpp>
+#include <vm/bytecode/validator/valid_type/type_context.hpp>
+#include <vm/bytecode/validator/valid_type/type_map.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/process/type_metadata/inheritance_metadata.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -129,7 +129,7 @@ namespace {
 					variants.reserve(data.alternatives.size());
 					for (auto& variant: data.alternatives)
 						variants.emplace_back(type_metadata->at(vm::TypeID(variant.asInt())));
-					type_at_metadata->defineVariant(variants);
+					type_at_metadata->defineVariant(data.type_tag_size, variants);
 				}
 				variant_case(vm::code::valid_type::finalized::Function, data) {
 					std::vector<vm::TypeCRef> parameters;
@@ -168,4 +168,12 @@ void vm::code::detail::rebuildTypeMetadata(
 									  }) | std::ranges::to<std::vector>());
 
 	type_metadata->finalize();
+
+	// Sanity assert
+	for (const auto& type: types) {
+		CORE_ASSERT(
+			static_cast<usize>(type_metadata->at(type.getName())->getID()) == type.getID().asInt(),
+			"Type ID mismatch after rebuilding type metadata"
+		);
+	}
 }

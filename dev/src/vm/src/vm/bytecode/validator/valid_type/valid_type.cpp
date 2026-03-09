@@ -1,4 +1,4 @@
-#include "type.hpp"
+#include "valid_type.hpp"
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -8,7 +8,6 @@
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <algorithm>
-#include <cmath>
 #include <variant>
 
 using namespace vm::code;
@@ -235,20 +234,21 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 							superclass->isKind<finalized::Structure>(),
 							"Superclass must be a structure"
 						);
-						const auto& super_structure = superclass->getKindAs<finalized::Structure>();
-						const auto& super_imd       = super_structure.inheritance_metadata.expect(
+						const auto  super_structure = superclass->getKindAs<finalized::Structure>();
+						const auto& super_imd       = super_structure->inheritance_metadata.expect(
                             "Superclass must have inheritance metadata"
                         );
 
 						// Fields. Superclass fields are inserted before subclass fields.
-						for (const auto& field: superclass->getKindAs<finalized::Structure>().fields)
+						for (const auto& field:
+						     superclass->getKindAs<finalized::Structure>()->fields)
 							fields.emplace_back(field.name, field.type);
 						// Super types
 						imd.super_types.insert(
 							superclass->getKindAs<finalized::Structure>()
-								.inheritance_metadata->super_types.begin(),
+								->inheritance_metadata->super_types.begin(),
 							superclass->getKindAs<finalized::Structure>()
-								.inheritance_metadata->super_types.end()
+								->inheritance_metadata->super_types.end()
 						);
 						// Virtual methods
 						for (const auto& method: super_imd.available_methods)
@@ -276,7 +276,7 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 			auto interface = types.at(i);
 			CORE_ASSERT(interface->isKind<finalized::Structure>(), "Interface must be a structure");
 			const auto& interface_structure = interface->getKindAs<finalized::Structure>();
-			const auto& interface_imd       = interface_structure.inheritance_metadata.expect(
+			const auto& interface_imd       = interface_structure->inheritance_metadata.expect(
                 "Interface must have inheritance metadata"
             );
 
@@ -340,7 +340,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		}
 		variant_case(defined::DefinedPointer, pointer) {
 			this->size                  = valid_type::TypeSize::pointer();
-			this->is_trivially_copyable = true;
+			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
 		}
 		variant_case(defined::DefinedFixedSizeTable, fixed_size_table) {
@@ -375,16 +375,15 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 				                                                            .result     = function.result } };
 		}
 		variant_case(defined::DefinedVariant, variant) {
-			// log_256(x) = log_2(x) / log_2(256) = log_2(x) / 8.0
-			const auto needed_bytes
-				= ceil(log2(static_cast<double>(variant.alternatives.size())) / 8.0);
-
-			// Need to get a power of 2 - 1, 2, 4, 8, 16 etc
-			// 2 ** (ceil(log2(needed_bytes)))
-			const auto rounded_to_power_of_2
-				= static_cast<usize>(std::pow(2, ceil(log2(needed_bytes))));
-
-			const auto type_tag_size = Bytes(rounded_to_power_of_2);
+			CORE_ASSERT(
+				variant.alternatives.size() >= 2, "Variant must have at least 2 alternatives"
+			);
+			const auto num_alternatives = variant.alternatives.size();
+			const auto needed_bits      = static_cast<usize>(std::bit_width(num_alternatives - 1));
+			// Add 7 so we round up to the nearest byte, because we cannot have sub-byte sizes.
+			const auto needed_bytes          = (needed_bits + 7) / 8;
+			const auto rounded_to_power_of_2 = std::bit_ceil(needed_bytes);
+			const auto type_tag_size         = Bytes(rounded_to_power_of_2);
 
 			// Finalize the alternatives and calculate the size of the variant.
 			// The process to calculate data_segment_size is not trivial,
@@ -499,7 +498,6 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 }
 
 [[nodiscard]] valid_type::TypeSize valid_type::ValidType::getSize() const {
-	// CORE_ASSERT(state == State::Finalized, "Tried to get size of a type that was not finalized");
 	variant_match(state) {
 		variant_case(Finalized, finalized) {
 			CORE_ASSERT(

@@ -17,7 +17,6 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/concurrency/gil.hpp>
 #include <vm/core/process/exceptions.hpp>
-#include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>

@@ -4,8 +4,8 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/bytecode/validator/type/type.hpp>
-#include <vm/bytecode/validator/type/type_utils.hpp>
+#include <vm/bytecode/validator/valid_type/type_utils.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace {
@@ -327,7 +327,8 @@ namespace {
 					throw UnknownSubtypeError(function, function.result);
 			}
 			variant_case(VariantType, variant) {
-				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
+				if (variant.variant_alternatives.empty() || variant.variant_alternatives.size() == 1)
+					throw TooFewVariantAlternativesError(variant);
 				std::unordered_set<base::StrID> alternative_set;
 				for (auto& alternative: variant.variant_alternatives) {
 					if (!tod_types.contains(alternative))

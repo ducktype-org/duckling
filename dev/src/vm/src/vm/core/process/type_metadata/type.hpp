@@ -88,7 +88,7 @@ namespace vm {
 			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
 			base::Optional<InheritanceMetadata>                 inheritance_metadata
 		);
-		void defineVariant(const std::vector<TypeRef>& variants_definitions);
+		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
 		void defineOpaque(TypeSize size);
 
@@ -143,7 +143,7 @@ namespace vm {
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 
 		// variant
-		base::Optional<usize>                 getTypeTagSizeBytes() const;
+		base::Optional<Bytes>                 getTypeTagSizeBytes() const;
 		base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
 
 

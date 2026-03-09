@@ -4,9 +4,9 @@
 
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/bytecode/validator/type/type.hpp>
-#include <vm/bytecode/validator/type/type_id.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 
 using namespace vm::code;
 

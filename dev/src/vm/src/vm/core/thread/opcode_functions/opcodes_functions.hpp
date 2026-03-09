@@ -270,7 +270,7 @@ namespace vm {
 				variant_type->getSize().asInt()
 			);
 
-			switch (variant_type_tag_size) {
+			switch (variant_type_tag_size.asInt()) {
 			case 1:
 				// byte, using uint8_t below since byte is not std::integral
 				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
@@ -285,7 +285,7 @@ namespace vm {
 				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
 				break;
 			default:
-				CORE_PANIC("Invalid variant size: ", variant_type_tag_size);
+				CORE_PANIC("Invalid variant size: ", variant_type_tag_size.asInt());
 			}
 		}
 

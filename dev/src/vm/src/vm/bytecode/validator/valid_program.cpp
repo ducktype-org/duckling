@@ -72,9 +72,6 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
 	if (new_functions.empty()) return;
 
-	// @note: This is a temporary built type metadata for the sake of function verification.
-	// @TODO: #1306
-
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));

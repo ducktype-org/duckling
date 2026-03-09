@@ -14,7 +14,7 @@
 /**
  * @brief Macro used to create Strong ID types.
  * Usage:
- * 	STRONG_TYPEDEF_ID(TypeName)
+ * 	STRONG_TYPEDEF_ID(TypeName);
  *
  *  Created type has following interface:
  *
@@ -66,7 +66,7 @@
  * @brief Macro used to create Strong ID types that can be created
  * directly from integers rather then with `Type::next()`
  * Usage:
- * 	STRONG_TYPEDEF_ID(TypeName)
+ * 	STRONG_TYPEDEF_ID(TypeName);
  *
  *  Created type has following interface:
  *

@@ -6,11 +6,11 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/bytecode/validator/type/defined_kinds.hpp>
-#include <vm/bytecode/validator/type/finalized_kinds.hpp>
-#include <vm/bytecode/validator/type/type_id.hpp>
-#include <vm/bytecode/validator/type/type_map.hpp>
-#include <vm/bytecode/validator/type/type_size.hpp>
+#include <vm/bytecode/validator/valid_type/defined_kinds.hpp>
+#include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
+#include <vm/bytecode/validator/valid_type/type_map.hpp>
+#include <vm/bytecode/validator/valid_type/type_size.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 
 #include <variant>
 
@@ -27,22 +27,6 @@ namespace vm::code::valid_type {
 	 * After finalization type is immutable. Type cannot be unfinalized.
 	 */
 	class ValidType final {
-		struct Declared {};
-
-		struct Defined {
-			DefinedTypeVariant kind;
-		};
-
-		struct Finalizing {
-			DefinedTypeVariant kind;
-		};
-
-		struct Finalized {
-			FinalizedTypeVariant kind;
-		};
-
-		std::variant<Declared, Defined, Finalizing, Finalized> state = Declared{};
-
 	public:
 		/****************/
 		/* Constructors */
@@ -112,8 +96,8 @@ namespace vm::code::valid_type {
 
 		template<ConcreteType T>
 		[[nodiscard]]
-		const T& getKindAs() const {
-			return *maybeGetKindAs<T>().expect("Tried to get kind of a type as the wrong type");
+		CRef<T> getKindAs() const {
+			return maybeGetKindAs<T>().expect("Tried to get kind of a type as the wrong type");
 		}
 
 		template<ConcreteType T>
@@ -139,6 +123,9 @@ namespace vm::code::valid_type {
 
 		bool operator==(const ValidTypeID& other_id) const;
 
+		/**
+		 * @brief For more information read docs of `is_trivially_copyable`.
+		 */
 		[[nodiscard]] bool isTriviallyCopyable() const;
 
 	private:
@@ -176,7 +163,21 @@ namespace vm::code::valid_type {
 		base::StrID name;
 		ValidTypeID id;
 
-		// ConcreteTypeVariant kind;
+		struct Declared {};
+
+		struct Defined {
+			DefinedTypeVariant kind;
+		};
+
+		struct Finalizing {
+			DefinedTypeVariant kind;
+		};
+
+		struct Finalized {
+			FinalizedTypeVariant kind;
+		};
+
+		std::variant<Declared, Defined, Finalizing, Finalized> state = Declared{};
 	};
 
 }
