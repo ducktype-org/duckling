@@ -52,9 +52,6 @@ namespace compiler::driver {
 		QUERY_AUTO_CACHE_COPY
 
 		/** Helper variable for printing user logs, change freely if needed */
-		constinit static inline std::atomic<u64> this_module_count = 0;
-
-		/** Helper variable for printing user logs, change freely if needed */
 		constinit static inline std::atomic<u64> total_module_count = 0;
 
 		/**
@@ -76,10 +73,23 @@ namespace compiler::driver {
 		 * Helper function to log module compilation info.
 		 */
 		static void moduleLog(const QKey& key, std::string_view info) {
+			/** Helper variables for printing user logs, change freely if needed */
+			static concurrent::ConHashMap<frontend::ModuleID, u64> module_number_cache;
+			static std::atomic<u64>                                next_module_number = 1;
+
+			u64 id = 0;
+			module_number_cache.maybePutAndUpdate(key.module_id, 0, [&](Ref<u64> number) {
+				if (*number == 0) {
+					// this is a new module
+					*number = next_module_number.fetch_add(1, std::memory_order_relaxed);
+				}
+				id = *number;
+			});
+
 			auto total = total_module_count.load(std::memory_order_relaxed);
 			CORE_USER_LOG(
 				"[",
-				this_module_count.fetch_add(1, std::memory_order_relaxed),
+				id,
 				"/",
 				total == 0 ? "?" : std::to_string(total),
 				"] ",
