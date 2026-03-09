@@ -32,6 +32,7 @@ reqwest = { version = "0.13.1", features = ["deflate", "gzip", "json", "multipar
 rusqlite = "0.37.0"
 russcip = { version = "0.9.1", features = ["bundled"]}
 saphyr = "0.0.6"
+scip-sys = { version = "0.1.26", features = ["bundled"]}
 shellexpand = "3.1.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde-untagged = "0.1.9"

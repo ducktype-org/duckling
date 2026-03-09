@@ -204,15 +204,21 @@ mod private {
             .get_package_all_metadata(&server.uri().parse().unwrap(), "foo".into())
             .await
             .unwrap();
+        let FetcherResponse::Some(response) = response else {
+            panic!("Offline response with offline flag not present");
+        };
         assert_eq!(response.packages_metadata.len(), 2);
-        let fetched_from_cache = fetcher
+        let FetcherResponse::Some(fetched_from_cache) = fetcher
             .get_package_metadata(&types::PackageWithUrl {
                 id: "foo".into(),
                 version: Version::new(1, 2, 5),
                 url: server.uri().parse().unwrap(),
             })
             .await
-            .unwrap();
+            .unwrap()
+        else {
+            panic!("Offline response when metadata should be present in cache");
+        };
         assert_eq!(fetched_from_cache.metadata.name, "foo");
         assert_eq!(fetched_from_cache.metadata.version, Version::new(1, 2, 5));
     }
