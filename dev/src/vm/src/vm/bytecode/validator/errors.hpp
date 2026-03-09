@@ -10,6 +10,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #include <string_view>
@@ -18,7 +19,7 @@
 namespace vm::code {
 	class ValidationError: public base::LogicError {
 	public:
-		ValidationError(const std::string& reason): base::LogicError(reason) {}
+		ValidationError(const std::string& reason): LogicError(reason) {}
 
 		// Element causing the error.
 		[[nodiscard]] virtual base::Optional<CRef<ElementBase>> maybeElement() const { return {}; }
@@ -44,7 +45,7 @@ namespace vm::code {
 
 	class PathWithoutEndError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG
+		constexpr static std::string_view ERR_MSG
 			= "Not all code paths end with returns in function: ";
 		const base::StrID func_name;
 
@@ -55,7 +56,7 @@ namespace vm::code {
 
 	class VoidTypeArgumentError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG
+		constexpr static std::string_view ERR_MSG
 			= "Void type cannot be used as argument in function: ";
 		const base::StrID func_name;
 
@@ -70,8 +71,8 @@ namespace vm::code {
 	 */
 	class MissingFunctionalTypeError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
-		const base::StrID                       func_name;
+		constexpr static std::string_view ERR_MSG = "Functional type is not declared for: ";
+		const base::StrID                 func_name;
 
 		MissingFunctionalTypeError(base::StrID func_name):
 			  ValidationError(base::strConcat(ERR_MSG, func_name)),
@@ -84,7 +85,7 @@ namespace vm::code {
 	 */
 	class MissingGlobalCtorDtorError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG = "Missing function declaration for ";
+		constexpr static std::string_view ERR_MSG = "Missing function declaration for ";
 
 		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
 			  ValidationError(base::strConcat(
@@ -103,8 +104,8 @@ namespace vm::code {
 	 */
 	class TypeIsNotFunctionalError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
-		const base::StrID                       type_name;
+		constexpr static std::string_view ERR_MSG = "Type is not functional: ";
+		const base::StrID                 type_name;
 
 		TypeIsNotFunctionalError(base::StrID type_name):
 			  ValidationError(base::strConcat(ERR_MSG, type_name)),
@@ -113,20 +114,24 @@ namespace vm::code {
 
 	class CyclicDependencyError: public ValidationError {
 	public:
-		constexpr static const std::string_view ERR_MSG = "Cyclic dependency detected: ";
-		const base::StrID                       type_name;
+		constexpr static std::string_view ERR_MSG = "Cyclic dependency detected: ";
+		const TypeOfData                  type;
 
-		CyclicDependencyError(const Type& type):
-			  ValidationError(base::strConcat(ERR_MSG, type.getName())),
-			  type_name(type.getName()) {}
+		CyclicDependencyError(const TypeOfData& type):
+			  ValidationError(base::strConcat(ERR_MSG, typeName(type))),
+			  type(type) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(type, type, return static_cast<const ElementBase*>(&type));
+		}
 	};
 
 #define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \
 	class NAME: public ValidationError {                                                \
 	public:                                                                             \
-		constexpr static const std::string_view ERR_MSG = ERROR;                        \
-		const ELEMENT_TYPE                      new_element;                            \
-		const ELEMENT_TYPE                      previous_element;                       \
+		constexpr static std::string_view ERR_MSG = ERROR;                              \
+		const ELEMENT_TYPE                new_element;                                  \
+		const ELEMENT_TYPE                previous_element;                             \
                                                                                         \
 		NAME(ELEMENT_TYPE new_element, ELEMENT_TYPE previous_element):                  \
 			  ValidationError(ERR_MSG.data()),                                          \
@@ -155,8 +160,8 @@ namespace vm::code {
 	public:
 		constexpr static std::string_view ERR_MSG = "Given VM type is not trivially copyable: ";
 
-		ExtCArgumentTypeNotTriviallyCopyable(TypeCRef vm_type):
-			  ValidationError(base::strConcat(ERR_MSG, vm_type->getName())) {}
+		ExtCArgumentTypeNotTriviallyCopyable(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
 	};
 
 	class InvalidMainReturnType: public ValidationError {
@@ -287,7 +292,9 @@ namespace vm::code {
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
 	DEFINE_TYPE_ERROR(InvalidPrimitiveSizeError, "Primitive type cannot have size 0: ");
-	DEFINE_TYPE_ERROR(EmptyVariantError, "This variant type is empty: ");
+	DEFINE_TYPE_ERROR(
+		TooFewVariantAlternativesError, "Variants should have at least two alternatives: "
+	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidImplementsError,
 		"This object can implement only existing interfaces other than itself: "
@@ -295,6 +302,11 @@ namespace vm::code {
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		DuplicatedImplementsError,
 		"This interface/class tried implementing the same interface twice: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		DuplicatedMethodNameError,
+		"Every method must have a deterministic signature, but this method name is used for "
+		"different signatures: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidExtendsError, "This class can extend only existing classes other than itself: "
@@ -328,6 +340,9 @@ namespace vm::code {
 		"Method implementation lacks its declaration as a virtual method: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		DuplicatedVariantAlternativeError, "This variant alternative is duplicated"
+	)
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"

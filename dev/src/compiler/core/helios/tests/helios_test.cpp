@@ -537,18 +537,22 @@ private:
 			= compiler::helios::HInterface::ofTypeInstance(simple_class_abstract_type);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto a_result = h_interface.lookup(ctx, base::StrID("a"));
+			using compiler::helios::LookupResult;
+			CRef<LookupResult> a_result
+				= &h_interface.lookup(ctx, base::StrID("a"))->valueOrPanic();
 			ASSERT_TRUE(a_result->isSingle());
 			auto a_symbol = a_result->leaves.at(0);
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
-			auto get_a_result = h_interface.lookup(ctx, base::StrID("getA"));
+			CRef<LookupResult> get_a_result
+				= &h_interface.lookup(ctx, base::StrID("getA"))->valueOrPanic();
 			ASSERT_TRUE(get_a_result->isSingle());
 			auto get_a_symbol = get_a_result->leaves.at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
 
-			auto empty_result = h_interface.lookup(ctx, base::StrID("non_existent_symbol"));
+			CRef<LookupResult> empty_result
+				= &h_interface.lookup(ctx, base::StrID("non_existent_symbol"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 		});
 	}
@@ -2612,7 +2616,7 @@ private:
 				"Trying to lift an unliftable tuple to a type should fail."
 			);
 			std::stringstream ss;
-			ctx.int_logger.terminalPrint(ss);
+			ctx.dumpToOneLoggerAndClear()->terminalPrint(ss);
 			assertTrue(
 				ss.str().contains("cannot be converted"),
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
@@ -2680,7 +2684,7 @@ private:
 			assertEqual(
 				initial_value_expr->origin.isGenerated(),
 				is_generated,
-				"Generated origin does not match for variable "
+				base::strConcat("Generated origin does not match for variable ", name.strView())
 			);
 		};
 		check_var_init_expr_origin(base::StrID("var1"), false);
@@ -2724,6 +2728,14 @@ private:
 				fun->origin.getSourcePosition(),
 				pst_fun->getSourcePosition(),
 				base::strConcat("The function origin is not the PST of the function", name.strView())
+			);
+			assertEqual(
+				fun->origin.getPSTElement().value().illegalAccess().value()->getHash(),
+				pst_fun->getHash(),
+				base::strConcat(
+					"The function origin PST element does not match the PST function for ",
+					name.strView()
+				)
 			);
 		};
 

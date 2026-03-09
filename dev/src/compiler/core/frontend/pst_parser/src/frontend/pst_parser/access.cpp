@@ -19,7 +19,7 @@ namespace pst::internal {
 		ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
 			"PST Accessed a nullptr LangElement.",
 			"To check the location of the bad access, enable "
-			" query dev logs."
+			"query dev logs."
 		));
 		query::throwFailed();
 	}
