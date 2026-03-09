@@ -43,7 +43,9 @@ private:
 	 *
 	 * It creates a virtual file from the `module_content` argument
 	 * and creates a module tree from it every function call.
-
+	 *
+	 * @TODO: #2213 Add PST errors handling here.
+	 *
 	 * @param module_content The content of the module main source file.
 	 * @param present_phrases List of phrases that should be present in the logged errors.
 	 * @param logged_msg_count Expected number of logged error messages.
@@ -59,6 +61,8 @@ private:
 			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 			auto logger = query::Context::dumpToOneLoggerAndClear();
+
+			// @TODO: #2213: we should do something smarted here, and see if the sum of pst and query errors is ok:
 			assertTrue(
 				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
 			);
@@ -454,8 +458,7 @@ private:
                     }
 				}
 			)",
-			{ "Variable name is ambiguous, because it has been defined multiple "
-		      "times.",
+			{ "Variable name is ambiguous, because it has been defined multiple times.",
 		      "Found declaration:" },
 			1
 		);
