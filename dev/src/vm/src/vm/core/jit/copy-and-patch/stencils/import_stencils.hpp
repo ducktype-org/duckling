@@ -1,6 +1,7 @@
 #include <array>
 #include <cstddef>
 #include <string_view>
+#include <span>
 
 namespace vm::jit {
 
