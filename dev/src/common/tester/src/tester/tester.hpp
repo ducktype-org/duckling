@@ -81,6 +81,8 @@ namespace tester {
 	private:
 		class CritTestError final: public std::exception {
 		public:
+			CritTestError(std::string_view message = "Critical test failure.");
+
 			[[nodiscard]]
 			const char* what() const noexcept final;
 		};

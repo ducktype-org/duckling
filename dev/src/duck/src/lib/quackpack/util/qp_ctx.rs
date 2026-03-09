@@ -51,4 +51,8 @@ impl<'duck> QpCtx<'duck> {
     pub fn duck_home(&self) -> &DuckHome {
         self.inner.duck_home()
     }
+
+    pub fn is_offline(&self) -> bool {
+        self.inner.is_offline()
+    }
 }

@@ -2,7 +2,10 @@
 
 #include "query_entry_point.hpp"
 
-#include <query_framework/query_int.hpp>
+#include <concurrent/base/locks/assert_lock.hpp>
+
+#include <base/extend_cpp/defer.hpp>
+
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -11,11 +14,12 @@ namespace query::utils {
 		struct KeyFor_DoWithContext final {
 			std::function<std::any(query::Context&)> value;
 			usize                                    id;
-			static inline usize                      next_id = 0;
+
+			static inline std::atomic<usize> next_id = 0;
 
 			KeyFor_DoWithContext(std::function<std::any(query::Context&)> value):
 				  value(std::move(value)),
-				  id(next_id++) {}
+				  id(next_id.fetch_add(1)) {}
 
 			[[nodiscard]]
 			u64 queryUnstablePerfectHash() const {
@@ -38,10 +42,18 @@ namespace query::utils {
 	}
 
 	std::any withContextCompute(std::function<std::any(query::Context&)> action) {
+		static concurrent::AssertLock lock;
+		lock.lock();
+		defer(lock.unlock());
+
 		return query::entryPoint<DoWithContext>(std::move(action));
 	}
 
 	void withContextDo(std::function<void(query::Context&)> action) {
+		static concurrent::AssertLock lock;
+		lock.lock();
+		defer(lock.unlock());
+
 		query::entryPoint<DoWithContext>({ [&](query::Context& ctx) -> std::any {
 			action(ctx);
 			return {};
