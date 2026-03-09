@@ -65,8 +65,8 @@ namespace base {
 		[[nodiscard]] std::string toStringHex() const;
 
 		/*
-		 * @brief Converts the Bit256 to a u64 by taking the least significant 64 bits and
-		 * discarding the rest
+		 * @brief Converts the Bit256 to a u64 by taking the least significant 64 bits.
+		 * Use this only when Bit256 was created from single u64 value.
 		 */
 		constexpr explicit operator u64() const RELEASE_NOEXCEPT {
 			CORE_ASSERT(
