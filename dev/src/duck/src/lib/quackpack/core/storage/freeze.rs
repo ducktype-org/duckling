@@ -70,6 +70,13 @@ impl RootPackage {
         }
     }
 
+    pub fn as_freeze_dep(&self) -> FreezeDep {
+        FreezeDep {
+            name: self.name(),
+            version: self.version(),
+        }
+    }
+
     pub fn name(&self) -> StrId {
         self.name
     }
@@ -138,6 +145,13 @@ impl FreezePackage {
             features,
             dependencies,
             source,
+        }
+    }
+
+    pub fn as_freeze_dep(&self) -> FreezeDep {
+        FreezeDep {
+            name: self.name(),
+            version: self.version(),
         }
     }
 

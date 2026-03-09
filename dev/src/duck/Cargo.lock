@@ -566,6 +566,7 @@ dependencies = [
  "rusqlite",
  "russcip",
  "saphyr",
+ "scip-sys",
  "serde",
  "serde-untagged",
  "serde_json",

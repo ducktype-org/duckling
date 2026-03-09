@@ -46,3 +46,9 @@ impl<'duck> PackageCtx<'duck> {
         self.ctx
     }
 }
+
+impl From<PackageCtx<'_>> for Package {
+    fn from(value: PackageCtx<'_>) -> Self {
+        value.package
+    }
+}

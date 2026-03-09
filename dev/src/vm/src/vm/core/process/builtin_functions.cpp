@@ -23,7 +23,9 @@ namespace vm::builtins {
 				return {};
 			} else {
 				auto value = function(thread, args[Is]->template readBytes<FunArgs>()...);
-				CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
+				CORE_ASSERT(
+					sizeof(value) == vm_return_type->getSize().asInt(), "Type sizes do not match"
+				);
 
 				auto vm_value = process.createOwnedVmValue(vm_return_type);
 

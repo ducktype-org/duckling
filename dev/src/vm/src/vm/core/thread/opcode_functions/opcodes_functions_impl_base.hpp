@@ -473,7 +473,7 @@ namespace vm {
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
 				byte* args_pointer
-					= result_pointer + (is_void ? 0 : ext_func->result_type->getSize());
+					= result_pointer + (is_void ? 0 : ext_func->result_type->getSize().asInt());
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
@@ -689,7 +689,7 @@ namespace vm {
 		{
 			auto       dst_block_idx = frame->local_offset_to_block_idx[instr->arg0];
 			auto       dst_block     = frame->block_stack[dst_block_idx];
-			const auto type_size     = thread.process_memory.getBlockType(dst_block)->getSize();
+			const auto type_size = thread.process_memory.getBlockType(dst_block)->getSize().asInt();
 			std::memcpy(local_stack + instr->arg0, local_stack + instr->arg1, type_size);
 		}
 		FUNCTION_CONT(1);
@@ -701,7 +701,7 @@ namespace vm {
 			std::memcpy(
 				thread.process_memory.getBlockViewUnsafe(dst_block).getBegin(),
 				local_stack + instr->arg1,
-				thread.process_memory.getBlockType(dst_block)->getSize()
+				thread.process_memory.getBlockType(dst_block)->getSize().asInt()
 			);
 		}
 		FUNCTION_CONT(1);
@@ -713,7 +713,7 @@ namespace vm {
 			std::memcpy(
 				local_stack + instr->arg0,
 				thread.process_memory.getBlockViewUnsafe(src_block).getBegin(),
-				thread.process_memory.getBlockType(src_block)->getSize()
+				thread.process_memory.getBlockType(src_block)->getSize().asInt()
 			);
 		}
 		FUNCTION_CONT(1);
@@ -932,7 +932,7 @@ namespace vm {
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index        = readFromStack<u64>(local_stack, instr[1].arg0);
-			auto data_offset  = usize(index * element_type->getSize());
+			auto data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), data_offset }
@@ -948,7 +948,7 @@ namespace vm {
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index        = readFromStack<u64>(local_stack, instr[1].arg0);
-			auto data_offset  = usize(index * element_type->getSize());
+			auto data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), data_offset }

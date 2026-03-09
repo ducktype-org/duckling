@@ -1,4 +1,8 @@
-use clap::{Arg, ArgAction, Command, ValueHint, builder::ValueParser};
+use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser};
+
+use crate::{StrId, quackpack::core::Package};
+
+const DEFAULT_PROFILE: &str = "debug";
 
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;
@@ -75,6 +79,10 @@ pub trait CommandExt: Sized {
         )
     }
 
+    fn add_offline(self) -> Self {
+        self._arg_impl(flag("offline", "Don't perform any network requests"))
+    }
+
     fn add_jobs(self) -> Self {
         self._arg_impl(
             optional(
@@ -116,4 +124,29 @@ pub fn multi(name: &'static str, help: &'static str) -> Arg {
 
 pub fn subcommand(name: &'static str) -> Command {
     Command::new(name)
+}
+
+pub fn profile_from_matches(args: &ArgMatches) -> StrId {
+    if args.get_flag("release") {
+        "release".into()
+    } else if let Some(profile) = args.get_one::<String>("profile") {
+        profile.into()
+    } else {
+        DEFAULT_PROFILE.into()
+    }
+}
+
+pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
+    if args.get_flag("all-features") {
+        pkg.manifest()
+            .features()
+            .all_features()
+            .keys()
+            .copied()
+            .collect()
+    } else if let Some(cli_features) = args.get_many::<String>("features") {
+        cli_features.map(StrId::from).collect()
+    } else {
+        vec![]
+    }
 }
