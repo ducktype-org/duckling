@@ -8,6 +8,7 @@ namespace vm::jit {
 	vm::JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
 		PUSH_DIAGNOSTIC ALLOW_EXTENSIONS static constexpr char _bin[] = {
 #embed "wrapper-text" suffix(, )
+			0
 		};
 		POP_DIAGNOSTIC
 
@@ -39,23 +40,24 @@ namespace vm::jit {
 			return out;
 		}();
 
-		auto   opcodes = func_data.bc | std::views::transform(getInstructionOpcode);
-		size_t size    = std::ranges::fold_left(
-            opcodes | std::views::transform([&](low::MicroOpcode opcode) {
-                return stencils.functions[static_cast<u64>(opcode)].size;
-            }),
-            0,
-            std::plus<>{}
-        );
+		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
+		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
+			return stencils.functions[static_cast<u64>(opcode)].size;
+		};
+		size_t size = std::ranges::fold_left(
+			opcodes | std::views::transform(get_opfunc_size), 0, std::plus{}
+		);
 
 		auto       memory = JitMemory::allocate(size);
 		std::byte* next   = memory.memory;
 
-		auto add_instr
-			= [&](std::string_view binary) { std::memcpy(next, binary.begin(), binary.size()); };
+		auto add_instr = [&](auto binary) {
+			std::ranges::copy(binary, next);
+			next += std::ranges::size(binary);
+		};
 
 		for (low::MicroOpcode opcode: opcodes)
-			add_instr(stencils.function_binary(static_cast<u64>(opcode)));
-		return nullptr;
+			add_instr(stencils.stencil_binary(static_cast<u64>(opcode)));
+		return memory.into_func<JitOpFun>();
 	}
 }
