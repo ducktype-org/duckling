@@ -1,7 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+__attribute__((weak)) extern int patchable;
+
 int simple_function_plus_1(int x) {
+	if (x == 2137) {
+		x += patchable;
+	}
+
 	return x + 1;
 }
 
@@ -10,6 +16,10 @@ int calling_simple_odd(int x) {
 }
 
 int recursive_fibonacci(int x) {
+	if (x == 2137) {
+		x += patchable;
+	}
+
 	if (x <= 1)
 		return 1;
 	else
@@ -27,6 +37,10 @@ int calling_fibonacci_sum(int x) {
 }
 
 int* calling_libc(int x) {
+	if (x == 2137) {
+		x += patchable;
+	}
+	
 	int* output = calloc(sizeof(int), x);
 	for (int i = 0; i < x; ++i) {
 		output[i] = i;
