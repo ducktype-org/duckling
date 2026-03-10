@@ -7,9 +7,8 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         "${CMAKE_CURRENT_LIST_DIR}"
     )
 
-    set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-linked")
+    set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-so")
     set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-nm")
-    set(text_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-text")
 
     find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
     find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
@@ -17,9 +16,10 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     # Force resolution of local function calls (is it needed?)
     add_custom_command(
         OUTPUT ${linked_out}
-        COMMAND ${CMAKE_CXX_COMPILER} -r ${flto} -Bsymbolic-functions ${binary_file} -o ${linked_out}
+        COMMAND ${CMAKE_CXX_COMPILER} -Bsymbolic-functions -shared ${binary_file} -o ${linked_out}
         DEPENDS ${binary_file} ${extra_deps}
     )
+    set_source_files_properties("${linked_out}" PROPERTIES GENERATED TRUE)
 
     # Analyze and generate data from the binary
     add_custom_command(
@@ -29,14 +29,6 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         VERBATIM
     )
     set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
-
-    # Strip other section (it is no longer in the ELF format)
-    add_custom_command(
-        OUTPUT ${text_out}
-        COMMAND ${LLVM_OBJCOPY} -O binary --only-section=.text ${linked_out} ${text_out}
-        DEPENDS ${linked_out}
-    )
-    set_source_files_properties("${text_out}" PROPERTIES GENERATED TRUE)
 
     set(destination_scopes
         "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -66,7 +58,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         DIRECTORY ${destination_scopes}
         APPEND
         PROPERTY OBJECT_DEPENDS
-        "${nm_out}" "${text_out}"
+        "${nm_out}" "${linked_out}"
     )
 endfunction()
 
