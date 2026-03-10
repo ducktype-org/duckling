@@ -307,10 +307,14 @@ namespace vm {
 		friend class builtins::FunctionHandlers;
 
 		/**
-		 * @brief Called only on instruction execution.
-		 * Checks if thread has GIL and if not then acquires it.
+		 * @brief Runs GIL logic. Should be called periodically to allow GIL release.
+		 *
+		 * If thread does not have GIL then acquires it.
+		 * If thread already has GIL:
+		 *   -> if the GIL should be released, releases it
+		 *   -> otherwise does nothing.
 		 */
-		void keepOrAcquireGil();
+		void stepGil();
 
 		/**
 		 * @brief Releases GIL.

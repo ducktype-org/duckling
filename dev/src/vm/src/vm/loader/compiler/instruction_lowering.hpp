@@ -338,20 +338,39 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
-			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
-			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
-			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
+			instr_case(high::Op_jmp_label, i) {
+				addLow<Op_stepGil>();
+				addLow<Op_jmp_label>(i.label);
+			}
+			instr_case(high::Op_jmpIf_label, i) {
+				addLow<Op_stepGil>();
+				addLow<Op_jmpIf_label>(i.label);
+			}
+			instr_case(high::Op_jmpIfNot_label, i) {
+				addLow<Op_stepGil>();
+				addLow<Op_jmpIfNot_label>(i.label);
+			}
 			instr_case(high::Op_call_func, i) {
+				addLow<Op_stepGil>();
 #ifdef ENABLE_JIT
 				addLow<Op_jit_call_entrypoint>(i.function);
 #else
 				addLow<Op_call_func>(i.function);
 #endif
 			}
-			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
-			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
+			instr_case(high::Op_call_builtinfunc, i) {
+				addLow<Op_stepGil>();
+				addLow<Op_call_builtinfunc>(i.function);
+			}
+			instr_case(high::Op_call_cfunc, i) {
+				addLow<Op_stepGil>();
+				addLow<Op_call_cfunc>(i.function);
+			}
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
-			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
+			instr_case(high::Op_ret_tailcall_func, i) {
+				addLow<Op_stepGil>();
+				addLow<Op_ret_tailcall_func>(i.function);
+			}
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
 			instr_case(high::Op_init_lany_type, i) { addLow<Op_init_lany_type>(i.var, i.type); }
 			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
@@ -369,6 +388,7 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_type>(i.target_type);
 			}
 			instr_case(high::Op_virtual_call_lptr_method, i) {
+				addLow<Op_stepGil>();
 				addLow<Op_virtual_call_lptr_method>(i.object_ptr, i.method);
 			}
 			instr_case(high::Op_alloc_lptr_type, i) { addLow<Op_alloc_lptr_type>(i.ptr, i.type); }

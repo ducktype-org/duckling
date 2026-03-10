@@ -48,7 +48,6 @@
 
 #include <cmath>
 #include <limits>
-#include <type_traits>
 
 
 #ifdef DEBUG_OPCODES
@@ -1199,6 +1198,11 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
+		{ thread.stepGil(); }
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {

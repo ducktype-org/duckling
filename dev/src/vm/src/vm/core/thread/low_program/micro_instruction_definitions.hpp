@@ -659,6 +659,8 @@ DEF_MICRO_INSTR(exit)
 
 DEF_MICRO_INSTR(breakpoint)
 
+DEF_MICRO_INSTR(stepGil)
+
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * It is a helper for start functions.

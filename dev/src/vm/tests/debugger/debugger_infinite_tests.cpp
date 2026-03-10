@@ -58,25 +58,23 @@ private:
 
 		auto expected_next_line = [this](u64 x) -> u64 {
 			if (x == 3) return 4;
-			if (x == 4) return 3;
+			if (x == 4) return 5;
+			if (x == 5) return 3;
 			this->fail("Unexpected line number");
 			CORE_UNREACHABLE();
 		};
 
 		auto line_number2 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(position.instr_number), line_number2, "Line number is not correct (2)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number), line_number2);
 
 		auto line_number3 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(line_number2), line_number3, "Line number is not correct (3)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
 
 		auto line_number4 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(line_number3), line_number4, "Line number is not correct (4)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number3), line_number4);
+
+		auto line_number5 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number4), line_number5);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
