@@ -67,7 +67,7 @@ namespace query {
 		private:
 			internal::NodeID caller;
 			internal::NodeID callee;
-			bool             active_graph_operations;
+			bool             enable_active_graph_operations;
 
 
 		public:
@@ -79,7 +79,7 @@ namespace query {
 			):
 				  caller(caller),
 				  callee(callee),
-				  active_graph_operations(active_graph_operations) {
+				  enable_active_graph_operations(active_graph_operations) {
 				main_query_state.addDependency(caller, callee);
 
 				if (active_graph_operations) {
@@ -139,7 +139,7 @@ namespace query {
 			}
 
 			~QueryGraphHandler() {
-				if (active_graph_operations) {
+				if (enable_active_graph_operations) {
 					// We remove the edge after the query call is done.
 					// This is because active graph only tracks currently active queries and
 					// dependencies.
