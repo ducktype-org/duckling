@@ -166,18 +166,18 @@ private:
 		for (const auto& var: stack_frame_data.frame_vars) {
 			auto var_type_info_reponse = vm::api::debuggerGetTypeInfo(pid, var.type);
 			assertTrue(var_type_info_reponse.has_value(), "Get type info failed");
-			auto var_type_info = var_type_info_reponse.value();
+			auto var_type_info = var_type_info_reponse.value().type;
 
 			if (var.offset == 0) {
-				assertEqual(var_type_info.name, base::StrID("i64"), "Variable type is not correct");
+				assertEqual(var_type_info->getName(), base::StrID("i64"), "Variable type is not correct");
 
 				auto pointer_data_response
-					= vm::api::debuggerGetPointerData(pid, var.pointer, var_type_info.size.asInt())
+					= vm::api::debuggerGetPointerData(pid, var.pointer, var_type_info->getSize().assumePointerSize(vm::Type::POINTER_SIZE).asInt())
 				          .value();  // "Get pointer data failed"
 				auto value = vm::safeReadPointerBytes<i64>(pointer_data_response.data.getBegin());
 				assertEqual(0, value, "Variable value is not correct");
 			}
-			if (var_type_info.name == base::StrID("ptr")) {
+			if (var_type_info->getName() == base::StrID("ptr")) {
 				auto response = vm::api::debuggerDereferencePointer(pid, var.pointer)
 				                    .value();  // "Dereference pointer failed"
 				assertTrue(response.pointer.isNull(), "Pointer should be null");

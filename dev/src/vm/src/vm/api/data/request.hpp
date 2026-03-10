@@ -104,7 +104,7 @@ namespace vm::api {
 		};
 
 		struct DebuggerGetTypeInfo {
-			TypeID type_id;
+			base::StrID type_id;
 		};
 	}
 

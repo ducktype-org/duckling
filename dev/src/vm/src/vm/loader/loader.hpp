@@ -64,5 +64,11 @@ namespace vm::loader {
 		 */
 		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
+
+		/**
+		 * @brief Provides read-only access to types of the currently loaded program.
+		 * This is used by the debugger to provide type information.
+		 */
+		const code::valid_type::ValidTypeMap& types() const;
 	};
 }

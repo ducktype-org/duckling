@@ -193,7 +193,7 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::Pointer>);
 	}
 
-	std::expected<response::TypeInfo, ApiError> debuggerGetTypeInfo(PID pid, TypeID type_id) {
+	std::expected<response::TypeInfo, ApiError> debuggerGetTypeInfo(PID pid, base::StrID type_id) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::DebuggerGetTypeInfo{ .type_id = type_id }))
 		    .and_then(mapOrWrongResponse<response::TypeInfo>);

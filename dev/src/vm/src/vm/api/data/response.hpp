@@ -6,7 +6,7 @@
 #include <base/pointers/box.hpp>
 
 #include <vm/api/pointer.hpp>
-#include <vm/core/process/type_metadata/type.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
@@ -63,7 +63,7 @@ namespace vm::api {
 			struct FrameVar {
 				u64          offset;
 				api::Pointer pointer;
-				TypeID       type;
+				base::StrID  type;
 			};
 
 			base::StrID           function_name;
@@ -79,9 +79,7 @@ namespace vm::api {
 		};
 
 		struct TypeInfo {
-			base::StrID    name;
-			TypeSize       size;
-			vm::Type::Kind kind;
+			base::CRef<vm::code::valid_type::ValidType> type;
 		};
 
 		using Boolean = bool;

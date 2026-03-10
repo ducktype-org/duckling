@@ -337,7 +337,7 @@ namespace vm {
 							frame_vars.push_back(api::response::StackFrameData::FrameVar{
 								.offset  = offset,
 								.pointer = api::Pointer(vm::Pointer(block, 0)),
-								.type    = memory.getBlockType(block)->getID() });
+								.type    = memory.getBlockType(block)->getName() });
 						}
 
 						return api::Response(api::response::StackFrameData{
@@ -379,15 +379,10 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						auto res = loaded_program->getTypes().atMaybe(request.type_id);
-						match_optional(res) {
+						match_optional(loader.types().atMaybe(request.type_id)) {
 							opt_some(type) {
-								return api::Response(api::response::TypeInfo{
-									.name = type->getName(),
-									.size = type->getSize(),
-									.kind = type->getKind() });
+								return api::Response(api::response::TypeInfo{ type });
 							}
-
 							opt_none {
 								return std::unexpected(api::ApiError{
 									api::OtherError{ "Type not found" } });
