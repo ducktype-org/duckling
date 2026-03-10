@@ -137,18 +137,17 @@ namespace compiler::helios::code {
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
 				const auto escaped_string  = stmt->getValue().value.strView();
 				const auto unescape_result = base::unescapeString(escaped_string);
-				variant_match(unescape_result) {
-					variant_case(base::UnescapedString, result) {
+				match_optional(unescape_result) {
+					opt_some(result) {
 						node = makeBox<LiteralStringExpr>(
 							ctx, pstOrigin(stmt), base::StrID(result.value)
 						);
 					}
-					variant_case(base::UnknownEscapeSequence, error) {
+					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
 							stmt->getSourcePosition(), error.value
 						));
 					}
-					variant_default CORE_UNREACHABLE();
 				}
 			}
 
@@ -415,7 +414,8 @@ namespace compiler::helios::code {
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Suffix operators are not implemented yet in HOUT, since they don't exist yet.",
+					"Suffix operators are not implemented yet in HOUT, since they don't exist "
+					"yet.",
 					stmt->getSourcePosition()
 				));
 				return;  // failed

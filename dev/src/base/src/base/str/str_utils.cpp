@@ -69,7 +69,7 @@ base::UnescapeResult base::unescapeString(const std::string_view raw) {
 			case '0':  result += '\0'; break; // Null character
 
 			default:
-				return UnknownEscapeSequence{strConcat("\\", raw[i + 1])};
+				return std::unexpected(UnknownEscapeSequence{strConcat("\\", raw[i + 1])});
 			}
 			// clang-format on
 			i++;  // Skip the escaped character
@@ -78,4 +78,33 @@ base::UnescapeResult base::unescapeString(const std::string_view raw) {
 		}
 	}
 	return UnescapedString{ result };
+}
+
+std::string base::escapeString(std::string_view raw) {
+	std::string result;
+	result.reserve(raw.size() * 2);  // Worst case: every character needs escaping
+
+	for (char c: raw) {
+		// clang-format off
+		switch (c) {
+		case '\n': result += "\\n"; break; // Newline
+		case '\r': result += "\\r"; break; // Carriage return
+		case '\t': result += "\\t"; break; // Tab
+		case '\v': result += "\\v"; break; // Vertical tab
+		case '\b': result += "\\b"; break; // Backspace
+		case '\f': result += "\\f"; break; // Form feed
+		case '\a': result += "\\a"; break; // Alert (bell)
+		case '\033': result += "\\e"; break; // Escape (non-standard but common)
+		case '\\': result += "\\\\"; break; // Literal backslash
+		case '\"': result += "\\\""; break; // Double quote
+		case '\'': result += "\\\'"; break; // Single quote
+		case '\0': result += "\\0"; break;  // Null character
+
+		default:
+			result += c;
+			break;
+		}
+		// clang-format on
+	}
+	return result;
 }

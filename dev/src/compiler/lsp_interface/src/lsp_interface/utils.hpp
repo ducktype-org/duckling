@@ -51,13 +51,4 @@ namespace lsp {
 	 */
 	void initPSTs(const fs::FilePath& path);
 
-	/**
-	 * @brief Puts or updates a file in the virtual file system, notifies module tree and updates
-	 * its PST.
-	 *
-	 * @param virtual_root The root of the virtual file system.
-	 * @param path The path to the file to be updated.
-	 * @param content The content to write to the vfs.
-	 */
-	void putFile(const fs::File& virtual_root, const std::string& path, const std::string& content);
 }

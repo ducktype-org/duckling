@@ -28,22 +28,22 @@
 		)                                                                                 \
 	)
 
-#define ASSERT_EQUAL_PRINT(expected, actual)   \
-	assertEqual(                               \
-		expected,                              \
-		actual,                                \
-		base::strConcat(                       \
-			"Values not equal:\n\t\tIn line ", \
-			__LINE__,                          \
-			":\n\t\t\t",                       \
-			#expected,                         \
-			" != ",                            \
-			#actual,                           \
-			"\n\t\t\t",                        \
-			expected,                          \
-			" != ",                            \
-			actual                             \
-		)                                      \
+#define ASSERT_EQUAL_PRINT(expected, actual)               \
+	assertEqual(                                           \
+		expected,                                          \
+		actual,                                            \
+		base::strConcat(                                   \
+			"Values not equal:\n\t\tIn line ",             \
+			__LINE__,                                      \
+			":\n\t\t\t",                                   \
+			#expected,                                     \
+			" != ",                                        \
+			#actual,                                       \
+			"\n\t\t\t",                                    \
+			base::escapeString(base::strConcat(expected)), \
+			" != ",                                        \
+			base::escapeString(base::strConcat(actual))    \
+		)                                                  \
 	)
 
 
@@ -81,6 +81,8 @@ namespace tester {
 	private:
 		class CritTestError final: public std::exception {
 		public:
+			CritTestError(std::string_view message = "Critical test failure.");
+
 			[[nodiscard]]
 			const char* what() const noexcept final;
 		};

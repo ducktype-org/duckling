@@ -3,13 +3,13 @@
 * @ducktype-org/core-dev
 
 # QuackPack is also owned by the quackpack-dev:
-/dev/src/QuackPack/ @ducktype-org/core-dev @ducktype-org/quackpack-dev
 /dev/src/duck/ @ducktype-org/core-dev @ducktype-org/quackpack-dev
+
+# Integrated tests can be also modified by quackpack-dev
+/dev/integration_tests/ @ducktype-org/core-dev @ducktype-org/quackpack-dev
 
 # Let matihope be the reviewer of all toolbox changes
 /dev/scripts/py/toolbox @matihope @Maurycyt
 
 # Only selected people can modify code owner file:
 /.github/CODEOWNERS @andr729
-
-

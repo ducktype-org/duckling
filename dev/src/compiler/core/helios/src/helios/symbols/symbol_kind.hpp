@@ -1,11 +1,11 @@
 #pragma once
 
-namespace compiler::helios {
+#include <base/extend_cpp/stringifyable_enum.hpp>
 
-	/**
-	 * @brief Stores general kind/type of a symbol.
-	 */
-	enum class SymbolKind {
+MAKE_STRINGIFYABLE_ENUM(compiler::helios, int, SymbolKind
+		/**
+        * @brief Stores general kind/type of symbol.
+ 		*/,
 		Namespace,
 		Function,
 		FunctionDeclaration,
@@ -21,8 +21,6 @@ namespace compiler::helios {
 		Method,
 		Field,
 		Constructor,
-		Destructor,
-
+		Destructor
 		// ...
-	};
-}
+)
