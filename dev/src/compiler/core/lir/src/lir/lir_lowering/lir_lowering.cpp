@@ -834,7 +834,7 @@ namespace compiler::lir {
 			             .blocks             = std::move(blocks),
 			             .local_list         = {},
 			             .block_order        = { entry_block_ref },
-			             .metadata           = {{}, {}} };
+			             .metadata           = { {}, {} } };
 	}
 
 }

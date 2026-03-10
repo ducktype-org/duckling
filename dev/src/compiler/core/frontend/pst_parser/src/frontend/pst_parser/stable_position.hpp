@@ -52,7 +52,8 @@ namespace pst {
 		void extendWith(const StablePosition& other);
 
 		/**
-		 * @brief Create a new StablePosition that is the extension of this position and another position.
+		 * @brief Create a new StablePosition that is the extension of this position and another
+		 * position.
 		 */
 		[[nodiscard]] StablePosition extendedWith(const StablePosition& other) const;
 	};
