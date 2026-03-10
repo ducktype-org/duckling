@@ -1,5 +1,6 @@
 
 #include "global_logger.hpp"
+
 #include <diagnostic_interactive/logger.hpp>
 
 namespace global_state {
@@ -8,9 +9,7 @@ namespace global_state {
 		constinit MBox<dia_int::Logger> global_logger;
 	}
 
-	Ref<dia_int::Logger> getGlobalLogger() {
-		return global_logger.refMut().toOpt().value();
-	}
+	Ref<dia_int::Logger> getGlobalLogger() { return global_logger.refMut().toOpt().value(); }
 
 	bool hasGlobalLogger() { return global_logger.toOpt().has_value(); }
 

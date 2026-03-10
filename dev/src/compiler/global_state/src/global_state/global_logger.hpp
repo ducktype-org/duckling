@@ -1,6 +1,7 @@
 #include <diagnostic_interactive/logger_fwd.hpp>
-#include <base/pointers/ref.hpp>
+
 #include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace global_state {
 

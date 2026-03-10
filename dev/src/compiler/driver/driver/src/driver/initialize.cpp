@@ -7,8 +7,8 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
-#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
@@ -81,7 +81,11 @@ namespace compiler::driver {
 				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
 					"Main package does not have a main source file.",
 					base::strConcat(
-						"The main source file is required for compilation. Please add a ",  module_name, ".dmf file to the main module directory: ", package_info.package_path.string(), "/."
+						"The main source file is required for compilation. Please add a ",
+						module_name,
+						".dmf file to the main module directory: ",
+						package_info.package_path.string(),
+						"/."
 					)
 				));
 				return base::BAD;
@@ -191,11 +195,10 @@ namespace compiler::driver {
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 
-				auto package_success = handlePackageOptions(package_compilation_options.main_package_info);
+				auto package_success
+					= handlePackageOptions(package_compilation_options.main_package_info);
 
-				if (package_success.isBad()) {
-					return base::BAD;
-				}
+				if (package_success.isBad()) return base::BAD;
 
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);
