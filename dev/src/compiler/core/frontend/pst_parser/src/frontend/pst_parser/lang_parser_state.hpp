@@ -39,7 +39,9 @@ namespace pst {
 		friend void setSoftFallback(LangParserState& state, TokenStreamCondition fun);
 		friend void exitSoftFallback(LangParserState& state);
 
-		// These are methods that should only be used by automatic
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+		| These are methods that should only be used by automatic             |
+		\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 		/**
 		 * @brief deletes current stream and makes last stream the current stream. Resets error
@@ -86,8 +88,8 @@ namespace pst {
 			  tpc::ParserState(std::move(tokens), std::move(ctx), int_err) {}
 
 		/**
-		 * @brief Informs whether new errors and some parsing should be skipped till fallback is
-		 * reached.
+		 * @brief Informs whether new errors occurred and some parsing should be skipped till
+		 * fallback is reached.
 		 */
 		[[nodiscard]]
 		bool isSkipping() const;

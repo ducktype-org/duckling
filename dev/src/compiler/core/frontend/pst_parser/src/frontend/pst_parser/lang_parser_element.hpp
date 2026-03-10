@@ -4,6 +4,7 @@
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
 #include "elements/lang_state_unmethods.hpp"
+#include "pst_config.hpp"
 #include "pst_id.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -13,7 +14,6 @@
 #include <base/pointers/ref.hpp>
 
 #include <hashing/component_hash.hpp>
-#include <hashing/hash.hpp>
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
@@ -37,19 +37,7 @@ namespace pst {
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
-	protected:
-		/**
-		 * @brief Hash algorithm used for PST stable hashing
-		 * @TODO: #1337 Swap to CRC256
-		 */
-		using HashAlg = hashing::StatefulHash<hashing::SHA256>;
-
 	public:
-		/**
-		 * @brief Hash type for PST stable hashing
-		 */
-		using HashType = HashAlg::result_type;
-
 		using SubToken = base::CRef<lexer::Token>;
 
 		/**
@@ -356,18 +344,18 @@ namespace pst {
 		 * @brief Calculates the signature of the whole PST sub-tree. Assumes the hashes are already
 		 * calculated.
 		 */
-		void calcSignature(LangElement::HashAlg& partial_hash) const;
+		void calcSignature(HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Signs the hashes of the whole PST sub-tree with given signature.
 		 */
-		void signGenerated(LangElement::HashType& signature);
+		void signGenerated(HashType& signature);
 
 		/**
 		 * @brief Used to add additional data that is generic to multiple elements for example in
 		 * Stmt.
 		 */
-		virtual LangElement::HashAlg& addGenericDataToHash(LangElement::HashAlg& partial_hash) const;
+		virtual HashAlg& addGenericDataToHash(HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Adds the element specific information to the hash (Not generic ones such as number

@@ -98,7 +98,7 @@ namespace pst {
 		// hash = getID().asInt();
 	}
 
-	LangElement::HashAlg LangElement::calcStableHash() const {
+	HashAlg LangElement::calcStableHash() const {
 		HashAlg partial_hash = getElementPathHash().partial;
 		addToHash(partial_hash, elementType());
 		addGenericDataToHash(partial_hash);
@@ -106,12 +106,9 @@ namespace pst {
 		return partial_hash;
 	}
 
-	LangElement::HashAlg& LangElement::addGenericDataToHash(LangElement::HashAlg& partial_hash
-	) const {
-		return partial_hash;
-	}
+	HashAlg& LangElement::addGenericDataToHash(HashAlg& partial_hash) const { return partial_hash; }
 
-	void LangElement::calcSignature(LangElement::HashAlg& partial_hash) const {
+	void LangElement::calcSignature(HashAlg& partial_hash) const {
 		addToHash(partial_hash, hash->data);
 		for (auto& sub_el: sub_elements) {
 			variant_match(sub_el) {
@@ -126,8 +123,8 @@ namespace pst {
 		addToHash(partial_hash, "hash_end");
 	}
 
-	void LangElement::signGenerated(LangElement::HashType& signature) {
-		LangElement::HashAlg new_hash;
+	void LangElement::signGenerated(HashType& signature) {
+		HashAlg new_hash;
 		addToHash(new_hash, hash->data);
 		addToHash(new_hash, signature.data);
 		hash = new_hash.finalize();

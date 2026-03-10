@@ -275,7 +275,7 @@ namespace pst {
 		PST_RETURN out;
 	}
 
-	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
+	HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
 		addToHash(partial_hash, isImplicitReturn());

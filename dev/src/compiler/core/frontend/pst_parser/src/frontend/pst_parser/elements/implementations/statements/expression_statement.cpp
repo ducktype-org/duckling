@@ -11,7 +11,7 @@ namespace pst {
 
 	void ExprStmt::dprint(std::ostream& out) const { nullAwareDprint(expr, out); }
 
-	LangElement::HashAlg& ExprStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ExprStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

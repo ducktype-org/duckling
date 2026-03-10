@@ -99,7 +99,7 @@ namespace pst {
 		}
 	}
 
-	LangElement::HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
+	HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
 		addToHash(partial_hash, isImplicitReturn());

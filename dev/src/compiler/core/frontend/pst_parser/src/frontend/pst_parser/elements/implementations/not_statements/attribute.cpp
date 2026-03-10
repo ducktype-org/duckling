@@ -19,7 +19,7 @@ namespace pst {
 		PST_RETURN out;
 	}
 
-	LangElement::HashAlg& Attribute::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Attribute::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

@@ -4,8 +4,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	LangElement::HashAlg& ClassSpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash
-	) const {
+	HashAlg& ClassSpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

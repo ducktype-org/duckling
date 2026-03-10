@@ -55,7 +55,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ImportStarHides::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ImportStarHides::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, names);
 		addToHash(partial_hash, hides.has_value());
 		if (hides) addToHash(partial_hash, *hides);

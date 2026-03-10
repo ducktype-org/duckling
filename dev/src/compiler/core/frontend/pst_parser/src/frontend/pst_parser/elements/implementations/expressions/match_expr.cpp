@@ -66,7 +66,7 @@ namespace pst::expr {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& MatchExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& MatchExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, cases.size());
 		return partial_hash;
 	}

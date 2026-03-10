@@ -17,7 +17,6 @@
 #pragma once
 
 #include "access.hpp"
-#include "elements/lang_state_unmethods.hpp"
 #include "lang_parser_element.hpp"
 
 #include <token_parser_core/automatic.hpp>
@@ -26,9 +25,13 @@
 #define PST_AUTOMATIC_SKIP(ret) \
 	if (state.isSkipping()) { return ret; }
 
+/**
+ * @brief This macro saves the current context and restores it after executing code from the argument.
+ */
 #define PST_NEW_CONTEXT(code)       \
 	state.parse(out).saveContext(); \
-	code state.parse(out).exitSoftFallback();
+	code;                           \
+	state.parse(out).exitSoftFallback();
 
 namespace pst {
 	using lang_def::Keyword;

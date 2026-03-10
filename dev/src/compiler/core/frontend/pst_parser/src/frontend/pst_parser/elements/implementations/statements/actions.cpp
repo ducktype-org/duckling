@@ -66,7 +66,7 @@ namespace pst {
 		}
 	}
 
-	LangElement::HashAlg& Action::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Action::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, expr.has_value());
 		return partial_hash;
 	}

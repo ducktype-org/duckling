@@ -15,9 +15,7 @@ namespace pst {
 
 	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
 
-	LangElement::HashAlg& Using::addElementDataToStableHash(HashAlg& partial_hash) const {
-		return partial_hash;
-	}
+	HashAlg& Using::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
 
 	void Using::acceptVisitor(PstVisitor& visitor) const { visitor.visitUsing(*this); }
 

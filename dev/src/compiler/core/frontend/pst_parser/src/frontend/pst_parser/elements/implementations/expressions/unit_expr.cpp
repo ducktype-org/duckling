@@ -28,7 +28,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& UnitExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& UnitExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

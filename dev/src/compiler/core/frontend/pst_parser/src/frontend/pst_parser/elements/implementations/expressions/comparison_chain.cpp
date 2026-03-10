@@ -52,7 +52,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ComparisonChain::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ComparisonChain::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, sub_expr.size());
 		addToHash(partial_hash, operators);
 		return partial_hash;

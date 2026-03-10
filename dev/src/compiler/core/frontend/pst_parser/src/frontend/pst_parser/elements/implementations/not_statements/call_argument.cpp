@@ -23,7 +23,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& CallArgument::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& CallArgument::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, arg_name);
 		return partial_hash;
 	}

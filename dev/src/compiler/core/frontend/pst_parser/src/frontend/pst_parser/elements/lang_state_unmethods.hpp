@@ -1,6 +1,7 @@
 #pragma once
 // functions that mirror LangParserState methods that can be used without the full definition
 
+#include "../pst_config.hpp"
 #include "../pst_state_forward.hpp"
 #include "elements_list.hpp"
 
@@ -12,9 +13,6 @@
 
 namespace pst {
 	using ExprParseFun = MBox<ExprElement>(LangParserState&);
-
-	using HashAlg  = hashing::StatefulHash<hashing::SHA256>;
-	using HashType = HashAlg::result_type;
 
 	// These are needed to not include parser state definition
 	namespace internal {

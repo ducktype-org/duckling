@@ -35,7 +35,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ExprStrValue::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ExprStrValue::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, string);
 		return partial_hash;
 	}

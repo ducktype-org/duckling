@@ -36,7 +36,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& RoundExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& RoundExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

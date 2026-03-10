@@ -34,7 +34,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& BlockExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& BlockExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

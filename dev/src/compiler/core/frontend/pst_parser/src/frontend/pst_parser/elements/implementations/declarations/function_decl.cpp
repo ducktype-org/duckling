@@ -36,7 +36,7 @@ namespace pst {
 		return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
 	}
 
-	LangElement::HashAlg& FunDecl::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& FunDecl::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, ret.has_value());
 		return partial_hash;

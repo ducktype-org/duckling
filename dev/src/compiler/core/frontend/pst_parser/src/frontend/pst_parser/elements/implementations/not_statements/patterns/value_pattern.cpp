@@ -28,7 +28,7 @@ namespace pst {
 		return expression.give();
 	}
 
-	LangElement::HashAlg& ValuePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ValuePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

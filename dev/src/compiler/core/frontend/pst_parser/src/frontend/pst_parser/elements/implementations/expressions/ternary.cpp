@@ -94,7 +94,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Ternary::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Ternary::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

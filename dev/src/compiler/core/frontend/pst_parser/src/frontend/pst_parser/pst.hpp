@@ -175,7 +175,7 @@ namespace pst {
 		 */
 		void signGenerated() {
 			if (auto ref = element.internalMut()) {
-				LangElement::HashAlg partial_hash{};
+				HashAlg partial_hash{};
 				ref->calcSignature(partial_hash);
 				auto hash = partial_hash.finalize();
 				ref->signGenerated(hash);

@@ -27,7 +27,7 @@ namespace pst {
 			nullAwareDprint(stmt.value(), out);
 	}
 
-	LangElement::HashAlg& CodeBlockOrStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& CodeBlockOrStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, code_block.has_value());
 		addToHash(partial_hash, stmt.has_value());
 		return partial_hash;

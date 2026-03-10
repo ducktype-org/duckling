@@ -41,8 +41,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ImportIdentifierAs::addElementDataToStableHash(HashAlg& partial_hash
-	) const {
+	HashAlg& ImportIdentifierAs::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, names);
 		addToHash(partial_hash, as.has_value());
 		if (as) addToHash(partial_hash, *as);

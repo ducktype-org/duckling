@@ -50,7 +50,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type.strView());
 		return partial_hash;
 	}
