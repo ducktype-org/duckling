@@ -129,57 +129,26 @@ namespace compiler::helios {
 			 * CTV.
 			 */
 			auto evaluateTypeIndexing(
-				const tsh::SymbolType<>&            base_type,
-				const ctv::CompileTimeValue&        index_ctv,
-				base::Optional<dia::SourcePosition> index_expr_position
+				const tsh::SymbolType<>& base_type, const ctv::CompileTimeValue& index_ctv
 			) -> query::QResult<ctv::CompileTimeValue> {
 				auto base_abs = base_type.getType();
 
 				if (base_abs.getKind() == tsh::Kind::TypeTemplate) {
 					// If base is a TypeTemplate type, we expect a meta in the index expression. It
-					// specializes the type template.
+					// instantiates the type template.
 					auto template_type = base_abs.as<tsh::TypeTemplateAbstractType>();
 					// We just call `.value()` here since the type correctness should be verified
 					// earlier.
 					auto elem_type = index_ctv.get<tsh::SymbolType<>>().value();
 
-					variant_match(template_type.getSource()) {
-						variant_case(tsh::TypeTemplateAbstractType::BuiltinKind, builtin) {
-							switch (builtin) {
-							case tsh::TypeTemplateAbstractType::BuiltinKind::List: {
-								auto typed_dynamic_array
-									= ctx.query<tsh::QueryDynamicArrayType>({ elem_type });
-								return CompileTimeValue{ tsh::SymbolType<>{
-									typed_dynamic_array,
-									base_type.getRefKind(),
-									base_type.getMutability() } };
-							}
-							default: {
-								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-									base::strConcat(
-										"Evaluating type indexing at compile time for type: '",
-										template_type.toString(),
-										"'."
-									),
-									index_expr_position
-								));
-								return query::Failed();
-							}
-							}
-						}
-						variant_default {
-							ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-								base::strConcat(
-									"Evaluating type indexing at compile time for type: '",
-									template_type.toString(),
-									"'."
-								),
-								index_expr_position
-							));
-							return query::Failed();
-						}
-					}
-					CORE_UNREACHABLE();
+					// Instantiate the type template.
+					auto instantiated_abs_type = template_type.instantiate(ctx, elem_type);
+
+					return CompileTimeValue{ tsh::SymbolType<>{
+						instantiated_abs_type,
+						base_type.getRefKind(),
+						base_type.getMutability(),
+					} };
 				} else {
 					// If base is meta and not a type template, then the index should be an integral
 					// constant. This expression creates a new static array type.
@@ -206,10 +175,8 @@ namespace compiler::helios {
 						return;
 					}
 
-					auto indexing_res = evaluateTypeIndexing(
-						*maybe_type, index_res.valueOrThrow(), expr.origin.getSourcePosition()
-					);
-					result = indexing_res.valueOrThrow();
+					auto indexing_res = evaluateTypeIndexing(*maybe_type, index_res.valueOrThrow());
+					result            = indexing_res.valueOrThrow();
 					return;
 				}
 

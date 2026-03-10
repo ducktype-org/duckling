@@ -114,6 +114,12 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getSource();
 	}
 
+	AbstractType TypeTemplateAbstractType::instantiate(
+		query::Context& ctx, const SymbolType<>& element_type
+	) const {
+		return toCPimpl(pimpl)->instantiate(ctx, element_type);
+	}
+
 	usize StaticArrayAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
 	/*****************\

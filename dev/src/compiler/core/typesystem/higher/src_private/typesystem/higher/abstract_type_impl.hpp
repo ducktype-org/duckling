@@ -1,6 +1,7 @@
 #pragma once
 
 #include "queries.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -13,6 +14,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
+#include "query_framework/context/context.hpp"
 #include <query_framework/context/context_fd.hpp>
 
 #include <utility>
@@ -861,6 +863,10 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]] Source getSource() const { return source; }
+
+		[[nodiscard]] AbstractType instantiate(
+			query::Context& ctx, const SymbolType<>& element_type
+		) const;
 
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return true; }
 

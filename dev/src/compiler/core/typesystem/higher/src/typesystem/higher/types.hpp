@@ -15,6 +15,8 @@
 #include <base/collections/optional.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
+#include "query_framework/context/context.hpp"
+
 namespace compiler::tsh {
 	class UnitAbstractTypeImpl;
 	class VoidAbstractTypeImpl;
@@ -548,6 +550,16 @@ namespace compiler::tsh {
 		 * @return The template source.
 		 */
 		[[nodiscard]] Source getSource() const;
+
+		/**
+		 * @brief Creates a concrete type from this type template instantiated with the
+		 * `element_type`.
+		 * @param element_type The type to instantiate the type template with.
+		 * @return The concrete type after instantiation.
+		 */
+		[[nodiscard]] AbstractType instantiate(
+			query::Context& ctx, const SymbolType<>& element_type
+		) const;
 
 
 		CONSTRUCT_WITH_CHECKED_CAST(TypeTemplateAbstractType)
