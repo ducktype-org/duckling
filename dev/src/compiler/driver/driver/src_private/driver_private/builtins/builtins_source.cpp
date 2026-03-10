@@ -159,19 +159,29 @@ void builtin_dealloc(void* ptr) { free(ptr); }
 
 // push(vec: ref List[T], value: T, sizeof(T)) -> ()
 void builtin_list_push(list* list, void* element_ptr, uint64_t element_size) {
-	uint64_t required_space = (list->length + 1) * element_size;
+	uint64_t required_end_space = (list->length + 1) * element_size;
 
 	// Reallocate if needed.
-	if (required_space > list->memory_end_offset) {
-		uint64_t old_total_size = list->memory_begin_offset + list->memory_end_offset;
-		uint64_t new_total_size = old_total_size == 0 ? 4 * element_size : old_total_size * 2;
+	if (required_end_space > list->memory_end_offset) {
+		uint64_t current_data_size = list->length * element_size;
 
-		char* real_start = list->data - list->memory_begin_offset;
-		char* new_start  = (char*) realloc(real_start, new_total_size);
+		// New capacity of the list is twice the size of the old list length.
+		uint64_t new_number_of_elements = list->length > 1 ? list->length * 2 : 4;
+		uint64_t new_total_size         = new_number_of_elements * element_size;
+
+		char* real_data_start = list->data - list->memory_begin_offset;
+		char* new_start       = (char*) realloc(real_data_start, new_total_size);
 		if (!new_start) exit(1);
 
-		list->data              = new_start + list->memory_begin_offset;
-		list->memory_end_offset = new_total_size - list->memory_begin_offset;
+		// Center the data in the new buffer, for cheap `push_front` operations.
+		uint64_t new_begin_offset               = (new_total_size - current_data_size) / 2;
+		char*    new_data_location              = new_start + new_begin_offset;
+		char*    old_data_location_in_new_block = new_start + list->memory_begin_offset;
+		memmove(new_data_location, old_data_location_in_new_block, current_data_size);
+
+		list->data                = new_data_location;
+		list->memory_begin_offset = new_begin_offset;
+		list->memory_end_offset   = new_total_size - new_begin_offset;
 	}
 
 	// Insert the new element.
