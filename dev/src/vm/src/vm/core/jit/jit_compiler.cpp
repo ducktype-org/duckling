@@ -1,7 +1,5 @@
 #include "jit_compiler.hpp"
 
-#include <iostream>
-
 #include "block_detection.hpp"
 
 #include "opcodes_bitcode_source.hpp"
@@ -106,15 +104,12 @@ namespace vm::jit {
 				opfun_ty
 			);
 
-			std::cerr << "Lowered block " << block_idx << " with instructions [" << start << ", " << end << ")\n";
-
 			// Determine the kind of terminator needed for the block
 			const vm::MicroInstruction& last_instr = function_to_compile.bc[end - 1];
 			low::MicroOpcode last_opcode = getInstructionOpcode(last_instr);
 			switch (last_opcode) {
 				case low::MicroOpcode::jmp_label: {
 					usize target_block_idx = instr_to_block(end + last_instr.arg0);
-					std::cerr << "Connecting block " << block_idx << " with an unconditional jump to block " << target_block_idx << "\n";
 					ir_builder.CreateBr(llvm_blocks[target_block_idx]);
 					break;
 				}
@@ -167,9 +162,7 @@ namespace vm::jit {
 					break;
 				}
 			}
-			std::cerr << "Connected block " << block_idx << " with instructions [" << start << ", " << end << ")\n";
 		}
-		std::cerr << "Finished lowering function " << base::toString(function_to_compile.name) << "\n";
 	}
 
 	llvm::FunctionType* opFunType(llvm::LLVMContext& ctx) {
@@ -206,16 +199,14 @@ namespace vm::jit {
 		lowerFunction(function_to_compile, new_module.get(), opfun_ty, ctx);
 
 		auto&                       lljit = *llvmGetLljit();
-		std::cerr << "Adding module for function " << base::toString(function_to_compile.name) << " to JIT...\n";
-
 		llvm::orc::ThreadSafeModule tsm(std::move(new_module), std::move(ctx_ptr));
-		if (auto err = lljit.addIRModule(std::move(tsm)))
+		if (auto err = lljit.addIRModule(std::move(tsm))) {
 			llvm::logAllUnhandledErrors(
 				std::move(err), llvm::errs(), "Error adding module to JIT: "
 			);
-		std::cerr << "Module added.\n";
+		}
+
 		auto addr_or_err = lljit.lookup(base::toString(function_to_compile.name));
-		std::cerr << "Looked up JIT-compiled function " << base::toString(function_to_compile.name) << "\n";
 		if (!addr_or_err) {
 			llvm::handleAllErrors(addr_or_err.takeError(), [&](const llvm::ErrorInfoBase& eib) {
 				llvm::errs() << "JIT lookup failed: " << eib.message() << '\n';
@@ -226,8 +217,6 @@ namespace vm::jit {
 		llvm::orc::ExecutorAddr addr = *addr_or_err;
 
 		auto compiled_fn = addr.toPtr<vm::jit::JitOpFun>();
-		std::cerr << "Successfully compiled function " << base::toString(function_to_compile.name) << "\n";
-
 		return compiled_fn;
 	}
 }
