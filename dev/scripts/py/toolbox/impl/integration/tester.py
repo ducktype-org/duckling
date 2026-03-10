@@ -211,7 +211,7 @@ def run_case(
     # Run test.
     log_info_if_needed("Running the test case...", dry, verbose)
     test_output, test_err = dit_exec_command(
-        f"timeout {case.timeout}s sh -c \'{case.run}\'",
+        f"timeout {case.timeout}s sh -c \'{case.run}\'", # this is the bug '' 
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,
