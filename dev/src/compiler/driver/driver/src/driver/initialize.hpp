@@ -1,6 +1,7 @@
 #pragma once
 
 #include "options.hpp"
+#include <base/types/ok_bad.hpp>
 
 namespace compiler::driver {
 
@@ -15,6 +16,8 @@ namespace compiler::driver {
 	 * @note In the future this function may return some kind of handle
 	 * that will be used to interact with top-level driver operations
 	 * such as handling change in the source code input.
+	 *
+	 * @return Whether the initialization was successful or not. In case of failure, the error message will be printed to stderr.
 	 */
-	void initializeTheCompiler(CompilerModeOfOperationAndOptions options);
+	base::OkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options);
 }

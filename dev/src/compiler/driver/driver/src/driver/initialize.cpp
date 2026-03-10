@@ -26,13 +26,16 @@ namespace compiler::driver {
 	namespace {
 		constinit bool is_initialized = false;
 
+		void handleLoggerInitialization() {
+			// We might want to configure it differently in the future:
+			dia_int::configureImmediatePrint(&std::cerr);
+		}
+
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
 			if (not debug_options.dev_log_categories.empty()) logger::enable_dev_logs = true;
 
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableDevCategoryByStringName(category_name);
-
-			dia_int::configureImmediatePrint(&std::cerr);
 
 			driver::llvm_dump_ir  = debug_options.dump_llvm_ir;
 			driver::llvm_dump_asm = debug_options.dump_llvm_asm;
@@ -145,7 +148,7 @@ namespace compiler::driver {
 		}
 	}
 
-	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+	base::OkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
 		time_stats::TrackCategoryTime driver_initialization_time(
 			time_stats::TimeCategories::DriverInitialization
 		);
@@ -166,6 +169,8 @@ namespace compiler::driver {
 				CompilerModeOfOperationAndOptions::PackageCompilationMode,
 				package_compilation_options
 			) {
+				handleLoggerInitialization();
+
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
@@ -180,5 +185,6 @@ namespace compiler::driver {
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
+		return base::OK;
 	}
 }
