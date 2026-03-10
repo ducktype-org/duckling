@@ -7,6 +7,8 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <query_framework/query_errors.hpp>
+
 namespace compiler::helios {
 
 	// @TODO: in the future: make some base for all elements that can be used here
@@ -49,7 +51,14 @@ namespace compiler::helios {
 	StmtList<> getStmtsFromStmtAggregate(
 		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
 	) {
-		auto elem = locked.unlock(ctx);
+		auto elem_optional = locked.unlockOpt(ctx);
+		if (!elem_optional.has_value()) {
+			// @TODO: #1753 this throw may be suboptimal
+			query::throwFailed();
+		}
+
+		auto elem = elem_optional.value();
+
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
 			StmtList<> out;

@@ -15,13 +15,12 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/bytecode/validator/type_builder.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/loader/compiler/type_builder.hpp>
 #include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -130,8 +129,8 @@ namespace vm::loader::compiler {
 
 			auto type_ref = low_program.types->at(type.type_name);
 			result.put(local.var_name, { .offset = curr_stack_size, .type = type_ref });
-			auto type_size = type_ref->getSize();
-			type_size_stack.push_back(type_ref->getSize());
+			auto type_size = type_ref->getSize().asInt();
+			type_size_stack.push_back(type_size);
 			if (type.type_name == "void") return;
 			curr_stack_size += type_size;
 			max_stack_size = std::max(max_stack_size, curr_stack_size);
@@ -147,13 +146,13 @@ namespace vm::loader::compiler {
 			// @todo: https://github.com/ducktype-org/duckling/issues/962
 			auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
 				if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-					return (*inh_meta).virtual_methods.contains(method_name);
+					return (*inh_meta).available_methods.contains(method_name);
 				}
 				return false;
 			});
 			if (it != low_program.types->end()) {
 				auto inh_meta = it->getInheritanceMetadata().value();
-				return inh_meta->virtual_methods[method_name]->getParameterCount();
+				return inh_meta->available_methods[method_name]->getParameterCount();
 			}
 			CORE_UNREACHABLE();
 		};
@@ -277,7 +276,7 @@ namespace vm::loader::compiler {
 			for (const auto& param: signature.parameters) {
 				auto type = low_program.types->at(param.str);
 				parameters.emplace_back(type);
-				parameters_size += type->getSize();
+				parameters_size += type->getSize().asInt();
 			}
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
@@ -288,7 +287,7 @@ namespace vm::loader::compiler {
 			                      .local_stack_size = ctx.local_stack_size,
 			                      .arg_size         = parameters_size,
 			                      .ret_size
-			                      = low_program.types->at(signature.result_type)->getSize(),
+			                      = low_program.types->at(signature.result_type)->getSize().asInt(),
 			                      .parameters  = std::move(parameters),
 			                      .result_type = low_program.types->at(signature.result_type) },
 				function.name
@@ -316,12 +315,12 @@ namespace vm::loader::compiler {
 		auto new_types = ctx.getCurrentTypes() | std::views::drop(low_program.types->size());
 		if (std::ranges::empty(new_types)) return;
 
-		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx);
+		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx.getCurrentTypes());
 
 		// Update method ID to name maps, since new methods may have appeared after new types where
 		// added.
 		for (const auto& new_type: new_types) {
-			auto type_from_metadata = low_program.types->at(typeName(new_type));
+			auto type_from_metadata = low_program.types->at(new_type.getName());
 			if_opt_some(type_from_metadata->getInheritanceMetadata(), metadata) {
 				//@todo: https://github.com/ducktype-org/duckling/issues/962
 				for (auto& [name, impl]: metadata->vtable) {
@@ -345,7 +344,9 @@ namespace vm::loader::compiler {
 										   })
 			                             | std::ranges::to<std::vector<TypeCRef>>();
 			auto param_size_sum = std::ranges::fold_left(
-				params | std::views::transform([](const auto& param) { return param->getSize(); }),
+				params | std::views::transform([](const auto& param) {
+					return param->getSize().asInt();
+				}),
 				0,
 				std::plus()
 			);

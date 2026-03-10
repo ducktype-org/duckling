@@ -138,6 +138,12 @@ namespace vm {
 				return data;
 			}
 
+			constexpr void clear() {
+				values.clear();
+				id_to_name.clear();
+				name_to_id.clear();
+			}
+
 		private:
 			constexpr void createLink(ObjID id, base::StrID name) {
 				id_to_name.push_back(name);
@@ -194,6 +200,7 @@ namespace vm {
 		ObjIdNameMap& operator=(const ObjIdNameMap&) & = default;
 
 		using Base::contains, Base::begin, Base::end, Base::size, Base::insert, Base::atMaybe,
-			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData;
+			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData,
+			Base::clear;
 	};
 }

@@ -134,7 +134,7 @@ namespace pst {
 			= name;
 	}
 
-	void LangParserState::setConstextBlockOrdering(BlockOrderType type) {
+	void LangParserState::setContextBlockOrdering(BlockOrderType type) {
 		if (type == getContext()->block_order) return;
 		copyOwnContext();
 		dynamic_cast<LangParserContext*>(&*std::get<Box<tpc::ParserContext>>(current_context))

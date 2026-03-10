@@ -1,12 +1,13 @@
 //! Cross-platform environment variables snapshot.
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
+use std::fmt;
 
 use crate::{QuackResult, qp_err};
 
 /// Safe wrapper around [`std::env::vars_os`], which is safe to access on Windows: some of its
 /// environmental variables are case-insensitive.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Env {
     env: HashMap<OsString, OsString>,
 
@@ -127,6 +128,12 @@ impl FromIterator<(OsString, OsString)> for Env {
 impl<const N: usize> From<[(OsString, OsString); N]> for Env {
     fn from(value: [(OsString, OsString); N]) -> Self {
         <Self as FromIterator<(OsString, OsString)>>::from_iter(value)
+    }
+}
+
+impl fmt::Debug for Env {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Env").finish_non_exhaustive()
     }
 }
 

@@ -13,8 +13,8 @@ namespace pst::expr {
 		NAMED_CHILD(right, ExprElement);
 
 	public:
-		explicit BinaryOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
-			  ExprElement(pos, precedence),
+		explicit BinaryOperator(const LangParserState& state, Operator op, i64 precedence):
+			  ExprElement(state, precedence),
 			  op(op) {}
 
 		~BinaryOperator() override = default;
