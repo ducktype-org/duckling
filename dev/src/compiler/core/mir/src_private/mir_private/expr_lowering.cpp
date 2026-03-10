@@ -176,7 +176,8 @@ namespace compiler::mir {
 					MIRPlace(target_location),
 					assign_hole,
 					{ flagConstruct(target_location) },
-					expr_scope
+					expr_scope,
+					{}
 				);
 
 
@@ -304,12 +305,12 @@ namespace compiler::mir {
 					  return std::pair{ lowered.begin, lowered.getResult(function) };
 				  };
 
-			auto combine_positions = [](const auto& pos1, const auto& pos2) -> base::Optional<pst::StablePosition> {
-				if (pos1.has_value() && pos2.has_value()) {
+			auto combine_positions
+				= [](const auto& pos1, const auto& pos2) -> base::Optional<pst::StablePosition> {
+				if (pos1.has_value() && pos2.has_value())
 					return (*pos1).extendedWith(*pos2);
-				} else {
+				else
 					return base::Optional<pst::StablePosition>{};
-				}
 			};
 
 			using namespace std::views;
@@ -355,7 +356,7 @@ namespace compiler::mir {
 				auto [new_block, new_value]
 					= lower_subexpr_with_result(expr.ref(), new_comparison_block);
 				auto new_expr_position = expr->getPosition();
-				auto total_position = combine_positions(prev_expr_position, new_expr_position);
+				auto total_position    = combine_positions(prev_expr_position, new_expr_position);
 
 				// We create the prev_cmp, as we only now have both expressions.
 				prev_cmp_hole.fill(Instruction{ comp,
@@ -376,9 +377,9 @@ namespace compiler::mir {
 			// The first expression to be evaluated.
 			auto [first_block, first_value]
 				= lower_subexpr_with_result(chain_expr.expressions.front().ref(), prev_block);
-			
+
 			auto first_expr_position = chain_expr.expressions.front()->getPosition();
-			auto total_position = combine_positions(prev_expr_position, first_expr_position);
+			auto total_position      = combine_positions(prev_expr_position, first_expr_position);
 
 			// The first comparison to be performed.
 			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
@@ -742,19 +743,12 @@ namespace compiler::mir {
 		BlockBuilder::InstructionHole&    hole,
 		const std::vector<OperationFlag>& flags,
 		ScopeRef                          scope,
-		InstructionMetadata 		    metadata
+		InstructionMetadata               metadata
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
 				hole.fill(Instruction{
-					Operation::Assign,
-					target,
-					{ val },
-					flags,
-					scope,
-					{},
-					metadata
-				});
+					Operation::Assign, target, { val }, flags, scope, {}, metadata });
 			}
 			variant_case(Finalizer, res_data) {
 				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");

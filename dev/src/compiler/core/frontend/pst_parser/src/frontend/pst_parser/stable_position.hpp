@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/types/bit256.hpp>
+
 #include <diagnostic/source_position.hpp>
 
 namespace pst {
@@ -15,8 +16,8 @@ namespace pst {
 	class StablePosition {
 	public:
 		using HashType = base::Bit256;
-	private:
 
+	private:
 		/**
 		 * @brief Node hash that is defines one end of the position range.
 		 *
@@ -32,10 +33,7 @@ namespace pst {
 		 */
 		base::Optional<HashType> end_scope_node;
 
-		StablePosition(
-			HashType                 begin_scope_node,
-			base::Optional<HashType> end_scope_node
-		):
+		StablePosition(HashType begin_scope_node, base::Optional<HashType> end_scope_node):
 			  begin_scope_node(begin_scope_node),
 			  end_scope_node(end_scope_node) {}
 

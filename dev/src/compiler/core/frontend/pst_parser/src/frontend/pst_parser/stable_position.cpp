@@ -1,4 +1,5 @@
 #include "stable_position.hpp"
+
 #include "lang_parser_element.hpp"
 
 #include <algorithm>

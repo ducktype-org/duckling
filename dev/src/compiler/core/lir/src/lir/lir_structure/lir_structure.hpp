@@ -8,6 +8,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
+#include <mir/mir_structure/mir_metadata.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
@@ -433,6 +434,10 @@ namespace compiler::lir {
 
 	struct InstructionMetadata {
 		base::Optional<pst::StablePosition> position;
+
+		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
+
+		InstructionMetadata() = default;
 	};
 
 	/**
@@ -456,12 +461,14 @@ namespace compiler::lir {
 			const Operation          operation,
 			base::Optional<LIRPlace> output,
 			std::vector<LIRValue>    arguments,
+			InstructionMetadata      metadata         = {},
 			InstrParameters          extra_parameters = NoInstrParameters{}
 		):
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
-			  extra_params(extra_parameters) {}
+			  extra_params(extra_parameters),
+			  metadata(metadata) {}
 	};
 
 	/**
@@ -476,8 +483,7 @@ namespace compiler::lir {
 
 	struct FunctionMetadata {
 		base::Optional<pst::StablePosition> position;
-		std::string source_code_name;
-		std::string source_code_type;
+		base::StrID                         source_code_name;
 	};
 
 	/**
