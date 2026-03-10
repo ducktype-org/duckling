@@ -199,6 +199,10 @@ private:
 		});
 	}
 
+	/**
+	 * @brief Test if the stable positions in LIR metadata are correct.
+	 * We check if the positions from metadata of the instructions are correct.
+	 */
 	void functionCallMetadataTest() {
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
@@ -227,7 +231,7 @@ private:
 			foo_lir->metadata.position.has_value(), "Expected function metadata position in LIR foo"
 		);
 		print_stable_position(foo_lir->metadata.position, "foo.function");
-		ASSERT_EQUAL(foo_lir->metadata.source_code_name, base::StrID("foo"));
+		ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));
 
 		assertTrue(!foo_lir->block_order.empty(), "Expected at least one LIR block");
 		const auto& block0 = *foo_lir->block_order[0];

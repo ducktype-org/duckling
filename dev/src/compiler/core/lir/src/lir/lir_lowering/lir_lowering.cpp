@@ -70,7 +70,7 @@ namespace compiler::lir {
 			.abi          = symbol_abi,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
-			.return_type_layout = return_type
+			.return_type_layout = return_type,
 		};
 	}
 
@@ -742,8 +742,7 @@ namespace compiler::lir {
 				auto&            mir_func = key.function;
 				if (auto func_id = std::get_if<mir::FunctionSymID>(&mir_func->helios_id)) {
 					if (auto pst_elem = helios::symbolPst(func_id->id)) {
-						metadata.position = (*pst_elem).unlock(ctx)->getStablePosition();
-
+						metadata.position         = (*pst_elem).unlock(ctx)->getStablePosition();
 						metadata.source_code_name = helios::name(func_id->id);
 					}
 				}
@@ -828,15 +827,14 @@ namespace compiler::lir {
 
 		BlockRef entry_block_ref = blocks.last();
 
-		return Function{
-			.mangled_name       = mangled_name,
-			.abi                = helios::DefaultAbi{},
-			.parameter_layouts  = {},
-			.return_type_layout = return_type,
-			.blocks             = std::move(blocks),
-			.local_list         = {},
-			.block_order        = { entry_block_ref },
-		};
+		return Function{ .mangled_name       = mangled_name,
+			             .abi                = helios::DefaultAbi{},
+			             .parameter_layouts  = {},
+			             .return_type_layout = return_type,
+			             .blocks             = std::move(blocks),
+			             .local_list         = {},
+			             .block_order        = { entry_block_ref },
+			             .metadata           = {{}, {}} };
 	}
 
 }

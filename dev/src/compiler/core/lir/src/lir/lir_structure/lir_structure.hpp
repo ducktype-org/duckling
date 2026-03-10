@@ -483,7 +483,7 @@ namespace compiler::lir {
 
 	struct FunctionMetadata {
 		base::Optional<pst::StablePosition> position;
-		base::StrID                         source_code_name;
+		base::Optional<base::StrID>                         source_code_name;
 	};
 
 	/**

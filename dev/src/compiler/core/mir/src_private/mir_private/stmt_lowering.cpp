@@ -159,15 +159,17 @@ namespace compiler::mir {
 				);
 			}
 
-			condition_block->setTerminator(Instruction{ Operation::Branch,
-			                                            {},
-			                                            {
-															*possible_condition_res,
-															then_body->getID(),
-															else_body->getID(),
-														},
-			                                            {},
-			                                            condition_scope });
+			condition_block->setTerminator(Instruction{
+				Operation::Branch,
+				{},
+				{
+					*possible_condition_res,
+					then_body->getID(),
+					else_body->getID(),
+				},
+				{},
+				condition_scope,
+			});
 
 			output({ lowered_condition.begin });
 		}
