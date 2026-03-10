@@ -2,14 +2,13 @@
 # We don't run the actual duckling programs in this test, 
 # instead we test that the compiler produces the expected diagnostics when compiling invalid code.
 
-PreCase: "@{clean_cmd} && mkdir build;
+PreCase: "@{clean_cmd} && mkdir build"
 
-Run: "
-  case '@{backend}' in
+Run: "  case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                   ;;
     llvm)      @{compile_llvm_backend_cmd}                  ;;
     nobackend) echo 'Backend undefined'; exit 1             ;;
-    *)         echo 'Unknown backend';   exit 1             ;;
+    *)         echo 'Unknown backend';   exit 2             ;;
   esac;"
   
 Tests:
