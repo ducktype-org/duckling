@@ -1529,6 +1529,10 @@ class FunctionValidator {
 	}
 
 	void validateSignature() {
+		if (function.name.str == base::StrID("main")
+		    && function.signature.result_type.str != base::StrID("i64")) {
+			throw InvalidMainReturnType(function.signature);
+		}
 		for (const auto& param_type: function.signature.parameters) {
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
@@ -1573,10 +1577,6 @@ vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
-	if (function.name.str == base::StrID("main")
-	    && function.signature.result_type.str != base::StrID("i64")) {
-		throw InvalidMainReturnType(function.signature);
-	}
 
 	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, function);
 

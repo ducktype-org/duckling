@@ -163,7 +163,7 @@ namespace vm {
 		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
 		// Types
-		// @note: All the following are guaranteed to exist or since their existence was checked
+		// @note: All the following are guaranteed to exist or their existence was checked
 		// during code loading.
 
 		auto        main_return_type = func.result_type;
@@ -191,11 +191,12 @@ namespace vm {
 		u64 str_ptr_type_id  = str_ptr_type->getID().asInt();
 		u64 byte_type_id     = byte_type->getID().asInt();
 
-		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
+		const u64  called_function_id = executing_program->getFunctions().idOf(func.name).value();
+		const bool main_has_args      = !func.parameters.empty();
 
 		// Initialize the needed data first - argc and argv dynamic table.
-		// Note that `argv` and `argc` are always initialized even if `main` take no arguments. This
-		// is for the offsets to not get changed when generating the start function.
+		// Note that `argv` and `argc` are always initialized even if `main` takes no arguments.
+		// This is for the offsets to not get changed when generating the start function.
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
@@ -219,59 +220,61 @@ namespace vm {
 		);
 
 		// Now fill in the argv table.
-		for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
-			start_function.bc.insert(
-				start_function.bc.end(),
-				{
-					MAKE_BYTECODE_INSTRUCTION(
-						init_lany_type, 40, str_ptr_type_id
-					),  // [40, 56) ptr_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(
-						init_lany_type, 56, byte_type_id
-					),  // [56, 57) char_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(
-						mov_l64_imm, 24, arg.size() + 1
-					),  // argc_internal := arg.size() + 1 (for the \0 character)
-					MAKE_BYTECODE_INSTRUCTION(
-						dynTableReAlloc_lptr_type, 40, str_type_id
-					),                                              // alloc ptr_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
-					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
-				}
-			);
-			for (auto c: arg) {
+		if (main_has_args) {
+			for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
 				start_function.bc.insert(
 					start_function.bc.end(),
-					{ MAKE_BYTECODE_INSTRUCTION(
-						  mov_l8_imm, 56, static_cast<u64>(c)
-					  ),  // char_tmp_store := c
-				      MAKE_BYTECODE_INSTRUCTION(
-						  dynTableStore_lptr_lany, 40, 56
-					  ),  // ptr_tmp_store[ix] := char_tmp_store
-				      MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
-				      MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1) }
+					{
+						MAKE_BYTECODE_INSTRUCTION(
+							init_lany_type, 40, str_ptr_type_id
+						),  // [40, 56) ptr_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(
+							init_lany_type, 56, byte_type_id
+						),  // [56, 57) char_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(
+							mov_l64_imm, 24, arg.size() + 1
+						),  // argc_internal := arg.size() + 1 (for the \0 character)
+						MAKE_BYTECODE_INSTRUCTION(
+							dynTableReAlloc_lptr_type, 40, str_type_id
+						),                                              // alloc ptr_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
+						MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
+					}
+				);
+				for (auto c: arg) {
+					start_function.bc.insert(
+						start_function.bc.end(),
+						{ MAKE_BYTECODE_INSTRUCTION(
+							  mov_l8_imm, 56, static_cast<u64>(c)
+						  ),  // char_tmp_store := c
+					      MAKE_BYTECODE_INSTRUCTION(
+							  dynTableStore_lptr_lany, 40, 56
+						  ),  // ptr_tmp_store[ix] := char_tmp_store
+					      MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+					      MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1) }
+					);
+				}
+				start_function.bc.insert(
+					start_function.bc.end(),
+					{
+						// At this point ix == arg.size().
+						MAKE_BYTECODE_INSTRUCTION(mov_l8_imm, 56, 0),  // char_tmp_store := \0
+						MAKE_BYTECODE_INSTRUCTION(
+							dynTableStore_lptr_lany, 40, 56
+						),  // ptr_tmp_store[ix] := char_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+						MAKE_BYTECODE_INSTRUCTION(
+							mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
+						),  // ix := argv_index
+						MAKE_BYTECODE_INSTRUCTION(
+							dynTableStore_lptr_lany, 8, 40
+						),  // argv_internal[ix] := ptr_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
+					}
 				);
 			}
-			start_function.bc.insert(
-				start_function.bc.end(),
-				{
-					// At this point ix == arg.size().
-					MAKE_BYTECODE_INSTRUCTION(mov_l8_imm, 56, 0),  // char_tmp_store := \0
-					MAKE_BYTECODE_INSTRUCTION(
-						dynTableStore_lptr_lany, 40, 56
-					),  // ptr_tmp_store[ix] := char_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
-					MAKE_BYTECODE_INSTRUCTION(
-						mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
-					),  // ix := argv_index
-					MAKE_BYTECODE_INSTRUCTION(
-						dynTableStore_lptr_lany, 8, 40
-					),                                        // argv_internal[ix] := ptr_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
-					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
-				}
-			);
 		}
 
 
@@ -281,7 +284,7 @@ namespace vm {
 		);
 
 		// Pass the command line arguments only if main signature specifies it.
-		if (!func.parameters.empty()) {
+		if (main_has_args) {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
@@ -493,11 +496,7 @@ namespace vm {
 				try {
 					const auto& func = *executing_program->getFunctions()
 					                        .atMaybe(global->ctor_name.value())
-					                        .expect(base::strConcat(
-												"Called function '",
-												global->ctor_name.value(),
-												"' does not exist."
-											));
+					                        .value();
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -512,6 +511,7 @@ namespace vm {
 			if (!maybe_func.has_value()) {
 				respondExecutionRequest(api::ExecutionPanicked{
 					base::strConcat("Called function '", func_name, "' does not exist.") });
+				return;
 			}
 			const auto& func = *maybe_func.value();
 
