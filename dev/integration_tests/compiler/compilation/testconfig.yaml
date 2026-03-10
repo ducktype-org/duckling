@@ -67,3 +67,4 @@ SubDirs:
   - references
   - boxes
   - imports
+  - diagnostics

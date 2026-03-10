@@ -2,23 +2,23 @@
 # We don't run the actual duckling programs in this test, 
 # instead we test that the compiler produces the expected diagnostics when compiling invalid code.
 
+PreCase: "@{clean_cmd} && mkdir build;
+
 Run: "
   case '@{backend}' in
-    dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
-    llvm)
-      if [ '@{valgrind}' = 'true' ]; then
-        valgrind --leak-check=full --error-exitcode=1 @{compiled_to_llvm};
-      else
-        @{compiled_to_llvm};
-      fi
-      ;;
-    nobackend) echo \"Backend undefined\"; exit 1 ;;
-    *)         echo \"Unknown backend\";   exit 1 ;;
+    dvm)       @{compile_dvm_backend_cmd}                   ;;
+    llvm)      @{compile_llvm_backend_cmd}                  ;;
+    nobackend) echo 'Backend undefined'; exit 1             ;;
+    *)         echo 'Unknown backend';   exit 1             ;;
   esac;"
-
+  
 Tests:
   no_main_source_file:
     Cases:
       llvm:
         backend: llvm
-        ExitCode: 3
+        # @TODO: #2228 add better output handling here!
+        Output:
+          String:
+            "error[E0]: Main package does not have a main source file.\nThe main source file is required for compilation. Please add a no_main_source_file.dmf file to the main module directory.\n\n"
+        ExitCode: 1

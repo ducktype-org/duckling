@@ -83,9 +83,7 @@ namespace compiler::driver {
 					base::strConcat(
 						"The main source file is required for compilation. Please add a ",
 						module_name,
-						".dmf file to the main module directory: ",
-						package_info.package_path.string(),
-						"/."
+						".dmf file to the main module directory."
 					)
 				));
 				return base::BAD;
