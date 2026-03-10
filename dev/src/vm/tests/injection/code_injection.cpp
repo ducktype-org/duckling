@@ -2,6 +2,10 @@
 
 #include <base/collections/optional.hpp>
 
+#include "tester/tester.hpp"
+
+#include "vm/api/vm.hpp"
+
 #include <string>
 #include <vector>
 
@@ -23,6 +27,7 @@ public:
 		TESTER_ADD_TEST(separateGlobals);
 		TESTER_ADD_TEST(cyclicRepl);
 		TESTER_ADD_TEST(injectExistingFunction);
+		TESTER_ADD_TEST(runFunctionTypeCheck);
 	}
 
 private:
@@ -259,6 +264,31 @@ private:
 		fs::File file(path("inject_code_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 		ASSERT_TRUE(!vm::api::loadFiles(pid, { file }).has_value());
+		vm::api::deinitAndValidate(pid);
+	}
+
+	void runFunctionTypeCheck() {
+		vm::PID  pid = initProcess();
+		fs::File file(path("call_non_void_function.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+
+		OwnedArgumentList arguments;
+		arguments.push_back(getIntVmValue(pid, 10));
+
+		auto i32_value = vm::api::getVmValue(pid, "i32");
+		ASSERT_TRUE(i32_value.has_value());
+		arguments.push_back(std::move(i32_value->vm_value));
+
+		auto func_args = createArgumentList(arguments);
+
+		// Calling summer with no arguments should fail.
+		ASSERT_TRUE(vm::api::runFunction(pid, "summer", {}).has_value());
+		ASSERT_TRUE(!vm::api::join(pid).has_value());
+
+		ASSERT_TRUE(vm::api::runFunction(pid, "summer", func_args).has_value());
+		ASSERT_TRUE(!vm::api::join(pid).has_value());
+
+		freeArguments(arguments);
 		vm::api::deinitAndValidate(pid);
 	}
 };
