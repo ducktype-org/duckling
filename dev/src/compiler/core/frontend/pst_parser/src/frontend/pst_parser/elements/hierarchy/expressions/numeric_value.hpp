@@ -15,7 +15,7 @@ namespace pst::expr {
 			return value;
 		}
 
-		explicit ExprNumericValue(const dia::SourcePosition& position): ExprElement(position, 0) {}
+		explicit ExprNumericValue(const LangParserState& state): ExprElement(state, 0) {}
 
 		static MBox<ExprElement> parse(LangParserState& state, i64 length);
 

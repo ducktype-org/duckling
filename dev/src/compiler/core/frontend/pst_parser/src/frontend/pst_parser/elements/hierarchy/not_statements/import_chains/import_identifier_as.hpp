@@ -11,7 +11,7 @@ namespace pst {
 		base::Optional<tpc::Identifier> as;
 
 	public:
-		explicit ImportIdentifierAs(const dia::SourcePosition& position): ImportChain(position) {
+		explicit ImportIdentifierAs(const LangParserState& state): ImportChain(state) {
 			this->element_kind = ElementKind::ImportIdentifierAs;
 		}
 
