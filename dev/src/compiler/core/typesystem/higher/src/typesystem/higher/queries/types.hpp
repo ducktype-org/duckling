@@ -10,6 +10,7 @@
 #include "../types.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
