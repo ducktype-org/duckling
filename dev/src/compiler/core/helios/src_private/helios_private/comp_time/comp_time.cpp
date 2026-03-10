@@ -1,5 +1,7 @@
 #include "comp_time.hpp"
 
+#include "typesystem/higher/kind.hpp"
+
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
@@ -19,6 +21,7 @@
 
 #include <base/str/str_utils.hpp>
 
+#include "diagnostic/source_position.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -131,12 +134,14 @@ namespace compiler::helios {
 				base::Optional<dia::SourcePosition> index_expr_position
 			) -> query::QResult<ctv::CompileTimeValue> {
 				auto base_abs = base_type.getType();
-				switch (base_abs.getKind()) {
-				case tsh::Kind::TypeTemplate: {
+
+				if (base_abs.getKind() == tsh::Kind::TypeTemplate) {
 					// If base is a TypeTemplate type, we expect a meta in the index expression. It
 					// specializes the type template.
 					auto template_type = base_abs.as<tsh::TypeTemplateAbstractType>();
-					auto elem_type     = index_ctv.get<tsh::SymbolType<>>().value();
+					// We just call `.value()` here since the type correctness should be verified
+					// earlier.
+					auto elem_type = index_ctv.get<tsh::SymbolType<>>().value();
 
 					variant_match(template_type.getSource()) {
 						variant_case(tsh::TypeTemplateAbstractType::BuiltinKind, builtin) {
@@ -175,45 +180,12 @@ namespace compiler::helios {
 						}
 					}
 					CORE_UNREACHABLE();
-				}
-				case tsh::Kind::Meta: {
-					// If base is meta, then the index should be an integral constant. Then this
-					// expression creates a new static array type.
-					auto maybe_size = index_ctv.get<NumericValue>().value();
-					if (maybe_size.isIntegral()) {
-						usize size = static_cast<usize>(maybe_size.coerceTo<u64>().value());
-						return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
-					}
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Tried creating a static array type with a non integral size.",
-						index_expr_position.value()  // TODOP: Unsafe unwrap heree
-					));
-					return query::Failed();
-				}
-				default: {
-					// TODOP: Fix this.
-					// If base is meta, then the index should be an integral constant. Then this
-					// expression creates a new static array type.
-					auto maybe_size = index_ctv.get<NumericValue>().value();
-					if (maybe_size.isIntegral()) {
-						usize size = static_cast<usize>(maybe_size.coerceTo<u64>().value());
-						return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
-					}
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Tried creating a static array type with a non integral size.",
-						index_expr_position.value()  // TODOP: Unsafe unwrap heree
-					));
-					return query::Failed();
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Evaluating type indexing at compile time for type: '",
-							base_type.toString(),
-							"'."
-						),
-						index_expr_position
-					));
-					return query::Failed();
-				}
+				} else {
+					// If base is meta and not a type template, then the index should be an integral
+					// constant. This expression creates a new static array type.
+					auto  maybe_size = index_ctv.get<NumericValue>().value();
+					usize size       = static_cast<usize>(maybe_size.coerceTo<u64>().value());
+					return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
 				}
 			}
 
@@ -883,7 +855,8 @@ namespace compiler::helios {
 						base::strConcat(
 							"Evaluating a function in DVM at compile time which was generated "
 							"automatically. "
-							"This likely means that the function was a compiler generated class "
+							"This likely means that the function was a compiler generated "
+							"class "
 							"constructor. "
 							"The failure happened for the symbol `",
 							name(func_id),
@@ -951,11 +924,10 @@ namespace compiler::helios {
 
 			// Retrieve the functions return type.
 			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
-			if (callee_abs_type.getKind() != tsh::Kind::Function) {
+			if (callee_abs_type.getKind() != tsh::Kind::Function)
 				CORE_PANIC(
 					"Attempting to call a non_function type during VM compile time evaluation"
 				);
-			}
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result = executeInVm(
