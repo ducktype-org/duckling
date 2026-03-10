@@ -130,7 +130,9 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered_left.begin,
 				target_construction_hole,
-				Instruction(operation, {}, { res_left, res_right }, {}, expr_scope),
+				Instruction(
+					operation, {}, { res_left, res_right }, {}, expr_scope, {}, { expr.getPosition() }
+				),
 				result_type
 			);
 		}
@@ -148,7 +150,9 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered.begin,
 				target_construction_hole,
-				Instruction(operation, {}, { res_lowered }, {}, expr_scope),
+				Instruction(
+					operation, {}, { res_lowered }, {}, expr_scope, {}, { expr.getPosition() }
+				),
 				result_type
 			);
 		}
@@ -230,7 +234,15 @@ namespace compiler::mir {
 			noValueOutput(
 				current,
 				hole,
-				Instruction(Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope),
+				Instruction(
+					Operation::MetaCreateVariant,
+					{},
+					subtype_values,
+					{},
+					expr_scope,
+					{},
+					{ expr.getPosition() }
+				),
 				result_type
 			);
 			return;
@@ -292,6 +304,14 @@ namespace compiler::mir {
 					  return std::pair{ lowered.begin, lowered.getResult(function) };
 				  };
 
+			auto combine_positions = [](const auto& pos1, const auto& pos2) -> base::Optional<pst::StablePosition> {
+				if (pos1.has_value() && pos2.has_value()) {
+					return (*pos1).extendedWith(*pos2);
+				} else {
+					return base::Optional<pst::StablePosition>{};
+				}
+			};
+
 			using namespace std::views;
 
 			// Place for a comparison instruction
@@ -311,6 +331,7 @@ namespace compiler::mir {
 			auto [prev_block, prev_value] = lower_subexpr_with_result(
 				chain_expr.expressions.back().ref(), last_comparison_block
 			);
+			auto prev_expr_position = chain_expr.expressions.back()->getPosition();
 
 			auto mir_operators = chain_expr.operators | transform(builtinBinaryToOperation);
 
@@ -333,10 +354,17 @@ namespace compiler::mir {
 				// Next expression (completes the prev_cmp).
 				auto [new_block, new_value]
 					= lower_subexpr_with_result(expr.ref(), new_comparison_block);
+				auto new_expr_position = expr->getPosition();
+				auto total_position = combine_positions(prev_expr_position, new_expr_position);
 
 				// We create the prev_cmp, as we only now have both expressions.
-				prev_cmp_hole.fill(Instruction{
-					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
+				prev_cmp_hole.fill(Instruction{ comp,
+				                                { boolean_output },
+				                                { new_value, prev_value },
+				                                {},
+				                                expr_scope,
+				                                {},
+				                                { total_position } });
 
 				prev_block    = new_block;
 				prev_cmp_hole = new_cmp_hole;
@@ -348,13 +376,18 @@ namespace compiler::mir {
 			// The first expression to be evaluated.
 			auto [first_block, first_value]
 				= lower_subexpr_with_result(chain_expr.expressions.front().ref(), prev_block);
+			
+			auto first_expr_position = chain_expr.expressions.front()->getPosition();
+			auto total_position = combine_positions(prev_expr_position, first_expr_position);
 
 			// The first comparison to be performed.
 			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
 			                                { boolean_output },
 			                                { first_value, prev_value },
 			                                { flagConstruct(boolean_output) },
-			                                expr_scope });
+			                                expr_scope,
+			                                {},
+			                                { total_position } });
 
 			valueOutput(first_block, boolean_output);
 		}
@@ -386,13 +419,7 @@ namespace compiler::mir {
 			return noValueOutput(
 				sub_continuation,
 				call,
-				Instruction{
-					Operation::Call,
-					{},
-					args,
-					{},
-					expr_scope,
-				},
+				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -412,7 +439,8 @@ namespace compiler::mir {
 			                 expr_scope,
 			                 CastParameters{ .source_type
 			                                 = expr.source_expr->expression_type.getSymbolType(),
-			                                 .target_type = expr.target_type } },
+			                                 .target_type = expr.target_type },
+			                 { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -429,7 +457,15 @@ namespace compiler::mir {
 				noValueOutput(
 					lowered_inner.begin,
 					hole,
-					Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
+					Instruction(
+						Operation::AddressOf,
+						{},
+						{ res_inner },
+						{},
+						expr_scope,
+						{},
+						{ expr.getPosition() }
+					),
 					result_type
 				);
 			} else {
@@ -453,7 +489,9 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered_inner.begin,
 				hole,
-				Instruction(Operation::AllocBox, {}, { res_inner }, {}, expr_scope),
+				Instruction(
+					Operation::AllocBox, {}, { res_inner }, {}, expr_scope, {}, { expr.getPosition() }
+				),
 				result_type
 			);
 		}
@@ -703,7 +741,8 @@ namespace compiler::mir {
 		const MIRPlace&                   target,
 		BlockBuilder::InstructionHole&    hole,
 		const std::vector<OperationFlag>& flags,
-		ScopeRef                          scope
+		ScopeRef                          scope,
+		InstructionMetadata 		    metadata
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
@@ -713,6 +752,8 @@ namespace compiler::mir {
 					{ val },
 					flags,
 					scope,
+					{},
+					metadata
 				});
 			}
 			variant_case(Finalizer, res_data) {
@@ -721,6 +762,7 @@ namespace compiler::mir {
 				hole.fillNop(scope);
 				res_data.instr.output.emplace(target);
 				res_data.instr.flags.insert(res_data.instr.flags.end(), flags.begin(), flags.end());
+				res_data.instr.metadata = metadata;
 				res_data.hole.fill(res_data.instr);
 				value = target;
 			}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <frontend/pst_parser/stable_position.hpp>
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
@@ -585,6 +586,10 @@ namespace compiler::mir {
 	 */
 	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
 
+	struct InstructionMetadata {
+		base::Optional<pst::StablePosition> position;
+	};
+
 	/**
 	 * @brief Single instruction of MIR code.
 	 */
@@ -599,6 +604,8 @@ namespace compiler::mir {
 		std::vector<OperationFlag> flags;
 
 		InstrParameters extra_params{ NoInstrParameters{} };
+
+		InstructionMetadata metadata;
 
 		// @TODO: each Instruction should have source position reference
 
@@ -622,13 +629,15 @@ namespace compiler::mir {
 			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
 			const ScopeRef             scope,
-			InstrParameters            extra_parameters = NoInstrParameters{}
+			InstrParameters            extra_parameters = NoInstrParameters{},
+			InstructionMetadata        metadata = {}
 		):
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
 			  extra_params(extra_parameters),
+			  metadata(metadata),
 			  scope(scope) {}
 
 		void debugPrint(std::ostream& os) const;

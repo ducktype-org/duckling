@@ -3,6 +3,7 @@
 #include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
+#include <frontend/pst_parser/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -430,6 +431,10 @@ namespace compiler::lir {
 	 */
 	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
 
+	struct InstructionMetadata {
+		base::Optional<pst::StablePosition> position;
+	};
+
 	/**
 	 * @brief Single instruction of LIR code.
 	 */
@@ -438,8 +443,8 @@ namespace compiler::lir {
 		base::Optional<LIRPlace> output;
 		std::vector<LIRValue>    arguments;
 		InstrParameters          extra_params{ NoInstrParameters{} };
+		InstructionMetadata      metadata;
 
-		// @TODO: each Instruction should have source position reference
 
 		Instruction()                       = default;
 		Instruction(const Instruction&)     = default;
@@ -469,6 +474,12 @@ namespace compiler::lir {
 		Instruction              terminator;
 	};
 
+	struct FunctionMetadata {
+		base::Optional<pst::StablePosition> position;
+		std::string source_code_name;
+		std::string source_code_type;
+	};
+
 	/**
 	 * @brief Function in LIR.
 	 */
@@ -483,6 +494,8 @@ namespace compiler::lir {
 		base::StableVector<LIRLocal> local_list;
 
 		std::vector<BlockRef> block_order;
+
+		FunctionMetadata metadata;
 
 		/**
 		 * @brief Checks if block order uniquely stores

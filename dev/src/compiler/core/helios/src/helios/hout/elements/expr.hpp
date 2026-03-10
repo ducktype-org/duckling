@@ -63,6 +63,8 @@ namespace compiler::helios::code {
 			return id;
 		}
 
+		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const;
+
 	private:
 		HOUTExprID id = HOUTExprID::next();
 	};

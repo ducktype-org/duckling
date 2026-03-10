@@ -30,6 +30,8 @@ namespace compiler::helios::code {
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
+
+		[[nodiscard]] pst::StablePosition getPosition() const { return origin.getStablePosition().value(); }
 	};
 
 	/**
