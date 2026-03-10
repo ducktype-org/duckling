@@ -140,6 +140,7 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
+				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
@@ -291,6 +292,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, argv_ptr_type_id),  // [56, 72) *argv
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
 				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),          // argv := argv_internal
+				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),                 // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
@@ -590,15 +592,19 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = index,  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id  = index,  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();
