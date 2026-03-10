@@ -82,7 +82,7 @@ namespace query {
 				  enable_active_graph_operations(active_graph_operations) {
 				main_query_state.addDependency(caller, callee);
 
-				if (active_graph_operations) {
+				if (enable_active_graph_operations) {
 					// @TODO: #2026 Optimize it, we only need to add edge here, when the query is
 					// not ready.
 
