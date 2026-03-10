@@ -17,9 +17,9 @@ namespace compiler::helios {
 		/**
 		 * Hash of the PST element that the symbol was created from.
 		 */
-		pst::LangElement::HashType pst_element_hash;
+		pst::HashType pst_element_hash;
 
-		PstSymbolData(ScopeID scope, pst::LangElement::HashType pst_element_hash):
+		PstSymbolData(ScopeID scope, pst::HashType pst_element_hash):
 			  scope(scope),
 			  pst_element_hash(pst_element_hash) {}
 

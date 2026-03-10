@@ -19,7 +19,7 @@ namespace compiler::helios::code {
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> ElementOrigin::getPSTElement() const {
-		return pst_element.map([](const pst::LangElement::HashType& hash) {
+		return pst_element.map([](const pst::HashType& hash) {
 			auto element = pst::LangElement::getByStableHash(hash);
 			return element;
 		});
