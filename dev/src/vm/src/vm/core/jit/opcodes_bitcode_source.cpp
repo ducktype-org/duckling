@@ -44,8 +44,9 @@ PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
 POP_DIAGNOSTIC
 // NOLINTEND
 
-/// @brief context of llvmInit.
-static std::unique_ptr<LLVMContext> g_context;
+/// @brief Context of llvmInit.
+/// @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single shared context for the JIT instance.
+static std::unique_ptr<ThreadSafeContext> g_context;
 
 /// @brief LLVM module containing the parsed microinstruction bitcode.
 static std::unique_ptr<Module> g_module;
@@ -93,7 +94,7 @@ void llvmInit() {
 	llvm::InitializeNativeTargetAsmParser();
 
 	if (g_context) return;  // already initialized
-	g_context = std::make_unique<LLVMContext>();
+	auto initial_context = std::make_unique<LLVMContext>();
 
 	lljit_instance = exit_on_err(LLJITBuilder().create());
 
@@ -105,7 +106,7 @@ void llvmInit() {
 	// Load embedded BC into module
 	auto buffer = MemoryBuffer::getMemBuffer(StringRef(OPCODES, sizeof(OPCODES)), "", false);
 
-	auto mod_or_err = parseBitcodeFile(buffer->getMemBufferRef(), *g_context);
+	auto mod_or_err = parseBitcodeFile(buffer->getMemBufferRef(), *initial_context);
 	if (!mod_or_err) llvm::report_fatal_error("Aborting due to parse error");
 
 	g_module = std::move(*mod_or_err);
@@ -125,9 +126,11 @@ void llvmInit() {
 	}
 	CORE_ASSERT(!func_map.empty(), "Opfuns not found!");
 
-	exit_on_err(
-		lljit_instance->addIRModule(ThreadSafeModule(std::move(g_module), std::move(g_context)))
-	);
+	g_context = std::make_unique<ThreadSafeContext>(std::move(initial_context));
+
+	ThreadSafeModule tsm(std::move(g_module), *g_context);
+
+	exit_on_err(lljit_instance->addIRModule(std::move(tsm)));
 }
 
 llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun) {
@@ -139,6 +142,8 @@ std::string llvmGetFunName(const vm::low::MicroOpcode& fun) {
 	CORE_ASSERT(lfunc_name_map.contains(fun), "Opcode function not found in LLVM module");
 	return lfunc_name_map.at(fun);
 }
+
+llvm::orc::ThreadSafeContext* llvmGetTSCtx() { return g_context.get(); }
 
 llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }
 

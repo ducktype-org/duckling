@@ -27,6 +27,11 @@ llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun);
 std::string llvmGetFunName(const vm::low::MicroOpcode &fun);
 
 /**
+ * @brief Returns the ThreadSafeContext instance.
+ */
+llvm::orc::ThreadSafeContext* llvmGetTSCtx();
+
+/**
  * @brief Returns LLJIT instance.
  * @note For now it is stored in opcodes_bitcode_source but it will change.
  */

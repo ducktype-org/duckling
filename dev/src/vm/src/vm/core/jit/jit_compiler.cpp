@@ -99,8 +99,9 @@ namespace vm::jit {
 	}
 
 	MRef<JitOpFun> compileLLVM(const low::LowFuncData& function_to_compile) {
-		auto               ctx_ptr = std::make_unique<llvm::LLVMContext>();
-		llvm::LLVMContext& ctx     = *ctx_ptr;
+		llvm::orc::ThreadSafeContext& tsctx = *llvmGetTSCtx();
+
+		llvm::LLVMContext& ctx = *tsctx.getContext();
 
 		llvm::FunctionType* opfun_ty = opFunType(ctx);
 
@@ -110,7 +111,7 @@ namespace vm::jit {
 		lowerFunction(function_to_compile, new_module.get(), opfun_ty, ctx);
 
 		auto&                       lljit = *llvmGetLljit();
-		llvm::orc::ThreadSafeModule tsm(std::move(new_module), std::move(ctx_ptr));
+		llvm::orc::ThreadSafeModule tsm(std::move(new_module), tsctx);
 		if (auto err = lljit.addIRModule(std::move(tsm)))
 			llvm::logAllUnhandledErrors(
 				std::move(err), llvm::errs(), "Error adding module to JIT: "
