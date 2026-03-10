@@ -19,6 +19,7 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/str/str_utils.hpp>
 
 #include "diagnostic/source_position.hpp"
@@ -152,8 +153,13 @@ namespace compiler::helios {
 				} else {
 					// If base is meta and not a type template, then the index should be an integral
 					// constant. This expression creates a new static array type.
-					auto  maybe_size = index_ctv.get<NumericValue>().value();
-					usize size       = static_cast<usize>(maybe_size.coerceTo<u64>().value());
+					auto maybe_size = index_ctv.get<NumericValue>().value();
+					CORE_ASSERT(
+						maybe_size.isIntegral(),
+						"Static array type creation with non-integral size. This should be caught "
+						"earlier."
+					);
+					usize size = static_cast<usize>(maybe_size.coerceTo<u64>().value());
 					return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
 				}
 			}

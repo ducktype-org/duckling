@@ -135,8 +135,6 @@ private:
 			1
 		);
 
-		// TODOP: TypeTemplate indexing indexed with an int.
-
 		checkForErrorOnCompileModule(
 			R"(
 				fun a() = {
