@@ -7,7 +7,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	namespace internal {
+	namespace {
+		using namespace internal;
+
 		template<class T>
 		struct StmtClassifiers {
 			/**
@@ -38,7 +40,7 @@ namespace pst {
 		};
 
 		template<std::derived_from<ClassStmt> T, class... Ts>
-		MBox<T> parseStmt(LangParserState& state, const ClassContext& ctx, Ts... args) {
+		MBox<T> parseStmt(LangParserState& state, Ts... args) {
 			// We skip the first token as its the keyword we already found
 			u64  length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
 			bool could_implicitly_return
@@ -47,7 +49,7 @@ namespace pst {
 
 			fallbackLen(state, length);
 
-			MBox<T> out = T::parse(state, ctx, std::forward<Ts...>(args)...);
+			MBox<T> out = T::parse(state, std::forward<Ts...>(args)...);
 
 			auto opt = out.toOpt();
 			if (opt && opt.value()->trailingSemicolon()) {
@@ -62,7 +64,7 @@ namespace pst {
 			PST_RETURN out;
 		}
 
-		MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx) {
+		MBox<ClassStmt> chooseStmt(LangParserState& state) {
 			if (state[0].is(Special::Semicolon)
 			    && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
 				state.tokens().skip();
@@ -78,33 +80,33 @@ namespace pst {
 
 			switch (as_keyword) {
 			case Keyword::Fun:
-				return internal::parseStmt<Method>(state, ctx);
+				return parseStmt<Method>(state);
 			case Keyword::Let:
 			case Keyword::Var:
-				return internal::parseStmt<Field>(state, ctx);
+				return parseStmt<Field>(state);
 			case Keyword::Alias:
 			case Keyword::Using:
 			case Keyword::Class:
-				return internal::parseStmt<NonClassStmt>(state, ctx);
+				return parseStmt<NonClassStmt>(state);
 			default:
 				break;
 			}
 
-			if (state[0].isStr(ctx.name)) return internal::parseStmt<ClassSpecial>(state, ctx);
+			if (state[0].isStr(state.getContext()->class_name))
+				return parseStmt<ClassSpecial>(state);
 
-			return internal::parseStmt<Field>(state, ctx);
+			return parseStmt<Field>(state);
 		}
 	}
 
-	LangElement::HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
+	HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
 		addToHash(partial_hash, isImplicitReturn());
-		addToHash(partial_hash, context.name.str());
 		return partial_hash;
 	}
 
-	MBox<ClassStmt> ClassStmt::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<ClassStmt> ClassStmt::parse(LangParserState& state) {
 		// Collect Attributes
 		auto prefixes = collectPrefixes(state);
 
@@ -112,10 +114,10 @@ namespace pst {
 
 		// Specifier block handling
 		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
-			out = internal::parseStmt<ClassSpecifierBlock>(state, ctx);
+			out = parseStmt<ClassSpecifierBlock>(state);
 		} else {
 			// Parse Statement
-			out = internal::chooseStmt(state, ctx);
+			out = chooseStmt(state);
 		}
 
 		// Add Attributes

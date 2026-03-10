@@ -27,8 +27,7 @@ namespace pst {
 	 */
 	template<typename T, lang_def::Keyword key>
 	MBox<T> parseVariableTemplate(pst::LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<T>(position);
+		auto out = makeBox<T>(state);
 
 		if (!assertStmtChoice<T>(state, state[0].is(key))) return nullptr;
 

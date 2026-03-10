@@ -15,7 +15,7 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<TemplateSpecifier>(state.getPosition());
+		auto out = makeBox<TemplateSpecifier>(state);
 		state.parse(out).one(NamedOperator::Colon);
 		state.parse(out).goDown();
 		state.parse(out).one(&out->inner);
@@ -33,8 +33,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& TemplateSpecifier::addElementDataToStableHash(HashAlg& partial_hash
-	) const {
+	HashAlg& TemplateSpecifier::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 
