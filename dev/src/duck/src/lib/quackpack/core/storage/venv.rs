@@ -61,7 +61,11 @@ use tracing::debug;
 
 use crate::{
     QuackResult, QuackResultContext,
-    quackpack::core::storage::{freeze, paths::Storage, venv_id::VenvId},
+    quackpack::core::storage::{
+        freeze::{self, VenvFreeze},
+        paths::Storage,
+        venv_id::VenvId,
+    },
     util_common::{
         hash,
         path_ops_ext::{MkdirOptions, PathOpsExt},
@@ -173,6 +177,24 @@ impl VenvData {
 
     pub fn set_last_access(&mut self, last_access: SystemTime) {
         self.last_access = last_access;
+    }
+}
+
+impl From<VenvData> for VenvFreeze {
+    fn from(value: VenvData) -> Self {
+        value.freeze
+    }
+}
+
+impl From<Venv> for VenvData {
+    fn from(value: Venv) -> Self {
+        value.data
+    }
+}
+
+impl From<Venv> for VenvFreeze {
+    fn from(value: Venv) -> Self {
+        value.data.freeze
     }
 }
 

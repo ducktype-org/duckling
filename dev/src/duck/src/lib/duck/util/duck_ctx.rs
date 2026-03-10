@@ -121,3 +121,16 @@ impl Default for DuckCtx {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn assert_send_sync_package() {
+        fn assert_send<T: Send>() {}
+        fn assert_sync<T: Sync>() {}
+        assert_send::<DuckCtx>();
+        assert_sync::<DuckCtx>();
+    }
+}
