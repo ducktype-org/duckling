@@ -169,10 +169,16 @@ private:
 			auto var_type_info = var_type_info_reponse.value().type;
 
 			if (var.offset == 0) {
-				assertEqual(var_type_info->getName(), base::StrID("i64"), "Variable type is not correct");
+				assertEqual(
+					var_type_info->getName(), base::StrID("i64"), "Variable type is not correct"
+				);
 
 				auto pointer_data_response
-					= vm::api::debuggerGetPointerData(pid, var.pointer, var_type_info->getSize().assumePointerSize(vm::Type::POINTER_SIZE).asInt())
+					= vm::api::debuggerGetPointerData(
+						  pid,
+						  var.pointer,
+						  var_type_info->getSize().assumePointerSize(vm::Type::POINTER_SIZE).asInt()
+					)
 				          .value();  // "Get pointer data failed"
 				auto value = vm::safeReadPointerBytes<i64>(pointer_data_response.data.getBegin());
 				assertEqual(0, value, "Variable value is not correct");
