@@ -124,16 +124,29 @@ namespace vm::jit {
 						usize target_block_idx = instr_to_block(end + last_instr.arg0);
 						std::cerr << "Connecting block " << block_idx << " with a conditional jump to block " << target_block_idx << "\n";
 
+						// Access flags.flag (field index 0 in FlagData)
+						llvm::StructType* flag_data_ty = llvm::StructType::get(llvm_ctx, {
+							llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
+						}, /*isPacked=*/false);
+						flag_data_ty->setName("vm::FlagData");
+
+						// Define Frame struct type with correct field layout
+						llvm::StructType* frame_ty = llvm::StructType::get(llvm_ctx, {
+							llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(llvm_ctx)),  // const MicroInstruction*
+							llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(llvm_ctx)),  // std::byte* local_stack
+							llvm::PointerType::getUnqual(flag_data_ty),  					// bool flag (simplified FlagData)
+							// NOTE: We're simplifying - ignoring block_stack, HashMaps, etc.
+							// This is a HACK for now; ideally use actual struct definition
+						}, /*isPacked=*/false);
+        				frame_ty->setName("vm::Frame");  // Add name explicitly
+
 						// Get pointer to flags field in frame
-						llvm::StructType* frame_ty = llvm::StructType::create(llvm_ctx, "vm::Frame");
 						llvm::PointerType* frame_ptr_ty = llvm::PointerType::getUnqual(frame_ty);
 
 						// Access flags field (field index 2 in Frame)
 						llvm::Value* frame_ptr = ir_builder.CreateLoad(frame_ptr_ty, v_frame);
 						llvm::Value* flags_ptr = ir_builder.CreateStructGEP(frame_ty, frame_ptr, 2);
 
-						// Access flags.flag (field index 0 in FlagData)
-						llvm::StructType* flag_data_ty = llvm::StructType::create(llvm_ctx, "vm::FlagData");
 						llvm::Value* flag_ptr = ir_builder.CreateStructGEP(flag_data_ty, flags_ptr, 0);
 
 						// Load the flag value
