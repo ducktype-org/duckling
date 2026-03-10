@@ -8,7 +8,7 @@ namespace pst {
 			CallArgument,
 			CallList,
 			false,  // empty list allowed
-			true,  // trailing separator allowed
+			true,   // trailing separator allowed
 			lexer::Token::BracketType::None,
 			internal::Conditions::isComma,
 			internal::Conditions::isSentinel,
