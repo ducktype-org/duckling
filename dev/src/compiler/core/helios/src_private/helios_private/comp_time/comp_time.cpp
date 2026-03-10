@@ -1,7 +1,5 @@
 #include "comp_time.hpp"
 
-#include "typesystem/higher/kind.hpp"
-
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
@@ -19,10 +17,8 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/except/exceptions.hpp"
 #include <base/str/str_utils.hpp>
 
-#include "diagnostic/source_position.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -828,8 +824,7 @@ namespace compiler::helios {
 						base::strConcat(
 							"Evaluating a function in DVM at compile time which was generated "
 							"automatically. "
-							"This likely means that the function was a compiler generated "
-							"class "
+							"This likely means that the function was a compiler generated class "
 							"constructor. "
 							"The failure happened for the symbol `",
 							name(func_id),
@@ -897,10 +892,10 @@ namespace compiler::helios {
 
 			// Retrieve the functions return type.
 			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
-			if (callee_abs_type.getKind() != tsh::Kind::Function)
-				CORE_PANIC(
-					"Attempting to call a non_function type during VM compile time evaluation"
-				);
+			CORE_ASSERT(
+				callee_abs_type.getKind() == tsh::Kind::Function,
+				"Attempting to call a non_function type during VM compile time evaluation"
+			);
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result = executeInVm(

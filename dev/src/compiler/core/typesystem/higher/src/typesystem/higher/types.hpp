@@ -15,8 +15,6 @@
 #include <base/collections/optional.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
-#include "query_framework/context/context.hpp"
-
 namespace compiler::tsh {
 	class UnitAbstractTypeImpl;
 	class VoidAbstractTypeImpl;

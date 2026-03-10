@@ -1,15 +1,8 @@
 #include "abstract_type_impl.hpp"
 
-#include "typesystem/higher/abstract_type.hpp"
-#include "typesystem/higher/queries/types.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
-
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/variant_match.hpp"
-#include "base/str/str_utils.hpp"
+#include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
 

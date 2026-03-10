@@ -1,7 +1,6 @@
 #pragma once
 
 #include "queries.hpp"
-#include "typesystem/higher/symbol_type.hpp"
 
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -14,7 +13,6 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
-#include "query_framework/context/context.hpp"
 #include <query_framework/context/context_fd.hpp>
 
 #include <utility>

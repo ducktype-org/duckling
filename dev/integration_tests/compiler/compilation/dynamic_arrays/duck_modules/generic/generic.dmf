@@ -147,6 +147,8 @@ fun listOfRefsTest() -> () = {
     printPoint(&p2);
     printSeparator();
 
+    # With the current semantics, this line automatically dereferences 
+    # `&p2` and inserts a copy to `list_of_refs`.
     list_of_refs[0] = &p2;
     # This should not modify `p1` with the current semantics.
     list_of_refs[1].x = 999;

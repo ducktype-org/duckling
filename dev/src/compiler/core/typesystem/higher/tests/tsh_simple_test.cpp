@@ -1,5 +1,3 @@
-#include "typesystem/higher/kind.hpp"
-
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
@@ -624,7 +622,7 @@ private:
 			assertTrue(
 				instantiated_abs_2 == instantiated_abs,
 				"Two same type templates instantiated with the same type should produce the same "
-			    "type"
+				"type"
 			);
 		});
 	}
