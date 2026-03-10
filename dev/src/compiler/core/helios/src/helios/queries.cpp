@@ -34,6 +34,7 @@
 #include <typesystem/higher/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -47,20 +48,33 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto scopes = ctx.query<QueryScopesInModule>(key);
-
-			HOUTUnit out;
-
 			// We want to continue gathering other entities
 			// even if some function queries fail,
 			// so we store in this variable whether any failure occurred,
 			// and return failure at the end if so.
 			bool is_failed = false;
 
+			MCRef<std::vector<ScopeID>> scopes_to_process;
+
+			auto scopes_in_module = ctx.query<QueryScopesInModule>(key);
+			variant_match(scopes_in_module->value) {
+				variant_case(QueryScopesInModuleValue::Success, success) {
+					scopes_to_process = &success.scopes;
+				}
+				variant_case(QueryScopesInModuleValue::Failure, failure) {
+					scopes_to_process = &failure.partial_scopes;
+					is_failed
+						= true;  // we mark the whole query as failed, even if we have some scopes
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
+
+			HOUTUnit out;
+
 			std::vector<query::TaskHandle> scheduled_tasks;
 			std::vector<SymID>             class_symbols;
 
-			for (auto scope: *scopes) {
+			for (auto scope: *scopes_to_process) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
 				for (auto sym: *symbols_in_scope) {
@@ -633,7 +647,12 @@ namespace compiler::helios {
 			code::CodeBlock block({});
 			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
-				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
+				auto          unlocked = stmt.unlockOpt(ctx);
+				if (!unlocked.has_value()) {
+					// @TODO: #1753 change here to grab errors from all statements.
+					query::throwFailed();
+				}
+				unlocked.value()->acceptVisitor(stmt_maker);
 
 				if (stmt_maker.is_failed) {
 					// @TODO: #1753 change here to grab errors from all statements.

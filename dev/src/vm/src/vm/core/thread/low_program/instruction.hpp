@@ -68,20 +68,19 @@ namespace vm {
 	constexpr u64 OP_CASES_COUNT = ::internal::countOpCases();
 
 	struct MicroInstruction final {
-		union {
-			/**
-			 * @brief Index indicating which opcode it is.
-			 * @details This is used when the `USE_TAIL_CALLS` option is disabled.
-			 */
-			u64 nontc_opcode;
-
-			/**
-			 * @brief Pointer to the opcode functions
-			 * @details This is used when the `USE_TAIL_CALLS` option is enabled.
-			 */
-			OpFunTC* tc_opfun;
-		};
-
+#ifdef USE_TAIL_CALLS
+		/**
+		 * @brief Pointer to the opcode functions
+		 * @details This is used when the `USE_TAIL_CALLS` option is enabled.
+		 */
+		OpFunTC* tc_opfun;
+#else
+		/**
+		 * @brief Index indicating which opcode it is.
+		 * @details This is used when the `USE_TAIL_CALLS` option is disabled.
+		 */
+		u64 nontc_opcode;
+#endif
 		u64 arg0;
 		u64 arg1;
 

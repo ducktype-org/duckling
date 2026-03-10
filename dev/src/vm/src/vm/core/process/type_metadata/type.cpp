@@ -6,6 +6,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 
 #include <algorithm>
 
@@ -114,13 +115,13 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset = Offset(0), .type = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
 	}
 
-	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
+	void Type::defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		CORE_ASSERT(variants_definitions.size() != 0, "Cannot define variant with no alternatives");
 		state = State::Defined;
@@ -129,17 +130,8 @@ namespace vm {
 		auto variant = kind::Variant{};
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
-		// log_256(x) = log_2(x) / log_2(256) = log_2(x) / 8.0
-		const auto needed_bytes
-			= ceil(log2(static_cast<double>(variants_definitions.size())) / 8.0);
-
-		// Need to get a power of 2 - 1, 2, 4, 8, 16 etc
-		// 2 ** (ceil(log2(needed_bytes)))
-		const auto rounded_to_power_of_2
-			= static_cast<usize>(std::pow(2, ceil(log2(needed_bytes))));
-
-		variant.type_tag_size_bytes = rounded_to_power_of_2;
-		kind                        = variant;
+		variant.type_tag_size = type_tag_size;
+		kind                  = variant;
 	}
 
 	void Type::defineFunction(std::vector<TypeCRef> parameters, TypeCRef result) {
@@ -161,7 +153,9 @@ namespace vm {
 	}
 
 	void Type::finalize() {
-		if (state == State::Finalizing) throw code::CyclicDependencyError(*this);
+		// @TODO: #1971 Delete these checks
+		if (state == State::Finalizing)
+			CORE_PANIC("Cyclic dependency detected during type finalization");
 		if (state == State::Finalized) return;
 		state = State::Finalizing;
 		defer(state = State::Finalized);
@@ -174,7 +168,7 @@ namespace vm {
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
-				Offset offset = 0;
+				Offset offset(0);
 				for (auto& field: data.fields) {
 					field.offset = offset;
 					field.type->finalize();
@@ -186,12 +180,12 @@ namespace vm {
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
-				TypeSize data_size = 0;
+				TypeSize data_size(0);
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
 					data_size = std::max(data_size, alternative->getSize());
 				}
-				this->size = variant.type_tag_size_bytes + data_size;
+				this->size = variant.type_tag_size + data_size;
 				isInstantiableImpl(variant);
 			}
 		}
@@ -272,9 +266,9 @@ namespace vm {
 		});
 	}
 
-	base::Optional<u64> Type::getParametersSize() const {
+	base::Optional<Bytes> Type::getParametersSize() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
-			usize size = 0;
+			Bytes size(0);
 			for (const auto& param: function->parameters) size += param->getSize();
 			return size;
 		});
@@ -293,9 +287,9 @@ namespace vm {
 		});
 	}
 
-	base::Optional<usize> Type::getTypeTagSizeBytes() const {
+	base::Optional<Bytes> Type::getTypeTagSizeBytes() const {
 		return get<kind::Variant>().map([](CRef<kind::Variant> variant) {
-			return variant->type_tag_size_bytes;
+			return variant->type_tag_size;
 		});
 	}
 
@@ -319,11 +313,7 @@ namespace vm {
 			variant_case(kind::FixedSizeTable, table) {
 				return table.inner_type->isTriviallyCopyable();
 			}
-			variant_case(kind::Variant, variant) {
-				for (const auto& tp: variant.alternatives)
-					if (!tp->isTriviallyCopyable()) return false;
-				return true;
-			}
+			variant_case(kind::Variant, variant) { return false; }
 			variant_case(kind::Function, function) { return false; }
 			variant_case(kind::Pointer, pointer) { return false; }
 			variant_case(kind::Opaque, opaque) { return true; }

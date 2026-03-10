@@ -12,8 +12,7 @@ namespace pst {
 	);
 
 	MBox<StmtSpecifier> StmtSpecifier::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<StmtSpecifier>(position);
+		auto out = makeBox<StmtSpecifier>(state);
 
 		auto keyword = state[0].asKeyword();
 		if (!assertStmtChoice<StmtSpecifier>(
@@ -54,7 +53,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& StmtSpecifier::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& StmtSpecifier::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, lang_def::keywordToStr(specifier));
 		return partial_hash;
 	}

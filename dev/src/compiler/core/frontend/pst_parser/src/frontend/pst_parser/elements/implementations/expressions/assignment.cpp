@@ -26,7 +26,7 @@ namespace pst::expr {
 			}
 		}
 		if (!found) return Lower::parse(state, length);
-		auto out = makeBox<Assignment>(pos);
+		auto out = makeBox<Assignment>(state);
 
 		state.parse(out).with(&out->variables, Lower::parse, +place);
 
@@ -50,7 +50,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type.strView());
 		return partial_hash;
 	}

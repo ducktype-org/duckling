@@ -10,7 +10,7 @@ namespace pst {
 	class ImplementsList final:
 		  public List<ImplementsElementExprHolder, internal::NameGetters::inheritanceList> {
 	public:
-		explicit ImplementsList(const dia::SourcePosition& pos): List(pos) {}
+		explicit ImplementsList(const LangParserState& state): List(state) {}
 
 		static MBox<ImplementsList> parse(LangParserState& state);
 

@@ -6,8 +6,7 @@
 namespace pst {
 	// @TODO: make better
 	MBox<Fun> Fun::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Fun>(position);
+		auto out = makeBox<Fun>(state);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
@@ -16,7 +15,10 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
-		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			state.parse(out).all(NamedOperator::Assign, &out->body);
+		})
 
 		PST_RETURN out;
 	}
@@ -41,7 +43,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Fun::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Fun::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, ret.has_value());
 		return partial_hash;

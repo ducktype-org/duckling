@@ -12,7 +12,7 @@ namespace pst {
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:
-		explicit Param(const dia::SourcePosition& position): NotStmt(position) {
+		explicit Param(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::Param;
 		}
 

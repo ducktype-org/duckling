@@ -5,7 +5,7 @@
 namespace pst {
 	class Redo final: public Action {
 	public:
-		explicit Redo(const dia::SourcePosition& position): Action(position) {}
+		explicit Redo(const LangParserState& state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;
