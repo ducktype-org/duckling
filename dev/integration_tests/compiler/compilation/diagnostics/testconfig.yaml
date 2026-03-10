@@ -4,12 +4,14 @@
 
 PreCase: "@{clean_cmd} && mkdir build"
 
-Run: "  case '@{backend}' in
+Run: "
+  case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                   ;;
     llvm)      @{compile_llvm_backend_cmd}                  ;;
-    nobackend) echo 'Backend undefined'; exit 1             ;;
-    *)         echo 'Unknown backend';   exit 2             ;;
-  esac;"
+    nobackend) exit 1 ;;
+    *)         exit 2 ;;
+  esac;
+  "
   
 Tests:
   no_main_source_file:
@@ -18,6 +20,7 @@ Tests:
         backend: llvm
         # @TODO: #2228 add better output handling here!
         Output:
-          String:
-            "error[E0]: Main package does not have a main source file.\nThe main source file is required for compilation. Please add a no_main_source_file.dmf file to the main module directory.\n\n"
+          String: ""
+        Err:
+          String: "error[E0]: Main package does not have a main source file.\nThe main source file is required for compilation. Please add a no_main_source_file.dmf file to the main module directory.\n\n"
         ExitCode: 1
