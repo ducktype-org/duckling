@@ -1,0 +1,64 @@
+# Benchmark: arithmetic operations on local variables with a loop inside the function
+# Function f performs ~40 arithmetic instructions sequentially (no branches, no calls)
+# Main reads n from STDIN and calls f n times
+
+function f {} -> void {
+    init_lany_type a, i64;
+    mov_l64_imm a, 100;
+    add_l64_imm a, 15;
+
+    jmp_label cleanup_a;
+
+    init_lany_type b, i64;
+    mov_l64_imm b, 50;
+    add_l64_imm b, 22;
+
+    # Cleanup
+    deinit; # b
+
+    label cleanup_a;
+    deinit; # a
+    
+    ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    # Read counter limit from STDIN
+    init_lany_type counter_limit, i64;
+    input_l64 counter_limit;
+
+    # Initialize loop counter
+    init_lany_type counter, i64;
+    mov_l64_imm counter, 0;
+
+    # Loop until counter equals counter_limit
+    label loop_start;
+    
+    # Check if counter == counter_limit
+    cmpEq_l64_l64 counter, counter_limit;
+    jmpIf_label loop_end;
+
+    # Call function f
+    call_func f;
+
+    # Increment counter
+    add_l64_imm counter, 1;
+
+    # Jump back to loop start
+    jmp_label loop_start;
+
+    label loop_end;
+    
+    # Return 0
+    mov_l64_imm ret_val, 0;
+    
+    deinit; # counter
+    deinit; # counter_limit
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}
