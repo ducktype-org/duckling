@@ -267,7 +267,7 @@ clah::Clah getClahForMain() {
                         base::generateRandomString(32)
                     );
 
-					compiler::driver::initializeTheCompiler(
+					auto init_ok = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
@@ -284,6 +284,11 @@ clah::Clah getClahForMain() {
 							},
 						}
 					);
+
+					if (init_ok.isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
@@ -365,7 +370,7 @@ clah::Clah getClahForMain() {
 
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
-					compiler::driver::initializeTheCompiler(
+					auto init_ok = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
@@ -383,6 +388,12 @@ clah::Clah getClahForMain() {
 							},
 						}
 					);
+
+					if (init_ok.isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 
 

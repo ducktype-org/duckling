@@ -4,11 +4,14 @@
 
 #include <concurrent/module_flags/worker_count.hpp>
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
+#include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
@@ -29,6 +32,8 @@ namespace compiler::driver {
 		void handleLoggerInitialization() {
 			// We might want to configure it differently in the future:
 			dia_int::configureImmediatePrint(&std::cerr);
+
+			global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 		}
 
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
@@ -66,12 +71,23 @@ namespace compiler::driver {
 			);
 		}
 
-		void handlePackageOptions(const options_types::PackageInfo& package_info) {
+		base::OkBad handlePackageOptions(const options_types::PackageInfo& package_info) {
 			// Create the module tree for the main package and add it to global state
 			auto root_module = compiler::frontend::createModuleTree(
 				package_info.package_path, package_info.package_name
 			);
+			if (!getModuleRef(root_module)->hasMainSourceFile()) {
+				auto module_name = getModuleRef(root_module)->getName();
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
+					"Main package does not have a main source file.",
+					base::strConcat(
+						"The main source file is required for compilation. Please add a ",  module_name, ".dmf file to the main module directory: ", package_info.package_path.string(), "/."
+					)
+				));
+				return base::BAD;
+			}
 			global_state::setters::addMainPackage(root_module);
+			return base::OK;
 		}
 
 		/**
@@ -174,7 +190,12 @@ namespace compiler::driver {
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
-				handlePackageOptions(package_compilation_options.main_package_info);
+
+				auto package_success = handlePackageOptions(package_compilation_options.main_package_info);
+
+				if (package_success.isBad()) {
+					return base::BAD;
+				}
 
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);

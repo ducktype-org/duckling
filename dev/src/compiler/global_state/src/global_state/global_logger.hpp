@@ -7,7 +7,7 @@ namespace global_state {
 	/**
 	 * Returns a global dia-int logger that can be used outside query framework.
 	 */
-	Ref<dia_int::Logger> getRootCollection();
+	Ref<dia_int::Logger> getGlobalLogger();
 
 	/**
 	 * Returns true if the global logger has been set.
