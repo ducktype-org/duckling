@@ -6,16 +6,19 @@
 namespace vm {
 
 // for now only a single(ext-less) instruction
-#define HANDLE_OPCODE(opcode_name)                                                            \
-	void wrapper_##opcode_name(                                                               \
-		MicroInstruction instr, std::byte* local_stack, Frame* frame, VMThread* thread        \
-	) {                                                                                       \
-		CORE_ASSERT(getInstructionOpcode(instr) == SC_OPCODE, "Expected a different opcode"); \
-		MicroInstruction* instr_ptr = &instr;                                                 \
-		vm::OpFuns::op_##opcode_name(instr_ptr, local_stack, frame, thread);                  \
-		CORE_ASSERT(instr_ptr == &instr + 1, "An unexpected jumping opcode");                 \
+#define HANDLE_MICRO_INSTR(opcode_name)                                                \
+	void wrapper_##opcode_name(                                                        \
+		MicroInstruction instr, std::byte* local_stack, Frame* frame, VMThread& thread \
+	) {                                                                                \
+		CORE_ASSERT(                                                                   \
+			getInstructionOpcode(instr) == low::MicroOpcode::opcode_name,              \
+			"Expected a different opcode"                                              \
+		);                                                                             \
+		const MicroInstruction* instr_ptr = &instr;                                    \
+		vm::OpFuns::op_##opcode_name(instr_ptr, local_stack, frame, thread);           \
+		CORE_ASSERT(instr_ptr == &instr + 1, "An unexpected jumping opcode");          \
 	}
 #include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
-#undef HANDLE_OPCODE
+#undef HANDLE_MICRO_INSTR
 
 }

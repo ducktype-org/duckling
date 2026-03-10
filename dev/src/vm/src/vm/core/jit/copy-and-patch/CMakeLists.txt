@@ -1,78 +1,41 @@
-function(process_to_binary source_file destination_file)
-    get_filename_component(
-        source_file_abs "${source_file}"
-        ABSOLUTE BASE_DIR
-        "${CMAKE_CURRENT_LIST_DIR}"
-    )
+# Analyze and process the `binary_file`, preparing to embed in `destination_file`
+function(process_to_binary binary_file destination_file binary_artifact_prefix)
+    set(extra_deps ${ARGN})
     get_filename_component(
         destination_file_abs "${destination_file}"
         ABSOLUTE BASE_DIR
         "${CMAKE_CURRENT_LIST_DIR}"
     )
 
-    if(NOT EXISTS "${source_file_abs}")
-        message(
-            FATAL_ERROR 
-            "process_to_binary source file not found: ${source_file_abs}"
-        )
-    endif()
+    set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-linked")
+    set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-nm")
+    set(text_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-text")
 
-    get_filename_component(
-        source_file_stem "${source_file_abs}"
-        NAME_WE
-    )
-    
-    
-    add_library(${source_file_stem}-compiled OBJECT ${source_file})
-    target_compile_options(${source_file_stem}-compiled PRIVATE 
-        -fPIC
-        -fno-plt
-        -fno-semantic-interposition
-    )
-    if(source_file_stem STREQUAL "wrapper")
-        target_include_directories(${source_file_stem}-compiled PRIVATE
-            "${CMAKE_SOURCE_DIR}/src/vm/src"
-            "${CMAKE_SOURCE_DIR}/src/vm/src_private"
-        )
-        target_link_libraries(${source_file_stem}-compiled
-            Base Clah Filesystem TPC Init Logger Diagnostic Crow::Crow JSON
-        )
-    endif()
-
-    set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${source_file_stem}-linked")
-    set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${source_file_stem}-nm")
-    set(text_out "${CMAKE_CURRENT_BINARY_DIR}/${source_file_stem}-text")
-    
     find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
     find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
 
-    set(flto "")
-    if(ENABLE_LINK_TIME_OPTIMIZATION)
-        set(flto "-flto")
-    endif()
-
+    # Force resolution of local function calls (is it needed?)
     add_custom_command(
         OUTPUT ${linked_out}
-        COMMAND ${CMAKE_CXX_COMPILER} -r ${flto} -Bsymbolic-functions $<TARGET_OBJECTS:${source_file_stem}-compiled> -o ${linked_out}
-        DEPENDS ${source_file_stem}-compiled
+        COMMAND ${CMAKE_CXX_COMPILER} -r ${flto} -Bsymbolic-functions ${binary_file} -o ${linked_out}
+        DEPENDS ${binary_file} ${extra_deps}
     )
+
+    # Analyze and generate data from the binary
     add_custom_command(
         OUTPUT ${nm_out}
         COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py" "${linked_out}" "--output=${nm_out}"
         DEPENDS ${linked_out} ${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py
         VERBATIM
     )
+    set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
+
+    # Strip other section (it is no longer in the ELF format)
     add_custom_command(
         OUTPUT ${text_out}
-        COMMAND ${LLVM_OBJCOPY} -O binary --only-section=.text ${linked_out} ${text_out} 
+        COMMAND ${LLVM_OBJCOPY} -O binary --only-section=.text ${linked_out} ${text_out}
         DEPENDS ${linked_out}
     )
-
-    add_custom_target(${source_file_stem}-binary-artifacts
-        DEPENDS "${nm_out}" "${text_out}"
-    )
-
-    set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
     set_source_files_properties("${text_out}" PROPERTIES GENERATED TRUE)
 
     set(destination_scopes
@@ -80,6 +43,7 @@ function(process_to_binary source_file destination_file)
         "${CMAKE_SOURCE_DIR}/src/vm"
     )
 
+    # Include data generated from the binary
     set_property(
         SOURCE "${destination_file_abs}"
         DIRECTORY ${destination_scopes}
@@ -88,16 +52,15 @@ function(process_to_binary source_file destination_file)
         "${CMAKE_CURRENT_BINARY_DIR}"
     )
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set_property(
-            SOURCE "${destination_file_abs}"
-            DIRECTORY ${destination_scopes}
-            APPEND
-            PROPERTY COMPILE_OPTIONS
-            "--embed-dir=${CMAKE_CURRENT_BINARY_DIR}"
-        )
-    endif()
-    
+    # Embed the binary
+    set_property(
+        SOURCE "${destination_file_abs}"
+        DIRECTORY ${destination_scopes}
+        APPEND
+        PROPERTY COMPILE_OPTIONS
+        "--embed-dir=${CMAKE_CURRENT_BINARY_DIR}"
+    )
+
     set_property(
         SOURCE "${destination_file_abs}"
         DIRECTORY ${destination_scopes}
@@ -107,14 +70,42 @@ function(process_to_binary source_file destination_file)
     )
 endfunction()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # JIT_ENABLED nie działa
-    process_to_binary(tests/mock_stencils.c tests/jit_memory_test.cpp)
-    duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
-endif ()
+add_library(mock_stencils OBJECT tests/mock_stencils.c)
+target_compile_options(mock_stencils PRIVATE
+    -fPIC
+    -fno-plt
+    -fno-semantic-interposition
+)
+process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
+duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    process_to_binary(stencils/wrapper.cpp copy-and-patch.cpp)
-    add_files(copy-and-patch.cpp)
+# prepare to include it in the full LTO of opfuncs
+add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
+target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
+target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
+
+if(NOT JIT_LLVM_LLC)
+    find_program(JIT_LLVM_LLC NAMES llc-19 llc REQUIRED)
 endif()
 
-set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
+set(cp_stencils "${CMAKE_CURRENT_BINARY_DIR}/wrapper")
+
+# compile to binary
+add_custom_command(
+    OUTPUT ${cp_stencils}
+    COMMAND ${JIT_LLVM_LLC}
+    -filetype=obj
+    -O3
+    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>
+    -o
+    ${cp_stencils}
+    DEPENDS CommonVMBitcode_sc
+)
+
+process_to_binary("${cp_stencils}" copy-and-patch.cpp "wrapper")
+add_custom_target(
+    wrapper-binary-artifacts-target
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm
+    ${CMAKE_CURRENT_BINARY_DIR}/wrapper-text
+)

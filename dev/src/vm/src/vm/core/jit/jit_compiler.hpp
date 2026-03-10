@@ -9,6 +9,7 @@
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>  // maybe remove this dependency?
 
 namespace vm {
+	// TODO move to place not config dependant
 	using JitOpFun = void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::VMThread*);
 }
 

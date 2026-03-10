@@ -89,6 +89,9 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
         ${jit_dependency}
     )
     make_module(JitDep USES llvm_helpers Base Diagnostic)
+    target_compile_options(JitDep PRIVATE
+        --embed-dir=${CMAKE_BINARY_DIR}
+    )
     target_include_directories(JitDep PRIVATE ${LLVM_INCLUDE_DIRS})
 
     target_include_directories(MainVM PRIVATE $<TARGET_PROPERTY:JitDep,INTERFACE_INCLUDE_DIRECTORIES>)
@@ -131,6 +134,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND ${JIT_LLVM_LINKER}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
+                $<TARGET_OBJECTS:cp-stencils_bc>
                 ${vm_dep_objects_bc}
                 -o ${common_bc}.tmp
             COMMAND ${JIT_LLVM_OPT}
@@ -142,12 +146,16 @@ function(add_vm_variant suffix compile_def)
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
             BYPRODUCTS ${common_bc}.tmp
-            DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc ${vm_dep_bc_targets}
+            DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc cp-stencils_bc ${vm_dep_bc_targets}
             COMMENT "Full O3 + LTO + Aggressive Inline for ${suffix}"
         )
 
         add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc})
         add_dependencies(JitDep CommonVMBitcode_${suffix})
+        set_target_properties(CommonVMBitcode_${suffix}
+            PROPERTIES
+                VM_COMMON_BC ${common_bc}
+        )
 
         add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
         
@@ -179,8 +187,8 @@ add_vm_variant(tc "USE_TAIL_CALLS")
 add_vm_variant(sc "USE_SWITCH_CASE")
 
 # Default alias to "sc"
-add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc> $<TARGET_OBJECTS:JitDep>)
 if (JIT_ENABLED)
+    add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc> $<TARGET_OBJECTS:JitDep>)
     make_module(LibVM USES llvm_helpers ${vm_dependencies})
     target_link_libraries(LibVM ${llvm_libs})
     add_executable(VM $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
@@ -188,6 +196,7 @@ if (JIT_ENABLED)
     target_link_libraries(VM LibVM ${llvm_libs})
     target_link_options(VM PRIVATE -Wl,--export-dynamic)
 else() # Same as for JIT, but without JITDep and llvm_libs
+    add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc>)
     make_module(LibVM USES ${vm_dependencies})
     add_executable(VM $<TARGET_OBJECTS:MainVM>)
 
