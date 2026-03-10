@@ -8,7 +8,7 @@ namespace pst {
 	 */
 	class Decl: public Stmt {
 	public:
-		Decl(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
+		Decl(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
 
 		bool trailingSemicolon() override;
 

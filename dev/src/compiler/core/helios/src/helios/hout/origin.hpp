@@ -33,9 +33,9 @@ namespace compiler::helios::code {
 		bool is_generated;
 
 		ElementOrigin(
-			base::Optional<pst::StablePosition>           source_position,
-			base::Optional<pst::StablePosition::HashType> pst_element_hash,
-			bool                                          is_generated
+			base::Optional<pst::StablePosition> source_position,
+			base::Optional<pst::StablePosition::HashType>       pst_element_hash,
+			bool                                is_generated
 		):
 			  source_position(source_position),
 			  pst_element(pst_element_hash),

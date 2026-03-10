@@ -31,40 +31,17 @@ namespace pst {
 
 		void copyOwnContext();
 
-	public:
-		LangParserState(
-			tpc::TokenStream&& tokens, Box<LangParserContext>&& ctx, Ref<dia_int::Logger> int_err
-		):
-			  tpc::ParserState(std::move(tokens), std::move(ctx), int_err) {}
+	private:
+		template<class T>
+		friend class pst::PSTAutomatic;
+		friend void fallbackLen(LangParserState& state, u64 length);
+		friend void exitFallback(LangParserState& state);
+		friend void setSoftFallback(LangParserState& state, TokenStreamCondition fun);
+		friend void exitSoftFallback(LangParserState& state);
 
-		/**
-		 * @brief Informs whether new errors and some parsing should be skipped till fallback is
-		 * reached.
-		 */
-		[[nodiscard]]
-		bool isSkipping() const;
-
-		/**
-		 * @brief Informs whether the state is finalized
-		 */
-		[[nodiscard]]
-		bool isFinalized() const;
-
-		/**
-		 * @brief Adds import to the list of imports.
-		 */
-		void addImport(const CRef<pst::Import>& import);
-
-		/**
-		 * @brief Extracts imports from state.
-		 *
-		 * @note Leaves State in an `illegal` state.
-		 */
-		[[nodiscard]]
-		auto extractState() && -> std::vector<ImportType> {
-			CORE_ASSERT(isFinalized(), "Parsing was not finalized before extracting imports");
-			return std::move(imports);
-		}
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+		| These are methods that should only be used by automatic             |
+		\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 		/**
 		 * @brief deletes current stream and makes last stream the current stream. Resets error
@@ -104,6 +81,41 @@ namespace pst {
 		 */
 		void exitFallback();
 
+	public:
+		LangParserState(
+			tpc::TokenStream&& tokens, Box<LangParserContext>&& ctx, Ref<dia_int::Logger> int_err
+		):
+			  tpc::ParserState(std::move(tokens), std::move(ctx), int_err) {}
+
+		/**
+		 * @brief Informs whether new errors occurred and some parsing should be skipped till
+		 * fallback is reached.
+		 */
+		[[nodiscard]]
+		bool isSkipping() const;
+
+		/**
+		 * @brief Informs whether the state is finalized
+		 */
+		[[nodiscard]]
+		bool isFinalized() const;
+
+		/**
+		 * @brief Adds import to the list of imports.
+		 */
+		void addImport(const CRef<pst::Import>& import);
+
+		/**
+		 * @brief Extracts imports from state.
+		 *
+		 * @note Leaves State in an `illegal` state.
+		 */
+		[[nodiscard]]
+		auto extractState() && -> std::vector<ImportType> {
+			CORE_ASSERT(isFinalized(), "Parsing was not finalized before extracting imports");
+			return std::move(imports);
+		}
+
 		/**
 		 * @brief Do final checks that everything is parsed.
 		 */
@@ -113,7 +125,7 @@ namespace pst {
 		CRef<LangParserContext> getContext() const;
 
 		void setContextClassName(base::StrID);
-		void setConstextBlockOrdering(BlockOrderType);
+		void setContextBlockOrdering(BlockOrderType);
 
 		/**
 		 * @brief Adds to the balance of skipped_entries

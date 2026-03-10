@@ -5,8 +5,7 @@
 namespace pst {
 
 	MBox<MatchCase> MatchCase::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<MatchCase>(position);
+		auto out = makeBox<MatchCase>(state);
 
 		if (!assertStmtChoice<MatchCase>(state, state[0].is(Keyword::Case))) return nullptr;
 
@@ -72,7 +71,7 @@ namespace pst {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& MatchCase::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& MatchCase::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, branches);
 		return partial_hash;
 	}
