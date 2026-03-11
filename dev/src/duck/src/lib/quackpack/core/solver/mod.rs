@@ -1,5 +1,5 @@
-//! This module contains a [`Solver`] struct, which is designated to finding the dependency resolution
-//! of a given package.
+//! This module contains a [`SolverGathererData`] and [`SolverEngineData`] structs, which are designated
+//! to finding the dependency resolution of a given package.
 //! By *dependency resolution* we mean a set of packages, each with a designated set of features,
 //! so that each package's dependencies are satisfied inside that set.
 //!
@@ -46,7 +46,7 @@ use crate::{
     },
 };
 
-/// A struct designated to finding the dependency resolution of a given package.
+/// A struct designated to finding the full dependency graph of a given package.
 pub struct SolverGathererData<'duck> {
     root_package_ctx: &'duck PackageCtx<'duck>,
     root_pkg: ExpandedPackage,
@@ -55,6 +55,7 @@ pub struct SolverGathererData<'duck> {
     mode: SolverMode,
 }
 
+/// Dependency realization returned by [`solve`](SolverEngineData::solve).
 pub struct SolverAnswer {
     pub new_freeze: SolverFreeze,
     pub pkgs_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
@@ -66,7 +67,7 @@ pub enum ShouldRunSolverEngine {
 }
 
 impl<'duck> SolverGathererData<'duck> {
-    /// Creates a new [`Solver`] instance.
+    /// Creates a new [`SolverGathererData`] instance.
     pub fn new(
         package_ctx: &'duck PackageCtx<'duck>,
         current_freeze: SolverFreeze,
@@ -94,7 +95,7 @@ impl<'duck> SolverGathererData<'duck> {
     }
 
     /// Determines if all the transitive dependencies of the root package are satisfied.
-    /// If not, prepares the [`Solver`] for running the engine by constructing [`SolverInput`].
+    /// If not, prepares the [`SolverEngineData`] for running the engine by constructing [`SolverInput`].
     pub fn prepare_solving<'fetcher, Access: GitAccess>(
         self,
         fetcher: &'fetcher mut Fetcher<'duck>,
@@ -187,6 +188,9 @@ impl<'duck> SolverGathererData<'duck> {
 }
 
 #[derive(Debug)]
+/// A struct designated to finding the dependency resolution of a given package.
+///
+/// It can be created by [`prepare_solving`](SolverGathererData::prepare_solving).
 pub struct SolverEngineData {
     input: SolverInput,
     root_pkg: ExpandedPackage,
