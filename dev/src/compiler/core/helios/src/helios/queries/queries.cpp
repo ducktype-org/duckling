@@ -177,7 +177,7 @@ namespace compiler::helios {
 
 			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
 			for (auto submodule: *submodules) {
-				// @TODO optimize multiple concatenations
+				// @TODO: #2239 optimize multiple concatenations
 				auto submodule_hout
 					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
 				for (const auto& i: submodule_hout) out.push_back(i);
