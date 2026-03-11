@@ -8,6 +8,8 @@
 #include <cstring>
 #include <span>
 #include <string_view>
+#include <vector>
+#include <algorithm>
 
 namespace vm::jit::cnp {
 	struct LLVM_nm_data {

@@ -4,21 +4,22 @@
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
-namespace vm::jit {
+namespace vm::jit::cnp {
 	using JitOpFun = void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::VMThread*);
 
 	JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
-		PUSH_DIAGNOSTIC ALLOW_EXTENSIONS static constexpr char _bin[] = {
-#embed "wrapper-text" suffix(, )
+		PUSH_DIAGNOSTIC       ALLOW_EXTENSIONS;
+		static constexpr char _bin[] = {
+#embed "wrapper-so" suffix(, )
 			0
 		};
 		POP_DIAGNOSTIC
 
-		static Stencils stencils = [] {
-			Stencils out{ .binary    = std::to_array(_bin),
-				          .functions = {
+		static auto stencils = [] {
+			constexpr Stencils out{ .binary    = std::to_array(_bin),
+				                    .functions = {
 #include "wrapper-nm"
-						  } };
+									} };
 
 			constexpr std::string_view                         wrapper_prefix = "wrapper_";
 			std::array<LLVM_nm_data, low::OPCODE_NAMES.size()> ordered{};
@@ -39,7 +40,7 @@ namespace vm::jit {
 
 			for (size_t opcode = 0; opcode < low::OPCODE_NAMES.size(); ++opcode)
 				out.functions[opcode] = ordered[opcode];
-			return out;
+			return out.load();
 		}();
 
 		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
