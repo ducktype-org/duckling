@@ -7,7 +7,7 @@
 use tracing::debug;
 
 use crate::{
-    DuckCtx, QuackResult, StrId,
+    QuackResult, StrId,
     quackpack::core::{
         FeatureName, PackageCtx,
         storage::{freeze::VenvFreeze, paths::Storage},
@@ -23,7 +23,6 @@ use duckc::*;
 #[derive(Debug)]
 /// All informations required to compile a project.
 pub struct BuildContext<'duck> {
-    pub duck_ctx: &'duck DuckCtx,
     pub package: &'duck PackageCtx<'duck>,
     pub freeze: VenvFreeze,
     pub storage: Storage,
@@ -37,7 +36,7 @@ pub fn compile<'duck>(bcx: BuildContext<'duck>) -> QuackResult<()> {
     let mut graph = CompilerDag::new_early(&bcx)?;
     graph.populate_features(&bcx.used_features)?;
     graph.remove_disabled_dependencies()?;
-    let duckc = Duckc::new(bcx.duck_ctx);
+    let duckc = Duckc::new(bcx.package.ctx());
     duckc.compile(&graph, CompilationType::OnlyRootPackage, &bcx)?;
     Ok(())
 }

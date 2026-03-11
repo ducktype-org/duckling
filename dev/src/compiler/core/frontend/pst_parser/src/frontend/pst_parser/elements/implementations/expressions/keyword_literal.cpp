@@ -7,7 +7,7 @@ namespace pst::expr {
 	MBox<ExprElement> KeywordLiteral::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		auto out = makeBox<KeywordLiteral>(state.getPosition());
+		auto out = makeBox<KeywordLiteral>(state);
 
 		state.parse(out).one(&out->keyword);
 
@@ -30,7 +30,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& KeywordLiteral::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& KeywordLiteral::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, keyword);
 		addToHash(partial_hash, template_specifier.has_value());
 		return partial_hash;

@@ -30,7 +30,7 @@ namespace pst::expr {
 		i64 fwd = toNextLink(state, length);
 		if (fwd == length) return Lower::parse(state, length);
 
-		auto out = makeBox<ChainExpr>(state.getPosition());
+		auto out = makeBox<ChainExpr>(state);
 
 		state.parse(out).with(&out->atom, Lower::parse, +fwd);
 		length -= fwd;
@@ -79,7 +79,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ChainExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ChainExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, chain.size());
 		return partial_hash;
 	}

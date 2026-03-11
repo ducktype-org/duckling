@@ -68,7 +68,7 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = makeBox<Ternary>(pos);
+		auto out = makeBox<Ternary>(state);
 
 		state.parse(out).one(Keyword::If);
 		state.parse(out).with(&out->condition, Lower::parse, then_fwd - 1);
@@ -94,7 +94,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Ternary::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Ternary::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 
