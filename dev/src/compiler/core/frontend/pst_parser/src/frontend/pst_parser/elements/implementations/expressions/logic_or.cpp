@@ -24,9 +24,9 @@ namespace pst::expr {
 
 		auto out = makeBox<LogicOr>(state);
 
-		state.parse(out).with(&out->left, Lower::parse, +or_fwd);
-		state.parse(out).one(Keyword::Or);
-		state.parse(out).with(&out->right, Self::parse, length - or_fwd - 1);
+		PARSE().with(&out->left, Lower::parse, +or_fwd);
+		PARSE().one(Keyword::Or);
+		PARSE().with(&out->right, Self::parse, length - or_fwd - 1);
 
 		PST_RETURN out;
 	}

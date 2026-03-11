@@ -15,7 +15,7 @@ namespace pst::expr {
 		}
 
 		auto out = makeBox<ExprNumericValue>(state);
-		state.parse(out).one(&out->value);
+		PARSE().one(&out->value);
 
 		if (length > 1) {
 			state.logInt(makeBox<MoreThanValueError>(pos));

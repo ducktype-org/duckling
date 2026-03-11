@@ -13,7 +13,7 @@ namespace pst {
 			"Bad starting keyword in NonClassStmt."
 		);
 
-		state.parse(out).one(&out->inner_stmt);
+		PARSE().one(&out->inner_stmt);
 		out->inner_decl_kind        = out->inner_stmt.internal()->isDeclaration();
 		out->inner_decl_symbol_name = out->inner_stmt.internal()->getDeclSymbolName();
 

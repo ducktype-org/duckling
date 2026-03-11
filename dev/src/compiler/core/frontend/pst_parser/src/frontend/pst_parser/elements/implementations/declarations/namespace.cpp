@@ -11,7 +11,7 @@ namespace pst {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Unordered);
-			state.parse(out).all(Keyword::Namespace, &out->name, &out->body);
+			PARSE().all(Keyword::Namespace, &out->name, &out->body);
 		})
 
 		PST_RETURN out;
