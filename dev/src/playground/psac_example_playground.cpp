@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <mutex>
+#include "init/init.hpp"
 
 std::mutex cout_mutex;
 
@@ -51,6 +52,8 @@ psac_function(fib, psac::Mod<int>* n_mod, psac::Mod<int>* result) {
 	}
 
 int main() {
+    init::InitObject init;
+    
 	LOG("======================================");
 	LOG("Start Init");
 
