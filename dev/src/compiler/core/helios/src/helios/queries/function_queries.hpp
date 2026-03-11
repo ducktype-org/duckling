@@ -1,0 +1,37 @@
+/**
+ * @file function_queries.hpp
+ * @brief This file contains queries specific to function analysis, return type deduction, 
+ * and HOUT code generation for functions.
+ * @note These queries are primarily used by top-level HELIOS queries during the compilation process.
+ */
+#pragma once
+
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/hout/hout.hpp>
+
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
+
+namespace compiler::helios {
+    /**
+	 * @brief Query function return type, deduced based on return statements in its body.
+	 */
+	DECLARE_QUERY(QueryReturnTypeDeduction, SymID, CRef<query::QResult<tsh::SymbolType<>>>, ({}))
+
+    /**
+	 * @brief Query declaration of function: types, args and its names.
+	 * @note Unlike QueryCodeOfFun, this query works for all SymID-s that represent functions,
+	 * be it user-defined, extern, built-in, or generated.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryDeclOfFun, SymID, CRef<query::QResult<HOUTFunctionDeclaration>>, ({}));
+
+    /**
+	 * @brief Query code of a function.
+	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryCodeOfFun, SymID, CRef<query::QResult<HOUTFunction>>, ({}));
+}

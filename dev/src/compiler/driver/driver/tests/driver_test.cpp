@@ -7,7 +7,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>

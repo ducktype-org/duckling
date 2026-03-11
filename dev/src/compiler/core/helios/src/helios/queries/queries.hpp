@@ -12,6 +12,8 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <helios/queries/function_queries.hpp>
+
 namespace compiler::helios {
 	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient
 	// incremental compilation
@@ -43,21 +45,4 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
-
-	/**
-	 * @brief Query declaration of function: types, args and its names.
-	 * @note Unlike QueryCodeOfFun, this query works for all SymID-s that represent functions,
-	 * be it user-defined, extern, built-in, or generated.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QueryDeclOfFun, SymID, CRef<query::QResult<HOUTFunctionDeclaration>>, ({}));
-
-	/**
-	 * @brief Query code of a function.
-	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QueryCodeOfFun, SymID, CRef<query::QResult<HOUTFunction>>, ({}));
 }
