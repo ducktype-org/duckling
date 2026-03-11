@@ -41,15 +41,14 @@ namespace lsp {
 	);
 
 	/**
-	 * @brief Create a file in the virtual file system with the given content.
+	 * @brief Add a file from real file system to the virtual file system.
 	 * It also adds the file to a module or creates a new module for it if needed,
 	 * and runs a query invalidation inside.
 	 *
 	 * @param absolute_physical_path Absolute path to the file in the real file system.
-	 * @param content Content of the file to be created.
 	 */
 	void addFile(
-		const fs::FilePath& absolute_physical_path, const std::string& content
+		const fs::FilePath& absolute_physical_path
 	);
 
 	/**
@@ -60,5 +59,15 @@ namespace lsp {
 	 * @param absolute_physical_path 
 	 */
 	void removeFile(const fs::FilePath& absolute_physical_path);
+
+
+	/**
+	 * @brief Remove a file or a directory with all its content from the virtual file system.
+	 *
+	 * Calls the `removeFile` function for files, and recursively calls itself for directories.
+	 *
+	 * @param absolute_physical_path Absolute path to the file or directory in the real file system.
+	 */
+	void removeFileOrDirectory(const fs::FilePath& absolute_physical_path);
 
 }

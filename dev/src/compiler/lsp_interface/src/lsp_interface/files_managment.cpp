@@ -17,130 +17,30 @@ namespace lsp {
 	using namespace compiler::frontend;
 
 	namespace {
+		// Global state for registered workspace roots.
+		// We use it to know where to stop when we walk up the filesystem looking for the package root.
 		std::vector<fs::FilePath> workspace_roots;
 
-		bool hasMainModuleFile(const fs::FilePath& dir_path) {
-			auto dir = fs::File(dir_path);
-			if (!dir.isDirectory()) return false;
+		// ========================== Filesystem related helpers ==========================
 
+		/**
+		 * @brief For a given directory path, checks if it contains a main module file
+		 * (dir/dir.dmf). If the directory does not exist, it throws an exception.
+		 */
+		bool hasDirectoryMainModuleFile(const fs::FilePath& dir_path) {
+			auto dir         = fs::File(dir_path);
 			auto module_file = dir_path.join(dir.name() + std::string(LANG_MODULE_FILE));
 			return module_file.exists();
 		}
 
-		base::Optional<fs::File> getMainModuleFile(const fs::FilePath& dir_path) {
-			auto dir = fs::File(dir_path);
-			if (!dir.isDirectory()) return {};
-
-			auto module_file = dir_path.join(dir.name() + std::string(LANG_MODULE_FILE));
-			if (module_file.exists()) return fs::File(module_file);
+		/**
+		 * @brief For a given directory path, returns the path to the main module file (dir/dir.dmf)
+		 * if it exists.
+		 */
+		base::Optional<fs::File> getDirectoryMainModuleFile(const fs::FilePath& dir_path) {
+			if (hasDirectoryMainModuleFile(dir_path))
+				return dir_path.join(dir_path.name() + std::string(LANG_MODULE_FILE));
 			return {};
-		}
-
-		// ========================== Package related helpers ==========================
-
-		void createRootModuleAndRegisterPackage(const fs::File& file) {
-			auto module_id = createModuleTreeWithRandomPackageID(file);
-			global_state::setters::addPackage(module_id);
-			std::cerr << "Created package for " << file.getFilePath().strView() << "\n";
-		}
-
-		void removeModuleAndUnregisterPackage(ModuleID module_id) {
-			;
-			if (not getModuleRef(module_id)->getParentModule().has_value())
-				global_state::setters::removePackage(module_id);
-
-			ModuleTreeModifier::removeModuleRecursive(
-				GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					module_id
-				)
-			);
-		}
-
-		// ========================== Adding file to module tree ==========================
-
-		base::Optional<base::Ref<ModuleTree>> findModuleForPath(
-			const fs::File& expected_module_directory
-		) {
-			const auto& dir = expected_module_directory;
-			if (!dir.isDirectory()) return {};
-			if (!hasMainModuleFile(dir.getFilePath())) return {};
-
-			auto module_file_name = dir.name() + std::string(LANG_MODULE_FILE);
-			auto module_file_path = dir.getFilePath().join(module_file_name);
-
-			auto source_files = SourceFile::getSourceFilesFromFile(fs::File(module_file_path));
-			if (source_files.empty()) return {};
-
-			auto module_id = source_files.back()->getModule().illegalAccess().getID();
-			return GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-				module_id
-			);
-		}
-
-		void addFileToModuleTree(const fs::File& file) {
-			auto extension  = file.extension();
-			auto parent_dir = file.getFilePath().parentPath();
-
-
-			if (extension == LANG_SOURCE_FILE) {
-				auto module_ref_opt = findModuleForPath(parent_dir);
-				if_opt_some(module_ref_opt, module_ref)
-					ModuleTreeModifier::addSourceFile(module_ref, file);
-				return;
-			}
-
-			if (extension == LANG_MODULE_FILE) {
-				base::Optional<base::Ref<ModuleTree>> module_ref_opt;
-				base::StrID                           stem_id(file.stem().c_str());
-				if (file.stem() == parent_dir.name()) {
-					// Case when we have a/a.dmf submodule structure.
-					module_ref_opt = findModuleForPath(parent_dir.parentPath());
-				} else {
-					// Case when we have b/a.dmf
-					module_ref_opt = findModuleForPath(parent_dir);
-				}
-
-				if_opt_some(module_ref_opt, module_ref) {
-					auto submodule
-						= ModuleTreeBuilder::create(file, module_ref->getPackageID().strView());
-					ModuleTreeModifier::addSubmodule(module_ref, submodule);
-				}
-				if_opt_none(module_ref_opt) { createRootModuleAndRegisterPackage(file); }
-				return;
-			}
-		}
-
-		// ========================== Removing a file from module tree ==========================
-		//
-
-		void removeFileFromModuleTree(const fs::File& file) {
-			;
-
-			auto                         source_files = SourceFile::getSourceFilesFromFile(file);
-			std::unordered_set<ModuleID> modules_to_remove;
-
-			for (auto& source_file: source_files) {
-				auto module_id  = source_file->getModule().illegalAccess().getID();
-				auto module_ref = getModuleRef(module_id);
-
-				bool is_main_source_file = false;
-				if (module_ref->hasMainSourceFile()) {
-					auto main_source_file = module_ref->getMainSourceFile().illegalAccess().getID();
-					is_main_source_file   = (main_source_file == source_file->getFileID());
-				}
-
-				if (is_main_source_file) modules_to_remove.insert(module_id);
-			}
-
-			for (auto& source_file: source_files) {
-				auto module_id = source_file->getModule().illegalAccess().getID();
-				if (modules_to_remove.contains(module_id)) continue;
-
-				ModuleTreeModifier::removeSourceFileFromStorage(source_file);
-			}
-
-			for (const auto& module_id: modules_to_remove)
-				removeModuleAndUnregisterPackage(module_id);
 		}
 
 		/**
@@ -171,6 +71,123 @@ namespace lsp {
 					copyDucklingFilesToVirtual(sub_path);
 			}
 		}
+
+		// ========================== Package related helpers ==========================
+
+		/**
+		 * @brief Creates a new root module for the given file and registers it as a package.
+		 */
+		void createRootModuleAndRegisterPackage(const fs::File& file) {
+			auto module_id = createModuleTreeWithRandomPackageID(file);
+			global_state::setters::addPackage(module_id);
+			std::cerr << "Created package for " << file.getFilePath().strView() << "\n";
+		}
+
+		/**
+		 * @brief Recursively removes a module and all its submodules from the module tree.
+		 * If the removed module is a root module, it is unregistered.
+		 */
+		void removeModuleAndUnregisterPackage(ModuleID module_id) {
+			;
+			if (getModuleRef(module_id)->getParentModule().empty())
+				global_state::setters::removePackage(module_id);
+
+			ModuleTreeModifier::removeModuleRecursive(
+				GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					module_id
+				)
+			);
+		}
+
+		// ========================== Adding file to module tree ==========================
+
+		/**
+		 * @brief For a given directory path, finds the corresponding module in the module tree if
+		 * it exists.
+		 */
+		base::Optional<base::Ref<ModuleTree>> findModuleForDirectoryPath(const fs::File& dir) {
+			if (not hasDirectoryMainModuleFile(dir.getFilePath())) return {};
+
+			auto module_file_path = getDirectoryMainModuleFile(dir.getFilePath()).value();
+
+			auto source_files = SourceFile::getSourceFilesFromFile(fs::File(module_file_path));
+			if (source_files.empty()) return {};
+
+			auto module_id = source_files.back()->getModule().illegalAccess().getID();
+			return GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+				module_id
+			);
+		}
+
+		void addFileToModuleTree(const fs::File& file) {
+			auto extension  = file.extension();
+			auto parent_dir = fs::File(file.getFilePath().parentPath());
+
+			if (extension == LANG_SOURCE_FILE) {
+				auto module_ref_opt = findModuleForDirectoryPath(parent_dir);
+				if_opt_some(module_ref_opt, module_ref)
+					ModuleTreeModifier::addSourceFile(module_ref, file);
+				return;
+			}
+
+			if (extension == LANG_MODULE_FILE) {
+				base::Optional<base::Ref<ModuleTree>> parent_module_ref_opt;
+				base::StrID                           stem_id(file.stem().c_str());
+				if (file.stem() == parent_dir.name()) {
+					// Case when we have a/a.dmf submodule structure.
+					auto parent_dir_parent = fs::File(parent_dir.getFilePath().parentPath());
+					parent_module_ref_opt  = findModuleForDirectoryPath(parent_dir_parent);
+				} else {
+					// Case when we have b/a.dmf
+					parent_module_ref_opt = findModuleForDirectoryPath(parent_dir);
+				}
+
+				if_opt_some(parent_module_ref_opt, module_ref) {
+					std::cerr << "Adding new file to already loaded package: "
+							  << file.getFilePath().strView() << "\n";
+					auto submodule
+						= ModuleTreeBuilder::create(file, module_ref->getPackageID().strView());
+					ModuleTreeModifier::addSubmodule(module_ref, submodule);
+				}
+				if_opt_none(parent_module_ref_opt) { createRootModuleAndRegisterPackage(file); }
+				return;
+			}
+		}
+
+		// ========================== Removing a file from module tree ==========================
+
+		/**
+		 * @brief Removes a file from the module tree. If the file is a source file, it is removed
+		 * from its module. If the file is a module file, the entire module is removed. If the
+		 * removed module was a package, it is unregistered.
+		 */
+		void removeFileFromModuleTree(const fs::File& file) {
+			auto                         source_files = SourceFile::getSourceFilesFromFile(file);
+			std::unordered_set<ModuleID> modules_to_remove;
+
+			for (auto& source_file: source_files) {
+				auto module_id  = source_file->getModule().illegalAccess().getID();
+				auto module_ref = getModuleRef(module_id);
+
+				bool is_main_source_file = false;
+				if (module_ref->hasMainSourceFile()) {
+					auto main_source_file = module_ref->getMainSourceFile().illegalAccess().getID();
+					is_main_source_file   = (main_source_file == source_file->getFileID());
+				}
+
+				if (is_main_source_file) modules_to_remove.insert(module_id);
+			}
+
+			for (auto& source_file: source_files) {
+				auto module_id = source_file->getModule().illegalAccess().getID();
+				if (modules_to_remove.contains(module_id)) continue;
+
+				ModuleTreeModifier::removeSourceFileFromStorage(source_file);
+			}
+
+			for (const auto& module_id: modules_to_remove)
+				removeModuleAndUnregisterPackage(module_id);
+		}
 	}
 
 	void addWorkspace(const fs::FilePath& absolute_physical_path) {
@@ -195,20 +212,22 @@ namespace lsp {
 		fs::FilePath package_root_dir = absolute_physical_path;
 
 		// Get the directory to start searching for the package root.
-		auto current = fs::File(absolute_physical_path).isDirectory()
-		                 ? absolute_physical_path
-		                 : absolute_physical_path.parentPath();
+		auto current = absolute_physical_path.parentPath();
 
-		while (current.exists()) {
-			if (hasMainModuleFile(current)) package_root_dir = current;
+		while (current.exists() and not current.empty()) {
 			if (current == workspace_root) break;
+			if (hasDirectoryMainModuleFile(current))
+				package_root_dir = current;
+			else
+				break;
+
 			current = current.parentPath();
 		}
 
 		if (package_root_dir.toVirtualPath().exists()) {
 			// If the package is already loaded, it means that the file is a new file in an already
 			// loaded package, so we just create it in the virtual file system.
-			lsp::addFile(absolute_physical_path, "");
+			lsp::addFile(absolute_physical_path);
 		} else {
 			// If the package is not loaded, we need to load it first.
 			copyDucklingFilesToVirtual(package_root_dir);
@@ -216,11 +235,12 @@ namespace lsp {
 		}
 	}
 
-	void addFile(const fs::FilePath& absolute_physical_path, const std::string& content) {
+	void addFile(const fs::FilePath& absolute_physical_path) {
 		auto virtual_path = absolute_physical_path.toVirtualPath();
 		if (virtual_path.exists()) return;
 
-		auto file = fs::FileManager::createVirtualFile(virtual_path, content);
+		copyDucklingFilesToVirtual(absolute_physical_path);
+		auto file = fs::File(virtual_path);
 
 		addFileToModuleTree(file);
 
@@ -241,7 +261,28 @@ namespace lsp {
 		query::external::invalidateQueries(std::move(new_inputs), {}, {});
 	}
 
+	void removeFileOrDirectory(const fs::FilePath& absolute_physical_path) {
+		auto virtual_path = absolute_physical_path.toVirtualPath();
+		if (!virtual_path.exists()) return;
+
+		auto file = fs::File(virtual_path);
+
+		if (file.isFile()) {
+			removeFile(absolute_physical_path);
+			return;
+		}
+
+		if (file.isDirectory()) {
+			for (const auto& sub_path: file.listFilePaths()) {
+				// sub_path is a virtual path — convert back to physical for the recursive call
+				removeFileOrDirectory(sub_path.toPhysicalPath());
+			}
+			fs::FileManager::deleteFolder(file, true);
+		}
+	}
+
 	void updateFileContent(const fs::FilePath& absolute_physical_path, const std::string& content) {
+		std::cerr << "Updating content of file: " << absolute_physical_path.strView() << "\n";
 		auto file_path = absolute_physical_path.toVirtualPath();
 		auto file      = fs::File(file_path);
 

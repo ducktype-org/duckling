@@ -162,20 +162,26 @@ export class CompilerDaemonClient {
 		}
 	}
 
+	// Lazily initialize the package owning filePath when the user opens it.
+	public async openFile(filePath: string, connection: Connection): Promise<void> {
+		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
+		await this.sendFileRequest(`/open_file/${base64FilePath}`, connection);
+	}
+
 	public async changeContent(filePath: string, fileContent: string, connection: Connection): Promise<void> {
-		console.log(`Changing content of ${filePath} in compiler daemon`);
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 		await this.sendFileRequest(`/change_content/${base64FilePath}/${base64FileContent}`, connection);
 	}
 
 	public async newFile(filePath: string, connection: Connection): Promise<void> {
-		await this.changeContent(filePath, "", connection)
+		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
+		await this.sendFileRequest(`/add_file/${base64FilePath}`, connection);
 	}
 
-	public async deleteFile(filePath: string, connection: Connection): Promise<void> {
+	public async deleteFileOrDir(filePath: string, connection: Connection): Promise<void> {
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
-		await this.sendFileRequest(`/remove_file/${base64FilePath}`, connection);
+		await this.sendFileRequest(`/remove_file_or_dir/${base64FilePath}`, connection);
 	}
 
 	// Used for debug in various places
@@ -209,12 +215,6 @@ export class CompilerDaemonClient {
 			const base64Path = Buffer.from(uriToFilePath(folder.uri)).toString('base64');
 			await this.fetchWithRestart(`${this.ls_daemon_address}/add_workspace/${base64Path}`, connection);
 		}
-	}
-
-	// Lazily initialise the package owning filePath when the user opens it.
-	public async openFile(filePath: string, connection: Connection): Promise<void> {
-		const base64Path = Buffer.from(uriToFilePath(filePath)).toString('base64');
-		await this.sendFileRequest(`/open_file/${base64Path}`, connection);
 	}
 
 	// This function is called to get the semantic tokens from the daemon for a file

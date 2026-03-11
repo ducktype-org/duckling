@@ -105,8 +105,7 @@ connection.onInitialized(() => {
 			DidChangeWatchedFilesNotification.type,
 			{
 				watchers: [
-					{ globPattern: "**/*.duck" },
-					{ globPattern: "**/*.dmf" }
+					{ globPattern: "**/*" }
 				]
 			}
 		);
@@ -146,7 +145,7 @@ connection.onDidChangeConfiguration(change => {
 		);
 	}
 	// Revalidate all open text documents
-	documents.all().forEach(document => validateDuckling(document, connection, compilerDaemonClient));
+	documents.all().forEach(document => validateDuckling(document.uri, connection, compilerDaemonClient));
 });
 
 export function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
@@ -177,8 +176,10 @@ connection.onRequest("textDocument/semanticTokens/full", (params) =>
 connection.onRequest("duckling/restart", async () => {
     connection.window.showInformationMessage("Restarting Duckling Daemon...");
     await compilerDaemonClient.restart(connection);
-	documents.all().forEach(document => compilerDaemonClient.openFile(document.uri, connection));
     connection.window.showInformationMessage("Duckling Daemon Restarted");
+
+	documents.all().forEach(document => compilerDaemonClient.openFile(document.uri, connection));
+	documents.all().forEach(document => validateDuckling(document.uri, connection, compilerDaemonClient));
 });
 
 connection.onDefinition(
@@ -197,24 +198,31 @@ documents.onDidChangeContent(change => {
 	// The document has changed, so we need to update it in the compiler daemon
 	compilerDaemonClient.changeContent(change.document.uri, change.document.getText(), connection).then(() => {
 		// Revalidate the document
-		validateDuckling(change.document, connection, compilerDaemonClient);
+		validateDuckling(change.document.uri, connection, compilerDaemonClient);
 	});
 });
 
 connection.onDidChangeWatchedFiles(change => {
-	console.log("We received an file change event");
+	let isDucklingFile = (uri: string) => {
+		return uri.endsWith(".dk") || uri.endsWith(".duckling");
+	}
 	for (const fileEvent of change.changes) {
+		console.log("File change event received:", fileEvent.type);
 		switch (fileEvent.type) {
-
 			case FileChangeType.Created:
+				if (!isDucklingFile(fileEvent.uri)) continue;
+
 				console.log("File created:", fileEvent.uri);
-				compilerDaemonClient.newFile(fileEvent.uri, connection);
+				compilerDaemonClient.newFile(fileEvent.uri, connection).then(() => {
+				validateDuckling(fileEvent.uri, connection, compilerDaemonClient);
+				});
 				break;
 
 			case FileChangeType.Deleted:
 				console.log("File deleted:", fileEvent.uri);
-				compilerDaemonClient.deleteFile(fileEvent.uri, connection);
-				documents.all().forEach(document => validateDuckling(document, connection, compilerDaemonClient));
+				compilerDaemonClient.deleteFileOrDir(fileEvent.uri, connection).then(() => {
+				documents.all().forEach(document => validateDuckling(document.uri, connection, compilerDaemonClient));
+				});
 				break;
 		}
 	}

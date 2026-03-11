@@ -119,12 +119,11 @@ void server(i32 port) {
 	 * @param base64_content The base64 encoded content of the file.
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
-	CROW_ROUTE(app, "/add_file/<string>/<string>")
-	([](const std::string& base64_path, const std::string& base64_content) {
+	CROW_ROUTE(app, "/add_file/<string>")
+	([](const std::string& base64_path) {
 		const auto path    = base64::decode_into<std::string>(base64_path);
-		const auto content = base64::decode_into<std::string>(base64_content);
 
-		lsp::addFile(path, content);
+		lsp::addFile(path);
 
 		return crow::response(200, "OK");
 	});
@@ -136,11 +135,11 @@ void server(i32 port) {
 	 * @param base64_content The base64 encoded content of the file.
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
-	CROW_ROUTE(app, "/remove_file/<string>")
+	CROW_ROUTE(app, "/remove_file_or_dir/<string>")
 	([](const std::string& base64_path) {
 		const auto path = base64::decode_into<std::string>(base64_path);
 
-		lsp::removeFile(path);
+		lsp::removeFileOrDirectory(path);
 
 		return crow::response(200, "OK");
 	});
