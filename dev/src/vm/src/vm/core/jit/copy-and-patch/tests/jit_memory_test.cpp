@@ -1,6 +1,6 @@
 #include "../memory/memory.cpp"
-#include "../stencils/dynamic_linker.cpp"
 #include "../memory/memory.hpp"
+#include "../stencils/dynamic_linker.cpp"
 #include "../stencils/import_stencils.hpp"
 
 #include <base/pointers/box.hpp>
@@ -11,14 +11,17 @@
 #include <cstring>
 #include <string>
 
-PUSH_DIAGNOSTIC
-ALLOW_EXTENSIONS
-constexpr static char full_elf[] = {
+using vm::jit::cnp::JitMemory;
+using vm::jit::cnp::LLVM_nm_data;
+using vm::jit::cnp::Stencils;
+
+
+PUSH_DIAGNOSTIC ALLOW_EXTENSIONS constexpr static char full_elf[] = {
 #embed "mock_stencils-so" suffix(, )
 };
 POP_DIAGNOSTIC
 
-static auto stencils = vm::jit::Stencils{ .binary = std::to_array(full_elf),
+static auto stencils = Stencils{ .binary = std::to_array(full_elf),
 	                                                             .functions = {
 #include "mock_stencils-nm"
 																 } }.load();
@@ -39,13 +42,14 @@ public:
 private:
 	void printBinary() {
 		std::cerr << "Binary:\n";
-		for (std::byte c: stencils.binary()) std::cerr << std::hex << (int) (unsigned char) c << ' ';
+		for (std::byte c: stencils.binary())
+			std::cerr << std::hex << (int) (unsigned char) c << ' ';
 		std::cerr << "\nFunctions:\n";
-		for (vm::jit::LLVM_nm_data data: stencils.functions()) std::cerr << data.name << '\n';
+		for (LLVM_nm_data data: stencils.functions()) std::cerr << data.name << '\n';
 	}
 
 	constexpr static auto find_func = [](auto name) {
-		for (vm::jit::LLVM_nm_data data: stencils.functions())
+		for (LLVM_nm_data data: stencils.functions())
 			if (data.name == name) return data;
 		CORE_PANIC("No function with that name");
 	};

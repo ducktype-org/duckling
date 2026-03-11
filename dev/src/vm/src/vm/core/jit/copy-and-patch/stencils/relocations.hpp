@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-namespace vm::jit {
+namespace vm::jit::cnp {
 	enum class HoleType;
 
 	struct StencilHole {
@@ -16,7 +16,7 @@ namespace vm::jit {
 #ifdef __x86_64__
 	enum class HoleType { Movable };
 
-	void vm::jit::StencilHole::relocate(std::byte* from, std::byte* to) const {
+	void StencilHole::relocate(std::byte* from, std::byte* to) const {
 		switch (type) {
 			break;
 		case HoleType::Movable:

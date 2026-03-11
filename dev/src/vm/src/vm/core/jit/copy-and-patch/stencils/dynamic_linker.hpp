@@ -2,10 +2,10 @@
 
 #include <span>
 
-namespace vm::jit {
 
 #if __unix__
 
+namespace vm::jit::cnp {
 	struct DynamicLibrary {
 		int   lib_fd;
 		void* lib_handle;
@@ -15,9 +15,8 @@ namespace vm::jit {
 
 		static DynamicLibrary load(std::span<const char> binary);
 	};
+}
 
 #else
 	#error "Unsupported system"
 #endif
-
-}
