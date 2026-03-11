@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(testGraphJumps);
 		TESTER_ADD_TEST(testNoRet);
 		TESTER_ADD_TEST(testSignaturesValidation);
+		TESTER_ADD_TEST(testMainWithNoArguments);
 	}
 
 private:
@@ -50,6 +51,8 @@ private:
 		runTestOnVm("double_call.dbc", "1 2 3 4", "10", {});
 		runTestOnVm("double_call.dbc", "123 456 789 100", "1468", {});
 	}
+
+	void testMainWithNoArguments() { runTestOnVm("main_no_args.dbc", "", "42", {}); }
 
 	void testDeinitializeReturnValue() {
 		loadInvalidDbc(
