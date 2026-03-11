@@ -8,6 +8,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -21,7 +22,6 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
-#include <helios/queries/function_queries.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
