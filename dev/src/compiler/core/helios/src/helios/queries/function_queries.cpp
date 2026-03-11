@@ -1,42 +1,44 @@
 #include "helios/queries/function_queries.hpp"
 
-#include <query_framework/query_errors.hpp>
-#include <query_framework/standard_query/query_impl.hpp>
-#include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
-#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
-#include <helios_private/symbols/symbols.hpp>
-#include <helios_private/scopes/scopes.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/type_interface.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/expression_type.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
+#include <helios_private/expressions/coercions.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/symbol_type.hpp>
+#include <typesystem/higher/type_interface.hpp>
+
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+
+#include <query_framework/query_errors.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 
-    struct IMPLEMENT_QUERY(QueryReturnTypeDeduction, query::QResult<tsh::SymbolType<>>) {
+	struct IMPLEMENT_QUERY(QueryReturnTypeDeduction, query::QResult<tsh::SymbolType<>>) {
 		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -163,7 +165,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReturnTypeDeduction);
 
-    struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
+	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -434,7 +436,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
 
-    struct IMPLEMENT_QUERY(QueryCodeOfFun, query::QResult<HOUTFunction>) {
+	struct IMPLEMENT_QUERY(QueryCodeOfFun, query::QResult<HOUTFunction>) {
 		/**
 		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or
 		 * pst::CodeBlockOrStmt Might be changed into query in the future

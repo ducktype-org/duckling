@@ -7,12 +7,11 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
-
-#include <helios/queries/function_queries.hpp>
 
 namespace compiler::helios {
 	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient

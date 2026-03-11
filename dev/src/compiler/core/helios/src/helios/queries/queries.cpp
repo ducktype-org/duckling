@@ -21,8 +21,10 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
+
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
