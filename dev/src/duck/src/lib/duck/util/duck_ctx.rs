@@ -102,7 +102,7 @@ impl DuckCtx {
         self.offline = offline;
     }
 
-    /// Get the path of the default packages storage in [`DuckHome`].
+    /// Get the path of the default packages' storage in [`DuckHome`].
     pub fn default_storage_root(&self) -> &Path {
         self.duck_home().storage_dir()
     }
