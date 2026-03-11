@@ -16,20 +16,6 @@ namespace compiler::driver {
 	);
 
 	/**
-	 * Collect InputData using module lookup metadata from previous metadata storage.
-	 * @return A vector of InputData containing SideInput hashes and their corresponding QueryIDs.
-	 */
-	std::vector<query::external::InputData>
-	collectInputDataFromGlobalPackagesFromPrevMetadata();
-
-	/**
-	 * Collect InputData using module lookup metadata from current metadata storage.
-	 * @return A vector of InputData containing SideInput hashes and their corresponding QueryIDs.
-	 */
-	std::vector<query::external::InputData>
-	collectInputDataFromGlobalPackagesFromCurrentMetadata();
-
-	/**
 	 * Collect InputData "ids" (i.e. side input hashes) across all modules in global packages.
 	 * This includes:
 	 * - Module side inputs for all modules in the package.
@@ -42,6 +28,14 @@ namespace compiler::driver {
 	 * This function uses previous metadata storage.
 	 * @return A vector of InputData containing SideInput hashes and their corresponding QueryIDs.
 	 */
-	std::vector<query::external::InputData> collectInputDataFromGlobalPackages();
+	std::vector<query::external::InputData>
+	collectInputDataFromGlobalPackagesFromPrevMetadata();
 
+	/**
+	 * Same as `collectInputDataFromGlobalPackagesFromPrevMetadata` but collects from 
+	 * the current metadata storage instead of the previous one.
+	 * The main user is the Language Server.
+	 */
+	std::vector<query::external::InputData>
+	collectInputDataFromGlobalPackagesFromCurrentMetadata();
 }  // namespace compiler::driver

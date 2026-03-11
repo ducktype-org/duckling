@@ -119,7 +119,7 @@ namespace compiler::driver {
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
 				// contains information about which nodes are inputs and their associated hashes.
-				query::external::markPreviousGraphNodesInputs(collectInputDataFromGlobalPackages());
+				query::external::markPreviousGraphNodesInputs(collectInputDataFromGlobalPackagesFromPrevMetadata());
 			}
 		}
 

@@ -230,8 +230,4 @@ namespace compiler::driver {
 		return collectInputDataFromGlobalPackagesImpl(lookups_map);
 	}
 
-	std::vector<query::external::InputData> collectInputDataFromGlobalPackages() {
-		return collectInputDataFromGlobalPackagesFromPrevMetadata();
-	}
-
 }  // namespace compiler::driver

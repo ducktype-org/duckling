@@ -38,36 +38,18 @@ namespace lsp {
 
 		// ========================== Package related helpers ==========================
 
-		/**
-		 * @brief Helper to get file from virtual root, creating it if it doesn't exist.
-		 */
-		fs::File getFileFromVirtualRoot(const fs::File& virtual_root, const std::string& path) {
-			if (virtual_root.getFilePath().join(path).exists())
-				return { virtual_root.getFilePath().join(path) };
-			else {
-				fs::FileManager::createVirtualFile(virtual_root.getFilePath().join(path), "");
-				return { virtual_root.getFilePath().join(path) };
-			}
-		}
-
-		std::vector<query::external::InputData> collectAllCurrentInputs() {
-			return compiler::driver::collectInputDataFromGlobalPackagesFromCurrentMetadata();
-		}
-
-		// ========================== Package related helpers ==========================
-
 		void createRootModuleAndRegisterPackage(const fs::File& file) {
-			auto module_id = compiler::frontend::createModuleTreeWithRandomPackageID(file);
+			auto module_id = createModuleTreeWithRandomPackageID(file);
 			global_state::setters::addPackage(module_id);
 			std::cerr << "Created package for " << file.getFilePath().strView() << "\n";
 		}
 
-		void removeModuleAndUnregisterPackage(compiler::frontend::ModuleID module_id) {
+		void removeModuleAndUnregisterPackage(ModuleID module_id) {
 			;
 			if (not getModuleRef(module_id)->getParentModule().has_value())
 				global_state::setters::removePackage(module_id);
 
-			compiler::frontend::ModuleTreeModifier::removeModuleRecursive(
+			ModuleTreeModifier::removeModuleRecursive(
 				GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					module_id
 				)
@@ -76,7 +58,7 @@ namespace lsp {
 
 		// ========================== Adding file to module tree ==========================
 
-		base::Optional<base::Ref<compiler::frontend::ModuleTree>> findModuleForPath(
+		base::Optional<base::Ref<ModuleTree>> findModuleForPath(
 			const fs::File& expected_module_directory
 		) {
 			const auto& dir = expected_module_directory;
@@ -160,27 +142,34 @@ namespace lsp {
 			for (const auto& module_id: modules_to_remove)
 				removeModuleAndUnregisterPackage(module_id);
 		}
-	}
 
-	/**
-	 */
-	void copyDucklingFilesToVirtual(const fs::FilePath& start_physical_path) {
-		auto        file         = fs::File(start_physical_path);
-		const auto& path         = start_physical_path;
-		const auto& virtual_path = path.toVirtualPath();
+		/**
+		 * @brief Recursively copies all duckling files from the physical file
+		 *  system to the virtual file system, starting from the given path.
+		 *
+		 * The start path have to exists.
+		 *
+		 * @param start_physical_path Start physical path in the filesystem to copy from.
+		 */
+		void copyDucklingFilesToVirtual(const fs::FilePath& start_physical_path) {
+			auto        file         = fs::File(start_physical_path);
+			const auto& path         = start_physical_path;
+			const auto& virtual_path = path.toVirtualPath();
 
-		if (file.isFile()) {
-			if (path.extension() == LANG_MODULE_FILE || path.extension() == LANG_SOURCE_FILE) {
-				fs::FileManager::createVirtualFile(
-					virtual_path, file.getContent().view().stringView(), true
-				);
+			if (file.isFile()) {
+				if (path.extension() == LANG_MODULE_FILE || path.extension() == LANG_SOURCE_FILE) {
+					fs::FileManager::createVirtualFile(
+						virtual_path, file.getContent().view().stringView(), true
+					);
+				}
 			}
-		}
 
-		if (file.isDirectory()) {
-			if (!virtual_path.exists()) fs::FileManager::createVirtualFolder(virtual_path);
+			if (file.isDirectory()) {
+				if (!virtual_path.exists()) fs::FileManager::createVirtualFolder(virtual_path);
 
-			for (const auto& sub_path: file.listFilePaths()) copyDucklingFilesToVirtual(sub_path);
+				for (const auto& sub_path: file.listFilePaths())
+					copyDucklingFilesToVirtual(sub_path);
+			}
 		}
 	}
 
@@ -216,33 +205,47 @@ namespace lsp {
 			current = current.parentPath();
 		}
 
-		if (package_root_dir.toVirtualPath().exists()) return;
-
-		copyDucklingFilesToVirtual(package_root_dir);
-		createRootModuleAndRegisterPackage(package_root_dir.toVirtualPath());
+		if (package_root_dir.toVirtualPath().exists()) {
+			// If the package is already loaded, it means that the file is a new file in an already
+			// loaded package, so we just create it in the virtual file system.
+			lsp::addFile(absolute_physical_path, "");
+		} else {
+			// If the package is not loaded, we need to load it first.
+			copyDucklingFilesToVirtual(package_root_dir);
+			createRootModuleAndRegisterPackage(package_root_dir.toVirtualPath());
+		}
 	}
 
-	void addFile(
-		const fs::File& virtual_root, const std::string& path, const std::string& content
-	) {
-		auto file = getFileFromVirtualRoot(virtual_root, path);
-		file.writeToFile(content);
+	void addFile(const fs::FilePath& absolute_physical_path, const std::string& content) {
+		auto virtual_path = absolute_physical_path.toVirtualPath();
+		if (virtual_path.exists()) return;
+
+		auto file = fs::FileManager::createVirtualFile(virtual_path, content);
 
 		addFileToModuleTree(file);
 
-		auto new_inputs = collectAllCurrentInputs();
+		auto new_inputs = compiler::driver::collectInputDataFromGlobalPackagesFromCurrentMetadata();
 		query::external::invalidateQueries(std::move(new_inputs), {}, {});
 	}
 
-	void updateFileContent(
-		const fs::File& virtual_root, const std::string& path, const std::string& content
-	) {
-		auto file_path = virtual_root.getFilePath().join(path);
-		if (!file_path.exists()) return;
+	void removeFile(const fs::FilePath& absolute_physical_path) {
+		auto virtual_path = absolute_physical_path.toVirtualPath();
+		if (!virtual_path.exists()) return;
 
-		auto file = fs::File(file_path);
+		auto file = fs::File(virtual_path);
+		removeFileFromModuleTree(file);
 
-		auto source_files = compiler::frontend::SourceFile::getSourceFilesFromFile(file);
+		fs::FileManager::deleteFile(file);
+
+		auto new_inputs = compiler::driver::collectInputDataFromGlobalPackagesFromCurrentMetadata();
+		query::external::invalidateQueries(std::move(new_inputs), {}, {});
+	}
+
+	void updateFileContent(const fs::FilePath& absolute_physical_path, const std::string& content) {
+		auto file_path = absolute_physical_path.toVirtualPath();
+		auto file      = fs::File(file_path);
+
+		auto source_files = SourceFile::getSourceFilesFromFile(file);
 
 
 		std::vector<query::external::InputData> previous_inputs;
@@ -251,34 +254,22 @@ namespace lsp {
 			auto pst = source_file->getPST();
 			compiler::driver::collectQueryInputsFromPst(pst, previous_inputs);
 		}
-		
+
 		file.writeToFile(content);
-		compiler::frontend::ModuleTreeModifier::fileModified(file);
+		ModuleTreeModifier::fileModified(file);
 
 		std::vector<query::external::InputData> new_inputs;
-		
+
 		for (auto& source_file: source_files) {
 			auto pst = source_file->getPST();
 			compiler::driver::collectQueryInputsFromPst(pst, new_inputs);
 		}
 
-		std::vector<query::external::InputData> invalidated_inputs;
-		query::external::invalidateQueries(std::move(new_inputs), {previous_inputs}, {&invalidated_inputs});
-		for (const auto& input: invalidated_inputs) {
-			std::cerr << "Invalidated input with QueryID: " << input.q_id.getData().name << " and hash: " << input.hash << "\n";
-		}
-	}
-
-	void removeFile(const fs::File& virtual_root, const std::string& path) {
-		auto file_path = virtual_root.getFilePath().join(path);
-		if (!file_path.exists()) return;
-
-		auto file = fs::File(file_path);
-		removeFileFromModuleTree(file);
-
-		fs::FileManager::deleteFile(file);
-
-		auto new_inputs = collectAllCurrentInputs();
-		query::external::invalidateQueries(std::move(new_inputs), {}, {});
+		// std::vector<query::external::InputData> invalidated_inputs;
+		query::external::invalidateQueries(std::move(new_inputs), { previous_inputs }, {});
+		// for (const auto& input: invalidated_inputs) {
+		// 	std::cerr << "Invalidated input with QueryID: " << input.q_id.getData().name
+		// 			  << " and hash: " << input.hash << "\n";
+		// }
 	}
 }

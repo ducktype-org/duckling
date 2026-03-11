@@ -163,6 +163,7 @@ export class CompilerDaemonClient {
 	}
 
 	public async changeContent(filePath: string, fileContent: string, connection: Connection): Promise<void> {
+		console.log(`Changing content of ${filePath} in compiler daemon`);
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 		await this.sendFileRequest(`/change_content/${base64FilePath}/${base64FileContent}`, connection);
@@ -332,12 +333,5 @@ export interface LSPKeywordData {
 
 // File paths are stored in URIs, this function converts them to file paths
 function uriToFilePath(uri: string): string {
-	if (uri.startsWith("file:")) {
-		const filepath = uri.split(":")[1];
-		return filepath.replace("///", "").replace("\\\\\\", "");
-	}
-	if (uri.startsWith("/") || uri.startsWith("\\")) {
-		return uri.slice(1);
-	}
-	return uri;
+    return new URL(uri).pathname;
 }
