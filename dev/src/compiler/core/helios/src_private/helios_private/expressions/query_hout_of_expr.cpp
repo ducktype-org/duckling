@@ -228,6 +228,7 @@ namespace compiler::helios::code {
 			 * @param rhs The precomputed right-hand side argument
 			 * @param scope The scope in which the operator call happens
 			 */
+			[[nodiscard]]
 			Box<Expr> resolveBinaryOperator(
 				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
 			) const {
@@ -555,12 +556,12 @@ namespace compiler::helios::code {
 				using namespace ::std::views;
 
 				const auto& pst_operators  = stmt->getOperators();
-				size_t      operator_count = std::ranges::size(pst_operators);
-				size_t      expr_count     = operator_count + 1;
+				usize      operator_count = usize(std::ranges::size(pst_operators));
+				usize      expr_count     = operator_count + 1;
 
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
-				for (size_t i = 0; i < expr_count; ++i) {
+				for (usize i = 0; i < expr_count; ++i) {
 					auto result = fromPST(ctx, stmt->getSubExpr(i));
 					if (result.hasFailed()) return;
 					result_exprs.push_back(std::move(result.valueOrThrow()));
@@ -581,7 +582,7 @@ namespace compiler::helios::code {
 
 				// Perform operator resolution for each operator in the chain. Reuse the expressions
 				// which are between two operators. The last expressions is not reused, but that's fine.
-				for (int op_idx = 0; op_idx < operator_count; op_idx++) {
+				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
 					const auto op = pst_operators.at(op_idx);
 					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
 					auto next_lhs = rhs->nextUse();

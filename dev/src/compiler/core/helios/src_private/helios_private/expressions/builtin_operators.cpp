@@ -145,7 +145,7 @@ namespace compiler::helios::code {
 					houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::BuiltinOperator{
 						ctx.query<tsh::QueryFunctionType>({
 							std::move(param_types),
-							std::move(return_type),
+							return_type,
 						}),
 					} },
 				});

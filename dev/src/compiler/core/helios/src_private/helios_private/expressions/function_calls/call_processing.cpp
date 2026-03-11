@@ -326,7 +326,7 @@ namespace compiler::helios::code {
 	 */
 	Box<Expr> constructCallExpr(
 		query::Context&                              ctx,
-		CallPstOrigin                                pst_origin,
+		const CallPstOrigin&                         pst_origin,
 		const SymID                                  fun,
 		CallArguments                                call_arguments,
 		const std::vector<ArgumentOrigin>&           argument_origin,
