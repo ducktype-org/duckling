@@ -32,11 +32,11 @@ use crate::quackpack::core::{
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
     fn git_path(&self, _url: url::Url, _commit: crate::StrId) -> PathBuf {
-        panic!("unimplemented")
+        unimplemented!()
     }
 
     fn is_stored(&self, _url: url::Url, _commit: crate::StrId) -> bool {
-        panic!("unimplemented")
+        unimplemented!()
     }
 
     fn store(
@@ -45,7 +45,7 @@ impl GitAccess for MockGitAccess {
         _commit: crate::StrId,
         _source_path: &std::path::Path,
     ) -> crate::QuackResult<()> {
-        panic!("unimplemented")
+        unimplemented!()
     }
 }
 

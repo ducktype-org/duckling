@@ -6,7 +6,7 @@ use tempfile::{TempDir, tempdir};
 use crate::{
     DuckCtx,
     quackpack::{
-        core::{Version, fetcher::types, git_access::GitAccess},
+        core::{PackageLoader, Version, fetcher::types, git_access::GitAccess},
         schemas::registry,
     },
     util_common::path_ops_ext::PathOpsExt,
@@ -25,11 +25,11 @@ use crate::quackpack::core::{
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
     fn git_path(&self, _url: url::Url, _commit: crate::StrId) -> PathBuf {
-        panic!("unimplemented")
+        unimplemented!()
     }
 
     fn is_stored(&self, _url: url::Url, _commit: crate::StrId) -> bool {
-        panic!("unimplemented")
+        unimplemented!()
     }
 
     fn store(
@@ -38,7 +38,7 @@ impl GitAccess for MockGitAccess {
         _commit: crate::StrId,
         _source_path: &std::path::Path,
     ) -> crate::QuackResult<()> {
-        panic!("unimplemented")
+        unimplemented!()
     }
 }
 
@@ -60,9 +60,10 @@ fn setup_duck_ctx() -> (DuckCtx, TempDir) {
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
-    let manifest = dir.path().join("quackconfig.yml");
+    let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
     manifest.touch().unwrap();
     manifest.write(contents).unwrap();
+    dir.path().try_fsync_dir().unwrap();
     (dir, manifest)
 }
 
