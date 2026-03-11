@@ -1,4 +1,4 @@
-#include "helios/queries/function_queries.hpp"
+#include "function_queries.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
