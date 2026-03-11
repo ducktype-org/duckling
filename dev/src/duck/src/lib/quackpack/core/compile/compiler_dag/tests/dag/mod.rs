@@ -3,26 +3,20 @@ use std::collections::{HashMap, HashSet};
 
 use setup::*;
 
-use crate::{
-    QpCtx,
-    quackpack::core::{
-        PackageLoader,
-        compile::{
-            BuildContext,
-            compiler_dag::{CompilerDag, DependencyNode},
-        },
-        storage::paths::Storage,
+use crate::quackpack::core::{
+    PackageLoader,
+    compile::{
+        BuildContext,
+        compiler_dag::{CompilerDag, DependencyNode},
     },
+    storage::paths::Storage,
 };
 
 #[test]
 fn creates_valid_initial_graph() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -57,11 +51,8 @@ fn creates_valid_initial_graph() {
 #[test]
 fn expands_valid_features1() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -102,11 +93,8 @@ fn expands_valid_features1() {
 #[test]
 fn expands_valid_features2() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -147,11 +135,8 @@ fn expands_valid_features2() {
 #[test]
 fn expands_valid_features3() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -199,11 +184,8 @@ fn expands_valid_features3() {
 #[test]
 fn errors_with_nonexistent_features() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -222,11 +204,8 @@ there is no such feature as `nonexistent`"
 #[test]
 fn removes_inactive_deps1() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -257,11 +236,8 @@ fn removes_inactive_deps1() {
 #[test]
 fn removes_inactive_deps2() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -295,11 +271,8 @@ fn removes_inactive_deps2() {
 #[test]
 fn removes_inactive_deps3() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -333,11 +306,8 @@ fn removes_inactive_deps3() {
 #[test]
 fn removes_inactive_deps4() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.duck_home()),
@@ -374,11 +344,8 @@ fn removes_inactive_deps4() {
 #[test]
 fn cycle_in_freeze() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze_with_cycle(),
         storage: Storage::new(ctx.duck_home()),
@@ -395,11 +362,8 @@ fn cycle_in_freeze() {
 #[test]
 fn missing_direct_dep_in_freeze() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze_without_direct_dep(),
         storage: Storage::new(ctx.duck_home()),
@@ -416,11 +380,8 @@ fn missing_direct_dep_in_freeze() {
 #[test]
 fn missing_transitive_dep_in_freeze() {
     let (ctx, root) = setup_mock_storage();
-    let qp_ctx = QpCtx::new(&ctx);
-    let package =
-        PackageLoader::find_at_exact_directory(&root.path().join("root"), &qp_ctx).unwrap();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let bcx = BuildContext {
-        duck_ctx: &ctx,
         package: &package,
         freeze: freeze_without_transitive_dep(),
         storage: Storage::new(ctx.duck_home()),
