@@ -101,6 +101,10 @@ protected:
 		const base::Optional<i64>          expected_exit_code = {}
 	);
 
+	TestResult runFunctionExpectPanic(
+		vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
+	);
+
 	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece);
 
 	/**
@@ -112,7 +116,8 @@ protected:
 	);
 
 	/**
-	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
+	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded
+	 * correctly.
 	 */
 	void loadValidDbc(const std::string& dbc_filename);
 };

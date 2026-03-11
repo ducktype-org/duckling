@@ -137,6 +137,12 @@ namespace vm {
 			const auto& arg_value = func_args[i];
 			auto        arg_type  = func.parameters[i];
 
+			if (arg_value->getPID() != process.getPID()) {
+				throw exceptions::VMRuntimeException(
+					base::strConcat("VMValue for argument ", i, " comes from a different process")
+				);
+			}
+
 			if (arg_value->type != arg_type) {
 				throw exceptions::VMRuntimeException(base::strConcat(
 					"Type mismatch for argument ",
@@ -148,12 +154,6 @@ namespace vm {
 					", got ",
 					arg_value->type->getName().str()
 				));
-			}
-
-			if (arg_value->getPID() != process.getPID()) {
-				throw exceptions::VMRuntimeException(
-					base::strConcat("VMValue for argument ", i, " comes from a different process")
-				);
 			}
 
 			start_function.bc.push_back(
