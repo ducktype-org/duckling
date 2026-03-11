@@ -25,10 +25,9 @@ namespace global_state {
 		void removePackage(compiler::frontend::ModuleID root_module) {
 			bool removed_main = !packages.empty() && packages.front().root_module == root_module;
 
-			auto it = std::remove_if(packages.begin(), packages.end(), [&](const PackageInfo& pkg) {
+			std::erase_if(packages, [&](const PackageInfo& pkg) {
 				return pkg.root_module == root_module;
 			});
-			packages.erase(it, packages.end());
 
 			if (removed_main) main_package_set = false;
 		}

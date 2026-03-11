@@ -244,7 +244,7 @@ namespace compiler::helios {
 			if (element_scope_kind == ElementScopeKind::Transparent)
 				return parent.ref->perfectClone();
 
-			
+
 			// clang-format on
 
 			return ScopeData{
@@ -565,7 +565,8 @@ namespace compiler::helios {
 						" scope of symbol: ",
 						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getHash().toStringHex(),
+						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getHash().toStringHex(
+						),
 						"\n"
 					)
 				);

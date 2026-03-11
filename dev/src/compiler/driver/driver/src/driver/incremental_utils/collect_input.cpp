@@ -72,7 +72,7 @@ namespace compiler::driver {
 			return lookups_map;
 		}
 	}
-	
+
 	void collectQueryInputsFromPst(
 		CRef<pst::PST<>> pst_ref, std::vector<query::external::InputData>& out
 	) {

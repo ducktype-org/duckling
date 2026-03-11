@@ -28,14 +28,12 @@ namespace compiler::driver {
 	 * This function uses previous metadata storage.
 	 * @return A vector of InputData containing SideInput hashes and their corresponding QueryIDs.
 	 */
-	std::vector<query::external::InputData>
-	collectInputDataFromGlobalPackagesFromPrevMetadata();
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromPrevMetadata();
 
 	/**
-	 * Same as `collectInputDataFromGlobalPackagesFromPrevMetadata` but collects from 
+	 * Same as `collectInputDataFromGlobalPackagesFromPrevMetadata` but collects from
 	 * the current metadata storage instead of the previous one.
 	 * The main user is the Language Server.
 	 */
-	std::vector<query::external::InputData>
-	collectInputDataFromGlobalPackagesFromCurrentMetadata();
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromCurrentMetadata();
 }  // namespace compiler::driver

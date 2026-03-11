@@ -121,7 +121,7 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/add_file/<string>")
 	([](const std::string& base64_path) {
-		const auto path    = base64::decode_into<std::string>(base64_path);
+		const auto path = base64::decode_into<std::string>(base64_path);
 
 		lsp::addFile(path);
 
@@ -153,7 +153,8 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/get_errors/<string>")
 	([](const std::string& base64_path) {
-		const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
+		const auto path
+			= fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
 		if (not path.exists()) return crow::response(404, "File not found");
 
 		const auto file     = fs::File(path);
@@ -174,7 +175,8 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/get_semantic_tokens/<string>")
 	([](const std::string& base64_path) {
-		const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
+		const auto path
+			= fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
 
 		if (!path.exists()) return crow::response(404, "File not found");
 
@@ -193,7 +195,8 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
 	([](const std::string& base64_path, const uint& offset) {
-		const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
+		const auto path
+			= fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
 
 		if (!path.exists()) return crow::response(404, "File not found");
 

@@ -11,7 +11,8 @@ namespace lsp {
 	 * @brief Register a workspace root directory. Used later by openFile to bound
 	 * upward module-root search.
 	 *
-	 * @param absolute_physical_path Absolute path to the workspace root directory in the real file system.
+	 * @param absolute_physical_path Absolute path to the workspace root directory in the real file
+	 * system.
 	 */
 	void addWorkspace(const fs::FilePath& absolute_physical_path);
 
@@ -36,27 +37,26 @@ namespace lsp {
 	 * @param absolute_physical_path Absolute path to the file in the real file system.
 	 * @param content New content of the file.
 	 */
-	void updateFileContent(
-		const fs::FilePath& absolute_physical_path, const std::string& content
-	);
+	void updateFileContent(const fs::FilePath& absolute_physical_path, const std::string& content);
 
 	/**
 	 * @brief Add a file from real file system to the virtual file system.
 	 * It also adds the file to a module or creates a new module for it if needed,
 	 * and runs a query invalidation inside.
 	 *
+	 * @warning Adding a file only may create and append a new submodule to the module tree,
+	 * but it won't add the packages that could become the submodules of the new module.
+	 *
 	 * @param absolute_physical_path Absolute path to the file in the real file system.
 	 */
-	void addFile(
-		const fs::FilePath& absolute_physical_path
-	);
+	void addFile(const fs::FilePath& absolute_physical_path);
 
 	/**
-	 * @brief Remove a file from the virtual file system. 
-	 * It also removes the file from a module or an entire module 
+	 * @brief Remove a file from the virtual file system.
+	 * It also removes the file from a module or an entire module
 	 * and runs a query invalidation inside.
-	 * 
-	 * @param absolute_physical_path 
+	 *
+	 * @param absolute_physical_path
 	 */
 	void removeFile(const fs::FilePath& absolute_physical_path);
 

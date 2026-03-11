@@ -108,7 +108,7 @@ namespace query::external {
 	[[nodiscard]] std::vector<byte> serializeMetadata();
 
 	enum class MetadataStorageKind { Current, Previous };
-	
+
 	/**
 	 * @brief Get all metadata of a specific type from all nodes in the previous compilation.
 	 *
@@ -118,7 +118,7 @@ namespace query::external {
 	 * @return std::vector<MetadataInfo<MetadataT>> Metadata with associated InputData.
 	 *         Returns empty vector if no previous metadata exists
 	 *         or no metadata of this type was found.
-	 */	
+	 */
 	template<typename MetadataT, MetadataStorageKind Kind>
 	requires std::derived_from<MetadataT, internal::BaseMetadata> [[nodiscard]]
 	std::vector<MetadataInfo<MetadataT>> getMetadataFromAllNodesImpl() {
