@@ -210,8 +210,12 @@ def run_case(
 
     # Run test.
     log_info_if_needed("Running the test case...", dry, verbose)
+
+    # @TODO: #2231 see if we can relax it
+    assert "\"" not in case.run, f"Double quote character is not allowed in the test case command, as it is used for wrapping the command in tester.py. Please remove it from the command. The command: {case.run}"
+
     test_output, test_err = dit_exec_command(
-        f"timeout {case.timeout}s sh -c \'{case.run}\'", # this is the bug '' 
+        f"timeout {case.timeout}s sh -c \"{case.run}\"", # this is the bug '' 
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,

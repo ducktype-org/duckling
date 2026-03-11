@@ -37,8 +37,8 @@ Run: "
         @{compiled_to_llvm};
       fi
       ;;
-    nobackend) echo \"Backend undefined\"; exit 1 ;;
-    *)         echo \"Unknown backend\";   exit 1 ;;
+    nobackend) echo 'Backend undefined'; exit 1 ;;
+    *)         echo 'Unknown backend';   exit 1 ;;
   esac;"
 
 Tests:
