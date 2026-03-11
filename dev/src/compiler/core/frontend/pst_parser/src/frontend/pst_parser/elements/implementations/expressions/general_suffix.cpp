@@ -23,7 +23,7 @@ namespace pst::expr {
 	MBox<ExprElement> GeneralSuffix::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
-		u64 length = state.ctokens().size();
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		i64 fwd            = 0;
 		i64 reduced_length = base::safeIntConv<i64>(length);

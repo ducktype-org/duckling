@@ -35,7 +35,7 @@ namespace pst::expr {
 	 */
 	MBox<ExprElement> GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
 		if (std::holds_alternative<i64>(expr)) {
-			fallbackLen(state, std::get<i64>(expr));
+			fallbackLen(state, base::safeIntConv<u64>(std::get<i64>(expr)));
 			auto out = Lower::parse(state);
 			exitFallback(state);
 			return out;
