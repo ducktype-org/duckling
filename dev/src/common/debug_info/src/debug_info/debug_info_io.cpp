@@ -41,35 +41,17 @@ namespace debug_info {
 		j.at("d").get_to(v.d);
 	}
 
-	// -- Optional
-
-	template<typename T>
-	inline void to_json(json& j, const base::Optional<T>& opt) {
-		if (opt)
-			j = *opt;
-		else
-			j = nullptr;
-	}
-
-	template<typename T>
-	inline void from_json(const json& j, base::Optional<T>& opt) {
-		if (j.is_null())
-			opt = std::nullopt;
-		else
-			opt = j.get<T>();
-	}
-
 	// -- PstHashPostion
 
 	inline void to_json(json& j, const PstHashPostion& v) {
-		j = json{ { "position_scope_begin", v.postion_scope_begin },
-			      { "position_scope_end", v.postion_scope_end } };
+		j = json{ { "position_scope_begin", v.postion_scope_begin } };
+		if (v.postion_scope_end) j["position_scope_end"] = *v.postion_scope_end;
 	}
 
 	inline void from_json(const json& j, PstHashPostion& v) {
 		j.at("position_scope_begin").get_to(v.postion_scope_begin);
 		if (j.contains("position_scope_end"))
-			j.at("position_scope_end").get_to(v.postion_scope_end);
+			v.postion_scope_end = j.at("position_scope_end").get<PstHash>();
 	}
 
 	// -- FilePosition
@@ -133,14 +115,26 @@ namespace debug_info {
 		auto sorted = v.instr_offsets_to_metadata;
 		std::ranges::sort(sorted, {}, &decltype(sorted)::value_type::first);
 
-		j = json{ { "function_name", v.function_name },
-			      { "position", v.position },
-			      { "instr_offsets_to_metadata", sorted } };
+		// Build explicitly: Optional<string> and Optional<SourcePosition> aren't
+		// in the debug_info namespace, so ADL won't find our generic to_json helpers
+		// if we put them in a braced initializer list.
+		j = json::object();
+		if (v.function_name) j["function_name"] = *v.function_name;
+		if (v.position) j["position"] = *v.position;
+		j["instr_offsets_to_metadata"] = sorted;
 	}
 
 	inline void from_json(const json& j, FunctionMetadata& v) {
-		j.at("function_name").get_to(v.function_name);
-		j.at("position").get_to(v.position);
+		// Optional<string> — handle explicitly (ADL won't find our Optional helper).
+		if (j.contains("function_name") && !j.at("function_name").is_null())
+			v.function_name = j.at("function_name").get<std::string>();
+		else
+			v.function_name = std::nullopt;
+		// Optional<SourcePosition> — same reason.
+		if (j.contains("position") && !j.at("position").is_null())
+			v.position = j.at("position").get<SourcePosition>();
+		else
+			v.position = std::nullopt;
 		j.at("instr_offsets_to_metadata").get_to(v.instr_offsets_to_metadata);
 		if (!std::ranges::is_sorted(
 				v.instr_offsets_to_metadata,

@@ -69,7 +69,8 @@ private:
 		assertTrue(info.functions.size() == 1, "Expected 1 function");
 
 		const auto& func = info.functions.at("_Zfoo");
-		assertTrue(func.function_name == "foo", "Function name incorrect");
+		assertTrue(func.function_name.has_value(), "Function name should be present");
+		assertTrue(*func.function_name == "foo", "Function name incorrect");
 		assertTrue(func.instr_offsets_to_metadata.size() == 2, "Expected 2 instructions");
 
 		// Instructions are stored in insertion order from the builder
@@ -222,7 +223,7 @@ private:
 
 		const auto check_func = [&](const std::string& mangled, u64 expected_line) {
 			const auto& func = info.functions.at(mangled);
-			const auto& fp   = std::get<FilePosition>(func.position.line_col_position);
+			const auto& fp   = std::get<FilePosition>(func.position->line_col_position);
 			assertTrue(fp.file_path == "resolved.duck", mangled + ": file_path incorrect");
 			assertTrue(fp.start_line == expected_line, mangled + ": start_line incorrect");
 		};

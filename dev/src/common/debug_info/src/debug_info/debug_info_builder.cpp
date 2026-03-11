@@ -53,8 +53,9 @@ namespace debug_info {
 	) {
 		return beginFunction(
 			std::move(mangled_name),
-			FunctionMetadata{ .function_name             = std::move(function_name),
-		                      .position                  = std::move(position),
+			FunctionMetadata{ .function_name
+		                      = base::Optional<std::string>{ std::move(function_name) },
+		                      .position = base::Optional<SourcePosition>{ std::move(position) },
 		                      .instr_offsets_to_metadata = {} }
 		);
 	}

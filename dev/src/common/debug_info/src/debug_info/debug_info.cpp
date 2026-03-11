@@ -23,7 +23,7 @@ namespace debug_info {
 		source_positions_type = SourcePositionsType::LineColumn;
 
 		for (auto& [mangled, func]: functions) {
-			func.position = resolvePosition(func.position, resolver);
+			if (func.position) func.position = resolvePosition(*func.position, resolver);
 
 			for (auto& [offset, instr_meta]: func.instr_offsets_to_metadata)
 				instr_meta.position = resolvePosition(instr_meta.position, resolver);
