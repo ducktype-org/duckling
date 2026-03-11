@@ -6,4 +6,4 @@ add_library(DebugInfo
 
 make_module(DebugInfo USES Base JSON)
 
-# duck_add_test(common DebugInfo tests/debug_info_test.cpp USES DebugInfo Base)
+duck_add_test(common debug_info tests/debug_info_test.cpp USES DebugInfo Base)

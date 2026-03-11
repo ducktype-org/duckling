@@ -20,10 +20,10 @@ namespace nlohmann {
 		static void from_json(const json& j, base::Map<K, V>& map) {
 			map.clear();
 			for (auto it = j.begin(); it != j.end(); ++it)
-				map[it.key()] = it.value().get<V>();
+				map.insertOrAssign(it.key(), it.value().get<V>());
 		}
 	};
-} // namespace nlohmann
+}  // namespace nlohmann
 
 namespace debug_info {
 	using json = nlohmann::json;
@@ -63,7 +63,7 @@ namespace debug_info {
 
 	inline void to_json(json& j, const PstHashPostion& v) {
 		j = json{ { "position_scope_begin", v.postion_scope_begin },
-		          { "position_scope_end", v.postion_scope_end } };
+			      { "position_scope_end", v.postion_scope_end } };
 	}
 
 	inline void from_json(const json& j, PstHashPostion& v) {
@@ -76,10 +76,10 @@ namespace debug_info {
 
 	inline void to_json(json& j, const FilePosition& v) {
 		j = json{ { "file_path", v.file_path },
-		          { "start_line", v.start_line },
-		          { "start_column", v.start_column },
-		          { "end_line", v.end_line },
-		          { "end_column", v.end_column } };
+			      { "start_line", v.start_line },
+			      { "start_column", v.start_column },
+			      { "end_line", v.end_line },
+			      { "end_column", v.end_column } };
 	}
 
 	inline void from_json(const json& j, FilePosition& v) {
@@ -95,10 +95,10 @@ namespace debug_info {
 	inline void to_json(json& j, const SourcePosition& v) {
 		if (std::holds_alternative<PstHashPostion>(v.line_col_position)) {
 			j = { { "type", "PstHashPosition" },
-			      { "value", std::get<PstHashPostion>(v.line_col_position) } };
+				  { "value", std::get<PstHashPostion>(v.line_col_position) } };
 		} else {
 			j = { { "type", "FilePosition" },
-			      { "value", std::get<FilePosition>(v.line_col_position) } };
+				  { "value", std::get<FilePosition>(v.line_col_position) } };
 		}
 	}
 
@@ -122,13 +122,9 @@ namespace debug_info {
 
 	// -- TypeMetadata
 
-	inline void to_json(json& j, const TypeMetadata& v) {
-		j = json{ { "name", v.name } };
-	}
+	inline void to_json(json& j, const TypeMetadata& v) { j = json{ { "name", v.name } }; }
 
-	inline void from_json(const json& j, TypeMetadata& v) {
-		j.at("name").get_to(v.name);
-	}
+	inline void from_json(const json& j, TypeMetadata& v) { j.at("name").get_to(v.name); }
 
 	// -- FunctionMetadata
 
@@ -138,14 +134,22 @@ namespace debug_info {
 		std::ranges::sort(sorted, {}, &decltype(sorted)::value_type::first);
 
 		j = json{ { "function_name", v.function_name },
-		          { "position", v.position },
-		          { "instr_offsets_to_metadata", sorted } };
+			      { "position", v.position },
+			      { "instr_offsets_to_metadata", sorted } };
 	}
 
 	inline void from_json(const json& j, FunctionMetadata& v) {
 		j.at("function_name").get_to(v.function_name);
 		j.at("position").get_to(v.position);
 		j.at("instr_offsets_to_metadata").get_to(v.instr_offsets_to_metadata);
+		if (!std::ranges::is_sorted(
+				v.instr_offsets_to_metadata,
+				{},
+				&decltype(v.instr_offsets_to_metadata)::value_type::first
+			))
+			throw nlohmann::json::other_error::create(
+				501, "instr_offsets_to_metadata is not sorted by offset", &j
+			);
 	}
 
 	// -- Target / SourcePositionsType enums
@@ -154,17 +158,17 @@ namespace debug_info {
 	NLOHMANN_JSON_SERIALIZE_ENUM(
 		SourcePositionsType,
 		{ { SourcePositionsType::PstHash, "PstHash" },
-		  { SourcePositionsType::LineColumn, "LineColumn" } }
+	      { SourcePositionsType::LineColumn, "LineColumn" } }
 	)
 
 	// -- DebugInfo
 
 	inline void to_json(json& j, const DebugInfo& v) {
 		j = json{ { "target", v.target },
-		          { "module_path", v.module_path },
-		          { "source_positions_type", v.source_positions_type },
-		          { "functions", v.functions },
-		          { "types", v.types } };
+			      { "module_path", v.module_path },
+			      { "source_positions_type", v.source_positions_type },
+			      { "functions", v.functions },
+			      { "types", v.types } };
 	}
 
 	inline void from_json(const json& j, DebugInfo& v) {
@@ -175,7 +179,7 @@ namespace debug_info {
 		j.at("types").get_to(v.types);
 	}
 
-// NOLINTEND
+	// NOLINTEND
 
 	std::expected<DebugInfo, std::string> loadFromStream(std::istream& in) {
 		try {
@@ -192,4 +196,4 @@ namespace debug_info {
 		out << j.dump(4);
 	}
 
-} // namespace debug_info
+}  // namespace debug_info

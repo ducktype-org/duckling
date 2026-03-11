@@ -2,7 +2,6 @@
 
 #include "debug_info.hpp"
 
-#include <functional>
 #include <string>
 
 namespace debug_info {
@@ -21,7 +20,7 @@ namespace debug_info {
 	 *
 	 * @code
 	 *   builder
-	 *     .beginFunction("_Mfoo", "foo", pos)
+	 *     .beginFunction("Mangledfoo", "foo", pos)
 	 *       .addInstruction(0, srcPos)
 	 *       .addInstruction(4, srcPos2)
 	 *     .end()
@@ -46,7 +45,7 @@ namespace debug_info {
 		FunctionBuilder& addInstruction(u64 offset, SourcePosition position);
 
 		/**
-		 * @brief Finalises this function, writes it into the parent builder, and
+		 * @brief Finalizes this function, writes it into the parent builder, and
 		 *        returns the parent so further builder calls can be chained.
 		 *
 		 * The FunctionBuilder must not be used after calling end().
@@ -57,9 +56,7 @@ namespace debug_info {
 		friend class DebugInfoBuilder;
 
 		FunctionBuilder(
-			DebugInfoBuilder& parent,
-			std::string       mangled_name,
-			FunctionMetadata  metadata
+			DebugInfoBuilder& parent, std::string mangled_name, FunctionMetadata metadata
 		);
 
 		DebugInfoBuilder& parent;
@@ -77,7 +74,7 @@ namespace debug_info {
 	 *   DebugInfo info = DebugInfoBuilder(Target::DBC, "mymodule.dmf",
 	 *                                     SourcePositionsType::PstHash)
 	 *     .addType("_TMyType", "MyType")
-	 *     .beginFunction("_Mfoo", "foo", functionPos)
+	 *     .beginFunction("foo", "foo", functionPos)
 	 *       .addInstruction(0,  instrPos0)
 	 *       .addInstruction(4,  instrPos4)
 	 *     .end()
@@ -87,9 +84,7 @@ namespace debug_info {
 	class DebugInfoBuilder {
 	public:
 		DebugInfoBuilder(
-			Target              target,
-			std::string         module_path,
-			SourcePositionsType source_positions_type
+			Target target, std::string module_path, SourcePositionsType source_positions_type
 		);
 
 		// ------------------------------------------------------------------
@@ -120,15 +115,13 @@ namespace debug_info {
 		 * @brief Convenience overload: builds FunctionMetadata from name + position.
 		 */
 		FunctionBuilder beginFunction(
-			std::string    mangled_name,
-			std::string    function_name,
-			SourcePosition position
+			std::string mangled_name, std::string function_name, SourcePosition position
 		);
 
 		// ------------------------------------------------------------------
 
 		/**
-		 * @brief Finalises and returns the accumulated DebugInfo.
+		 * @brief Finalizes and returns the accumulated DebugInfo.
 		 *
 		 * The builder is left in a valid-but-empty state after this call;
 		 * calling build() again will return a default-constructed DebugInfo.
@@ -146,4 +139,4 @@ namespace debug_info {
 		DebugInfo info;
 	};
 
-} // namespace debug_info
+}  // namespace debug_info

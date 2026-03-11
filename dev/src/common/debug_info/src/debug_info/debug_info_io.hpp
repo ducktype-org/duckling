@@ -9,9 +9,9 @@
 namespace debug_info {
 
 	/**
-	 * @brief Deserialises a DebugInfo object from a JSON stream.
+	 * @brief Deserializes a DebugInfo object from a JSON stream.
 	 *
-	 * On success returns the deserialised DebugInfo.
+	 * On success returns the deserialized DebugInfo.
 	 * On failure (malformed JSON, missing fields, wrong types, …) returns an
 	 * error string describing the problem — no exception is thrown.
 	 *
@@ -20,15 +20,15 @@ namespace debug_info {
 	std::expected<DebugInfo, std::string> loadFromStream(std::istream& in);
 
 	/**
-	 * @brief Serialises a DebugInfo object to a JSON stream.
+	 * @brief Serializes a DebugInfo object to a JSON stream.
 	 *
 	 * The output is indented JSON (4-space indent) for human readability.
 	 * Instruction entries within each function are sorted by offset before
 	 * being written.
 	 *
-	 * @param info The DebugInfo to serialise.
+	 * @param info The DebugInfo to serialize.
 	 * @param out  Any std::ostream to write to (e.g. a file stream).
 	 */
 	void saveToStream(const DebugInfo& info, std::ostream& out);
 
-} // namespace debug_info
+}  // namespace debug_info

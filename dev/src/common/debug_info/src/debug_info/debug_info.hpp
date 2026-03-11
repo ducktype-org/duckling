@@ -69,8 +69,6 @@ namespace debug_info {
 		 *
 		 * @param resolver A callable that maps PstHashPostion → FilePosition.
 		 */
-		void resolvePositions(
-			const std::function<FilePosition(const PstHashPostion&)>& resolver
-		);
+		void resolvePositions(const std::function<FilePosition(const PstHashPostion&)>& resolver);
 	};
 }
