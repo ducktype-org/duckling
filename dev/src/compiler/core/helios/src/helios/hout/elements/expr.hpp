@@ -780,4 +780,4 @@ namespace compiler::helios::code {
 	};
 }
 
-ID_STD_HASH(compiler::helios::code::HOUTExprID)
+ID_STD_HASH(compiler::helios::code::HOUTExprID);

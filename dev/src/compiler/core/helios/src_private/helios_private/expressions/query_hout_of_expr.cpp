@@ -154,8 +154,8 @@ namespace compiler::helios::code {
 			void visitExprCharValue(pst::Access<pst::expr::ExprCharValue> stmt) override {
 				const auto escaped_string  = stmt->getValue().value.strView();
 				const auto unescape_result = base::unescapeString(escaped_string);
-				variant_match(unescape_result) {
-					variant_case(base::UnescapedString, result) {
+				match_optional(unescape_result) {
+					opt_some(result) {
 						if (result.value.size() == 1) {
 							node
 								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
@@ -165,12 +165,11 @@ namespace compiler::helios::code {
 							);
 						}
 					}
-					variant_case(base::UnknownEscapeSequence, error) {
+					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
 							stmt->getSourcePosition(), error.value
 						));
 					}
-					variant_default CORE_UNREACHABLE();
 				}
 			}
 
@@ -265,7 +264,7 @@ namespace compiler::helios::code {
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
 				// @TODO: #1412 fix dealias
-				auto all_candidates = lookup_result->leaves;
+				auto all_candidates = lookup_result->valueOrThrow().leaves;
 				for (const auto builtin_operator: *getRegularBinaryBuiltinSymbols(ctx))
 					if (name(builtin_operator) == op.value)
 						all_candidates.push_back(builtin_operator);
