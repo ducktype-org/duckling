@@ -2,6 +2,7 @@
 #include "global_logger.hpp"
 
 #include <diagnostic_interactive/logger.hpp>
+#include <query_framework/context/context.hpp>
 
 namespace global_state {
 
@@ -9,7 +10,16 @@ namespace global_state {
 		constinit MBox<dia_int::Logger> global_logger;
 	}
 
-	Ref<dia_int::Logger> getGlobalLogger() { return global_logger.refMut().toOpt().value(); }
+	Ref<dia_int::Logger> getGlobalLogger() {
+		// @TODO: #1933 change it to something better, remove or relax query->global state dependency if possible.
+		// Note that this assertion now only works because global logger is not used concurrently with query-workers,
+		// but it is logically incorrect.
+		CORE_ASSERT(
+			query::Context::getState().activeQueryCount() == 0,
+			"getGlobalLogger used within query!"
+		);
+		return global_logger.refMut().toOpt().value();
+	}
 
 	bool hasGlobalLogger() { return global_logger.toOpt().has_value(); }
 
