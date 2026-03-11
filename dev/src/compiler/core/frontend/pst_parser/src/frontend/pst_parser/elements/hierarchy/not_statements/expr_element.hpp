@@ -15,8 +15,8 @@ namespace pst {
 		 */
 		static bool checkNonEmpty(LangParserState& state);
 
-		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
-			  NotStmt(position),
+		explicit ExprElement(const LangParserState& state, i64 precedence):
+			  NotStmt(state),
 			  PRECEDENCE(precedence) {
 			this->element_kind = ElementKind::ExprElement;
 		}

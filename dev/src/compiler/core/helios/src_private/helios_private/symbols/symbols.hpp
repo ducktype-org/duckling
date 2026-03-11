@@ -61,7 +61,7 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
-		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({ .uses_qresult = false })
+		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	using QueryDealias_Result = query::QResult<SymbolList>;
@@ -133,9 +133,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QueryDirectFunctionCalls, SymID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
-	);
+	DECLARE_QUERY(QueryDirectFunctionCalls, SymID, CRef<query::QResult<std::vector<SymID>>>, ({}));
 
 	/**
 	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
@@ -147,6 +145,6 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryTransitiveFunctionCalls, SymID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
+		QueryTransitiveFunctionCalls, SymID, CRef<query::QResult<std::vector<SymID>>>, ({})
 	);
 }

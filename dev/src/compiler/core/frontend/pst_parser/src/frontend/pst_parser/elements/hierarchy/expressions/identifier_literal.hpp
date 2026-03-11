@@ -11,7 +11,7 @@ namespace pst::expr {
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
-		IdentifierLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+		IdentifierLiteral(const LangParserState& state): ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

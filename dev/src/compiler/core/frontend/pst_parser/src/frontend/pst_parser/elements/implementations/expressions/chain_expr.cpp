@@ -30,7 +30,7 @@ namespace pst::expr {
 		i64 fwd = toNextLink(state);
 		if (state[fwd].is(Token::Type::Sentinel)) return Lower::parse(state);
 
-		auto out = makeBox<ChainExpr>(state.getPosition());
+		auto out = makeBox<ChainExpr>(state);
 
 		state.parse(out).autoFallbackLen(fwd).with(&out->atom, Lower::parse);
 
@@ -76,7 +76,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ChainExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ChainExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, chain.size());
 		return partial_hash;
 	}

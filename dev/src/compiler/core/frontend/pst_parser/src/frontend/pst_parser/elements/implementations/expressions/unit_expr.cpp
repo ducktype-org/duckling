@@ -17,7 +17,7 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<UnitExpr>(state.getPosition());
+		auto out = makeBox<UnitExpr>(state);
 
 		state.parse(out).goDown();
 		state.parse(out).goUpAndSkip();
@@ -30,7 +30,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& UnitExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& UnitExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

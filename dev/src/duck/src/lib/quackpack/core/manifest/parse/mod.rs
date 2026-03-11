@@ -6,7 +6,7 @@ use tracing::{Level, debug, span};
 
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util_common::path_ops_ext::PathOpsExt;
-use crate::{QpCtx, QuackResultContext, StrId, qp_internal};
+use crate::{DuckCtx, QuackResultContext, StrId, qp_internal};
 use crate::{QuackResult, quackpack::core::Package};
 
 mod dependency;
@@ -24,7 +24,7 @@ mod tests;
 /// 1. Read the entire YAML string.
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
-pub fn parse_manifest(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
+pub fn parse_manifest(path: &Path, ctx: &DuckCtx) -> QuackResult<Package> {
     let span = span!(Level::DEBUG, "manifest", path = %path.display());
     let _guard = span.enter();
     debug!("starting parsing...");
@@ -65,7 +65,7 @@ impl Scope {
 }
 
 /// Helper for [`parse_manifest`].
-fn parse_inner(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
+fn parse_inner(path: &Path, ctx: &DuckCtx) -> QuackResult<Package> {
     let package_root = path
         .parent()
         .ok_or_else(|| qp_internal!("the manifest path has no parent"))?;

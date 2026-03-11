@@ -8,7 +8,7 @@ namespace pst::expr {
 	 */
 	class UnitExpr final: public ExprElement {
 	public:
-		explicit UnitExpr(const dia::SourcePosition& pos): ExprElement(pos, 0) {}
+		explicit UnitExpr(const LangParserState& state): ExprElement(state, 0) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

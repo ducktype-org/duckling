@@ -61,21 +61,33 @@ namespace query::internal {
 	}  // namespace
 
 	base::Optional<ExtractedNodeMetadata> MetadataStorage::extract(NodeID node_id) {
-		auto it = storage.atMaybe(node_id);
-		if (!it.has_value()) return {};
+		auto extracted = storage.extract(node_id);
 
-		ExtractedNodeMetadata result(node_id, std::move(*it.value()));
-		storage.erase(node_id);
-		return result;
+		if (!extracted.has_value()) {
+			// NodeID not found, return empty optional
+			return base::Optional<ExtractedNodeMetadata>{};
+		} else {
+			// We have to convert ConHashMap to StableHashMap for the extracted data
+			base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> extracted_map;
+
+			for (auto& [type_id, metadata_vec]: extracted.value())
+				extracted_map.put(type_id, std::move(metadata_vec));
+
+			return ExtractedNodeMetadata{ node_id, std::move(extracted_map) };
+		}
 	}
 
 	void MetadataStorage::emplace(ExtractedNodeMetadata&& extracted) {
-		storage.put(std::move(extracted).node_id, std::move(extracted.type_map));
+		// convert StableHashMap back to ConHashMap for storage
+		TypeMap type_map;
+		for (auto& [type_id, metadata_vec]: extracted.type_map)
+			type_map.put(type_id, std::move(metadata_vec));
+		extracted.type_map.clear();
+
+		storage.put(std::move(extracted).node_id, std::move(type_map));
 	}
 
 	void MetadataStorage::clearNodeMetadata(NodeID node_id) { storage.erase(node_id); }
-
-	void MetadataStorage::clear() { storage.clear(); }
 
 	bool MetadataStorage::empty() const { return storage.size() == 0; }
 
@@ -160,9 +172,9 @@ namespace query::internal {
 	}
 
 	MetadataStorage MetadataStorage::deserialize(std::span<const std::byte> data) {
-		MetadataStorage storage;
+		if (data.empty()) return MetadataStorage{};
 
-		if (data.empty()) return storage;
+		MetadataStorage storage;
 
 		usize offset = 0;
 
@@ -253,6 +265,22 @@ namespace query::internal {
 		}
 
 		return storage;
+	}
+
+	void MetadataStorage::prettyPrint(std::ostream& os) const {
+		os << "MetadataStorage with " << storage.size() << " nodes:\n";
+		for (const auto& [node_id, type_map]: storage) {
+			os << "  NodeID(q_id=" << node_id.q_id.getData().name << ", hash=" << node_id.hash.val
+			   << "):\n";
+			for (const auto& [type_id, metadata_vec]: type_map) {
+				os << "    TypeID: " << type_id.strView() << " (" << metadata_vec.size()
+				   << " instances)\n";
+				for (const auto& metadata: metadata_vec) {
+					os << "      - ";
+					metadata->prettyPrint(os);
+				}
+			}
+		}
 	}
 
 }  // namespace query

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_context.hpp>
 
 namespace vm::code {
 	/*
@@ -19,10 +18,10 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Create a TypeContext with builtin types.
+	 * @brief Returns a list of builtin type definitions.
 	 * @note The types defined here are used by the builtin functions.
 	 */
-	code::TypeContext getBuiltinTypes();
+	const std::vector<TypeOfData>& getBuiltinTypes();
 
 	/**
 	 * @brief Returns the builtin type of a given name.

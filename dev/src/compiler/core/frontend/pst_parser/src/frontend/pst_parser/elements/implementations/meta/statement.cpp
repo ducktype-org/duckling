@@ -12,6 +12,15 @@ namespace pst {
 	namespace internal {
 		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
 
+		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
+			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+			    || state[fwd - 1].is(Special::Semicolon)
+			    || keywordFlags(state[fwd].asKeyword())
+			           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+			    || keywordFlags(state[fwd].asKeyword())
+			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+		}
+
 		template<class T>
 		struct StmtClassifiers {
 			/**
@@ -57,28 +66,56 @@ namespace pst {
 			}
 		};
 
-		template<>
-		struct StmtClassifiers<If> {
+		template<class T>
+		struct StmtFinder {
 			/**
-			 * @brief Function that checks heuristically for a potential end of an if statement.
-			 *
-			 * This function is a very rough placeholder that should work in most correct cases but
-			 * a proper heuristic handling will be needed.
-			 *
-			 * @TODO: #1761 Add proper handling instead.
+			 * @brief Calculates the heuristic for where a given statement ends. Can be overriden
+			 * when needed.
 			 */
-			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel)
-				    || ((state[fwd - 1].is(Special::Semicolon)
-				         || Conditions::isBlockGroup(state, fwd - 1))
-				        && !state[fwd].is(Keyword::Else));
+			static u64 findStatementLength(LangParserState& state) {
+				return 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			}
+		};
+
+		template<class T>
+		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
+
+		template<class T>
+		requires FunctionLike<T> struct StmtFinder<T> {
+		private:
+			static bool isAssignOrEnd(const TokenStream& stream, i64 fwd) {
+				return StmtClassifiers<T>::isStmtEnd(stream, fwd)
+				    || stream[fwd].is(NamedOperator::Assign);
+			}
+
+			static bool isInnerExprEnd(const TokenStream& stream, i64 fwd) {
+				return StmtClassifiers<ExprStmt>::isStmtEnd(stream, fwd);
+			}
+
+		public:
+			/**
+			 * @brief For function like definitions we have to consider code block vs an expression.
+			 */
+			static u64 findStatementLength(LangParserState& state) {
+				u64 initial_length = 1 + state.ctokens().countUntil<isAssignOrEnd>(1);
+				if (!state[base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign))
+					return initial_length;
+				initial_length++;
+				if (Conditions::isBlockGroup(
+						state.ctokens(), base::safeIntConv<i64>(initial_length)
+					))
+					return initial_length + 1;
+				return initial_length
+				     + state.ctokens().countUntil<isInnerExprEnd>(
+						 base::safeIntConv<i64>(initial_length)
+					 );
 			}
 		};
 
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
 			// We skip the first token as its the keyword we already found
-			u64  length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			u64  length = StmtFinder<T>::findStatementLength(state);
 			bool could_implicitly_return
 				= !state[base::safeIntConv<i64>(length) - 1].is(Special::Semicolon)
 			   && state[base::safeIntConv<i64>(length)].is(Token::Type::Sentinel);
@@ -96,6 +133,26 @@ namespace pst {
 			}
 
 			exitFallback(state);
+
+			PST_RETURN out;
+		}
+
+		/**
+		 * @brief This is a helper concept for Statements that behave similarly to flow control
+		 * elements as in they can have a code block or a sub-statement. They have to be handled
+		 * differently for fallbacks.
+		 */
+		template<class T>
+		concept FlowControlLike
+			= std::same_as<T, If> || std::same_as<T, For> || std::same_as<T, While>;
+
+		template<std::derived_from<Stmt> T>
+		requires FlowControlLike<T> MBox<T> parseStmt(LangParserState& state) {
+			setSoftFallback(state, isStatementBegin);
+
+			MBox<T> out = T::parse(state);
+
+			exitSoftFallback(state);
 
 			PST_RETURN out;
 		}
@@ -218,7 +275,7 @@ namespace pst {
 		PST_RETURN out;
 	}
 
-	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
+	HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
 		addToHash(partial_hash, isImplicitReturn());

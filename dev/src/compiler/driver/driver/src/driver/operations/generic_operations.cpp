@@ -52,9 +52,6 @@ namespace compiler::driver {
 		QUERY_AUTO_CACHE_COPY
 
 		/** Helper variable for printing user logs, change freely if needed */
-		constinit static inline std::atomic<u64> this_module_count = 0;
-
-		/** Helper variable for printing user logs, change freely if needed */
 		constinit static inline std::atomic<u64> total_module_count = 0;
 
 		/**
@@ -76,10 +73,23 @@ namespace compiler::driver {
 		 * Helper function to log module compilation info.
 		 */
 		static void moduleLog(const QKey& key, std::string_view info) {
+			/** Helper variables for printing user logs, change freely if needed */
+			static concurrent::ConHashMap<frontend::ModuleID, u64> module_number_cache;
+			static std::atomic<u64>                                next_module_number = 1;
+
+			u64 id = 0;
+			module_number_cache.maybePutAndUpdate(key.module_id, 0, [&](Ref<u64> number) {
+				if (*number == 0) {
+					// this is a new module
+					*number = next_module_number.fetch_add(1, std::memory_order_relaxed);
+				}
+				id = *number;
+			});
+
 			auto total = total_module_count.load(std::memory_order_relaxed);
 			CORE_USER_LOG(
 				"[",
-				this_module_count.fetch_add(1, std::memory_order_relaxed),
+				id,
 				"/",
 				total == 0 ? "?" : std::to_string(total),
 				"] ",
@@ -105,6 +115,10 @@ namespace compiler::driver {
 			}
 		}
 
+		static std::string getModuleOutputName(const QKey& key) {
+			return key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+		}
+
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			moduleLog(key, "Recompiling");
 
@@ -115,8 +129,7 @@ namespace compiler::driver {
 			}
 			CRef lir_data = &lir_data_result->valueOrThrow();
 
-			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name = getModuleOutputName(key);
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
@@ -149,7 +162,7 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data);
+				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
 				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
@@ -168,8 +181,7 @@ namespace compiler::driver {
 		 * Returns Optional empty if the underlying file does not exist anymore.
 		 */
 		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
-			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name = getModuleOutputName(key);
 
 			auto collection   = getQueryArtifactsCollection();
 			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
@@ -183,6 +195,14 @@ namespace compiler::driver {
 
 			moduleLog(key, "Cached, loading artifact from disk");
 			return output;
+		}
+
+		static auto deleteFromDisc(const QKey& key) -> bool {
+			auto output_name = getModuleOutputName(key);
+
+			auto collection = getQueryArtifactsCollection();
+			moduleLog(key, "Deleting artifact from disk");
+			return collection->deleteFileArtifact(base::StrID(output_name.c_str()));
 		}
 	};
 
@@ -245,7 +265,7 @@ namespace compiler::driver {
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
 		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
+		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
 
 		vm::PID pid{};
 

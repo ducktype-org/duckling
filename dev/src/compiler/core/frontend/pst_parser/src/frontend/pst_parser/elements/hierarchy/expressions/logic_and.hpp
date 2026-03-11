@@ -12,8 +12,8 @@ namespace pst::expr {
 		using Self  = LogicAnd;
 
 	public:
-		explicit LogicAnd(const dia::SourcePosition& position):
-			  BinaryOperator(position, lang_def::keywordToStr(lang_def::Keyword::And), 730) {}
+		explicit LogicAnd(const LangParserState& state):
+			  BinaryOperator(state, lang_def::keywordToStr(lang_def::Keyword::And), 730) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

@@ -23,7 +23,7 @@ namespace pst::expr {
 		}
 		if (!and_found) return Lower::parse(state);
 
-		auto out = makeBox<LogicAnd>(pos);
+		auto out = makeBox<LogicAnd>(state);
 
 		state.parse(out).autoFallbackLen(and_fwd).with(&out->left, Lower::parse);
 		state.parse(out).one(Keyword::And);

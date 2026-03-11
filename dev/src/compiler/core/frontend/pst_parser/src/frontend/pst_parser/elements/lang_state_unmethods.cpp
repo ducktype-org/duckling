@@ -6,7 +6,13 @@
 #include "implementations/preamble.hpp"
 
 namespace pst::internal {
-	dia::SourcePosition getPosition(LangParserState& state) { return state.getPosition(); }
+	dia::SourcePosition getPosition(const LangParserState& state) { return state.getPosition(); }
+
+	HashType getContextHash(const LangParserState& state) {
+		HashAlg partial_hash;
+		addToHash(partial_hash, state.getContext());
+		return partial_hash.finalize();
+	}
 
 	void parseExprIntoHolder(
 		LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length
@@ -22,7 +28,5 @@ namespace pst::internal {
 
 	u64 streamSize(LangParserState& state) { return state.ctokens().size(); }
 
-	bool isGood(LangParserState& state) {
-		return state.err->good() and (not state.int_err->hasErrors());
-	}
+	bool isGood(LangParserState& state) { return not state.int_err->hasErrors(); }
 }

@@ -4,8 +4,7 @@
 
 namespace pst {
 	MBox<Expand> Expand::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Expand>(position);
+		auto out = makeBox<Expand>(state, state.getContext());
 
 		if (!assertStmtChoice<Expand>(state, state[0].is(Keyword::Expand))) return nullptr;
 
@@ -27,7 +26,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Expand::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Expand::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

@@ -56,5 +56,6 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;
 		friend struct ImplementationOf_QueryLookupInScopeAndParents;
+		friend struct ImplementationOf_QueryClassOfMember;
 	};
 }

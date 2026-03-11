@@ -35,13 +35,13 @@ namespace pst::expr {
 	 */
 	MBox<ExprElement> GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
 		if (std::holds_alternative<i64>(expr)) {
-			state.setFallback(std::get<i64>(expr));
+			fallbackLen(state, std::get<i64>(expr));
 			auto out = Lower::parse(state);
-			state.exitFallback();
+			exitFallback(state);
 			return out;
 		} else {
 			auto op  = std::get<Box<OperatorBuilder>>(expr).ref();
-			auto out = makeBox<GeneralBinary>(state.getPosition(), op->type);
+			auto out = makeBox<GeneralBinary>(state, op->type);
 
 			state.parse(out).with(&out->left, parseRecursive, op->lhs);
 			state.parse(out).one(op->type);
@@ -72,7 +72,7 @@ namespace pst::expr {
 		i64              next = 0;
 		PST_WHILE(fwd < reduced_length) {
 			next = skipAtom(state, fwd, reduced_length);
-			if (fwd == next) state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition(fwd)));
+			if (fwd == next) state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition(fwd), state[fwd].describe()));
 			if (next < reduced_length - 1)  // Not a suffix operator or end of expression
 				operators.push_back(next);
 			fwd = std::min(next + 1, reduced_length);

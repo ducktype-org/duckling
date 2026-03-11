@@ -205,7 +205,7 @@ namespace base {
 
 
 	public:
-		MBox() = default;
+		constexpr MBox() = default;
 
 		MBox(std::nullptr_t) {}
 

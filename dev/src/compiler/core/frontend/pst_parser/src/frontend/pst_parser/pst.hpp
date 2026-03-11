@@ -15,10 +15,7 @@ namespace pst {
 	// Used to not include full state definition
 	namespace internal {
 		Box<LangParserState> makeState(
-			tpc::TokenStream&&,
-			Box<LangParserContext>&&,
-			Ref<dia::Logger>     logger,
-			Ref<dia_int::Logger> int_logger
+			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia_int::Logger> int_logger
 		);
 		std::vector<ImportType> extractState(Box<LangParserState>);
 
@@ -30,9 +27,6 @@ namespace pst {
 	 *
 	 * Program - Top level is unordered
 	 * Script - Top level is ordered
-	 *
-	 * Currently doesn't change anything
-	 * @TODO: #1891 Will add the behaviour
 	 */
 	enum class PSTType {
 		Program,
@@ -97,7 +91,6 @@ namespace pst {
                     token_data.tokens.size()
                 ),
                 std::move(parsing_ctx),
-                file->getLogger(),
                 file->getIntLogger()
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
@@ -182,7 +175,7 @@ namespace pst {
 		 */
 		void signGenerated() {
 			if (auto ref = element.internalMut()) {
-				LangElement::HashAlg partial_hash{};
+				HashAlg partial_hash{};
 				ref->calcSignature(partial_hash);
 				auto hash = partial_hash.finalize();
 				ref->signGenerated(hash);

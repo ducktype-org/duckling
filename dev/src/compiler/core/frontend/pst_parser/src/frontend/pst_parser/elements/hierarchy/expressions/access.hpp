@@ -13,7 +13,7 @@ namespace pst::expr {
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
-		Access(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+		Access(const LangParserState& state): ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

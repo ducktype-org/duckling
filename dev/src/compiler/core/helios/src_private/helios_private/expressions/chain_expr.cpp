@@ -13,7 +13,10 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/origin.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/expressions/coercions.hpp>
@@ -22,9 +25,11 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -35,7 +40,6 @@
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
-#include <token_parser_core/common_elements.hpp>
 
 namespace compiler::helios::code {
 
@@ -184,7 +188,7 @@ namespace compiler::helios::code {
 		/**
 		 * The original PST chain expression that is being processed.
 		 */
-		pst::Access<pst::expr::ChainExpr> original_chain_expr;
+		pst::Access<pst::ExprElement> whole_chain_pst;
 
 		/**
 		 * The temporary buffor for the currently built value from left to current place of
@@ -258,12 +262,21 @@ namespace compiler::helios::code {
 		query::QResult<std::vector<SymID>> getCallableCandidates(
 			const std::vector<SymID>& looked_up_callees
 		) const {
+			// @TODO: #2135 handle ambiguity in class scopes
+
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Function
 				        || kind(symbol) == SymbolKind::FunctionDeclaration;
 				}))
 				return looked_up_callees;
+
+			// If all candidates are methods, return them as is.
+			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+					return kind(symbol) == SymbolKind::Method;
+				})) {
+				return looked_up_callees;
+			}
 
 			// Check error condition and report error.
 			if (looked_up_callees.size() > 1) {
@@ -321,12 +334,13 @@ namespace compiler::helios::code {
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				const auto lookup_result = h_interface.lookup(query_ctx, ident->getName().value);
+				const auto lookup_qresult = h_interface.lookup(query_ctx, ident->getName().value);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-				auto res = processFunctionCall(query_ctx, callees, ident, call_expr);
+				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
 				return ChainState::ofExpr(std::move(expr));
 			}
@@ -336,8 +350,10 @@ namespace compiler::helios::code {
 				);
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
-				auto base_state_res = processNamespaceOrValue(sym_list.back(), pstOrigin(ident));
+				auto base_state_res
+					= processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
 				UNPACK_QRESULT_MOVE(auto base_state =, base_state_res);
+
 
 				if (base_state.isExpr()) {
 					auto square_call_res
@@ -442,7 +458,7 @@ namespace compiler::helios::code {
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident));
+			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
 		}
 
 		/**
@@ -456,7 +472,7 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, expr);
 			auto symbol = getIdentifierExprSymID(hout_expr);
 			if (symbol.has_value())
-				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr));
+				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr), pst_expr);
 			return ChainState::ofExpr(hout_expr->clone());
 		}
 
@@ -522,9 +538,9 @@ namespace compiler::helios::code {
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
-			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
-			                         .lookup(query_ctx, expr_access->getName().value);
-
+			auto lookup_qresult    = HInterface::ofTypeInstance(current_expr_type)
+			                          .lookup(query_ctx, expr_access->getName().value);
+			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
 			// Note that if multiple symbols were found, it results in an error and enters
 			// the following if statement. This is temporary, as symbol ambiguity should be
@@ -548,7 +564,7 @@ namespace compiler::helios::code {
 						}
 						auto node = makeBox<AccessExpr>(
 							query_ctx,
-							current_expr->origin.extended(expr_access),
+							pstOrigin(current_expr->origin, expr_access),
 							std::move(current_expr),
 							sym
 						);
@@ -611,8 +627,8 @@ namespace compiler::helios::code {
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto whole_expr_origin
-				= current_state.getNamespaceLikePstOrigin().extended(expr_access);
-			return processNamespaceOrValue(sym_list.back(), whole_expr_origin);
+				= pstOrigin(current_state.getNamespaceLikePstOrigin(), expr_access);
+			return processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 		}
 
 		/**
@@ -628,6 +644,26 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Call>   call_expr
 		) -> query::QResult<ChainState> {
 			switch (call_expr->getType()) {
+			case lexer::Token::Round: {
+				auto current_expr_type = current_expr->expression_type.getType();
+				auto lookup_qresult    = HInterface::ofTypeInstance(current_expr_type)
+				                          .lookup(query_ctx, expr_access->getName().value);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+
+				// @TODO: #1412 fix dealias
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				auto self_expr_ref = makeBox<RefOfExpr>(
+					query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
+				);
+
+				auto res = processMethodCall(
+					query_ctx, callees, expr_access, call_expr, std::move(self_expr_ref)
+				);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+				return ChainState::ofExpr(std::move(expr));
+			}
 			case lexer::Token::Square: {
 				auto access_res = processPSTExpr(std::move(current_expr), expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, access_res);
@@ -666,13 +702,15 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState> {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
-				                         .lookup(query_ctx, expr_access->getName().value);
+				auto lookup_qresult = HInterface::ofSymbol(namespace_like_symbol)
+				                          .lookup(query_ctx, expr_access->getName().value);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 				// @TODO: #1412 fix dealias
 				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-				auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
+				auto expr_result
+					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 				return ChainState::ofExpr(std::move(expr));
 			}
@@ -686,8 +724,9 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
 				auto whole_expr_origin
-					= current_state.getNamespaceLikePstOrigin().extended(expr_access);
-				auto state_res = processNamespaceOrValue(sym_list.back(), whole_expr_origin);
+					= pstOrigin(current_state.getNamespaceLikePstOrigin(), expr_access);
+				auto state_res
+					= processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
 
 				if (access_state.isExpr()) {
@@ -696,6 +735,7 @@ namespace compiler::helios::code {
 					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 					return ChainState::ofExpr(std::move(expr));
 				}
+
 
 				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"This symbol cannot be indexed", call_expr->getSourcePosition()
@@ -723,8 +763,11 @@ namespace compiler::helios::code {
 		 * @param symbol The symbol found in the lookup.
 		 * @param pst_elem The PST element for which the lookup was performed.
 		 */
-		auto processNamespaceOrValue(const SymID& symbol, ElementOrigin pst_element_origin)
-			-> query::QResult<ChainState> {
+		auto processNamespaceOrValue(
+			const SymID&                  symbol,
+			ElementOrigin                 pst_element_origin,
+			pst::Access<pst::LangElement> pst_elem
+		) -> query::QResult<ChainState> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {
@@ -737,6 +780,11 @@ namespace compiler::helios::code {
 				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
 				return ChainState::ofExpr(std::move(expr));
 			}
+			case SymbolKind::Field: {
+				auto expr = processFieldNoSelf(query_ctx, symbol, pst_element_origin, pst_elem);
+				UNPACK_QRESULT_MOVE(base::Box<Expr> field_expr =, expr);
+				return ChainState::ofExpr(std::move(field_expr));
+			}
 			default:
 				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					base::strConcat(
@@ -746,6 +794,115 @@ namespace compiler::helios::code {
 				));
 				return query::Failed();
 			}
+		}
+
+		/**
+		 * @brief When we have a field symbol found in lookup,
+		 * that is not preceded by an access expression, for example "field"
+		 * this functions finds the "self" argument
+		 * and creates an access expression.
+		 */
+		auto processFieldNoSelf(
+			query::Context&               ctx,
+			const SymID&                  field_symbol,
+			ElementOrigin                 pst_element_origin,
+			pst::Access<pst::LangElement> pst_elem
+		) -> query::QResult<base::Box<Expr>> {
+			// @TODO: #2135 handle ambiguity in class scopes
+			auto scope           = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
+			auto sym_list_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
+				pst_elem->getSourcePosition(), ctx, base::StrID("self")
+			);
+			UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
+
+			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), sym_list.back());
+			auto self_type = self_expr->expression_type.getSymbolType().getType();
+
+			auto fields = self_type.getInterface(ctx)->getFieldsView();
+			if (std::ranges::find(fields, field_symbol, &tsh::InterfaceElement::getSymbol)
+			    == fields.end()) {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"No such field found in the interface of prefix expression.",
+					pst_elem->getSourcePosition()
+				));
+				return query::Failed();
+			}
+
+
+			return makeBox<AccessExpr>(
+				ctx,
+				pst_element_origin,
+				makeBox<DerefExpr>(ctx, generatedOrigin(), std::move(self_expr)),
+				field_symbol
+			);
+		}
+
+		/**
+		 * @brief This function processes a function or method call when there is no "self" argument
+		 * to find, for example "foo()". If the candidates are methods, it tries to find "self"
+		 * argument and fails if it is not found. If the candidates are functions, it processes the
+		 * call as a normal function call.
+		 *
+		 * @return query::QResult<base::Box<Expr>>
+		 */
+		auto processFunctionOrMethodNoSelfCall(
+			query::Context&               ctx,
+			const std::vector<SymID>&     candidates,
+			pst::Access<pst::LangElement> callee_element,
+			pst::Access<pst::expr::Call>  call_expr
+		) -> query::QResult<base::Box<CallExpr>> {
+			if (candidates.size() >= 1 && kind(candidates[0]) == SymbolKind::Method) {
+				// @TODO: #2135 handle ambiguity in class scopes
+
+				// Try to find "self" argument
+				auto find_self_arg = [&] -> query::QResult<SymID> {
+					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ call_expr });
+
+					auto lookup_qresult
+						= HInterface::ofScopeWithParents(scope).lookup(ctx, base::StrID("self"));
+
+					UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+					UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result->getAsSingle());
+
+					variant_match(sym_list) {
+						variant_case(SymbolList, result) { return result.back(); }
+						variant_case_novalue(errors::SymbolNotFound) {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								"Method call without `self` argument.",
+								call_expr->getSourcePosition()
+							));
+							return query::Failed();
+						}
+						variant_case_novalue(errors::Ambiguity) {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								"Multiple candidates for `self` argument found which should be "
+								"impossible.",
+								call_expr->getSourcePosition()
+							));
+							return query::Failed();
+						}
+					}
+					CORE_UNREACHABLE();
+				};
+				auto self_arg_result = find_self_arg();
+				UNPACK_QRESULT(auto self_arg =, self_arg_result);
+				auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), self_arg);
+
+				// Filter candidates for which the self argument is different than the found one
+				auto self_type = self_expr->expression_type;
+
+				auto methods = self_type.getType().getInterface(ctx)->getMethodsView();
+
+				std::vector<SymID> filtered_candidates;
+				for (const auto& method: methods)
+					if (std::ranges::find(candidates, method.getSymbol()) != candidates.end())
+						filtered_candidates.push_back(method.getSymbol());
+
+				return processMethodCall(
+					ctx, filtered_candidates, callee_element, call_expr, std::move(self_expr)
+				);
+			}
+			return processFunctionCall(ctx, candidates, callee_element, call_expr);
 		}
 
 		// =============================== MAIN PROCESSING LOOP ===============================
@@ -834,10 +991,16 @@ namespace compiler::helios::code {
 	public:
 		ChainExprConstruction(query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr):
 			  query_ctx(ctx),
-			  original_chain_expr(expr) {
+			  whole_chain_pst(expr) {
 			this->chain_elements.emplace_back(expr->getAtom());
 			auto chain = expr->getChain();
 			std::ranges::copy(chain, std::back_inserter(this->chain_elements));
+		}
+
+		ChainExprConstruction(query::Context& ctx, pst::Access<pst::expr::IdentifierLiteral> expr):
+			  query_ctx(ctx),
+			  whole_chain_pst(expr) {
+			this->chain_elements.emplace_back(expr);
 		}
 
 		/**
@@ -856,6 +1019,9 @@ namespace compiler::helios::code {
 			           && isNextElement<pst::expr::Call>()) {
 				error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
 				this->index += 2;
+			} else if (isCurrentElement<pst::expr::IdentifierLiteral>()) {
+				error = firstStep<pst::expr::IdentifierLiteral>();
+				this->index++;
 			} else {
 				error = firstStep<pst::ExprElement>();
 				this->index++;
@@ -908,7 +1074,7 @@ namespace compiler::helios::code {
 
 			// If we have multiple expressions, we need to create a chain expression
 			auto chain_expr = makeBox<SequenceExpr>(
-				query_ctx, pstOrigin(original_chain_expr), std::move(result_sequence)
+				query_ctx, pstOrigin(whole_chain_pst), std::move(result_sequence)
 			);
 			return chain_expr;
 		}
@@ -916,6 +1082,13 @@ namespace compiler::helios::code {
 
 	ExprConstructionResult fromChainExpr(
 		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
+	) {
+		ChainExprConstruction construction(ctx, expr.unlock(ctx));
+		return construction.run();
+	}
+
+	query::QResult<Box<code::Expr>> fromIdentifierLiteral(
+		query::Context& ctx, pst::AccessLocked<pst::expr::IdentifierLiteral> expr
 	) {
 		ChainExprConstruction construction(ctx, expr.unlock(ctx));
 		return construction.run();

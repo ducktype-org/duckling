@@ -14,8 +14,10 @@ namespace pst::expr {
 		std::vector<i64> ends;
 		for (i64 i = 0; i < length; i++)
 			if (state[i].is(Special::Comma)) ends.push_back(i);
+
 		if (ends.empty()) return Lower::parse(state);
-		auto out   = makeBox<Comma>(pos);
+
+		auto out   = makeBox<Comma>(state);
 		i64  start = -1;
 
 		for (auto end: ends) {
@@ -50,7 +52,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Comma::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Comma::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, expressions.size());
 		return partial_hash;
 	}

@@ -24,8 +24,8 @@ namespace pst::expr {
 		};
 
 	public:
-		explicit GeneralBinary(const dia::SourcePosition& pos, Operator op):
-			  BinaryOperator(pos, op, op.getGenBinOpPrecedence()) {}
+		explicit GeneralBinary(const LangParserState& state, Operator op):
+			  BinaryOperator(state, op, op.getGenBinOpPrecedence()) {}
 
 		/**
 		 * @brief

@@ -24,7 +24,7 @@ namespace pst::expr {
 		}
 		if (!or_found) return Lower::parse(state);
 
-		auto out = makeBox<LogicOr>(pos);
+		auto out = makeBox<LogicOr>(state);
 
 		state.parse(out).autoFallbackLen(or_fwd).with(&out->left, Lower::parse);
 		state.parse(out).one(Keyword::Or);

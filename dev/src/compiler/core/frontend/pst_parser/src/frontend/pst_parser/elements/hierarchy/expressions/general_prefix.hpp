@@ -14,8 +14,8 @@ namespace pst::expr {
 		using Self  = GeneralPrefix;
 
 	public:
-		explicit GeneralPrefix(const dia::SourcePosition& pos, Operator op):
-			  PrefixOperator(pos, op, 400) {}
+		explicit GeneralPrefix(const LangParserState& state, Operator op):
+			  PrefixOperator(state, op, 400) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

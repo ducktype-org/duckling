@@ -10,7 +10,7 @@ namespace pst::expr {
 		NAMED_CHILD(expr, ExprElement);
 
 	public:
-		explicit RoundExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
+		explicit RoundExpr(const LangParserState& state): ExprElement(state, 200) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 
