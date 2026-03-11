@@ -48,10 +48,12 @@ namespace dia_int {
 	 */
 	class PlaceholderCodeError final: public MessageBase {
 		Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "misc",
-				     .name          = "placeholder_code" };
+			return {
+				.template_type = "message",
+				.type          = "error",
+				.family        = "misc",
+				.name          = "placeholder_code",
+			};
 		}
 
 	public:
@@ -60,6 +62,35 @@ namespace dia_int {
 			dia::SourcePosition         source_position,
 			std::string                 description             = "",
 			base::Optional<std::string> pointer_message_content = "here"
+		);
+	};
+
+	/**
+	 * @brief A Placeholder Not-Yet-Implemented message with a header and code snippet. Used to
+	 * indicate that a feature is not yet implemented.
+	 *
+	 * This acts as an alternative to throwing panics or `base::NotYetImplemented` exceptions that
+	 * provides better user experience and testing possibilities.
+	 *
+	 * @note This should be treated as any other error, and the query that logs this error should
+	 * generally return a failed result.
+	 */
+	class NotYetImplementedCodeError final: public MessageBase {
+		Metadata getMetadata() const final {
+			return {
+				.template_type = "message",
+				.type          = "error",
+				.family        = "misc",
+				.name          = "not_yet_implemented_code",
+			};
+		}
+
+	public:
+		NotYetImplementedCodeError(
+			std::string                         header_message,
+			base::Optional<dia::SourcePosition> source_position,
+			std::string                         description             = "",
+			base::Optional<std::string>         pointer_message_content = "here"
 		);
 	};
 

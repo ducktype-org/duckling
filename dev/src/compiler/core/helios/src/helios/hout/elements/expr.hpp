@@ -506,6 +506,37 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Represents an array indexing operation.
+	 *
+	 * This expression is used in two cases:
+	 * - When the base is a list or a static array, the index is expected to be an i64 integer. This
+	 * then represents an index access (array[0]).
+	 * - When the base is a meta type, the index is expected to be an i64 integer. This then
+	 * represents a static array type creation.
+	 */
+	struct IndexExpr final: public Expr {
+		Box<Expr> base;
+		Box<Expr> index;
+
+		IndexExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> base, Box<Expr> index);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		IndexExpr(
+			const tsh::ExpressionType<>& expression_type,
+			ElementOrigin                origin,
+			Box<Expr>                    base,
+			Box<Expr>                    index
+		);
+	};
+
+	/**
 	 * @brief Represents a call in an expression.
 	 */
 	struct CallExpr final: public Expr {
@@ -701,6 +732,27 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		DerefExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents a default (zeroed) value for a given type.
+	 * Used for implicit variable initialization. This gets then mapped to `llvm::getNullValue(type)`.
+	 */
+	struct DefaultValueExpr final: public Expr {
+		tsh::SymbolType<> type;
+
+		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::SymbolType<> type);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		DefaultValueExpr(
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
+		);
 	};
 
 	/**

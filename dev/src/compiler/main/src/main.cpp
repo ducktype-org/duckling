@@ -99,8 +99,10 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 ) {
 	compiler::linker::LinkingOptions linking_options;
 
-	if (auto lib_path = parsing_result.getValue<fs::FilePath>("external-static-library"))
-		linking_options.external_static_libraries.push_back(lib_path.value());
+	linking_options.linker_path = parsing_result.getValue<std::string>("linker");
+
+	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
+		linking_options.additional_link_options = lib_path.value();
 
 	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
 
@@ -277,6 +279,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = 1,
+							},
 						}
 					);
 
@@ -325,9 +330,14 @@ clah::Clah getClahForMain() {
 	                     .addLongName("print-graph")
 	                     .addShortDesc("Print the query graph after the compilation.")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("library"))
-	                     .addLongName("external-static-library")
-	                     .addShortDesc("Path to a static library to link against.")
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("link-options"))
+	                     .addLongName("additional-link-options")
+	                     .addShortDesc("Additional link options.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("linker"))
+	                     .addLongName("linker")
+	                     .addShortDesc("Path to the linker executable.")
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
@@ -342,10 +352,18 @@ clah::Clah getClahForMain() {
 							 "Disable incremental compilation (do not load previous query graph)."
 						 )
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
+
+					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -360,6 +378,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
@@ -435,6 +456,9 @@ clah::Clah getClahForMain() {
 									.backend_options = {},
 									.debug_options = getDebugOptionsFromClap(options),
 									.incremental = {.enabled = !options.isFlag("no-incremental") },
+									.execution_options = {
+										.worker_count = 1,
+									},
 						}
 					);
 
@@ -461,9 +485,11 @@ clah::Clah getClahForMain() {
 							   compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options = getDebugOptionsFromClap(options),
+									   .execution_options = {
+										   .worker_count = 1,
+									   },
 								   }
 							   );
-
 							   compiler::repl::ReplSession session;
 							   int                         result = session.run();
 							   compiler::driver::exit();
@@ -505,7 +531,8 @@ int main(int argc, const char* argv[]) {
 	} catch (...) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
-			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
+			{ "Unexpected Exception not inheriting from std::exception was "
+		      "caught.\n",
 		      printer::Color::Default },
 		});
 		return 1;

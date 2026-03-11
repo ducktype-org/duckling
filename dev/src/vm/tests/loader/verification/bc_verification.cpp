@@ -1,7 +1,6 @@
 #include <vm_tester_utils.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/loader/errors.hpp>
 
 class BCVerificationTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -68,7 +67,7 @@ private:
 		loadInvalidDbc(
 			"wrong/functions/multiple_functions.dbc",
 			{
-				vm::loader::DuplicatedFunctionError::ERR_MSG,
+				"Function with this name already exists.",
 			}
 		);
 	}

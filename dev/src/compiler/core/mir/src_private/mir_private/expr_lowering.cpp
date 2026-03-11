@@ -261,6 +261,26 @@ namespace compiler::mir {
 			}
 		}
 
+		void visitIndexExpr(const hc::IndexExpr& expr) override {
+			if (expr.base->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta) {
+				// @TODO: #1918 Implement that.
+				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
+			} else {
+				auto lowered_index = lowerSubExpr(*expr.index, continuation);
+				auto index_val     = lowered_index.getResult(function);
+
+				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+				auto base_val     = lowered_base.getResult(function);
+
+				variant_match(std::move(base_val.getVariant())) {
+					variant_case(MIRPlace, place) {
+						valueOutput(lowered_base.begin, place.withIndex(index_val));
+					}
+					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
+				}
+			}
+		}
+
 		void visitSequenceExpr(const hc::SequenceExpr&) override {
 			throw base::NotYetImplemented("sequence expr lowering");
 		}
@@ -393,10 +413,7 @@ namespace compiler::mir {
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
 			const auto& inner_type = expr.inner->expression_type.getSymbolType();
 
-			// If a reference of box is taken, no `AddressOf` instruction is inserted.
-			if (inner_type.getRefKind() == tsh::ReferenceKind::Box) {
-				output(lowerSubExpr(*expr.inner, continuation));
-			} else {
+			if (inner_type.getRefKind() == tsh::ReferenceKind::Direct) {
 				auto       hole          = continuation->addHole();
 				auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 				const auto res_inner     = lowered_inner.getResult(function);
@@ -408,10 +425,19 @@ namespace compiler::mir {
 					Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
 					result_type
 				);
+			} else {
+				// If a reference of box or ref is taken, no `AddressOf` instruction is inserted.
+				output(lowerSubExpr(*expr.inner, continuation));
 			}
 		}
 
 		void visitBoxOfExpr(const hc::BoxOfExpr& expr) override {
+			CORE_ASSERT(
+				expr.inner->expression_type.getSymbolType().getRefKind()
+					== tsh::ReferenceKind::Direct,
+				"BoxOfExpr on a non direct type"
+			);
+
 			auto       hole          = continuation->addHole();
 			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			const auto res_inner     = lowered_inner.getResult(function);
@@ -438,6 +464,16 @@ namespace compiler::mir {
 					CORE_UNREACHABLE();
 				}
 			}
+		}
+
+		void visitDefaultValueExpr(const hc::DefaultValueExpr& expr) override {
+			auto hole = continuation->addHole();
+			noValueOutput(
+				continuation,
+				hole,
+				Instruction(Operation::ZeroInitialize, {}, {}, {}, expr_scope),
+				expr.expression_type.getSymbolType()
+			);
 		}
 
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {

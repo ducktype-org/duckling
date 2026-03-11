@@ -26,6 +26,9 @@ namespace compiler::tsh {
 	/**
 	 * TSH-private query to get the interface of a class.
 	 *
+	 * To access the interface of a class from outside the TSH module, use
+	 * `AbstractType::getInterface`
+	 *
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their interfaces is trivial.
 	 *

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/types.hpp>
@@ -48,6 +49,17 @@ namespace compiler::helios::houtgen {
 		};
 
 		/**
+		 * Represents a compiler-generated `self` parameter of a class method.
+		 */
+		struct SelfParameter final {
+			SymID   method_symbol;
+			ScopeID scope;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
 		 * Represents a compiler-generated variable (not parameter) in a function. This function may
 		 * itself be compiler-generated, such as the `ImplicitConstructor`.
 		 */
@@ -74,14 +86,19 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		std::variant<ImplicitConstructor, BuiltinOperator, Parameter, Variable, ReplExpressionWrapper> data;
+		std::variant<ImplicitConstructor, BuiltinOperator, Parameter, SelfParameter, Variable, ReplExpressionWrapper>
+			data;
 
 		explicit GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, BuiltinOperator, Parameter, Variable, ReplExpressionWrapper>& data
-		);
+			const std::variant<ImplicitConstructor, BuiltinOperator, Parameter,
+									 SelfParameter,
+									 Variable,
+									 ReplExpressionWrapper>& data);
 
 		[[nodiscard]]
-		base::Bit256      queryUnstablePerfectHash() const;
-		tsh::SymbolType<> getType(query::Context& ctx) const;
+		base::Bit256                          queryUnstablePerfectHash() const;
+		tsh::SymbolType<>                     getType(query::Context& ctx) const;
+		[[nodiscard]] ScopeID                 getScope() const;
+		[[nodiscard]] base::Optional<ScopeID> maybeScope() const;
 	};
 }

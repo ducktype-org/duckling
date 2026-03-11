@@ -1,6 +1,5 @@
 #include <vm_tester_utils.hpp>
 
-#include <vm/loader/parser/errors.hpp>
 #include <vm/loader/parser/parser.hpp>
 
 using namespace vm::loader;
@@ -45,7 +44,7 @@ private:
 		parseInvalidDbc(
 			"invalid_opcode.dbc",
 			{
-				base::strConcat(parser::UnknownOpCodeError::ERR_MSG, "mov_l46_imm"),
+				"OpCode 'mov_l46_imm' does not exist.",
 			}
 		);
 	}
@@ -54,14 +53,13 @@ private:
 		parseInvalidDbc(
 			"no_semicolon.dbc",
 			{
-				parser::ExpectedSemicolonAfterError::ERR_MSG,
+				"Expected `;` after here",
 			}
 		);
 	}
 
 	void invalidLocalName() {
-		// @TODO: #1785 dia 2.0 in the vm
-		// parseInvalidDbc("invalid_local_name.dbc", { tpc::NoIdentifierErrorOld::ERR_MSG });
+		parseInvalidDbc("invalid_local_name.dbc", { "Expected an identifier here" });
 	}
 };
 

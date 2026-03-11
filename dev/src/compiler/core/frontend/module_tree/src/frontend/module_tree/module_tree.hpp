@@ -37,6 +37,19 @@ namespace compiler::frontend {
 	struct GetModuleID_Functor;
 
 	/**
+	 * @brief REPL-specific data structure.
+	 *
+	 * Only used for repl modules.
+	 */
+	struct ReplData final {
+		/**
+		 * Parent REPL module in chronological order.
+		 * Optional - only empty for first REPL module.
+		 */
+		base::Optional<ModuleID> m_repl_module_parent;
+	};
+
+	/**
 	 * @brief Represents a single module in the Duckling project tree.
 	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
@@ -94,17 +107,31 @@ namespace compiler::frontend {
 		/**
 		 * Accesses the source files of the module.
 		 * Does not contain Main module file (Main source file)
-		 * @return A const reference to a vector of SourceFile references
+		 * @return A lazy view that can be unlocked within a query context or accessed illegally
+		 * (outside queries).
 		 */
 		[[nodiscard]]
-		std::vector<FileAccessLocked> getSourceFiles() const;
+		SourceFilesAccessLocked getSourceFiles() const;
 
 		/**
 		 * Accesses the submodules located in this module.
-		 * @return A vector of ModuleAccessLocked representing all submodules.
+		 * @note Use this only if you need all submodules. For single submodule access, use
+		 * getSubmoduleByName().
+		 * @return A lazy view that can be unlocked within a query context or accessed illegally
+		 * (outside queries).
 		 */
 		[[nodiscard]]
-		std::vector<ModuleAccessLocked> getSubmodules() const;
+		SubmodulesAccessLocked getSubmodules() const;
+
+		/**
+		 * Access a single submodule edge by name.
+		 * Registers dependency via QueryModuleChildSideInput when unlocked.
+		 * Use this function in lookups when you need only a submodule with some name.
+		 * @param name Name of the submodule to access.
+		 * @return AccessLocked wrapper that may contain the submodule if it exists.
+		 */
+		[[nodiscard]]
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -122,6 +149,29 @@ namespace compiler::frontend {
 		base::StrID getName() const;
 
 		base::StrID getPackageID() const { return m_package_id; }
+
+		/**
+		 * Check if this module is a REPL-generated module.
+		 * REPL modules have special cross-module lookup behavior.
+		 * @return true if this is a REPL module, false otherwise
+		 */
+		[[nodiscard]]
+		bool isReplModule() const {
+			return m_repl_data.has_value();
+		}
+
+		/**
+		 * Get the parent REPL module.
+		 * Only valid for REPL modules.
+		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
+		 */
+		[[nodiscard]]
+		base::Optional<ModuleID> getReplModuleParent() const {
+			CORE_ASSERT(
+				m_repl_data.has_value(), "repl data of a node with parent should have value!"
+			);
+			return m_repl_data->m_repl_module_parent;
+		}
 
 		/**
 		 * Returns ComponentHash of the module.
@@ -221,6 +271,13 @@ namespace compiler::frontend {
 		 * Used for component hash calculation.
 		 */
 		base::StrID m_package_id;
+
+		/**
+		 * REPL-specific data.
+		 * Optional - only set for modules created in REPL sessions.
+		 * Presence of this optional indicates the module is a REPL module.
+		 */
+		base::Optional<ReplData> m_repl_data;
 	};
 
 	/**
@@ -316,6 +373,12 @@ namespace compiler::frontend {
 		void setParent(base::Ref<ModuleTree> parent);
 
 		/**
+		 * Sets REPL-specific module data.
+		 * @param repl_data The ReplData struct.
+		 */
+		void setReplModule(const ReplData& repl_data);
+
+		/**
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.
 		 */
@@ -371,6 +434,8 @@ namespace compiler::frontend {
 
 		base::StrID m_name;
 		bool        m_finalized;
+
+		base::Optional<ReplData> m_repl_data;
 	};
 
 	/**
@@ -499,6 +564,18 @@ namespace compiler::frontend {
 	 * for more details see ModuleTreeBuilder::create
 	 */
 	ModuleID createModuleTree(const fs::File& file, std::string_view package_id);
+
+	/**
+	 * @brief: Concurrently parses all source files in the module tree and their submodules
+	 * recursively, creating PSTs for each file. This function should be called before collecting
+	 * Inputs from the previous compilation graph.
+	 *
+	 * Blocks until all files in the module tree have been parsed.
+	 *
+	 * @param module_id The ModuleID of the root module to start parsing from
+	 * @note This function cannot be called from query
+	 */
+	void parseAllFilesInModuleTree(ModuleID module_id);
 
 	/*
 	 * Creates a completely new module tree with a random package ID from the given file.

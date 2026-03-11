@@ -33,7 +33,9 @@
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 #include <base/types/ints.hpp>
-
+#ifdef ENABLE_JIT
+	#include <vm/core/jit/jit_compiler.hpp>
+#endif
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -59,6 +61,7 @@
 	#define FUNCTION_ARGS                      OPFUN_ARGS
 	#define FUNCTION_CONT(step)                OPFUN_CONT(step)
 	#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
+	#define OP_FUN                             vm::OpFun
 #endif
 
 namespace vm {
@@ -199,7 +202,7 @@ namespace vm {
 			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);               \
 			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);               \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs OP rhs;                                                                   \
+			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
@@ -209,7 +212,7 @@ namespace vm {
 			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                     \
 			auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                            \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
-			lhs OP rhs;                                                                   \
+			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
@@ -225,26 +228,26 @@ namespace vm {
 	}
 
 // @TODO: #1216 Check for over/under flows.
-#define DEFINE_INT_N_ARITHMETIC(SIZE)                \
-	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)     \
-	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)     \
-	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)     \
-	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %=)  \
-	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /=)  \
-	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)           \
-	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)    \
-	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %=) \
-	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /=)
+#define DEFINE_INT_N_ARITHMETIC(SIZE)               \
+	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)    \
+	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)    \
+	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %)  \
+	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /)  \
+	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)          \
+	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)   \
+	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %) \
+	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /)
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
 #define FLOAT_64_TYPE double
 #define FLOAT_32_TYPE float
-#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                          \
-	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)    \
-	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)    \
-	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)    \
-	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /=) \
+#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                         \
+	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)   \
+	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)   \
+	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)   \
+	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /) \
 	DEFINE_NEGATION_OP(fneg, SIZE, FLOAT_##SIZE##_TYPE)
 
 	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
@@ -358,6 +361,46 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
+#ifdef ENABLE_JIT
+	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
+		{
+			auto& jit_data = thread.jit_data;
+			auto  func_id  = instr->arg0;
+
+			// @TODO: #2126 manage the size when inserting new code
+			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
+
+			jit::JitFuncData& my_data = jit_data[func_id];
+
+			auto run_compiled = [&]() {
+				performFunctionCall(instr, local_stack, frame, thread, func_id);
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+			};
+
+			if (my_data.func_ptr) {
+				// is already compiled
+				run_compiled();
+			} else if (0 < my_data.until_compilation) {
+				// should be compiled later
+				--my_data.until_compilation;
+				performFunctionCall(instr, local_stack, frame, thread, func_id);
+			} else {
+				// should be compiled now
+				const low::LowFuncData& current_function
+					= thread.executing_program->getFunctions()[func_id];
+
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(current_function);
+
+				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
+				my_data.func_ptr = compiled;
+
+				run_compiled();
+			}
+		}
+		FUNCTION_CONT_CHECK_STRATEGY(0);
+	}
+#endif
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
 		{
 			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
@@ -438,6 +481,14 @@ namespace vm {
 			}
 		}
 
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
+		{
+			auto& called_func = thread.executing_program->getFunctions()[instr->arg0];
+			builtins::setThreadCtx(called_func.name.str());
+		}
 		FUNCTION_CONT(1);
 	}
 

@@ -32,10 +32,12 @@ namespace compiler::helios::code {
 		VariantTypeConstructorExpr,
 		CallExpr,
 		AccessExpr,
+		IndexExpr,
 		SequenceExpr,
 		BoxOfExpr,
 		RefOfExpr,
 		DerefExpr,
+		DefaultValueExpr,
 		CastExpr,
 		LiftToTypeExpr
 	);

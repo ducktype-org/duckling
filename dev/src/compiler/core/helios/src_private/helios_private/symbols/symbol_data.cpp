@@ -1,8 +1,13 @@
 #include "symbol_data.hpp"
 
+#include <helios/scope_id.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include <base/except/exceptions.hpp>
 
 namespace compiler::helios {
 	namespace houtgen {
@@ -16,6 +21,10 @@ namespace compiler::helios {
 
 		base::Bit256 GeneratedSymbolData::Parameter::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), parameter_index };
+		}
+
+		base::Bit256 GeneratedSymbolData::SelfParameter::queryUnstablePerfectHash() const {
+			return { method_symbol.queryUnstablePerfectHash(), scope.queryUnstablePerfectHash() };
 		}
 
 		base::Bit256 GeneratedSymbolData::Variable::queryUnstablePerfectHash() const {
@@ -32,7 +41,7 @@ namespace compiler::helios {
 												 ImplicitConstructor,
 												 BuiltinOperator,
 												 Parameter,
-												 Variable,
+												SelfParameter, Variable,
 												 ReplExpressionWrapper>& data):
 			  data(data) {}
 
@@ -90,6 +99,16 @@ namespace compiler::helios {
 						= function_type.getParameterTypes().at(param.parameter_index);
 					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
 				}
+				variant_case(SelfParameter, param) {
+					const auto class_type
+						= ctx.query<QueryClassOfMember>(param.method_symbol)->valueOrThrow();
+					auto param_symbol_type = tsh::SymbolType{
+						class_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+					return param_symbol_type;
+				}
 				variant_case(Variable, var) { return var.type; }
 				variant_case(ReplExpressionWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
@@ -102,6 +121,42 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		ScopeID GeneratedSymbolData::getScope() const {
+			variant_match(data) {
+				variant_case(ImplicitConstructor, ctor) {
+					CORE_PANIC("Can't get scope of implicit constructor yet.");
+				}
+				variant_case(BuiltinOperator, op) {
+					CORE_PANIC("Can't get scope of builtin operator yet.");
+				}
+				variant_case(Parameter, param) {
+					CORE_PANIC("Can't get scope of generated parameter yet.");
+				}
+				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(Variable, var) {
+					CORE_PANIC("Can't get scope of generated variable yet.");
+				}
+				variant_case(ReplExpressionWrapper, repl) {
+					CORE_PANIC("Can't get scope of repl expr wrapper yet.");
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		[[nodiscard]]
+		base::Optional<ScopeID> GeneratedSymbolData::maybeScope() const {
+			variant_match(data) {
+				variant_case(ImplicitConstructor, ctor) { return {}; }
+				variant_case(BuiltinOperator, op) { return {}; }
+				variant_case(Parameter, param) { return {}; }
+				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(Variable, var) { return {}; }
+				variant_case(ReplExpressionWrapper, repl) { return {}; }
+				variant_default { CORE_PANIC("Unhandled symbol kind"); }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -140,6 +195,9 @@ namespace compiler::helios {
 				kind = SymbolKind::Function;
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Parameter) {
+				kind = SymbolKind::Parameter;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::SelfParameter) {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {

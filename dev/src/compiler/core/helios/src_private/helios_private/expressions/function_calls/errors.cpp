@@ -2,16 +2,13 @@
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
-#include <frontend/pst_parser/element_kind.hpp>
-#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/queries.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -161,58 +158,21 @@ namespace compiler::helios::code {
 		}
 	};
 
-	/**
-	 * Documentation in the header file.
-	 */
-	pst::Access<pst::ParamList> getFunctionParamList(
-		query::Context& ctx, pst::Access<pst::LangElement> function_decl
-	) {
-		switch (function_decl->getElementKind()) {
-		case pst::ElementKind::Fun: {
-			auto fun = function_decl.dynamicCast<pst::Fun>().value();
-			return fun->getParams().unlock(ctx);
-		}
-		case pst::ElementKind::FunDecl: {
-			auto fun_decl = function_decl.dynamicCast<pst::FunDecl>().value();
-			return fun_decl->getParams().unlock(ctx);
-		}
-		case pst::ElementKind::ClassMethod: {
-			// @TODO: #1547 When class methods are being implemented think of the errors messages
-			auto class_method = function_decl.dynamicCast<pst::Method>().value();
-			return class_method->getParams().unlock(ctx);
-		}
-		default:
-			CORE_PANIC("Expected function or method declaration");
-		}
-	}
-
-	pst::Access<pst::LangElement> getNthDeclarationParameter(
-		query::Context& ctx, pst::Access<pst::LangElement> function_decl, usize parameter_index
-	) {
-		usize current_index = 0;
-		for (auto&& param: *getFunctionParamList(ctx, function_decl)) {
-			if (current_index == parameter_index) return param.unlock(ctx);
-			current_index++;
-		}
-		CORE_PANIC("Parameter index out of bounds");
-	}
-
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
 		query::Context&            ctx,
-		const CallSourcePositions& source_positions,
+		ElementOrigin              whole_call_origin,
+		std::vector<ElementOrigin> arguments_origin,
 		const CallFailure&         failure_reason,
 		bool                       is_for_candidate_function
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
-				return makeBox<PositionalAfterNamedArgumentError>(
-					source_positions.args.at(data.argument_index)
-				);
+				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
+				return makeBox<PositionalAfterNamedArgumentError>(source_pos);
 			}
 			variant_case(RepeatedNamedArgument, data) {
-				return makeBox<RepeatedNamedArgumentError>(
-					source_positions.args.at(data.argument_index)
-				);
+				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
+				return makeBox<RepeatedNamedArgumentError>(source_pos);
 			}
 			variant_case(FunctionMatchFailure, data) {
 				auto get_interactive_function
@@ -224,15 +184,19 @@ namespace compiler::helios::code {
 				};
 				variant_match(data) {
 					variant_case(TooManyCallArguments, data) {
-						auto first_arg_pos = source_positions.args.at(data.valid_arguments);
-						auto last_arg_pos  = source_positions.args.at(data.total_arguments - 1);
+						auto first_arg_pos
+							= arguments_origin[data.valid_arguments].getSourcePosition().value();
+						auto last_arg_pos
+							= arguments_origin[data.total_arguments - 1].getSourcePosition().value();
+
 						base::Optional<Box<InteractiveFunction>> function
 							= get_interactive_function(data.function);
 						auto pos = dia::SourcePosition::merge(first_arg_pos, last_arg_pos);
 						return makeBox<TooManyCallArgumentsError>(pos, std::move(function));
 					}
 					variant_case(UnknownNamedArgument, data) {
-						auto arg_pos = source_positions.args.at(data.argument_index);
+						auto arg_pos
+							= arguments_origin[data.argument_index].getSourcePosition().value();
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<UnknownNamedArgumentError>(
@@ -240,37 +204,43 @@ namespace compiler::helios::code {
 						);
 					}
 					variant_case(TypeMismatch, data) {
-						auto arg_pos = source_positions.args.at(data.argument_index);
+						dia::SourcePosition pos = [&] {
+							if_opt_some(
+								arguments_origin[data.argument_index].getSourcePosition(), pos
+							) {
+								return pos;
+							}
+							return whole_call_origin.getSourcePosition().value();
+						}();
+
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<ArgumentIncompatibleTypeError>(
-							arg_pos,
+							pos,
 							makeBox<InteractiveType>(ctx, data.expected_type),
 							makeBox<InteractiveType>(ctx, data.given_type),
 							std::move(function_name)
 						);
 					}
 					variant_case(MissingCallArgument, data) {
+						auto& decl = ctx.query<QueryDeclOfFun>(data.function)->valueOrThrow();
+
 						if_opt_some(
-							getSymRef(data.function)->getDataOpt<PstSymbolData>(), pst_data
+							decl.parameters[data.parameter_index].origin.getSourcePosition(),
+							param_pos
 						) {
-							auto param_decl = getNthDeclarationParameter(
-								ctx, pst_data->getElement().unlock(ctx), data.parameter_index
-							);
-							base::Optional<dia::SourcePosition> param_position{
-								param_decl->getSourcePosition()
-							};
 							return makeBox<CallMissingArgumentError>(
-								source_positions.arg_group, param_position
+								whole_call_origin.getSourcePosition().value(), param_pos
 							);
 						}
 
 						return makeBox<CallMissingArgumentError>(
-							source_positions.arg_group, std::nullopt
+							whole_call_origin.getSourcePosition().value(), std::nullopt
 						);
 					}
 					variant_case(NamedArgumentProvidedByPositional, data) {
-						auto arg_pos = source_positions.args.at(data.argument_index);
+						auto arg_pos
+							= arguments_origin[data.argument_index].getSourcePosition().value();
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<NamedArgumentProvidedByPositionalError>(

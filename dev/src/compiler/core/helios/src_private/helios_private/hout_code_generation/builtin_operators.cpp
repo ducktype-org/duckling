@@ -1,22 +1,20 @@
 #include "builtin_operators.hpp"
 
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/expressions/function_calls/call_source_positions.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 namespace compiler::helios::houtgen {
 	Box<code::Expr> generateBuiltinOperatorExpression(
 		query::Context&                              ctx,
-		const CallSourcePositions&                   source_positions,
+		const code::CallPstOrigin&                   pst_origin,
 		const SymID                                  operator_symbol,
 		std::vector<Box<code::Expr>>                 arguments,
 		const base::Optional<std::vector<Coercion>>& coercions
 	) {
 		const auto op_name     = name(operator_symbol);
-		const auto call_origin = code::ElementOrigin(
-			dia::SourcePosition::merge(source_positions.callee, source_positions.arg_group), false
-		);
+		const auto call_origin = pst_origin.whole_call_origin;
 
 		auto lhs = coercions ? coercions->at(0).coerce(ctx, std::move(arguments.at(0)))
 		                     : std::move(arguments.at(0));

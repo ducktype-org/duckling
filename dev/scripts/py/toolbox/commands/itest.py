@@ -21,6 +21,12 @@ from click import command, option
     help="Runs `Clean` command on every test. If passed, no tests are ran.",
 )
 @option(
+    "--duckc-worker-count",
+    type=int,
+    default=1,
+    help="Number of duckc' worker threads to use for running tests.",
+)
+@option(
     "-d",
     "--dry",
     is_flag=True,

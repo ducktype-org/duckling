@@ -157,6 +157,8 @@ namespace artifacts {
 		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybe(base::StrID artifact_name
 		) const;
 
+		bool deleteFileArtifact(base::StrID artifact_name);
+
 		/////////////////////////// BLOB ARTIFACTS /////////////////////////
 
 		BlobArtifact blobArtifactNew(base::StrID artifact_name);
@@ -212,6 +214,7 @@ namespace artifacts {
 		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybeNoLock(base::StrID artifact_name
 		) const;
 
+		bool deleteFileArtifactNoLock(base::StrID artifact_name);
 
 		BlobArtifact blobArtifactNewNoLock(base::StrID artifact_name);
 

@@ -203,6 +203,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			CastOperationLowerer::lowerCastOperation(operation, args, maybe_output, *this);
 			return;
 		}
+		variant_case_novalue(NoOpOperation) { return; }
 	}
 	auto operation = std::get<SimpleOperation>(dvm_operation).op;
 

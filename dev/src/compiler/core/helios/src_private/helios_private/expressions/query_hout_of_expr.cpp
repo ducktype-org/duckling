@@ -6,6 +6,7 @@
 #include "numeric_literals.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
@@ -249,7 +250,7 @@ namespace compiler::helios::code {
 				    && isNumericOperator(op)) {
 					auto numeric_builtin_opt
 						= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
-					auto new_origin = lhs->origin.extended(rhs->origin);
+					auto new_origin = elementOrigin(lhs->origin, rhs->origin);
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
 						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
@@ -327,15 +328,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
-				// note: this is a mock, it should be unified with ChainExpr
-				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-
-				const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-					stmt->getName().position, ctx, stmt->getName().value
-				);
-
-				node
-					= makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), sym_list.valueOrThrow().back());
+				node = fromIdentifierLiteral(ctx, stmt).valueOrThrow();
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
@@ -440,12 +433,23 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
+				case pst::Keyword::Self: {
+					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
-
-				default:
-					CORE_PANIC(
-						"Keyword not yet handled (or bad keyword) by PstExprToHoutExprVisitor"
+					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
+						stmt->getSourcePosition(), ctx, base::StrID("self")
 					);
+
+					node = makeBox<IdentifierExpr>(
+						ctx, pstOrigin(stmt), sym_list.valueOrThrow().back()
+					);
+					break;
+				}
+				default:
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Keyword not yet handled.", stmt->getSourcePosition()
+					));
+					return;  // failed
 				}
 			}
 
@@ -462,12 +466,13 @@ namespace compiler::helios::code {
 				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
 			}
 
-			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
+			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
-				throw base::NotYetImplemented(
-					"Suffix operators are not yet implemented in HOUT, "
-					"since they don't exist yet"
-				);
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Suffix operators are not implemented yet in HOUT, since they don't exist yet.",
+					stmt->getSourcePosition()
+				));
+				return;  // failed
 			}
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
@@ -486,9 +491,28 @@ namespace compiler::helios::code {
 				auto inner_type = inner->expression_type.getSymbolType();
 
 				if (stmt->getOperator() == lang_def::NamedOperator::Ampersand) {
+					// @TODO: #1956 remove the check bellow.
+					// This is a temporary check to prevent us from taking reference of types that
+					// do not carry information.
+					if (not inner_type.getType().carriesInformation(ctx)) {
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Taking reference of type that does not carry information is not "
+							"supported yet.",
+							stmt->getSourcePosition()
+						));
+						return;  // failed
+					}
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
-					// This should change to take value category into consideration as well as
-					// the `unique`/`leaking` specifiers.
+					// This should change to take value category into consideration as well as the
+					// `unique`/`leaking` specifiers.
+					auto primary_category = inner->expression_type.getValueCategory().getCategory();
+					if (primary_category == tsh::PrimaryCategory::Literal
+					    || primary_category == tsh::PrimaryCategory::Temporary) {
+						ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Tried to reference a temporary", stmt->getSourcePosition()
+						));
+						return;
+					}
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
 				}
@@ -576,8 +600,14 @@ namespace compiler::helios::code {
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
+			auto element_unlocked = element.unlockOpt(ctx);
+			if (element_unlocked.empty()) {
+				// PST should have reported parsing error for this, so we just return failure here.
+				return query::Failed();
+			}
+
 			PstExprToHoutExprVisitor visitor(ctx);
-			element.unlock(ctx)->acceptExprVisitor(visitor);
+			element_unlocked.value()->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
 			return query::Failed();
