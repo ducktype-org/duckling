@@ -5,7 +5,6 @@
 #include <base/types/ints.hpp>
 
 #include <queue>
-#include <vector>
 
 namespace base {
 
@@ -14,85 +13,114 @@ namespace base {
 	 *
 	 * The class stores objects of type T in a pool and allows:
 	 *  - adding new objects,
-	 *  - retrieving objects by ID,
+	 *  - retrieving objects by ID with a stable reference,
 	 *  - removing objects (freeing slots).
 	 *
 	 * Slots are reused using the free_ids queue.
 	 */
-	template<typename T>
-	class ObjectPool final {
+	template<class T, class ObjID = u64, bool SHOULD_RECYCLE = true>
+	class StableObjectPool final {
 	private:
 		/**
 		 * @brief Pool for objects.
 		 */
-		std::vector<Ref<T>> object_pool;
+		std::deque<T> object_pool;
 
 		/**
 		 * @brief Indicates which object_pool slots are currently unused.
 		 */
-		std::vector<bool> is_free;
+		std::deque<bool> is_free;
 
 		/**
 		 * @brief Pool of free object indices.
 		 */
-		std::queue<i64> free_ids;
+		std::queue<ObjID> free_ids;
 
 		/**
 		 * @brief Maximum number of objects that can be stored in the object pool.
 		 */
-		i64 max_objects;
+		usize max_objects;
 
 		/**
 		 * @brief Default maximum number of objects if not specified.
 		 */
-		static constexpr i64 DEFAULT_MAX_OBJECTS = 1e6;
+		static constexpr usize DEFAULT_MAX_OBJECTS = 1'000'000;
 
 	public:
-		struct ObjectDoesntExist: public LogicError {
-			ObjectDoesntExist(): LogicError("Object does not exist") {}
-		};
-
-		struct TooManyObjects: public LogicError {
-			TooManyObjects(): LogicError("Too many objects in the pool") {}
-		};
-
-		explicit ObjectPool(i64 max_objects = DEFAULT_MAX_OBJECTS): max_objects(max_objects) {}
-
 		/**
 		 * @brief Constructs an ObjectPool with a given maximum capacity.
 		 *
 		 * @param max_objects Maximum number of objects allowed in the pool.
 		 *                    Defaults to DEFAULT_MAX_OBJECTS.
+		 * @note Returned references are stable.
 		 */
-		Ref<T> get(i64 object_id) {
-			if (object_id >= (i64) object_pool.size() || is_free.at((size_t) object_id))
-				throw ObjectDoesntExist();
+		explicit StableObjectPool(usize max_objects = DEFAULT_MAX_OBJECTS):
+			  max_objects(max_objects) {}
 
-			return object_pool.at((size_t) object_id);
+		/**
+		 * @brief Attempts to retrieve an object by its ID.
+		 *
+		 * @param object_id ID of the object in the pool.
+		 * @return Optional containing a reference to the object if it exists,
+		 *         otherwise an empty Optional.
+		 */
+		base::Optional<Ref<T>> maybeGet(ObjID object_id) {
+			if (object_id < object_pool.size() && !is_free.at(object_id))
+				return &object_pool.at(object_id);
+			return {};
+		}
+
+		base::Optional<CRef<T>> maybeGet(ObjID object_id) const {
+			if (object_id < object_pool.size() && !is_free.at(object_id))
+				return &object_pool.at(object_id);
+			return {};
+		}
+
+		/**
+		 * @brief Retrieves an object by its ID.
+		 *
+		 * @param object_id ID of the object in the pool.
+		 * @return Reference to the object stored in the pool.
+		 *
+		 * @throws Exception if the object does not exist.
+		 */
+		Ref<T> get(ObjID object_id) { return maybeGet(object_id).expect("Object does not exist"); }
+
+		CRef<T> get(ObjID object_id) const {
+			return maybeGet(object_id).expect("Object does not exist");
 		}
 
 		/**
 		 * @brief Adds new object into pool.
+		 *
+		 * @return ObjID ID of the newly created object in the pool.
 		 */
-		i64 add() {
-			if (free_ids.size() == 0) {
-				if ((i64) object_pool.size() >= max_objects) throw TooManyObjects();
-				free_ids.push((i64) object_pool.size());
-				object_pool.push_back(new T);
-				is_free.push_back(false);
+		template<class... Args>
+		ObjID add(Args&&... args) {
+			CORE_ASSERT(object_pool.size() < max_objects, "Too many objects in the pool");
+			if constexpr (SHOULD_RECYCLE) {
+				if (!free_ids.empty()) {
+					ObjID free_id = free_ids.front();
+					free_ids.pop();
+					object_pool[free_id]                 = T(std::forward<Args>(args)...);
+					is_free[static_cast<usize>(free_id)] = false;
+					return free_id;
+				}
 			}
-
-			i64 free_id = free_ids.front();
-			free_ids.pop();
-			return free_id;
+			ObjID new_id(object_pool.size());
+			object_pool.emplace_back(std::forward<Args>(args)...);
+			is_free.push_back(false);
+			return new_id;
 		}
 
 		/**
 		 * @brief Removes object from pool.
 		 */
-		void remove(i64 object_id) {
-			if (object_id >= (i64) object_pool.size() || is_free.at((size_t) object_id))
-				throw ObjectDoesntExist();
+		void remove(ObjID object_id) {
+			CORE_ASSERT(
+				object_id < object_pool.size() && !is_free.at((size_t) object_id),
+				"Object is already removed"
+			);
 
 			is_free.at((size_t) object_id) = true;
 			free_ids.push(object_id);

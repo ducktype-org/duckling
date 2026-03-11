@@ -61,7 +61,7 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
-		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({ .uses_qresult = false })
+		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	using QueryDealias_Result = query::QResult<SymbolList>;

@@ -16,7 +16,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit CallArgument(const dia::SourcePosition& pos): NotStmt(pos) {
+		explicit CallArgument(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::CallArgument;
 		}
 

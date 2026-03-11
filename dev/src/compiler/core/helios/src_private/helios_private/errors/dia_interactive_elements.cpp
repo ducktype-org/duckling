@@ -71,8 +71,10 @@ namespace compiler::helios {
 		if (!ident_opt.has_value()) return;
 		auto       ident = ident_opt.value();
 		const auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-		const auto lookup_result
+		const auto lookup_qresult
 			= HInterface::ofScopeWithParents(scope).lookup(ctx, ident->getName().value);
+		if (lookup_qresult->hasFailed()) return;
+		CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
 
 		std::function<void(const LookupResult&, const std::string&)> emit_alias_note
 			= [&](const LookupResult& current, const std::string& alias_name) {

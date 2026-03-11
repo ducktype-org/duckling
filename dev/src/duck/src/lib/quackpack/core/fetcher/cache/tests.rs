@@ -70,24 +70,22 @@ fn make_test_db() -> ManifestCache {
     ManifestCache::new(CacheLocation::Memory).unwrap()
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn add_and_fetch_metadata() {
+#[test]
+fn add_and_fetch_metadata() {
     let cache = make_test_db();
     cache
         .add_or_replace_manifest(&create_example_package(), create_sample_metadata())
-        .await
         .unwrap();
     let metadata = cache
         .get_manifest(&create_example_package())
-        .await
         .unwrap()
         .unwrap();
     assert_eq!(metadata, create_sample_metadata());
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn not_found_metadata() {
+#[test]
+fn not_found_metadata() {
     let cache = make_test_db();
-    let metadata = cache.get_manifest(&create_example_package()).await.unwrap();
+    let metadata = cache.get_manifest(&create_example_package()).unwrap();
     assert_eq!(metadata, None);
 }

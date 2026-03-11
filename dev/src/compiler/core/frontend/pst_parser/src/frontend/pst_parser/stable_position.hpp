@@ -13,8 +13,6 @@ namespace pst {
 	 * the position can become invalid after re-parses.
 	 */
 	class StablePosition {
-		using HashType = LangElement::HashType;
-
 		/**
 		 * @brief Node hash that is defines one end of the position range.
 		 *
@@ -28,12 +26,9 @@ namespace pst {
 		 * @brief Node hash that defines the other end of the position range.
 		 * If not set, the position is defined as the position of the @p begin_scope_node only.
 		 */
-		base::Optional<LangElement::HashType> end_scope_node;
+		base::Optional<HashType> end_scope_node;
 
-		StablePosition(
-			LangElement::HashType                 begin_scope_node,
-			base::Optional<LangElement::HashType> end_scope_node
-		):
+		StablePosition(HashType begin_scope_node, base::Optional<HashType> end_scope_node):
 			  begin_scope_node(begin_scope_node),
 			  end_scope_node(end_scope_node) {}
 

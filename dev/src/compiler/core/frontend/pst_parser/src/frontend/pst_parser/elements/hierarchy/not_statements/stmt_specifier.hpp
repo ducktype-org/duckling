@@ -23,7 +23,7 @@ namespace pst {
 
 		static const std::set<Keyword> SPECIFIEIRS_CALL_LIST_REQUIRED;
 
-		explicit StmtSpecifier(const dia::SourcePosition& position): NotStmt(position) {
+		explicit StmtSpecifier(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::StmtSpecifier;
 		}
 

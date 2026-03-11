@@ -55,10 +55,9 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-		VMThread&        thread   = getEmptyThread();
-		bool             response = thread.spawnThreadAndRun(
-            loaded_program, func_name, run_arguments
-        );  // Setting thread ctx necessary for now, until function pointers implemented
+		VMThread&        thread = getEmptyThread();
+		bool response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
+		// Setting thread ctx necessary for now, until function pointers implemented
 		thread.setThreadCtx("");
 
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
