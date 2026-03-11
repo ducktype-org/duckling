@@ -5,7 +5,7 @@ use tracing::debug;
 use super::dependency;
 
 use crate::{
-    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail,
+    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail,
     quackpack::{
         core::{
             CompilerSpecificOptions, Features, Manifest, PackageMetadata, Profiles, RootDescription,
@@ -17,11 +17,7 @@ use crate::{
 use super::Scope;
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
-pub(crate) fn parse(
-    schema: &ManifestSchema,
-    root: &Path,
-    ctx: &QpCtx<'_>,
-) -> QuackResult<Manifest> {
+pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: &DuckCtx) -> QuackResult<Manifest> {
     let Some(ref metadata) = schema.metadata else {
         qp_bail!("missing the obligatory section `metadata`")
     };

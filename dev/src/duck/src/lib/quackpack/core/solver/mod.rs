@@ -31,13 +31,10 @@ use std::{
     collections::{HashMap, HashSet},
     marker::PhantomData,
     path::PathBuf,
-    sync::Arc,
 };
 
-use tokio::sync::Mutex;
-
 use crate::{
-    QpCtx, QuackResult, qp_bail, qp_bail_internal,
+    QuackResult, qp_bail, qp_bail_internal,
     quackpack::core::{
         FeatureName, Manifest, PackageCtx,
         fetcher::Fetcher,
@@ -60,7 +57,6 @@ impl SolverState for Prepared {}
 
 /// A struct designated to finding the dependency resolution of a given package.
 pub struct Solver<'duck, State: SolverState> {
-    qp_ctx: &'duck QpCtx<'duck>,
     fetcher: &'duck Fetcher<'duck>,
     root_package_ctx: &'duck PackageCtx<'duck>,
     root_pkg: ExpandedPackage,
@@ -90,7 +86,6 @@ impl<'duck> Solver<'duck, Prepared> {
         mode: SolverMode,
     ) -> Self {
         Self {
-            qp_ctx: package_ctx.ctx(),
             root_package_ctx: package_ctx,
             root_pkg: ExpandedPackage {
                 location: InternedExpandedLocation::new(ExpandedLocation::Local {
@@ -116,11 +111,11 @@ impl<'duck> Solver<'duck, Prepared> {
 
     /// Determines if all the transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`Solver`] for running the engine by constructing [`SolverInput`].
-    pub async fn prepare_solving<GitAccessImpl: GitAccess>(
+    pub fn prepare_solving<Access: GitAccess>(
         self,
-        git_access: Arc<Mutex<GitAccessImpl>>,
+        git_access: &Access,
     ) -> QuackResult<ShouldRunSolverEngine<'duck>> {
-        let gatherer = Gatherer::new(self.qp_ctx, self.fetcher, git_access);
+        let gatherer = Gatherer::new(self.fetcher, git_access);
 
         let root_manifest = self.root_package_ctx.package().manifest().clone();
         let root_features = root_manifest
@@ -129,10 +124,7 @@ impl<'duck> Solver<'duck, Prepared> {
             .keys()
             .copied()
             .collect();
-        let mut prev_freeze_manifests = self
-            .current_freeze
-            .get_prev_freeze_manifests(&gatherer)
-            .await?;
+        let mut prev_freeze_manifests = self.current_freeze.get_prev_freeze_manifests(&gatherer)?;
         prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
         let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
@@ -147,7 +139,7 @@ impl<'duck> Solver<'duck, Prepared> {
             }));
         } else if self.mode.frozen {
             qp_bail!(
-                "Solver activated with the --frozen option but the main package dependencies were not satisfied inside the found freeze"
+                "Solver activated with the `--frozen` option but the main package dependencies were not satisfied inside the found freeze"
             )
         }
 
@@ -159,15 +151,13 @@ impl<'duck> Solver<'duck, Prepared> {
             root_features,
             &maximal_valid_freeze,
             self.mode,
-        )
-        .await?;
+        )?;
         let solver_input = SolverInput::from_freeze_and_gathered_info(
             &maximal_valid_freeze,
             prev_freeze_manifests,
             gathered_info,
         );
         Ok(ShouldRunSolverEngine::Yes(Box::new(Solver {
-            qp_ctx: self.qp_ctx,
             fetcher: self.fetcher,
             root_package_ctx: self.root_package_ctx,
             root_pkg: self.root_pkg,
@@ -181,8 +171,8 @@ impl<'duck> Solver<'duck, Prepared> {
 
     /// Helper for [`Self::prepare_solving`].
     /// Runs the [`Gatherer`], to fetch all potentially necessary manifests.
-    async fn run_solver_gatherer<GitAccessImpl: GitAccess>(
-        gatherer: &Gatherer<'duck, GitAccessImpl>,
+    fn run_solver_gatherer<Access: GitAccess>(
+        gatherer: &Gatherer<'_, '_, Access>,
         root_manifest: Manifest,
         root_path: PathBuf,
         root_features: HashSet<FeatureName>,
@@ -191,9 +181,7 @@ impl<'duck> Solver<'duck, Prepared> {
     ) -> QuackResult<GatheredInfo> {
         let root_manifest_for_gathering =
             Self::prepare_root_manifest_for_gathering(root_manifest, freeze)?;
-        gatherer
-            .explore(root_path, root_manifest_for_gathering, root_features, mode)
-            .await
+        gatherer.explore(root_path, root_manifest_for_gathering, root_features, mode)
     }
 
     /// Helper for [`Self::run_solver_gatherer`].

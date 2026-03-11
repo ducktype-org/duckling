@@ -1,5 +1,6 @@
-pub mod async_helpers;
 pub mod paths;
 pub mod progress_bar;
 pub mod qp_ctx;
 pub mod str_id;
+
+pub const PANIC_MESSAGE: &str = "panick'ed";

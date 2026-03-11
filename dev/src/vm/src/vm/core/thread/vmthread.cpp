@@ -100,6 +100,18 @@ namespace vm {
 	low::LowFuncData VMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
+		if (func_args.size() != func.parameters.size()) {
+			throw exceptions::VMRuntimeException(base::strConcat(
+				"Function '",
+				func.name.str(),
+				"' expects ",
+				func.parameters.size(),
+				" arguments, but ",
+				func_args.size(),
+				" were provided."
+			));
+		}
+
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
 			                             .bc               = {},
 			                             .local_stack_size = 0,
@@ -120,10 +132,26 @@ namespace vm {
 		for (u64 i = 0; i < func_args.size(); i++) {
 			const auto& arg_value = func_args[i];
 			auto        arg_type  = func.parameters[i];
-			// @TODO: Turn this to exception?
-			CORE_ASSERT(
-				arg_value->getPID() == process.getPID(), "VmValue comes from a different process"
-			);
+
+			if (arg_value->getPID() != process.getPID()) {
+				throw exceptions::VMRuntimeException(
+					base::strConcat("VMValue for argument ", i, " comes from a different process")
+				);
+			}
+
+			if (arg_value->type != arg_type) {
+				throw exceptions::VMRuntimeException(base::strConcat(
+					"Type mismatch for argument ",
+					i,
+					" of function '",
+					func.name.str(),
+					"': expected ",
+					arg_type->getName().str(),
+					", got ",
+					arg_value->type->getName().str()
+				));
+			}
+
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
 			);
@@ -719,4 +747,8 @@ namespace vm {
 		has_gil = false;
 		process.getGIL().release();
 	}
+
+	void VMThread::setThreadCtx(std::string name) { thread_ctx = std::move(name); }
+
+	std::string VMThread::getThreadCtx() { return thread_ctx; }
 }

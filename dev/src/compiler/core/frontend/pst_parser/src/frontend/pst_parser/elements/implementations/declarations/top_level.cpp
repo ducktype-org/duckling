@@ -16,10 +16,10 @@ namespace pst {
 
 		PST_WHILE(state.notEmpty()) {
 			MBox<Stmt> stmt;
-			state.parse(out).one(&stmt);
+			PARSE().one(&stmt);
 			if (stmt) {
 				out->statements.emplace_back(nullptr);
-				state.parse(out).assign(&out->statements.back(), std::move(stmt));
+				PARSE().assign(&out->statements.back(), std::move(stmt));
 			}
 			PST_WHILE(state[0].is(Special::Semicolon)) {
 				state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));

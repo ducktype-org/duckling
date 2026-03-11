@@ -20,9 +20,9 @@ namespace pst::expr {
 
 		auto out = makeBox<RoundExpr>(state);
 
-		state.parse(out).goDown();
-		state.parse(out).with(&out->expr, Comma::parse, (i64) state.ctokens().size());
-		state.parse(out).goUpAndSkip();
+		PARSE().goDown();
+		PARSE().with(&out->expr, Comma::parse, (i64) state.ctokens().size());
+		PARSE().goUpAndSkip();
 
 		PST_RETURN out;
 	}
