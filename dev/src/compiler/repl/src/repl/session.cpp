@@ -342,7 +342,7 @@ namespace compiler::repl {
 					return;
 				}
 
-				std::cout << "Definitions loaded.\n";
+				CORE_DEV_LOG(REPL, "Definitions loaded.\n");
 			} catch (const base::Panic& e) {
 				error_message = "Definition compilation error: " + std::string(e.what());
 				std::cerr << error_message << "\n";
