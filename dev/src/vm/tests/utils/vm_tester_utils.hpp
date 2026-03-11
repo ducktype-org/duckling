@@ -116,8 +116,7 @@ protected:
 	);
 
 	/**
-	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded
-	 * correctly.
+	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
 	void loadValidDbc(const std::string& dbc_filename);
 };

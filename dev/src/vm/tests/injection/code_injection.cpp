@@ -2,10 +2,6 @@
 
 #include <base/collections/optional.hpp>
 
-#include "tester/tester.hpp"
-
-#include "vm/api/vm.hpp"
-
 #include <string>
 #include <vector>
 
