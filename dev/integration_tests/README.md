@@ -122,6 +122,13 @@ General variables (not tied to any context):
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
 
+Subtree-specific variables (tied to a subtree rooted in this node) (these are __INHERITED__ from the parent node):
+- `PreNode` - A command run once - when the node is about to be processed
+  Example: if we have a testconfig with 3 subdirs and its PreNode says `echo '1'`, '1' will be printed 4 times total - once for every test node before it is executed. Order of execution: `parent node` -> `first child` -> `second child` -> `third child` -> `parent's possible siblings`
+- `PostNode` - Same as `PreNode`, but the command is executed after the node is done being processed, which changes the order. Order example in the same setup: `first child` -> `second child` -> `third child` -> `parent node` -> `parent's possible siblings`
+Both - `PreNode` and `PostNode` are executed regardless of the test being filtered out or not. Let me rephrase: Even if my test does not satisfy the `-t` flag argument passed in the command, its `PreNode` and `PostNode` commands will be executed and so will be its children's commands and so on.
+This means that the only way to prevent a specific directory's `PreNode` from executing is to comment out its declaration as someone's `Subdir`
+
 Test specific:
 
 - `Name` - Explicit name of a test.
