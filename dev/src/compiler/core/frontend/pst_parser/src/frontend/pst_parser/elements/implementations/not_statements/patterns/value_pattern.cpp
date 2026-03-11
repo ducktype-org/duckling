@@ -11,7 +11,7 @@ namespace pst {
 		}
 
 		auto out = makeBox<ValuePattern>(state);
-		state.parse(out).one(&out->expression);
+		PARSE().one(&out->expression);
 
 		PST_RETURN out;
 	}

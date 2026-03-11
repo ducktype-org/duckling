@@ -11,7 +11,7 @@ namespace pst {
 	MBox<ClassSpecifierBlock> ClassSpecifierBlock::parse(LangParserState& state) {
 		auto out = makeBox<ClassSpecifierBlock>(state);
 
-		state.parse(out).one(&out->block);
+		PARSE().one(&out->block);
 
 		PST_RETURN out;
 	}

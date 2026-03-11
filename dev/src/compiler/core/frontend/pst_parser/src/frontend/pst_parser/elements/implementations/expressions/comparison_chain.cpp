@@ -20,17 +20,17 @@ namespace pst::expr {
 
 		PST_WHILE(fwd < length) {
 			out->sub_expr.emplace_back(nullptr);
-			state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
+			PARSE().with(&out->sub_expr.back(), Lower::parse, +fwd);
 
 			out->operators.push_back(state[0].asBinaryOperator().value());
-			state.parse(out).eatOne();
+			PARSE().eatOne();
 
 			length -= fwd + 1;
 			fwd = skipToOp(state, 0, length);
 		}
 
 		out->sub_expr.emplace_back(nullptr);
-		state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
+		PARSE().with(&out->sub_expr.back(), Lower::parse, +fwd);
 
 		PST_RETURN out;
 	}
