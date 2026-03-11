@@ -19,7 +19,7 @@ fn creates_valid_initial_graph() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec![],
         profile: "debug".into(),
     };
@@ -55,7 +55,7 @@ fn expands_valid_features1() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec!["use_foo_with_baz".into()],
         profile: "debug".into(),
     };
@@ -97,7 +97,7 @@ fn expands_valid_features2() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec!["use_bar_with_baz".into()],
         profile: "debug".into(),
     };
@@ -139,7 +139,7 @@ fn expands_valid_features3() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec!["full".into()],
         profile: "debug".into(),
     };
@@ -188,7 +188,7 @@ fn errors_with_nonexistent_features() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec!["nonexistent".into()],
         profile: "debug".into(),
     };
@@ -208,7 +208,7 @@ fn removes_inactive_deps1() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec![],
         profile: "debug".into(),
     };
@@ -240,7 +240,7 @@ fn removes_inactive_deps2() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec!["use_foo_with_baz".into()],
         profile: "debug".into(),
     };
@@ -275,7 +275,7 @@ fn removes_inactive_deps3() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec!["use_bar_with_baz".into()],
         profile: "debug".into(),
     };
@@ -310,7 +310,7 @@ fn removes_inactive_deps4() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec!["full".into()],
         profile: "debug".into(),
     };
@@ -348,7 +348,7 @@ fn cycle_in_freeze() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze_with_cycle(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec![],
         profile: "debug".into(),
     };
@@ -366,7 +366,7 @@ fn missing_direct_dep_in_freeze() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze_without_direct_dep(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec![],
         profile: "debug".into(),
     };
@@ -384,7 +384,7 @@ fn missing_transitive_dep_in_freeze() {
     let bcx = BuildContext {
         package: &package,
         freeze: freeze_without_transitive_dep(),
-        storage: Storage::new(ctx.duck_home()),
+        storage: Storage::new(ctx.default_storage_root().to_path_buf()),
         used_features: vec![],
         profile: "debug".into(),
     };

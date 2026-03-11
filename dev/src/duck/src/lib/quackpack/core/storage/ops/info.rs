@@ -14,7 +14,7 @@ use storage::paths;
 /// virtual environment separately. Equivalent to calling [`venv_info`] on all virtual environments present
 /// in the storage.
 pub fn list_venvs(ctx: &DuckCtx) -> QuackResult<HashMap<VenvId, Venv>> {
-    let storage = paths::Storage::new(ctx.duck_home());
+    let storage = paths::Storage::new(ctx.default_storage_root().to_path_buf());
     let mut metadata = HashMap::new();
     let vevns = storage.iter_venvs()?.collect::<Result<Vec<_>, _>>()?;
     for venv in vevns {
@@ -33,7 +33,7 @@ pub fn list_venvs(ctx: &DuckCtx) -> QuackResult<HashMap<VenvId, Venv>> {
 
 /// Retrieve the storage state of a specific virtual environment.
 pub fn venv_info(ctx: &DuckCtx, id: impl ToVenvId) -> QuackResult<Option<Venv>> {
-    let storage = paths::Storage::new(ctx.duck_home());
+    let storage = paths::Storage::new(ctx.default_storage_root().to_path_buf());
     let id = id.to_venv_id();
     let _lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
     let data = Venv::fix_and_load(&storage, id)?;

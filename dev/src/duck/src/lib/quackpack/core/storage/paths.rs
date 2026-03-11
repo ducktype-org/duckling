@@ -30,8 +30,8 @@ use std::{
 };
 
 use crate::{
-    QuackResult, duck::util::duck_home::DuckHome, qp_bail_internal,
-    quackpack::core::storage::venv_id::VenvId, util_common::path_ops_ext::PathOpsExt,
+    QuackResult, qp_bail_internal, quackpack::core::storage::venv_id::VenvId,
+    util_common::path_ops_ext::PathOpsExt,
 };
 
 use super::package_id::PackageId;
@@ -61,9 +61,7 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn new(layout: &DuckHome) -> Self {
-        let root = layout.storage_dir().to_path_buf();
-
+    pub fn new(root: PathBuf) -> Self {
         let packages_dir = root.join(PKGS_DIR_NAME);
         let venvs_dir = root.join(VENVS_DIR_NAME);
 
