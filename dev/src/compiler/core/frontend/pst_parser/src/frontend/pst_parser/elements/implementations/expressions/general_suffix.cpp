@@ -9,8 +9,9 @@ namespace pst::expr {
 	MBox<ExprElement> GeneralSuffix::parseRecursive(LangParserState& state, u64 iter) {
 		if (iter == 0) return Lower::parse(state);
 
-		u64 length = state.ctokens().size();
-		auto out = makeBox<GeneralSuffix>(state, state[base::safeIntConv<i64>(length) - 1].getValue());
+		u64  length = state.ctokens().size();
+		auto out
+			= makeBox<GeneralSuffix>(state, state[base::safeIntConv<i64>(length) - 1].getValue());
 
 		state.parse(out).autoFallbackLen(length - 1).with(&out->expr, parseRecursive, iter - 1);
 
