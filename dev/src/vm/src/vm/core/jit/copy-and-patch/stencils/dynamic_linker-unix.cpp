@@ -12,8 +12,6 @@
 
 #include <dlfcn.h>
 #include <unistd.h>
-
-#define _GNU_SOURCE
 #include <sys/mman.h>
 
 namespace vm::jit {
