@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dynamic_linker.hpp"
+#include "relocations.hpp"
 
 #include <array>
 #include <cstddef>
@@ -10,10 +11,12 @@
 
 namespace vm::jit {
 	struct LLVM_nm_data {
-		const char* name;
-		const char* type;
-		int         place;
-		int         size;
+		const char*              name;
+		const char*              type;
+		int                      place;
+		int                      size;
+		std::vector<StencilHole> to_patch   = {};
+		std::vector<StencilHole> relocation = {};
 	};
 
 	template<size_t BinarySize, size_t NumFunctions>
@@ -38,8 +41,8 @@ namespace vm::jit {
 				                   .dynlib   = DynamicLibrary::load(stencils.binary) };
 		}
 
-		std::span<const std::byte> stencil_binary(size_t index) const {
-			return stencil_binary(stencils.functions[index]);
+		auto stencil_binary(this auto&& self, size_t index) {
+			return self.stencil_binary(self.stencils.functions[index]);
 		}
 
 		std::span<const std::byte> stencil_binary(const LLVM_nm_data& func_data) const {
@@ -47,12 +50,23 @@ namespace vm::jit {
 			return std::span(begin, begin + func_data.size);
 		}
 
-		auto& functions() const {
-			return stencils.functions;
+		std::span<std::byte> stencil_binary(const LLVM_nm_data& func_data) {
+			auto begin = reinterpret_cast<std::byte*>(dynlib.findSymbol(func_data.name));
+			return std::span(begin, begin + func_data.size);
 		}
 
+		auto& functions() const { return stencils.functions; }
+
 		std::span<const std::byte> binary() const {
-			return std::span((const std::byte*)stencils.binary.data(), stencils.binary.size());
+			return std::span((const std::byte*) stencils.binary.data(), stencils.binary.size());
+		}
+
+		void relocate(const LLVM_nm_data& func_data, std::byte* new_address) {
+			auto binary = stencil_binary(func_data);
+			std::ranges::copy(binary, new_address);
+
+			for (const StencilHole& hole: func_data.relocation)
+				hole.relocate(binary.data(), new_address);
 		}
 
 		StencilsT      stencils;
