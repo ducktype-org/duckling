@@ -10,7 +10,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Pattern>(state, state[0].is(Keyword::Pattern))) return nullptr;
 
-		state.parse(out).all(Keyword::Pattern, &out->name);
+		PARSE().all(Keyword::Pattern, &out->name);
 
 		// Patterns take in only one argument, thus we don't use the parametr list and check for
 		// braces manually.
@@ -20,25 +20,25 @@ namespace pst {
 		}
 
 		auto bracket_group_token = state[0];
-		state.parse(out).goDown();
+		PARSE().goDown();
 		if (state.empty()) {
 			state.logInt(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
 			return nullptr;
 		}
 
-		state.parse(out).one(&out->param);
+		PARSE().one(&out->param);
 		if (!state.empty()) {  // More than one argument.
 			state.logInt(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
 			return nullptr;
 		}
 
-		state.parse(out).goUpAndSkip();
+		PARSE().goUpAndSkip();
 
-		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
+		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			state.parse(out).all(NamedOperator::Assign, &out->body);
+			PARSE().all(NamedOperator::Assign, &out->body);
 		})
 
 		PST_RETURN out;
