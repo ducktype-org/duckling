@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    QpCtx, QuackResult,
+    DuckCtx, QuackResult,
     quackpack::core::{self, Package, package_loader::PackageLoader, venv_config::VenvConfig},
 };
 
@@ -10,12 +10,12 @@ use crate::{
 pub struct PackageCtx<'duck> {
     package: Package,
     venv_config: VenvConfig,
-    ctx: &'duck QpCtx<'duck>,
+    ctx: &'duck DuckCtx,
 }
 
 impl<'duck> PackageCtx<'duck> {
     /// Create new [`PackageCtx`]
-    pub fn new(project_root: PathBuf, ctx: &'duck QpCtx<'duck>) -> QuackResult<Self> {
+    pub fn new(project_root: PathBuf, ctx: &'duck DuckCtx) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
         let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);
         let venv_config = VenvConfig::new(venv_config_path)?;
@@ -41,8 +41,8 @@ impl<'duck> PackageCtx<'duck> {
         &self.venv_config
     }
 
-    /// Get [`QpCtx`] used to create this [`PackageCtx`]
-    pub fn ctx(&self) -> &QpCtx<'duck> {
+    /// Get [`DuckCtx`] used to create this [`PackageCtx`]
+    pub fn ctx(&self) -> &DuckCtx {
         self.ctx
     }
 }

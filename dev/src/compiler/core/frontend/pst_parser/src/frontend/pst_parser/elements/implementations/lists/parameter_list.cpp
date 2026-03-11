@@ -8,7 +8,7 @@ namespace pst {
 			Param,
 			ParamList,
 			false,  // empty list allowed
-			false,  // trailing separator not allowed
+			true,   // trailing separator not allowed
 			lexer::Token::BracketType::Round,
 			internal::Conditions::isComma,
 			internal::Conditions::isSentinel,

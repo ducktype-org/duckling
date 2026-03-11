@@ -52,5 +52,4 @@ The VM provides built-in functions for thread management:
 
 ## Notes
 
-- The current mutex implementation uses a simple hash map. Future versions may optimize storage and reuse patterns (see issue #2109).
 - GIL release policy is configurable through the timeout value (currently 5ms).
