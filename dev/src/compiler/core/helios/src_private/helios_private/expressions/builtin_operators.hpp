@@ -11,6 +11,8 @@
 #include <helios_private/expressions/coercions.hpp>
 
 #include <lexer/token_common.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/utils/simple_keys.hpp>
 
 namespace compiler::helios::code {
 	/**
@@ -25,12 +27,17 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Get all builtin binary operators which are *not* numeric operators
-	 * for the purpose of lookup and overload resolution.
+	 * for the purpose of lookup and overload resolution. This is a query for idiomatic parallelism.
 	 * @note: The symbols' implementation in
 	 * compiler::helios::houtgen::generateBuiltinOperatorExpression must be kept up-to-date with
 	 * this list.
 	 */
-	CRef<std::vector<SymID>> getRegularBinaryBuiltinSymbols(query::Context& ctx);
+	DECLARE_QUERY(
+		QueryRegularBinaryBuiltinSymbols,
+		query::EmptyKey,
+		CRef<std::vector<SymID>>,
+		({ .uses_qresult = false })
+	);
 
 	/**
 	 * @brief Finds a builtin unary operation for a given expression and for given operator. If the

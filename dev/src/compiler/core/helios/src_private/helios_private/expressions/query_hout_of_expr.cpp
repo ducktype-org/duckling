@@ -265,7 +265,7 @@ namespace compiler::helios::code {
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
 				// @TODO: #1412 fix dealias
 				auto all_candidates = lookup_result->valueOrThrow().leaves;
-				for (const auto builtin_operator: *getRegularBinaryBuiltinSymbols(ctx))
+				for (const auto builtin_operator: *ctx.query<QueryRegularBinaryBuiltinSymbols>({}))
 					if (name(builtin_operator) == op.value)
 						all_candidates.push_back(builtin_operator);
 				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
