@@ -19,7 +19,7 @@ impl SolverFreeze {
     /// to later check whether their dependencies are still satisfied inside the freeze.
     pub fn get_prev_freeze_manifests<Access: GitAccess>(
         &self,
-        gatherer: &Gatherer<'_, '_, Access>,
+        gatherer: &Gatherer<'_, '_, '_, Access>,
     ) -> QuackResult<HashMap<ExpandedPackage, Box<Manifest>>> {
         let mut tasks = vec![];
         for pkg in self.package_freezes.keys() {

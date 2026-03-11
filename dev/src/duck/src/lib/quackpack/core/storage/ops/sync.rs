@@ -45,8 +45,8 @@ pub fn sync(
     options: SyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     let storage = Storage::new(package.ctx().duck_home());
-    let fetcher = Fetcher::new(package.ctx())?;
-    let git_access = StorageGitAccess::new(&storage);
+    let mut fetcher = Fetcher::new(package.ctx())?;
+    let mut git_access = StorageGitAccess::new(&storage);
     let venv_config = package.venv_config();
     let expose_freezefile = venv_config.is_freezefile_exposed()?;
     let user_exposed_freeze = load_external_freezefile(package, expose_freezefile)?;
@@ -69,8 +69,8 @@ pub fn sync(
 
     let solver_answer = get_solver_answer(
         package,
-        &fetcher,
-        &git_access,
+        &mut fetcher,
+        &mut git_access,
         input_freeze,
         SolverMode::from(options),
     )?;
@@ -84,7 +84,8 @@ pub fn sync(
         .new_freeze
         .generate_storage_freeze(&solver_answer.pkgs_manifests)?;
 
-    let _was_anything_installed = fetch_source_codes(&storage, &fetcher, git_access, pkgs)?;
+    let _was_anything_installed =
+        fetch_source_codes(&storage, &mut fetcher, &mut git_access, pkgs)?;
 
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
     let now = SystemTime::now();
@@ -159,10 +160,10 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Prepares the input and runs [`Solver::prepare_solving`].
-fn get_solver_answer<'duck>(
-    package: &'duck PackageCtx<'duck>,
-    fetcher: &'duck Fetcher<'duck>,
-    git_access: &'duck StorageGitAccess<'duck>,
+fn get_solver_answer<'ctx, 'fetcher, 'access>(
+    package: &'ctx PackageCtx<'ctx>,
+    fetcher: &'fetcher mut Fetcher<'ctx>,
+    git_access: &mut StorageGitAccess<'access>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
@@ -176,13 +177,13 @@ fn get_solver_answer<'duck>(
         Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
-    let solver = SolverGathererData::new(package, fetcher, solver_freeze, mode);
+    let solver = SolverGathererData::new(package, solver_freeze, mode);
     let fetcher_lock = package
         .ctx()
         .duck_home()
         .ensure_fetcher_lockfile()?
         .lock(ShouldBlock::Yes)?;
-    let should_run_engine = solver.prepare_solving(git_access)?;
+    let should_run_engine = solver.prepare_solving(fetcher, git_access)?;
     drop(fetcher_lock);
     match should_run_engine {
         ShouldRunSolverEngine::No(answer) => Ok(answer),
@@ -195,8 +196,8 @@ fn get_solver_answer<'duck>(
 /// but their source codes have not yet been fetched.
 fn fetch_source_codes(
     storage: &Storage,
-    fetcher: &Fetcher<'_>,
-    mut git_access: StorageGitAccess<'_>,
+    fetcher: &mut Fetcher<'_>,
+    git_access: &mut StorageGitAccess<'_>,
     pkgs: Vec<ExpandedPackage>,
 ) -> QuackResult<bool> {
     let mut was_anything_installed = false;
@@ -206,7 +207,7 @@ fn fetch_source_codes(
         .ensure_fetcher_lockfile()?
         .lock(ShouldBlock::Yes)?;
     for pkg in pkgs {
-        was_anything_installed |= fetch_source_code(storage, fetcher, &mut git_access, pkg)?;
+        was_anything_installed |= fetch_source_code(storage, fetcher, git_access, pkg)?;
     }
     drop(fetcher_lock);
     Ok(was_anything_installed)
@@ -216,7 +217,7 @@ fn fetch_source_codes(
 /// Fetches the source code of a package if it is not yet stored in the storage.
 fn fetch_source_code(
     storage: &Storage,
-    fetcher: &Fetcher<'_>,
+    fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
     pkg: ExpandedPackage,
 ) -> QuackResult<bool> {
@@ -247,7 +248,7 @@ fn fetch_source_code(
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }
-            let mut succesfully_fetched = false;
+            let mut successfully_fetched = false;
             let mut blob_path = PathBuf::new();
             for _ in 0..MAX_BLOB_RETRY_COUNT {
                 if let Ok(path) = fetcher.fetch_package_blob(&PackageWithUrl {
@@ -256,11 +257,11 @@ fn fetch_source_code(
                     url: url.clone(),
                 }) {
                     blob_path = path;
-                    succesfully_fetched = true;
+                    successfully_fetched = true;
                     break;
                 }
             }
-            if !succesfully_fetched {
+            if !successfully_fetched {
                 qp_bail!("Failed to fetch a package");
             }
             let pkg_dir = storage.pkg_dir(&pkg_id);

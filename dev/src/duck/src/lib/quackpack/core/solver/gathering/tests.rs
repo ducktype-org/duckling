@@ -374,7 +374,7 @@ fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -390,8 +390,8 @@ dependencies:
         &url
     ));
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let git_access = MockGitAccess();
-    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let mut git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
@@ -502,7 +502,7 @@ fn pinned_registry() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -524,8 +524,8 @@ dependencies:
         &url, &url,
     ));
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let git_access = MockGitAccess();
-    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let mut git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
@@ -566,7 +566,7 @@ fn features() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -594,8 +594,8 @@ features:
         &url, &url,
     ));
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let git_access = MockGitAccess();
-    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let mut git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
@@ -663,7 +663,7 @@ fn pinned_request_while_pending_not_pinned() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -683,8 +683,8 @@ dependencies:
         &url, &url,
     ));
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
-    let git_access = MockGitAccess();
-    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let mut git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),

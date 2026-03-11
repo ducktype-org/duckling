@@ -48,7 +48,6 @@ use crate::{
 
 /// A struct designated to finding the dependency resolution of a given package.
 pub struct SolverGathererData<'duck> {
-    fetcher: &'duck Fetcher<'duck>,
     root_package_ctx: &'duck PackageCtx<'duck>,
     root_pkg: ExpandedPackage,
     root_pkg_features: HashSet<FeatureName>,
@@ -70,7 +69,6 @@ impl<'duck> SolverGathererData<'duck> {
     /// Creates a new [`Solver`] instance.
     pub fn new(
         package_ctx: &'duck PackageCtx<'duck>,
-        fetcher: &'duck Fetcher<'duck>,
         current_freeze: SolverFreeze,
         mode: SolverMode,
     ) -> Self {
@@ -90,7 +88,6 @@ impl<'duck> SolverGathererData<'duck> {
                 .keys()
                 .copied()
                 .collect(),
-            fetcher,
             current_freeze,
             mode,
         }
@@ -98,11 +95,12 @@ impl<'duck> SolverGathererData<'duck> {
 
     /// Determines if all the transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`Solver`] for running the engine by constructing [`SolverInput`].
-    pub fn prepare_solving<Access: GitAccess>(
+    pub fn prepare_solving<'fetcher, Access: GitAccess>(
         self,
-        git_access: &Access,
+        fetcher: &'fetcher mut Fetcher<'duck>,
+        git_access: &mut Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
-        let gatherer = Gatherer::new(self.fetcher, git_access);
+        let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = self.root_package_ctx.package().manifest().clone();
         let root_features = root_manifest
@@ -155,7 +153,7 @@ impl<'duck> SolverGathererData<'duck> {
     /// Helper for [`Self::prepare_solving`].
     /// Runs the [`Gatherer`], to fetch all potentially necessary manifests.
     fn run_solver_gatherer<Access: GitAccess>(
-        gatherer: &Gatherer<'_, '_, Access>,
+        gatherer: &Gatherer<'_, '_, '_, Access>,
         root_manifest: Manifest,
         root_path: PathBuf,
         root_features: HashSet<FeatureName>,

@@ -37,14 +37,14 @@ use crate::{
 };
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
-pub struct Gatherer<'duck, 'access, Access: GitAccess> {
-    fetcher: &'duck Fetcher<'duck>,
-    git_access: &'access Access,
+pub struct Gatherer<'duck, 'fetcher, 'access, Access: GitAccess> {
+    fetcher: &'fetcher mut Fetcher<'duck>,
+    git_access: &'access mut Access,
 }
 
-impl<'duck, 'access, Access: GitAccess> Gatherer<'duck, 'access, Access> {
+impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'access, Access> {
     /// Creates a new, empty [`Gatherer`].
-    pub fn new(fetcher: &'duck Fetcher<'duck>, git_access: &'access Access) -> Self {
+    pub fn new(fetcher: &'fetcher mut Fetcher<'duck>, git_access: &'access mut Access) -> Self {
         Self {
             fetcher,
             git_access,

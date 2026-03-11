@@ -148,7 +148,7 @@ fn new_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -217,9 +217,10 @@ dependencies:
         .into(),
     };
 
-    let solver =
-        SolverGathererData::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
-    let ShouldRunSolverEngine::Yes(solver) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, SolverMode::default());
+    let ShouldRunSolverEngine::Yes(solver) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };
@@ -262,7 +263,7 @@ fn remove_unnecessary_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -334,9 +335,10 @@ dependencies:
         .into(),
     };
 
-    let solver =
-        SolverGathererData::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
-    let ShouldRunSolverEngine::No(answer) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, SolverMode::default());
+    let ShouldRunSolverEngine::No(answer) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };
@@ -376,7 +378,7 @@ fn no_longer_working_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -441,8 +443,10 @@ dependencies:
         supress_foreign_manifests_errors: true,
         frozen: false,
     };
-    let solver = SolverGathererData::new(&pkg_ctx, &fetcher, previous_freeze, mode);
-    let ShouldRunSolverEngine::Yes(solver) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, mode);
+    let ShouldRunSolverEngine::Yes(solver) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };
