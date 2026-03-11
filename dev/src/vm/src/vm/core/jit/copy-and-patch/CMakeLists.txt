@@ -94,6 +94,7 @@ add_custom_command(
     OUTPUT ${cp_stencils}
     COMMAND ${JIT_LLVM_LLC}
     -filetype=obj
+    --relocation-model=pic
     -O3
     $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>
     -o
