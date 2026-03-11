@@ -2,6 +2,7 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <frontend/module_tree/file_id.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
@@ -99,8 +100,10 @@ namespace compiler::frontend {
 		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
 		} else {
-			// @TODO: #1879 Program chosen as default type
-			parse_tree.emplace(pst::PST(file, pst::PSTType::Program, getComponentHash()));
+			// @TODO: #1879 Program chosen as default type for non_REPL
+			auto pst_type = getModuleRef(linked_module)->isReplModule() ? pst::PSTType::Script
+			                                                            : pst::PSTType::Program;
+			parse_tree.emplace(pst::PST(file, pst_type, getComponentHash()));
 			return &parse_tree.value();
 		}
 	}
