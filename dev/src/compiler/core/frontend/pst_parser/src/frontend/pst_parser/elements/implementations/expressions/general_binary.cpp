@@ -38,11 +38,11 @@ namespace pst::expr {
 			return Lower::parse(state, std::get<i64>(expr));
 		} else {
 			auto op  = std::get<Box<OperatorBuilder>>(expr).ref();
-			auto out = makeBox<GeneralBinary>(state.getPosition(), op->type);
+			auto out = makeBox<GeneralBinary>(state, op->type);
 
-			state.parse(out).with(&out->left, parseRecursive, op->lhs);
-			state.parse(out).one(op->type);
-			state.parse(out).with(&out->right, parseRecursive, op->rhs);
+			PARSE().with(&out->left, parseRecursive, op->lhs);
+			PARSE().one(op->type);
+			PARSE().with(&out->right, parseRecursive, op->rhs);
 
 			PST_RETURN out;
 		}

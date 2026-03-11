@@ -538,18 +538,22 @@ private:
 			= compiler::helios::HInterface::ofTypeInstance(simple_class_abstract_type);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto a_result = h_interface.lookup(ctx, base::StrID("a"));
+			using compiler::helios::LookupResult;
+			CRef<LookupResult> a_result
+				= &h_interface.lookup(ctx, base::StrID("a"))->valueOrPanic();
 			ASSERT_TRUE(a_result->isSingle());
 			auto a_symbol = a_result->leaves.at(0);
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
-			auto get_a_result = h_interface.lookup(ctx, base::StrID("getA"));
+			CRef<LookupResult> get_a_result
+				= &h_interface.lookup(ctx, base::StrID("getA"))->valueOrPanic();
 			ASSERT_TRUE(get_a_result->isSingle());
 			auto get_a_symbol = get_a_result->leaves.at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
 
-			auto empty_result = h_interface.lookup(ctx, base::StrID("non_existent_symbol"));
+			CRef<LookupResult> empty_result
+				= &h_interface.lookup(ctx, base::StrID("non_existent_symbol"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 		});
 	}

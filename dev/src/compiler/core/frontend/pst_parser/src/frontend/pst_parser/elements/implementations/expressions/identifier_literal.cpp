@@ -7,12 +7,12 @@ namespace pst::expr {
 	MBox<ExprElement> IdentifierLiteral::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		auto out = makeBox<IdentifierLiteral>(state.getPosition());
+		auto out = makeBox<IdentifierLiteral>(state);
 
-		state.parse(out).one(&out->name);
+		PARSE().one(&out->name);
 
 		if (length > 2 && state[0].is(NamedOperator::Colon) && state[1].isBracketGroup(Token::Curly))
-			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse, 2L);
+			PARSE().with(&out->template_specifier, TemplateSpecifier::parse, 2L);
 
 		PST_RETURN out;
 	}
@@ -30,8 +30,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& IdentifierLiteral::addElementDataToStableHash(HashAlg& partial_hash
-	) const {
+	HashAlg& IdentifierLiteral::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, template_specifier.has_value());
 		return partial_hash;

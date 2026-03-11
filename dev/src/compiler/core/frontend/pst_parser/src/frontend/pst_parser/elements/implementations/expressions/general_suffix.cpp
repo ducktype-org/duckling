@@ -9,11 +9,11 @@ namespace pst::expr {
 	MBox<ExprElement> GeneralSuffix::parseRecursive(LangParserState& state, i64 length, u64 iter) {
 		if (iter == 0) return Lower::parse(state, length);
 
-		auto out = makeBox<GeneralSuffix>(state.getPosition(), state[length - 1].getValue());
+		auto out = makeBox<GeneralSuffix>(state, state[length - 1].getValue());
 
-		state.parse(out).with(&out->expr, parseRecursive, length - 1, iter - 1);
+		PARSE().with(&out->expr, parseRecursive, length - 1, iter - 1);
 
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		PST_RETURN out;
 	}

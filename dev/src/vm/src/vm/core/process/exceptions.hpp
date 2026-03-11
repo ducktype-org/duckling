@@ -31,5 +31,4 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
 	VM_RUNTIME_EXCEPTION(VMFoundMemoryLeakException, "Memory leak detected");
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
-	VM_RUNTIME_EXCEPTION(VMMutexDoesntExist, "Mutex doesn\'t exist");
 }

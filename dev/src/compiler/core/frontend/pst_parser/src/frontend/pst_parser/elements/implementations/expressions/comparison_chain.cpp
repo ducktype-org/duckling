@@ -16,21 +16,21 @@ namespace pst::expr {
 		i64 fwd = skipToOp(state, 0, length);
 		if (fwd == length) return Lower::parse(state, length);
 
-		auto out = makeBox<ComparisonChain>(state.getPosition());
+		auto out = makeBox<ComparisonChain>(state);
 
 		PST_WHILE(fwd < length) {
 			out->sub_expr.emplace_back(nullptr);
-			state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
+			PARSE().with(&out->sub_expr.back(), Lower::parse, +fwd);
 
 			out->operators.push_back(state[0].asBinaryOperator().value());
-			state.parse(out).eatOne();
+			PARSE().eatOne();
 
 			length -= fwd + 1;
 			fwd = skipToOp(state, 0, length);
 		}
 
 		out->sub_expr.emplace_back(nullptr);
-		state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
+		PARSE().with(&out->sub_expr.back(), Lower::parse, +fwd);
 
 		PST_RETURN out;
 	}
@@ -52,7 +52,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ComparisonChain::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ComparisonChain::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, sub_expr.size());
 		addToHash(partial_hash, operators);
 		return partial_hash;

@@ -5,14 +5,14 @@
 
 namespace pst {
 	MBox<ImportNested> ImportNested::parse(LangParserState& state) {
-		auto out = makeBox<ImportNested>(state.getPosition());
+		auto out = makeBox<ImportNested>(state);
 
 		tpc::Identifier id;
 		PST_WHILE(state[0].isIdentifier()) {
-			state.parse(out).all(&id, NamedOperator::Period);
+			PARSE().all(&id, NamedOperator::Period);
 			out->names.push_back(id);
 		}
-		state.parse(out).one(&out->nested_import);
+		PARSE().one(&out->nested_import);
 
 		return out;
 	}
@@ -33,7 +33,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ImportNested::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ImportNested::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, names);
 		return partial_hash;
 	}

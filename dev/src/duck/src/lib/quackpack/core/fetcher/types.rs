@@ -68,3 +68,9 @@ pub struct MultiMetadata {
 pub struct SearchResult {
     pub result: Vec<Package>,
 }
+
+#[derive(Debug)]
+pub enum FetcherResponse<T> {
+    Some(T),
+    Offline,
+}

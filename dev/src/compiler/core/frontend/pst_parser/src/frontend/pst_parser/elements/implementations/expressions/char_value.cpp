@@ -16,8 +16,8 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprCharValue>(pos, state[0].getValue());
-		state.parse(out).eatOne();
+		auto out = makeBox<ExprCharValue>(state, state[0].getValue());
+		PARSE().eatOne();
 
 		if (length > 1) {
 			state.logInt(makeBox<MoreThanCharValueError>(pos));
@@ -35,7 +35,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ExprCharValue::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ExprCharValue::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, string);
 		return partial_hash;
 	}

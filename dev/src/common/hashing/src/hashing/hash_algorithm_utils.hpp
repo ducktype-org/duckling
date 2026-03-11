@@ -160,19 +160,6 @@ namespace hashing {
 		}
 
 		/**
-		 * Checks if a range that may have unspecified order of elements can be hashed
-		 */
-		template<typename HashAlgorithm, typename R>
-		concept can_hash_range_with_unspecified_order
-			= std::copy_constructible<HashAlgorithm> && std::ranges::input_range<R>
-		   && requires(HashAlgorithm::result_type res) {
-				  {
-					  res ^= res
-				  }
-				  -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
-			  };
-
-		/**
 		 * Checks if the type is tuple-like i.e. supports std::tuple_size and std::get
 		 */
 		template<typename T>
