@@ -45,7 +45,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit MatchCase(dia::SourcePosition& pos): NotStmt(pos) {
+		explicit MatchCase(LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::MatchCase;
 		}
 

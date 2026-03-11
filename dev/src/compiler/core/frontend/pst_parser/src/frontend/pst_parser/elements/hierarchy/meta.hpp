@@ -4,6 +4,7 @@
 #include "../../lang_parser_element.hpp"
 #include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
+#include "../lang_state_unmethods.hpp"
 
 #include <diagnostic/source_position.hpp>
 #include <string_id/string_id.hpp>
@@ -22,7 +23,7 @@ namespace pst {
 	 */
 	class NotStmt: public LangElement {
 	public:
-		explicit NotStmt(const dia::SourcePosition& position): LangElement(position) {}
+		explicit NotStmt(const LangParserState& state): LangElement(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -108,9 +109,7 @@ namespace pst {
 		Prefixes prefixes;
 		bool     implicit_return{};
 
-		Stmt(StmtKind kind, const dia::SourcePosition& position):
-			  LangElement(position),
-			  kind(kind) {}
+		Stmt(StmtKind kind, const LangParserState& state): LangElement(state), kind(kind) {}
 
 		static PrefixBoxes collectPrefixes(LangParserState& state);
 
@@ -207,39 +206,23 @@ namespace pst {
 		}
 	};
 
-#define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                                   \
-	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) { \
-		this->element_kind = element_kind_;                                                 \
+#define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                         \
+	class_name(const LangParserState& state): Stmt(StmtKind::class_name, state) { \
+		this->element_kind = element_kind_;                                       \
 	}
-
-	/**
-	 * @brief Context needed in class parsing
-	 *
-	 * includes:
-	 *  - name - class name
-	 */
-	struct ClassContext {
-		base::StrID name;
-	};
 
 	/**
 	 * @brief Statements specific to the inside of a class
 	 */
 	class ClassStmt: public Stmt {
 	protected:
-		ClassContext context;
-
-		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, ClassContext ctx):
-			  Stmt(kind, pos),
-			  context(std::move(ctx)) {}
+		ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
 
 	protected:
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 	public:
-		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
-
-		const ClassContext& getContext() { return { context }; }
+		static MBox<ClassStmt> parse(LangParserState& state);
 
 		[[nodiscard]]
 		std::string elementType() const override {

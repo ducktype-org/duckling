@@ -38,16 +38,21 @@ namespace concurrent {
 			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
 			u64 hash = HASH_T{}(key);
 
-			CORE_ASSERT(
-				SHARD_COUNT == shard_mutexes.size() and SHARD_COUNT == shards.size(),
-				"Shard count mismatch"
-			);
-			CORE_ASSERT(SHARD_COUNT > 0, "Shard count must be greater than zero");
-
 			u64 result = hash % SHARD_COUNT;
 			CORE_ASSERT(result < SHARD_COUNT, "Shard index out of bounds");
 
 			return result;
+		}
+
+		/**
+		 * Asserts that the number of shards and their corresponding mutexes match.
+		 * This fails when someone accidentally pushes a new shard to the shards vector.
+		 */
+		void assertCorrectShardsSize() const {
+			CORE_ASSERT(
+				SHARD_COUNT == shard_mutexes.size() and SHARD_COUNT == shards.size(),
+				"Shard count mismatch"
+			);
 		}
 
 		/**
@@ -64,6 +69,7 @@ namespace concurrent {
 				  shard_index(shard_index),
 				  self(self) {
 				self.shard_mutexes[shard_index]->lock();
+				self.assertCorrectShardsSize();
 			}
 
 			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
@@ -82,6 +88,7 @@ namespace concurrent {
 		public:
 			explicit WithAllShardsLock(const ConHashMap& self) noexcept: self(self) {
 				for (u64 i = 0; i < SHARD_COUNT; i++) self.shard_mutexes[i]->lock();
+				self.assertCorrectShardsSize();
 			}
 
 			~WithAllShardsLock() noexcept {
@@ -507,6 +514,8 @@ namespace concurrent {
 		 * queries).
 		 */
 		constexpr static u64 SHARD_COUNT = 129;
+
+		static_assert(SHARD_COUNT > 0, "Shard count must be positive");
 
 		/**
 		 * The shards of the map.

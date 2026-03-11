@@ -5,9 +5,8 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Constructor>(position, ctx);
+	MBox<Constructor> Constructor::parse(LangParserState& state) {
+		auto out = makeBox<Constructor>(state);
 
 		state.parse(out).eatOne();
 
@@ -21,7 +20,11 @@ namespace pst {
 
 		state.parse(out).one(&out->params);
 		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).all(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			state.parse(out).all(NamedOperator::Assign, &out->body);
+		})
 
 		PST_RETURN out;
 	}
