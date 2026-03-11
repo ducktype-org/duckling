@@ -202,6 +202,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
 	Example<pst::Fun, true>      simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
+	Example<pst::Fun, true>      simple_function3{ "fun foo(x: i32, y: i32 = 1,) = {}" };
 	Example<pst::Fun, false>     bad_function{ "fun foo(x: i32, y) = {}" };
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
@@ -255,6 +256,13 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, false> empty_specifier{ "public;" };
 	Example<pst::Stmt, false> bad_extern_block{ "extern {class x{}};" };
 
+	Example<pst::Stmt, true> trailing_comma_attr_arg_list{
+		"@if_system(Windows,) print(\"windows\");"
+	};
+	Example<pst::Stmt, true> trailing_comma_call_list{ "print(\"windows\",);" };
+	Example<pst::Stmt, true> trailing_comma_nested_import{ "import A.B.(C,)" };
+	Example<pst::Stmt, true> trailing_comma_parameter_list{ "fun foo(a: A,) = {}" };
+	Example<pst::Stmt, true> trailing_comma_template_list{ "x.y:{1,};" };
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
 	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };
