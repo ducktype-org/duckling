@@ -19,7 +19,7 @@ namespace pst::expr {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			state.parse(out).one(&out->block);
+			PARSE().one(&out->block);
 		})
 
 		PST_RETURN out;

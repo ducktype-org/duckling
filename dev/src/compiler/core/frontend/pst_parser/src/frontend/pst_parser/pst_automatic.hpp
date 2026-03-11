@@ -25,6 +25,7 @@
 #define PST_AUTOMATIC_SKIP(ret) \
 	if (state.isSkipping()) { return ret; }
 
+#define PARSE() state.parse(out)
 /**
  * @brief This macro saves the current context and restores it after executing code from the argument.
  */

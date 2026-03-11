@@ -40,9 +40,9 @@ namespace pst::expr {
 			auto op  = std::get<Box<OperatorBuilder>>(expr).ref();
 			auto out = makeBox<GeneralBinary>(state, op->type);
 
-			state.parse(out).with(&out->left, parseRecursive, op->lhs);
-			state.parse(out).one(op->type);
-			state.parse(out).with(&out->right, parseRecursive, op->rhs);
+			PARSE().with(&out->left, parseRecursive, op->lhs);
+			PARSE().one(op->type);
+			PARSE().with(&out->right, parseRecursive, op->rhs);
 
 			PST_RETURN out;
 		}

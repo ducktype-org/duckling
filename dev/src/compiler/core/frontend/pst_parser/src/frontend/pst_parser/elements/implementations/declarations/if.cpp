@@ -12,9 +12,9 @@ namespace pst {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			state.parse(out).all(Keyword::If, &out->optional_name, &out->condition, &out->then_body);
+			PARSE().all(Keyword::If, &out->optional_name, &out->condition, &out->then_body);
 
-			if (state.parse(out).tryEat(Keyword::Else)) state.parse(out).one(&out->else_body);
+			if (PARSE().tryEat(Keyword::Else)) PARSE().one(&out->else_body);
 		})
 
 		PST_RETURN out;

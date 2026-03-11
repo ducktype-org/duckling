@@ -16,10 +16,10 @@ namespace pst::expr {
 		}
 
 		auto out = makeBox<TemplateSpecifier>(state);
-		state.parse(out).one(NamedOperator::Colon);
-		state.parse(out).goDown();
-		state.parse(out).one(&out->inner);
-		state.parse(out).goUpAndSkip();
+		PARSE().one(NamedOperator::Colon);
+		PARSE().goDown();
+		PARSE().one(&out->inner);
+		PARSE().goUpAndSkip();
 
 		PST_RETURN out;
 	}
