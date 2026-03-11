@@ -7,7 +7,7 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/origin.hpp>
-#include <helios/queries/queries.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/expressions/coercions.hpp>

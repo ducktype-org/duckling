@@ -14,11 +14,6 @@
 
 namespace compiler::helios {
 	/**
-	 * @brief Query function return type, deduced based on return statements in its body.
-	 */
-	DECLARE_QUERY(QueryReturnTypeDeduction, SymID, CRef<query::QResult<tsh::SymbolType<>>>, ({}))
-
-	/**
 	 * @brief Query declaration of function: types, args and its names.
 	 * @note Unlike QueryCodeOfFun, this query works for all SymID-s that represent functions,
 	 * be it user-defined, extern, built-in, or generated.

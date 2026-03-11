@@ -38,6 +38,11 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief Query function return type, deduced based on return statements in its body.
+	 */
+	DECLARE_QUERY(QueryReturnTypeDeduction, SymID, CRef<query::QResult<tsh::SymbolType<>>>, ({}))
+
 	struct IMPLEMENT_QUERY(QueryReturnTypeDeduction, query::QResult<tsh::SymbolType<>>) {
 		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
 			query::Context& ctx;
