@@ -1,7 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use futures::future::join_all;
-
 use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
@@ -19,9 +17,9 @@ use crate::{
 impl SolverFreeze {
     /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
     /// to later check whether their dependencies are still satisfied inside the freeze.
-    pub async fn get_prev_freeze_manifests<'duck, GitAccessImpl: GitAccess>(
+    pub fn get_prev_freeze_manifests<Access: GitAccess>(
         &self,
-        gatherer: &'duck Gatherer<'duck, GitAccessImpl>,
+        gatherer: &Gatherer<'_, '_, Access>,
     ) -> QuackResult<HashMap<ExpandedPackage, Box<Manifest>>> {
         let mut tasks = vec![];
         for pkg in self.package_freezes.keys() {
@@ -29,10 +27,10 @@ impl SolverFreeze {
                 continue;
             }
             if let Ok(request) = pkg.create_manifest_request() {
-                tasks.push(Box::pin(gatherer.fetch(request)));
+                tasks.push(gatherer.fetch(request));
             }
         }
-        let results = join_all(tasks).await;
+        let results = tasks;
         let mut manifests = HashMap::new();
         for fetch_response in results {
             let fetch_response = fetch_response?;
@@ -277,7 +275,7 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, QpCtx, StrId,
+        DuckCtx, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
@@ -325,9 +323,8 @@ features:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -398,9 +395,8 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -478,10 +474,9 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -581,11 +576,10 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
-        let manifest_d = parse_manifest(&path_d, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
+        let manifest_d = parse_manifest(&path_d, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),

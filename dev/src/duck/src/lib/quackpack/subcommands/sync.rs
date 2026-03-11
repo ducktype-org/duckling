@@ -1,7 +1,5 @@
-use tokio::runtime;
-
 use crate::{
-    DuckCtx, QpCtx, QuackResult,
+    DuckCtx, QuackResult,
     quackpack::core::{AllowGlobalPackage, PackageLoader, storage},
 };
 
@@ -14,13 +12,11 @@ pub struct SyncOptions {
 }
 
 pub fn sync(ctx: &DuckCtx, options: SyncOptions) -> QuackResult<()> {
-    let qp_ctx = QpCtx::new(ctx);
     let pkg = if options.global {
-        PackageLoader::global_package(&qp_ctx)?
+        PackageLoader::global_package(ctx)?
     } else {
-        PackageLoader::find_from_cwd(&qp_ctx, AllowGlobalPackage::No)?
+        PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
-    let rt = runtime::Builder::new_multi_thread().enable_all().build()?;
-    rt.block_on(async { storage::sync(ctx, &pkg, options) })?;
+    storage::sync(&pkg, options)?;
     Ok(())
 }

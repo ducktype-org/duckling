@@ -30,11 +30,13 @@ pub trait UrlExt: Sized {
         Ok(new)
     }
 
+    #[allow(dead_code)]
     fn for_new_package(&self) -> QuackResult<Self> {
         self._join("/packages")
             .context_internal("we control queries statically...?")
     }
 
+    #[allow(dead_code)]
     fn for_new_blob(&self, package: &types::Package) -> QuackResult<Self> {
         self._join(&format!("/packages/{}/{}", package.id, package.version))
     }
