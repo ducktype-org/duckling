@@ -16,7 +16,7 @@ use crate::duck::driver::{
     cli,
     cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
     cli_no_err,
-    global_cli_options::GlobalCliOptions,
+    global_options::GlobalOptions,
     subcommands::exec_for,
 };
 
@@ -51,11 +51,11 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     run_subcmd(ctx, args, &external)
 }
 
-fn get_global_options() -> Option<GlobalCliOptions> {
+fn get_global_options() -> Option<GlobalOptions> {
     // We get matches without worrying about errors, only to retrieve GlobalCliOptions.
     // Later matching is done again on the real command, so any errors will be taken care of there.
     if let Ok(matches) = cli_no_err().try_get_matches() {
-        GlobalCliOptions::from_matches(&matches).ok()
+        GlobalOptions::from_matches(&matches).ok()
     } else {
         None
     }

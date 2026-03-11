@@ -64,7 +64,7 @@ const byte* vm::VmValue::getBytes() const { return data.data(); }
 
 void vm::VmValue::dprint(std::ostream& out, const std::string& indent) const {
 	out << indent << "---- VmValue ----\n";
-	out << indent << "Type: " << type->getName().str() << " (Size: " << type->getSize()
+	out << indent << "Type: " << type->getName().str() << " (Size: " << type->getSize().asInt()
 		<< " bytes)\n";
 	out << indent << "Value:";
 

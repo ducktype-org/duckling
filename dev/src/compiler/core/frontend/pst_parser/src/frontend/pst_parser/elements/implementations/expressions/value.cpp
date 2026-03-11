@@ -14,8 +14,8 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprNumericValue>(state.getPosition());
-		state.parse(out).one(&out->value);
+		auto out = makeBox<ExprNumericValue>(state);
+		PARSE().one(&out->value);
 
 		if (length > 1) {
 			state.logInt(makeBox<MoreThanValueError>(pos));
@@ -36,7 +36,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ExprNumericValue::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ExprNumericValue::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, value);
 		return partial_hash;
 	}

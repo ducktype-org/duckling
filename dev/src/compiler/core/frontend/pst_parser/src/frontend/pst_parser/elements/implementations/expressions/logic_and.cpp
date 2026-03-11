@@ -21,11 +21,11 @@ namespace pst::expr {
 		}
 		if (!and_found) return Lower::parse(state, length);
 
-		auto out = makeBox<LogicAnd>(pos);
+		auto out = makeBox<LogicAnd>(state);
 
-		state.parse(out).with(&out->left, Lower::parse, +and_fwd);
-		state.parse(out).one(Keyword::And);
-		state.parse(out).with(&out->right, Self::parse, length - and_fwd - 1);
+		PARSE().with(&out->left, Lower::parse, +and_fwd);
+		PARSE().one(Keyword::And);
+		PARSE().with(&out->right, Self::parse, length - and_fwd - 1);
 
 		PST_RETURN out;
 	}

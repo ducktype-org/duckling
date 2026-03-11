@@ -26,14 +26,14 @@ namespace pst::expr {
 			}
 		}
 		if (!found) return Lower::parse(state, length);
-		auto out = makeBox<Assignment>(pos);
+		auto out = makeBox<Assignment>(state);
 
-		state.parse(out).with(&out->variables, Lower::parse, +place);
+		PARSE().with(&out->variables, Lower::parse, +place);
 
 		out->type = state[0].getValue();
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
-		state.parse(out).with(&out->value, Lower::parse, length - place - 1);
+		PARSE().with(&out->value, Lower::parse, length - place - 1);
 
 		PST_RETURN out;
 	}
@@ -50,7 +50,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type.strView());
 		return partial_hash;
 	}

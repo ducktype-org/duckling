@@ -14,18 +14,18 @@ namespace pst::expr {
 		for (i64 i = 0; i < length; i++)
 			if (state[i].is(Special::Comma)) ends.push_back(i);
 		if (ends.empty()) return Lower::parse(state, length);
-		auto out   = makeBox<Comma>(pos);
+		auto out   = makeBox<Comma>(state);
 		i64  start = -1;
 
 		for (auto end: ends) {
 			out->expressions.emplace_back();
-			state.parse(out).with(&out->expressions.back(), Lower::parse, end - 1 - start);
-			state.parse(out).one(Special::Comma);
+			PARSE().with(&out->expressions.back(), Lower::parse, end - 1 - start);
+			PARSE().one(Special::Comma);
 			start = end;
 		}
 		if (start + 1 != length) {
 			out->expressions.emplace_back();
-			state.parse(out).with(&out->expressions.back(), Lower::parse, length - 1 - start);
+			PARSE().with(&out->expressions.back(), Lower::parse, length - 1 - start);
 		}
 		PST_RETURN out;
 	}
@@ -47,7 +47,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Comma::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Comma::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, expressions.size());
 		return partial_hash;
 	}

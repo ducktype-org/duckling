@@ -18,11 +18,11 @@ namespace pst::expr {
 
 		if (state[0].getRecursive().size() == 0) return UnitExpr::parse(state, length);
 
-		auto out = makeBox<RoundExpr>(state.getPosition());
+		auto out = makeBox<RoundExpr>(state);
 
-		state.parse(out).goDown();
-		state.parse(out).with(&out->expr, Comma::parse, (i64) state.ctokens().size());
-		state.parse(out).goUpAndSkip();
+		PARSE().goDown();
+		PARSE().with(&out->expr, Comma::parse, (i64) state.ctokens().size());
+		PARSE().goUpAndSkip();
 
 		PST_RETURN out;
 	}
@@ -36,7 +36,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& RoundExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& RoundExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

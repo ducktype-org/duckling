@@ -57,6 +57,8 @@ namespace vm {
 		std::unique_lock lock(rw_global);
 		VMThread&        thread = getEmptyThread();
 		bool response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
+		// Setting thread ctx necessary for now, until function pointers implemented
+		thread.setThreadCtx("");
 
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 		i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));

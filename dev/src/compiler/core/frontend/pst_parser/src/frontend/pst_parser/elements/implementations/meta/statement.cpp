@@ -148,11 +148,11 @@ namespace pst {
 
 		template<std::derived_from<Stmt> T>
 		requires FlowControlLike<T> MBox<T> parseStmt(LangParserState& state) {
-			state.setSoftFallback(isStatementBegin);
+			setSoftFallback(state, isStatementBegin);
 
 			MBox<T> out = T::parse(state);
 
-			state.exitSoftFallback();
+			exitSoftFallback(state);
 
 			PST_RETURN out;
 		}
@@ -275,7 +275,7 @@ namespace pst {
 		PST_RETURN out;
 	}
 
-	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
+	HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
 		addToHash(partial_hash, isImplicitReturn());

@@ -10,7 +10,7 @@ namespace pst {
 	 */
 	class ImportChain: public NotStmt {
 	public:
-		explicit ImportChain(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit ImportChain(const LangParserState& state): NotStmt(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

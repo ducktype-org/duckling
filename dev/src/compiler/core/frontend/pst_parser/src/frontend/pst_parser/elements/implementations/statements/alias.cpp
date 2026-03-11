@@ -6,12 +6,11 @@
 namespace pst {
 
 	MBox<Alias> Alias::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Alias>(position);
+		auto out = makeBox<Alias>(state);
 
 		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
 
-		state.parse(out).all(Keyword::Alias, &out->name, NamedOperator::Assign, &out->points_to);
+		PARSE().all(Keyword::Alias, &out->name, NamedOperator::Assign, &out->points_to);
 
 		if (out->points_to.internal()->getStar())
 			state.logInt(makeBox<AliasStarError>(out->source_position));
@@ -19,7 +18,7 @@ namespace pst {
 		PST_RETURN out;
 	}
 
-	LangElement::HashAlg& Alias::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Alias::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		return partial_hash;
 	}

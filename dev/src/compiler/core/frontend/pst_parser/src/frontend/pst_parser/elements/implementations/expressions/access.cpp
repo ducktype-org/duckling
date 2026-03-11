@@ -15,7 +15,7 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<Access>(state.getPosition());
+		auto out = makeBox<Access>(state);
 
 		out->type = state[0].getValue();
 
@@ -27,11 +27,11 @@ namespace pst::expr {
 			));
 		}
 
-		state.parse(out).eatOne();  // `.` or `.?`
-		state.parse(out).one(&out->name);
+		PARSE().eatOne();  // `.` or `.?`
+		PARSE().one(&out->name);
 
 		if (length > 2 && state[0].is(NamedOperator::Colon) && state[1].isBracketGroup(Token::Curly))
-			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse, 2L);
+			PARSE().with(&out->template_specifier, TemplateSpecifier::parse, 2L);
 
 		PST_RETURN out;
 	}
@@ -50,7 +50,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Access::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Access::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type.strView());
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, template_specifier.has_value());

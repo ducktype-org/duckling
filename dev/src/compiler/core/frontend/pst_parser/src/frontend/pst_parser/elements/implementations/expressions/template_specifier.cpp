@@ -15,11 +15,11 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<TemplateSpecifier>(state.getPosition());
-		state.parse(out).one(NamedOperator::Colon);
-		state.parse(out).goDown();
-		state.parse(out).one(&out->inner);
-		state.parse(out).goUpAndSkip();
+		auto out = makeBox<TemplateSpecifier>(state);
+		PARSE().one(NamedOperator::Colon);
+		PARSE().goDown();
+		PARSE().one(&out->inner);
+		PARSE().goUpAndSkip();
 
 		PST_RETURN out;
 	}
@@ -33,8 +33,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& TemplateSpecifier::addElementDataToStableHash(HashAlg& partial_hash
-	) const {
+	HashAlg& TemplateSpecifier::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 
