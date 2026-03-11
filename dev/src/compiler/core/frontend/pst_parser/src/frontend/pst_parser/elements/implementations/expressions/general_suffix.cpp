@@ -13,9 +13,9 @@ namespace pst::expr {
 		auto out
 			= makeBox<GeneralSuffix>(state, state[base::safeIntConv<i64>(length) - 1].getValue());
 
-		state.parse(out).autoFallbackLen(length - 1).with(&out->expr, parseRecursive, iter - 1);
+		PARSE().autoFallbackLen(length - 1).with(&out->expr, parseRecursive, iter - 1);
 
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		PST_RETURN out;
 	}

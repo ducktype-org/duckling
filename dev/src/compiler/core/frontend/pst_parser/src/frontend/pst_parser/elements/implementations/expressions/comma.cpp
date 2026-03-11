@@ -24,15 +24,13 @@ namespace pst::expr {
 
 		for (auto end: ends) {
 			out->expressions.emplace_back();
-			state.parse(out)
-				.autoFallbackLen(end - 1 - start)
-				.with(&out->expressions.back(), Lower::parse);
+			PARSE().autoFallbackLen(end - 1 - start).with(&out->expressions.back(), Lower::parse);
 			state.parse(out).one(Special::Comma);
 			start = end;
 		}
 		if (start + 1 != length) {
 			out->expressions.emplace_back();
-			state.parse(out).with(&out->expressions.back(), Lower::parse);
+			PARSE().with(&out->expressions.back(), Lower::parse);
 		}
 		PST_RETURN out;
 	}

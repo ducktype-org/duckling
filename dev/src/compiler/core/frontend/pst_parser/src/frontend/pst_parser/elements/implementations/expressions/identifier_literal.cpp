@@ -9,11 +9,11 @@ namespace pst::expr {
 
 		auto out = makeBox<IdentifierLiteral>(state);
 
-		state.parse(out).one(&out->name);
+		PARSE().one(&out->name);
 
 		if (state.ctokens().size() >= 2 && state[0].is(NamedOperator::Colon)
 		    && state[1].isBracketGroup(Token::Curly))
-			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse);
+			PARSE().with(&out->template_specifier, TemplateSpecifier::parse);
 
 		PST_RETURN out;
 	}

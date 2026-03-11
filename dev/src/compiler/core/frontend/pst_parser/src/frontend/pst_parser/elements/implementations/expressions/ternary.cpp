@@ -65,14 +65,15 @@ namespace pst::expr {
 
 		auto out = makeBox<Ternary>(state);
 
-		state.parse(out).one(Keyword::If);
-		state.parse(out).autoFallbackLen(then_fwd - 1).with(&out->condition, Lower::parse);
+		PARSE().one(Keyword::If);
+		PARSE().autoFallbackLen(then_fwd - 1).with(&out->condition, Lower::parse);
 
-		state.parse(out).one(Keyword::Then);
-		state.parse(out).autoFallbackLen(else_fwd - then_fwd - 1).with(&out->if_true, Lower::parse);
+		PARSE().one(Keyword::Then);
+		PARSE().autoFallbackLen(else_fwd - then_fwd - 1).with(&out->if_true, Lower::parse);
 
-		state.parse(out).one(Keyword::Else);
-		state.parse(out).autoFallbackLen(length - else_fwd - 1).with(&out->if_false, Lower::parse);
+		PARSE().one(Keyword::Else);
+		PARSE().autoFallbackLen(length - else_fwd - 1).with(&out->if_false, Lower::parse);
+
 		PST_RETURN out;
 	}
 

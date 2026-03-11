@@ -22,9 +22,9 @@ namespace pst::expr {
 
 		auto out = makeBox<RoundExpr>(state);
 
-		state.parse(out).goDown();
-		state.parse(out).with(&out->expr, Comma::parse);
-		state.parse(out).goUpAndSkip();
+		PARSE().goDown();
+		PARSE().with(&out->expr, Comma::parse);
+		PARSE().goUpAndSkip();
 
 		PST_RETURN out;
 	}

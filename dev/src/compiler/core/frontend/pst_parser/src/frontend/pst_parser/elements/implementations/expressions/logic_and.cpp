@@ -25,9 +25,9 @@ namespace pst::expr {
 
 		auto out = makeBox<LogicAnd>(state);
 
-		state.parse(out).autoFallbackLen(and_fwd).with(&out->left, Lower::parse);
-		state.parse(out).one(Keyword::And);
-		state.parse(out).with(&out->right, Self::parse);
+		PARSE().autoFallbackLen(and_fwd).with(&out->left, Lower::parse);
+		PARSE().one(Keyword::And);
+		PARSE().with(&out->right, Self::parse);
 
 		PST_RETURN out;
 	}

@@ -26,17 +26,17 @@ namespace pst::expr {
 
 		PST_WHILE(fwd < length) {
 			out->sub_expr.emplace_back(nullptr);
-			state.parse(out).autoFallbackLen(fwd).with(&out->sub_expr.back(), Lower::parse);
+			PARSE().autoFallbackLen(fwd).with(&out->sub_expr.back(), Lower::parse);
 
 			out->operators.push_back(state[0].asBinaryOperator().value());
-			state.parse(out).eatOne();
+			PARSE().eatOne();
 
 			length -= fwd + 1;
 			fwd = skipToOp(state, 0);
 		}
 
 		out->sub_expr.emplace_back(nullptr);
-		state.parse(out).with(&out->sub_expr.back(), Lower::parse);
+		PARSE().with(&out->sub_expr.back(), Lower::parse);
 
 		PST_RETURN out;
 	}

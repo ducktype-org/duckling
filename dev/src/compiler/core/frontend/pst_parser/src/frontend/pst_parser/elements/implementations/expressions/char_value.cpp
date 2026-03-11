@@ -18,7 +18,7 @@ namespace pst::expr {
 		}
 
 		auto out = makeBox<ExprCharValue>(state, state[0].getValue());
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		if (length > 1) state.logInt(makeBox<MoreThanCharValueError>(pos));
 
