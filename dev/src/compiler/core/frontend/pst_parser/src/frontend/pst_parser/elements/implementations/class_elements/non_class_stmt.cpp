@@ -3,9 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<NonClassStmt> NonClassStmt::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<NonClassStmt>(position, ctx);
+	MBox<NonClassStmt> NonClassStmt::parse(LangParserState& state) {
+		auto out = makeBox<NonClassStmt>(state);
 
 		Keyword as_keyword = state[0].asKeyword();
 		CORE_ASSERT(
@@ -30,7 +29,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& NonClassStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& NonClassStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, inner_decl_kind);
 		addToHash(partial_hash, inner_decl_symbol_name.has_value());
 		if (inner_decl_symbol_name.has_value())

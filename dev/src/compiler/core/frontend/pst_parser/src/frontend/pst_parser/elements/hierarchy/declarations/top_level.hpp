@@ -8,6 +8,11 @@ namespace pst {
 	 */
 	class TopLevel final: public Decl {
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
+		/**
+		 * @brief The ordering in the top-level is based on context and usually changed by passing
+		 * the correct PSTType option to PST or a whole custom context.
+		 */
+		BlockOrderType type = BlockOrderType::Undefined;
 
 		/**
 		 * This is the division of statements inside the block based on their symbol declaration

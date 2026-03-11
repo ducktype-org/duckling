@@ -5,8 +5,7 @@
 namespace pst {
 	MBox<TuplePattern> TuplePattern::parse(LangParserState& state) {
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Round)) return nullptr;
-		auto position = state.getPosition();
-		auto out      = makeBox<TuplePattern>(position);
+		auto out = makeBox<TuplePattern>(state);
 		PARSE().one(&out->elements);
 		PST_RETURN out;
 	}
@@ -19,7 +18,7 @@ namespace pst {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& TuplePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& TuplePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

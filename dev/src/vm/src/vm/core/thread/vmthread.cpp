@@ -699,4 +699,9 @@ namespace vm {
 		has_gil = false;
 		process.getGIL().release();
 	}
+
+
+	void VMThread::setThreadCtx(std::string name) { thread_ctx = std::move(name); }
+
+	std::string VMThread::getThreadCtx() { return thread_ctx; }
 }

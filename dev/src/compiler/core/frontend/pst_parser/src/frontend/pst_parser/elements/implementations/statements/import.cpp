@@ -5,8 +5,7 @@
 
 namespace pst {
 	MBox<Import> Import::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Import>(position);
+		auto out = makeBox<Import>(state);
 
 		if (!assertStmtChoice<Import>(state, state[0].is(Keyword::Import))) return nullptr;
 
@@ -25,7 +24,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Import::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Import::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

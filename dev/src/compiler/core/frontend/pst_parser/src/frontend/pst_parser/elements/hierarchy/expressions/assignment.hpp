@@ -16,7 +16,7 @@ namespace pst::expr {
 		NAMED_CHILD(value, ExprElement);
 
 	public:
-		explicit Assignment(const dia::SourcePosition& position): ExprElement(position, 1'000) {}
+		explicit Assignment(const LangParserState& state): ExprElement(state, 1'000) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

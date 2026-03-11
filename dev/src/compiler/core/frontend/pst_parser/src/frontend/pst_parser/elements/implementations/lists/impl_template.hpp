@@ -122,9 +122,7 @@ namespace pst {
 			GetName                   getName,
 			class ParsingClass = ListElements>
 		static auto parseList(LangParserState& state) -> MBox<Self> {
-			auto position = state.getPosition();
-
-			Box<Self> out = makeBox<Self>(position);
+			Box<Self> out = makeBox<Self>(state);
 
 			// Handle opening brackets:
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
@@ -152,7 +150,7 @@ namespace pst {
 						expr_length++;
 					}
 
-					state.setFallback(expr_length);
+					PARSE().fallbackLen(expr_length);
 
 					if (expr_length == 0) {
 						// Handle empty field errors with sensible ranges
@@ -176,7 +174,7 @@ namespace pst {
 						PARSE().assign(&out->elements.back(), std::move(box));
 					}
 
-					state.exitFallback();
+					PARSE().exitFallback();
 
 					if (isEnding(state.ctokens(), 0)) break;
 					if (isSeparator(state.ctokens(), 0)) {

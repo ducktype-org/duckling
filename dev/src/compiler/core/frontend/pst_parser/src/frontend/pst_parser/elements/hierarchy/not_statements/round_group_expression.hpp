@@ -10,7 +10,7 @@ namespace pst {
 		NAMED_CHILD(expr, CommaExprHolder);
 
 	public:
-		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {
+		explicit RoundGroupExpr(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::RoundGroupExpr;
 		}
 

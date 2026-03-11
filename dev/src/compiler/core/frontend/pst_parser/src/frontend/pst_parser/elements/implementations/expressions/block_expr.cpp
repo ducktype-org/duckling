@@ -15,9 +15,12 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<BlockExpr>(state.getPosition());
+		auto out = makeBox<BlockExpr>(state);
 
-		PARSE().withDef(&out->block, BlockOrderType::Ordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().one(&out->block);
+		})
 
 		PST_RETURN out;
 	}
@@ -31,7 +34,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& BlockExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& BlockExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

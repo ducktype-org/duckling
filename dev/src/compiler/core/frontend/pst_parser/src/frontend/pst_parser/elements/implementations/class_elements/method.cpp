@@ -4,16 +4,18 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Method> Method::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Method>(position, ctx);
+	MBox<Method> Method::parse(LangParserState& state) {
+		auto out = makeBox<Method>(state);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		PARSE().all(Keyword::Fun, &out->name, &out->params);
 		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 
-		PARSE().one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().all(NamedOperator::Assign, &out->body);
+		})
 
 		PST_RETURN out;
 	}
@@ -38,7 +40,7 @@ namespace pst {
 		return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
 	}
 
-	LangElement::HashAlg& Method::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Method::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, ret.has_value());
 		return partial_hash;

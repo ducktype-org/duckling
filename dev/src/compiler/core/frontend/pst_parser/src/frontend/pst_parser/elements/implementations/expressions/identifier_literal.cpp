@@ -7,7 +7,7 @@ namespace pst::expr {
 	MBox<ExprElement> IdentifierLiteral::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		auto out = makeBox<IdentifierLiteral>(state.getPosition());
+		auto out = makeBox<IdentifierLiteral>(state);
 
 		PARSE().one(&out->name);
 
@@ -30,8 +30,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& IdentifierLiteral::addElementDataToStableHash(HashAlg& partial_hash
-	) const {
+	HashAlg& IdentifierLiteral::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, template_specifier.has_value());
 		return partial_hash;

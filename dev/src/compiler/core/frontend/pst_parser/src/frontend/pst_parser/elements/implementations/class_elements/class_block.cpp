@@ -3,9 +3,13 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<ClassBlock> ClassBlock::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<ClassBlock>(position);
+	MBox<ClassBlock> ClassBlock::parse(LangParserState& state) {
+		CORE_ASSERT(
+			state.getContext()->block_order == BlockOrderType::Unordered,
+			"Class block should have unordered order type"
+		);
+
+		auto out = makeBox<ClassBlock>(state);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.logInt(makeBox<error::BlockStartError>(state.getPosition()));
@@ -16,7 +20,7 @@ namespace pst {
 
 		PST_WHILE(state.notEmpty()) {
 			MBox<ClassStmt> stmt;
-			PARSE().with(&stmt, ClassStmt::parse, ctx);
+			PARSE().with(&stmt, ClassStmt::parse);
 			if (stmt) {
 				out->statements.emplace_back(nullptr);
 				PARSE().assign(&out->statements.back(), std::move(stmt));
@@ -104,7 +108,7 @@ namespace pst {
 		out << "]";
 	}
 
-	LangElement::HashAlg& ClassBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ClassBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, statements.size());
 		addToHash(partial_hash, no_symbol.size());
 		addToHash(partial_hash, transparent.size());

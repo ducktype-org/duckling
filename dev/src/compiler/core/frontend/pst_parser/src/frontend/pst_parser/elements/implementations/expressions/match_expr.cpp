@@ -11,8 +11,7 @@ namespace pst::expr {
 
 		if (!state[0].is(Keyword::Match)) return Lower::parse(state, length);
 
-		auto position = state.getPosition();
-		auto out      = makeBox<MatchExpr>(position);
+		auto out = makeBox<MatchExpr>(state);
 
 		if (!assertStmtChoice<MatchExpr>(state, state[0].is(Keyword::Match))) return nullptr;
 		PARSE().one(Keyword::Match);
@@ -22,9 +21,9 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		state.goDown();
+		PARSE().goDown();
 		PARSE().one(&out->value_to_match);
-		state.goUpAndSkip();
+		PARSE().goUpAndSkip();
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.logInt(makeBox<MatchCurlyBracketError>(state.getPosition()));
@@ -67,7 +66,7 @@ namespace pst::expr {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& MatchExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& MatchExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, cases.size());
 		return partial_hash;
 	}

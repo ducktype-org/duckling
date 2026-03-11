@@ -38,7 +38,7 @@ namespace pst::expr {
 			return Lower::parse(state, std::get<i64>(expr));
 		} else {
 			auto op  = std::get<Box<OperatorBuilder>>(expr).ref();
-			auto out = makeBox<GeneralBinary>(state.getPosition(), op->type);
+			auto out = makeBox<GeneralBinary>(state, op->type);
 
 			PARSE().with(&out->left, parseRecursive, op->lhs);
 			PARSE().one(op->type);

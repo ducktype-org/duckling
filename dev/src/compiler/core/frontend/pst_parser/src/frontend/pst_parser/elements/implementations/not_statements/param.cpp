@@ -5,8 +5,7 @@
 namespace pst {
 
 	MBox<Param> Param::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Param>(position);
+		auto out = makeBox<Param>(state);
 
 		PARSE().all(&out->name, NamedOperator::Colon);
 
@@ -36,7 +35,7 @@ namespace pst {
 		out << "}}";
 	}
 
-	LangElement::HashAlg& Param::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Param::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, initial.has_value());
 		return partial_hash;

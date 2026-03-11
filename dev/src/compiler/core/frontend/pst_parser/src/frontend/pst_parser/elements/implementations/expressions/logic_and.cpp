@@ -21,7 +21,7 @@ namespace pst::expr {
 		}
 		if (!and_found) return Lower::parse(state, length);
 
-		auto out = makeBox<LogicAnd>(pos);
+		auto out = makeBox<LogicAnd>(state);
 
 		PARSE().with(&out->left, Lower::parse, +and_fwd);
 		PARSE().one(Keyword::And);
