@@ -61,7 +61,8 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn new(root: PathBuf) -> Self {
+    pub fn new(root: impl Into<PathBuf>) -> Self {
+        let root = root.into();
         let packages_dir = root.join(PKGS_DIR_NAME);
         let venvs_dir = root.join(VENVS_DIR_NAME);
 

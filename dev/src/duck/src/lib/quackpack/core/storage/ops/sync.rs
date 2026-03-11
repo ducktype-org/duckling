@@ -48,7 +48,7 @@ pub fn sync(
     let storage_localization = venv_config
         .storage_path()?
         .unwrap_or(package.ctx().default_storage_root());
-    let storage = Storage::new(storage_localization.to_path_buf());
+    let storage = Storage::new(storage_localization);
     let fetcher = Fetcher::new(package.ctx())?;
     let git_access = StorageGitAccess::new(&storage);
     let expose_freezefile = venv_config.is_freezefile_exposed()?;
