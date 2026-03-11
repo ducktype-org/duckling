@@ -2,6 +2,8 @@
 
 #include <cstddef>
 
+namespace vm::jit::cnp {
+
 struct JitMemory {
 	static JitMemory allocate(size_t size);
 
@@ -16,3 +18,5 @@ struct JitMemory {
 	std::byte* memory;
 	size_t     size;
 };
+
+}

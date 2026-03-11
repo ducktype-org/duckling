@@ -9,7 +9,7 @@
 #include <span>
 #include <string_view>
 
-namespace vm::jit {
+namespace vm::jit::cnp {
 	struct LLVM_nm_data {
 		const char*              name;
 		const char*              type;
