@@ -320,6 +320,13 @@ namespace compiler::helios {
 					                ->valueOrThrow()
 					                .ref();
 					output(expr->expression_type.getSymbolType());
+				} else {
+					// "void" return should actually deduce to unit type:
+					output(tsh::SymbolType<>{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					});
 				}
 			}
 
