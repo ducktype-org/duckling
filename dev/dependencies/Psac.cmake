@@ -1,15 +1,3 @@
-# include(FetchContent)
-
-# set(PSAC_COMMIT "acec8165ee1a6046a10ff601f90b42e06613ea0b")
-
-# FetchContent_Declare(
-# 	psac
-# 	URL "https://github.com/poleszc/psac/archive/${PSAC_COMMIT}.zip"
-# 	SYSTEM
-# )
-
-# FetchContent_MakeAvailable(psac)
-
 include(FetchContent)
 
 set(PSAC_COMMIT "acec8165ee1a6046a10ff601f90b42e06613ea0b")
