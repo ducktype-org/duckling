@@ -1,4 +1,5 @@
-#include "../memory/memory.cpp"  // for easy invocation
+#include "../memory/memory.cpp"
+#include "../stencils/dynamic_linker.cpp"
 #include "../memory/memory.hpp"
 #include "../stencils/import_stencils.hpp"
 
@@ -38,13 +39,13 @@ public:
 private:
 	void printBinary() {
 		std::cerr << "Binary:\n";
-		for (char c: stencils.binary) std::cerr << std::hex << (int) (unsigned char) c << ' ';
+		for (std::byte c: stencils.binary()) std::cerr << std::hex << (int) (unsigned char) c << ' ';
 		std::cerr << "\nFunctions:\n";
-		for (vm::jit::LLVM_nm_data data: stencils.functions) std::cerr << data.name << '\n';
+		for (vm::jit::LLVM_nm_data data: stencils.functions()) std::cerr << data.name << '\n';
 	}
 
 	constexpr static auto find_func = [](auto name) {
-		for (vm::jit::LLVM_nm_data data: stencils.functions)
+		for (vm::jit::LLVM_nm_data data: stencils.functions())
 			if (data.name == name) return data;
 		CORE_PANIC("No function with that name");
 	};
@@ -75,12 +76,12 @@ private:
 	}
 
 	void testCallingSimple() {
-		auto simple = stencils.findSymbol<int(int)>("calling_simple_odd");
+		auto simple = stencils.dynlib.findSymbol<int(int)>("calling_simple_odd");
 		for (int i = 0; i < 10; ++i) ASSERT_EQUAL(std::invoke(simple, i), 2 * i + 1);
 	}
 
 	void testCallingRecursive() {
-		auto fibonacci_sum = stencils.findSymbol<int(int)>("calling_fibonacci_sum");
+		auto fibonacci_sum = stencils.dynlib.findSymbol<int(int)>("calling_fibonacci_sum");
 
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 0), 1);
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 1), 2);
@@ -89,7 +90,7 @@ private:
 	}
 
 	void testCallingLibc() {
-		auto calling_libc    = stencils.findSymbol<int*(int)>("calling_libc");
+		auto calling_libc    = stencils.dynlib.findSymbol<int*(int)>("calling_libc");
 		auto from_jit_memory = base::Box<int>::fromPointer(std::invoke(calling_libc, 100));
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL(from_jit_memory.get()[i], i);
 	}
