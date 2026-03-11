@@ -16,7 +16,13 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     # Force resolution of local function calls (is it needed?)
     add_custom_command(
         OUTPUT ${linked_out}
-        COMMAND ${CMAKE_CXX_COMPILER} -Bsymbolic-functions -shared ${binary_file} -o ${linked_out}
+        COMMAND ${CMAKE_CXX_COMPILER}
+        -Bsymbolic-functions
+        -fno-plt
+        -shared
+        -fPIC
+        ${binary_file}
+        -o ${linked_out}
         DEPENDS ${binary_file} ${extra_deps}
     )
     set_source_files_properties("${linked_out}" PROPERTIES GENERATED TRUE)
@@ -67,6 +73,7 @@ target_compile_options(mock_stencils PRIVATE
     -fPIC
     -fno-plt
     -fno-semantic-interposition
+    -mllvm=--inline-threshold=3000000
 )
 process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
 duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
