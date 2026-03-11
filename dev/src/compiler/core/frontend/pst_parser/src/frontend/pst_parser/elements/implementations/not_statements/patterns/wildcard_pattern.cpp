@@ -8,7 +8,7 @@ namespace pst {
 		if (!state[0].is(Special::Underscore)) return nullptr;
 
 		auto out = makeBox<WildcardPattern>(state);
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 		PST_RETURN out;
 	}
 

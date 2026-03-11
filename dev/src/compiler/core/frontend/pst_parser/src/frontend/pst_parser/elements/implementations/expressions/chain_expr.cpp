@@ -32,7 +32,7 @@ namespace pst::expr {
 
 		auto out = makeBox<ChainExpr>(state);
 
-		state.parse(out).with(&out->atom, Lower::parse, +fwd);
+		PARSE().with(&out->atom, Lower::parse, +fwd);
 		length -= fwd;
 
 		PST_WHILE(length > 0) {
@@ -40,10 +40,10 @@ namespace pst::expr {
 			MBox<ExprElement> extension;
 			if (state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)) {
-				state.parse(out).with(&extension, Access::parse, +fwd);
+				PARSE().with(&extension, Access::parse, +fwd);
 			} else if (state[0].isBracketGroup(lexer::Token::Round)
 			           || state[0].isBracketGroup(lexer::Token::Square)) {
-				state.parse(out).with(&extension, Call::parse, +fwd);
+				PARSE().with(&extension, Call::parse, +fwd);
 			} else {
 				state.logInt(makeBox<BadChainExprError>(
 					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())
@@ -52,7 +52,7 @@ namespace pst::expr {
 			}
 			if (extension) {
 				out->chain.emplace_back(nullptr);
-				state.parse(out).assign(&out->chain.back(), std::move(extension));
+				PARSE().assign(&out->chain.back(), std::move(extension));
 			}
 			length -= fwd;
 		}
