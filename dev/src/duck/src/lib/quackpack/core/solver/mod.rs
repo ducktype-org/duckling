@@ -29,7 +29,6 @@ mod tests;
 
 use std::{
     collections::{HashMap, HashSet},
-    marker::PhantomData,
     path::PathBuf,
 };
 
@@ -47,23 +46,13 @@ use crate::{
     },
 };
 
-pub trait SolverState {}
-
-pub struct Created;
-pub struct Prepared;
-
-impl SolverState for Created {}
-impl SolverState for Prepared {}
-
 /// A struct designated to finding the dependency resolution of a given package.
-pub struct Solver<'duck, State: SolverState> {
+pub struct SolverGathererData<'duck> {
     fetcher: &'duck Fetcher<'duck>,
     root_package_ctx: &'duck PackageCtx<'duck>,
     root_pkg: ExpandedPackage,
     root_pkg_features: HashSet<FeatureName>,
     current_freeze: SolverFreeze,
-    gathered_info: Option<SolverInput>,
-    state: PhantomData<State>,
     mode: SolverMode,
 }
 
@@ -72,12 +61,12 @@ pub struct SolverAnswer {
     pub pkgs_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
 }
 
-pub enum ShouldRunSolverEngine<'duck> {
+pub enum ShouldRunSolverEngine {
     No(SolverAnswer),
-    Yes(Box<Solver<'duck, Prepared>>),
+    Yes(Box<SolverEngineData>),
 }
 
-impl<'duck> Solver<'duck, Prepared> {
+impl<'duck> SolverGathererData<'duck> {
     /// Creates a new [`Solver`] instance.
     pub fn new(
         package_ctx: &'duck PackageCtx<'duck>,
@@ -103,8 +92,6 @@ impl<'duck> Solver<'duck, Prepared> {
                 .collect(),
             fetcher,
             current_freeze,
-            gathered_info: None,
-            state: PhantomData,
             mode,
         }
     }
@@ -114,7 +101,7 @@ impl<'duck> Solver<'duck, Prepared> {
     pub fn prepare_solving<Access: GitAccess>(
         self,
         git_access: &Access,
-    ) -> QuackResult<ShouldRunSolverEngine<'duck>> {
+    ) -> QuackResult<ShouldRunSolverEngine> {
         let gatherer = Gatherer::new(self.fetcher, git_access);
 
         let root_manifest = self.root_package_ctx.package().manifest().clone();
@@ -157,15 +144,11 @@ impl<'duck> Solver<'duck, Prepared> {
             prev_freeze_manifests,
             gathered_info,
         );
-        Ok(ShouldRunSolverEngine::Yes(Box::new(Solver {
-            fetcher: self.fetcher,
-            root_package_ctx: self.root_package_ctx,
+        Ok(ShouldRunSolverEngine::Yes(Box::new(SolverEngineData {
             root_pkg: self.root_pkg,
             root_pkg_features: self.root_pkg_features,
             current_freeze: maximal_valid_freeze,
-            gathered_info: Some(solver_input),
-            state: PhantomData,
-            mode: self.mode,
+            input: solver_input,
         })))
     }
 
@@ -203,14 +186,19 @@ impl<'duck> Solver<'duck, Prepared> {
     }
 }
 
-impl<'duck> Solver<'duck, Prepared> {
+#[derive(Debug)]
+pub struct SolverEngineData {
+    input: SolverInput,
+    root_pkg: ExpandedPackage,
+    root_pkg_features: HashSet<FeatureName>,
+    current_freeze: SolverFreeze,
+}
+
+impl SolverEngineData {
     pub fn solve(self) -> QuackResult<SolverAnswer> {
-        let Some(input) = self.gathered_info else {
-            qp_bail_internal!("Tried to run solver without input specified");
-        };
-        let manifests = input.gathered_manifests.clone();
+        let manifests = self.input.gathered_manifests.clone();
         let solver_output =
-            SolverEngine::run_engine(input, &(self.root_pkg, self.root_pkg_features))?;
+            SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
         let new_freeze = self.current_freeze.new_freeze(&manifests, solver_output)?;
         Ok(SolverAnswer {
             new_freeze,

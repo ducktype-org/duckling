@@ -15,7 +15,7 @@ use crate::{
 use url::Url;
 
 use crate::quackpack::core::{
-    PackageCtx, ShouldRunSolverEngine, Solver,
+    PackageCtx, ShouldRunSolverEngine, SolverGathererData,
     fetcher::Fetcher,
     solver_freeze::{SolverFreeze, SolverPackageFreeze},
     solver_mode::SolverMode,
@@ -217,7 +217,8 @@ dependencies:
         .into(),
     };
 
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
+    let solver =
+        SolverGathererData::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
     let ShouldRunSolverEngine::Yes(solver) = solver.prepare_solving(&MockGitAccess()).unwrap()
     else {
         panic!()
@@ -333,7 +334,8 @@ dependencies:
         .into(),
     };
 
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
+    let solver =
+        SolverGathererData::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
     let ShouldRunSolverEngine::No(answer) = solver.prepare_solving(&MockGitAccess()).unwrap()
     else {
         panic!()
@@ -439,7 +441,7 @@ dependencies:
         supress_foreign_manifests_errors: true,
         frozen: false,
     };
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, mode);
+    let solver = SolverGathererData::new(&pkg_ctx, &fetcher, previous_freeze, mode);
     let ShouldRunSolverEngine::Yes(solver) = solver.prepare_solving(&MockGitAccess()).unwrap()
     else {
         panic!()

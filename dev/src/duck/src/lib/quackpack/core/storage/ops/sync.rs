@@ -7,8 +7,8 @@ use crate::{
     QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err,
     quackpack::{
         core::{
-            BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine, Solver,
-            SolverAnswer,
+            BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine,
+            SolverAnswer, SolverGathererData,
             fetcher::{Fetcher, types::PackageWithUrl},
             git_access::GitAccess,
             solver_freeze::SolverFreeze,
@@ -176,7 +176,7 @@ fn get_solver_answer<'duck>(
         Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
-    let solver = Solver::new(package, fetcher, solver_freeze, mode);
+    let solver = SolverGathererData::new(package, fetcher, solver_freeze, mode);
     let fetcher_lock = package
         .ctx()
         .duck_home()
