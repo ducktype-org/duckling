@@ -88,10 +88,10 @@ namespace compiler::mir {
 	 */
 	struct FunctionBuilder final {
 	private:
-		base::Optional<base::StrID>                                   name;
-		base::StableVector<BlockBuilder>                              blocks;
-		base::Optional<BlockBuilderRef>                               entry_block;
-		base::StableVector<MIRLocal>                                  local_list;
+		base::Optional<base::StrID>      name;
+		base::StableVector<BlockBuilder> blocks;
+		base::Optional<BlockBuilderRef>  entry_block;
+		base::StableVector<MIRLocal>     local_list;
 		// @TODO (review): should this be a ConHashMap?
 		base::StableHashMap<helios::code::HOUTExprID, MIRLocalMutRef> reusable_expr_locals;
 		tsh::FunctionAbstractType                                     function_type;

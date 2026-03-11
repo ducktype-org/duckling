@@ -981,12 +981,8 @@ private:
 		auto symbol_name = [](const char* name, auto&& symbol) {
 			return base::strConcat("(Symbol ", name, " (", symbol.queryUnstablePerfectHash(), "))");
 		};
-		auto tmp = [](const std::string& expr) {
-			return base::strConcat("[tmp](", expr, ")");
-		};
-		auto reuse = [](const std::string& expr) {
-			return base::strConcat("[reuse](", expr, ")");
-		};
+		auto tmp   = [](const std::string& expr) { return base::strConcat("[tmp](", expr, ")"); };
+		auto reuse = [](const std::string& expr) { return base::strConcat("[reuse](", expr, ")"); };
 
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
@@ -1029,12 +1025,29 @@ private:
 		expr_cmp->debugPrint(out_cmp);
 		ASSERT_EQUAL_PRINT(
 			(base::strConcat(
-				symbol_name("V1", sym_v1), " < ", tmp("3"), " and ",
-				reuse("3"), " <= ", tmp("4"), " and ",
-				reuse("4"), " == ", tmp("5"), " and ",
-				reuse("5"), " != ", tmp("6"), " and ",
-				reuse("6"), " >= ", tmp("7"), " and ",
-				reuse("7"), " > ", tmp(symbol_name("VM1", sym_vm1))
+				symbol_name("V1", sym_v1),
+				" < ",
+				tmp("3"),
+				" and ",
+				reuse("3"),
+				" <= ",
+				tmp("4"),
+				" and ",
+				reuse("4"),
+				" == ",
+				tmp("5"),
+				" and ",
+				reuse("5"),
+				" != ",
+				tmp("6"),
+				" and ",
+				reuse("6"),
+				" >= ",
+				tmp("7"),
+				" and ",
+				reuse("7"),
+				" > ",
+				tmp(symbol_name("VM1", sym_vm1))
 			)),
 			out_cmp.str()
 		);

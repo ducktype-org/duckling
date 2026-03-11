@@ -333,7 +333,8 @@ namespace compiler::mir {
 				auto comparison_hole = comparison_block->addHole();
 
 				// Now, lower the comparison
-				auto [comp_cont, comp_res] = lower_subexpr_with_result(comp.ref(), comparison_block);
+				auto [comp_cont, comp_res]
+					= lower_subexpr_with_result(comp.ref(), comparison_block);
 
 				// Finally, fill in the comparison instruction.
 				// Remember to set construction flag for boolean_output only for the first comparison.

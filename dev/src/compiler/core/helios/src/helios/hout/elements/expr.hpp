@@ -231,9 +231,7 @@ namespace compiler::helios::code {
 		SharedBox<Expr> inner;
 		bool            first_use;
 
-		ReusableExpr(
-			query::Context& ctx, Box<Expr> inner, bool first_use = true
-		);
+		ReusableExpr(query::Context& ctx, Box<Expr> inner, bool first_use = true);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

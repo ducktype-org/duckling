@@ -119,9 +119,7 @@ namespace {
 				// runtime.
 				return llvm::ConstantInt::get(llvm_type.get(), 0, false);
 			}
-			variant_case(char, c) {
-				return llvm::ConstantInt::get(llvm_type.get(), c);
-			}
+			variant_case(char, c) { return llvm::ConstantInt::get(llvm_type.get(), c); }
 			variant_case(base::StrID, str) {
 				// First, create a global constant for the string data
 				const auto string_constant = llvm::ConstantDataArray::getString(

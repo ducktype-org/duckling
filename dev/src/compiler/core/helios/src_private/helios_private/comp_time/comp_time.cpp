@@ -854,7 +854,7 @@ namespace compiler::helios {
 				variant_case(CouldNotShortPath, _) {
 					// If TreeEval failed, try to evaluate with VM.
 					if (const auto* reusable_expr
-						= dynamic_cast<const code::ReusableExpr*>(expr.get())) {
+					    = dynamic_cast<const code::ReusableExpr*>(expr.get())) {
 						// If it's a reusable expression, propagate evaluation inwards.
 						return evalHoutExpr(ctx, reusable_expr->inner.ref());
 					}

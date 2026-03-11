@@ -41,7 +41,8 @@ namespace compiler::helios {
 												 ImplicitConstructor,
 												 BuiltinOperator,
 												 Parameter,
-												SelfParameter, Variable,
+												 SelfParameter,
+												 Variable,
 												 ReplExpressionWrapper>& data):
 			  data(data) {}
 

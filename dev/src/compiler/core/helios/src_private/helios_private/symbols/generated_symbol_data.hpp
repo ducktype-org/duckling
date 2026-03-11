@@ -89,8 +89,10 @@ namespace compiler::helios::houtgen {
 		std::variant<ImplicitConstructor, BuiltinOperator, Parameter, SelfParameter, Variable, ReplExpressionWrapper>
 			data;
 
-		explicit GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, BuiltinOperator, Parameter,
+		explicit GeneratedSymbolData(const std::variant<
+									 ImplicitConstructor,
+									 BuiltinOperator,
+									 Parameter,
 									 SelfParameter,
 									 Variable,
 									 ReplExpressionWrapper>& data);

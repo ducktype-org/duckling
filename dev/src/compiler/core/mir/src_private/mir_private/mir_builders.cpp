@@ -193,13 +193,15 @@ namespace compiler::mir {
 		return local_list.last();
 	}
 
-	MIRLocalMutRef FunctionBuilder::addTmp(const helios::code::ReusableExpr& reusable_expr, const ScopeRef scope) {
-		auto expr_id     = reusable_expr.inner->getID();
+	MIRLocalMutRef FunctionBuilder::addTmp(
+		const helios::code::ReusableExpr& reusable_expr, const ScopeRef scope
+	) {
+		auto expr_id = reusable_expr.inner->getID();
 		if (auto found = reusable_expr_locals.atMaybeCopy(expr_id); found.has_value())
 			return found.value();
 
 		const auto symbol_type = reusable_expr.expression_type.getSymbolType();
-		auto tmp = addTmp(symbol_type, scope);
+		auto       tmp         = addTmp(symbol_type, scope);
 		reusable_expr_locals.put(expr_id, tmp);
 		return tmp;
 	}

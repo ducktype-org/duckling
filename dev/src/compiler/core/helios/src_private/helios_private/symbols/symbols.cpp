@@ -490,9 +490,7 @@ namespace compiler::helios {
 					std::vector<SymbolData> output_symbol_data;
 
 					auto char_type = tsh::SymbolType<>(
-						tsh::getCharType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
+						tsh::getCharType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 					);
 					auto i32_type = tsh::SymbolType<>(
 						tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
