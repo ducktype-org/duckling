@@ -8,7 +8,7 @@ namespace pst::expr {
 	MBox<ExprElement> Ternary::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
-		u64 length = state.ctokens().size();
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 

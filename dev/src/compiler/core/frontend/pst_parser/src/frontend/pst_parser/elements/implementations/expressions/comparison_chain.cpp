@@ -17,7 +17,7 @@ namespace pst::expr {
 	MBox<ExprElement> ComparisonChain::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
-		u64 length = state.ctokens().size();
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		i64 fwd = skipToOp(state, 0);
 		if (fwd == length) return Lower::parse(state);
