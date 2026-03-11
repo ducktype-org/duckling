@@ -47,8 +47,8 @@ use crate::{
 };
 
 /// A struct designated to finding the full dependency graph of a given package.
-pub struct SolverGathererData<'duck> {
-    root_package_ctx: &'duck PackageCtx<'duck>,
+pub struct SolverGathererData<'duck, 'ctx> {
+    root_package_ctx: &'ctx PackageCtx<'duck>,
     root_pkg: ExpandedPackage,
     root_pkg_features: HashSet<FeatureName>,
     current_freeze: SolverFreeze,
@@ -66,10 +66,10 @@ pub enum ShouldRunSolverEngine {
     Yes(Box<SolverEngineData>),
 }
 
-impl<'duck> SolverGathererData<'duck> {
+impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     /// Creates a new [`SolverGathererData`] instance.
     pub fn new(
-        package_ctx: &'duck PackageCtx<'duck>,
+        package_ctx: &'ctx PackageCtx<'duck>,
         current_freeze: SolverFreeze,
         mode: SolverMode,
     ) -> Self {
@@ -96,9 +96,9 @@ impl<'duck> SolverGathererData<'duck> {
 
     /// Determines if all the transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`SolverEngineData`] for running the engine by constructing [`SolverInput`].
-    pub fn prepare_solving<'fetcher, Access: GitAccess>(
+    pub fn prepare_solving<Access: GitAccess>(
         self,
-        fetcher: &'fetcher mut Fetcher<'duck>,
+        fetcher: &mut Fetcher<'_>,
         git_access: &mut Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
         let mut gatherer = Gatherer::new(fetcher, git_access);

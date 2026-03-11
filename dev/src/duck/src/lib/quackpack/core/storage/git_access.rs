@@ -22,7 +22,7 @@ impl<'paths> StorageGitAccess<'paths> {
     }
 }
 
-impl<'paths> GitAccess for StorageGitAccess<'paths> {
+impl GitAccess for StorageGitAccess<'_> {
     fn git_path(&self, url: Url, commit: StrId) -> PathBuf {
         self.paths.pkg_dir(&PackageId::Git(GitId::new(url, commit)))
     }

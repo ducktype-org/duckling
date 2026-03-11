@@ -41,7 +41,7 @@ const MAX_BLOB_RETRY_COUNT: i32 = 3;
 /// returns *new* packages to install, we never remove nor overwrite anything in [`sync`],
 /// therefore we can drop `SyncLock`.
 pub fn sync(
-    package: &PackageCtx,
+    package: &PackageCtx<'_>,
     options: SyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     let storage = Storage::new(package.ctx().duck_home());
@@ -110,7 +110,11 @@ pub fn sync(
 /// Checks if the venv for which the sync is run was previously synced from a different location,
 /// and there is a manifest in that location.
 /// This would override that manifest's venv.
-fn check_if_overwrites(pkg_ctx: &PackageCtx, venv: Option<&Venv>, id: StrId) -> QuackResult<()> {
+fn check_if_overwrites(
+    pkg_ctx: &PackageCtx<'_>,
+    venv: Option<&Venv>,
+    id: StrId,
+) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
     if pkg_ctx.package().manifest_path() != venv.data().last_location()
         && venv.data().last_location().exists()
@@ -159,11 +163,11 @@ fn load_external_freezefile(
 }
 
 /// Helper for [`sync`].
-/// Prepares the input and runs [`Solver::prepare_solving`].
-fn get_solver_answer<'ctx, 'fetcher, 'access>(
-    package: &'ctx PackageCtx<'ctx>,
-    fetcher: &'fetcher mut Fetcher<'ctx>,
-    git_access: &mut StorageGitAccess<'access>,
+/// Prepares the input and runs [`SolverGathererData::prepare_solving`].
+fn get_solver_answer(
+    package: &PackageCtx<'_>,
+    fetcher: &mut Fetcher<'_>,
+    git_access: &mut StorageGitAccess<'_>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
