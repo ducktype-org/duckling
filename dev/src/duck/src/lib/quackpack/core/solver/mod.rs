@@ -100,7 +100,7 @@ impl<'duck> SolverGathererData<'duck> {
         fetcher: &'fetcher mut Fetcher<'duck>,
         git_access: &mut Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
-        let gatherer = Gatherer::new(fetcher, git_access);
+        let mut gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = self.root_package_ctx.package().manifest().clone();
         let root_features = root_manifest
@@ -109,7 +109,9 @@ impl<'duck> SolverGathererData<'duck> {
             .keys()
             .copied()
             .collect();
-        let mut prev_freeze_manifests = self.current_freeze.get_prev_freeze_manifests(&gatherer)?;
+        let mut prev_freeze_manifests = self
+            .current_freeze
+            .get_prev_freeze_manifests(&mut gatherer)?;
         prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
         let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
@@ -130,7 +132,7 @@ impl<'duck> SolverGathererData<'duck> {
 
         let root_path = self.root_package_ctx.package().root_directory().into();
         let gathered_info = Self::run_solver_gatherer(
-            &gatherer,
+            &mut gatherer,
             root_manifest,
             root_path,
             root_features,
@@ -153,7 +155,7 @@ impl<'duck> SolverGathererData<'duck> {
     /// Helper for [`Self::prepare_solving`].
     /// Runs the [`Gatherer`], to fetch all potentially necessary manifests.
     fn run_solver_gatherer<Access: GitAccess>(
-        gatherer: &Gatherer<'_, '_, '_, Access>,
+        gatherer: &mut Gatherer<'_, '_, '_, Access>,
         root_manifest: Manifest,
         root_path: PathBuf,
         root_features: HashSet<FeatureName>,

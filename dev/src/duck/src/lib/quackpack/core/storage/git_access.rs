@@ -32,7 +32,7 @@ impl<'paths> GitAccess for StorageGitAccess<'paths> {
             .is_package_stored(&PackageId::Git(GitId::new(url, commit)))
     }
 
-    fn store(&self, url: Url, commit: StrId, source_path: &Path) -> QuackResult<()> {
+    fn store(&mut self, url: Url, commit: StrId, source_path: &Path) -> QuackResult<()> {
         let id = PackageId::Git(GitId::new(url, commit));
         let dir = self.paths.pkg_dir(&id);
         if dir.exists() {

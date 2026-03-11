@@ -33,7 +33,7 @@ impl GitAccess for MockGitAccess {
     }
 
     fn store(
-        &self,
+        &mut self,
         _url: url::Url,
         _commit: crate::StrId,
         _source_path: &std::path::Path,

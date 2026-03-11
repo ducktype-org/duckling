@@ -40,7 +40,7 @@ impl GitAccess for MockGitAccess {
     }
 
     fn store(
-        &self,
+        &mut self,
         _url: url::Url,
         _commit: crate::StrId,
         _source_path: &std::path::Path,
@@ -391,7 +391,7 @@ dependencies:
     ));
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
-    let gatherer = Gatherer::new(&mut fetcher, &mut git_access);
+    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
@@ -525,7 +525,7 @@ dependencies:
     ));
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
-    let gatherer = Gatherer::new(&mut fetcher, &mut git_access);
+    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
@@ -595,7 +595,7 @@ features:
     ));
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
-    let gatherer = Gatherer::new(&mut fetcher, &mut git_access);
+    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
@@ -684,7 +684,7 @@ dependencies:
     ));
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
-    let gatherer = Gatherer::new(&mut fetcher, &mut git_access);
+    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
