@@ -133,11 +133,11 @@ namespace vm::builtins {
 		thread.process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
 
-	i64 FunctionHandlers::builtinCreateCV(VMThread& thread) {
+	u64 FunctionHandlers::builtinCreateCV(VMThread& thread) {
 		return thread.process.getSynchronizationPrimitives().addCV();
 	}
 
-	void FunctionHandlers::builtinWaitCV(VMThread& thread, i64 cv_id, i64 mutex_id) {
+	void FunctionHandlers::builtinWaitCV(VMThread& thread, u64 cv_id, u64 mutex_id) {
 		auto cv    = thread.process.getSynchronizationPrimitives().getCV(cv_id);
 		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
 
@@ -149,17 +149,17 @@ namespace vm::builtins {
 		thread.keepOrAcquireGil();
 	}
 
-	void FunctionHandlers::builtinNotifyCV(VMThread& thread, i64 cv_id) {
+	void FunctionHandlers::builtinNotifyCV(VMThread& thread, u64 cv_id) {
 		auto cv = thread.process.getSynchronizationPrimitives().getCV(cv_id);
 		cv->notifyOne();
 	}
 
-	void FunctionHandlers::builtinNotifyAllCV(VMThread& thread, i64 cv_id) {
+	void FunctionHandlers::builtinNotifyAllCV(VMThread& thread, u64 cv_id) {
 		auto cv = thread.process.getSynchronizationPrimitives().getCV(cv_id);
 		cv->notifyAll();
 	}
 
-	void FunctionHandlers::builtinDestroyCV(VMThread& thread, i64 cv_id) {
+	void FunctionHandlers::builtinDestroyCV(VMThread& thread, u64 cv_id) {
 		thread.process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 

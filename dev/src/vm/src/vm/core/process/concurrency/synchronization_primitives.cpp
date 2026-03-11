@@ -9,12 +9,12 @@ namespace vm {
 
 	void SynchronizationPrimitives::removeMutex(usize mutex_id) { mutex_pool.remove(mutex_id); }
 
-	Ref<ConditionVariable> SynchronizationPrimitives::getCV(i64 cv_id) {
+	Ref<ConditionVariable> SynchronizationPrimitives::getCV(usize cv_id) {
 		return cv_pool.get(cv_id);
 	}
 
-	i64 SynchronizationPrimitives::addCV() { return cv_pool.add(); }
+	usize SynchronizationPrimitives::addCV() { return cv_pool.add(); }
 
-	void SynchronizationPrimitives::removeCV(i64 cv_id) { cv_pool.remove(cv_id); }
+	void SynchronizationPrimitives::removeCV(usize cv_id) { cv_pool.remove(cv_id); }
 
 }

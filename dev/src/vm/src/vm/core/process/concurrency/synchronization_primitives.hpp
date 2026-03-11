@@ -23,7 +23,7 @@ namespace vm {
 		/**
 		 * @brief Pool for condition variables used in the process.
 		 */
-		base::ObjectPool<ConditionVariable> cv_pool;
+		base::StableObjectPool<ConditionVariable, u64, false> cv_pool;
 
 
 	public:
@@ -46,16 +46,16 @@ namespace vm {
 		/**
 		 * @brief Getter for condition variables in the pool.
 		 */
-		base::Ref<ConditionVariable> getCV(i64 cv_id);
+		base::Ref<ConditionVariable> getCV(usize cv_id);
 
 		/**
 		 * @brief Adds new condition variable into pool.
 		 */
-		i64 addCV();
+		usize addCV();
 
 		/**
 		 * @brief Removes condition variable from pool.
 		 */
-		void removeCV(i64);
+		void removeCV(usize);
 	};
 }
