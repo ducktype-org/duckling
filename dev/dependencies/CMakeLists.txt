@@ -9,10 +9,7 @@ include(Replxx.cmake)
 include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
 include(YamlCpp.cmake)
-include(Libffi.cmake)
-include(LspFramework.cmake)
-
-add_subdirectory(allocators)
+include(Psac.cmake)
 
 # These dependencies should be handled in main CMakeLists (for correct context)
 macro (insertDependencies)

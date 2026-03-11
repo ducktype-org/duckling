@@ -21,4 +21,12 @@ llvm_map_components_to_libnames(llvm_libs
 target_include_directories(llvm_example_playground PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)
 
-duck_add_playground(ffi ffi_playground.cpp USES Base PkgConfig::LIBFFI)
+
+
+add_executable(psac_example_playground psac_example_playground.cpp)
+target_link_libraries(psac_example_playground psac Base)
+target_compile_options(psac_example_playground PRIVATE 
+    -Wall -Wextra -Wfatal-errors
+    -g -Og -fno-omit-frame-pointer
+    -pthread -mcx16
+    )
