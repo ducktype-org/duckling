@@ -244,7 +244,16 @@ namespace compiler::helios {
 			if (element_scope_kind == ElementScopeKind::Transparent)
 				return parent.ref->perfectClone();
 
-
+			// simple parent sanity check:
+			// it is technically not needed anymore, but it left as an additional
+			// layer of bug detection.
+			// clang-format off
+			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID())) {
+				CORE_ASSERT(*scope_in_map == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
+			}
+			else {
+				parent_map.put(element->getID(), parent);
+			}
 			// clang-format on
 
 			return ScopeData{
@@ -588,13 +597,12 @@ namespace compiler::helios {
 						" considered scope : ",
 						key.ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						key.ref->relatedPSTElement().value().unlock(ctx)->getHash().toStringHex(),
+						key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 						"\n\n",
 						" scope of symbol: ",
 						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getHash().toStringHex(
-						),
+						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 						"\n"
 					)
 				);
