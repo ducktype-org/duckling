@@ -62,12 +62,12 @@ int main() {
 
 	LOG("Run PSAC for 10");
 
-	psac_write(&n, 3);
+	psac_write(&n, 10);
 	auto comp = psac_run(fib, &n, &result);
 	LOG("Result of fib(10) is: " << result.value);
 
 	LOG("Change n from 10 to 11");
-	psac_write(&n, 4);
+	psac_write(&n, 11);
 
 	LOG("Propagating after change");
 	psac_propagate(comp);
