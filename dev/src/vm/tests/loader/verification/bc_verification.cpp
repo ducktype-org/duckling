@@ -16,6 +16,7 @@ public:
 		// Function verification
 		TESTER_ADD_TEST(multipleFunctions);
 		TESTER_ADD_TEST(useArgumentAfterCall);
+		TESTER_ADD_TEST(mainVerification);
 
 		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
@@ -80,6 +81,15 @@ private:
 			{
 				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
+		);
+	}
+
+	void mainVerification() {
+		loadInvalidDbc(
+			"wrong/functions/invalid_main_ret_type.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"wrong/functions/invalid_main_ret_size.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
 		);
 	}
 
