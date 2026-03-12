@@ -114,7 +114,7 @@ namespace compiler::tsh {
 	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
 		  components(std::move(components)) {
 		representation = "Tuple" + stringifyTypeVector(this->components);
-		mangledName    = "T" + mangleTypeVector(this->components);
+		mangled_name   = "T" + mangleTypeVector(this->components);
 	}
 
 	bool TupleAbstractTypeImpl::hasNoOpDestructor() const {
@@ -135,7 +135,7 @@ namespace compiler::tsh {
 		  free(free) {
 		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
 		               + result_type.toString() + ")";
-		mangledName = "F" + result_type.getMangledName() + mangleTypeVector(this->parameter_types);
+		mangled_name = "F" + result_type.getMangledName() + mangleTypeVector(this->parameter_types);
 	}
 
 	bool FunctionAbstractTypeImpl::isImplicitlyCoercible(
@@ -169,7 +169,7 @@ namespace compiler::tsh {
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
-		mangledName    = "V" + mangleTypeVector(underlying_types);
+		mangled_name   = "V" + mangleTypeVector(underlying_types);
 	}
 
 	bool VariantAbstractTypeImpl::hasNoOpDestructor() const {
@@ -181,7 +181,7 @@ namespace compiler::tsh {
 	ClassAbstractTypeImpl::ClassAbstractTypeImpl(compiler::helios::SymID symbol, query::Context& ctx):
 		  symbol(symbol) {
 		representation = "Class " + name(symbol).str();
-		mangledName    = helios::mangler::getSimpleMangledName(ctx, symbol).str();
+		mangled_name   = helios::mangler::getSimpleMangledName(ctx, symbol).str();
 	}
 
 	CRef<TypeInterface> ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {

@@ -89,7 +89,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		const std::string& getMangledName() const {
-			return mangledName;
+			return mangled_name;
 		}
 
 		/**
@@ -154,7 +154,7 @@ namespace compiler::tsh {
 		/**
 		 * @brief The text representation of this type.
 		 */
-		std::string mangledName = "";
+		std::string mangled_name = "";
 	};
 
 	std::vector<Box<const AbstractTypeImpl>>& getTypes();
@@ -178,7 +178,7 @@ namespace compiler::tsh {
 
 		UnitAbstractTypeImpl() {
 			representation = "()";
-			mangledName    = "u";
+			mangled_name   = "u";
 		}
 
 		[[nodiscard]] bool isImplicitlyCoercible(AbstractType target, query::Context& context)
@@ -206,7 +206,7 @@ namespace compiler::tsh {
 
 		VoidAbstractTypeImpl() {
 			representation = "void";
-			mangledName    = "v";
+			mangled_name   = "v";
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
@@ -230,7 +230,7 @@ namespace compiler::tsh {
 
 		explicit ByteAbstractTypeImpl() {
 			representation = "byte";
-			mangledName    = "y";
+			mangled_name   = "y";
 		}
 
 		[[nodiscard]]
@@ -259,7 +259,7 @@ namespace compiler::tsh {
 
 		explicit BoolAbstractTypeImpl() {
 			representation = "bool";
-			mangledName    = "b";
+			mangled_name   = "b";
 		}
 
 		[[nodiscard]]
@@ -288,7 +288,7 @@ namespace compiler::tsh {
 
 		explicit CharAbstractTypeImpl() {
 			representation = "char";
-			mangledName    = "c";
+			mangled_name   = "c";
 		}
 
 		[[nodiscard]]
@@ -330,10 +330,10 @@ namespace compiler::tsh {
 			  signedness(signedness) {
 			if (signedness == IntegralAbstractType::Signedness::Signed) {
 				representation = base::strConcat("i", size);
-				mangledName    = base::strConcat("i", size);
+				mangled_name   = base::strConcat("i", size);
 			} else {
 				representation = base::strConcat("u", size);
-				mangledName    = base::strConcat("j", size);
+				mangled_name   = base::strConcat("j", size);
 			}
 		}
 
@@ -378,7 +378,7 @@ namespace compiler::tsh {
 
 		explicit FloatAbstractTypeImpl(usize size): size(Bits(size)) {
 			representation = base::strConcat("f", size);
-			mangledName    = base::strConcat("f", size);
+			mangled_name   = base::strConcat("f", size);
 		}
 
 		[[nodiscard]]
@@ -460,7 +460,7 @@ namespace compiler::tsh {
 
 		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
 			representation = base::strConcat("pointer(", component.toString(), ")");
-			mangledName    = "P" + component.getMangledName() + "E";
+			mangled_name   = "P" + component.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -486,7 +486,7 @@ namespace compiler::tsh {
 
 		StringAbstractTypeImpl() {
 			representation = "string";
-			mangledName    = "s";
+			mangled_name   = "s";
 		}
 
 		[[nodiscard]]
@@ -520,7 +520,7 @@ namespace compiler::tsh {
 
 		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
 			representation = base::strConcat("dynamic_array(", element.toString(), ")");
-			mangledName    = "D" + element.getMangledName() + "E";
+			mangled_name   = "D" + element.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -562,7 +562,7 @@ namespace compiler::tsh {
 			  element_type(element),
 			  size(size) {
 			representation = base::strConcat(element.toString(), "[", base::toString(size), "]");
-			mangledName    = "A" + base::toString(size) + element.getMangledName() + "E";
+			mangled_name   = "A" + base::toString(size) + element.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -848,7 +848,7 @@ namespace compiler::tsh {
 
 		explicit MetaAbstractTypeImpl() {
 			representation = "type";
-			mangledName    = "t";
+			mangled_name   = "t";
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
