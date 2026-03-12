@@ -24,6 +24,7 @@ namespace lsp {
 	 * registered workspace root. The topmost directory with a matching
 	 * dir/dir.dmf is treated as the package root and loaded into the VFS +
 	 * module tree if not already present.
+	 * If the package is already loaded, the `addFile` is called.
 	 *
 	 * @param absolute_physical_path Absolute path to the file in the real file system.
 	 */
@@ -59,7 +60,6 @@ namespace lsp {
 	 * @param absolute_physical_path
 	 */
 	void removeFile(const fs::FilePath& absolute_physical_path);
-
 
 	/**
 	 * @brief Remove a file or a directory with all its content from the virtual file system.

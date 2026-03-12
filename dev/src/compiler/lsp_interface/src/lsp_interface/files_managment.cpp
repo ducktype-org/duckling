@@ -102,23 +102,39 @@ namespace lsp {
 		// ========================== Adding file to module tree ==========================
 
 		/**
-		 * @brief For a given directory path, finds the corresponding module in the module tree if
+		 * @brief For a given file path, finds the corresponding module in the module tree if
 		 * it exists.
 		 */
-		base::Optional<base::Ref<ModuleTree>> findModuleForDirectoryPath(const fs::File& dir) {
-			if (not hasDirectoryMainModuleFile(dir.getFilePath())) return {};
-
-			auto module_file_path = getDirectoryMainModuleFile(dir.getFilePath()).value();
-
-			auto source_files = SourceFile::getSourceFilesFromFile(fs::File(module_file_path));
+		base::Optional<base::Ref<ModuleTree>> findModuleForFile(const fs::File& file) {
+			auto source_files = SourceFile::getSourceFilesFromFile(file);
 			if (source_files.empty()) return {};
-
 			auto module_id = source_files.back()->getModule().illegalAccess().getID();
 			return GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				module_id
 			);
 		}
 
+		/**
+		 * @brief For a given directory path, finds the corresponding module in the module tree if
+		 * it exists.
+		 */
+		base::Optional<base::Ref<ModuleTree>> findModuleForDirectoryPath(const fs::File& dir) {
+			if (not hasDirectoryMainModuleFile(dir.getFilePath())) return {};
+			auto module_file_path = getDirectoryMainModuleFile(dir.getFilePath()).value();
+			return findModuleForFile(fs::File(module_file_path));
+		}
+
+		base::Optional<base::Ref<ModuleTree>> findModuleForFileOrDirPath(const fs::File& file) {
+			if (file.isDirectory()) return findModuleForDirectoryPath(file);
+			if (file.isFile()) return findModuleForFile(file);
+			return {};
+		}
+
+		/**
+		 * @brief This checks if the given file should
+		 * become a new module in the module tree and if it should
+		 * be a submodule or a new root module.
+		 */
 		void addFileToModuleTree(const fs::File& file) {
 			auto extension  = file.extension();
 			auto parent_dir = fs::File(file.getFilePath().parentPath());
@@ -151,6 +167,53 @@ namespace lsp {
 				}
 				if_opt_none(parent_module_ref_opt) { createRootModuleAndRegisterPackage(file); }
 				return;
+			}
+		}
+
+		/**
+		 * @brief Scans for the children of the newly added module
+		 * and adds them as submodules if needed.
+		 *
+		 * This is for a situation, where we add a file like /a/a.dmf
+		 * and there are other files in the /a directory, like /a/b.dmf or /a/c/c.dmf,
+		 * that should become submodules of /a/a.dmf.
+		 */
+		void checkForNewSubmodules(const fs::File& file) {
+			auto parent_dir = fs::File(file.getFilePath().parentPath());
+			if (parent_dir.stem() != file.stem()) return;
+
+			if_opt_none(findModuleForDirectoryPath(parent_dir)) return;
+			auto parent_module_ref = findModuleForDirectoryPath(parent_dir).value();
+
+
+			for (auto& file_path: parent_dir.listFilePaths()) {
+				auto module_ref_opt = findModuleForFileOrDirPath(fs::File(file_path));
+				if_opt_none(module_ref_opt) {
+					// There are no submodules for this file (single file module or module tree)
+					std::cerr << "Adding new submodule " << file_path.strView()
+							  << " to parent module " << parent_module_ref->getName().strView()
+							  << "\n";
+					auto submodule = ModuleTreeBuilder::create(
+						fs::File(file_path), parent_module_ref->getPackageID().strView()
+					);
+					ModuleTreeModifier::addSubmodule(parent_module_ref, submodule);
+				}
+				if_opt_some(module_ref_opt, submodule) {
+					// There is a module for this file, but it is not a submodule of the new module,
+					// so we need to move it.
+					if (submodule->getParentModule().empty()) {
+						// Is a package
+						std::cerr << "Adding existing submodule " << submodule->getName().strView()
+								  << " to new parent module "
+								  << parent_module_ref->getName().strView() << "\n";
+						ModuleTreeModifier::changePackageID(
+							submodule, parent_module_ref->getPackageID().strView()
+						);
+						ModuleTreeModifier::addSubmodule(parent_module_ref, submodule);
+
+						global_state::setters::removePackage(submodule->getModuleID());
+					}
+				}
 			}
 		}
 
@@ -243,6 +306,7 @@ namespace lsp {
 		auto file = fs::File(virtual_path);
 
 		addFileToModuleTree(file);
+		checkForNewSubmodules(file);
 
 		auto new_inputs = compiler::driver::collectInputDataFromGlobalPackagesFromCurrentMetadata();
 		query::external::invalidateQueries(std::move(new_inputs), {}, {});
