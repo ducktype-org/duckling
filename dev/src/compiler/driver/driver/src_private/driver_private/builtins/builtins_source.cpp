@@ -55,7 +55,7 @@ int32_t builtin_output_char(char c) { return printf("%c", c); }
 
 char builtin_input_char() {
 	char c;
-	if (scanf("%c", &c) != 1) exit(1);
+	if (scanf(" %c", &c) != 1) exit(1);
 	return c;
 }
 

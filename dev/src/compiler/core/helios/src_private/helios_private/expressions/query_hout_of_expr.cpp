@@ -64,7 +64,8 @@ namespace compiler::helios::code {
 		};
 
 		/**
-		 * brief This error message is used when a character literal contains more than one character.
+		 * @brief This error message is used when a character literal contains more than one
+		 * character.
 		 */
 		class InvalidCharacterLiteralError final: public dia_int::MessageWithCodeFragment {
 			dia_int::Metadata getMetadata() const final {
@@ -196,7 +197,7 @@ namespace compiler::helios::code {
 
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
-				const std::set<std::string> numeric_ops
+				static const std::set<std::string> numeric_ops
 					= { "+", "-", "*", "/", "%", "**", "<", "<=", ">", ">=", "==", "!=" };
 				return numeric_ops.contains(op.str());
 			}
@@ -237,8 +238,8 @@ namespace compiler::helios::code {
 
 				// Binary operator resolution now happens in two steps:
 				// 1. If the arguments are both numeric (integral or float) and the operator is a
-				// built-in arithmetic operator, we try to find the smallest common type to which we
-				// can promote both arguments, and then use the built-in operator on the common type.
+				// built-in arithmetic operator, we look for promotions from left to right and from
+				// right to left, and then use the built-in operator on the promoted-to type.
 				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
 				//    a. The calling scope (a user can define a standalone function named `+`).
 				//    b. The type of the left-hand side argument (for an operator method).
@@ -266,9 +267,11 @@ namespace compiler::helios::code {
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
 				// @TODO: #1412 fix dealias
 				auto all_candidates = lookup_result->valueOrThrow().leaves;
-				for (const auto builtin_operator: *ctx.query<QueryRegularBinaryBuiltinSymbols>({}))
-					if (name(builtin_operator) == op.value)
-						all_candidates.push_back(builtin_operator);
+				for (const auto [builtin_operator_sym, _]:
+				     *ctx.query<QueryRegularBinaryBuiltinSymbols>({})) {
+					if (name(builtin_operator_sym) == op.value)
+						all_candidates.push_back(builtin_operator_sym);
+				}
 				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
 				    .valueOrThrow();
 			}
@@ -556,8 +559,8 @@ namespace compiler::helios::code {
 				using namespace ::std::views;
 
 				const auto& pst_operators  = stmt->getOperators();
-				usize      operator_count = usize(std::ranges::size(pst_operators));
-				usize      expr_count     = operator_count + 1;
+				usize       operator_count = usize(std::ranges::size(pst_operators));
+				usize       expr_count     = operator_count + 1;
 
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);

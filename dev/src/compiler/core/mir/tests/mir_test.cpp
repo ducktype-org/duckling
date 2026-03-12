@@ -868,10 +868,8 @@ private:
 						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
 
 					// If this test fails use the following to find the correct Instruction.
-					mir_rep_good2.debugPrint(std::cerr);
-					std::cerr << "\n\n";
-					assignment.debugPrint(std::cerr);
-					std::cerr << "\n\n";
+					// mir_rep_good2.debugPrint(std::cerr);
+					// assignment.debugPrint(std::cerr);
 					assertEqual(
 						compiler::mir::Operation::Assign,
 						assignment.operation,

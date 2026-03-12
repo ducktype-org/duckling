@@ -10,11 +10,11 @@
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/expressions/builtin_operators.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/function_calls/errors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_code_generation/builtin_operators.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
@@ -251,7 +251,7 @@ namespace compiler::helios::code {
 	 *
 	 * @return Box<CallExpr> representing the function call
 	 */
-	Box<Expr> constructProperCallExpr(
+	Box<Expr> constructCallExpr(
 		query::Context&                              ctx,
 		SymID                                        fun,
 		const CallPstOrigin&                         pst_origin,
@@ -305,52 +305,23 @@ namespace compiler::helios::code {
 	 * @p argument_origin defines the actual structure of the arguments, while @p
 	 * positional_arguments and @p named_arguments define their content.
 	 */
-	Box<Expr> constructBuiltinOperatorEvaluationExpr(
+	Box<Expr> constructOperatorExpr(
 		query::Context&                              ctx,
 		const CallPstOrigin&                         pst_origin,
 		const SymID                                  fun,
 		CallArguments                                call_arguments,
 		const base::Optional<std::vector<Coercion>>& coercions
 	) {
-		return houtgen::generateBuiltinOperatorExpression(
-			ctx, pst_origin, fun, std::move(call_arguments.positional_arguments), coercions
-		);
-	}
+		const auto call_origin = pst_origin.whole_call_origin;
+		auto  hout_op   = ctx.query<QueryRegularBinaryBuiltinSymbols>({})->atMaybe(fun).value()->op;
+		auto& arguments = call_arguments.positional_arguments;
+		auto  lhs       = coercions ? coercions->at(0).coerce(ctx, std::move(arguments.at(0)))
+		                            : std::move(arguments.at(0));
+		auto  rhs       = coercions ? coercions->at(1).coerce(ctx, std::move(arguments.at(1)))
+		                            : std::move(arguments.at(1));
 
-	/**
-	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
-	 * constructs a helios Expr representing the call of the function. Construction of the
-	 * expressions will move the arguments.
-	 * @p argument_origin defines the actual structure of the arguments, while @p
-	 * positional_arguments and @p named_arguments define their content.
-	 */
-	Box<Expr> constructCallExpr(
-		query::Context&                              ctx,
-		const CallPstOrigin&                         pst_origin,
-		const SymID                                  fun,
-		CallArguments                                call_arguments,
-		const std::vector<ArgumentOrigin>&           argument_origin,
-		const base::Optional<std::vector<Coercion>>& coercions
-	) {
-		// If the function is a builtin operator, we use special
-		// handling which may not be simply a single function call.
-		// Note: this does not include numeric operators on numeric arguments,
-		// as that case is handled earlier, before considering overload resolution.
-		variant_match(getSymRef(fun)->other) {
-			variant_case(houtgen::GeneratedSymbolData, generated) {
-				variant_match(generated.data) {
-					variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
-						return constructBuiltinOperatorEvaluationExpr(
-							ctx, pst_origin, fun, std::move(call_arguments), coercions
-						);
-					}
-				}
-			}
-		}
-
-		// Otherwise, we construct a normal function call expression.
-		return constructProperCallExpr(
-			ctx, fun, pst_origin, std::move(call_arguments), argument_origin, coercions
+		return makeBox<BinaryOperatorExpr>(
+			ctx, call_origin, hout_op, std::move(lhs), std::move(rhs)
 		);
 	}
 
@@ -477,16 +448,12 @@ namespace compiler::helios::code {
 					);
 				}
 
-				auto result = makeBox<FailedCandidateNote>(decl.origin.getSourcePosition().value());
-				result->addAttachedMessage(createDetailedCallErrorMessage(
-					ctx,
-					call_pst_origin.whole_call_origin,
-					call_pst_origin.arguments_origin,
-					reason,
-					true
-				));
-				return result;
+				return makeBox<FailedCandidateNote>(decl.origin.getSourcePosition().value());
 			}();
+
+			candidate_note->addAttachedMessage(createDetailedCallErrorMessage(
+				ctx, call_pst_origin.whole_call_origin, call_pst_origin.arguments_origin, reason, true
+			));
 
 			if (first_candidate_msg.empty())
 				first_candidate_msg.emplace(std::move(candidate_note));
@@ -680,14 +647,13 @@ namespace compiler::helios::code {
 		};
 
 		// Resolve overloads and construct call expression
-		auto overload_resolution_result
+		auto overload_resolution_qresult
 			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
-		if (overload_resolution_result.hasFailed()) return query::Failed();
-		const auto [callee_sym, argument_origin, coercions]
-			= std::move(overload_resolution_result.valueOrThrow());
+		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
 
 		return constructCallExpr(
-			ctx, pst_origin, callee_sym, std::move(call_arguments), argument_origin, coercions
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
 		);
 	}
 
@@ -721,13 +687,13 @@ namespace compiler::helios::code {
 		};
 
 		// Resolve overloads and construct call expression
-		auto overload_resolution_result
+		auto overload_resolution_qresult
 			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
-		if (overload_resolution_result.hasFailed()) return query::Failed();
-		const auto [callee_sym, argument_origin, coercions]
-			= std::move(overload_resolution_result.valueOrThrow());
+		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
+
 		return constructCallExpr(
-			ctx, pst_origin, callee_sym, std::move(call_arguments), argument_origin, coercions
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
 		);
 	}
 
@@ -752,14 +718,31 @@ namespace compiler::helios::code {
 		call_arguments.positional_arguments.emplace_back(std::move(rhs));
 
 		// Resolve overloads and construct call expression
-		auto overload_resolution_result
+		auto overload_resolution_qresult
 			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
-		if (overload_resolution_result.hasFailed()) return query::Failed();
-		const auto [callee_sym, argument_origin, coercions]
-			= std::move(overload_resolution_result.valueOrThrow());
+		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
 
+		// Now construct the expression.
+		// If the function is a builtin operator, we use special
+		// handling which may not be simply a single function call.
+		// Note: this does not include numeric operators on numeric arguments,
+		// as that case is handled earlier, before considering overload resolution.
+		variant_match(getSymRef(callee_sym)->other) {
+			variant_case(houtgen::GeneratedSymbolData, generated) {
+				variant_match(generated.data) {
+					variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+						return constructOperatorExpr(
+							ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
+						);
+					}
+				}
+			}
+		}
+
+		// Otherwise, we construct a normal function call expression.
 		return constructCallExpr(
-			ctx, pst_origin, callee_sym, std::move(call_arguments), argument_origin, coercions
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
 		);
 	}
 }

@@ -193,7 +193,7 @@ namespace compiler::mir {
 		return local_list.last();
 	}
 
-	MIRLocalMutRef FunctionBuilder::addTmp(
+	MIRLocalMutRef FunctionBuilder::getTmpForReusableExpr(
 		const helios::code::ReusableExpr& reusable_expr, const ScopeRef scope
 	) {
 		auto expr_id = reusable_expr.inner->getID();

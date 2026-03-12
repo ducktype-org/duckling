@@ -226,6 +226,9 @@ namespace compiler::helios::code {
 	/**
 	 * @brief A special kind of expression which wraps expressions that need to be
 	 * used multiple times without recalculating, such as `b` in `a < b < c`.
+	 * @note One should be very careful not to create a "next use" ReusableExpr which does not
+	 * semantically see the result of the corresponding "first use" ReusableExpr, for example
+	 * if they are in different branches of an if expression.
 	 */
 	struct ReusableExpr final: public Expr {
 		SharedBox<Expr> inner;

@@ -107,15 +107,15 @@ namespace compiler::mir {
 		void visitReusableExpr(const helios::code::ReusableExpr& expr) override {
 			// If this is the subsequent use of the expression,
 			// simply return the temporary value assigned to it.
+			auto target_location = function.getTmpForReusableExpr(expr, expr_scope);
 			if (not expr.first_use) {
-				valueOutput(continuation, function.addTmp(expr, expr_scope));
+				valueOutput(continuation, target_location);
 				return;
 			}
 
 			// Otherwise, compute the value of the expression.
-			auto target_location = function.addTmp(expr, expr_scope);
-			auto assign_hole     = continuation->addHole();
-			auto lowered_inner   = lowerSubExpr(*expr.inner, continuation);
+			auto assign_hole   = continuation->addHole();
+			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			lowered_inner.storeResultInGivenPlace(
 				MIRPlace(target_location), assign_hole, { flagConstruct(target_location) }, expr_scope
 			);

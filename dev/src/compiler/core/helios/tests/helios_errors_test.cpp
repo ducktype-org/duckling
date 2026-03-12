@@ -93,6 +93,17 @@ private:
 		checkForErrorOnCompileModule(
 			R"(fun a() = true + false;)", { "Call failed due to ambiguous overload resolution" }, 1
 		);
+		checkForErrorOnCompileModule(
+			R"(fun a() = 'c' + 1i64;)",
+			{
+				"Call failed due to ambiguous overload resolution",
+				"type const Function (const u8, const char) -> (const char).",
+				"given argument type `char` cannot be converted to the expected type `const u8`.",
+				"type const Function (const char, const u8) -> (const char).",
+				"given argument type `i64` cannot be converted to the expected type `const u8`.",
+			},
+			1
+		);
 		checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
 
 		// ============================ Function calls ============================

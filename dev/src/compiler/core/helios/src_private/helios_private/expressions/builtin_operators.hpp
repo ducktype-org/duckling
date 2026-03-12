@@ -26,6 +26,20 @@ namespace compiler::helios::code {
 	);
 
 	/**
+	 * @brief Represents a builtin binary operator which is not a numeric operator, and its
+	 * corresponding HOUT .
+	 */
+	struct RegularBinaryBuiltin {
+		// The symbol of the builtin operator.
+		SymID symbol;
+
+		// The HOUT operation to perform (might be extended to, say, function calls in the future).
+		BuiltinBinary op;
+	};
+
+	using RegularBinaryBuiltinSymbolMap = base::StableHashMap<SymID, RegularBinaryBuiltin>;
+
+	/**
 	 * @brief Get all builtin binary operators which are *not* numeric operators
 	 * for the purpose of lookup and overload resolution. This is a query for idiomatic parallelism.
 	 * @note: The symbols' implementation in
@@ -35,7 +49,7 @@ namespace compiler::helios::code {
 	DECLARE_QUERY(
 		QueryRegularBinaryBuiltinSymbols,
 		query::EmptyKey,
-		CRef<std::vector<SymID>>,
+		CRef<RegularBinaryBuiltinSymbolMap>,
 		({ .uses_qresult = false })
 	);
 

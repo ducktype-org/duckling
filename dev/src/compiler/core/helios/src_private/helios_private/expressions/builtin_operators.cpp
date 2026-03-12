@@ -23,10 +23,6 @@ namespace {
 	 * coercion. If any of the arguments is not a direct type a coercion to the direct type will be
 	 * forced.
 	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
-	 *
-	 * @TODO: #973 this function panics on query::Failed in coercions, should probably propagate
-	 * failed instead. If we conclude, that this will return empty optional on failure, we should
-	 * document it here.
 	 */
 	base::Optional<std::tuple<tsh::SymbolType<>, Coercion, Coercion>> findCommonTypeWithCoercion(
 		query::Context& ctx, base::CRef<Expr> lhs, base::CRef<Expr> rhs
@@ -125,77 +121,79 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	struct IMPLEMENT_QUERY(QueryRegularBinaryBuiltinSymbols, std::vector<SymID>) {
+	struct IMPLEMENT_QUERY(QueryRegularBinaryBuiltinSymbols, RegularBinaryBuiltinSymbolMap) {
 		static auto provide(Context& ctx, QKey) -> PResult {
 			// Preamble
-			using Signedness = tsh::IntegralAbstractType::Signedness;
-
-			const auto bool_type = tsh::SymbolType<>{
+			const auto bool_t = tsh::SymbolType<>{
 				tsh::getBoolType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable,
 			};
-			const auto builtin_op = [&ctx](
+			using enum BuiltinBinary;
+
+			// The result map and a helper function to populate it.
+			auto       result_ops = RegularBinaryBuiltinSymbolMap{};
+			const auto builtin_op = [&ctx, &result_ops](
 										const base::StrID              name,
 										std::vector<tsh::SymbolType<>> param_types,
-										tsh::SymbolType<>              return_type
-									) {
-				return ctx.query<houtgen::QueryGeneratedSymbol>({
-					name,
-					houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::BuiltinOperator{
-						ctx.query<tsh::QueryFunctionType>({
-							std::move(param_types),
-							return_type,
-						}),
-					} },
-				});
+										const tsh::SymbolType<>        return_type,
+										const BuiltinBinary            op
+									) -> void {
+				auto builtin = RegularBinaryBuiltin{
+					.symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+						name,
+						houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::BuiltinOperator{
+							ctx.query<tsh::QueryFunctionType>({
+								std::move(param_types),
+								return_type,
+							}),
+						} },
+					}),
+					.op     = op,
+				};
+				result_ops.put(builtin.symbol, builtin);
 			};
 
-			auto ops = std::vector<SymID>{};
-
 			/// Meta comparisons ///
-			for (const auto name: std::vector{ base::StrID("=="), base::StrID("!=") }) {
-				const auto meta_type = tsh::SymbolType<>{
-					tsh::getMetaType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable,
-				};
-				ops.push_back(builtin_op(name, { meta_type, meta_type }, bool_type));
-			}
-
-			/// Boolean operations ///
-			for (const auto name: std::vector{
-					 keywordToStr(lang_def::Keyword::And),
-					 keywordToStr(lang_def::Keyword::Or),
-					 base::StrID("=="),
-					 base::StrID("!="),
-				 }) {
-				ops.push_back(builtin_op(name, { bool_type, bool_type }, bool_type));
-			}
-
-			/// Character arithmetic ///
-			const auto u8_type = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 8, Signedness::Unsigned),
+			const auto meta_t = tsh::SymbolType<>{
+				tsh::getMetaType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable,
 			};
-			const auto char_type = tsh::SymbolType<>{
+			builtin_op(base::StrID("=="), { meta_t, meta_t }, bool_t, MetaEq);
+			builtin_op(base::StrID("!="), { meta_t, meta_t }, bool_t, MetaNeq);
+
+			/// Boolean operations ///
+			const auto kw_and = keywordToStr(lang_def::Keyword::And);
+			const auto kw_or  = keywordToStr(lang_def::Keyword::Or);
+			builtin_op(kw_and, { bool_t, bool_t }, bool_t, BooleanAnd);
+			builtin_op(kw_or, { bool_t, bool_t }, bool_t, BooleanOr);
+			builtin_op(base::StrID("=="), { bool_t, bool_t }, bool_t, IntegerEq);
+			builtin_op(base::StrID("!="), { bool_t, bool_t }, bool_t, IntegerNeq);
+
+			/// Character arithmetic ///
+			const auto u8_t = tsh::SymbolType<>{
+				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable,
+			};
+			const auto char_t = tsh::SymbolType<>{
 				tsh::getCharType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable,
 			};
-			ops.push_back(builtin_op(base::StrID("<"), { char_type, char_type }, bool_type));
-			ops.push_back(builtin_op(base::StrID("<="), { char_type, char_type }, bool_type));
-			ops.push_back(builtin_op(base::StrID(">"), { char_type, char_type }, bool_type));
-			ops.push_back(builtin_op(base::StrID(">="), { char_type, char_type }, bool_type));
-			ops.push_back(builtin_op(base::StrID("=="), { char_type, char_type }, bool_type));
-			ops.push_back(builtin_op(base::StrID("!="), { char_type, char_type }, bool_type));
-			ops.push_back(builtin_op(base::StrID("-"), { char_type, char_type }, u8_type));
-			ops.push_back(builtin_op(base::StrID("+"), { u8_type, char_type }, char_type));
-			ops.push_back(builtin_op(base::StrID("+"), { char_type, u8_type }, char_type));
+			builtin_op(base::StrID("<"), { char_t, char_t }, bool_t, IntegerLt);
+			builtin_op(base::StrID("<="), { char_t, char_t }, bool_t, IntegerLteq);
+			builtin_op(base::StrID(">"), { char_t, char_t }, bool_t, IntegerGt);
+			builtin_op(base::StrID(">="), { char_t, char_t }, bool_t, IntegerGteq);
+			builtin_op(base::StrID("=="), { char_t, char_t }, bool_t, IntegerEq);
+			builtin_op(base::StrID("!="), { char_t, char_t }, bool_t, IntegerNeq);
+			builtin_op(base::StrID("-"), { char_t, char_t }, u8_t, IntegerSub);
+			builtin_op(base::StrID("+"), { u8_t, char_t }, char_t, IntegerAdd);
+			builtin_op(base::StrID("+"), { char_t, u8_t }, char_t, IntegerAdd);
 
 			// Return
-			return ops;
+			return result_ops;
 		}
 
 		QUERY_AUTO_CACHE_CREF

@@ -154,7 +154,9 @@ namespace compiler::mir {
 		 * returned instead of creating a new one.
 		 */
 		[[nodiscard]]
-		MIRLocalMutRef addTmp(const helios::code::ReusableExpr& reusable_expr, ScopeRef scope);
+		MIRLocalMutRef getTmpForReusableExpr(
+			const helios::code::ReusableExpr& reusable_expr, ScopeRef scope
+		);
 
 		/**
 		 * Creates an anonymous temporary local value.
