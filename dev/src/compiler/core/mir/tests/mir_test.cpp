@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(moveValidation);
 	}
 
@@ -690,7 +691,7 @@ private:
 			using namespace compiler::mir;
 			for (const auto& block_id: mir_func.block_order) {
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					if (instr.operation == Operation::AllocBox) {
+					if (instr.operation == Operation::BoxAlloc) {
 						// var b_int: box i32 = 42;
 						// var b_point: box Point = Point(10, 20);
 						const auto& arg = instr.arguments[0];
@@ -829,6 +830,71 @@ private:
 			ASSERT_TRUE(found_zero_init_pts);
 			ASSERT_TRUE(found_index_projection);
 			ASSERT_TRUE(found_complex_pts_projection);
+		});
+	}
+
+	void dynamicArraysTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/dynamic_arrays")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& hout_func = unit.functions.at(0);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
+			                     ->valueOrThrow();
+
+			bool found_zero_init        = false;
+			bool found_push             = false;
+			bool found_pop              = false;
+			bool found_len              = false;
+			bool found_index_projection = false;
+
+			using namespace compiler::mir;
+
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					switch (instr.operation) {
+					case Operation::ZeroInitialize: {
+						auto& out_place = instr.output.value();
+						if (out_place.getBase<MIRLocalRef>()->getName() == "l")
+							found_zero_init = true;
+						break;
+					}
+					case Operation::ListPush:
+						found_push = true;
+						break;
+					case Operation::ListPop:
+						found_pop = true;
+						break;
+					case Operation::ListLen:
+						found_len = true;
+						break;
+					case Operation::Assign:
+					case Operation::Cast: {
+						if (instr.output.has_value()) {
+							auto& out_place = instr.output.value();
+							if (out_place.getBase<MIRLocalRef>()->getName() == "l"
+							    && out_place.projection_chain.size() == 1) {
+								bool is_index = std::holds_alternative<MIRPlace::IndexProjection>(
+									out_place.projection_chain[0].storage
+								);
+								if (is_index) found_index_projection = true;
+							}
+						}
+						break;
+					}
+					default:
+						break;
+					}
+				}
+			}
+
+			ASSERT_TRUE(found_zero_init);
+			ASSERT_TRUE(found_push);
+			ASSERT_TRUE(found_pop);
+			ASSERT_TRUE(found_len);
+			ASSERT_TRUE(found_index_projection);
 		});
 	}
 

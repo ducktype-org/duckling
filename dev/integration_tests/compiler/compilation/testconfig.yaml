@@ -64,6 +64,7 @@ SubDirs:
   - constants
   - classes
   - static_arrays
+  - dynamic_arrays
   - optimisations
   - references
   - boxes
