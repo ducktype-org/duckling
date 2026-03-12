@@ -240,7 +240,7 @@ namespace compiler::helios::mangler {
 			    or kind(symbol_id) == SymbolKind::Method) {
 				ret = "F";
 
-				// TODO: Function qualifiers
+				// @TODO: #2255 Function qualifiers
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
