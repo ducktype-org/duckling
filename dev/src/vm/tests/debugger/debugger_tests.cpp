@@ -130,6 +130,11 @@ private:
 	void vmApiMemory() {
 		auto pid = loadProgram("breakpoint.dbc");
 
+		{
+			auto error_response = vm::api::debuggerGetTypeInfo(pid, base::StrID("non_existent_type"));
+			assertFalse(error_response.has_value(), "Getting type info should have failed");
+		}
+
 		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
