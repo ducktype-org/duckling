@@ -102,12 +102,8 @@ namespace vm::builtins {
 		return std::stoll(str_data);
 	}
 
-	std::string thread_ctx;
-
-	void setThreadCtx(std::string ctx) { thread_ctx = std::move(ctx); }
-
 	i64 FunctionHandlers::builtinStartThread(VMThread& thread) {
-		return i64{ vm::api::runFunction(thread.process.getPID(), thread_ctx).value() };
+		return i64{ vm::api::runFunction(thread.process.getPID(), thread.getThreadCtx()).value() };
 	}
 
 	void FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
@@ -116,24 +112,24 @@ namespace vm::builtins {
 		thread.keepOrAcquireGil();
 	}
 
-	i64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
-		i64 mutex_id = thread.process.getSynchronizationPrimitives().addMutex();
+	u64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
+		usize mutex_id = thread.process.getSynchronizationPrimitives().addMutex();
 		return mutex_id;
 	}
 
-	void FunctionHandlers::builtinLockMutex(VMThread& thread, i64 mutex_id) {
+	void FunctionHandlers::builtinLockMutex(VMThread& thread, u64 mutex_id) {
 		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
 		thread.releaseGil();
 		mutex->lock();
 		thread.keepOrAcquireGil();
 	}
 
-	void FunctionHandlers::builtinUnlockMutex(VMThread& thread, i64 mutex_id) {
+	void FunctionHandlers::builtinUnlockMutex(VMThread& thread, u64 mutex_id) {
 		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
 		mutex->unlock();
 	}
 
-	void FunctionHandlers::builtinDestroyMutex(VMThread& thread, i64 mutex_id) {
+	void FunctionHandlers::builtinDestroyMutex(VMThread& thread, u64 mutex_id) {
 		thread.process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
 

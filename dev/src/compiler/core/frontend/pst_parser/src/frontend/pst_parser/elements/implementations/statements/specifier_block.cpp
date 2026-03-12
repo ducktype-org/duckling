@@ -8,7 +8,7 @@ namespace pst {
 	MBox<SpecifierBlock> SpecifierBlock::parse(LangParserState& state) {
 		auto out = makeBox<SpecifierBlock>(state);
 
-		state.parse(out).withDef(&out->block);
+		PARSE().withDef(&out->block);
 
 		PST_RETURN out;
 	}

@@ -11,9 +11,9 @@ namespace pst::expr {
 
 		auto out = makeBox<GeneralSuffix>(state, state[length - 1].getValue());
 
-		state.parse(out).with(&out->expr, parseRecursive, length - 1, iter - 1);
+		PARSE().with(&out->expr, parseRecursive, length - 1, iter - 1);
 
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		PST_RETURN out;
 	}

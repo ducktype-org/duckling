@@ -17,7 +17,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
-#include <repl/repl_session.hpp>
+#include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
