@@ -611,17 +611,32 @@ private:
 
 			const auto i64_type
 				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
+			const auto i32_type
+				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
 			const auto i64_st             = st(i64_type);
+			const auto i32_st             = st(i32_type);
 			const auto instantiated_abs   = list_template_type.instantiate(ctx, i64_st);
 			const auto instantiated_abs_2 = list_template_type_2.instantiate(ctx, i64_st);
+			const auto instantiated_abs_3 = list_template_type_2.instantiate(ctx, i32_st);
 			const auto expected           = ctx.query<QueryDynamicArrayType>({ i64_st });
+			const auto expected_2         = ctx.query<QueryDynamicArrayType>({ i32_st });
 			assertTrue(
 				expected == instantiated_abs,
 				"Instantiating list type template should produce a dynamic array of i64"
 			);
 			assertTrue(
+				expected_2 == instantiated_abs_3,
+				"Instantiating list type template should produce a dynamic array of i32"
+			);
+			assertTrue(
 				instantiated_abs_2 == instantiated_abs,
 				"Two same type templates instantiated with the same type should produce the same "
+				"type"
+			);
+			assertFalse(
+				instantiated_abs_3 == instantiated_abs,
+				"Two same type templates instantiated with different types should produce a "
+				"different "
 				"type"
 			);
 		});

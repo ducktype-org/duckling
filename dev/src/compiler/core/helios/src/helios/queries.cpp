@@ -834,7 +834,7 @@ namespace compiler::helios {
 					}
 				} else if (op == base::StrID("-=")) {
 					// @TODO: #1970 This implementation is temporary and should be handled by the
-					// `+=` operator in the future.
+					// `-=` operator in the future.
 					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
 						auto u64_type = tsh::SymbolType<>{
 							tsh::getIntegralType(
