@@ -19,7 +19,7 @@ Tests:
         run_args: '"Hello, world!"'
         Output:
           String: "Hello, world!\n"
-  test-TimeOut:
+  test-timeout:
     Run: "sleep @{run_args}"
     run_args: ""
     TimeOut: 1
