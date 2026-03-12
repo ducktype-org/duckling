@@ -109,7 +109,7 @@ private:
 				  ));
 		auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
 
-		// vaidate that .o file from previous compilation is present before we run the compilation
+		// Validate that .o file from previous compilation is present before we run the compilation
 		// with changed source code
 		assertTrue(
 			output_maybe.has_value(), "Output file should be present in artifacts before compilation"
@@ -147,7 +147,7 @@ private:
 		// disc Check that there is no .o file in artifacts after compilation
 		auto output_maybe2 = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
 
-		// vaidate that .o file from previous compilation is present before we run the compilation
+		// Validate that .o file from previous compilation is present before we run the compilation
 		// with changed source code
 		assertFalse(
 			output_maybe2.has_value(),

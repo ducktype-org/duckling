@@ -39,7 +39,7 @@ namespace compiler::repl {
 			);
 		}
 
-		auto module_unique_name = base::StrID(module_name.data());
+		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
