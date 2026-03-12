@@ -190,7 +190,7 @@ namespace compiler::driver {
 				// Be carefull to not abort this function
 				// in places where the compiler is left in a state
 				// that could result in panics/errors during exit.
-				
+
 				handleLoggerInitialization();
 
 				handleDebugOptions(package_compilation_options.debug_options);
