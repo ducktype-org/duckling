@@ -1,3 +1,4 @@
+# A subfolder fot testing diagnostics produced by the compiler when compiling invalid code.
 
 # We don't run the actual duckling programs in this test, 
 # instead we test that the compiler produces the expected diagnostics when compiling invalid code.
@@ -8,19 +9,11 @@ Run: "
   case @{backend} in
     dvm)       @{compile_dvm_backend_cmd}                   ;;
     llvm)      @{compile_llvm_backend_cmd}                  ;;
-    nobackend) echo 'Backend undefined'; exit 1               ;;
-    *)         echo 'Unknown backend';   exit 1                 ;;
+    nobackend) echo \"Backend undefined\"; exit 1               ;;
+    *)         echo \"Unknown backend\";   exit 1                 ;;
   esac;
   "
   
-Tests:
-  no_main_source_file:
-    Cases:
-      llvm:
-        backend: llvm
-        # @TODO: #2228 add better output handling here!
-        Output:
-          String: ""
-        Err:
-          String: "error[E0]: Main package does not have a main source file.\nThe main source file is required for compilation. Please add a no_main_source_file.dmf file to the main module directory.\n\n"
-        ExitCode: 1
+SubDirs:
+  - initialization
+  
