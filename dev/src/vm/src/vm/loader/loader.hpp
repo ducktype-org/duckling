@@ -67,7 +67,6 @@ namespace vm::loader {
 
 		/**
 		 * @brief Provides read-only access to types of the currently loaded program.
-		 * This is used by the debugger to provide type information.
 		 */
 		const code::valid_type::ValidTypeMap& types() const;
 	};
