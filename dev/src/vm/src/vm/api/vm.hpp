@@ -222,5 +222,5 @@ namespace vm::api {
 	 * @brief Get the name, size and kind of a given type.
 	 * @return The response containing the type info or an API error.
 	 */
-	std::expected<response::TypeInfo, ApiError> debuggerGetTypeInfo(PID pid, base::StrID type_id);
+	std::expected<response::TypeInfo, ApiError> debuggerGetTypeInfo(PID pid, base::StrID type_name);
 }

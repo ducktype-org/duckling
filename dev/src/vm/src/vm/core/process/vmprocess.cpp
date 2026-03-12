@@ -379,7 +379,7 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						match_optional(loader.types().atMaybe(request.type_id)) {
+						match_optional(loader.types().atMaybe(request.type_name)) {
 							opt_some(type) {
 								return api::Response(api::response::TypeInfo{ type });
 							}
