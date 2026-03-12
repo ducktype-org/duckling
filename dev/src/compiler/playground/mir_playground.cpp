@@ -1,4 +1,5 @@
 #include <frontend/module_tree/module_tree.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
