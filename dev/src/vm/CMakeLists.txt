@@ -89,6 +89,9 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
         ${jit_dependency}
     )
     make_module(JitDep USES llvm_helpers Base Diagnostic)
+    if (TARGET cp-stencils-target)
+        add_dependencies(JitDep cp-stencils-target)
+    endif()
     target_compile_options(JitDep PRIVATE
         --embed-dir=${CMAKE_BINARY_DIR}
     )
