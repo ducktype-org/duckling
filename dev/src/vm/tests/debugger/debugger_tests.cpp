@@ -131,7 +131,8 @@ private:
 		auto pid = loadProgram("breakpoint.dbc");
 
 		{
-			auto error_response = vm::api::debuggerGetTypeInfo(pid, base::StrID("non_existent_type"));
+			auto error_response
+				= vm::api::debuggerGetTypeInfo(pid, base::StrID("non_existent_type"));
 			assertFalse(error_response.has_value(), "Getting type info should have failed");
 		}
 
@@ -193,10 +194,11 @@ private:
 				                    .value();  // "Dereference pointer failed"
 				assertTrue(response.pointer.isNull(), "Pointer should be null");
 
-				auto dereference_response = vm::api::debuggerDereferencePointer(
-					pid, response.pointer
+				auto dereference_response
+					= vm::api::debuggerDereferencePointer(pid, response.pointer);
+				assertFalse(
+					dereference_response.has_value(), "Getting null pointer data should have failed"
 				);
-				assertFalse(dereference_response.has_value(), "Getting null pointer data should have failed");
 			}
 		}
 
