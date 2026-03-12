@@ -19,7 +19,7 @@ namespace compiler::driver {
 	 * such as handling change in the source code input.
 	 *
 	 * @return Whether the initialization was successful or not. In case of failure, the error
-	 * message will be printed to stderr.
+	 * message will be printed to stderr. Driver exit should still be called in the failure case.
 	 */
 	base::OkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options);
 }
