@@ -13,26 +13,29 @@ use crate::{
         },
         types_common::{ExpandedLocation, InternedExpandedLocation},
     },
-    util_common::path_ops_ext::PathOpsExt,
+    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
 pub fn setup_mock_storage() -> (DuckCtx, TempDir) {
-    let tmpdir_root = TempDir::new().unwrap();
-    setup_mock_packages(&tmpdir_root.path().join("storage"));
-    setup_mock_root_package(&tmpdir_root.path().join("root"));
-    // Also overwrite DUCK_HOME, so we'll use the default configuration options.
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::set_var("DUCK_STORAGE_DIR", tmpdir_root.path().join("storage"));
-        std::env::set_var("DUCK_HOME", tmpdir_root.path());
-    }
-    let ctx = DuckCtx::default();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::remove_var("DUCK_STORAGE_DIR");
-        std::env::remove_var("DUCK_HOME");
-    }
-    (ctx, tmpdir_root)
+    let setup = || {
+        let tmpdir_root = TempDir::new().unwrap();
+        setup_mock_packages(&tmpdir_root.path().join("storage"));
+        setup_mock_root_package(&tmpdir_root.path().join("root"));
+        // Also overwrite DUCK_HOME, so we'll use the default configuration options.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::set_var("DUCK_STORAGE_DIR", tmpdir_root.path().join("storage"));
+            std::env::set_var("DUCK_HOME", tmpdir_root.path());
+        }
+        let ctx = DuckCtx::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::remove_var("DUCK_STORAGE_DIR");
+            std::env::remove_var("DUCK_HOME");
+        }
+        (ctx, tmpdir_root)
+    };
+    setup_test(setup)
 }
 
 pub fn setup_mock_packages(root: &Path) {

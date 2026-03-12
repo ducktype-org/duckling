@@ -6,10 +6,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> MatchExpr::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> MatchExpr::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
-		if (!state[0].is(Keyword::Match)) return Lower::parse(state, length);
+		if (!state[0].is(Keyword::Match)) return Lower::parse(state);
 
 		auto out = makeBox<MatchExpr>(state);
 
