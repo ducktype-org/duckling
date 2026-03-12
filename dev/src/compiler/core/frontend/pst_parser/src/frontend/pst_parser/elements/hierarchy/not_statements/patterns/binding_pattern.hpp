@@ -12,7 +12,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit BindingPattern(const dia::SourcePosition& position): AnalysisPattern(position) {
+		explicit BindingPattern(const LangParserState& state): AnalysisPattern(state) {
 			this->element_kind = ElementKind::BindingPattern;
 		}
 

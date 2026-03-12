@@ -8,7 +8,7 @@ namespace pst {
 			UniversalExprHolderLowerLevel,
 			TemplateList,
 			false,  // empty list allowed
-			false,  // trailing separator not allowed
+			true,   // trailing separator not allowed
 			lexer::Token::BracketType::None,
 			internal::Conditions::isComma,
 			internal::Conditions::isSentinel,

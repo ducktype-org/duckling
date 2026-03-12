@@ -1,12 +1,10 @@
-use std::{collections::HashMap, fs::File, path::PathBuf, sync::Arc, time::SystemTime};
+use std::{fs::File, path::PathBuf, time::SystemTime};
 
-use async_scoped::TokioScope;
 use flate2::read::GzDecoder;
 use tar::Archive;
-use tokio::sync::Mutex;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err,
+    QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err,
     quackpack::{
         core::{
             BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine, Solver,
@@ -27,7 +25,6 @@ use crate::{
             types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
         },
         subcommands::sync::SyncOptions,
-        util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
     },
     util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
@@ -44,17 +41,19 @@ const MAX_BLOB_RETRY_COUNT: i32 = 3;
 /// returns *new* packages to install, we never remove nor overwrite anything in [`sync`],
 /// therefore we can drop `SyncLock`.
 pub fn sync(
-    ctx: &DuckCtx,
-    pkg_ctx: &PackageCtx,
+    package: &PackageCtx,
     options: SyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
-    let storage = Storage::new(ctx.duck_home());
-    let fetcher = Fetcher::new(ctx)?;
-    let git_access = Arc::new(Mutex::new(StorageGitAccess::new(&storage, HashMap::new())));
-    let venv_config = pkg_ctx.venv_config();
+    let venv_config = package.venv_config();
+    let storage_localization = venv_config
+        .storage_path()?
+        .unwrap_or(package.ctx().default_storage_root());
+    let storage = Storage::new(storage_localization);
+    let fetcher = Fetcher::new(package.ctx())?;
+    let git_access = StorageGitAccess::new(&storage);
     let expose_freezefile = venv_config.is_freezefile_exposed()?;
-    let user_exposed_freeze = load_external_freezefile(pkg_ctx, expose_freezefile)?;
-    let id = pkg_ctx.to_venv_id();
+    let user_exposed_freeze = load_external_freezefile(package, expose_freezefile)?;
+    let id = package.to_venv_id();
 
     let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)
         .context("failed to acquire try sync lock")?;
@@ -64,7 +63,7 @@ pub fn sync(
     drop(data_lock);
 
     if !options.overwrite {
-        check_if_overwrites(pkg_ctx, venv.as_ref(), id)?;
+        check_if_overwrites(package, venv.as_ref(), id)?;
     }
 
     let input_freeze = user_exposed_freeze
@@ -72,8 +71,7 @@ pub fn sync(
         .or(venv.as_ref().map(|venv| venv.data().freeze()));
 
     let solver_answer = get_solver_answer(
-        ctx,
-        pkg_ctx,
+        package,
         &fetcher,
         &git_access,
         input_freeze,
@@ -89,14 +87,14 @@ pub fn sync(
         .new_freeze
         .generate_storage_freeze(&solver_answer.pkgs_manifests)?;
 
-    let _was_anything_installed = fetch_source_codes(ctx, &storage, &fetcher, git_access, pkgs)?;
+    let _was_anything_installed = fetch_source_codes(&storage, &fetcher, git_access, pkgs)?;
 
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
     let now = SystemTime::now();
     let data = VenvData::new(
         new_freeze,
         venv_config.is_ephemeral()?,
-        pkg_ctx.package().manifest_path().to_path_buf(),
+        package.package().manifest_path().to_path_buf(),
         now,
     );
     let venv = Venv::new(id, data);
@@ -105,7 +103,7 @@ pub fn sync(
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
-        freeze_name(pkg_ctx.package()).write(json)?;
+        freeze_name(package.package()).write(json)?;
     }
     Ok((_sync_lock, venv, storage))
 }
@@ -164,17 +162,16 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Prepares the input and runs [`Solver::prepare_solving`].
-fn get_solver_answer(
-    ctx: &DuckCtx,
-    pkg_ctx: &PackageCtx,
-    fetcher: &Fetcher<'_>,
-    git_access: &Arc<Mutex<StorageGitAccess<'_>>>,
+fn get_solver_answer<'duck>(
+    package: &'duck PackageCtx<'duck>,
+    fetcher: &'duck Fetcher<'duck>,
+    git_access: &'duck StorageGitAccess<'duck>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
     let root_pkg = ExpandedPackage {
         location: InternedExpandedLocation::new(ExpandedLocation::Local {
-            absolute_path: pkg_ctx.package().root_directory().to_path_buf(),
+            absolute_path: package.package().root_directory().to_path_buf(),
         }),
         version: None,
     };
@@ -182,64 +179,49 @@ fn get_solver_answer(
         Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
-    let solver = Solver::new(pkg_ctx, fetcher, solver_freeze, mode);
-    let fetcher_lock = ctx
+    let solver = Solver::new(package, fetcher, solver_freeze, mode);
+    let fetcher_lock = package
+        .ctx()
         .duck_home()
         .ensure_fetcher_lockfile()?
         .lock(ShouldBlock::Yes)?;
-    let (_, results) = TokioScope::scope_and_block(|spawner| {
-        spawner.spawn(async {
-            let should_run_engine = solver.prepare_solving(git_access.clone()).await?;
-            drop(fetcher_lock);
-            match should_run_engine {
-                ShouldRunSolverEngine::No(answer) => Ok(answer),
-                ShouldRunSolverEngine::Yes(solver) => solver.solve(),
-            }
-        });
-    });
-    let result = unpack_tokio_scoped_vector(results)?;
-    extract_single_item_from_vec(result)?
+    let should_run_engine = solver.prepare_solving(git_access)?;
+    drop(fetcher_lock);
+    match should_run_engine {
+        ShouldRunSolverEngine::No(answer) => Ok(answer),
+        ShouldRunSolverEngine::Yes(solver) => solver.solve(),
+    }
 }
 
 /// Helper for [`sync`].
 /// Fetches source codes of packages which have been decided to be part of the freeze,
 /// but their source codes have not yet been fetched.
 fn fetch_source_codes(
-    ctx: &DuckCtx,
     storage: &Storage,
     fetcher: &Fetcher<'_>,
-    git_access: Arc<Mutex<StorageGitAccess<'_>>>,
+    mut git_access: StorageGitAccess<'_>,
     pkgs: Vec<ExpandedPackage>,
 ) -> QuackResult<bool> {
     let mut was_anything_installed = false;
-    let fetcher_lock = ctx
+    let fetcher_lock = fetcher
+        .ctx()
         .duck_home()
         .ensure_fetcher_lockfile()?
         .lock(ShouldBlock::Yes)?;
-    let (_, results) = TokioScope::scope_and_block(|spawner| {
-        for pkg in pkgs {
-            let tmp_pkg = Arc::new(pkg);
-            let tmp_git_access = git_access.clone();
-            spawner.spawn(async {
-                fetch_source_code(storage, fetcher, tmp_git_access, tmp_pkg).await
-            });
-        }
-    });
-    drop(fetcher_lock);
-    let results = unpack_tokio_scoped_vector(results)?;
-    for result in results {
-        was_anything_installed |= result?;
+    for pkg in pkgs {
+        was_anything_installed |= fetch_source_code(storage, fetcher, &mut git_access, pkg)?;
     }
+    drop(fetcher_lock);
     Ok(was_anything_installed)
 }
 
 /// Helper for [`fetch_source_codes`].
 /// Fetches the source code of a package if it is not yet stored in the storage.
-async fn fetch_source_code(
+fn fetch_source_code(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
-    git_access: Arc<Mutex<StorageGitAccess<'_>>>,
-    pkg: Arc<ExpandedPackage>,
+    git_access: &mut StorageGitAccess<'_>,
+    pkg: ExpandedPackage,
 ) -> QuackResult<bool> {
     match pkg.location.as_ref() {
         ExpandedLocation::Local { absolute_path: _ } => Ok(false),
@@ -248,17 +230,14 @@ async fn fetch_source_code(
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }
-            let git_access = git_access.lock().await;
             if git_access.is_stored(url.clone(), *commit) {
                 storage.mark_as_stored(&pkg_id)?;
                 return Ok(true);
             }
-            fetcher
-                .clone_from_git_to_directory(
-                    &Git::new(url.clone(), BranchOrTag::Default, Some(*commit)),
-                    &storage.pkg_dir(&pkg_id),
-                )
-                .await?;
+            fetcher.clone_from_git_to_directory(
+                &Git::new(url.clone(), BranchOrTag::Default, Some(*commit)),
+                &storage.pkg_dir(&pkg_id),
+            )?;
             storage.mark_as_stored(&pkg_id)?;
             storage.pkg_dir(&pkg_id).try_fsync_dir()?;
             Ok(true)
@@ -274,14 +253,11 @@ async fn fetch_source_code(
             let mut succesfully_fetched = false;
             let mut blob_path = PathBuf::new();
             for _ in 0..MAX_BLOB_RETRY_COUNT {
-                if let Ok(path) = fetcher
-                    .fetch_package_blob(&PackageWithUrl {
-                        id: *real_name,
-                        version,
-                        url: url.clone(),
-                    })
-                    .await
-                {
+                if let Ok(path) = fetcher.fetch_package_blob(&PackageWithUrl {
+                    id: *real_name,
+                    version,
+                    url: url.clone(),
+                }) {
                     blob_path = path;
                     succesfully_fetched = true;
                     break;

@@ -11,7 +11,7 @@ namespace pst {
 		base::Optional<std::vector<tpc::Identifier>> hides;
 
 	public:
-		explicit ImportStarHides(const dia::SourcePosition& position): ImportChain(position) {
+		explicit ImportStarHides(const LangParserState& state): ImportChain(state) {
 			this->element_kind = ElementKind::ImportStarHides;
 		}
 

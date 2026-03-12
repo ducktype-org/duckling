@@ -6,11 +6,9 @@
 
 namespace pst {
 	MBox<SpecifierBlock> SpecifierBlock::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<SpecifierBlock>(position);
+		auto out = makeBox<SpecifierBlock>(state);
 
-		// @TODO: #1535 Figure out ordering with context
-		state.parse(out).withDef(&out->block, BlockOrderType::Unordered);
+		PARSE().withDef(&out->block);
 
 		PST_RETURN out;
 	}
@@ -27,7 +25,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& SpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& SpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

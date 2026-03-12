@@ -6,11 +6,10 @@ use crate::util_common::path_ops_ext::PathOpsExt;
 use super::*;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
+use httpmock::prelude::*;
 use tempfile::tempdir;
-use wiremock::matchers::{method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
 
-async fn create_mock_server() -> MockServer {
+fn create_mock_server() -> (MockServer, DuckCtx) {
     let pkg1 = registry::Dependency {
         version: vec![Version::new(2, 3, 6)],
         source: registry::DependencySource {
@@ -98,84 +97,70 @@ async fn create_mock_server() -> MockServer {
         profiles: HashMap::new(),
     };
 
-    let server = MockServer::start().await;
+    let server = MockServer::start();
 
-    Mock::given(method("GET"))
-        .and(path("/packages/bar/2.5.6"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&bar_256))
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/bar/2.5.6");
+        then.status(200).json_body_obj(&bar_256);
+    });
 
-    Mock::given(method("GET"))
-        .and(path("/packages/foo/1.2.5"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&foo_125))
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/foo/1.2.5");
+        then.status(200).json_body_obj(&foo_125);
+    });
 
-    Mock::given(method("GET"))
-        .and(path("/packages/foo/1.2.3"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&foo_123))
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/foo/1.2.3");
+        then.status(200).json_body_obj(&foo_123);
+    });
 
-    Mock::given(method("GET"))
-        .and(path("/packages/foo/2137.6.7"))
-        .respond_with(ResponseTemplate::new(404))
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/foo/2137.6.7");
+        then.status(404);
+    });
 
-    Mock::given(method("GET"))
-        .and(path("/packages/foo"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(&types::MultiMetadata {
-                packages_metadata: vec![foo_123, foo_125],
-            }),
-        )
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/foo");
+        then.status(200).json_body_obj(&types::MultiMetadata {
+            packages_metadata: vec![foo_123, foo_125],
+        });
+    });
 
-    Mock::given(method("GET"))
-        .and(path("/packages/bar"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_json(&types::MultiMetadata {
-                packages_metadata: vec![bar_256],
-            }),
-        )
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/bar");
+        then.status(200).json_body_obj(&types::MultiMetadata {
+            packages_metadata: vec![bar_256],
+        });
+    });
 
-    Mock::given(method("GET"))
-        .and(path("/packages/bar/2.5.6/download"))
-        .respond_with(ResponseTemplate::new(200).set_body_string("bar-2.5.6"))
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/bar/2.5.6/download");
+        then.status(200).body("bar-2.5.6");
+    });
 
-    Mock::given(method("GET"))
-        .and(path("/packages/foo/1.2.3/download"))
-        .respond_with(ResponseTemplate::new(200).set_body_string("foo-1.2.3"))
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/foo/1.2.5/download");
+        then.status(200).body("foo-1.2.5");
+    });
 
-    Mock::given(method("GET"))
-        .and(path("/packages/foo/1.2.5/download"))
-        .respond_with(ResponseTemplate::new(200).set_body_string("foo-1.2.5"))
-        .mount(&server)
-        .await;
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/foo/1.2.3/download");
+        then.status(200).body("foo-1.2.3");
+    });
 
-    server
+    (server, DuckCtx::default())
 }
 
-#[tokio::test]
-async fn single_metadata() {
-    let server = create_mock_server().await;
-    let client = DucknestClient::new().unwrap();
+#[test]
+fn single_metadata() {
+    let (server, ctx) = create_mock_server();
+    let client = DucknestClient::new(&ctx);
     let response = client
         .get_exact_metadata(&types::PackageWithUrl {
             id: "foo".into(),
             version: Version::new(1, 2, 3),
-            url: server.uri().parse().unwrap(),
+            url: server.base_url().parse().unwrap(),
         })
-        .await
         .unwrap();
     assert_eq!(response.metadata.name, "foo");
     assert_eq!(response.metadata.version, Version::new(1, 2, 3));
@@ -186,63 +171,57 @@ async fn single_metadata() {
             .get_exact_metadata(&types::PackageWithUrl {
                 id: "foo".into(),
                 version: Version::new(1, 2, 4),
-                url: server.uri().parse().unwrap(),
+                url: server.base_url().parse().unwrap(),
             })
-            .await
             .is_err()
     );
 }
 
-#[tokio::test]
-async fn multi_metadata() {
-    let server = create_mock_server().await;
-    let client = DucknestClient::new().unwrap();
+#[test]
+fn multi_metadata() {
+    let (server, ctx) = create_mock_server();
+    let client = DucknestClient::new(&ctx);
     let response = client
-        .get_multi_metadata(&(server.uri().parse().unwrap()), "foo".into())
-        .await
+        .get_multi_metadata(&(server.base_url().parse().unwrap()), "foo".into())
         .unwrap();
     assert_eq!(response.packages_metadata.len(), 2);
 }
 
-#[tokio::test]
-async fn download_blob() {
+#[test]
+fn download_blob() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("target");
-    let server = create_mock_server().await;
-    let client = DucknestClient::new().unwrap();
+    let (server, ctx) = create_mock_server();
+    let client = DucknestClient::new(&ctx);
     client
         .fetch_blob(
             &types::PackageWithUrl {
                 id: "foo".into(),
                 version: Version::new(1, 2, 3),
-                url: server.uri().parse().unwrap(),
+                url: server.base_url().parse().unwrap(),
             },
             &path,
         )
-        .await
         .unwrap();
     assert_eq!(path.read_to_string().unwrap(), "foo-1.2.3");
 }
 
-#[tokio::test]
-async fn not_found_in_response() {
-    let server = create_mock_server().await;
-    let client = DucknestClient::new().unwrap();
+#[test]
+fn not_found_in_response() {
+    let (server, ctx) = create_mock_server();
+    let client = DucknestClient::new(&ctx);
     let err = client
         .get_exact_metadata(&types::PackageWithUrl {
             id: "foo".into(),
             version: Version::new(2137, 6, 7),
-            url: server.uri().parse().unwrap(),
+            url: server.base_url().parse().unwrap(),
         })
-        .await
         .unwrap_err();
     assert_eq!(
         err.to_string(),
         format!(
-            "while getting a metadata of `foo` version `2137.6.7` from `{}/`
-HTTP status client error (404 Not Found) for url ({}/packages/foo/2137.6.7)",
-            server.uri(),
-            server.uri()
+            "HTTP status client error (404) for url `{}/packages/foo/2137.6.7`",
+            server.base_url()
         )
     );
 }

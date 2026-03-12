@@ -15,7 +15,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit FlowPattern(const dia::SourcePosition& position): NotStmt(position) {
+		explicit FlowPattern(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::FlowPattern;
 		}
 

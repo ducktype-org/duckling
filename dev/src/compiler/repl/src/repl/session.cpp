@@ -1,4 +1,4 @@
-#include "repl_session.hpp"
+#include "session.hpp"
 
 #include "utils.hpp"
 
@@ -27,7 +27,6 @@
 #include <cstring>
 #include <iostream>
 #include <string_view>
-#include <vector>
 
 namespace compiler::repl {
 	// @TODO: #1784 decide if we want to do it here or in the main.cpp.
@@ -46,20 +45,10 @@ namespace compiler::repl {
 	}
 
 	ReplSession::ReplSession():
-		  m_config(),
 		  m_should_exit(false),
-		  m_line_counter(0),
+		  m_inputs_counter(0),
 		  m_dvm_pid(0),
-		  m_frontend(m_history, m_config) {
-		initDVM();
-	}
-
-	ReplSession::ReplSession(ReplConfig config):
-		  m_config(std::move(config)),
-		  m_should_exit(false),
-		  m_line_counter(0),
-		  m_dvm_pid(0),
-		  m_frontend(m_history, m_config) {
+		  m_frontend() {
 		initDVM();
 	}
 
@@ -113,8 +102,9 @@ namespace compiler::repl {
 	}
 
 	void ReplSession::clearHistory() {
+		m_frontend.clearHistory();
 		m_history.clear();
-		m_line_counter = 0;
+		m_inputs_counter = 0;
 	}
 
 	ReplResult ReplSession::processLine(std::string_view line) {
@@ -140,7 +130,7 @@ namespace compiler::repl {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CORE_DEV_LOG(REPL, "Querying QueryReplExpressionWrapper\n");
 			expr_wrapper = ctx.query<QueryReplExpressionWrapper>({ .expr_stmt = expr_stmt,
-			                                                       .counter   = m_line_counter });
+			                                                       .counter   = m_inputs_counter });
 
 			CORE_DEV_LOG(REPL, "Getting mangled name\n");
 			auto mangled_name = helios::mangler::getSimpleMangledName(
@@ -285,65 +275,48 @@ namespace compiler::repl {
 		try {
 			CORE_DEV_LOG(REPL, "Starting executeInput\n");
 
-			// This probe module is temporary — individual statement modules are created below.
 			CORE_DEV_LOG(REPL, "Parsing input for statement extraction\n");
-			auto probe_module_id = frontend::createModuleTreeFromContents(input);
 
-			std::vector<std::string> statement_sources;
-			bool                     has_parse_errors = false;
+			match_optional(splitInputIntoStatements(input)) {
+				opt_some(statement_sources) {
+					if (statement_sources.empty()) return ReplResult::success();
 
-			query::utils::withContextDo([&](query::Context& ctx) {
-				auto main_file = ctx.query<frontend::QueryMainSourceFile>(probe_module_id);
-				auto pst       = getFilePST(ctx, main_file);
+					CORE_DEV_LOG(
+						REPL, "Input divided into ", statement_sources.size(), " statement(s):\n"
+					);
+					for (usize i = 0; i < statement_sources.size(); ++i)
+						CORE_DEV_LOG(REPL, "  [", i + 1, "] \"", statement_sources[i], "\"\n");
 
-				CORE_DEV_LOG(REPL, "PST:\n");
-				if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
-					pst->dprint(std::cout);
-					std::cout << "\n\n";
+					CORE_DEV_LOG(REPL, "Executing ", statement_sources.size(), " statement(s)\n");
+
+					ReplResult last_result = ReplResult::success();
+					for (const auto& stmt_source: statement_sources) {
+						CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
+						auto module_ref
+							= createReplModule(stmt_source, m_history, m_inputs_counter);
+						auto module_id = module_ref->getModuleID();
+
+						CORE_DEV_LOG(REPL, "Creating module\n");
+						CORE_DEV_LOG(
+							REPL,
+							"Module created: #",
+							module_id.queryUnstablePerfectHash(),
+							", isRepl=",
+							module_ref->isReplModule(),
+							", hasParent=",
+							module_ref->getReplModuleParent().has_value(),
+							"\n"
+						);
+						m_history.emplace_back(stmt_source, module_id);
+						++m_inputs_counter;
+						last_result = executeSingleStatement(module_id);
+						if (last_result.status == ReplResult::Status::Error) return last_result;
+					}
+					return last_result;
 				}
-
-				if (pst->getLogger()->bad()) {
-					std::cerr << "Parse errors:\n";
-					pst->getLogger()->dumpLog(false, std::cerr);
-					has_parse_errors = true;
-					return;
-				}
-
-				statement_sources = extractStatementSources(ctx, probe_module_id);
-			});
-
-			if (has_parse_errors) return ReplResult::error("Parse error");
-			if (statement_sources.empty()) return ReplResult::success();
-
-			CORE_DEV_LOG(REPL, "Input divided into ", statement_sources.size(), " statement(s):\n");
-			for (usize i = 0; i < statement_sources.size(); ++i)
-				CORE_DEV_LOG(REPL, "  [", i + 1, "] \"", statement_sources[i], "\"\n");
-
-			CORE_DEV_LOG(REPL, "Executing ", statement_sources.size(), " statement(s)\n");
-
-			ReplResult last_result = ReplResult::success();
-			for (const auto& stmt_source: statement_sources) {
-				CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
-				auto module_ref = createReplModule(stmt_source, m_history, m_line_counter);
-				auto module_id  = module_ref->getModuleID();
-
-				CORE_DEV_LOG(REPL, "Creating module\n");
-				CORE_DEV_LOG(
-					REPL,
-					"Module created: #",
-					module_id.queryUnstablePerfectHash(),
-					", isRepl=",
-					module_ref->isReplModule(),
-					", hasParent=",
-					module_ref->getReplModuleParent().has_value(),
-					"\n"
-				);
-				m_history.emplace_back(stmt_source, module_id);
-				++m_line_counter;
-				last_result = executeSingleStatement(module_id);
-				if (last_result.status == ReplResult::Status::Error) return last_result;
+				opt_err(err) return ReplResult::error(err);
 			}
-			return last_result;
+			CORE_UNREACHABLE();
 
 		} catch (const std::out_of_range& e) {
 			std::string error_msg = std::string("REPL map::at error (out_of_range): ") + e.what();
@@ -364,7 +337,6 @@ namespace compiler::repl {
 	int ReplSession::run() {
 		m_frontend.printWelcome();
 		while (!m_should_exit) {
-			m_frontend.printPrompt();
 			std::string line = m_frontend.readLine();
 
 			if (line.empty() && std::cin.eof()) {

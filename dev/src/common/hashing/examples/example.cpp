@@ -14,10 +14,12 @@
 
 // we can use the Hash as a drop-in replacement for std::hash, for example in std::unordered_map
 namespace my_map {
+	using Hasher = decltype([](auto&& x) { return hashing::Hash<>{}(x).data.at(0); });
+
 	template<
 		class Key,
 		class T,
-		class Hash  = hashing::Hash<>,
+		class Hash  = Hasher,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
 	using unordered_map = std::unordered_map<Key, T, Hash, Pred, Alloc>;
@@ -83,13 +85,13 @@ int main() {
 	m[2] = 3;
 	std::cout << m[1] << ' ' << m[2] << '\n';  // 2 3
 
-	// by default fnva_64 algorithm is used
-	std::cout << Hash{}(type1{}) << '\n';  // some 64-bit number
+	// by default the DefaultHashAlgorithm is used
+	std::cout << Hash{}(type1{}) << '\n';
 
 	// but we can specify the algorithm explicitly as a template parameter
 	// it's also possible to get the hash value at compile time
-	constexpr auto H = Hash<Fnv1a_32>{}(type2{});
-	std::cout << H << '\n';  // some 32-bit number
+	constexpr auto H = Hash<SHA256>{}(type2{});
+	std::cout << H << '\n';  // some 256-bit number
 
 	struct type3 {
 		int x{ 123 }, y{ 456 };
@@ -112,7 +114,7 @@ int main() {
 	hasher2(7, std::string{ "hello" }, 42);
 
 	constexpr auto HASH_VALUE
-		= hashing::StatefulHash<hashing::Fnv1a_64>{}(7, type2{}, 7, std::string{ "hello" }, 42)
+		= hashing::StatefulHash<hashing::SHA256>{}(7, type2{}, 7, std::string{ "hello" }, 42)
 	          .finalize();
 	std::cout << "stateful hash:\n"
 			  << hasher2.finalize() << "\n\t(constexpr) hash value: " << HASH_VALUE << '\n';
