@@ -31,5 +31,15 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
 	VM_RUNTIME_EXCEPTION(VMFoundMemoryLeakException, "Memory leak detected");
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
-	VM_RUNTIME_EXCEPTION(VMMutexDoesntExist, "Mutex doesn\'t exist");
+
+#define VM_RUNTIME_EXCEPTION_WITH_PARAM(name, msg, type)                 \
+	struct name: public VMRuntimeException {                             \
+		type                              value;                         \
+		constexpr static std::string_view ERR_MSG = msg;                 \
+		name(const type& value):                                         \
+			  VMRuntimeException(base::strConcat(ERR_MSG, ": ", value)), \
+			  value(value) {}                                            \
+	}
+
+	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMResourceDoesNotExist, "Resource does not exist", std::string);
 }

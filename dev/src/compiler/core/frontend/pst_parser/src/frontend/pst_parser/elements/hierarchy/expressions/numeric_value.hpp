@@ -17,7 +17,7 @@ namespace pst::expr {
 
 		explicit ExprNumericValue(const LangParserState& state): ExprElement(state, 0) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~ExprNumericValue() override = default;
 		void     dprint(std::ostream& out) const final;

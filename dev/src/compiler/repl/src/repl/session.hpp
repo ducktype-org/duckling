@@ -1,5 +1,5 @@
 /**
- * @file repl_session.hpp
+ * @file session.hpp
  * @brief REPL (Read-Eval-Print Loop) session management for Duckling compiler.
  *
  * This file defines the ReplSession class which manages an interactive REPL session,
@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "repl_frontend.hpp"
-#include "repl_structs.hpp"
+#include "frontend.hpp"
+#include "helper_structs.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
@@ -35,7 +35,6 @@ namespace compiler::repl {
 	class ReplSession final {
 	public:
 		ReplSession();
-		explicit ReplSession(ReplConfig config);
 
 		/**
 		 * Run the main REPL loop (blocking).
@@ -43,6 +42,7 @@ namespace compiler::repl {
 		 */
 		int run();
 
+	private:
 		/**
 		 * @brief Process a single line of input from the user.
 		 *
@@ -65,26 +65,6 @@ namespace compiler::repl {
 		 * @return ReplResult with execution outcome and optional message
 		 */
 		ReplResult executeInput(std::string_view input);
-
-		/**
-		 * @brief Get the history of all statements entered in this REPL session.
-		 *
-		 * @return Vector of ReplStatement representing the session history.
-		 */
-		[[nodiscard]]
-		const std::vector<ReplStatement>& getHistory() const {
-			return m_history;
-		}
-
-		/**
-		 * @brief Get the configuration settings for this REPL session.
-		 *
-		 * @return ReplConfig containing the session's configuration options.
-		 */
-		[[nodiscard]]
-		const ReplConfig& getConfig() const {
-			return m_config;
-		}
 
 		/**
 		 * @brief Check whether the REPL session should terminate.
@@ -110,7 +90,7 @@ namespace compiler::repl {
 		 */
 		void clearHistory();
 
-	private:
+
 		/**
 		 * @brief Determine if a line of input is a REPL command.
 		 *
@@ -180,12 +160,11 @@ namespace compiler::repl {
 		 */
 		void initDVM();
 
-		ReplConfig                 m_config;       /// Configuration for REPL behavior
-		std::vector<ReplStatement> m_history;      /// All statements entered in this session
 		bool                       m_should_exit;  /// Flag to terminate the REPL loop
-		u64          m_line_counter;  /// Counter for generating unique wrapper function names
-		vm::PID      m_dvm_pid;       /// Process ID of the running DVM instance
-		ReplFrontend m_frontend;      /// Frontend for user interaction
+		std::vector<ReplStatement> m_history;      /// All statements entered in this session
+		u64          m_inputs_counter;  /// Counter for generating unique wrapper function names
+		vm::PID      m_dvm_pid;         /// Process ID of the running DVM instance
+		ReplFrontend m_frontend;        /// Frontend for user interaction
 	};
 
 }  // namespace compiler::repl

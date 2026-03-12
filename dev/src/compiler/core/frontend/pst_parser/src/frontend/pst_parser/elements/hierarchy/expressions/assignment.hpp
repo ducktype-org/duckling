@@ -38,7 +38,7 @@ namespace pst::expr {
 			return value.give();
 		}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~Assignment() override = default;
 		void     dprint(std::ostream& out) const final;

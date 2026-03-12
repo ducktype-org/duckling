@@ -9,7 +9,7 @@ use crate::{
         core::{PackageLoader, Version, fetcher::types, git_access::GitAccess},
         schemas::registry,
     },
-    util_common::path_ops_ext::PathOpsExt,
+    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
 use url::Url;
@@ -43,19 +43,22 @@ impl GitAccess for MockGitAccess {
 }
 
 fn setup_duck_ctx() -> (DuckCtx, TempDir) {
-    // We set cache directory to a temporary directory, so we can use `Fetcher` without
-    // worrying about leaving traces of tests in FS.
-    let dir = tempdir().unwrap();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::set_var("DUCK_CACHE_DIR", dir.path());
-    }
-    let ctx = DuckCtx::default();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::remove_var("DUCK_CACHE_DIR");
-    }
-    (ctx, dir)
+    let setup = || {
+        // We set cache directory to a temporary directory, so we can use `Fetcher` without
+        // worrying about leaving traces of tests in FS.
+        let dir = tempdir().unwrap();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::set_var("DUCK_CACHE_DIR", dir.path());
+        }
+        let ctx = DuckCtx::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::remove_var("DUCK_CACHE_DIR");
+        }
+        (ctx, dir)
+    };
+    setup_test(setup)
 }
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {

@@ -44,10 +44,13 @@ pub fn sync(
     package: &PackageCtx<'_>,
     options: SyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
-    let storage = Storage::new(package.ctx().duck_home());
+    let venv_config = package.venv_config();
+    let storage_localization = venv_config
+        .storage_path()?
+        .unwrap_or(package.ctx().default_storage_root());
+    let storage = Storage::new(storage_localization);
     let mut fetcher = Fetcher::new(package.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
-    let venv_config = package.venv_config();
     let expose_freezefile = venv_config.is_freezefile_exposed()?;
     let user_exposed_freeze = load_external_freezefile(package, expose_freezefile)?;
     let id = package.to_venv_id();

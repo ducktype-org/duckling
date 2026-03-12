@@ -15,7 +15,7 @@ namespace pst::expr {
 		explicit LogicAnd(const LangParserState& state):
 			  BinaryOperator(state, lang_def::keywordToStr(lang_def::Keyword::And), 730) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~LogicAnd() override = default;
 	};
