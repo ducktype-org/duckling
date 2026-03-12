@@ -126,8 +126,7 @@ Subtree-specific variables (tied to a subtree rooted in this node) (these are __
 - `PreNode` - A command run once - when the node is about to be processed
   Example: if we have a testconfig with 3 subdirs and its PreNode says `echo '1'`, '1' will be printed 4 times total - once for every test node before it is executed. Order of execution: `parent node` -> `first child` -> `second child` -> `third child` -> `parent's possible siblings`
 - `PostNode` - Same as `PreNode`, but the command is executed after the node is done being processed, which changes the order. Order example in the same setup: `first child` -> `second child` -> `third child` -> `parent node` -> `parent's possible siblings`
-Both - `PreNode` and `PostNode` are executed regardless of the test being filtered out or not. Let me rephrase: Even if my test does not satisfy the `-t` flag argument passed in the command, its `PreNode` and `PostNode` commands will be executed and so will be its children's commands and so on.
-This means that the only way to prevent a specific directory's `PreNode` from executing is to comment out its declaration as someone's `Subdir`
+Both - `PreNode` and `PostNode` are executed only if the test satisfies the optional `-t` argument passed in the command. Let me rephrase: If my test does not satisfy the `-t` argument, its `PreNode` and `PostNode` commands will not be executed, nor will those of its children and so on. This means that filtering ensures that only relevant directories' `PreNode` and `PostNode` commands are executed.
 
 Test specific:
 
