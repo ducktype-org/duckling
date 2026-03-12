@@ -12,7 +12,7 @@ use crate::{
             registry::{self, DependencyCondition, DependencyFeature},
         },
     },
-    util_common::{path_ops_ext::PathOpsExt, tests_setup_mutex::setup_test},
+    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
 use std::collections::HashSet;
