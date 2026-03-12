@@ -176,7 +176,10 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Unit;
 
-		UnitAbstractTypeImpl() { representation = "()"; mangledName = "u"; }
+		UnitAbstractTypeImpl() {
+			representation = "()";
+			mangledName    = "u";
+		}
 
 		[[nodiscard]] bool isImplicitlyCoercible(AbstractType target, query::Context& context)
 			const override;
@@ -201,7 +204,10 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Void;
 
-		VoidAbstractTypeImpl() { representation = "void"; mangledName = "v"; }
+		VoidAbstractTypeImpl() {
+			representation = "void";
+			mangledName    = "v";
+		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
@@ -222,7 +228,10 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Byte;
 
-		explicit ByteAbstractTypeImpl() { representation = "byte"; mangledName = "y"; }
+		explicit ByteAbstractTypeImpl() {
+			representation = "byte";
+			mangledName    = "y";
+		}
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
@@ -248,7 +257,10 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Bool;
 
-		explicit BoolAbstractTypeImpl() { representation = "bool"; mangledName = "b"; }
+		explicit BoolAbstractTypeImpl() {
+			representation = "bool";
+			mangledName    = "b";
+		}
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
@@ -274,7 +286,10 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Char;
 
-		explicit CharAbstractTypeImpl() { representation = "char"; mangledName = "c"; }
+		explicit CharAbstractTypeImpl() {
+			representation = "char";
+			mangledName    = "c";
+		}
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
@@ -315,10 +330,10 @@ namespace compiler::tsh {
 			  signedness(signedness) {
 			if (signedness == IntegralAbstractType::Signedness::Signed) {
 				representation = base::strConcat("i", size);
-				mangledName = base::strConcat("i", size);
+				mangledName    = base::strConcat("i", size);
 			} else {
 				representation = base::strConcat("u", size);
-				mangledName = base::strConcat("j", size);
+				mangledName    = base::strConcat("j", size);
 			}
 		}
 
@@ -363,7 +378,7 @@ namespace compiler::tsh {
 
 		explicit FloatAbstractTypeImpl(usize size): size(Bits(size)) {
 			representation = base::strConcat("f", size);
-			mangledName = base::strConcat("f", size);
+			mangledName    = base::strConcat("f", size);
 		}
 
 		[[nodiscard]]
@@ -445,7 +460,7 @@ namespace compiler::tsh {
 
 		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
 			representation = base::strConcat("pointer(", component.toString(), ")");
-			mangledName = "P" + component.getMangledName() + "E";
+			mangledName    = "P" + component.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -469,7 +484,10 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::String;
 
-		StringAbstractTypeImpl() { representation = "string"; mangledName = "s"; }
+		StringAbstractTypeImpl() {
+			representation = "string";
+			mangledName    = "s";
+		}
 
 		[[nodiscard]]
 
@@ -477,7 +495,10 @@ namespace compiler::tsh {
 		 * @brief Strings have nontrivial destructors because destruction of a string requires to
 		 * free memory.
 		 */
-		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
+		[[nodiscard]] bool
+			hasNoOpDestructor() const override {
+			return false;
+		}
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -499,7 +520,7 @@ namespace compiler::tsh {
 
 		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
 			representation = base::strConcat("dynamic_array(", element.toString(), ")");
-			mangledName = "D" + element.getMangledName() + "E";
+			mangledName    = "D" + element.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -541,7 +562,7 @@ namespace compiler::tsh {
 			  element_type(element),
 			  size(size) {
 			representation = base::strConcat(element.toString(), "[", base::toString(size), "]");
-			mangledName = "A" + base::toString(size) + element.getMangledName() + "E";
+			mangledName    = "A" + base::toString(size) + element.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -825,7 +846,10 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Meta;
 
-		explicit MetaAbstractTypeImpl() { representation = "type"; mangledName = "t"; }
+		explicit MetaAbstractTypeImpl() {
+			representation = "type";
+			mangledName    = "t";
+		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 

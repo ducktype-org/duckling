@@ -239,7 +239,7 @@ namespace compiler::helios::mangler {
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
 			    or kind(symbol_id) == SymbolKind::Method) {
 				ret = "F";
-				
+
 				// TODO: Function qualifiers
 
 				const auto& fun_decl
