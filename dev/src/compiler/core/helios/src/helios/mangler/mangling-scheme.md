@@ -15,7 +15,7 @@ either in the scheme or it's implementation, they should be reflected here.
 <scheme-version> ::= <compact-number>                       // version of the mangling scheme
 
 <encoding> ::= <path>                                       // variables and constants
-             | <path> <function-type>                       // functions
+             | <path> <function>                            // functions
              | <repl-expression-wrapper>                    // REPL expressions
 
 // REPL expression wrappers use simplified mangling for now. @TODO: #1768 decide
@@ -34,6 +34,11 @@ either in the scheme or it's implementation, they should be reflected here.
 <module-name> ::= <identifier>                                      // module name
                 | <identifier> "I" <templ-arg>* "E"                 // templated module instantiation
 <script-name> ::= <identifier>                                      // script name
+
+// note that function symbols nad function types are different
+<function> ::= <function-type> <parameter-name>* "E"
+
+<parameter-name> ::= <identifier>
 
 // base-10-number - the length in bytes of the raw identifier
 // raw-identifier - the actual name of the symbol encoded according to the encoding-identifier
@@ -102,13 +107,11 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <class-type> ::= "C" <path>                                 // class-like types (class, enum, etc.)
 
-<function-type> ::= "F" <function-qualifier>* <return-type> <function-argument>* "E"
+<function-type> ::= "F" <function-qualifier>* <return-type> <argument-type>* "E"
 
 <return-type> ::= <type>
 
-<function-argument> := <type> <function-argument-name>
-
-<function-argument-name> := <identifier>
+<argument-type> ::= <type>
 
 // additional qualifiers for functions including member functions
 // more qualifiers should be added in the future

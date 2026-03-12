@@ -238,18 +238,13 @@ namespace compiler::helios::mangler {
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
 			    or kind(symbol_id) == SymbolKind::Method) {
-				ret = "F";
-
-				// @TODO: #2255 Function qualifiers
+				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
+				ret                = function_type.getMangledName();
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
-				ret += fun_decl.return_type.getMangledName();
 
-				for (const auto& param: fun_decl.parameters) {
-					ret += param.type.getMangledName();
-					ret += identifier(param.name.str());
-				}
+				for (const auto& param: fun_decl.parameters) ret += identifier(param.name.str());
 
 				ret += "E";
 			} else {

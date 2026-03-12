@@ -135,6 +135,8 @@ namespace compiler::tsh {
 		  free(free) {
 		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
 		               + result_type.toString() + ")";
+
+		// @TODO: #2255 Function qualifiers?
 		mangled_name = "F" + result_type.getMangledName() + mangleTypeVector(this->parameter_types);
 	}
 
