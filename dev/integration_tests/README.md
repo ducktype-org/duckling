@@ -122,11 +122,15 @@ General variables (not tied to any context):
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
 
-Subtree-specific variables (tied to a subtree rooted in this node) (these are __INHERITED__ from the parent node):
-- `PreNode` - A command run once - when the node is about to be processed
-  Example: if we have a testconfig with 3 subdirs and its PreNode says `echo '1'`, '1' will be printed 4 times total - once for every test node before it is executed. Order of execution: `parent node` -> `first child` -> `second child` -> `third child` -> `parent's possible siblings`
-- `PostNode` - Same as `PreNode`, but the command is executed after the node is done being processed, which changes the order. Order example in the same setup: `first child` -> `second child` -> `third child` -> `parent node` -> `parent's possible siblings`
-Both - `PreNode` and `PostNode` are executed only if the test satisfies the optional `-t` argument passed in the command. Let me rephrase: If my test does not satisfy the `-t` argument, its `PreNode` and `PostNode` commands will not be executed, nor will those of its children and so on. This means that filtering ensures that only relevant directories' `PreNode` and `PostNode` commands are executed.
+Subtree-specific variables (applied to a subtree rooted at this node) are __INHERITED__ from the parent node unless explicitly redefined in the child node:
+- `PreNode` - A command executed once before processing the node and its subdirectories.  
+  Example: If a `PreNode` command is `echo '1'` and the node has 3 subdirectories, the command will run 4 times in total: once for the parent node and once for each subdirectory.  
+  Order of execution: `parent node` -> `first child` -> `second child` -> `third child` -> `parent's siblings`.
+
+- `PostNode` - Same as `PreNode`, but the command is executed after processing the node and its subdirectories.  
+  Order of execution: `first child` -> `second child` -> `third child` -> `parent node` -> `parent's siblings`.
+
+Both `PreNode` and `PostNode` commands are executed only if the node or its descendants match the `-t` filter argument. This ensures that irrelevant nodes and their commands are skipped.
 
 Test specific:
 
