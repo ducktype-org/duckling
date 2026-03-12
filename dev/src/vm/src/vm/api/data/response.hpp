@@ -49,6 +49,7 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
+			// @todo: #2264 should express position in CodeCollection instead of LowVMProgram
 			u64         function_id;
 			u64         instr_number;
 			base::StrID function_name;
