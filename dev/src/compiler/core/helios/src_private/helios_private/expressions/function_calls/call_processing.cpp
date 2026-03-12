@@ -707,8 +707,8 @@ namespace compiler::helios::code {
 		const auto whole_call_origin = elementOrigin(lhs->origin, rhs->origin);
 
 		const CallPstOrigin pst_origin{
-			// Giving the callee the position of the entire call is not strictly correct,
-			// but currently has no adverse effects. @TODO: 2075 fix this.
+			// @TODO: 2075 Giving the callee the position of the entire call is not
+			// strictly correct, but currently has no adverse effects. Fix this.
 			.whole_call_origin = whole_call_origin,
 			.callee_origin     = whole_call_origin,
 			.arguments_origin  = { lhs_origin, rhs_origin }

@@ -18,7 +18,6 @@ namespace compiler::ctv {
 		variant_match(value) {
 			variant_case(bool, val) { return val ? "true" : "false"; }
 			variant_case(NumericValue, val) { return val.toString(); }
-			// TODO: add test for this case
 			variant_case(char, c) { return "'" + base::escapeString(std::string{ c }) + "'"; }
 			variant_case(base::StrID, val) { return "\"" + base::escapeString(val.str()) + "\""; }
 			variant_case_novalue(UnitCTV) { return "()"; }
