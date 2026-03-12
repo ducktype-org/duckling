@@ -234,19 +234,20 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string funcType(query::Context& ctx, SymID symbol_id) {
-			// @TODO: #1568 use type mangling for parameter and return types.
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
 			    or kind(symbol_id) == SymbolKind::Method) {
 				ret = "F";
+				
+				// TODO: Function qualifiers
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
-				ret += fun_decl.return_type.toString();
+				ret += fun_decl.return_type.getMangledName();
 
 				for (const auto& param: fun_decl.parameters) {
-					ret += param.type.toString();
+					ret += param.type.getMangledName();
 					ret += identifier(param.name.str());
 				}
 
@@ -304,8 +305,7 @@ namespace compiler::helios::mangler {
 				CORE_UNREACHABLE();
 			}
 			case SymbolKind::Class: {
-				// @TODO: #1568 generalise type mangling?
-				return path(ctx, symbol_id);
+				return "C" + path(ctx, symbol_id);
 			}
 			default:
 				throw base::LogicError{ base::strConcat(

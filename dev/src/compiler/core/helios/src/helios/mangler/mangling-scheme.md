@@ -61,6 +61,7 @@ either in the scheme or it's implementation, they should be reflected here.
               | <value-arg>
 
 <type> ::= <builtin-type>
+         | <pointer-type>
          | <variant-type>
          | <tuple-type>
          | <array-type>
@@ -70,29 +71,34 @@ either in the scheme or it's implementation, they should be reflected here.
          | <type-modifier>* <type>
          | <back-reference>
 // there could possibly be more qualifiers
-// should not repeat, sorted lexicographically
+// should not repeat
 <type-modifier> ::= "N"                                     // const
-                  | "P"                                     // pointer
+                  | "M"                                     // unique
+                  | "L"                                     // leaking
                   | "R"                                     // reference
-                  | "M"                                     // atomic
-                  | "W"                                     // volatile
                   | "X"                                     // box
 
 // more types could be added in the future
-<builtin-type> ::= "i"                                      // i64
-                 | "u"                                      // u64
-                 | "f"                                      // f32
-                 | "d"                                      // f64
+<builtin-type> ::= "u"                                      // unit
+                 | "v"                                      // void
+                 | "y"                                      // byte
                  | "b"                                      // bool
                  | "c"                                      // char
+                 | "i" <base-10-number>                     // i64 etc.
+                 | "j" <base-10-number>                     // u64 etc.
+                 | "f" <base-10-number>                     // f64 etc.
                  | "s"                                      // string
-                 | "v"                                      // void
+                 | "t"                                      // meta (type type)
+
+<pointer-type> ::= "P"                                      // raw pointer
+                 | "P" <type> "E"                           // pointer
 
 <variant-type> ::= "V" <type>* "E"                          // variant type
 
 <tuple-type> ::= "T" <type>* "E"                            // tuple type
 
-<array-type> ::= "A" <base-10-number> <type> "E"            // array type
+<array-type> ::= "A" <base-10-number> <type> "E"            // static array type
+                 | "D" <type> "E"                           // dynamic array type
 
 <class-type> ::= "C" <path>                                 // class-like types (class, enum, etc.)
 

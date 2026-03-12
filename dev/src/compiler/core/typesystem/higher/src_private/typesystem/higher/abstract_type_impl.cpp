@@ -4,6 +4,7 @@
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <helios/mangler/mangler.hpp>
 
 #include <utility>
 
@@ -19,6 +20,20 @@ namespace compiler::tsh {
 		if (!types.empty()) res << types[0].toString();
 		for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
 		res << ")";
+
+		return res.str();
+	}
+
+	/**
+	 * @brief Creates a mangled string representation of a vector of symbol types.
+	 * @param types Vector of symbol types to mangle.
+	 * @return A mangled string representing a sequence of symbol types.
+	 */
+	std::string mangleTypeVector(const std::vector<SymbolType<>>& types) {
+		std::stringstream res;
+		if (!types.empty()) res << types[0].getMangledName();
+		for (const auto& type: types | std::views::drop(1)) res << type.getMangledName();
+		res << "E";
 
 		return res.str();
 	}
@@ -99,6 +114,7 @@ namespace compiler::tsh {
 	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
 		  components(std::move(components)) {
 		representation = "Tuple" + stringifyTypeVector(this->components);
+		mangledName = "T" + mangleTypeVector(this->components);
 	}
 
 	bool TupleAbstractTypeImpl::hasNoOpDestructor() const {
@@ -119,6 +135,7 @@ namespace compiler::tsh {
 		  free(free) {
 		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
 		               + result_type.toString() + ")";
+		mangledName = "F" + result_type.getMangledName() + mangleTypeVector(this->parameter_types);
 	}
 
 	bool FunctionAbstractTypeImpl::isImplicitlyCoercible(
@@ -152,6 +169,7 @@ namespace compiler::tsh {
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
+		mangledName = "V" + mangleTypeVector(underlying_types);
 	}
 
 	bool VariantAbstractTypeImpl::hasNoOpDestructor() const {
@@ -160,8 +178,9 @@ namespace compiler::tsh {
 		return true;
 	}
 
-	ClassAbstractTypeImpl::ClassAbstractTypeImpl(compiler::helios::SymID symbol): symbol(symbol) {
+	ClassAbstractTypeImpl::ClassAbstractTypeImpl(compiler::helios::SymID symbol, query::Context& ctx): symbol(symbol) {
 		representation = "Class " + name(symbol).str();
+		mangledName = helios::mangler::getSimpleMangledName(ctx, symbol).str();
 	}
 
 	CRef<TypeInterface> ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {

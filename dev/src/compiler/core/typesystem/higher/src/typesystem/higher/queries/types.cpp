@@ -170,8 +170,8 @@ namespace compiler::tsh {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
 
 	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Impl) {
-		static auto provide(Context&, const QKey key) -> PResult {
-			return ClassAbstractTypeImpl(key);
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			return ClassAbstractTypeImpl(key, ctx);
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF

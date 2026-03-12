@@ -540,8 +540,6 @@ namespace compiler::tsl {
 		 */
 		std::vector<CRef<TypeLayout>> layout_idx_to_layout;
 
-		base::StrID mangled_name;
-
 		// Delegate constructor.
 		explicit ClassTypeLayout(
 			struct ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx
@@ -599,11 +597,6 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		CRef<TypeLayout> getFieldLayoutOfLayoutIndex(const usize layout_index) const {
 			return layout_idx_to_layout.at(layout_index);
-		}
-
-		[[nodiscard]]
-		base::StrID getMangledName() const {
-			return mangled_name;
 		}
 
 		[[nodiscard]]

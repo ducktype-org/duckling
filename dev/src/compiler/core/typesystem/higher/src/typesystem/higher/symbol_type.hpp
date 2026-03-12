@@ -264,6 +264,20 @@ namespace compiler::tsh {
 			);
 		}
 
+		[[nodiscard]]
+		std::string getMangledName() const {
+			using enum ReferenceKind;
+			return base::strConcat(
+				uniqueness == Uniqueness::Unique ? "unique " : "M",
+				leakage == Leakage::Leaking ? "leaking " : "L",
+				mutability == Mutability::Mutable ? "" : "N",
+				reference_kind == Direct ? ""
+				: reference_kind == Box  ? "X"
+										 : "R",
+				abstract_type.getMangledName()
+			);
+		}
+
 	private:
 		ABSTRACT_TYPE abstract_type;
 		ReferenceKind reference_kind;

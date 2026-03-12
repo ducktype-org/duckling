@@ -402,12 +402,7 @@ namespace compiler::tsl {
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(helper.total_size, helper.class_type),
 		  num_fields(helper.field_layouts.size()),
-		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id),
-		  mangled_name(ctx.query<compiler::helios::mangler::QueryMangledSymbol>(
-			  compiler::helios::mangler::KeyOf_MangledSymbol{
-				  .symbol_key = helper.class_type.getSymbol(),
-			  }
-		  )) {
+		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
 		for (u32 i = 0; i < num_fields; i++) {
 			// Fill out the map based on the subsequent field symbols and their offsets.
 			sym_id_to_offset.put(
