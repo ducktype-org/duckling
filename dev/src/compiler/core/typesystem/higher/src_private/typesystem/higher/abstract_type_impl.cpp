@@ -289,8 +289,8 @@ namespace compiler::tsh {
 
 	const std::string& ModuleAbstractTypeImpl::getMangledName() const {
 		CORE_PANIC("Module type cannot be mangled (we can add it if we find a use case).");
-  }
-  
+	}
+
 	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getInterface(query::Context&) const {
 		throw base::NotYetImplemented("Type template interface not yet implemented");
 	}

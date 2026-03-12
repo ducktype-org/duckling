@@ -521,7 +521,7 @@ namespace compiler::tsh {
 
 		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
 			representation = base::strConcat("List[", element.toString(), "]");
-      mangled_name   = "D" + element.getMangledName() + "E";
+			mangled_name   = "D" + element.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
