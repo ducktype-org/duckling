@@ -1,6 +1,6 @@
 /**
- * @file lsp_daemon.cpp
- * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
+ * @file main.cpp
+ * @brief This file defines LS daemon, the c++ layer of the duckling language server.
  */
 
 #include <base/preproc/diagnostics.hpp>  // this is included here, to provide push/pop diagnostics macros
@@ -205,7 +205,7 @@ void showVersion() {
 }
 
 clah::Clah getLspDaemonCLI() {
-	return clah::Clah("lsp_daemon", "The Duckling Language Server Protocol daemon.")
+	return clah::Clah("duck_ls", "The Duckling Language Server daemon.")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
@@ -237,8 +237,8 @@ clah::Clah getLspDaemonCLI() {
  * This function initializes the command-line argument parser, handles exceptions,
  * and starts the LSP server on the specified port.
  *
- * Example usage 1: ./lsp_daemon start -p 8080
- * Example usage 2: ./lsp_daemon start --port 8080
+ * Example usage 1: ./duck_ls start -p 8080
+ * Example usage 2: ./duck_ls start --port 8080
  *
  * @param argc The number of command-line arguments.
  * @param argv The array of command-line arguments.
