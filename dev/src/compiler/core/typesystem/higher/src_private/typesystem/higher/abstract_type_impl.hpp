@@ -809,6 +809,9 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+
+		[[nodiscard]]
+		const std::string& getMangledName() const;
 	};
 
 	class ModuleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -832,6 +835,9 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+
+		[[nodiscard]]
+		const std::string& getMangledName() const;
 	};
 
 	class MetaAbstractTypeImpl final: public AbstractTypeImpl {
@@ -875,5 +881,8 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+
+		[[nodiscard]]
+		const std::string& getMangledName() const;
 	};
 }

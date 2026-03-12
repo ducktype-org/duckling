@@ -278,6 +278,18 @@ namespace compiler::tsh {
 		CORE_PANIC("Import type interface does not exist (we can add it if we find a use case).");
 	}
 
+	const std::string& ImportAbstractTypeImpl::getMangledName() const {
+		CORE_PANIC("Import type cannot be mangled (we can add it if we find a use case).");
+	}
+
+	const std::string& NamespaceAbstractTypeImpl::getMangledName() const {
+		CORE_PANIC("Namespace type cannot be mangled (we can add it if we find a use case).");
+	}
+
+	const std::string& ModuleAbstractTypeImpl::getMangledName() const {
+		CORE_PANIC("Module type cannot be mangled (we can add it if we find a use case).");
+	}
+
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().base;
