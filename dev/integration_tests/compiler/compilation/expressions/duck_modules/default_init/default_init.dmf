@@ -3,7 +3,7 @@ class Point {
     y: i64 = 888;
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     var i: i64;
     builtin_output_i64(i); # 0
 

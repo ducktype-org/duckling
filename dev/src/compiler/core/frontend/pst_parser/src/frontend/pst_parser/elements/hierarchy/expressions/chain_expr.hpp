@@ -15,12 +15,12 @@ namespace pst::expr {
 		/**
 		 * @brief checks length before the start of the next link
 		 */
-		static i64 toNextLink(const LangParserState& state, i64 length);
+		static i64 toNextLink(const LangParserState& state);
 
 	public:
-		ChainExpr(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+		ChainExpr(const LangParserState& state): ExprElement(state, 300) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 		void                     dprint(std::ostream& out) const final;
 		void                     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg&                 addElementDataToStableHash(HashAlg&) const override;

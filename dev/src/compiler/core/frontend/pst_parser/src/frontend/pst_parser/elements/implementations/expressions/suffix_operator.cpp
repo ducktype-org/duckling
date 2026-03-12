@@ -14,7 +14,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& SuffixOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& SuffixOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, op);
 		return partial_hash;
 	}

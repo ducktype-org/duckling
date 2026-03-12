@@ -168,7 +168,7 @@ mod test {
     use std::path::PathBuf;
 
     use crate::{
-        DuckCtx, QpCtx,
+        DuckCtx,
         quackpack::core::{
             parse_manifest,
             types_common::{ExpandedLocation, InternedExpandedLocation},
@@ -310,10 +310,9 @@ features:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_root = parse_manifest(&path_root, &qpctx).unwrap();
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_root = parse_manifest(&path_root, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_root = InternedExpandedLocation::new(ExpandedLocation::Local {
             absolute_path: PathBuf::new().join("./root_path"),
         });

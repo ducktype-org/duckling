@@ -5,8 +5,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> Assignment::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		u64 length = state.ctokens().size();
 
 		auto pos
 			= dia::SourcePosition(state.getPosition(), state.getPosition((i64) length - 1).getEnd());
@@ -20,20 +22,19 @@ namespace pst::expr {
 					place = i;
 				} else {
 					state.logInt(makeBox<MultipleAssignmentError>(pos));
-					fastForward(state, length);
 					return nullptr;
 				}
 			}
 		}
-		if (!found) return Lower::parse(state, length);
-		auto out = makeBox<Assignment>(pos);
+		if (!found) return Lower::parse(state);
+		auto out = makeBox<Assignment>(state);
 
-		state.parse(out).with(&out->variables, Lower::parse, +place);
+		PARSE().autoFallbackLen(place).with(&out->variables, Lower::parse);
 
 		out->type = state[0].getValue();
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
-		state.parse(out).with(&out->value, Lower::parse, length - place - 1);
+		PARSE().with(&out->value, Lower::parse);
 
 		PST_RETURN out;
 	}
@@ -50,7 +51,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type.strView());
 		return partial_hash;
 	}

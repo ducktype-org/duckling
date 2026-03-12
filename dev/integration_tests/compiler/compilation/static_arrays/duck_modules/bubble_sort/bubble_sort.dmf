@@ -19,7 +19,7 @@ fun bubble_sort(size: i64, arr: ref i64[10]) -> () = {
     }
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     let n = builtin_input_i64(); 
     
     var data: i64[10];

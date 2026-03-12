@@ -13,7 +13,7 @@ namespace pst {
 		bool                         star = false;
 
 	public:
-		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {
+		explicit DottedName(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::DottedName;
 		}
 
