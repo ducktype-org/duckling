@@ -10,6 +10,7 @@
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
 // @TODO: #1824 Move platform dependent includes to a separate file.
 #include <sys/ioctl.h>
