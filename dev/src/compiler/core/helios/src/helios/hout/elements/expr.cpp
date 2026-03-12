@@ -7,6 +7,7 @@
 
 #include "../visitors.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/queries.hpp>
@@ -245,14 +246,27 @@ namespace compiler::helios::code {
 	}
 
 	Box<Expr> ReusableExpr::clone() const {
-		// @TODO: #??? Remove this static map and find a better way to track reused subexpressions.
-		static base::HashMap<HOUTExprID, SharedBox<Expr>> inner_id_to_cloned;
+		// Using a concurrent static map isn't particularly elegant. Another solution would be to
+		// add a "cloning context" (by default empty) to the clone methods and pass it around. It
+		// could then also be a simple sequential data structure.
+		// Consider adding a cloning context if we find more use cases for it, but for now
+		// this is a simple solution for a local problem.
+		static concurrent::ConHashMap<HOUTExprID, SharedBox<Expr>> inner_id_to_cloned;
 
+		// We want to clone the inner expression only once, and reuse the cloned version for all
+		// reusable expressions which pointed to the same inner expression. Hence, we keep a map
+		// from the inner ID of the cloned expression to its clone
+		// Note that when the reusable expressions get cloned *again*, the ID of the inner *clone*
+		// is taken as the key to the map, and the clone of the clone is inserted.
 		auto inner_cloned = [&] -> SharedBox<Expr> {
 			auto inner_id = inner->getID();
-			if (!inner_id_to_cloned.contains(inner_id))
-				inner_id_to_cloned.put(inner_id, inner->clone());
-			return inner_id_to_cloned.at(inner_id);
+			if (!inner_id_to_cloned.contains(inner_id)) {
+				// Attempt to populate the map only if it doesn't already contain a cloned version
+				// of the inner expression. This might fail if another thread populated the map after
+				// the `contains` check above, in which case all is good, and we ignore the failure.
+				inner_id_to_cloned.maybePut(inner_id, SharedBox(inner->clone()));
+			}
+			return *inner_id_to_cloned.at(inner_id);
 		}();
 
 		return makeBox<ReusableExpr>(inner_cloned, first_use);
