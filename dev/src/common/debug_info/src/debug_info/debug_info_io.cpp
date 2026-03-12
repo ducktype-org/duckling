@@ -102,6 +102,17 @@ namespace debug_info {
 		j.at("position").get_to(v.position);
 	}
 
+	// -- VariableMetadata
+
+	inline void to_json(json& j, const VariableMetadata& v) {
+		j = json{ { "name", v.name }, { "position", v.position } };
+	}
+
+	inline void from_json(const json& j, VariableMetadata& v) {
+		j.at("name").get_to(v.name);
+		j.at("position").get_to(v.position);
+	}
+
 	// -- TypeMetadata
 
 	inline void to_json(json& j, const TypeMetadata& v) { j = json{ { "name", v.name } }; }
@@ -112,8 +123,18 @@ namespace debug_info {
 
 	inline void to_json(json& j, const FunctionMetadata& v) {
 		// Sort a temporary copy by offset so the on-disk format is always ordered.
-		auto sorted = v.instr_offsets_to_metadata;
-		std::ranges::sort(sorted, {}, &decltype(sorted)::value_type::first);
+		auto sorted_instr_offsets_to_metadata = v.instr_offsets_to_metadata;
+		std::ranges::sort(
+			sorted_instr_offsets_to_metadata,
+			{},
+			&decltype(sorted_instr_offsets_to_metadata)::value_type::first
+		);
+		auto sorted_instr_offsets_to_variable_init = v.instr_offsets_to_variable_init;
+		std::ranges::sort(
+			sorted_instr_offsets_to_variable_init,
+			{},
+			&decltype(sorted_instr_offsets_to_variable_init)::value_type::first
+		);
 
 		// Build explicitly: Optional<string> and Optional<SourcePosition> aren't
 		// in the debug_info namespace, so ADL won't find our generic to_json helpers
@@ -121,7 +142,8 @@ namespace debug_info {
 		j = json::object();
 		if (v.function_name) j["function_name"] = *v.function_name;
 		if (v.position) j["position"] = *v.position;
-		j["instr_offsets_to_metadata"] = sorted;
+		j["instr_offsets_to_metadata"]      = sorted_instr_offsets_to_metadata;
+		j["instr_offsets_to_variable_init"] = sorted_instr_offsets_to_variable_init;
 	}
 
 	inline void from_json(const json& j, FunctionMetadata& v) {
@@ -136,6 +158,10 @@ namespace debug_info {
 		else
 			v.position = std::nullopt;
 		j.at("instr_offsets_to_metadata").get_to(v.instr_offsets_to_metadata);
+		if (j.contains("instr_offsets_to_variable_init"))
+			j.at("instr_offsets_to_variable_init").get_to(v.instr_offsets_to_variable_init);
+		else
+			v.instr_offsets_to_variable_init.clear();
 		if (!std::ranges::is_sorted(
 				v.instr_offsets_to_metadata,
 				{},
@@ -143,6 +169,14 @@ namespace debug_info {
 			))
 			throw nlohmann::json::other_error::create(
 				501, "instr_offsets_to_metadata is not sorted by offset", &j
+			);
+		if (!std::ranges::is_sorted(
+				v.instr_offsets_to_variable_init,
+				{},
+				&decltype(v.instr_offsets_to_variable_init)::value_type::first
+			))
+			throw nlohmann::json::other_error::create(
+				501, "instr_offsets_to_variable_init is not sorted by offset", &j
 			);
 	}
 

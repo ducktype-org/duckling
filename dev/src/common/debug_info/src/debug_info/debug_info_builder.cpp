@@ -22,6 +22,20 @@ namespace debug_info {
 		return addInstruction(offset, InstructionMetadata{ .position = std::move(position) });
 	}
 
+	FunctionBuilder& FunctionBuilder::addVariableInit(u64 offset, VariableMetadata metadata) {
+		this->metadata.instr_offsets_to_variable_init.emplace_back(offset, std::move(metadata));
+		return *this;
+	}
+
+	FunctionBuilder& FunctionBuilder::addVariableInit(
+		u64 offset, std::string variable_name, SourcePosition position
+	) {
+		return addVariableInit(
+			offset,
+			VariableMetadata{ .name = std::move(variable_name), .position = std::move(position) }
+		);
+	}
+
 	DebugInfoBuilder& FunctionBuilder::end() {
 		parent.finalizeFunction(std::move(mangled_name), std::move(metadata));
 		return parent;
@@ -56,7 +70,8 @@ namespace debug_info {
 			FunctionMetadata{ .function_name
 		                      = base::Optional<std::string>{ std::move(function_name) },
 		                      .position = base::Optional<SourcePosition>{ std::move(position) },
-		                      .instr_offsets_to_metadata = {} }
+		                      .instr_offsets_to_metadata      = {},
+		                      .instr_offsets_to_variable_init = {} }
 		);
 	}
 

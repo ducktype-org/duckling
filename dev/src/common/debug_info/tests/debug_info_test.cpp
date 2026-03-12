@@ -42,12 +42,17 @@ private:
 		line_position.start_line = line_position.end_line = 3;
 		instr4_pos.line_col_position                      = line_position;
 
+		SourcePosition var0_pos;
+		line_position.start_line = line_position.end_line = 4;
+		var0_pos.line_col_position                        = line_position;
+
 		return DebugInfoBuilder(Target::DBC, "test.dmf", SourcePositionsType::LineColumn)
 		    .addType("_TMyType", "MyType")
 		    .addType("_TOther", TypeMetadata{ .name = "Other" })
 		    .beginFunction("_Zfoo", "foo", func_pos)
 		    .addInstruction(0, instr0_pos)
 		    .addInstruction(4, instr4_pos)
+		    .addVariableInit(0, "local_x", var0_pos)
 		    .end()
 		    .build();
 	}
@@ -72,6 +77,9 @@ private:
 		assertTrue(func.function_name.has_value(), "Function name should be present");
 		assertTrue(*func.function_name == "foo", "Function name incorrect");
 		assertTrue(func.instr_offsets_to_metadata.size() == 2, "Expected 2 instructions");
+		assertTrue(
+			func.instr_offsets_to_variable_init.size() == 1, "Expected 1 variable initialization"
+		);
 
 		// Instructions are stored in insertion order from the builder
 		bool found0 = false, found4 = false;
@@ -88,6 +96,12 @@ private:
 		}
 		assertTrue(found0, "Instruction at offset 0 not found");
 		assertTrue(found4, "Instruction at offset 4 not found");
+
+		const auto& [var_offset, var_meta] = func.instr_offsets_to_variable_init.front();
+		assertTrue(var_offset == 0, "Variable init offset incorrect");
+		assertTrue(var_meta.name == "local_x", "Variable name incorrect");
+		const auto& var_fp = std::get<FilePosition>(var_meta.position.line_col_position);
+		assertTrue(var_fp.start_line == 4, "Variable init: start_line incorrect");
 	}
 
 	void serializationRoundTripTest() {
@@ -120,6 +134,10 @@ private:
 		assertTrue(
 			result->functions.at("_Zfoo").instr_offsets_to_metadata.size() == 2,
 			"Round-trip: wrong number of instructions"
+		);
+		assertTrue(
+			result->functions.at("_Zfoo").instr_offsets_to_variable_init.size() == 1,
+			"Round-trip: wrong number of variable initializations"
 		);
 	}
 
@@ -178,6 +196,29 @@ private:
 })");
 			auto               result = debug_info::loadFromStream(iss);
 			assertFalse(result.has_value(), "Unsorted instr_offsets_to_metadata should fail");
+		}
+
+		// Variable initializations not sorted by offset should fail
+		{
+			std::istringstream iss(R"({
+	"target": "DBC",
+	"module_path": "x.dmf",
+	"source_positions_type": "LineColumn",
+	"functions": {
+		"_Zx": {
+			"function_name": "x",
+			"position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 1, "start_column": 0, "end_line": 2, "end_column": 0 } },
+			"instr_offsets_to_metadata": [],
+			"instr_offsets_to_variable_init": [
+				[8, { "name": "a", "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 2, "start_column": 0, "end_line": 2, "end_column": 1 } } }],
+				[4, { "name": "b", "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 3, "start_column": 0, "end_line": 3, "end_column": 1 } } }]
+			]
+		}
+	},
+	"types": {}
+})");
+			auto               result = debug_info::loadFromStream(iss);
+			assertFalse(result.has_value(), "Unsorted instr_offsets_to_variable_init should fail");
 		}
 	}
 

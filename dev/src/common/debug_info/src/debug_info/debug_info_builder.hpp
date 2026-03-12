@@ -45,6 +45,18 @@ namespace debug_info {
 		FunctionBuilder& addInstruction(u64 offset, SourcePosition position);
 
 		/**
+		 * @brief Adds a variable-initialization entry at @p offset with full metadata.
+		 */
+		FunctionBuilder& addVariableInit(u64 offset, VariableMetadata metadata);
+
+		/**
+		 * @brief Convenience overload: builds VariableMetadata from name + position.
+		 */
+		FunctionBuilder& addVariableInit(
+			u64 offset, std::string variable_name, SourcePosition position
+		);
+
+		/**
 		 * @brief Finalizes this function, writes it into the parent builder, and
 		 *        returns the parent so further builder calls can be chained.
 		 *
@@ -76,6 +88,7 @@ namespace debug_info {
 	 *     .addType("_TMyType", "MyType")
 	 *     .beginFunction("foo", "foo", functionPos)
 	 *       .addInstruction(0,  instrPos0)
+	 *       .addVariableInit(0, "x", varPos0)
 	 *       .addInstruction(4,  instrPos4)
 	 *     .end()
 	 *     .build();

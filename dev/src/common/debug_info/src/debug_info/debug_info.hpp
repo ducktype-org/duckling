@@ -35,11 +35,17 @@ namespace debug_info {
 		SourcePosition position;
 	};
 
+	struct VariableMetadata {
+		std::string    name;
+		SourcePosition position;
+	};
+
 	struct FunctionMetadata {
 		base::Optional<std::string>    function_name;
 		base::Optional<SourcePosition> position;
 
 		std::vector<std::pair<u64, InstructionMetadata>> instr_offsets_to_metadata;
+		std::vector<std::pair<u64, VariableMetadata>>    instr_offsets_to_variable_init;
 	};
 
 	struct TypeMetadata {
