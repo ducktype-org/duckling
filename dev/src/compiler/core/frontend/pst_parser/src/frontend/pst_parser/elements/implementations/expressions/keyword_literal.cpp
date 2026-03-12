@@ -4,15 +4,16 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> KeywordLiteral::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> KeywordLiteral::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
 		auto out = makeBox<KeywordLiteral>(state);
 
 		PARSE().one(&out->keyword);
 
-		if (length > 2 && state[0].is(NamedOperator::Colon) && state[1].isBracketGroup(Token::Curly))
-			PARSE().with(&out->template_specifier, TemplateSpecifier::parse, 2L);
+		if (state.ctokens().size() >= 2 && state[0].is(NamedOperator::Colon)
+		    && state[1].isBracketGroup(Token::Curly))
+			PARSE().with(&out->template_specifier, TemplateSpecifier::parse);
 
 		PST_RETURN out;
 	}
