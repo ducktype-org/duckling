@@ -95,7 +95,7 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Update apt
         run: sudo apt update
@@ -342,7 +342,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Fetch origin/main
         run: git fetch origin main
