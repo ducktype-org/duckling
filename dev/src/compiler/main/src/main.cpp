@@ -484,12 +484,6 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_script", "Compile a .ds script file into a .dbc or executable.")
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("output"))
-	                     .addShortName('o')
-	                     .addLongName("output")
-	                     .addShortDesc("Output file path.")
-	                     .optional()
-	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
@@ -524,13 +518,6 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto default_ext = backend_type == driver::BackendType::DVM ? ".dbc" : ".exe";
-					auto default_out = fs::FilePath(
-						script_file.getFilePath().getPath().stem().string() + default_ext
-					);
-					auto output_path
-						= options.getValue<fs::FilePath>("output").copyValueOr(default_out);
-
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
 					auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
@@ -540,7 +527,6 @@ clah::Clah getClahForMain() {
 							.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
 							                      .copyValueOr("./duck_build/"),
 						},
-						.output_path       = output_path,
 						.debug_options     = getDebugOptionsFromClap(options),
 						.execution_options = {
 							.worker_count = base::safeIntConv<u64>(worker_count),

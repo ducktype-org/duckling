@@ -131,7 +131,6 @@ namespace compiler::driver {
 			fs::File                        script_file;
 			global_state::BackendOptions    backend_options;
 			options_types::ArtifactsOptions compilation_artifacts;
-			fs::FilePath                    output_path;
 			options_types::DebugOptions     debug_options;
 			options_types::ExecutionOptions execution_options;
 		};
