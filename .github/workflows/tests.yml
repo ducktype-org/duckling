@@ -164,7 +164,7 @@ jobs:
       # main branch misses, fallback to any branch's cache.
       - name: Restore build cache
         id: restore-build-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ${{ env.CCACHE_DIR }}
@@ -279,7 +279,7 @@ jobs:
       # Manually cache the build before testing, but **after** cleaning.
       - name: Save build cache
         id: save-build-cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             ${{ env.CCACHE_DIR }}
