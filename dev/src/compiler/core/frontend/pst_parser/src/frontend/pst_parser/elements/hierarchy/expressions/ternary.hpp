@@ -27,7 +27,7 @@ namespace pst::expr {
 			return "Ternary Expr";
 		}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~Ternary() override = default;
 		void     dprint(std::ostream& out) const final;

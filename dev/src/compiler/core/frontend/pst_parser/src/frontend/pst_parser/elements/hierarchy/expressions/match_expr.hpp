@@ -26,7 +26,7 @@ namespace pst::expr {
 			this->element_kind = ElementKind::Match;
 		}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~MatchExpr() override = default;
 		void dprint(std::ostream& out) const final;
