@@ -9,12 +9,12 @@ namespace pst {
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
-		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
-		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
+		PARSE().all(Keyword::Fun, &out->name, &out->params);
+		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			state.parse(out).all(NamedOperator::Assign, &out->body);
+			PARSE().all(NamedOperator::Assign, &out->body);
 		})
 
 		PST_RETURN out;

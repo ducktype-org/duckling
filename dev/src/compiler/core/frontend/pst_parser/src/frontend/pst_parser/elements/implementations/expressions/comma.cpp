@@ -19,13 +19,13 @@ namespace pst::expr {
 
 		for (auto end: ends) {
 			out->expressions.emplace_back();
-			state.parse(out).with(&out->expressions.back(), Lower::parse, end - 1 - start);
-			state.parse(out).one(Special::Comma);
+			PARSE().with(&out->expressions.back(), Lower::parse, end - 1 - start);
+			PARSE().one(Special::Comma);
 			start = end;
 		}
 		if (start + 1 != length) {
 			out->expressions.emplace_back();
-			state.parse(out).with(&out->expressions.back(), Lower::parse, length - 1 - start);
+			PARSE().with(&out->expressions.back(), Lower::parse, length - 1 - start);
 		}
 		PST_RETURN out;
 	}

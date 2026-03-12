@@ -1,4 +1,4 @@
-fun main() -> i32 = {
+fun main() -> i64 = {
     let i64_1 = builtin_input_i64();
     builtin_output_i64(i64_1);
     let i64_2 = builtin_input_i64();
