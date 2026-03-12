@@ -34,7 +34,11 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         DEPENDS ${linked_out} ${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py
         VERBATIM
     )
-    set_source_files_properties("${nm_out}" PROPERTIES GENERATED TRUE)
+
+    set_source_files_properties("${linked_out}" "${nm_out}"
+        PROPERTIES GENERATED TRUE
+        HEADER_FILE_ONLY TRUE
+    )
 
     set(destination_scopes
         "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -103,9 +107,19 @@ add_custom_command(
 )
 
 process_to_binary("${cp_stencils}" copy-and-patch.cpp "wrapper")
+set(wrapper_binary_artifacts
+    "${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm"
+    "${CMAKE_CURRENT_BINARY_DIR}/wrapper-so"
+)
 add_custom_target(
-    wrapper-binary-artifacts-target
+    cp-stencils-target
     DEPENDS
-    ${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm
-    ${CMAKE_CURRENT_BINARY_DIR}/wrapper-text
+    ${wrapper_binary_artifacts}
+)
+set(jit_dependency
+    ${jit_dependency}
+    "${CMAKE_CURRENT_LIST_DIR}/memory/memory.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/copy-and-patch.cpp"
+    ${wrapper_binary_artifacts}
+    PARENT_SCOPE
 )
