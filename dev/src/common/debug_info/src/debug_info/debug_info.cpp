@@ -27,6 +27,9 @@ namespace debug_info {
 
 			for (auto& [offset, instr_meta]: func.instr_offsets_to_metadata)
 				instr_meta.position = resolvePosition(instr_meta.position, resolver);
+
+			for (auto& [offset, variable_meta]: func.instr_offsets_to_variable_init)
+				variable_meta.position = resolvePosition(variable_meta.position, resolver);
 		}
 	}
 

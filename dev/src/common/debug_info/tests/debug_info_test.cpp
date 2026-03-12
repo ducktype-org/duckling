@@ -224,7 +224,7 @@ private:
 
 	void resolvePositionsTest() {
 		// Build two functions whose positions are PstHashPostion.
-		// Instructions are left empty to keep the test focused.
+		// Also add one variable init to verify nested metadata gets resolved too.
 
 		auto make_hash_pos = [&](u64 a, u64 b) -> SourcePosition {
 			return SourcePosition{ .line_col_position = PstHashPostion{
@@ -236,6 +236,7 @@ private:
 
 		DebugInfo info = DebugInfoBuilder(Target::DBC, "mod.dmf", SourcePositionsType::PstHash)
 		                     .beginFunction("_Zfoo", "foo", make_hash_pos(1, 10))
+		                     .addVariableInit(7, "local_foo", make_hash_pos(11, 110))
 		                     .end()
 		                     .beginFunction("_Zbar", "bar", make_hash_pos(2, 20))
 		                     .end()
@@ -271,6 +272,14 @@ private:
 
 		check_func("_Zfoo", 1);
 		check_func("_Zbar", 2);
+
+		const auto& foo_var
+			= info.functions.at("_Zfoo").instr_offsets_to_variable_init.at(0).second;
+		const auto& var_fp = std::get<FilePosition>(foo_var.position.line_col_position);
+		assertTrue(foo_var.name == "local_foo", "Variable name should be preserved");
+		assertTrue(var_fp.file_path == "resolved.duck", "Variable init: file_path incorrect");
+		assertTrue(var_fp.start_line == 11, "Variable init: start_line incorrect");
+		assertTrue(var_fp.start_column == 110, "Variable init: start_column incorrect");
 	}
 };
 
