@@ -17,6 +17,8 @@ import {
 	_Connection
 } from 'vscode-languageserver/node';
 
+import * as os from 'os';
+import * as path from 'path';
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { handleSemanticTokensFull } from "./semanticTokens";
 import { preloadKeywords } from "./preloadKeywords";
@@ -31,8 +33,8 @@ const connection = createConnection(ProposedFeatures.all);
 // Send a notification to the client that the server has started
 connection.sendNotification('window/showMessage', {type: 3, message: 'DucklingLS started!'});
 
-// Create a compiler daemon client
-const compilerDaemonClient = new CompilerDaemonClient();
+// Create a compiler daemon client — instantiated in onInitialized once config is available
+let compilerDaemonClient!: CompilerDaemonClient;
 // Create a document manager
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
@@ -87,8 +89,6 @@ connection.onInitialize((params: InitializeParams) => {
 		};
 	}
 
-	// Preload keywords for autocompletion
-	preloadKeywords(compilerDaemonClient, connection);
 	return result;
 });
 
@@ -98,6 +98,20 @@ connection.onInitialized(() => {
 			// Register for all configuration changes.
 			connection.client.register(DidChangeConfigurationNotification.type, undefined);
 		}
+
+		// Resolve the duck_ls binary path from configuration, falling back to the default.
+		let executablePath = path.join(os.homedir(), '.local', 'bin', 'duck_ls');
+		const config = await connection.workspace.getConfiguration('DucklingLanguageServer');
+		const rawPath: string = config?.executablePath;
+		if (rawPath) {
+			// Expand leading ~ to the home directory
+			executablePath = rawPath.replace(/^~(?=\/|$)/, os.homedir());
+		}
+
+		compilerDaemonClient = new CompilerDaemonClient(connection, executablePath);
+		// Preload keywords for autocompletion
+		preloadKeywords(compilerDaemonClient, connection);
+
 		if (hasWorkspaceFolderCapability) {
 			await compilerDaemonClient.putWorkspace(connection);
 			
@@ -204,7 +218,7 @@ connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null =
 
 // Make the compiler daemon client exit when the connection exits
 connection.onExit(() => {
-	compilerDaemonClient.exit();
+	compilerDaemonClient?.exit();
 });
 
 // Make the text document manager listen on the connection

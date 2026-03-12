@@ -178,6 +178,12 @@ namespace compiler::driver {
 				handleDebugOptions(repl_options.debug_options);
 				handleExecutionOptions(repl_options.execution_options);
 			}
+			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
+				handleDebugOptions(script_options.debug_options);
+				handleExecutionOptions(script_options.execution_options);
+				handleArtifactsOptions(script_options.compilation_artifacts);
+				handleBackendOptions(script_options.backend_options);
+			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
 	}
