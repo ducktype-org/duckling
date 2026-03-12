@@ -188,10 +188,15 @@ private:
 				auto value = vm::safeReadPointerBytes<i64>(pointer_data_response.data.getBegin());
 				assertEqual(0, value, "Variable value is not correct");
 			}
-			if (var_type_info->getName() == base::StrID("ptr")) {
+			if (var_type_info->getName().strView().starts_with("ptr")) {
 				auto response = vm::api::debuggerDereferencePointer(pid, var.pointer)
 				                    .value();  // "Dereference pointer failed"
 				assertTrue(response.pointer.isNull(), "Pointer should be null");
+
+				auto dereference_response = vm::api::debuggerDereferencePointer(
+					pid, response.pointer
+				);
+				assertFalse(dereference_response.has_value(), "Getting null pointer data should have failed");
 			}
 		}
 

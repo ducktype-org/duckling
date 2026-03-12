@@ -364,6 +364,9 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
+						if (request.pointer.pointer.isNull())
+							return std::unexpected(api::ApiError{
+								api::OtherError{ "Cannot dereference null pointer" } });
 						base::ModRawView view = memory.getPointerData(
 							request.pointer.pointer, Type::POINTER_SIZE.asInt()
 						);
