@@ -512,6 +512,13 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Automatic safe conversion version of autoFallbackLen
+		 */
+		PSTAutomatic& autoFallbackLen(i64 length) {
+			return autoFallbackLen(base::safeIntConv<u64>(length));
+		}
+
+		/**
 		 * @brief Setup a fallback for parsing. The fallback is automatically exited when
 		 * PSTAutomatic is destructed at the end of the expression.
 		 *
