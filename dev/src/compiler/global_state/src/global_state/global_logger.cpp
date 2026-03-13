@@ -18,6 +18,7 @@ namespace global_state {
 		CORE_ASSERT(
 			query::Context::getState().activeQueryCount() == 0, "getGlobalLogger used within query!"
 		);
+		CORE_ASSERT(global_logger.toOpt().has_value(), "Global logger is not set!");
 		return global_logger.refMut().toOpt().value();
 	}
 
