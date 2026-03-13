@@ -6,6 +6,22 @@
 
 namespace compiler::driver {
 
+	struct InitializationResult final {
+	private:
+		base::OkBad result;
+		bool        checked = false;
+
+	public:
+		InitializationResult(base::OkBad result);
+		InitializationResult(const InitializationResult&) = delete;
+		InitializationResult(InitializationResult&&) = delete;
+
+		~InitializationResult();
+
+		[[nodiscard]]
+		base::OkBad status();
+	};
+
 	/**
 	 * @brief Initializes the compiler with the given options.
 	 * This function initializes the query state, query input,
@@ -22,5 +38,5 @@ namespace compiler::driver {
 	 * In case of failure, diagnostic messages will be reported in global logger.
 	 * Driver exit should still be called in the failure case.
 	 */
-	base::OkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options);
+	 InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options);
 }

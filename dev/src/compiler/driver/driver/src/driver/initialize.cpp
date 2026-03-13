@@ -26,6 +26,18 @@
 
 namespace compiler::driver {
 
+	InitializationResult::InitializationResult(base::OkBad result): result(result) {}
+
+	InitializationResult::~InitializationResult() {
+		CORE_ASSERT_NOEXCEPT(checked, "Initialization failed, but the failure was not handled!");
+	}
+
+	[[nodiscard]]
+	base::OkBad InitializationResult::status() {
+		checked = true;
+		return result;
+	}
+
 	namespace {
 		constinit bool is_initialized = false;
 
@@ -166,7 +178,7 @@ namespace compiler::driver {
 		}
 	}
 
-	base::OkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+	 InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
 		time_stats::TrackCategoryTime driver_initialization_time(
 			time_stats::TimeCategories::DriverInitialization
 		);

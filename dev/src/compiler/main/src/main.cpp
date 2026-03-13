@@ -131,11 +131,16 @@ clah::Clah getClahForMain() {
 			clah::Clah("lex", "Runs lexer on a single file and prints the result to cout.")
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto file_to_lex = options.getPositional<fs::File>(0);
 
@@ -177,11 +182,16 @@ clah::Clah getClahForMain() {
 			clah::Clah("parse", "Runs parser on a single file and prints result in json to cout.")
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
@@ -207,11 +217,15 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(clah::Clah("get_hout", "Debug prints hout-unit of a module.")
 	                       .addPositional(clah::FileParser::make("module"))
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
+							   auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 								   }
 							   );
+							   if (init_result.status().isBad()) {
+								   compiler::driver::exit();
+								   return 1;
+							   }
 
 							   auto path_to_compile = options.getPositional<fs::File>(0);
 
@@ -267,7 +281,7 @@ clah::Clah getClahForMain() {
                         base::generateRandomString(32)
                     );
 
-					auto init_ok = compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
@@ -285,7 +299,7 @@ clah::Clah getClahForMain() {
 						}
 					);
 
-					if (init_ok.isBad()) {
+					if (init_result.status().isBad()) {
 						compiler::driver::exit();
 						return 1;
 					}
@@ -370,7 +384,7 @@ clah::Clah getClahForMain() {
 
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
-					auto init_ok = compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
@@ -389,7 +403,7 @@ clah::Clah getClahForMain() {
 						}
 					);
 
-					if (init_ok.isBad()) {
+					if (init_result.status().isBad()) {
 						compiler::driver::exit();
 						return 1;
 					}
@@ -455,7 +469,7 @@ clah::Clah getClahForMain() {
                     );
 					using namespace compiler;
 
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.main_package_info = {
 										.package_name = package_name,
@@ -472,6 +486,11 @@ clah::Clah getClahForMain() {
 									},
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
@@ -544,7 +563,11 @@ clah::Clah getClahForMain() {
 						},
 					};
 
-					compiler::driver::initializeTheCompiler(mode);
+					auto init_result= compiler::driver::initializeTheCompiler(mode);
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 					auto        result = driver::compileScript(mode, backend_type, linking_options);
@@ -555,7 +578,7 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
+							   auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 									   .execution_options = {
@@ -563,6 +586,10 @@ clah::Clah getClahForMain() {
 									   },
 								   }
 							   );
+							   if (init_result.status().isBad()) {
+								   compiler::driver::exit();
+								   return 1;
+							   }
 							   compiler::repl::ReplSession session;
 							   int                         result = session.run();
 							   compiler::driver::exit();
@@ -570,11 +597,11 @@ clah::Clah getClahForMain() {
 						   }))
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
+						   		(void)compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 								   }
-							   );
+							   ).status();
 							   return 0;
 						   }));
 }

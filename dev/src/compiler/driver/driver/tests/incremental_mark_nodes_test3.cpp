@@ -36,7 +36,7 @@ private:
 			= fs::FilePath(std::filesystem::current_path() / k_artifacts_dir);
 
 		// Initialize with changed functions path (same package name as previous step)
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
@@ -52,6 +52,8 @@ private:
             }
         );
 
+		ASSERT_TRUE(init_result.status().isOk());
+		
 		auto prev_graph_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
 		ASSERT_TRUE(prev_graph_opt.has_value());
 		auto prev = prev_graph_opt.value();
