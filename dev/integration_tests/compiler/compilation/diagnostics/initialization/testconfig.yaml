@@ -9,5 +9,7 @@ Tests:
         Output:
           String: ""
         Err:
-          String: "error[E0]: Main package does not have a main source file.\nThe main source file is required for compilation. Please add a no_main_source_file.dmf file to the main module directory.\n\n"
+          String: "error[E0]: Main package does not have a main source file.\n\
+           The main source file is required for compilation.
+           Please add a no_main_source_file.dmf file to the main module directory.\n\n"
         ExitCode: 1
