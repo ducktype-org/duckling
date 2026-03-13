@@ -1,5 +1,6 @@
 #pragma once
 
+#include "execution_config.hpp"
 #include "process_info.hpp"
 
 #include <filesystem/file.hpp>
@@ -112,8 +113,9 @@ namespace vm::api {
 		request::DeinitAndValidate>;
 
 	struct SupervisorRequest {
-		PID            pid;
-		RequestVariant request;
+		PID             pid;
+		RequestVariant  request;
+		ExecutionConfig config;
 	};
 
 }

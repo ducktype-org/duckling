@@ -38,27 +38,29 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id) {
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id, ExecutionConfig config) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Resume{ thread_id }))
+		    .doRequest(SupervisorRequest(pid, request::Resume{ thread_id }, config))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> resume(PID pid) {
+	std::expected<void, ApiError> resume(PID pid, ExecutionConfig config) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Resume{ ThreadID{ 0 } }))
+		    .doRequest(SupervisorRequest(pid, request::Resume{ ThreadID{ 0 } }, config))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> step(PID pid) {
+	std::expected<void, ApiError> step(PID pid, ExecutionConfig config) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Step{}))
+		    .doRequest(SupervisorRequest(pid, request::Step{}, config))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid) {
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(
+		PID pid, ExecutionConfig config
+	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{}))
+		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{}, config))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
@@ -68,30 +70,39 @@ namespace vm::api {
 		});
 	}
 
-	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& paths) {
+	std::expected<void, ApiError> loadFiles(
+		PID pid, const std::vector<fs::File>& paths, ExecutionConfig config
+	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }))
+		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }, config))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code) {
+	std::expected<void, ApiError> loadCode(
+		PID pid, const code::CodeCollection& code, ExecutionConfig config
+	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::LoadCode{ code }))
+		    .doRequest(SupervisorRequest(pid, request::LoadCode{ code }, config))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {
+	std::expected<void, ApiError> run(
+		PID pid, const std::vector<std::string>& args, ExecutionConfig config
+	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Run{ args }))
+		    .doRequest(SupervisorRequest(pid, request::Run{ args }, config))
 		    .transform(ignoreResponse);
 	}
 
 	std::expected<ThreadID, ApiError> runFunction(
-		PID pid, const std::string& function_name, const FunctionRunArguments& args
+		PID                         pid,
+		const std::string&          function_name,
+		const FunctionRunArguments& args,
+		ExecutionConfig             config
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
-				pid, request::RunFunction{ .func_name = function_name, .func_args = args }
+				pid, request::RunFunction{ .func_name = function_name, .func_args = args }, config
 			))
 		    .and_then([](const Response& response) {
 				return mapOrWrongResponse<ThreadID>(response);
@@ -105,11 +116,16 @@ namespace vm::api {
 	}
 
 	std::expected<ExitValue, ApiError> runFunctionAwait(
-		PID pid, const std::string& function_name, const FunctionRunArguments& args
+		PID                         pid,
+		const std::string&          function_name,
+		const FunctionRunArguments& args,
+		ExecutionConfig             config
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
-				pid, request::RunFunctionAwait{ .func_name = function_name, .func_args = args }
+				pid,
+				request::RunFunctionAwait{ .func_name = function_name, .func_args = args },
+				config
 			))
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}

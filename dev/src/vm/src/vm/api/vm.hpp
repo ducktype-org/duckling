@@ -6,6 +6,7 @@
 
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/execution_config.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
@@ -31,7 +32,9 @@ namespace vm::api {
 	 * @return Nothing if the code was loaded successfully or an API error otherwise (ex. syntax
 	 * errors, static verification errors, duplicate function errors).
 	 */
-	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& path);
+	std::expected<void, ApiError> loadFiles(
+		PID pid, const std::vector<fs::File>& path, ExecutionConfig config = {}
+	);
 
 	/**
 	 * @brief Load the code from given code collection into a specified process on DVM.
@@ -39,7 +42,9 @@ namespace vm::api {
 	 * @return Nothing if the code was loaded successfully or an API error otherwise (ex. syntax
 	 * errors, static verification errors, duplicate function errors).
 	 */
-	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code);
+	std::expected<void, ApiError> loadCode(
+		PID pid, const code::CodeCollection& code, ExecutionConfig config = {}
+	);
 
 	/**
 	 * @brief Run a program on DVM. It is expected that a 'main' function was loaded into the
@@ -48,7 +53,9 @@ namespace vm::api {
 	 *
 	 * @return Nothing if the program was run successfully or an API error otherwise.
 	 */
-	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
+	std::expected<void, ApiError> run(
+		PID pid, const ProgramRunArguments& args = {}, ExecutionConfig config = {}
+	);
 
 	/**
 	 * @brief Run a function with a given name on DVM.
@@ -57,7 +64,10 @@ namespace vm::api {
 	 * @return ThreadID if the function was run successfully or an API error otherwise.
 	 */
 	std::expected<ThreadID, ApiError> runFunction(
-		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
+		PID                         pid,
+		const std::string&          func_name,
+		const FunctionRunArguments& args   = {},
+		ExecutionConfig             config = {}
 	);
 
 	/**
@@ -66,7 +76,10 @@ namespace vm::api {
 	 * @return The return value of the function if it was ran successfully or an API error otherwise.
 	 */
 	std::expected<ExitValue, ApiError> runFunctionAwait(
-		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
+		PID                         pid,
+		const std::string&          func_name,
+		const FunctionRunArguments& args   = {},
+		ExecutionConfig             config = {}
 	);
 
 	/**
@@ -117,15 +130,15 @@ namespace vm::api {
 	 * @return Nothing if the program successfully resumed or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
-	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id);
-	std::expected<void, ApiError> resume(PID pid);
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id, ExecutionConfig config = {});
+	std::expected<void, ApiError> resume(PID pid, ExecutionConfig config = {});
 
 	/**
 	 * @brief Perform one instruction of the program and pause.
 	 * @return Nothing if the program successfully stepped and paused or an API error otherwise, in
 	 * which case the state is undefined.
 	 */
-	std::expected<void, ApiError> step(PID pid);
+	std::expected<void, ApiError> step(PID pid, ExecutionConfig config = {});
 
 	/**
 	 * @brief Force the main execution thread of the given process to stop running and kill the
@@ -138,7 +151,9 @@ namespace vm::api {
 	/**
 	 * @brief Wait for breakpoint hit. Used by tests.
 	 */
-	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(
+		PID pid, ExecutionConfig config = {}
+	);
 
 	/**
 	 * @brief Get the code position of the next line of bytecode to be executed on the specified
