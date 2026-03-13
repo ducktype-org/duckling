@@ -309,8 +309,6 @@ jobs:
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --duckc-worker-count 1;
-             cat /tmp/dit.log
-
 
       - name: Integration Tests Multithreaded (Only Compiler)
         id: integration-tests-multithreaded-only-compiler
