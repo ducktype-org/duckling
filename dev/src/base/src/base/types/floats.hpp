@@ -33,6 +33,14 @@ static_assert(
 	std::numeric_limits<float>::is_iec559, "Fallback error: 'float' must be IEC 559 compliant."
 );
 static_assert(
+	sizeof(float) == 4 && FLT_MANT_DIG == 24,
+	"Fallback error: 'float' must be 32-bits to be used as 'f32'."
+);
+static_assert(
+	sizeof(double) == 8 && DBL_MANT_DIG == 53,
+	"Fallback error: 'double' must be 64-bits to be used as 'f64'."
+);
+static_assert(
 	std::numeric_limits<double>::is_iec559, "Fallback error: 'double' must be IEC 559 compliant."
 );
 using f32 = float;
