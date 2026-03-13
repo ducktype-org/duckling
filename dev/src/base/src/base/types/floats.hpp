@@ -27,8 +27,8 @@ using f64 = std::float64_t;
 #else
 // @note: floats and doubles are USUALLY 32 and 64 bits in size. This is not guaranteed by the
 // standard though. Here we assert that the sizes and mantissa sizes are what we expect.
-// Check if we are on a platform where floats and doubles are not IEC 559 compliant (IEEE 754), or
-// if their sizes are not what we expect. If so, we trigger a compile-time error with a helpful message.
+// Check if we are on a platform where floats and doubles are not IEC 559 compliant (IEEE 754).
+// If so, we trigger a compile-time error with a helpful message.
 static_assert(
 	std::numeric_limits<float>::is_iec559, "Fallback error: 'float' must be IEC 559 compliant."
 );
