@@ -29,7 +29,7 @@ namespace compiler::driver {
 	InitializationResult::InitializationResult(base::OkBad result): result(result) {}
 
 	InitializationResult::~InitializationResult() {
-		CORE_ASSERT_NOEXCEPT(checked, "Initialization failed, but the failure was not handled!");
+		CORE_ASSERT_NOEXCEPT(checked, "Initialization status was not checked, use status method!");
 	}
 
 	[[nodiscard]]

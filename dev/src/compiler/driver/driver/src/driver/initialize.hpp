@@ -6,6 +6,12 @@
 
 namespace compiler::driver {
 
+	/**
+	 * Helper struct used to wrap the result of the initialization,
+	 * in a way that forces the caller to check it (to avoid silent failures).
+	 *
+	 * In status method is never called, the destructor will panic.
+	 */
 	struct InitializationResult final {
 	private:
 		base::OkBad result;
