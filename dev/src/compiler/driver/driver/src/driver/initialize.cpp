@@ -181,6 +181,7 @@ namespace compiler::driver {
 
 		variant_match(options.mode) {
 			variant_case(CompilerModeOfOperationAndOptions::BareMode, bare_options) {
+				handleLoggerInitialization();
 				handleDebugOptions(bare_options.debug_options);
 			}
 			variant_case(
@@ -206,10 +207,12 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
+				handleLoggerInitialization();
 				handleDebugOptions(repl_options.debug_options);
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
+				handleLoggerInitialization();
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
