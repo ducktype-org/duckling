@@ -18,8 +18,9 @@ namespace compiler::driver {
 	 * that will be used to interact with top-level driver operations
 	 * such as handling change in the source code input.
 	 *
-	 * @return Whether the initialization was successful or not. In case of failure, the error
-	 * message will be printed to stderr. Driver exit should still be called in the failure case.
+	 * @return Whether the initialization was successful or not.
+	 * In case of failure, diagnostic messages will be reported in global logger.
+	 * Driver exit should still be called in the failure case.
 	 */
 	base::OkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options);
 }
