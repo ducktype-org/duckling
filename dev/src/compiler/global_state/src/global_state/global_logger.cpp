@@ -19,15 +19,12 @@ namespace global_state {
 			query::Context::getState().activeQueryCount() == 0, "getGlobalLogger used within query!"
 		);
 		CORE_ASSERT(global_logger.toOpt().has_value(), "Global logger is not set!");
-		return global_logger.refMut().toOpt().value();
+		return global_logger.toOpt().value();
 	}
 
 	bool hasGlobalLogger() { return global_logger.toOpt().has_value(); }
 
 	namespace setters {
-		/**
-		 * This should only be called by the driver.
-		 */
 		void setGlobalLogger(Box<dia_int::Logger> logger) {
 			CORE_ASSERT(global_logger.toOpt().empty(), "Global logger is already set!");
 			global_logger = std::move(logger);
