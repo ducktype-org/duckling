@@ -14,7 +14,7 @@ namespace compiler::driver {
 	public:
 		InitializationResult(base::OkBad result);
 		InitializationResult(const InitializationResult&) = delete;
-		InitializationResult(InitializationResult&&) = delete;
+		InitializationResult(InitializationResult&&)      = delete;
 
 		~InitializationResult();
 
@@ -38,5 +38,5 @@ namespace compiler::driver {
 	 * In case of failure, diagnostic messages will be reported in global logger.
 	 * Driver exit should still be called in the failure case.
 	 */
-	 InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options);
+	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options);
 }

@@ -563,7 +563,7 @@ clah::Clah getClahForMain() {
 						},
 					};
 
-					auto init_result= compiler::driver::initializeTheCompiler(mode);
+					auto init_result = compiler::driver::initializeTheCompiler(mode);
 					if (init_result.status().isBad()) {
 						compiler::driver::exit();
 						return 1;
@@ -597,11 +597,12 @@ clah::Clah getClahForMain() {
 						   }))
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-						   		(void)compiler::driver::initializeTheCompiler(
+							   (void) compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 								   }
-							   ).status();
+							   )
+								   .status();
 							   return 0;
 						   }));
 }

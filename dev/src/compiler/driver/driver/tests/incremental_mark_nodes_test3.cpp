@@ -53,7 +53,7 @@ private:
         );
 
 		ASSERT_TRUE(init_result.status().isOk());
-		
+
 		auto prev_graph_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
 		ASSERT_TRUE(prev_graph_opt.has_value());
 		auto prev = prev_graph_opt.value();

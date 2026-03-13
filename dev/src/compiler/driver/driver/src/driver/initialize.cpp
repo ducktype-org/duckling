@@ -178,7 +178,7 @@ namespace compiler::driver {
 		}
 	}
 
-	 InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
 		time_stats::TrackCategoryTime driver_initialization_time(
 			time_stats::TimeCategories::DriverInitialization
 		);
