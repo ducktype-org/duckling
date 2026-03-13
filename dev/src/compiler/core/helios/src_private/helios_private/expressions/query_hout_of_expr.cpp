@@ -559,7 +559,7 @@ namespace compiler::helios::code {
 				using namespace ::std::views;
 
 				const auto& pst_operators  = stmt->getOperators();
-				usize       operator_count = usize(std::ranges::size(pst_operators));
+				auto        operator_count = usize(std::ranges::size(pst_operators));
 				usize       expr_count     = operator_count + 1;
 
 				std::vector<Box<Expr>> result_exprs;
