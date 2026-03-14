@@ -11,7 +11,7 @@ namespace debug_info {
 		base::Optional<base::Bit256> postion_scope_end;
 	};
 
-	struct FilePosition {
+	struct FilePosition final {
 		std::string file_path;
 		u64         start_line;
 		u64         start_column;
@@ -48,7 +48,7 @@ namespace debug_info {
 
 	enum class SourcePositionsType : u32 { PstHash, LineColumn };
 
-	struct DebugInfo {
+	struct DebugInfo final {
 		Target      target;         // for now only DBC (maybe in future other targets)
 		std::string module_path;    // path to the module this debug info is for
 		SourcePositionsType
