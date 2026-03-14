@@ -8,14 +8,14 @@ namespace pst {
 
 		if (state[0].is(Keyword::Let)) {
 			out->is_mutable = false;
-			state.parse(out).one(Keyword::Let);
+			PARSE().one(Keyword::Let);
 		} else
-			state.parse(out).tryEat(Keyword::Var);
+			PARSE().tryEat(Keyword::Var);
 
-		state.parse(out).all(&out->name, NamedOperator::Colon);
-		state.parse(out).one(&out->type);
+		PARSE().all(&out->name, NamedOperator::Colon);
+		PARSE().one(&out->type);
 
-		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->init);
+		if (PARSE().tryEat(NamedOperator::Assign)) PARSE().one(&out->init);
 
 		PST_RETURN out;
 	}

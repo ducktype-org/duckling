@@ -63,6 +63,51 @@ namespace compiler::helios::code {
 			);
 		}
 
+		/**
+		 * @brief Processes the creation of array-related types. This includes:
+		 * - Type template baking - if the base is a 'TypeTemplate' type (e.g., bare 'List'
+		 * keyword), the index argument is expected to be Meta.
+		 * - Static Array Type Creation - if the base is a meta type (e.g., 'i32'), the index
+		 * argument is expected to be an integral constant representing the array size. This results
+		 * in a 'StaticArray' type.
+		 *
+		 * @param base The base expression being indexed.
+		 * @param arg_pst The PST element inside the square brackets.
+		 * @return A ChainState containing an IndexExpr representing the type construction.
+		 */
+		query::QResult<base::Box<Expr>> processArrayTypeCreation(
+			query::Context& ctx, Box<Expr> base, pst::AccessLocked<pst::ExprElement> arg_pst
+		) {
+			// If base is a type template, we expect meta in the index arguments for baking the
+			// template type. Otherwise we expect an integer for StaticArray type creation.
+			// @TODO: #1532 This u64/meta coercions should be handled by the `[]` operator.
+			auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
+				// @TODO: #1918 This logic should be generalized to handle any expressions with
+				// TypeTemplate type, not just literals.
+				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
+					if (literal_type_expr->value_type.getType().getKind()
+					    == tsh::Kind::TypeTemplate) {
+						return tsh::SymbolType<>{
+							tsh::getMetaType(),
+
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Immutable,
+						};
+					}
+				}
+				return tsh::SymbolType<>{
+					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable
+				};
+			}();
+
+			auto arg_res = getHoutOfExprWithExpectedType(ctx, arg_pst, expected_index_arg_type);
+			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
+
+			auto total_origin = pstOrigin(base->origin, arg_pst.unlock(ctx));
+			return makeBox<IndexExpr>(ctx, total_origin, std::move(base), std::move(arg_expr));
+		}
 	}
 
 	query::QResult<base::Box<Expr>> processSquareCall(
@@ -74,6 +119,7 @@ namespace compiler::helios::code {
 			char(call_expr->getType())
 		);
 
+		// @TODO: #1532 This check should be handled by the `[]` operator.
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -89,23 +135,8 @@ namespace compiler::helios::code {
 
 		// If base is coercible to meta, this is an array type creation.
 		if (meta_coercion_res.isValid()) {
-			// @TODO: #1532 This u64 coercion should be handled by the `[]` operator.
-			auto u64_type = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable
-			};
-
-			auto arg_res = getHoutOfExprWithExpectedType(ctx, arg_pst, u64_type);
-			UNPACK_QRESULT_MOVE(base::Box<Expr> arg_expr =, arg_res);
-
-			auto total_origin = pstOrigin(base->origin, call_expr);
-			return makeBox<IndexExpr>(
-				ctx,
-				total_origin,
-				meta_coercion_res.coerce(ctx, std::move(base)),
-				std::move(arg_expr)
-			);
+			auto coerced_base = meta_coercion_res.coerce(ctx, std::move(base));
+			return processArrayTypeCreation(ctx, std::move(coerced_base), arg_pst);
 		}
 
 		// Otherwise, it's an index operator.

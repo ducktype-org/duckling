@@ -22,7 +22,7 @@ namespace pst {
 			return nullptr;
 
 		if (SPECIFIEIRS_CALL_LIST_REQUIRED.contains(keyword)) {
-			state.parse(out).one(&out->specifier);
+			PARSE().one(&out->specifier);
 
 			if (!state[0].isBracketGroup(lexer::Token::Round)) {
 				state.logSafeError(
@@ -31,11 +31,11 @@ namespace pst {
 				return nullptr;
 			}
 
-			state.parse(out).goDown();
-			state.parse(out).one(&out->call_list);
-			state.parse(out).goUpAndSkip();
+			PARSE().goDown();
+			PARSE().one(&out->call_list);
+			PARSE().goUpAndSkip();
 		} else {
-			state.parse(out).one(&out->specifier);
+			PARSE().one(&out->specifier);
 		}
 		PST_RETURN out;
 	}

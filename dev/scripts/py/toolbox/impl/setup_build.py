@@ -32,6 +32,7 @@ def setup_build_impl(
     llvm_linker,
     opt_path,
     sanitizer,
+    use_replxx,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -77,6 +78,7 @@ def setup_build_impl(
         f"-D DISABLE_UNITY_COMPILATION={'ON' if disable_unity_compilation else 'OFF'}",
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
         f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
+        f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")

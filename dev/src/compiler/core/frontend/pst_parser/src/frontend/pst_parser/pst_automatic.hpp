@@ -25,6 +25,7 @@
 #define PST_AUTOMATIC_SKIP(ret) \
 	if (state.isSkipping()) { return ret; }
 
+#define PARSE() state.parse(out)
 /**
  * @brief This macro saves the current context and restores it after executing code from the argument.
  */
@@ -508,6 +509,13 @@ namespace pst {
 			}
 			state.setFallback(length);
 			return *this;
+		}
+
+		/**
+		 * @brief Automatic safe conversion version of autoFallbackLen
+		 */
+		PSTAutomatic& autoFallbackLen(i64 length) {
+			return autoFallbackLen(base::safeIntConv<u64>(length));
 		}
 
 		/**

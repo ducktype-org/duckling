@@ -5,8 +5,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> BlockExpr::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> BlockExpr::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {
 			// This should (probably) never happen with how it's called by the parser
@@ -19,7 +21,7 @@ namespace pst::expr {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			state.parse(out).one(&out->block);
+			PARSE().one(&out->block);
 		})
 
 		PST_RETURN out;

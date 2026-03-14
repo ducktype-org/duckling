@@ -15,7 +15,7 @@ namespace pst::expr {
 		explicit LogicNot(const LangParserState& state):
 			  PrefixOperator(state, lang_def::keywordToStr(Keyword::Not), 730) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~LogicNot() override = default;
 	};
