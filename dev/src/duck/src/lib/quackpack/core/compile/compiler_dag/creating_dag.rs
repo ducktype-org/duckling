@@ -184,7 +184,7 @@ impl CompilerDag {
     /// *early* means that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
-    pub fn new_early(ctx: &BuildContext<'_>) -> QuackResult<Self> {
+    pub fn new_early(ctx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
         let graph = DependencyDag::new(&ctx.freeze)?;
         let mut packages = HashMap::new();
