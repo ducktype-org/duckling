@@ -200,7 +200,7 @@ namespace compiler::driver {
 				CompilerModeOfOperationAndOptions::PackageCompilationMode,
 				package_compilation_options
 			) {
-				// Be carefull to not abort this function
+				// Be careful to not abort this function
 				// in places where the compiler is left in a state
 				// that could result in panics/errors during exit.
 

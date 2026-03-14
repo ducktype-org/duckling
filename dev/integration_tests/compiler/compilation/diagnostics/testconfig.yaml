@@ -1,7 +1,7 @@
-# A subfolder fot testing diagnostics produced by the compiler when compiling invalid code.
+# A subfolder for testing diagnostics produced by the compiler when compiling invalid code.
 
-# We don't run the actual duckling programs in this test, 
-# instead we test that the compiler produces the expected diagnostics when compiling invalid code.
+# We do not run actual Duckling programs in this test.
+# Instead, we verify that the compiler produces the expected diagnostics for invalid code.
 
 PreCase: "@{clean_cmd} && mkdir build"
 

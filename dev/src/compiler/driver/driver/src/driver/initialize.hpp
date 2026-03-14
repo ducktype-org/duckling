@@ -10,7 +10,7 @@ namespace compiler::driver {
 	 * Helper struct used to wrap the result of the initialization,
 	 * in a way that forces the caller to check it (to avoid silent failures).
 	 *
-	 * In status method is never called, the destructor will panic.
+	 * If status method is never called, the destructor will panic.
 	 */
 	struct InitializationResult final {
 	private:
@@ -41,7 +41,7 @@ namespace compiler::driver {
 	 * such as handling change in the source code input.
 	 *
 	 * @return Whether the initialization was successful or not.
-	 * In case of failure, diagnostic messages will be reported in global logger.
+	 * In case of failure, diagnostic messages will be reported in the global logger.
 	 * Driver exit should still be called in the failure case.
 	 */
 	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options);
