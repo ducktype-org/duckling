@@ -143,7 +143,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND llvm-extract-19 --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
 
             COMMAND ${JIT_LLVM_OPT}
-                -passes=internalize,lower-invoke,attributor,always-inline,simplifycfg,function-attrs,default<O3>,argpromotion,deadargelim,globalopt,strip-dead-prototypes,aggressive-instcombine,globaldce,adce,strip
+                -passes=internalize,lower-invoke,attributor,always-inline,simplifycfg,function-attrs,default<O3>,argpromotion,deadargelim,globalopt,strip-dead-prototypes,aggressive-instcombine,globaldce,adce
                 --internalize-public-api-file=${extracted_func_file}
                 --inline-threshold=200000
                 ${common_bc}
