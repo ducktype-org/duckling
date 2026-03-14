@@ -17,6 +17,7 @@ add_library(Driver
 	src/driver/initialize.cpp
 	src/driver/exit.cpp
 	src/driver/repl_utils/repl_dvm_helpers.cpp
+	src/driver/repl_utils/repl_split_helpers.cpp
 
 	${BUILTINS_EMBEDS}
 )
