@@ -310,6 +310,11 @@ def run_tests(
     tree.append(node.name)
     all_stats = TestStatistics([], [], [])
 
+    # Check if the current node is relevant to the filter
+    current_path = "/".join(tree)
+    if not current_path.startswith(filter) and not filter.startswith(current_path):
+        return all_stats
+
     # Pre-node command
     if node.pre_node:
         log_info_if_needed("Executing pre-node command...", dry, verbose)
