@@ -38,6 +38,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include "diagnostic/source_position.hpp"
 #include "query_framework/query_errors.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
@@ -266,9 +267,16 @@ namespace compiler::helios::code {
 		 */
 		[[nodiscard]]
 		query::QResult<std::vector<SymID>> getCallableCandidates(
-			const std::vector<SymID>& looked_up_callees
+			query::Context& ctx,
+			const std::vector<SymID>& looked_up_callees,
+			dia::SourcePosition call_position
 		) const {
 			// @TODO: #2135 handle ambiguity in class scopes
+
+			if (looked_up_callees.empty()) {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>("No callables found for call.", call_position));
+				return query::Failed();
+			}
 
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
@@ -343,7 +351,7 @@ namespace compiler::helios::code {
 				const auto lookup_qresult = h_interface.lookup(query_ctx, ident->getName().value);
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				const auto callees_q_result = getCallableCandidates(query_ctx, lookup_result->leaves, call_expr->getSourcePosition());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
@@ -574,7 +582,7 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				const auto callees_q_result = getCallableCandidates(query_ctx, lookup_result->leaves, call_expr->getSourcePosition());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				// if (callees.back())

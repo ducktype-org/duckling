@@ -141,7 +141,7 @@ private:
 					b(1,2,3);
 				}
 			)",
-			{ "no matching functions" },
+			{ "No callables found for call" },
 			1
 		);
 
@@ -312,7 +312,7 @@ private:
 					}
 				}
 			)",
-			{ "Call failed because no matching functions were found." },
+			{ "No callables found for call." },
 			1
 		);
 
