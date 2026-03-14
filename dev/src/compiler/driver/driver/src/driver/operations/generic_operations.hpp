@@ -7,6 +7,7 @@
 #pragma once
 
 #include "../backend_type.hpp"
+#include "../options.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
@@ -42,6 +43,25 @@ namespace compiler::driver {
 	 */
 	std::expected<RunOutput, std::string> runModuleOnDVM(
 		query::Context& ctx, frontend::ModuleID module_id
+	);
+
+	/**
+	 * @brief Compile a Duckling script (.ds file) into a single artifact.
+	 *
+	 * Reads the script source, splits it into individual statements, creates a chain of
+	 * REPL-style modules (each with a parent link to the previous), compiles each one,
+	 * and combines the results into a single output file:
+	 *   - DVM backend  -> .dbc bytecode file
+	 *   - LLVM backend -> native executable (linked with linking_options)
+	 *
+	 * @param mode             All script compilation options (file, backend, output path).
+	 * @param backend_type     Whether to use DVM or LLVM backend.
+	 * @param linking_options  Linker configuration (ignored for DVM backend).
+	 */
+	base::OkBad compileScript(
+		const CompilerModeOfOperationAndOptions::ScriptMode& mode,
+		BackendType                                          backend_type,
+		const linker::LinkingOptions&                        linking_options
 	);
 
 	struct KeyOf_CompileModule final {

@@ -36,6 +36,8 @@
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
 #endif
+#include <base/types/floats.hpp>
+
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -241,8 +243,8 @@ namespace vm {
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
-#define FLOAT_64_TYPE double
-#define FLOAT_32_TYPE float
+#define FLOAT_64_TYPE f64
+#define FLOAT_32_TYPE f32
 #define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                         \
 	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)   \
 	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)   \

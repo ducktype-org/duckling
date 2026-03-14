@@ -85,7 +85,7 @@ namespace compiler::tsl {
 		 */
 		[[nodiscard]]
 		virtual std::string toStringIdentification() const {
-			return "Layout of " + source_type.toString() + " : " + base::toString(getSize());
+			return source_type.toString() + ":" + base::toString(getSize());
 		}
 
 		virtual ~TypeLayoutABC() = default;
