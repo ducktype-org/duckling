@@ -1,0 +1,14 @@
+{
+    "argv": [
+        "PATH_TO_PYTHON_BINARY",
+        "PATH/duckling-zpp-4.4/dev/src/compiler/repl/kernel/ret_duck_kernel.py",
+        "-f",
+        "{connection_file}"
+    ],
+    "display_name": "Duckling",
+    "language": "duckling",
+    "name": "duckling",
+    "codemirror_mode": "text/x-duckling",
+    "mimetype": "text/x-duckling",
+    "file_extension": ".duckling"
+}
