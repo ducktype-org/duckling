@@ -26,6 +26,7 @@ PreCase: "@{clean_cmd} && mkdir build;
     nobackend) echo 'Backend undefined'; exit 1             ;;
     *)         echo 'Unknown backend';   exit 1             ;;
   esac;"
+
 Run: "
   case '@{backend}' in
     dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
@@ -68,3 +69,4 @@ SubDirs:
   - references
   - boxes
   - imports
+  - diagnostics
