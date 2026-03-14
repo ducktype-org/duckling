@@ -1,5 +1,7 @@
 #include "jit_compiler.hpp"
 
+#include "block_detection.hpp"
+
 #include "opcodes_bitcode_source.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
@@ -64,16 +66,117 @@ namespace vm::jit {
 		v_frame->setName("frame");
 		v_thread->setName("thread");
 
-		llvm::BasicBlock* entry = llvm::BasicBlock::Create(llvm_ctx, "entry", user_func_wrapper);
-		llvm::IRBuilder<> ir_builder(entry);
-		lowerBasicBlock(
-			function_to_compile.bc,
-			module,
-			{ v_instr, v_local_stack, v_frame, v_thread },
-			ir_builder,
-			opfun_ty
-		);
-		ir_builder.CreateRetVoid();
+		// Get basic block boundaries
+		std::vector<usize> block_beginnings = collectBasicBlockBeginnings(function_to_compile);
+
+		// Create LLVM basic blocks for each VM block
+		std::vector<llvm::BasicBlock*> llvm_blocks;
+		for (usize i = 0; i < block_beginnings.size(); ++i) {
+			llvm::BasicBlock* block = llvm::BasicBlock::Create(
+				llvm_ctx,
+				"block_at_" + std::to_string(i),
+				user_func_wrapper
+			);
+			llvm_blocks.push_back(block);
+		}
+
+		auto instr_to_block = [&](usize instr_index) {
+			auto it = std::lower_bound(block_beginnings.begin(), block_beginnings.end(), instr_index);
+			return it != block_beginnings.end() ? std::distance(block_beginnings.begin(), it) : block_beginnings.size() - 1;
+		};
+
+		for (usize block_idx = 0; block_idx < llvm_blocks.size() - 1; ++block_idx) {
+			llvm::IRBuilder<> ir_builder(llvm_blocks[block_idx]);
+			usize start = block_beginnings[block_idx];
+			usize end = block_beginnings[block_idx + 1];
+
+			low::MicroBytecode block_bc(
+				function_to_compile.bc.begin() + start,
+				function_to_compile.bc.begin() + end
+			);
+
+			lowerBasicBlock(
+				block_bc,
+				module,
+				{ v_instr, v_local_stack, v_frame, v_thread },
+				ir_builder,
+				opfun_ty
+			);
+
+			// Determine the kind of terminator needed for the block
+			const vm::MicroInstruction& last_instr = function_to_compile.bc[end - 1];
+			low::MicroOpcode last_opcode = getInstructionOpcode(last_instr);
+			switch (last_opcode) {
+				case low::MicroOpcode::jmp_label: {
+					usize target_block_idx = instr_to_block(end + last_instr.arg0);
+					ir_builder.CreateBr(llvm_blocks[target_block_idx]);
+					break;
+				}
+				case low::MicroOpcode::jmpIf_label:
+				case low::MicroOpcode::jmpIfNot_label: {
+					if (block_idx + 1 < llvm_blocks.size()) {
+						usize target_block_idx = instr_to_block(end + last_instr.arg0);
+
+						// Access flags.flag (field index 0 in FlagData)
+						llvm::StructType* flag_data_ty = llvm::StructType::get(llvm_ctx, {
+							llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
+						}, /*isPacked=*/false);
+						flag_data_ty->setName("vm::FlagData");
+
+						// Define Frame struct type with correct field layout
+						llvm::StructType* frame_ty = llvm::StructType::get(llvm_ctx, {
+							llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(llvm_ctx)),  // const MicroInstruction*
+							llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(llvm_ctx)),  // std::byte* local_stack
+							llvm::PointerType::getUnqual(flag_data_ty),  					// bool flag (simplified FlagData)
+							// NOTE: We're simplifying - ignoring block_stack, HashMaps, etc.
+							// This is a HACK for now; ideally use actual struct definition
+						}, /*isPacked=*/false);
+        				frame_ty->setName("vm::Frame");  // Add name explicitly
+
+						// Get pointer to flags field in frame
+						llvm::PointerType* frame_ptr_ty = llvm::PointerType::getUnqual(frame_ty);
+
+						// Access flags field (field index 2 in Frame)
+						llvm::Value* frame_ptr = ir_builder.CreateLoad(frame_ptr_ty, v_frame);
+						llvm::Value* flags_ptr = ir_builder.CreateStructGEP(frame_ty, frame_ptr, 2);
+
+						llvm::Value* flag_ptr = ir_builder.CreateStructGEP(flag_data_ty, flags_ptr, 0);
+
+						// Load the flag value
+						llvm::Value* flag_value = ir_builder.CreateLoad(
+							ir_builder.getInt1Ty(),
+							flag_ptr
+						);
+
+						if (last_opcode == low::MicroOpcode::jmpIfNot_label) {
+							flag_value = ir_builder.CreateNot(flag_value);
+						}
+
+						// Create conditional branch
+						ir_builder.CreateCondBr(
+							flag_value,
+							llvm_blocks[target_block_idx],
+							llvm_blocks[block_idx + 1]
+						);
+					}
+					break;
+				}
+				case low::MicroOpcode::ret:
+				case low::MicroOpcode::ret_tailcall_func: {
+					ir_builder.CreateRetVoid();
+					break;
+				}
+				default: {
+					// For other opcodes, we assume the block falls through to the next one
+					if (block_idx + 1 < llvm_blocks.size()) {
+						ir_builder.CreateBr(llvm_blocks[block_idx + 1]);
+					} else {
+						ir_builder.CreateRetVoid();
+					}
+					break;
+				}
+			}
+		}
 	}
 
 	llvm::FunctionType* opFunType(llvm::LLVMContext& ctx) {

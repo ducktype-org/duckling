@@ -22,7 +22,7 @@ add_files(
 	thread/opcode_functions/opcodes_functions_impl_debug.cpp
 	thread/low_program/instruction.cpp
 	thread/vmthread.cpp
-    thread/vmvalue.cpp
+	thread/vmvalue.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
