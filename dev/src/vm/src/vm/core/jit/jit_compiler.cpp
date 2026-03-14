@@ -119,10 +119,13 @@ namespace vm::jit {
 
 						// Define Frame and FlagData struct types
 						llvm::StructType* frame_ty = llvm::StructType::getTypeByName(llvm_ctx, "struct.vm::Frame");
-						llvm::StructType* flag_data_ty = llvm::StructType::get(llvm_ctx, {
-							llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
-						}, /*isPacked=*/false);
-						flag_data_ty->setName("struct.vm::FlagData");
+						llvm::StructType* flag_data_ty = llvm::StructType::getTypeByName(llvm_ctx, "struct.vm::FlagData");
+						if (!flag_data_ty) {
+							flag_data_ty = llvm::StructType::get(llvm_ctx, {
+								llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
+							}, /*isPacked=*/false);
+							flag_data_ty->setName("struct.vm::FlagData");
+						}
 						u32 flags_field_index = 0;
 
 						// Access flags field
