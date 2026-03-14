@@ -119,34 +119,46 @@ function(add_vm_variant suffix compile_def)
         target_include_directories(${lib_thread_vm_name}_bc PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name}_bc ${llvm_libs})
         target_compile_options(${lib_thread_vm_name}_bc PRIVATE -emit-llvm)
-        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE "${compile_def}")
+        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE "${compile_def}" IGNORE_NOT_JITABLE)
 
         set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.bc)
-        
+        set(extracted_func_file ${CMAKE_CURRENT_BINARY_DIR}/extracted_function_${suffix}.txt)
+
+        # Pipeline preparing opcodes definitions for JIT.
         add_custom_command(
-            OUTPUT ${common_bc}
-            # Links all opcodes dependencies to later optimize them with LTO, O3 and full inline.
+            OUTPUT ${common_bc} ${extracted_func_file}
+            # Links all opcodes together, without optimizations.
             COMMAND ${JIT_LLVM_LINKER}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
                 ${vm_dep_objects_bc}
-                -o ${common_bc}.tmp
-            COMMAND ${JIT_LLVM_OPT}
-                -O3
-                --enable-lto-internalization
-                --inline-threshold=20000 # full inline
-                --module-summary
-                ${common_bc}.tmp
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
-            BYPRODUCTS ${common_bc}.tmp
+        
+            # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"            
+            COMMAND bash -c
+            "llvm-nm-19 ${common_bc} | awk '\$2~/[Tt]/ && \$3~/OpFuns/ && \$3~/op_/ && \$3!~/debug/ {print \$3}' > ${extracted_func_file}"
+            
+            # Strip global constructors, they are not necessery for jit.
+            COMMAND llvm-extract-19 --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
+
+            COMMAND ${JIT_LLVM_OPT}
+                -passes=internalize,lower-invoke,attributor,always-inline,simplifycfg,function-attrs,default<O3>,argpromotion,deadargelim,globalopt,strip-dead-prototypes,aggressive-instcombine,globaldce,adce,strip
+                --internalize-public-api-file=${extracted_func_file}
+                --inline-threshold=200000
+                ${common_bc}
+                -o ${common_bc}
+
+            VERBATIM
             DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc ${vm_dep_bc_targets}
-            COMMENT "Full O3 + LTO + Aggressive Inline for ${suffix}"
         )
 
         # JitDep depends to both bc files (it can embed both of them), but is NOT config dependent.
-        add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc})
+        add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc} ${opcodes_bc_file})
         add_dependencies(JitDep CommonVMBitcode_${suffix})
+        set_source_files_properties(${jit_dependency}
+            PROPERTIES OBJECT_DEPENDS "${opcodes_bc_file}"
+        )
 
         add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
         
