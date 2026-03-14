@@ -41,12 +41,12 @@ namespace debug_info {
 
 	// -- PstHashPostion
 
-	inline void to_json(json& j, const PstHashPostion& v) {
+	void to_json(json& j, const PstHashPostion& v) {
 		j = json{ { "position_scope_begin", v.postion_scope_begin } };
 		if (v.postion_scope_end) j["position_scope_end"] = *v.postion_scope_end;
 	}
 
-	inline void from_json(const json& j, PstHashPostion& v) {
+	void from_json(const json& j, PstHashPostion& v) {
 		j.at("position_scope_begin").get_to(v.postion_scope_begin);
 		if (j.contains("position_scope_end"))
 			v.postion_scope_end = j.at("position_scope_end").get<base::Bit256>();
@@ -54,7 +54,7 @@ namespace debug_info {
 
 	// -- FilePosition
 
-	inline void to_json(json& j, const FilePosition& v) {
+	void to_json(json& j, const FilePosition& v) {
 		j = json{ { "file_path", v.file_path },
 			      { "start_line", v.start_line },
 			      { "start_column", v.start_column },
@@ -62,7 +62,7 @@ namespace debug_info {
 			      { "end_column", v.end_column } };
 	}
 
-	inline void from_json(const json& j, FilePosition& v) {
+	void from_json(const json& j, FilePosition& v) {
 		j.at("file_path").get_to(v.file_path);
 		j.at("start_line").get_to(v.start_line);
 		j.at("start_column").get_to(v.start_column);
@@ -72,7 +72,7 @@ namespace debug_info {
 
 	// -- SourcePosition
 
-	inline void to_json(json& j, const SourcePosition& v) {
+	void to_json(json& j, const SourcePosition& v) {
 		if (std::holds_alternative<PstHashPostion>(v.line_col_position)) {
 			j = { { "type", "PstHashPosition" },
 				  { "value", std::get<PstHashPostion>(v.line_col_position) } };
@@ -82,7 +82,7 @@ namespace debug_info {
 		}
 	}
 
-	inline void from_json(const json& j, SourcePosition& v) {
+	void from_json(const json& j, SourcePosition& v) {
 		const std::string type = j.at("type");
 		if (type == "PstHashPosition")
 			v.line_col_position = j.at("value").get<PstHashPostion>();
@@ -92,34 +92,30 @@ namespace debug_info {
 
 	// -- InstructionMetadata
 
-	inline void to_json(json& j, const InstructionMetadata& v) {
-		j = json{ { "position", v.position } };
-	}
+	void to_json(json& j, const InstructionMetadata& v) { j = json{ { "position", v.position } }; }
 
-	inline void from_json(const json& j, InstructionMetadata& v) {
-		j.at("position").get_to(v.position);
-	}
+	void from_json(const json& j, InstructionMetadata& v) { j.at("position").get_to(v.position); }
 
 	// -- VariableMetadata
 
-	inline void to_json(json& j, const VariableMetadata& v) {
+	void to_json(json& j, const VariableMetadata& v) {
 		j = json{ { "name", v.name }, { "position", v.position } };
 	}
 
-	inline void from_json(const json& j, VariableMetadata& v) {
+	void from_json(const json& j, VariableMetadata& v) {
 		j.at("name").get_to(v.name);
 		j.at("position").get_to(v.position);
 	}
 
 	// -- TypeMetadata
 
-	inline void to_json(json& j, const TypeMetadata& v) { j = json{ { "name", v.name } }; }
+	void to_json(json& j, const TypeMetadata& v) { j = json{ { "name", v.name } }; }
 
-	inline void from_json(const json& j, TypeMetadata& v) { j.at("name").get_to(v.name); }
+	void from_json(const json& j, TypeMetadata& v) { j.at("name").get_to(v.name); }
 
 	// -- FunctionMetadata
 
-	inline void to_json(json& j, const FunctionMetadata& v) {
+	void to_json(json& j, const FunctionMetadata& v) {
 		// Sort a temporary copy by offset so the on-disk format is always ordered.
 		auto sorted_instr_offsets_to_metadata = v.instr_offsets_to_metadata;
 		std::ranges::sort(
@@ -144,7 +140,7 @@ namespace debug_info {
 		j["instr_offsets_to_variable_init"] = sorted_instr_offsets_to_variable_init;
 	}
 
-	inline void from_json(const json& j, FunctionMetadata& v) {
+	void from_json(const json& j, FunctionMetadata& v) {
 		// Optional<string> — handle explicitly (ADL won't find our Optional helper).
 		if (j.contains("function_name") && !j.at("function_name").is_null())
 			v.function_name = j.at("function_name").get<std::string>();
@@ -189,7 +185,7 @@ namespace debug_info {
 
 	// -- DebugInfo
 
-	inline void to_json(json& j, const DebugInfo& v) {
+	void to_json(json& j, const DebugInfo& v) {
 		j = json{ { "target", v.target },
 			      { "module_path", v.module_path },
 			      { "source_positions_type", v.source_positions_type },
@@ -197,7 +193,7 @@ namespace debug_info {
 			      { "types", v.types } };
 	}
 
-	inline void from_json(const json& j, DebugInfo& v) {
+	void from_json(const json& j, DebugInfo& v) {
 		j.at("target").get_to(v.target);
 		j.at("module_path").get_to(v.module_path);
 		j.at("source_positions_type").get_to(v.source_positions_type);
