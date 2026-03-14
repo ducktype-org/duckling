@@ -1,3 +1,4 @@
+//! Supported operations on a storage.
 mod clean;
 mod info;
 mod sync;

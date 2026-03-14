@@ -1,3 +1,4 @@
+//! Loading packages from a disk.
 use std::{marker::PhantomData, path::Path};
 
 use tracing::{debug, trace};
@@ -30,6 +31,7 @@ impl AllowGlobalPackage {
 }
 
 // Disallow creating PackageLoader instances.
+/// A loader of packages from a disk.
 pub struct PackageLoader(PhantomData<()>);
 
 impl PackageLoader {
@@ -94,7 +96,7 @@ impl PackageLoader {
         PackageCtx::new(path.to_path_buf(), ctx)
     }
 
-    /// Convenient helper.
+    /// A convenient helper.
     pub fn find_from_cwd<'duck>(
         ctx: &'duck DuckCtx,
         allow_global_package: AllowGlobalPackage,
@@ -197,7 +199,7 @@ metadata:
     }
 
     #[test]
-    fn founds_at_exact_directory_noadir() {
+    fn founds_at_exact_directory_notadir() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("xd");
         assert!(!file.exists());

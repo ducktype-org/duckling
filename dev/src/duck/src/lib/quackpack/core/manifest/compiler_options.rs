@@ -1,3 +1,4 @@
+//! Compiler-specific options parsed in a manifest.
 use std::collections::HashMap;
 
 use crate::StrId;
@@ -10,10 +11,12 @@ pub struct CompilerSpecificOptions {
 }
 
 impl CompilerSpecificOptions {
+    /// Create a new [`CompilerSpecificOptions`].
     pub fn new(flags: Vec<StrId>) -> Self {
         Self { flags }
     }
 
+    /// Get CLI flags for the duckc.
     pub fn flags(&self) -> &[StrId] {
         &self.flags
     }
@@ -38,6 +41,7 @@ impl From<CompilerSpecificOptions> for registry::CompilerOptions {
 struct CompilerFlagsMap(HashMap<StrId, CompilerSpecificOptions>);
 
 impl CompilerFlagsMap {
+    /// Get CLI flags for the given key.
     fn options_for(&self, key: StrId) -> Option<&[StrId]> {
         self.0.get(&key).map(CompilerSpecificOptions::flags)
     }
@@ -69,10 +73,12 @@ impl From<CompilerFlagsMap> for HashMap<String, registry::CompilerOptions> {
 pub struct Profiles(CompilerFlagsMap);
 
 impl Profiles {
+    /// Create a new [`Profiles`].
     pub fn new(compiler_flags: HashMap<StrId, CompilerSpecificOptions>) -> Self {
         Self(CompilerFlagsMap(compiler_flags))
     }
 
+    /// Get CLI flags for the profile `key`.
     pub fn options_for(&self, key: StrId) -> Option<&[StrId]> {
         self.0.options_for(key)
     }

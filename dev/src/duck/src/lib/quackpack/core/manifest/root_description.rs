@@ -1,3 +1,4 @@
+//! Description of the root package.
 use crate::{StrId, quackpack::core::Version};
 
 #[derive(Clone, Copy, Debug)]
@@ -8,7 +9,7 @@ pub struct RootDescription {
 }
 
 impl RootDescription {
-    /// Create a new root package description.
+    /// Create a new [`RootDescription`].
     pub fn new(name: StrId, version: Version) -> Self {
         Self { name, version }
     }
