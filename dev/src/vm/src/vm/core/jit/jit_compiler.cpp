@@ -123,7 +123,7 @@ namespace vm::jit {
 							llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
 						}, /*isPacked=*/false);
 						flag_data_ty->setName("struct.vm::FlagData");
-						u32 flags_field_index = 2;
+						u32 flags_field_index = 0;
 
 						// Access flags field
 						llvm::PointerType* frame_ptr_ty = llvm::PointerType::getUnqual(frame_ty);

@@ -32,6 +32,9 @@ namespace vm {
 	 * It stores the state of the one function call during the program execution.
 	 */
 	struct Frame {
+		// CRITICAL: Field flags must be defined first due to rules of field accessing in LLVM (used for JIT purposes)
+		FlagData flags{};
+
 		/**
 		 * @brief  Current instruction in the stack frame.
 		 * It is only updated when the new function is called.
@@ -42,8 +45,6 @@ namespace vm {
 		 * @brief Memory array where the local variables are stored.
 		 */
 		std::byte* local_stack = nullptr;
-
-		FlagData flags{};
 
 		/**
 		 * @brief Stack of block IDs used by the function created with init_type
