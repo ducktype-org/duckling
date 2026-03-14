@@ -61,6 +61,8 @@ pub struct SolverAnswer {
     pub pkgs_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
 }
 
+/// [`prepare_solving`](SolverGathererData::prepare_solving) response describing whether we should
+/// run the rest of the solver engine.
 pub enum ShouldRunSolverEngine {
     No(SolverAnswer),
     Yes(Box<SolverEngineData>),
