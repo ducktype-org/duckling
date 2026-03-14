@@ -9,10 +9,13 @@ use url::Url;
 
 use crate::{
     QuackResult, StrId, qp_bail_internal,
-    quackpack::core::{
-        BranchOrTag, Dependency, Source, Version,
-        types_common::{ExpandedLocation, ExpandedPackage, expanded::InternedExpandedLocation},
-        version::CompatibilityCheck,
+    quackpack::{
+        core::{
+            BranchOrTag, Dependency, Source, Version,
+            types_common::{ExpandedLocation, ExpandedPackage, expanded::InternedExpandedLocation},
+            version::CompatibilityCheck,
+        },
+        util::PANIC_MESSAGE,
     },
 };
 
@@ -39,7 +42,7 @@ impl InternedLocation {
             // Panics
             //
             // This function might panic when called if the lock is already held by the current thread.
-            .unwrap();
+            .expect(PANIC_MESSAGE);
         let reference = cache.get(&source).copied().unwrap_or_else(|| {
             let static_ref = Box::leak(Box::new(source));
             cache.insert(static_ref);
