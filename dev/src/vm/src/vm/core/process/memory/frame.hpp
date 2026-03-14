@@ -23,6 +23,7 @@ namespace vm {
 	}
 
 	struct FlagData {
+		// CRITICAL: Field flag must be defined first due to rules of field accessing in LLVM (used for JIT purposes)
 		bool flag;
 	};
 

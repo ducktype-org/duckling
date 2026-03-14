@@ -121,11 +121,16 @@ namespace vm::jit {
 						llvm::StructType* frame_ty = llvm::StructType::getTypeByName(llvm_ctx, "struct.vm::Frame");
 						llvm::StructType* flag_data_ty = llvm::StructType::getTypeByName(llvm_ctx, "struct.vm::FlagData");
 						if (!flag_data_ty) {
-							flag_data_ty = llvm::StructType::get(llvm_ctx, {
+							// Define FlagData struct type if it hasn't been defined yet
+							flag_data_ty = llvm::StructType::create(llvm_ctx, "struct.vm::FlagData");
+							flag_data_ty->setBody({
 								llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
 							}, /*isPacked=*/false);
-							flag_data_ty->setName("struct.vm::FlagData");
 						}
+						CORE_ASSERT(frame_ty, "Frame struct type should be defined in the module");
+						CORE_ASSERT(!flag_data_ty->isOpaque(), "FlagData struct type should be defined by now");
+
+						// The flags field should always be the first field in the Frame struct, otherwise the compilation will fail.
 						u32 flags_field_index = 0;
 
 						// Access flags field
