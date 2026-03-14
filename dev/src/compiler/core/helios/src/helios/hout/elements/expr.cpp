@@ -6,10 +6,13 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "diagnostic_interactive/placeholder.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/queries.hpp>
+
+#include "base/except/exceptions.hpp"
 
 #include <query_framework/context/context.hpp>
 
@@ -691,7 +694,7 @@ namespace compiler::helios::code {
 		return makeBox<AccessExpr>(expression_type, origin, base->clone(), field);
 	}
 
-	IndexExpr::IndexExpr(query::Context&, ElementOrigin origin, Box<Expr> base, Box<Expr> index):
+	IndexExpr::IndexExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> base, Box<Expr> index):
 		  Expr(
 			  tsh::ExpressionType(
 				  [&]() -> tsh::SymbolType<> {
@@ -706,7 +709,12 @@ namespace compiler::helios::code {
 					  case tsh::Kind::StaticArray:
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 					  default:
-						  CORE_PANIC("Cannot index a non-array like type");
+						  ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							  base::strConcat("Type `", base_type.getKind(), "` is not indexed."),
+							  origin.getSourcePosition().value()
+						  ));
+						  query::throwFailed();
+						  CORE_UNREACHABLE();
 					  }
 				  }(),
 				  // @TODO: #1549 Value category usage may not be correct here.
