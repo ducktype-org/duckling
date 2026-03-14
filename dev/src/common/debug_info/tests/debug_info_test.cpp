@@ -163,10 +163,9 @@ private:
 				R"({"target": 42, "module_path": "x.dmf", "source_positions_type": "LineColumn",
                 "functions": {}, "types": {}})"
 			);
-			auto result = debug_info::loadFromStream(iss);
+			auto _ = debug_info::loadFromStream(iss);
 			// nlohmann enum deserialization may not throw for unknown integers, but
 			// at minimum we verify the function returns without crashing
-			(void) result;
 		}
 
 		// Empty input

@@ -19,8 +19,8 @@ namespace nlohmann {
 
 		static void from_json(const json& j, base::Map<K, V>& map) {
 			map.clear();
-			for (auto it = j.begin(); it != j.end(); ++it)
-				map.insertOrAssign(it.key(), it.value().get<V>());
+			for (auto&& [key, val] : j)
+				map.insertOrAssign(key, val.get<V>());
 		}
 	};
 }  // namespace nlohmann
