@@ -19,27 +19,25 @@ namespace nlohmann {
 
 		static void from_json(const json& j, base::Map<K, V>& map) {
 			map.clear();
-			for (auto&& [key, val] : j)
-				map.insertOrAssign(key, val.get<V>());
+			for (auto it = j.begin(); it != j.end(); ++it)
+				map.insertOrAssign(it.key(), it.value().get<V>());
+		}
+	};
+
+	template<>
+	struct adl_serializer<base::Bit256> {
+		static void to_json(json& j, const base::Bit256& v) { j = v.data; }
+
+		static void from_json(const json& j, base::Bit256& v) {
+			std::array<u64, 4> arr{};
+			j.get_to(arr);
+			v = base::Bit256(arr);
 		}
 	};
 }  // namespace nlohmann
 
 namespace debug_info {
 	using json = nlohmann::json;
-
-	// -- PstHash
-
-	inline void to_json(json& j, const PstHash& v) {
-		j = json{ { "a", v.a }, { "b", v.b }, { "c", v.c }, { "d", v.d } };
-	}
-
-	inline void from_json(const json& j, PstHash& v) {
-		j.at("a").get_to(v.a);
-		j.at("b").get_to(v.b);
-		j.at("c").get_to(v.c);
-		j.at("d").get_to(v.d);
-	}
 
 	// -- PstHashPostion
 
@@ -51,7 +49,7 @@ namespace debug_info {
 	inline void from_json(const json& j, PstHashPostion& v) {
 		j.at("position_scope_begin").get_to(v.postion_scope_begin);
 		if (j.contains("position_scope_end"))
-			v.postion_scope_end = j.at("position_scope_end").get<PstHash>();
+			v.postion_scope_end = j.at("position_scope_end").get<base::Bit256>();
 	}
 
 	// -- FilePosition

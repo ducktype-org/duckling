@@ -6,17 +6,9 @@
 #include <functional>
 
 namespace debug_info {
-
-	struct PstHash {
-		u64 a;
-		u64 b;
-		u64 c;
-		u64 d;
-	};
-
-	struct PstHashPostion {
-		PstHash                 postion_scope_begin;
-		base::Optional<PstHash> postion_scope_end;
+	struct PstHashPostion final {
+		base::Bit256                 postion_scope_begin;
+		base::Optional<base::Bit256> postion_scope_end;
 	};
 
 	struct FilePosition {
@@ -27,20 +19,20 @@ namespace debug_info {
 		u64         end_column;
 	};
 
-	struct SourcePosition {
+	struct SourcePosition final {
 		std::variant<PstHashPostion, FilePosition> line_col_position;
 	};
 
-	struct InstructionMetadata {
+	struct InstructionMetadata final {
 		SourcePosition position;
 	};
 
-	struct VariableMetadata {
+	struct VariableMetadata final {
 		std::string    name;
 		SourcePosition position;
 	};
 
-	struct FunctionMetadata {
+	struct FunctionMetadata final {
 		base::Optional<std::string>    function_name;
 		base::Optional<SourcePosition> position;
 
@@ -48,16 +40,16 @@ namespace debug_info {
 		std::vector<std::pair<u64, VariableMetadata>>    instr_offsets_to_variable_init;
 	};
 
-	struct TypeMetadata {
+	struct TypeMetadata final {
 		std::string name;
 	};
 
-	enum class Target { DBC };
+	enum class Target : u32 { DBC };
 
-	enum class SourcePositionsType { PstHash, LineColumn };
+	enum class SourcePositionsType : u32 { PstHash, LineColumn };
 
 	struct DebugInfo {
-		Target      target;         // DBC, LIR
+		Target      target;         // for now only DBC (maybe in future other targets)
 		std::string module_path;    // path to the module this debug info is for
 		SourcePositionsType
 			source_positions_type;  // whether the debug info uses stable positions or not

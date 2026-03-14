@@ -21,7 +21,9 @@ public:
 	}
 
 private:
-	// Builds a small but complete DebugInfo for reuse across tests
+	/** Builds a small but complete DebugInfo for reuse across tests
+	 * (note that it uses both kinds of SourcePosition, which is incorrect outside of testing).
+	 */
 	static debug_info::DebugInfo makeTestDebugInfo() {
 		auto line_position = FilePosition{
 			.file_path    = "test.duck",
@@ -30,6 +32,11 @@ private:
 			.end_line     = 10,
 			.end_column   = 1,
 		};
+
+		auto pst_position = PstHashPostion{ .postion_scope_begin = base::Bit256{ 0, 1, 2, 4 },
+			                                .postion_scope_end   = base::Optional<base::Bit256>{
+                                                base::Bit256{ 4, 3, 2, 1 } } };
+
 
 		SourcePosition func_pos;
 		func_pos.line_col_position = line_position;
@@ -44,7 +51,7 @@ private:
 
 		SourcePosition var0_pos;
 		line_position.start_line = line_position.end_line = 4;
-		var0_pos.line_col_position                        = line_position;
+		var0_pos.line_col_position                        = pst_position;
 
 		return DebugInfoBuilder(Target::DBC, "test.dmf", SourcePositionsType::LineColumn)
 		    .addType("_TMyType", "MyType")
@@ -100,8 +107,8 @@ private:
 		const auto& [var_offset, var_meta] = func.instr_offsets_to_variable_init.front();
 		assertTrue(var_offset == 0, "Variable init offset incorrect");
 		assertTrue(var_meta.name == "local_x", "Variable name incorrect");
-		const auto& var_fp = std::get<FilePosition>(var_meta.position.line_col_position);
-		assertTrue(var_fp.start_line == 4, "Variable init: start_line incorrect");
+		const auto& var_fp = std::get<PstHashPostion>(var_meta.position.line_col_position);
+		assertTrue(var_fp.postion_scope_begin.data[1] == 1, "Variable init: start_line incorrect");
 	}
 
 	void serializationRoundTripTest() {
@@ -163,6 +170,7 @@ private:
 				R"({"target": 42, "module_path": "x.dmf", "source_positions_type": "LineColumn",
                 "functions": {}, "types": {}})"
 			);
+
 			auto _ = debug_info::loadFromStream(iss);
 			// nlohmann enum deserialization may not throw for unknown integers, but
 			// at minimum we verify the function returns without crashing
@@ -227,9 +235,8 @@ private:
 
 		auto make_hash_pos = [&](u64 a, u64 b) -> SourcePosition {
 			return SourcePosition{ .line_col_position = PstHashPostion{
-									   .postion_scope_begin
-									   = PstHash{ .a = a, .b = b, .c = 0, .d = 0 },
-									   .postion_scope_end = std::nullopt,
+									   .postion_scope_begin = base::Bit256{ a, b, 0, 0 },
+									   .postion_scope_end   = std::nullopt,
 								   } };
 		};
 
@@ -250,10 +257,10 @@ private:
 		info.resolvePositions([](const PstHashPostion& p) -> FilePosition {
 			return FilePosition{
 				.file_path    = "resolved.duck",
-				.start_line   = p.postion_scope_begin.a,
-				.start_column = p.postion_scope_begin.b,
-				.end_line     = p.postion_scope_begin.a,
-				.end_column   = p.postion_scope_begin.b,
+				.start_line   = p.postion_scope_begin.data.at(0),
+				.start_column = p.postion_scope_begin.data.at(1),
+				.end_line     = p.postion_scope_begin.data.at(0),
+				.end_column   = p.postion_scope_begin.data.at(1),
 			};
 		});
 

@@ -135,11 +135,6 @@ namespace debug_info {
 
 		/**
 		 * @brief Finalizes and returns the accumulated DebugInfo.
-		 *
-		 * The builder is left in a valid-but-empty state after this call;
-		 * calling build() again will return a default-constructed DebugInfo.
-		 * This allows build() to be used both on temporaries and on lvalue
-		 * references (e.g. at the end of a chain through end()).
 		 */
 		DebugInfo build();
 

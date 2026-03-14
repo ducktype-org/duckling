@@ -85,6 +85,5 @@ namespace debug_info {
 		info.functions.insertOrAssign(std::move(mangled_name), std::move(metadata));
 	}
 
-	DebugInfo DebugInfoBuilder::build() { return std::move(info); }
-
+	DebugInfo DebugInfoBuilder::build() { return info; }
 }  // namespace debug_info
