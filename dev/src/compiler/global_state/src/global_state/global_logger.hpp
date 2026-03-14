@@ -6,7 +6,7 @@
 namespace global_state {
 
 	/**
-	 * Returns a global dia-int logger that can be used outside query framework.
+	 * Returns a global dia-int logger that can be used outside the query framework.
 	 */
 	Ref<dia_int::Logger> getGlobalLogger();
 
