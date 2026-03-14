@@ -117,32 +117,21 @@ namespace vm::jit {
 					if (block_idx + 1 < llvm_blocks.size()) {
 						usize target_block_idx = instr_to_block(end + last_instr.arg0);
 
-						// Access flags.flag (field index 0 in FlagData)
+						// Define Frame and FlagData struct types
+						llvm::StructType* frame_ty = llvm::StructType::getTypeByName(llvm_ctx, "struct.vm::Frame");
 						llvm::StructType* flag_data_ty = llvm::StructType::get(llvm_ctx, {
 							llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
 						}, /*isPacked=*/false);
-						flag_data_ty->setName("vm::FlagData");
+						flag_data_ty->setName("struct.vm::FlagData");
+						u32 flags_field_index = 2;
 
-						// Define Frame struct type with correct field layout
-						llvm::StructType* frame_ty = llvm::StructType::get(llvm_ctx, {
-							llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(llvm_ctx)),  // const MicroInstruction*
-							llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(llvm_ctx)),  // std::byte* local_stack
-							llvm::PointerType::getUnqual(flag_data_ty),  					// bool flag (simplified FlagData)
-							// NOTE: We're simplifying - ignoring block_stack, HashMaps, etc.
-							// This is a HACK for now; ideally use actual struct definition
-						}, /*isPacked=*/false);
-        				frame_ty->setName("vm::Frame");  // Add name explicitly
-
-						// Get pointer to flags field in frame
+						// Access flags field
 						llvm::PointerType* frame_ptr_ty = llvm::PointerType::getUnqual(frame_ty);
-
-						// Access flags field (field index 2 in Frame)
 						llvm::Value* frame_ptr = ir_builder.CreateLoad(frame_ptr_ty, v_frame);
-						llvm::Value* flags_ptr = ir_builder.CreateStructGEP(frame_ty, frame_ptr, 2);
-
-						llvm::Value* flag_ptr = ir_builder.CreateStructGEP(flag_data_ty, flags_ptr, 0);
+						llvm::Value* flags_ptr = ir_builder.CreateStructGEP(frame_ty, frame_ptr, flags_field_index);
 
 						// Load the flag value
+						llvm::Value* flag_ptr = ir_builder.CreateStructGEP(flag_data_ty, flags_ptr, 0);
 						llvm::Value* flag_value = ir_builder.CreateLoad(
 							ir_builder.getInt1Ty(),
 							flag_ptr
