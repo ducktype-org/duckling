@@ -13,6 +13,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use crate::quackpack::util::PANIC_MESSAGE;
+
 static STRID_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
@@ -93,7 +95,7 @@ impl From<Cow<'_, str>> for StrId {
             // Panics
             //
             // This function might panic when called if the lock is already held by the current thread.
-            .unwrap();
+            .expect(PANIC_MESSAGE);
         let reference = cache.get(value.as_ref()).copied().unwrap_or_else(|| {
             let static_ref = value.into_owned().leak();
             cache.insert(static_ref);

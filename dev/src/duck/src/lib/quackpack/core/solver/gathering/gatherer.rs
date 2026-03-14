@@ -37,14 +37,14 @@ use crate::{
 };
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
-pub struct Gatherer<'duck, 'access, Access: GitAccess> {
-    fetcher: &'duck Fetcher<'duck>,
-    git_access: &'access Access,
+pub struct Gatherer<'duck, 'fetcher, 'access, Access: GitAccess> {
+    fetcher: &'fetcher mut Fetcher<'duck>,
+    git_access: &'access mut Access,
 }
 
-impl<'duck, 'access, Access: GitAccess> Gatherer<'duck, 'access, Access> {
+impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'access, Access> {
     /// Creates a new, empty [`Gatherer`].
-    pub fn new(fetcher: &'duck Fetcher<'duck>, git_access: &'access Access) -> Self {
+    pub fn new(fetcher: &'fetcher mut Fetcher<'duck>, git_access: &'access mut Access) -> Self {
         Self {
             fetcher,
             git_access,
@@ -55,7 +55,7 @@ impl<'duck, 'access, Access: GitAccess> Gatherer<'duck, 'access, Access> {
     /// For a given dependency entry in a manifest, fetches the manifests of the potential realizations
     /// and repeats the proccess for their manifests.
     pub fn explore(
-        &self,
+        &mut self,
         root_path: PathBuf,
         root_manifest: Manifest,
         root_features: HashSet<FeatureName>,
@@ -148,7 +148,7 @@ impl<'duck, 'access, Access: GitAccess> Gatherer<'duck, 'access, Access> {
     }
 
     /// Helper for [`Gatherer::explore()`], performs a fetch.
-    pub fn fetch(&self, request: ManifestsRequest) -> GathererResult<FetchResponse> {
+    pub fn fetch(&mut self, request: ManifestsRequest) -> GathererResult<FetchResponse> {
         match request {
             ManifestsRequest::Pinned(pinned_request) => self.fetch_registry_pinned(pinned_request),
             ManifestsRequest::NotPinned(not_pinned_request) => {
@@ -169,7 +169,7 @@ impl<'duck, 'access, Access: GitAccess> Gatherer<'duck, 'access, Access> {
 
     /// Helper for [`Gatherer::explore()`], performs a pinned registry fetch
     /// (registry fetch with a specified version).
-    fn fetch_registry_pinned(&self, request: PinnedRequest) -> GathererResult<FetchResponse> {
+    fn fetch_registry_pinned(&mut self, request: PinnedRequest) -> GathererResult<FetchResponse> {
         let fetch_failure = || {
             FetchResponse::Failed(FetchFailure::Pinned(PinnedFailure {
                 origin_location: request.location,
@@ -216,7 +216,7 @@ impl<'duck, 'access, Access: GitAccess> Gatherer<'duck, 'access, Access> {
     /// Helper for [`Gatherer::explore()`], performs a not pinned registry fetch
     /// (registry fetch of all the versions of some package).
     fn fetch_registry_not_pinned(
-        &self,
+        &mut self,
         request: &NotPinnedRequest,
         url: &Url,
         real_name: StrId,
@@ -272,7 +272,7 @@ impl<'duck, 'access, Access: GitAccess> Gatherer<'duck, 'access, Access> {
     /// Helper for [`Gatherer::explore()`], performs a git fetch
     /// (fetch from an external git repository).
     fn fetch_git(
-        &self,
+        &mut self,
         request: &NotPinnedRequest,
         url: &Url,
         branch_or_tag: BranchOrTag,
