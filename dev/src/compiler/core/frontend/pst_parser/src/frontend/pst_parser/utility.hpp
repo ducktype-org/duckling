@@ -11,6 +11,7 @@ namespace query {
 namespace pst {
 	class LangElement;
 	class ExprStmt;
+	class Stmt;
 	template<typename>
 	class AccessLocked;
 
@@ -27,6 +28,21 @@ namespace pst {
 	 * @return The single ExprStmt if present, empty otherwise
 	 */
 	base::Optional<AccessLocked<ExprStmt>> extractSingleExpression(
+		query::Context& ctx, const AccessLocked<LangElement>& root
+	);
+
+	/**
+	 * @brief If @p root contains exactly one child that is a control-flow or block
+	 * statement (If, While, For, or Block), returns it as a Stmt.
+	 *
+	 * @param ctx  Query context for PST access
+	 * @param root The PST root element to examine
+	 * @return The single instruction Stmt if present, empty otherwise
+	 *
+	 * @note This also works for named loops (e.g. `while MyLoop(cond) {}`), which are still treated
+	 * as instructions, not definitions.
+	 */
+	base::Optional<AccessLocked<Stmt>> extractSingleInstruction(
 		query::Context& ctx, const AccessLocked<LangElement>& root
 	);
 }

@@ -1,26 +1,25 @@
 #include "../../hierarchy/expressions/numeric_value.hpp"
+
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> ExprNumericValue::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> ExprNumericValue::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
 		if (!state[0].is(lexer::Token::Type::NumLiteralGroup)) {
 			// This should (probably) never happen with how it's called by the parser
 			state.logInt(makeBox<BadValueError>(pos));
-			fastForward(state, length);
 			return nullptr;
 		}
 
 		auto out = makeBox<ExprNumericValue>(state);
-		state.parse(out).one(&out->value);
+		PARSE().one(&out->value);
 
-		if (length > 1) {
-			state.logInt(makeBox<MoreThanValueError>(pos));
-			fastForward(state, length);
-		}
+		if (length > 1) state.logInt(makeBox<MoreThanValueError>(pos));
 
 		PST_RETURN out;
 	}

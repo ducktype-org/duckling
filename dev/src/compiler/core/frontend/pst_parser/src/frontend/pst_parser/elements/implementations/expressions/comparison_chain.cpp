@@ -4,33 +4,39 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	i64 ComparisonChain::skipToOp(const LangParserState& state, i64 base, i64 length) {
+	i64 ComparisonChain::skipToOp(const LangParserState& state, i64 base) {
 		i64 fwd = base;
-		PST_WHILE(fwd < length && !ExprClassify::isComparison(state.ctokens(), fwd)) fwd++;
+		PST_WHILE(
+			!state[fwd].is(Token::Type::Sentinel)
+			&& !ExprClassify::isComparison(state.ctokens(), fwd)
+		)
+		fwd++;
 		return fwd;
 	}
 
-	MBox<ExprElement> ComparisonChain::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> ComparisonChain::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
-		i64 fwd = skipToOp(state, 0, length);
-		if (fwd == length) return Lower::parse(state, length);
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
+
+		i64 fwd = skipToOp(state, 0);
+		if (fwd == length) return Lower::parse(state);
 
 		auto out = makeBox<ComparisonChain>(state);
 
 		PST_WHILE(fwd < length) {
 			out->sub_expr.emplace_back(nullptr);
-			state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
+			PARSE().autoFallbackLen(fwd).with(&out->sub_expr.back(), Lower::parse);
 
 			out->operators.push_back(state[0].asBinaryOperator().value());
-			state.parse(out).eatOne();
+			PARSE().eatOne();
 
 			length -= fwd + 1;
-			fwd = skipToOp(state, 0, length);
+			fwd = skipToOp(state, 0);
 		}
 
 		out->sub_expr.emplace_back(nullptr);
-		state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
+		PARSE().with(&out->sub_expr.back(), Lower::parse);
 
 		PST_RETURN out;
 	}

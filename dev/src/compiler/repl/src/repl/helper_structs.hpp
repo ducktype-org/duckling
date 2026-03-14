@@ -11,6 +11,17 @@
 
 namespace compiler::repl {
 	/**
+	 * @brief Configuration options for REPL behavior and appearance.
+	 */
+	struct ReplConfig final {
+		static constexpr std::string PROMPT
+			= "duckling> ";  /// Primary prompt shown before each input
+		static constexpr std::string CONTINUATION = "          ";  /// Prompt for continuation lines
+		static constexpr std::string HISTORY_MULTILINE_CONTINUATION
+			= "    ";  /// Prompt for history continuation.
+	};
+
+	/**
 	 * @brief Represents a single statement entered in the REPL session.
 	 *
 	 * Each statement maintains the original source code and associated module tree,
@@ -25,16 +36,6 @@ namespace compiler::repl {
 			  source_code(std::move(code)),
 			  module(frontend::getModuleRef(mod_id)),
 			  module_id(mod_id) {}
-	};
-
-	/**
-	 * @brief Configuration options for REPL behavior and appearance.
-	 */
-	struct ReplConfig final {
-		std::string prompt          = "duckling> ";  /// Primary prompt shown before each input
-		std::string continuation    = "      |";     /// Prompt for continuation lines
-		std::string multiline_start = R"(""")";
-		std::string multiline_end   = "/end";
 	};
 
 	/**

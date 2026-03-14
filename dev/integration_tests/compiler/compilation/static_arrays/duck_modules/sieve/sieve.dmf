@@ -22,7 +22,7 @@ fun sieve(n: i64, is_prime: ref i64[100]) -> () = {
     }
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     let n = builtin_input_i64();
     
     var limit = n;
@@ -36,7 +36,7 @@ fun main() -> i32 = {
 
     sieve(limit, &is_prime);
 
-    builtin_output_i64(88888888);
+    builtin_output_string("88888888\n");
     var k = 0;
     while (k <= limit) {
         if (is_prime[k] == 1) {

@@ -37,7 +37,7 @@ fun get_array_by_val() -> i32[3] = {
     return tmp;
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     var my_arr: i32[3];
     fill_array(&my_arr);
     builtin_output_i64(my_arr[0]); # 100
@@ -50,7 +50,7 @@ fun main() -> i32 = {
     let val = get_array_by_val()[1];
     builtin_output_i64(val);       # 20
 
-    builtin_output_i64(88888888);  # Separator
+    builtin_output_string("88888888\n");
     simple_array_test();
 
     return 0;
