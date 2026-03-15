@@ -24,6 +24,8 @@ pub trait UrlExt: Sized {
     }
 
     /// Get the URL for downloading a blob of the package `package`.
+    ///
+    /// A blob is a tar gunziped directory with a package's source code.
     fn for_blob(&self, package: &types::Package) -> QuackResult<Self> {
         self._join(&format!(
             "/packages/{}/{}/download",

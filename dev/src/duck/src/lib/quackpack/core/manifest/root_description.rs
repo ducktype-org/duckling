@@ -1,4 +1,4 @@
-//! Description of the root package.
+//! [`RootDescription`] allows to uniquely identify a root package (name + version).
 use crate::{StrId, quackpack::core::Version};
 
 #[derive(Clone, Copy, Debug)]

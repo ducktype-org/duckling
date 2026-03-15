@@ -23,7 +23,7 @@ pub trait CommandExt: Sized {
         self._arg_impl(multi("features", help).short('F').conflicts_with(with))
     }
 
-    /// Add `--packages` flag, which collects
+    /// Adds `--packages` flag, which collects names of packages.
     fn add_packages(self, help: &'static str) -> Self {
         self._arg_impl(multi("packages", help))
     }
