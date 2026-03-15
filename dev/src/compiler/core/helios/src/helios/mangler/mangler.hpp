@@ -1,7 +1,11 @@
 #include <helios/symbols/symbol_id.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <string_id/string_id.hpp>
+
+#include <concepts>
 
 namespace compiler::helios::mangler {
 
@@ -49,6 +53,10 @@ namespace compiler::helios::mangler {
 	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({ .uses_qresult = false }));
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id);
+
+	base::StrID getMangledSymbolType(query::Context& ctx, const tsh::SymbolType<> type);
+
+	base::StrID getMangledAbstractType(query::Context& ctx, const tsh::AbstractType& type);
 
 	template<ManglingSymbolKind Kind, class SpecialSymbolKey>
 	base::StrID getSpecialMangledName(query::Context& ctx, SpecialSymbolKey key);
