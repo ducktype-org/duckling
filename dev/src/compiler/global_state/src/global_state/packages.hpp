@@ -30,6 +30,11 @@ namespace global_state {
 		 */
 		void addPackage(compiler::frontend::ModuleID root_module);
 
+		/**
+		 * Removes a package from the global state by its root module ID.
+		 */
+		void removePackage(compiler::frontend::ModuleID root_module);
+
 		/** Adds the main package to the global state. */
 		void addMainPackage(compiler::frontend::ModuleID root_module);
 	}

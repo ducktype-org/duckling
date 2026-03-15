@@ -8,6 +8,12 @@
 #include <vector>
 
 namespace compiler::driver {
+	/**
+	 * Collect PST access side inputs for root and all subtree elements.
+	 */
+	void collectQueryInputsFromPst(
+		CRef<pst::PST<>> pst_ref, std::vector<query::external::InputData>& out
+	);
 
 	/**
 	 * Collect InputData "ids" (i.e. side input hashes) across all modules in global packages.
@@ -18,8 +24,16 @@ namespace compiler::driver {
 	 * - Source file count and submodule count side inputs for all modules.
 	 * - Module child side inputs for all module lookups performed in the previous compilation, that
 	 * are still valid in the current module tree.
+	 *
+	 * This function uses previous metadata storage.
 	 * @return A vector of InputData containing SideInput hashes and their corresponding QueryIDs.
 	 */
-	std::vector<query::external::InputData> collectInputDataFromGlobalPackages();
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromPrevMetadata();
 
+	/**
+	 * Same as `collectInputDataFromGlobalPackagesFromPrevMetadata` but collects from
+	 * the current metadata storage instead of the previous one.
+	 * The main user is the Language Server.
+	 */
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromCurrentMetadata();
 }  // namespace compiler::driver
