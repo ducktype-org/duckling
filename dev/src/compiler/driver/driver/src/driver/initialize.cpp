@@ -1,10 +1,10 @@
 #include "initialize.hpp"
 
-#include "diagnostic_interactive/module_flags/module_flags.hpp"
 #include "options.hpp"
 
 #include <concurrent/module_flags/worker_count.hpp>
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
