@@ -3,9 +3,8 @@
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 #include <string_id/string_id.hpp>
-
-#include <concepts>
 
 namespace compiler::helios::mangler {
 
@@ -52,11 +51,28 @@ namespace compiler::helios::mangler {
 	 */
 	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({ .uses_qresult = false }));
 
+	struct KeyOf_MangledType final {
+		using ManglingTypeKey = std::variant<tsh::SymbolType<>, tsh::AbstractType>;
+
+		ManglingTypeKey type_key;
+
+		/**
+		 * @TODO: #2027 likely remove, it is used only by the hash map.
+		 */
+		constexpr auto operator==(const KeyOf_MangledType& other) const;
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const;
+	};
+
+	/**
+	 * @brief Gets the mangled name of a type. The type can either be AbstractType or SymbolType.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryMangledType, KeyOf_MangledType, CRef<query::QResult<base::StrID>>, ({}));
+
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id);
-
-	base::StrID getMangledSymbolType(query::Context& ctx, const tsh::SymbolType<> type);
-
-	base::StrID getMangledAbstractType(query::Context& ctx, const tsh::AbstractType& type);
 
 	template<ManglingSymbolKind Kind, class SpecialSymbolKey>
 	base::StrID getSpecialMangledName(query::Context& ctx, SpecialSymbolKey key);
@@ -89,4 +105,13 @@ namespace compiler::helios::mangler {
 template<>
 struct std::hash<compiler::helios::mangler::KeyOf_MangledSymbol> final {
 	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledSymbol& key) const;
+};
+
+/**
+ * Hashed used for the perfect hash of KeyOf_MangledType.
+ * @TODO: #2027 likely remove.
+ */
+template<>
+struct std::hash<compiler::helios::mangler::KeyOf_MangledType> final {
+	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledType& key) const;
 };

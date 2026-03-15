@@ -62,6 +62,27 @@ namespace compiler::helios::mangler {
 		return result;
 	}
 
+	constexpr auto KeyOf_MangledType::operator==(const KeyOf_MangledType& other) const {
+		return type_key == other.type_key;
+	}
+
+	u64 KeyOf_MangledType::queryUnstablePerfectHash() const {
+		static concurrent::ConHashMap<KeyOf_MangledType, u64> hashes{};
+		static std::atomic<u64>                               next
+			= 1;  // start from 1, so that 0 can be used as an "empty value"
+
+		u64 result = 0;
+
+		hashes.maybePutAndUpdate(*this, 0, [&result](Ref<u64> existing) {
+			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
+			result = *existing;
+		});
+
+		CORE_ASSERT(result != 0, "Hash value not set!");
+
+		return result;
+	}
+
 	namespace internal {
 		/**
 		 * @brief Check if the symbol should be mangled in the first place.
@@ -241,7 +262,7 @@ namespace compiler::helios::mangler {
 				// @TODO: #2255 Function qualifiers?
 
 				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
-				ret << getMangledSymbolType(ctx, function_type).str();
+				ret << ctx.query<QueryMangledType>({ function_type })->valueOrThrow().str();
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
@@ -256,87 +277,6 @@ namespace compiler::helios::mangler {
 
 			return ret.str();
 		}
-
-		std::string type(query::Context&, tsh::UnitAbstractType) { return "u"; }
-
-		std::string type(query::Context&, tsh::VoidAbstractType) { return "v"; }
-
-		std::string type(query::Context&, tsh::ByteAbstractType) { return "y"; }
-
-		std::string type(query::Context&, tsh::BoolAbstractType) { return "b"; }
-
-		std::string type(query::Context&, tsh::CharAbstractType) { return "c"; }
-
-		std::string type(query::Context&, tsh::IntegralAbstractType integral_type) {
-			if (integral_type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed)
-				return base::strConcat("i", integral_type.getSize());
-			else
-				return base::strConcat("j", integral_type.getSize());
-		}
-
-		std::string type(query::Context&, tsh::FloatAbstractType float_type) {
-			return base::strConcat("f", float_type.getSize());
-		}
-
-		std::string type(query::Context&, tsh::RawPointerAbstractType) { return "p"; }
-
-		std::string type(query::Context& ctx, tsh::PointerAbstractType pointer_type) {
-			return base::strConcat("P", getMangledSymbolType(ctx, pointer_type.getPointee()), "E");
-		}
-
-		std::string type(query::Context&, tsh::StringAbstractType) { return "s"; }
-
-		std::string type(query::Context& ctx, tsh::FunctionAbstractType function_type) {
-			std::stringstream res;
-			res << "F" << getMangledSymbolType(ctx, function_type.getResultType()).str();
-			// @TODO: #2255 Function qualifiers?
-			for (auto& param: function_type.getParameterTypes())
-				res << getMangledSymbolType(ctx, param).str();
-			res << "E";
-
-			return res.str();
-		}
-
-		std::string type(query::Context& ctx, tsh::DynamicArrayAbstractType dynamic_array_type) {
-			return base::strConcat(
-				"D", getMangledSymbolType(ctx, dynamic_array_type.getElementType()), "E"
-			);
-		}
-
-		std::string type(query::Context& ctx, tsh::StaticArrayAbstractType static_array_type) {
-			return base::strConcat(
-				"A",
-				base::toString(static_array_type.getSize()),
-				getMangledSymbolType(ctx, static_array_type.getElementType()),
-				"E"
-			);
-		}
-
-		std::string type(query::Context& ctx, tsh::TupleAbstractType tuple_type) {
-			std::stringstream res;
-			res << "T";
-			for (auto& param: tuple_type.getComponents())
-				res << getMangledSymbolType(ctx, param).str();
-			res << "E";
-
-			return res.str();
-		}
-
-		std::string type(query::Context& ctx, tsh::VariantAbstractType variant_type) {
-			std::stringstream res;
-			res << "V";
-			for (auto& param: variant_type.getUnderlyingTypes())
-				res << getMangledSymbolType(ctx, param).str();
-			res << "E";
-
-			return res.str();
-		}
-
-		std::string type(query::Context& ctx, tsh::ClassAbstractType class_type) {
-			return getSimpleMangledName(ctx, class_type.getSymbol()).str();
-		}
-
-		std::string type(query::Context&, tsh::MetaAbstractType) { return "t"; }
 
 		/**
 		 * @brief Determines what type of symbol we are mangling to choose the right encoding
@@ -517,66 +457,162 @@ namespace compiler::helios::mangler {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledSymbol);
 
+	struct IMPLEMENT_QUERY(QueryMangledType, query::QResult<base::StrID>) {
+		static std::string mangle(query::Context&, tsh::UnitAbstractType) { return "u"; }
+
+		static std::string mangle(query::Context&, tsh::VoidAbstractType) { return "v"; }
+
+		static std::string mangle(query::Context&, tsh::ByteAbstractType) { return "y"; }
+
+		static std::string mangle(query::Context&, tsh::BoolAbstractType) { return "b"; }
+
+		static std::string mangle(query::Context&, tsh::CharAbstractType) { return "c"; }
+
+		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
+			if (type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed)
+				return base::strConcat("i", type.getSize());
+			else
+				return base::strConcat("j", type.getSize());
+		}
+
+		static std::string mangle(query::Context&, tsh::FloatAbstractType type) {
+			return base::strConcat("f", type.getSize());
+		}
+
+		static std::string mangle(query::Context&, tsh::RawPointerAbstractType) { return "p"; }
+
+		static std::string mangle(query::Context& ctx, tsh::PointerAbstractType type) {
+			return base::strConcat(
+				"P", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
+
+		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
+
+		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
+			std::stringstream res;
+			res << "F"
+				<< ctx.query<QueryMangledType>({ type.getResultType() })->valueOrThrow().str();
+			// @TODO: #2255 Function qualifiers?
+			for (auto& param: type.getParameterTypes())
+				res << ctx.query<QueryMangledType>({ param })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::DynamicArrayAbstractType type) {
+			return base::strConcat(
+				"D",
+				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
+				"E"
+			);
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::StaticArrayAbstractType type) {
+			return base::strConcat(
+				"A",
+				base::toString(type.getSize()),
+				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
+				"E"
+			);
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::TupleAbstractType type) {
+			std::stringstream res;
+			res << "T";
+			for (auto& elem: type.getComponents())
+				res << ctx.query<QueryMangledType>({ elem })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::VariantAbstractType type) {
+			std::stringstream res;
+			res << "V";
+			for (auto& elem: type.getUnderlyingTypes())
+				res << ctx.query<QueryMangledType>({ elem })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::ClassAbstractType type) {
+			return getSimpleMangledName(ctx, type.getSymbol()).str();
+		}
+
+		static std::string mangle(query::Context&, tsh::MetaAbstractType) { return "t"; }
+
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			variant_match(key.type_key) {
+				variant_case(tsh::SymbolType<>, type) {
+					return base::StrID{ base::strConcat(
+						type.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
+						type.getLeakage() == tsh::Leakage::Leaking ? "L" : "",
+						type.getMutability() == tsh::Mutability::Mutable ? "" : "N",
+						type.getRefKind() == tsh::ReferenceKind::Direct ? ""
+						: type.getRefKind() == tsh::ReferenceKind::Box  ? "X"
+																		: "R",
+						ctx.query<QueryMangledType>({ type.getType() })->valueOrThrow()
+					) };
+				}
+				variant_case(tsh::AbstractType, type) {
+					using enum tsh::Kind;
+					switch (type.getKind()) {
+					case Unit:
+						return base::StrID{ mangle(ctx, type.as<tsh::UnitAbstractType>()) };
+					case Void:
+						return base::StrID{ mangle(ctx, type.as<tsh::VoidAbstractType>()) };
+					case Byte:
+						return base::StrID{ mangle(ctx, type.as<tsh::ByteAbstractType>()) };
+					case Bool:
+						return base::StrID{ mangle(ctx, type.as<tsh::BoolAbstractType>()) };
+					case Char:
+						return base::StrID{ mangle(ctx, type.as<tsh::CharAbstractType>()) };
+					case Integral:
+						return base::StrID{ mangle(ctx, type.as<tsh::IntegralAbstractType>()) };
+					case Float:
+						return base::StrID{ mangle(ctx, type.as<tsh::FloatAbstractType>()) };
+					case RawPointer:
+						return base::StrID{ mangle(ctx, type.as<tsh::RawPointerAbstractType>()) };
+					case Pointer:
+						return base::StrID{ mangle(ctx, type.as<tsh::PointerAbstractType>()) };
+					case String:
+						return base::StrID{ mangle(ctx, type.as<tsh::StringAbstractType>()) };
+					case Function:
+						return base::StrID{ mangle(ctx, type.as<tsh::FunctionAbstractType>()) };
+					case DynamicArray:
+						return base::StrID{ mangle(ctx, type.as<tsh::DynamicArrayAbstractType>()) };
+					case StaticArray:
+						return base::StrID{ mangle(ctx, type.as<tsh::StaticArrayAbstractType>()) };
+					case Tuple:
+						return base::StrID{ mangle(ctx, type.as<tsh::TupleAbstractType>()) };
+					case Variant:
+						return base::StrID{ mangle(ctx, type.as<tsh::VariantAbstractType>()) };
+					case Class:
+						return base::StrID{ mangle(ctx, type.as<tsh::ClassAbstractType>()) };
+					case Meta:
+						return base::StrID{ mangle(ctx, type.as<tsh::MetaAbstractType>()) };
+					default:
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							base::strConcat("Cannot mangle type of kind: ", type.getKind()),
+							std::nullopt
+						));
+						return query::Failed();
+					}
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledType);
+
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id) {
 		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ .symbol_key = sym_id });
-	}
-
-	base::StrID getMangledSymbolType(query::Context& ctx, const tsh::SymbolType<> type) {
-		return base::StrID{ base::strConcat(
-			type.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
-			type.getLeakage() == tsh::Leakage::Leaking ? "L" : "",
-			type.getMutability() == tsh::Mutability::Mutable ? "" : "N",
-			type.getRefKind() == tsh::ReferenceKind::Direct ? ""
-			: type.getRefKind() == tsh::ReferenceKind::Box  ? "X"
-															: "R",
-			getMangledAbstractType(ctx, type.getType())
-		) };
-	}
-
-	base::StrID getMangledAbstractType(query::Context& ctx, const tsh::AbstractType& type) {
-		using enum tsh::Kind;
-		switch (type.getKind()) {
-		case Unit:
-			return base::StrID{ internal::type(ctx, type.as<tsh::UnitAbstractType>()) };
-		case Void:
-			return base::StrID{ internal::type(ctx, type.as<tsh::VoidAbstractType>()) };
-		case Byte:
-			return base::StrID{ internal::type(ctx, type.as<tsh::ByteAbstractType>()) };
-		case Bool:
-			return base::StrID{ internal::type(ctx, type.as<tsh::BoolAbstractType>()) };
-		case Char:
-			return base::StrID{ internal::type(ctx, type.as<tsh::CharAbstractType>()) };
-		case Integral:
-			return base::StrID{ internal::type(ctx, type.as<tsh::IntegralAbstractType>()) };
-		case Float:
-			return base::StrID{ internal::type(ctx, type.as<tsh::FloatAbstractType>()) };
-		case RawPointer:
-			return base::StrID{ internal::type(ctx, type.as<tsh::RawPointerAbstractType>()) };
-		case Pointer:
-			return base::StrID{ internal::type(ctx, type.as<tsh::PointerAbstractType>()) };
-		case String:
-			return base::StrID{ internal::type(ctx, type.as<tsh::StringAbstractType>()) };
-		case Function:
-			return base::StrID{ internal::type(ctx, type.as<tsh::FunctionAbstractType>()) };
-		case DynamicArray:
-			return base::StrID{ internal::type(ctx, type.as<tsh::DynamicArrayAbstractType>()) };
-		case StaticArray:
-			return base::StrID{ internal::type(ctx, type.as<tsh::StaticArrayAbstractType>()) };
-		case Tuple:
-			return base::StrID{ internal::type(ctx, type.as<tsh::TupleAbstractType>()) };
-		case Variant:
-			return base::StrID{ internal::type(ctx, type.as<tsh::VariantAbstractType>()) };
-		case Class:
-			return base::StrID{ internal::type(ctx, type.as<tsh::ClassAbstractType>()) };
-		case Meta:
-			return base::StrID{ internal::type(ctx, type.as<tsh::MetaAbstractType>()) };
-		default:
-			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
-			));
-			CORE_UNREACHABLE();
-			break;
-		}
 	}
 
 	template<>
@@ -624,6 +660,20 @@ std::size_t std::hash<compiler::helios::mangler::KeyOf_MangledSymbol>::operator(
 		variant_case(compiler::helios::SymID, sym_id) { return sym_id.queryUnstablePerfectHash(); }
 		variant_case(compiler::helios::mangler::special_symbol_keys::LIRModuleID, mod_id) {
 			return mod_id.id.getInnerID().asInt();
+		}
+		variant_default { CORE_UNREACHABLE(); }
+	}
+	CORE_UNREACHABLE();
+}
+
+std::size_t std::hash<compiler::helios::mangler::KeyOf_MangledType>::operator()(
+	const compiler::helios::mangler::KeyOf_MangledType& key
+) const {
+	// this does not need to be perfect, just good enough to avoid often collisions in the hash map.
+	variant_match(key.type_key) {
+		variant_case(compiler::tsh::AbstractType, type) { return type.queryUnstablePerfectHash(); }
+		variant_case(compiler::tsh::SymbolType<>, type) {
+			return std::hash<std::string>{}(type.queryUnstablePerfectHash().toStringHex());
 		}
 		variant_default { CORE_UNREACHABLE(); }
 	}

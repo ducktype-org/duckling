@@ -324,9 +324,10 @@ namespace compiler::backend_llvm {
 				//     FIXME :(
 				const auto class_name = base::anyCast<std::string>(
 					query::utils::withContextCompute([&](query::Context& ctx) {
-						return helios::mangler::getMangledAbstractType(
-							ctx, class_layout.getSourceType()
-						);
+						return ctx
+					        .query<helios::mangler::QueryMangledType>({ class_layout.getSourceType(
+							) })
+					        ->valueOrThrow();
 					})
 				);
 
