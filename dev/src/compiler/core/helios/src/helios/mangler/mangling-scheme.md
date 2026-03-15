@@ -120,7 +120,7 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "V"                               // virtual function
 
 <unnamed-type-name> ::= "Y" <path> "E" <disambiguator>      // unnamed type
-                      | "L" <captures> "G" <return-type> <type>* "E" <disambiguator>  // closure type
+                      | "W" <captures> "G" <return-type> <type>* "E" <disambiguator>  // closure type
 <captures> ::= <type>*                                      // types of captured variables
 // first unnamed symbol in the scope uses no disambiguator, second gets "_"
 // subsequent ones get "(n-2)_" represented in base 62
