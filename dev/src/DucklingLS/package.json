@@ -54,6 +54,12 @@
                     "default": 100,
                     "description": "Controls the maximum number of problems produced by the server."
                 },
+                "DucklingLanguageServer.executablePath": {
+                    "scope": "machine",
+                    "type": "string",
+                    "default": "~/.local/bin/duck_ls",
+                    "markdownDescription": "Path to the `duck_ls` binary. Supports `~` for the home directory. Defaults to `~/.local/bin/duck_ls`. Run `comp-copy.py` to install the binary there, or set this to a custom path if you installed it elsewhere."
+                },
                 "DucklingLanguageServer.trace.server": {
                     "scope": "window",
                     "type": "string",

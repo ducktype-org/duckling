@@ -1,13 +1,12 @@
 import { spawn, ChildProcess } from "child_process";
 import * as net from 'net';
+import * as os from 'os';
 import { Connection, CompletionItem, TextDocumentPositionParams, Diagnostic, WorkspaceFolder } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
 import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
-const BINARY_PATH = __dirname + "/../../bin/";
 
 function findFreePort(): Promise<number> {
 	return new Promise((resolve, reject) => {
@@ -64,21 +63,26 @@ export class CompilerDaemonClient {
 	private ls_daemon_address: string = '';
 	private startupPromise: Promise<void>;
 
-	constructor() {
-		this.startupPromise = this.startup();
+	constructor(connection: Connection, private binaryPath: string) {
+		this.startupPromise = this.startup(connection);
 	}
 
-	private async startup(): Promise<void> {
+	private async startup(connection: Connection): Promise<void> {
 		this.port = await findFreePort();
 		this.ls_daemon_address = `http://localhost:${this.port}`;
-		this.ls_daemon_process = this.startServerBinary();
+		this.ls_daemon_process = this.startServerBinary(connection);
 	}
 
-	private startServerBinary(): ChildProcess {
+	private startServerBinary(connection: Connection): ChildProcess {
 		const logPath = path.join(__dirname, 'daemon.log');
 		const logStream = fs.createWriteStream(logPath);
+		if (!fs.existsSync(this.binaryPath)) {
+			connection.window.showErrorMessage(`DucklingLS daemon binary not found at "${this.binaryPath}". ` +
+			`Install it with comp-copy.py or set DucklingLanguageServer.executablePath in VS Code settings.`);
+			throw new Error(`[DucklingLS] duck_ls binary not found at "${this.binaryPath}".`);
+		}
 		const childProcess = spawn(
-			BINARY_PATH + "lsp_daemon", 
+			this.binaryPath,
 			["start", "-p", this.port.toString()], 
 			{stdio: ["ignore", "pipe", "pipe"], detached: false} // This is necessary for the server to remain responsive
 		);
@@ -110,7 +114,7 @@ export class CompilerDaemonClient {
 			await new Promise(resolve => setTimeout(resolve, 100));
 		}
 		
-		this.startupPromise = this.startup();
+		this.startupPromise = this.startup(connection);
 		await this.waitForReady(connection);
 		await this.addWorkspace(connection, workspace_folders);
 		

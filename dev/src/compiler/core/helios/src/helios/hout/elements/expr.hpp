@@ -6,6 +6,7 @@
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
@@ -136,6 +137,24 @@ namespace compiler::helios::code {
 		LiteralBoolExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, bool value);
 	};
 
+	struct LiteralCharExpr final: public Expr {
+		char value;
+
+		LiteralCharExpr(query::Context& ctx, const ElementOrigin& origin, char value);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralCharExpr(
+			const tsh::ExpressionType<>& expression_type, const ElementOrigin& origin, char value
+		);
+	};
+
 	/**
 	 * @brief Represents a string literal value written in the expression ("Hello world" etc.).
 	 */
@@ -202,6 +221,32 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		IdentifierExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, SymID symbol);
+	};
+
+	/**
+	 * @brief A special kind of expression which wraps expressions that need to be
+	 * used multiple times without recalculating, such as `b` in `a < b < c`.
+	 * @note One should be very careful not to create a "next use" ReusableExpr which does not
+	 * semantically see the result of the corresponding "first use" ReusableExpr, for example
+	 * if they are in different branches of an if expression.
+	 */
+	struct ReusableExpr final: public Expr {
+		SharedBox<Expr> inner;
+		bool            first_use;
+
+		ReusableExpr(query::Context& ctx, Box<Expr> inner, bool first_use = true);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+		[[nodiscard]] Box<Expr> nextUse() const;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ReusableExpr(const SharedBox<Expr>& inner, bool first_use);
 	};
 
 	/**
@@ -324,6 +369,7 @@ namespace compiler::helios::code {
 		Ref,
 		Box,
 		Const,
+		Len,  // @TODO: #1970 Probably remove that in the future.
 	};
 
 	/**
@@ -334,7 +380,9 @@ namespace compiler::helios::code {
 
 		base::Box<Expr> expr;
 
-		UnaryOperatorExpr(ElementOrigin origin, BuiltinUnary operation, base::Box<Expr> expr);
+		UnaryOperatorExpr(
+			query::Context& ctx, ElementOrigin origin, BuiltinUnary operation, base::Box<Expr> expr
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -559,14 +607,13 @@ namespace compiler::helios::code {
 	 * @TODO: User defined comparison operators.
 	 */
 	struct ChainComparisonExpr final: public Expr {
-		std::vector<base::Box<Expr>> expressions;
-		std::vector<BuiltinBinary>   operators;
+		// A list of all comparison expressions.
+		// E.g. in `a < b < c`, this will contain the expressions for `a < b` and `b < c`.
+		// Note that `b` will typically be reused in both comparisons, via ReusableExpr.
+		std::vector<Box<Expr>> comparisons;
 
 		ChainComparisonExpr(
-			query::Context&              ctx,
-			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> expressions,
-			std::vector<BuiltinBinary>   operators
+			query::Context& ctx, ElementOrigin origin, std::vector<Box<Expr>> comparisons
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -578,10 +625,9 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		ChainComparisonExpr(
-			tsh::ExpressionType<>        expression_type,
-			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> expressions,
-			std::vector<BuiltinBinary>   operators
+			tsh::ExpressionType<>  expression_type,
+			ElementOrigin          origin,
+			std::vector<Box<Expr>> comparisons
 		);
 	};
 
@@ -736,4 +782,63 @@ namespace compiler::helios::code {
 			tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr
 		);
 	};
+
+	/**
+	 * @brief Represents a push operation to a dynamic array.
+	 *
+	 * Assumes the `list` argument is a dynamic array and `element` argument is the same as the
+	 * lists element type.
+	 * @TODO: #1959 This should probably be unified with '+=', '*=' etc.
+	 */
+	struct ListPushExpr final: public Expr {
+		Box<Expr> list;
+		Box<Expr> element;
+
+		ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ListPushExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             list,
+			Box<Expr>             element
+		);
+	};
+
+	/**
+	 * @brief Represents a pop operation from the dynamic array.
+	 *
+	 * Assumes the `list` argument is a dynamic array and `count` argument is an integer.
+	 * @TODO: #1959 This should probably be unified with '+=', '*=' etc.
+	 */
+	struct ListPopExpr final: public Expr {
+		Box<Expr> list;
+		Box<Expr> count;
+
+		ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ListPopExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             list,
+			Box<Expr>             count
+		);
+	};
 }
+
+ID_STD_HASH(compiler::helios::code::HOUTExprID);
