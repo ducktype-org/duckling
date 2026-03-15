@@ -13,7 +13,7 @@ use itertools::Itertools;
 use std::sync::RwLock;
 use tracing::debug;
 
-use crate::{StrId, duck::util::terminal::Terminal};
+use crate::{StrId, duck::util::terminal::Terminal, quackpack::util::PANIC_MESSAGE};
 
 const DEFAULT_REFRESH_RATE_HZ: u8 = 20;
 
@@ -81,7 +81,7 @@ impl DownloadingPackagesProgressBarManager {
             );
             return;
         }
-        let mut state = self.state.write().expect("panick'ed");
+        let mut state = self.state.write().expect(PANIC_MESSAGE);
         if state.reverse_map.contains_key(&pkg) {
             debug!("download of package `{pkg}` has already started");
             return;
@@ -110,7 +110,7 @@ impl DownloadingPackagesProgressBarManager {
             );
             return;
         }
-        let mut state = self.state.write().expect("panick'ed");
+        let mut state = self.state.write().expect(PANIC_MESSAGE);
 
         let Some(id) = state.reverse_map.remove(&pkg) else {
             debug!("download of package `{pkg}` hasn't started");

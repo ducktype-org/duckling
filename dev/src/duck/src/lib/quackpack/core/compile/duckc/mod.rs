@@ -41,7 +41,7 @@ impl Duckc {
         &self,
         graph: &CompilerDag,
         compilation_type: CompilationType,
-        bcx: &BuildContext<'_>,
+        bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<()> {
         match compilation_type {
             CompilationType::OnlyRootPackage => self.compile_root_package_only(graph, bcx),
@@ -52,7 +52,7 @@ impl Duckc {
     fn compile_root_package_only(
         &self,
         graph: &CompilerDag,
-        bcx: &BuildContext<'_>,
+        bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<()> {
         let this = graph.package(&graph.dag().root())?;
         let deps = graph.dag().dependencies_for_package(&graph.dag().root())?;

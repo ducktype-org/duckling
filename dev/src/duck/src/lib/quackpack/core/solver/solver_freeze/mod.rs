@@ -185,6 +185,7 @@ mod test {
         let manifest = dir.path().join("quackconfig.yml");
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
+        dir.path().try_fsync_dir().unwrap();
         (dir, manifest)
     }
 
