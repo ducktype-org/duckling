@@ -26,7 +26,7 @@ namespace compiler::tsh {
 	}
 
 	/**
-	 * @brief Creates a mangled string representation of a vector of symbol types.
+	 * @brief Creates a mangled string representation of a vector of symbol types ending with 'E' terminator.
 	 * @param types Vector of symbol types to mangle.
 	 * @return A mangled string representing a sequence of symbol types.
 	 */

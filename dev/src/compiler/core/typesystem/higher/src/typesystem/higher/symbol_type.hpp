@@ -268,8 +268,8 @@ namespace compiler::tsh {
 		std::string getMangledName() const {
 			using enum ReferenceKind;
 			return base::strConcat(
-				uniqueness == Uniqueness::Unique ? "unique " : "M",
-				leakage == Leakage::Leaking ? "leaking " : "L",
+				uniqueness == Uniqueness::Unique ? "" : "M",
+				leakage == Leakage::Leaking ? "" : "L",
 				mutability == Mutability::Mutable ? "" : "N",
 				reference_kind == Direct ? ""
 				: reference_kind == Box  ? "X"

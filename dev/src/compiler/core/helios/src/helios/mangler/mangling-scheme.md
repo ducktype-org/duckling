@@ -103,8 +103,7 @@ either in the scheme or it's implementation, they should be reflected here.
 <tuple-type> ::= "T" <type>* "E"                            // tuple type
 
 <array-type> ::= "A" <base-10-number> <type> "E"            // static array type
-                 | "D" <type> "E"                           // dynamic array type
-
+               | "D" <type> "E"                             // dynamic array type
 <class-type> ::= "C" <path>                                 // class-like types (class, enum, etc.)
 
 <function-type> ::= "F" <function-qualifier>* <return-type> <argument-type>* "E"
