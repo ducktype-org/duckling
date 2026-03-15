@@ -459,7 +459,6 @@ namespace compiler::frontend {
 		/**
 		 * Removes a source file from its module.
 		 * @param file The SourceFile to remove.
-		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
 		static void removeSourceFileFromStorage(base::Ref<SourceFile> file);
 
@@ -473,7 +472,6 @@ namespace compiler::frontend {
 		/**
 		 * Removes the main source file from the given module.
 		 * @param module The module to modify.
-		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
 		static void removeMainSourceFile(base::Ref<ModuleTree> module);
 
@@ -529,7 +527,6 @@ namespace compiler::frontend {
 		 * Also removes it from its parent's submodules and deletes associated source files.
 		 * @param module_id The ModuleID to remove.
 		 * This will set the parent of all submodules to the parent of the removed module.
-		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
 		 */
 		static void removeSingleModule(base::Ref<ModuleTree> module);
 
@@ -537,7 +534,6 @@ namespace compiler::frontend {
 		 * Removes the given module and all of its submodules recursively.
 		 * Parent hashes are updated once after the entire subtree is removed.
 		 * @param module_id The ModuleID to remove.
-		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
 		 */
 		static void removeModuleRecursive(base::Ref<ModuleTree> module);
 
