@@ -1,13 +1,12 @@
 # Gathers data from the binary stencils used for embeding and patching
 
 import _llvm
-import logging
 import asyncio
 import click
 
-async def generate_stencils(llvm_nm: str, binary: str, output_file):
+async def generate_stencils(binary: str, output_file):
     nm_args = ["-S", "--demangle", "--format=posix", binary]
-    nm_output: str = await _llvm.run(llvm_nm, nm_args)
+    nm_output: str = await _llvm.run("llvm-nm", nm_args)
 
     for line in nm_output.split('\n'):
         if not line.strip():
@@ -25,11 +24,6 @@ async def generate_stencils(llvm_nm: str, binary: str, output_file):
 
 @click.command()
 @click.option(
-    '--llvm-nm', 
-    default="llvm-nm", 
-    help='Path to LLVM-nm executable.'
-)
-@click.option(
     '--output', 
     required=True, 
     type=click.File('w'), 
@@ -39,9 +33,8 @@ async def generate_stencils(llvm_nm: str, binary: str, output_file):
     'binary', 
     type=click.Path(exists=True)
 )
-def main(llvm_nm, output, binary):
-    """Gathers data from binary stencils used for embedding and patching."""
-    asyncio.run(generate_stencils(llvm_nm, binary, output))
+def main(output, binary):
+    asyncio.run(generate_stencils(binary, output))
 
 if __name__ == "__main__":
     main()
