@@ -64,6 +64,10 @@ namespace compiler::helios {
 				result = CompileTimeValue{ expr.value };
 			}
 
+			void visitLiteralCharExpr(const code::LiteralCharExpr& expr) final {
+				result = CompileTimeValue{ expr.value };
+			}
+
 			void visitLiteralStringExpr(const code::LiteralStringExpr& expr) final {
 				result = CompileTimeValue{ expr.value };
 			}
@@ -261,8 +265,7 @@ namespace compiler::helios {
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
 										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at "
-											"compile "
+											"Operands on binary expression evaluated at compile "
 											"time are of different type. This should be "
 											"prevented by casts.\nLeft side is:",
 											lhs.getTypeOfStoredValue(ctx).getType().toString(),
@@ -274,19 +277,50 @@ namespace compiler::helios {
 									LhsNumT rhs_val = maybe_rhs_val.value();
 
 									using ResultT = LhsNumT;
-									ResultT result;
+									CompileTimeValue result;
+									auto set_bool_result = [&result](const bool bool_result) {
+										result = CompileTimeValue{ bool_result };
+									};
+									auto set_num_result = [&result](const ResultT num_result) {
+										result = CompileTimeValue{ NumericValue{ num_result } };
+									};
+
 									switch (expr.operation) {
+									case IntegerLt:
+									case FloatLt:
+										set_bool_result(lhs_val < rhs_val);
+										break;
+									case IntegerLteq:
+									case FloatLteq:
+										set_bool_result(lhs_val <= rhs_val);
+										break;
+									case IntegerGt:
+									case FloatGt:
+										set_bool_result(lhs_val > rhs_val);
+										break;
+									case IntegerGteq:
+									case FloatGteq:
+										set_bool_result(lhs_val >= rhs_val);
+										break;
+									case IntegerEq:
+									case FloatEq:
+										set_bool_result(lhs_val == rhs_val);
+										break;
+									case IntegerNeq:
+									case FloatNeq:
+										set_bool_result(lhs_val != rhs_val);
+										break;
 									case IntegerAdd:
 									case FloatAdd:
-										result = lhs_val + rhs_val;
+										set_num_result(lhs_val + rhs_val);
 										break;
 									case IntegerSub:
 									case FloatSub:
-										result = lhs_val - rhs_val;
+										set_num_result(lhs_val - rhs_val);
 										break;
 									case IntegerMul:
 									case FloatMul:
-										result = lhs_val * rhs_val;
+										set_num_result(lhs_val * rhs_val);
 										break;
 									case IntegerDiv:
 									case FloatDiv:
@@ -298,7 +332,7 @@ namespace compiler::helios {
 											));
 											return query::Failed();
 										}
-										result = static_cast<ResultT>(lhs_val / rhs_val);
+										set_num_result(lhs_val / rhs_val);
 										break;
 									case IntegerMod:
 									case FloatMod:
@@ -311,13 +345,15 @@ namespace compiler::helios {
 											return query::Failed();
 										}
 										if constexpr (std::is_integral_v<ResultT>)
-											result = static_cast<ResultT>(lhs_val % rhs_val);
+											set_num_result(lhs_val % rhs_val);
 										else
-											result = std::fmod(lhs_val, rhs_val);
+											set_num_result(std::fmod(lhs_val, rhs_val));
 										break;
 									case IntegerPow:
 									case FloatPow:
-										result = static_cast<ResultT>(std::pow(lhs_val, rhs_val));
+										set_num_result(
+											static_cast<ResultT>(std::pow(lhs_val, rhs_val))
+										);
 										break;
 									default:
 										ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -328,7 +364,7 @@ namespace compiler::helios {
 										return query::Failed();
 									}
 
-									return CompileTimeValue{ NumericValue{ result } };
+									return result;
 								},
 								lhs.getStorage()
 							);
@@ -336,10 +372,14 @@ namespace compiler::helios {
 					                         && std::is_same_v<RhsT, bool>) {
 							using enum code::BuiltinBinary;
 							switch (expr.operation) {
-							case code::BuiltinBinary::BooleanAnd:
+							case BooleanAnd:
 								return CompileTimeValue{ lhs && rhs };
-							case code::BuiltinBinary::BooleanOr:
+							case BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
+							case IntegerEq:
+								return CompileTimeValue{ lhs == rhs };
+							case IntegerNeq:
+								return CompileTimeValue{ lhs != rhs };
 							default:
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this binary operator at compile "
@@ -347,6 +387,17 @@ namespace compiler::helios {
 									expr.origin.getSourcePosition()
 								));
 								return query::Failed();
+							}
+						} else if constexpr (std::is_same_v<LhsT, tsh::SymbolType<>>
+					                         && std::is_same_v<RhsT, tsh::SymbolType<>>) {
+							using enum code::BuiltinBinary;
+							switch (expr.operation) {
+							case MetaEq:
+								return CompileTimeValue(lhs == rhs);
+							case MetaNeq:
+								return CompileTimeValue(lhs != rhs);
+							default:
+								CORE_UNREACHABLE();
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -481,85 +532,6 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
-				auto compare = [this](
-								   const CompileTimeValue& first,
-								   const CompileTimeValue& second,
-								   code::BuiltinBinary     operation
-							   ) {
-					return std::visit(
-						[&](auto&& lhs_val, auto&& rhs_val) -> bool {
-							using LhsT = std::decay_t<decltype(lhs_val)>;
-							using RhsT = std::decay_t<decltype(rhs_val)>;
-
-							if constexpr (std::is_same_v<LhsT, NumericValue>
-						                  && std::is_same_v<RhsT, NumericValue>) {
-								return std::visit(
-									[&](auto&& lhs_num) -> bool {
-										using LhsNumT = std::decay_t<decltype(lhs_num)>;
-
-										// @note: We assume both sides of the binary operation have
-								        // the same types. If types differ, they should be casted
-								        // with the cast expr beforehand.
-										auto maybe_rhs_val = rhs_val.template get<LhsNumT>();
-										if (!maybe_rhs_val.has_value()) {
-											CORE_PANIC(base::strConcat(
-												"Operands on binary expression evaluated at "
-												"compile "
-												"time are of different type. This should be "
-												"prevented by casts.\nLeft side is:",
-												first.getTypeOfStoredValue(ctx).getType().toString(),
-												"\nRight side is: ",
-												second.getTypeOfStoredValue(ctx).getType().toString()
-											));
-										}
-
-										LhsNumT rhs_num = maybe_rhs_val.value();
-										using enum code::BuiltinBinary;
-										switch (operation) {
-										case IntegerLt:
-										case FloatLt:
-											return lhs_num < rhs_num;
-										case IntegerGt:
-										case FloatGt:
-											return lhs_num > rhs_num;
-										case IntegerLteq:
-										case FloatLteq:
-											return lhs_num <= rhs_num;
-										case IntegerGteq:
-										case FloatGteq:
-											return lhs_num >= rhs_num;
-										case IntegerEq:
-										case FloatEq:
-											return lhs_num == rhs_num;
-										case IntegerNeq:
-										case FloatNeq:
-											return lhs_num != rhs_num;
-										default:
-											CORE_UNREACHABLE();
-										}
-									},
-									lhs_val.getStorage()
-								);
-							} else if constexpr (std::is_same_v<LhsT, tsh::SymbolType<>>
-						                         && std::is_same_v<RhsT, tsh::SymbolType<>>) {
-								using enum code::BuiltinBinary;
-								switch (operation) {
-								case code::BuiltinBinary::MetaEq:
-									return lhs_val == rhs_val;
-								case code::BuiltinBinary::MetaNeq:
-									return lhs_val != rhs_val;
-								default:
-									CORE_UNREACHABLE();
-								}
-							} else {
-								CORE_PANIC("Unsupported types in CTE chain expr");
-							}
-						},
-						first.getStorage(),
-						second.getStorage()
-					);
-				};
-
 				using namespace std::views;
 
 				auto evaluate_subexpr = [this](const base::Box<code::Expr>& expr) {
@@ -567,27 +539,18 @@ namespace compiler::helios {
 				};
 
 				// Each expression is evaluated lazily, when it becomes useful.
-				auto evaluated_exprs = chain_expr.expressions | transform(evaluate_subexpr);
+				auto evaluated_comps = chain_expr.comparisons | transform(evaluate_subexpr);
 
-				auto evaluated = evaluate_subexpr(chain_expr.expressions.front());
-				if (evaluated.hasFailed()) {
-					result = query::Failed();
-					return;
-				}
-				auto prev_value = evaluated.valueOrThrow();
-				for (auto [next_expr, comp]: zip(evaluated_exprs | drop(1), chain_expr.operators)) {
-					if (next_expr.hasFailed()) {
+				for (const auto& evaluated_comp: evaluated_comps) {
+					if (evaluated_comp.hasFailed()) {
 						result = query::Failed();
 						return;
 					}
 
-					auto next_value = next_expr.valueOrThrow();
-					if (!compare(prev_value, next_value, comp)) {
+					if (not evaluated_comp.valueOrThrow().get<bool>().value()) {
 						result = CompileTimeValue{ false };
 						return;
 					}
-
-					prev_value = next_value;
 				}
 				result = CompileTimeValue{ true };
 			}
@@ -764,6 +727,10 @@ namespace compiler::helios {
 					= CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
 			}
 
+			void visitReusableExpr(const code::ReusableExpr& reusable) override {
+				evaluateSubExpr(reusable.inner.ref());
+			}
+
 			void visitListPushExpr(const code::ListPushExpr& expr) final {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating list push expression at compile time.",
@@ -909,7 +876,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates a HOUT expression using TreeEval.
 		 * @return The calculated result represented by CompileTimeValue, a CouldNotShortPath
-		 * error if the expresion was to complicated for tree eval or a Failed error.
+		 * error if the expression was too complicated for tree eval or a Failed error.
 		 */
 		static auto evaluateWithTreeEval(query::Context& ctx, CRef<code::Expr> expr)
 			-> TreeEvalResult {
@@ -931,15 +898,22 @@ namespace compiler::helios {
 				variant_case(CompileTimeValue, ctv) { return ctv; }
 				variant_case(CouldNotShortPath, _) {
 					// If TreeEval failed, try to evaluate with VM.
-					const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
-					if (!call_expr) {
-						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-							"Evaluation of this expression in DVM at compile time",
-							expr->origin.getSourcePosition()
-						));
-						return query::Failed();
+					if (const auto* reusable_expr
+					    = dynamic_cast<const code::ReusableExpr*>(expr.get())) {
+						// If it's a reusable expression, propagate evaluation inwards.
+						return evalHoutExpr(ctx, reusable_expr->inner.ref());
 					}
-					return evaluateFunctionWithVm(ctx, call_expr);
+					if (const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get())) {
+						// If it's a call, evaluate it via the VM.
+						return evaluateFunctionWithVm(ctx, call_expr);
+					}
+
+					// Otherwise, log an error.
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Evaluation of this expression in DVM at compile time",
+						expr->origin.getSourcePosition()
+					));
+					return query::Failed();
 				}
 				variant_default { CORE_PANIC("Unexpected TreeEvalResult variant."); }
 			}

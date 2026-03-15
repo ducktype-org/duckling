@@ -97,7 +97,8 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Creates a call error message based on the provided failure reason.
 	 * @param ctx The query context.
-	 * @param call_expr The PST call expression.
+	 * @param whole_call_origin The ElementOrigin of the entire call expression.
+	 * @param arguments_origin The ElementOrigins of all arguments of the call expression.
 	 * @param failure_reason The reason for the call failure.
 	 * @param is_for_candidate_function Whether the message is for a candidate function
 	 * (used in ambiguous matches) or for the main call error.
