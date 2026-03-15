@@ -475,6 +475,9 @@ namespace compiler::helios {
 			}
 		};
 
+		/**
+		 * @brief Get the declaration of an implicit class constructor.
+		 */
 		static PResult getImplicitCtorDecl(
 			Context& ctx, const houtgen::GeneratedSymbolData::ImplicitConstructor& ctor_data
 		) {
@@ -570,6 +573,43 @@ namespace compiler::helios {
 			};
 		}
 
+		/**
+		 * @brief Get the declaration of a builtin function, or one which does not have its
+		 * parameters specified anywhere. The parameter symbols are set as compiler-generated.
+		 */
+		static PResult getBuiltinDecl(Context& ctx, QKey fun) {
+			const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ fun })
+			                              ->valueOrThrow()
+			                              .getType()
+			                              .as<tsh::FunctionAbstractType>();
+			const auto return_type = builtin_type.getResultType();
+			auto       parameters  = std::vector<code::Parameter>{};
+			for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
+				const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+					base::StrID(base::strConcat("_", i).c_str()),
+					houtgen::GeneratedSymbolData{
+						houtgen::GeneratedSymbolData::Parameter{
+							.function_symbol = fun,
+							.parameter_index = i,
+						},
+					},
+				});
+				parameters.emplace_back(
+					name(param_symbol),
+					param_type,
+					std::nullopt,
+					param_symbol,
+					code::generatedOrigin()
+				);
+			}
+			return HOUTFunctionDeclaration{
+				fun,
+				return_type,
+				std::move(parameters),
+				code::generatedOrigin(),
+			};
+		}
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (kind(key)) {
 			case SymbolKind::Function:
@@ -585,7 +625,12 @@ namespace compiler::helios {
 						variant_match(generated_data.data) {
 							variant_case(
 								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
-							) return getImplicitCtorDecl(ctx, ctor_data);
+							) {
+								return getImplicitCtorDecl(ctx, ctor_data);
+							}
+							variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+								return getBuiltinDecl(ctx, key);
+							}
 							variant_default {
 								// Other generated symbols are not functions.
 								CORE_UNREACHABLE();
@@ -593,33 +638,7 @@ namespace compiler::helios {
 						}
 					}
 					variant_case(builtin::BuiltinFunctionData, builtin) {
-						const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ key })
-						                              ->valueOrThrow()
-						                              .getType()
-						                              .as<tsh::FunctionAbstractType>();
-						const auto return_type = builtin_type.getResultType();
-						auto       parameters  = std::vector<code::Parameter>{};
-						for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
-							const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
-								base::StrID(base::strConcat("_", i).c_str()),
-								houtgen::GeneratedSymbolData{
-									houtgen::GeneratedSymbolData::Parameter{
-										.function_symbol = key,
-										.parameter_index = i,
-									},
-								},
-							});
-							parameters.emplace_back(
-								name(param_symbol),
-								param_type,
-								std::nullopt,
-								param_symbol,
-								code::generatedOrigin()
-							);
-						}
-						return HOUTFunctionDeclaration{
-							key, return_type, std::move(parameters), code::generatedOrigin()
-						};
+						return getBuiltinDecl(ctx, key);
 					}
 					variant_default { CORE_UNREACHABLE(); }
 				}
