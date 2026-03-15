@@ -1,5 +1,6 @@
 #include "initialize.hpp"
 
+#include "diagnostic_interactive/module_flags/module_flags.hpp"
 #include "options.hpp"
 
 #include <concurrent/module_flags/worker_count.hpp>
@@ -43,7 +44,8 @@ namespace compiler::driver {
 
 		void handleLoggerInitialization() {
 			// We might want to configure it differently in the future:
-			dia_int::configureImmediatePrint(&std::cerr, true);
+			dia_int::configureImmediatePrint(&std::cerr);
+			dia_int::configureTerminalPrinterColors(true);
 
 			global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 		}

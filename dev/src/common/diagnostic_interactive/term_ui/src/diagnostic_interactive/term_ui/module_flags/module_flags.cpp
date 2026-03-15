@@ -1,4 +1,5 @@
 #include "module_flags.hpp"
+
 #include <rang.hpp>
 
 namespace term_ui {

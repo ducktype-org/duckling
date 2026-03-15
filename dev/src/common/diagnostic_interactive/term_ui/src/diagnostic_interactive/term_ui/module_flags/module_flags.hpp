@@ -13,7 +13,7 @@ namespace term_ui {
 
 	/**
 	 * @brief Configure whether to use colors in the terminal UI.
-	 * 
+	 *
 	 * Also configures the underlying rang library to always output
 	 * escape codes by forcefully emitting ANSI instead of relying on
 	 * stdout TTY detection.

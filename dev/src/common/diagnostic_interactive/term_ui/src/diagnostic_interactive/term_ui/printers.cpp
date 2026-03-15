@@ -1,8 +1,8 @@
 #include "printers.hpp"
 
 #include <diagnostic_interactive/term_ui/code_section.hpp>
-#include <diagnostic_interactive/term_ui/styles.hpp>
 #include <diagnostic_interactive/term_ui/module_flags/module_flags.hpp>
+#include <diagnostic_interactive/term_ui/styles.hpp>
 
 namespace term_ui {
 	void print(const dia_int::term_ui_view::Message& msg, std::ostream& out) {
