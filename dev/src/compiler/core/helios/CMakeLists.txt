@@ -13,7 +13,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/expressions/function_calls/errors.cpp
 	src_private/helios_private/expressions/chain_expr.cpp
 	src_private/helios_private/expressions/query_hout_of_expr.cpp
-	src_private/helios_private/expressions/builtin_operations.cpp
+	src_private/helios_private/expressions/builtin_operators.cpp
 	src_private/helios_private/expressions/numeric_literals.cpp
 	src_private/helios_private/expressions/coercions.cpp
 	src_private/helios_private/comp_time/comp_time.cpp
