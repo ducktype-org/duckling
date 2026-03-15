@@ -607,7 +607,7 @@ impl TryFrom<GathererState> for GatheredInfo {
 
     fn try_from(mut value: GathererState) -> QuackResult<Self> {
         let mut gathered_manifests = HashMap::new();
-        let mut possible_features: HashMap<ExpandedPackage, HashSet<crate::StrId>> = HashMap::new();
+        let mut possible_features = HashMap::new();
         let mut unnecessary_pkgs = Vec::new();
         for (pkg, data) in value.pkgs_data {
             if data.referenced_by_requests {
