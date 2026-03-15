@@ -102,6 +102,10 @@ void server(i32 port) {
 		return crow::response(200, "OK");
 	});
 
+	/**
+	 * This path is the extension of the previous one, and it is used when the second argument is
+	 * empty, and the CROW can't handle it on it's own.
+	 */
 	CROW_ROUTE(app, "/change_content/<string>/")
 	([](const std::string& base64_path) {
 		const auto path = base64::decode_into<std::string>(base64_path);

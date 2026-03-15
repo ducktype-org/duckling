@@ -153,7 +153,7 @@ namespace query::external {
 	}
 
 	template<typename MetadataT>
-	auto getMetadataFromAllNodes() {
+	auto getMetadataFromAllCurrentNodes() {
 		return getMetadataFromAllNodesImpl<MetadataT, MetadataStorageKind::Current>();
 	}
 

@@ -224,7 +224,7 @@ namespace compiler::driver {
 
 	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromCurrentMetadata() {
 		LookupsMap lookups_map = createLookupMap(
-			query::external::getMetadataFromAllNodes<frontend::metadata_ModuleLookup>()
+			query::external::getMetadataFromAllCurrentNodes<frontend::metadata_ModuleLookup>()
 		);
 
 		return collectInputDataFromGlobalPackagesImpl(lookups_map);

@@ -88,7 +88,6 @@ namespace lsp {
 		 * If the removed module is a root module, it is unregistered.
 		 */
 		void removeModuleAndUnregisterPackage(ModuleID module_id) {
-			;
 			if (getModuleRef(module_id)->getParentModule().empty())
 				global_state::setters::removePackage(module_id);
 
@@ -199,8 +198,8 @@ namespace lsp {
 					ModuleTreeModifier::addSubmodule(parent_module_ref, submodule);
 				}
 				if_opt_some(module_ref_opt, submodule) {
-					// There is a module for this file, but it is not a submodule of the new module,
-					// so we need to move it.
+					// If there is a module for this file and it's a package root,
+					// we need to move it under the new parent module.
 					if (submodule->getParentModule().empty()) {
 						// Is a package
 						std::cerr << "Adding existing submodule " << submodule->getName().strView()
@@ -232,13 +231,13 @@ namespace lsp {
 				auto module_id  = source_file->getModule().illegalAccess().getID();
 				auto module_ref = getModuleRef(module_id);
 
-				bool is_main_source_file = false;
+				bool is_main_module_file = false;
 				if (module_ref->hasMainSourceFile()) {
 					auto main_source_file = module_ref->getMainSourceFile().illegalAccess().getID();
-					is_main_source_file   = (main_source_file == source_file->getFileID());
+					is_main_module_file   = (main_source_file == source_file->getFileID());
 				}
 
-				if (is_main_source_file) modules_to_remove.insert(module_id);
+				if (is_main_module_file) modules_to_remove.insert(module_id);
 			}
 
 			for (auto& source_file: source_files) {
@@ -277,7 +276,7 @@ namespace lsp {
 		// Get the directory to start searching for the package root.
 		auto current = absolute_physical_path.parentPath();
 
-		while (current.exists() and not current.empty()) {
+		while (not current.empty()) {
 			if (current == workspace_root) break;
 			if (hasDirectoryMainModuleFile(current))
 				package_root_dir = current;

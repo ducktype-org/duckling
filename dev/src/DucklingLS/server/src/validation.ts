@@ -13,7 +13,6 @@ export async function validateDuckling(
 	let errorsMap = await compilerDaemonClient.getErrors(uri, connection);
 
 	for (const [uri, diagnostics] of Object.entries(errorsMap)) {
-		let problems = 0;
 		const filteredDiagnostics = diagnostics.slice(0, settings.maxNumberOfProblems);
 
 		// Send the computed diagnostics to the client

@@ -1,20 +1,22 @@
 #include "packages.hpp"
 
-#include <algorithm>
+#include <base/collections/optional.hpp>
 
 namespace global_state {
 
 	namespace {
 		std::vector<PackageInfo> packages;
 		// Tracks whether a main package has been registered already
-		constinit bool main_package_set = false;
+		base::Optional<Ref<PackageInfo>> main_package{};
 	}
 
 	const std::vector<PackageInfo>& getPackages() { return packages; }
 
 	const PackageInfo& getMainPackage() {
-		CORE_ASSERT(!packages.empty(), "No packages have been registered, main package is missing!");
-		return packages.front();
+		CORE_ASSERT(
+			!main_package.empty(), "No packages have been registered, main package is missing!"
+		);
+		return *main_package.value().get();
 	}
 
 	namespace setters {
@@ -23,19 +25,18 @@ namespace global_state {
 		}
 
 		void removePackage(compiler::frontend::ModuleID root_module) {
-			bool removed_main = !packages.empty() && packages.front().root_module == root_module;
-
+			if_opt_some(main_package, main_pkg) {
+				if (main_pkg->root_module == root_module) main_package.reset();
+			}
 			std::erase_if(packages, [&](const PackageInfo& pkg) {
 				return pkg.root_module == root_module;
 			});
-
-			if (removed_main) main_package_set = false;
 		}
 
 		void addMainPackage(compiler::frontend::ModuleID root_module) {
-			CORE_ASSERT(!main_package_set, "Main package has already been added!");
+			CORE_ASSERT(main_package.empty(), "Main package has already been added!");
 			packages.insert(packages.begin(), { root_module });
-			main_package_set = true;
+			main_package.emplace(&packages.front());
 		}
 	}
 }
