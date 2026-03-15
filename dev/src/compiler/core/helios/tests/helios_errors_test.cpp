@@ -403,6 +403,21 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				fun bad() = {
+				    return;
+				    return 0;
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "inconsistent return statements" },
+			1
+		);
+
 		// ========================== Lexer errors ==========================
 
 		// // We don't see errors here, because they are produced by the lexer, not query:
