@@ -1,4 +1,4 @@
-#include "utils.hpp"
+#include "repl_split_helpers.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -9,8 +9,6 @@
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/with_context_do.hpp>
-
-#include <expected>
 
 namespace compiler::repl {
 
