@@ -336,7 +336,7 @@ namespace compiler::helios::mangler {
 			return getSimpleMangledName(ctx, class_type.getSymbol()).str();
 		}
 
-		std::string type(query::Context& ctx, tsh::MetaAbstractType meta_type) { return "t"; }
+		std::string type(query::Context&, tsh::MetaAbstractType) { return "t"; }
 
 		/**
 		 * @brief Determines what type of symbol we are mangling to choose the right encoding
