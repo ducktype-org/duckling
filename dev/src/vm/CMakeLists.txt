@@ -105,7 +105,7 @@ function(add_vm_variant suffix compile_def)
     set(exec_name "VM_${suffix}")
 
     add_library(${lib_thread_vm_name} OBJECT ${vm_config_dependent_sources})
-    target_compile_definitions(${lib_thread_vm_name} PRIVATE "${compile_def}")
+    target_compile_definitions(${lib_thread_vm_name} PRIVATE ${compile_def})
 
     if (JIT_ENABLED)
         # Additionall llvm dependecies.
@@ -119,7 +119,7 @@ function(add_vm_variant suffix compile_def)
         target_include_directories(${lib_thread_vm_name}_bc PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name}_bc ${llvm_libs})
         target_compile_options(${lib_thread_vm_name}_bc PRIVATE -emit-llvm)
-        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE "${compile_def}" IGNORE_NOT_JITABLE)
+        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE ${compile_def} IGNORE_NOT_JITABLE)
 
         set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.bc)
         set(extracted_func_file ${CMAKE_CURRENT_BINARY_DIR}/extracted_function_${suffix}.txt)
@@ -149,35 +149,30 @@ function(add_vm_variant suffix compile_def)
                 -o ${common_bc}
 
             VERBATIM
-            DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc ${vm_dep_bc_targets}
+            DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
+                    $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
+                    # Here dependency to both bc files and targets is necessery.
+                    ${vm_dep_objects_bc} # File dependency ensures each file will tracked and program will be rebuild if it changes.
+                    ${vm_dep_bc_targets} # Target dependency says what should be build first.
         )
-        target_sources(JitDep PRIVATE ${common_bc})
-
         # JitDep depends to both bc files (it can embed both of them), but is NOT config dependent.
-        add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc} ${opcodes_bc_file})
-
+        add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc} ${extracted_func_file})
         add_dependencies(JitDep CommonVMBitcode_${suffix})
 
-
-        set_source_files_properties(${jit_dependency}
-            PROPERTIES OBJECT_DEPENDS "${opcodes_bc_file}"
-        )
-
         add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
-        add_dependencies(${lib_vm_name} CommonVMBitcode_${suffix})
         
         target_link_libraries(${lib_vm_name} ${llvm_libs})
 
         make_module(${lib_vm_name} USES llvm_helpers ${vm_dependencies})
         
-
         target_compile_options(JitDep PRIVATE
             "--embed-dir=$<TARGET_PROPERTY:JitDep,BINARY_DIR>"
         )
 
         add_executable(${exec_name} $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
-        target_link_libraries(${exec_name} PRIVATE ${lib_vm_name} "-Wl,--export-dynamic")
-    
+        target_link_libraries(${exec_name} PRIVATE ${lib_vm_name})
+        target_link_options(${exec_name} PRIVATE -Wl,--export-dynamic)
+
     else()
         make_module(${lib_thread_vm_name} USES ${vm_dependencies})
 
@@ -201,7 +196,7 @@ if (JIT_ENABLED)
     target_link_libraries(LibVM ${llvm_libs})
     add_executable(VM $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
 
-    target_link_libraries(VM LibVM ${llvm_libs})
+    target_link_libraries(VM LibVM)
     target_link_options(VM PRIVATE -Wl,--export-dynamic)
 else() # Same as for JIT, but without JITDep and llvm_libs
     add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc>)
