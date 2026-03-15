@@ -6,16 +6,16 @@ use tempfile::{TempDir, tempdir};
 use crate::{
     DuckCtx,
     quackpack::{
-        core::{Version, fetcher::types, git_access::GitAccess},
+        core::{PackageLoader, Version, fetcher::types, git_access::GitAccess},
         schemas::registry,
     },
-    util_common::path_ops_ext::PathOpsExt,
+    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
 use url::Url;
 
 use crate::quackpack::core::{
-    PackageCtx, ShouldRunSolverEngine, Solver,
+    PackageCtx, ShouldRunSolverEngine, SolverGathererData,
     fetcher::Fetcher,
     solver_freeze::{SolverFreeze, SolverPackageFreeze},
     solver_mode::SolverMode,
@@ -25,44 +25,48 @@ use crate::quackpack::core::{
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
     fn git_path(&self, _url: url::Url, _commit: crate::StrId) -> PathBuf {
-        panic!("unimplemented")
+        unimplemented!()
     }
 
     fn is_stored(&self, _url: url::Url, _commit: crate::StrId) -> bool {
-        panic!("unimplemented")
+        unimplemented!()
     }
 
     fn store(
-        &self,
+        &mut self,
         _url: url::Url,
         _commit: crate::StrId,
         _source_path: &std::path::Path,
     ) -> crate::QuackResult<()> {
-        panic!("unimplemented")
+        unimplemented!()
     }
 }
 
 fn setup_duck_ctx() -> (DuckCtx, TempDir) {
-    // We set cache directory to a temporary directory, so we can use `Fetcher` without
-    // worrying about leaving traces of tests in FS.
-    let dir = tempdir().unwrap();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::set_var("DUCK_CACHE_DIR", dir.path());
-    }
-    let ctx = DuckCtx::default();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::remove_var("DUCK_CACHE_DIR");
-    }
-    (ctx, dir)
+    let setup = || {
+        // We set cache directory to a temporary directory, so we can use `Fetcher` without
+        // worrying about leaving traces of tests in FS.
+        let dir = tempdir().unwrap();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::set_var("DUCK_CACHE_DIR", dir.path());
+        }
+        let ctx = DuckCtx::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::remove_var("DUCK_CACHE_DIR");
+        }
+        (ctx, dir)
+    };
+    setup_test(setup)
 }
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
-    let manifest = dir.path().join("quackconfig.yml");
+    let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
     manifest.touch().unwrap();
     manifest.write(contents).unwrap();
+    dir.path().try_fsync_dir().unwrap();
     (dir, manifest)
 }
 
@@ -148,7 +152,7 @@ fn new_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -217,8 +221,10 @@ dependencies:
         .into(),
     };
 
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
-    let ShouldRunSolverEngine::Yes(solver) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, SolverMode::default());
+    let ShouldRunSolverEngine::Yes(solver) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };
@@ -261,7 +267,7 @@ fn remove_unnecessary_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -333,8 +339,10 @@ dependencies:
         .into(),
     };
 
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
-    let ShouldRunSolverEngine::No(answer) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, SolverMode::default());
+    let ShouldRunSolverEngine::No(answer) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };
@@ -374,7 +382,7 @@ fn no_longer_working_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -439,8 +447,10 @@ dependencies:
         supress_foreign_manifests_errors: true,
         frozen: false,
     };
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, mode);
-    let ShouldRunSolverEngine::Yes(solver) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, mode);
+    let ShouldRunSolverEngine::Yes(solver) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };

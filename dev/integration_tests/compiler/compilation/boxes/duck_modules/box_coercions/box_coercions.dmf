@@ -12,7 +12,7 @@ fun by_ref(p: ref Point) -> () = {
     p.x = 777; # This should modify the passed box.
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     var b_point: box Point = Point(1, 2);
 
     var res = by_value(b_point);

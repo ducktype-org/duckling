@@ -4,7 +4,7 @@ var GLOBAL_ARR: i64[SIZE];
 const MY_TYPE = i32[2];
 var GLOBAL_STRUCT_ARR: MY_TYPE;
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     GLOBAL_ARR[0] = 100i64;
     GLOBAL_ARR[4] = 500i64;
     builtin_output_i64(GLOBAL_ARR[0]); # 100

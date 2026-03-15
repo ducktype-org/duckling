@@ -31,7 +31,7 @@ fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
 /// Details are in [`setup_mock_storage`].
 fn clean() {
     let (ctx, root) = setup_mock_storage();
-    let mut output = storage::ops::clean_storage(&ctx).unwrap();
+    let mut output = storage::ops::clean_storage(&ctx, ctx.default_storage_root()).unwrap();
     output.removed_packages.sort();
     let mut expected_packages = [
         root.path()
@@ -66,24 +66,25 @@ fn clean() {
 /// removed.
 fn delete_venv() {
     let (ctx, root) = setup_mock_storage();
-    storage::ops::delete_venv(&ctx, StrId::new("root1")).unwrap();
+    let storage_root = ctx.default_storage_root();
+    storage::ops::delete_venv(storage_root, StrId::new("root1")).unwrap();
     check_venvs_exist(root.path(), &["root2", "root3", "root4"]);
     check_venvs_dont_exist(root.path(), &["root1"]);
-    storage::ops::delete_venv(&ctx, StrId::new("root2")).unwrap();
+    storage::ops::delete_venv(storage_root, StrId::new("root2")).unwrap();
     check_venvs_exist(root.path(), &["root3", "root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2"]);
-    storage::ops::delete_venv(&ctx, StrId::new("root3")).unwrap();
+    storage::ops::delete_venv(storage_root, StrId::new("root3")).unwrap();
     check_venvs_exist(root.path(), &["root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3"]);
 
-    storage::ops::delete_venv(&ctx, StrId::new("non_existent_venv")).unwrap();
+    storage::ops::delete_venv(storage_root, StrId::new("non_existent_venv")).unwrap();
     check_venvs_exist(root.path(), &["root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3"]);
 
-    storage::ops::delete_venv(&ctx, StrId::new("root4")).unwrap();
+    storage::ops::delete_venv(storage_root, StrId::new("root4")).unwrap();
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3", "root4"]);
 
-    let mut output = storage::ops::clean_storage(&ctx).unwrap();
+    let mut output = storage::ops::clean_storage(&ctx, storage_root).unwrap();
     output.removed_packages.sort();
     let mut expected_packages = [
         root.path()
@@ -105,7 +106,7 @@ fn delete_venv() {
 /// Basic info output tests.
 fn info() {
     let (ctx, _root) = setup_mock_storage();
-    let output = storage::ops::list_venvs(&ctx).unwrap();
+    let output = storage::ops::list_venvs(ctx.default_storage_root()).unwrap();
     assert_eq!(output.len(), 4);
     assert_eq!(
         output.get("root1").unwrap().data().freeze().root().name(),

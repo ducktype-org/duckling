@@ -3,24 +3,27 @@ use std::collections::HashMap;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
-use crate::quackpack::core::Version;
+use crate::{quackpack::core::Version, util_common::test_utils::setup_test};
 
 use super::*;
 
 fn setup_duck_ctx() -> (DuckCtx, TempDir) {
-    // We set cache directory to a temporary directory, so we can use `Fetcher` without
-    // worrying about leaving traces of tests in FS.
-    let dir = tempdir().unwrap();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::set_var("DUCK_CACHE_DIR", dir.path());
-    }
-    let ctx = DuckCtx::default();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::remove_var("DUCK_CACHE_DIR");
-    }
-    (ctx, dir)
+    let setup = || {
+        // We set cache directory to a temporary directory, so we can use `Fetcher` without
+        // worrying about leaving traces of tests in FS.
+        let dir = tempdir().unwrap();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::set_var("DUCK_CACHE_DIR", dir.path());
+        }
+        let ctx = DuckCtx::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::remove_var("DUCK_CACHE_DIR");
+        }
+        (ctx, dir)
+    };
+    setup_test(setup)
 }
 
 fn create_mock_server() -> MockServer {
@@ -170,7 +173,7 @@ fn create_mock_server() -> MockServer {
 fn all_metadata_adds_to_cache() {
     let (ctx, _dir) = setup_duck_ctx();
     let server = create_mock_server();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let response = fetcher
         .get_package_all_metadata(&server.base_url().parse().unwrap(), "foo".into())
         .unwrap();

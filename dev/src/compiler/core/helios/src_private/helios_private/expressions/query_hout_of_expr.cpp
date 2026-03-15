@@ -192,7 +192,9 @@ namespace compiler::helios::code {
 					opt_some_move(value) {
 						auto [operation, coercion] = value;
 						auto coerced               = coercion.coerce(ctx, std::move(expr));
-						return makeBox<UnaryOperatorExpr>(origin, operation, std::move(coerced));
+						return makeBox<UnaryOperatorExpr>(
+							ctx, origin, operation, std::move(coerced)
+						);
 					}
 					opt_none { return {}; }
 				}
@@ -378,6 +380,16 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
+				case pst::Keyword::List: {
+					node = makeBox<LiteralTypeExpr>(
+						ctx,
+						pstOrigin(stmt),
+						ctx.query<tsh::QueryTypeTemplateType>(
+							{ tsh::TypeTemplateAbstractType::BuiltinKind::List }
+						)
+					);
+					break;
+				}
 				case pst::Keyword::Self: {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 

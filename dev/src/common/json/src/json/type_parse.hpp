@@ -32,10 +32,10 @@ namespace js::impl {
 		static constexpr auto NAME = CONSTEXPR_CAT(#T, '\0'); \
 	};
 
-#define JSON_REGISTER_TYPE_WITH_NAME(T, CUSTOM_NAME)             \
-	template<>                                                   \
-	struct TypeParseTraits<T> {                                  \
-		static constexpr auto NAME = CONSTEXPR_CAT(CUSTOM_NAME); \
+#define JSON_REGISTER_TYPE_WITH_NAME(T, CUSTOM_NAME)                   \
+	template<>                                                         \
+	struct TypeParseTraits<T> {                                        \
+		static constexpr auto NAME = CONSTEXPR_CAT(CUSTOM_NAME, '\0'); \
 	};
 
 #define JSON_REGISTER_TEMPLATE_WITH_NAME(T, CUSTOM_NAME)                        \

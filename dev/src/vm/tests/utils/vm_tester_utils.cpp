@@ -185,3 +185,13 @@ void VmTestSuite::runFunctionSynchronouslyAsTest(
 		// function is void.
 		ASSERT_TRUE(exit_value->type->getName() == base::StrID("void"));
 }
+
+auto VmTestSuite::runFunctionExpectPanic(
+	vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
+) -> TestResult {
+	auto run_result = vm::api::runFunction(pid, func_name, args);
+	if (!run_result.has_value())
+		return { .pid = pid, .run_result = std::unexpected(run_result.error()) };
+	auto join_result = vm::api::join(pid);
+	return { .pid = pid, .run_result = std::unexpected(join_result.error()) };
+}
