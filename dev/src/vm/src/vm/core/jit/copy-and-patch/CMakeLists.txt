@@ -77,7 +77,6 @@ target_compile_options(mock_stencils PRIVATE
     -fPIC
     -fno-plt
     -fno-semantic-interposition
-    -mllvm=--inline-threshold=3000000
 )
 process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
 duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
@@ -116,10 +115,15 @@ add_custom_target(
     DEPENDS
     ${wrapper_binary_artifacts}
 )
-set(jit_dependency
-    ${jit_dependency}
-    "${CMAKE_CURRENT_LIST_DIR}/memory/memory.cpp"
-    "${CMAKE_CURRENT_LIST_DIR}/copy-and-patch.cpp"
-    ${wrapper_binary_artifacts}
-    PARENT_SCOPE
+
+add_files(
+    memory/memory.cpp
+    copy-and-patch.cpp
 )
+
+set(vm_common_sources ${vm_common_sources} ${files})
+
+add_files(
+    copy-and-patch.cpp
+)
+set(jit_dependency ${jit_dependency} ${files} ${wrapper_binary_artifacts})
