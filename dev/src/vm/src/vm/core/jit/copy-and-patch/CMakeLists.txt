@@ -1,3 +1,8 @@
+# TODO: #2282 resolve this earlier
+find_program(LLVM_LLC NAMES llc-19 llc REQUIRED)
+find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
+find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
+
 # Analyze and process the `binary_file`, preparing to embed in `destination_file`
 function(process_to_binary binary_file destination_file binary_artifact_prefix)
     set(extra_deps ${ARGN})
@@ -10,8 +15,6 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-so")
     set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-nm")
 
-    find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
-    find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
 
     # Force resolution of local function calls (is it needed?)
     add_custom_command(
@@ -86,16 +89,13 @@ add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
 target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
 target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
-if(NOT JIT_LLVM_LLC)
-    find_program(JIT_LLVM_LLC NAMES llc-19 llc REQUIRED)
-endif()
 
 set(cp_stencils "${CMAKE_CURRENT_BINARY_DIR}/wrapper")
 
 # compile to binary
 add_custom_command(
     OUTPUT ${cp_stencils}
-    COMMAND ${JIT_LLVM_LLC}
+    COMMAND ${LLVM_LLC}
     -filetype=obj
     --relocation-model=pic
     -O3
