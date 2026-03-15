@@ -43,7 +43,7 @@ namespace compiler::driver {
 
 		void handleLoggerInitialization() {
 			// We might want to configure it differently in the future:
-			dia_int::configureImmediatePrint(&std::cerr);
+			dia_int::configureImmediatePrint(&std::cerr, true);
 
 			global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 		}

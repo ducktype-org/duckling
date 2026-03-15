@@ -2,6 +2,7 @@
 
 #include <diagnostic_interactive/term_ui/code_section.hpp>
 #include <diagnostic_interactive/term_ui/styles.hpp>
+#include <diagnostic_interactive/term_ui/module_flags/module_flags.hpp>
 
 namespace term_ui {
 	void print(const dia_int::term_ui_view::Message& msg, std::ostream& out) {
@@ -33,7 +34,7 @@ namespace term_ui {
 		bool                                                  use_color_local
 	) {
 		// Set the global coloring flag.
-		use_color = use_color_local;
+		configureColoring(use_color_local);
 
 		// Display the diagnostics.
 		bool first_diag = true;

@@ -13,6 +13,7 @@ namespace dia_int {
 
 	/**
 	 * @brief Just a setter for the immediate print stream variable.
+	 * @param stream The stream to which the messages should be immediately printed.
 	 */
-	void configureImmediatePrint(MRef<std::ostream> stream);
+	void configureImmediatePrint(MRef<std::ostream> stream, bool use_colors);
 }
