@@ -533,80 +533,46 @@ namespace compiler::helios::mangler {
 		) };
 	}
 
-	base::StrID getMangledAbstractType(query::Context& ctx, const tsh::AbstractType& abstract_type) {
+	base::StrID getMangledAbstractType(query::Context& ctx, const tsh::AbstractType& type) {
 		using enum tsh::Kind;
-		switch (abstract_type.getKind()) {
+		switch (type.getKind()) {
 		case Unit:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::UnitAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::UnitAbstractType>()) };
 		case Void:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::VoidAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::VoidAbstractType>()) };
 		case Byte:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::ByteAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::ByteAbstractType>()) };
 		case Bool:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::BoolAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::BoolAbstractType>()) };
 		case Char:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::CharAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::CharAbstractType>()) };
 		case Integral:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::IntegralAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::IntegralAbstractType>()) };
 		case Float:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::FloatAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::FloatAbstractType>()) };
 		case RawPointer:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::RawPointerAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::RawPointerAbstractType>()) };
 		case Pointer:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::PointerAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::PointerAbstractType>()) };
 		case String:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::StringAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::StringAbstractType>()) };
 		case Function:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::FunctionAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::FunctionAbstractType>()) };
 		case DynamicArray:
-			return base::StrID{ internal::type(
-				ctx, static_cast<const tsh::DynamicArrayAbstractType&>(abstract_type)
-			) };
+			return base::StrID{ internal::type(ctx, type.as<tsh::DynamicArrayAbstractType>()) };
 		case StaticArray:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::StaticArrayAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::StaticArrayAbstractType>()) };
 		case Tuple:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::TupleAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::TupleAbstractType>()) };
 		case Variant:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::VariantAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::VariantAbstractType>()) };
 		case Class:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::ClassAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::ClassAbstractType>()) };
 		case Meta:
-			return base::StrID{
-				internal::type(ctx, static_cast<const tsh::MetaAbstractType&>(abstract_type))
-			};
+			return base::StrID{ internal::type(ctx, type.as<tsh::MetaAbstractType>()) };
 		default:
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat("Cannot mangle type of kind: ", abstract_type.getKind())
+				base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
 			));
 			CORE_UNREACHABLE();
 			break;
