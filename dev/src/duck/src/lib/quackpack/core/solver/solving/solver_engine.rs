@@ -15,7 +15,7 @@ use crate::{
         types_common::{
             DependencyEdge, ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
         },
-        util::get_possible_realisations,
+        util::get_possible_realizations,
     },
 };
 
@@ -229,7 +229,7 @@ impl<'a> SolverEngine<'a> {
         edge: &DependencyEdge,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let possible_realizations = get_possible_realisations(
+        let possible_realizations = get_possible_realizations(
             manifest_dependency,
             &self.input.versions_for_location,
             &self.input.location_resolver,
