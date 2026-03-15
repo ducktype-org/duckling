@@ -1,9 +1,8 @@
 #include "session.hpp"
 
-#include "utils.hpp"
-
 #include <driver/operations/generic_operations.hpp>
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
+#include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
