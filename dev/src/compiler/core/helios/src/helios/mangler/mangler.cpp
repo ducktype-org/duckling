@@ -605,7 +605,10 @@ namespace compiler::helios::mangler {
 				internal::type(ctx, static_cast<const tsh::MetaAbstractType&>(abstract_type))
 			};
 		default:
-			CORE_PANIC(base::strConcat("Cannot mangle type of kind: ", abstract_type.getKind()));
+			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				base::strConcat("Cannot mangle type of kind: ", abstract_type.getKind())
+			));
+			CORE_UNREACHABLE();
 			break;
 		}
 	}
