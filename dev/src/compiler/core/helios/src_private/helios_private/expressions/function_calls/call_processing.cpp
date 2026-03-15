@@ -335,13 +335,13 @@ namespace compiler::helios::code {
 		// We have to differentiate between first candidate beacuse all the other candidates will
 		// be attached to it.
 		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
-		for (const auto& [function, _]: exact_matches) {
+		for (const auto& match: exact_matches) {
 			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
-				auto& decl = ctx.query<QueryDeclOfFun>(function)->valueOrThrow();
+				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 				if_opt_none(decl.origin.getSourcePosition()) {
-					const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
+					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
 					return makeBox<dia_int::PlaceholderHeaderError>(
 						"Found exact candidate.",
 						base::strConcat(
@@ -376,13 +376,13 @@ namespace compiler::helios::code {
 		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
 		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
-		for (const auto& [function, _, coercions]: coercible_matches) {
+		for (const auto& match: coercible_matches) {
 			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
-				auto& decl = ctx.query<QueryDeclOfFun>(function)->valueOrThrow();
+				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 				if_opt_none(decl.origin.getSourcePosition()) {
-					const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
+					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
 					return makeBox<dia_int::PlaceholderHeaderNote>(
 						"Found coercible candidate.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
@@ -392,8 +392,8 @@ namespace compiler::helios::code {
 				auto decl_pos = decl.origin.getSourcePosition().value();
 
 				auto result = makeBox<CoercibleCandidateNote>(decl_pos);
-				for (usize i{ 0 }; i < coercions.size(); i++) {
-					auto& coercion = coercions[i];
+				for (usize i{ 0 }; i < match.coercions.size(); i++) {
+					auto& coercion = match.coercions[i];
 					if (not coercion.isEmptyCoercion()) {
 						if_opt_none(decl.parameters[i].origin.getSourcePosition()) continue;
 						auto param_pos = decl.parameters[i].origin.getSourcePosition().value();
@@ -707,7 +707,7 @@ namespace compiler::helios::code {
 		const auto whole_call_origin = elementOrigin(lhs->origin, rhs->origin);
 
 		const CallPstOrigin pst_origin{
-			// @TODO: 2075 Giving the callee the position of the entire call is not
+			// @TODO: #2075 Giving the callee the position of the entire call is not
 			// strictly correct, but currently has no adverse effects. Fix this.
 			.whole_call_origin = whole_call_origin,
 			.callee_origin     = whole_call_origin,
