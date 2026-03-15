@@ -929,12 +929,12 @@ private:
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                          ->valueOrThrow();
 
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[3]);
 					compiler::mir::Instruction&   assignment
-						= mir_rep_good2.blocks[mir_rep_good2.block_order[2]].instructions[0];
+						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
 
 					// If this test fails use the following to find the correct Instruction.
-					// mir_rep.debugPrint(std::cerr);
+					// mir_rep_good2.debugPrint(std::cerr);
 					// assignment.debugPrint(std::cerr);
 					assertEqual(
 						compiler::mir::Operation::Assign,
@@ -957,7 +957,7 @@ private:
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good3.local_list[2]);
 
 					mir_rep_good3.blocks[mir_rep_good3.block_order[2]]
-						.instructions[1]
+						.instructions[2]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
 					ASSERT_TRUE(validateFunction(ctx, mir_rep_good3).isOk());

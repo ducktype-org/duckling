@@ -40,6 +40,17 @@ namespace compiler::helios::code {
 		return { source_position, {}, false };
 	}
 
+	ElementOrigin elementOrigin(const ElementOrigin& left, const ElementOrigin& right) {
+		auto lsp = left.getStablePosition();
+		auto rsp = right.getStablePosition();
+		if_opt_some(lsp, lpos) {
+			if_opt_some(rsp, rpos) { lpos.extendWith(rpos); }
+			return { lpos, {}, false };
+		}
+		if_opt_none(lsp) { return { rsp, {}, rsp.empty() }; }
+		CORE_UNREACHABLE();
+	}
+
 	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements) {
 		CORE_ASSERT(!pst_elements.empty(), "pst_elements cannot be empty");
 

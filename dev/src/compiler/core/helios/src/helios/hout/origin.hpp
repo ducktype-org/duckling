@@ -79,6 +79,7 @@ namespace compiler::helios::code {
 			const ElementOrigin& origin, pst::Access<pst::LangElement> pst_element
 		);
 		friend ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element);
+		friend ElementOrigin elementOrigin(const ElementOrigin& left, const ElementOrigin& right);
 		friend ElementOrigin generatedOrigin();
 	};
 
@@ -96,6 +97,11 @@ namespace compiler::helios::code {
 	 * @brief Creates a non-generated ElementOrigin from some existing origin and pst element.
 	 */
 	ElementOrigin pstOrigin(const ElementOrigin& origin, pst::Access<pst::LangElement> pst_element);
+
+	/**
+	 * @brief Creates an ElementOrigin from two existing origins.
+	 */
+	ElementOrigin elementOrigin(const ElementOrigin& left, const ElementOrigin& right);
 
 	/**
 	 * @brief Creates a non-generated ElementOrigin from multiple PST elements.
