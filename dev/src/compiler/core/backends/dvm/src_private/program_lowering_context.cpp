@@ -8,6 +8,7 @@
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
+#include <algorithm>
 #include <ranges>
 
 using namespace compiler::backend_vm::internal;
@@ -190,6 +191,12 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 ) {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	// Sort globals and functions by their mangled names to ensure deterministic output, which is important for reproducibility.
+	// This also should guarantee that the order of functions and globals in the resulting DVM module is deterministic, which can be important for debugging and testing.
+	std::ranges::sort(collection.functions, [](const vm::code::Function& lhs,
+	                                          const vm::code::Function& rhs) {
+		return lhs.name.str < rhs.name.str;
+	});
 	collection.functions.insert(
 		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);
@@ -197,6 +204,10 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		global_name_to_dvm_data | std::views::values
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
+	std::ranges::sort(collection.global_data, [](const vm::code::GlobalData& lhs,
+	                                            const vm::code::GlobalData& rhs) {
+		return lhs.name.str < rhs.name.str;
+	});
 	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
