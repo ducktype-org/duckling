@@ -15,33 +15,10 @@ namespace vm::jit::cnp {
 		};
 		POP_DIAGNOSTIC
 
-		static auto stencils = [] {
-			constexpr Stencils out{ .binary    = std::to_array(_bin),
-				                    .functions = {
+		constexpr static auto stencils = Stencils out{ .binary    = std::to_array(_bin),
+			                                           .functions = {
 #include "wrapper-nm"
-									} };
-
-			constexpr std::string_view                         wrapper_prefix = "wrapper_";
-			std::array<LLVM_nm_data, low::OPCODE_NAMES.size()> ordered{};
-
-			for (const auto& fun: out.functions) {
-				std::string_view symbol_name = fun.name;
-				auto             prefix_pos  = symbol_name.find(wrapper_prefix);
-				if (prefix_pos == std::string_view::npos) continue;
-
-				auto opcode_in_symbol = symbol_name.substr(prefix_pos + wrapper_prefix.size());
-				for (size_t opcode = 0; opcode < low::OPCODE_NAMES.size(); ++opcode) {
-					std::string_view opcode_name = low::OPCODE_NAMES[opcode];
-					if (!opcode_in_symbol.starts_with(opcode_name)) continue;
-					ordered[opcode] = fun;
-					break;
-				}
-			}
-
-			for (size_t opcode = 0; opcode < low::OPCODE_NAMES.size(); ++opcode)
-				out.functions[opcode] = ordered[opcode];
-			return out.load();
-		}();
+													   } };
 
 		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
 		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
