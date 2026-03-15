@@ -1,5 +1,7 @@
 #include "cli.hpp"
 
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
+
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/api/api.hpp>
@@ -25,6 +27,7 @@ int cli() {
 
 int cli(const fs::File& filepath, const std::vector<std::string>& args) {
 	vm::PID pid{};
+	dia_int::configureTerminalPrinterColors(true);
 
 	std::expected<i64, std::string> result
 		= vm::api::spawn()

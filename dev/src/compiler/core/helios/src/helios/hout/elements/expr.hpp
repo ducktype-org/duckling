@@ -301,17 +301,17 @@ namespace compiler::helios::code {
 		FloatPow,
 
 		// Comparison operators
-		IntegerLt,    // Less then
-		IntegerLteq,  // Less then or equal to
-		IntegerGt,    // Greater then
-		IntegerGteq,  // Greater then or equal to
+		IntegerLt,    // Less than
+		IntegerLteq,  // Less than or equal to
+		IntegerGt,    // Greater than
+		IntegerGteq,  // Greater than or equal to
 		IntegerEq,    // Equal
 		IntegerNeq,   // Not equal
 
-		FloatLt,      // Less then
-		FloatLteq,    // Less then or equal to
-		FloatGt,      // Greater then
-		FloatGteq,    // Greater then or equal to
+		FloatLt,      // Less than
+		FloatLteq,    // Less than or equal to
+		FloatGt,      // Greater than
+		FloatGteq,    // Greater than or equal to
 		FloatEq,      // Equal
 		FloatNeq,     // Not equal
 

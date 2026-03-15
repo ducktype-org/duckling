@@ -56,6 +56,8 @@ pub struct SolverGathererData<'duck, 'ctx> {
 }
 
 /// Dependency realization returned by [`solve`](SolverEngineData::solve).
+/// Contains the new, currently valid [`SolverFreeze`]
+/// and its packages manifests to generate a serializable freeze.
 pub struct SolverAnswer {
     pub new_freeze: SolverFreeze,
     pub pkgs_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
@@ -201,6 +203,8 @@ pub struct SolverEngineData {
 }
 
 impl SolverEngineData {
+    /// Finds dependency resolution of a given package.
+    /// Returns a [`SolverAnswer`].
     pub fn solve(self) -> QuackResult<SolverAnswer> {
         let manifests = self.input.gathered_manifests.clone();
         let solver_output =

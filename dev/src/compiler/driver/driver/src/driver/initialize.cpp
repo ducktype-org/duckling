@@ -4,9 +4,10 @@
 
 #include <concurrent/module_flags/worker_count.hpp>
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
+#include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
-#include <driver_private/collect_input.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -44,6 +45,7 @@ namespace compiler::driver {
 		void handleLoggerInitialization() {
 			// We might want to configure it differently in the future:
 			dia_int::configureImmediatePrint(&std::cerr);
+			dia_int::configureTerminalPrinterColors(true);
 
 			global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 		}
@@ -152,7 +154,9 @@ namespace compiler::driver {
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
 				// contains information about which nodes are inputs and their associated hashes.
-				query::external::markPreviousGraphNodesInputs(collectInputDataFromGlobalPackages());
+				query::external::markPreviousGraphNodesInputs(
+					collectInputDataFromGlobalPackagesFromPrevMetadata()
+				);
 			}
 		}
 
