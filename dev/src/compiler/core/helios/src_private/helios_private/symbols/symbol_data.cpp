@@ -15,6 +15,10 @@ namespace compiler::helios {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
+			return { operator_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::Parameter::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), parameter_index };
 		}
@@ -35,6 +39,7 @@ namespace compiler::helios {
 
 		GeneratedSymbolData::GeneratedSymbolData(const std::variant<
 												 ImplicitConstructor,
+												 BuiltinOperator,
 												 Parameter,
 												 SelfParameter,
 												 Variable,
@@ -74,6 +79,13 @@ namespace compiler::helios {
 
 					return tsh::SymbolType<>{
 						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(BuiltinOperator, op) {
+					return tsh::SymbolType<>{
+						op.operator_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
@@ -119,6 +131,9 @@ namespace compiler::helios {
 				variant_case(ImplicitConstructor, ctor) {
 					CORE_PANIC("Can't get scope of implicit constructor yet.");
 				}
+				variant_case(BuiltinOperator, op) {
+					CORE_PANIC("Can't get scope of builtin operator yet.");
+				}
 				variant_case(Parameter, param) {
 					CORE_PANIC("Can't get scope of generated parameter yet.");
 				}
@@ -137,6 +152,7 @@ namespace compiler::helios {
 		base::Optional<ScopeID> GeneratedSymbolData::maybeScope() const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) { return {}; }
+				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
 				variant_case(Variable, var) { return {}; }
@@ -174,6 +190,9 @@ namespace compiler::helios {
 		SymbolKind kind{};
 		variant_match(generated_data.data) {
 			variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
+				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
 				kind = SymbolKind::Function;
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Parameter) {
