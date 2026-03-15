@@ -39,7 +39,7 @@ using namespace llvm::orc;
  */
 // NOLINTBEGIN
 PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
-	#embed "src/vm/common_sc.bc"
+	#embed "common_sc.bc"
 };
 POP_DIAGNOSTIC
 // NOLINTEND

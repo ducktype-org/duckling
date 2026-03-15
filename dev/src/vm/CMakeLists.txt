@@ -143,31 +143,36 @@ function(add_vm_variant suffix compile_def)
             COMMAND llvm-extract-19 --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
 
             COMMAND ${JIT_LLVM_OPT}
-                -passes=internalize,lower-invoke,attributor,always-inline,simplifycfg,function-attrs,default<O3>,argpromotion,deadargelim,globalopt,strip-dead-prototypes,aggressive-instcombine,globaldce,adce
+                -passes=globalopt,internalize,attributor,simplifycfg,default<O3>,strip-dead-prototypes,default<O3>
                 --internalize-public-api-file=${extracted_func_file}
-                --inline-threshold=200000
                 ${common_bc}
                 -o ${common_bc}
 
             VERBATIM
             DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc ${vm_dep_bc_targets}
         )
+        target_sources(JitDep PRIVATE ${common_bc})
 
         # JitDep depends to both bc files (it can embed both of them), but is NOT config dependent.
         add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc} ${opcodes_bc_file})
+
         add_dependencies(JitDep CommonVMBitcode_${suffix})
+
+
         set_source_files_properties(${jit_dependency}
             PROPERTIES OBJECT_DEPENDS "${opcodes_bc_file}"
         )
 
         add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
+        add_dependencies(${lib_vm_name} CommonVMBitcode_${suffix})
         
         target_link_libraries(${lib_vm_name} ${llvm_libs})
 
         make_module(${lib_vm_name} USES llvm_helpers ${vm_dependencies})
         
-        target_compile_options(${lib_vm_name} PRIVATE
-            -fembed-dir=${CMAKE_CURRENT_BINARY_DIR}
+
+        target_compile_options(JitDep PRIVATE
+            "--embed-dir=$<TARGET_PROPERTY:JitDep,BINARY_DIR>"
         )
 
         add_executable(${exec_name} $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
