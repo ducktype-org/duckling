@@ -4,6 +4,7 @@
 
 #include <concurrent/module_flags/worker_count.hpp>
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
@@ -44,6 +45,7 @@ namespace compiler::driver {
 		void handleLoggerInitialization() {
 			// We might want to configure it differently in the future:
 			dia_int::configureImmediatePrint(&std::cerr);
+			dia_int::configureTerminalPrinterColors(true);
 
 			global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 		}
