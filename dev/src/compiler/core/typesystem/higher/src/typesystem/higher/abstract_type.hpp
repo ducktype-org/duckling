@@ -214,13 +214,6 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		const std::string& toString() const;
 
-		/**
-		 * @brief Get the mangled name of this type.
-		 * @return The mangled name of this type.
-		 */
-		[[nodiscard]]
-		const std::string& getMangledName() const;
-
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 

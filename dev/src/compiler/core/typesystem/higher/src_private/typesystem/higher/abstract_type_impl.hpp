@@ -85,15 +85,6 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Get the mangled name of this type. See mangling-scheme.md for details.
-		 * @return The mangled name of this type.
-		 */
-		[[nodiscard]]
-		const std::string& getMangledName() const {
-			return mangled_name;
-		}
-
-		/**
 		 * @brief Determine whether it is legal to consider an implicit coercion
 		 * from a value described by this ExpressionType to one described by target.
 		 *
@@ -151,11 +142,6 @@ namespace compiler::tsh {
 		 * @brief The text representation of this type.
 		 */
 		std::string representation = "UNNAMED";
-
-		/**
-		 * @brief The text representation of this type.
-		 */
-		std::string mangled_name = "";
 	};
 
 	std::vector<Box<const AbstractTypeImpl>>& getTypes();
@@ -177,10 +163,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Unit;
 
-		UnitAbstractTypeImpl() {
-			representation = "()";
-			mangled_name   = "u";
-		}
+		UnitAbstractTypeImpl() { representation = "()"; }
 
 		[[nodiscard]] bool isImplicitlyCoercible(AbstractType target, query::Context& context)
 			const override;
@@ -205,10 +188,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Void;
 
-		VoidAbstractTypeImpl() {
-			representation = "void";
-			mangled_name   = "v";
-		}
+		VoidAbstractTypeImpl() { representation = "void"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
@@ -229,10 +209,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Byte;
 
-		explicit ByteAbstractTypeImpl() {
-			representation = "byte";
-			mangled_name   = "y";
-		}
+		explicit ByteAbstractTypeImpl() { representation = "byte"; }
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
@@ -258,10 +235,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Bool;
 
-		explicit BoolAbstractTypeImpl() {
-			representation = "bool";
-			mangled_name   = "b";
-		}
+		explicit BoolAbstractTypeImpl() { representation = "bool"; }
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
@@ -287,10 +261,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Char;
 
-		explicit CharAbstractTypeImpl() {
-			representation = "char";
-			mangled_name   = "c";
-		}
+		explicit CharAbstractTypeImpl() { representation = "char"; }
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
@@ -329,13 +300,10 @@ namespace compiler::tsh {
 		):
 			  size(Bits(size)),
 			  signedness(signedness) {
-			if (signedness == IntegralAbstractType::Signedness::Signed) {
+			if (signedness == IntegralAbstractType::Signedness::Signed)
 				representation = base::strConcat("i", size);
-				mangled_name   = base::strConcat("i", size);
-			} else {
+			else
 				representation = base::strConcat("u", size);
-				mangled_name   = base::strConcat("j", size);
-			}
 		}
 
 		[[nodiscard]]
@@ -379,7 +347,6 @@ namespace compiler::tsh {
 
 		explicit FloatAbstractTypeImpl(usize size): size(Bits(size)) {
 			representation = base::strConcat("f", size);
-			mangled_name   = base::strConcat("f", size);
 		}
 
 		[[nodiscard]]
@@ -461,7 +428,6 @@ namespace compiler::tsh {
 
 		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
 			representation = base::strConcat("pointer(", component.toString(), ")");
-			mangled_name   = "P" + component.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -485,21 +451,16 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::String;
 
+		[[nodiscard]]
 		StringAbstractTypeImpl() {
 			representation = "string";
-			mangled_name   = "s";
 		}
-
-		[[nodiscard]]
 
 		/**
 		 * @brief Strings have nontrivial destructors because destruction of a string requires to
 		 * free memory.
 		 */
-		[[nodiscard]] bool
-			hasNoOpDestructor() const override {
-			return false;
-		}
+		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -521,7 +482,6 @@ namespace compiler::tsh {
 
 		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
 			representation = base::strConcat("List[", element.toString(), "]");
-			mangled_name   = "D" + element.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -563,7 +523,6 @@ namespace compiler::tsh {
 			  element_type(element),
 			  size(size) {
 			representation = base::strConcat(element.toString(), "[", base::toString(size), "]");
-			mangled_name   = "A" + base::toString(size) + element.getMangledName() + "E";
 		}
 
 		[[nodiscard]]
@@ -747,7 +706,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 
-		explicit ClassAbstractTypeImpl(compiler::helios::SymID symbol, query::Context& ctx);
+		explicit ClassAbstractTypeImpl(compiler::helios::SymID symbol);
 
 		[[nodiscard]]
 		compiler::helios::SymID getSymbol() const {
@@ -810,9 +769,6 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
-
-		[[nodiscard]]
-		const std::string& getMangledName() const;
 	};
 
 	class ModuleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -836,9 +792,6 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
-
-		[[nodiscard]]
-		const std::string& getMangledName() const;
 	};
 
 	class MetaAbstractTypeImpl final: public AbstractTypeImpl {
@@ -853,10 +806,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Meta;
 
-		explicit MetaAbstractTypeImpl() {
-			representation = "type";
-			mangled_name   = "t";
-		}
+		explicit MetaAbstractTypeImpl() { representation = "type"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
@@ -882,9 +832,6 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
-
-		[[nodiscard]]
-		const std::string& getMangledName() const;
 	};
 
 	class TypeTemplateAbstractTypeImpl final: public AbstractTypeImpl {

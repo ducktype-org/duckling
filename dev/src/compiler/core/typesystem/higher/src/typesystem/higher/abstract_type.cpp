@@ -37,11 +37,6 @@ namespace compiler::tsh {
 		return pimpl->toString();
 	}
 
-	[[nodiscard]]
-	const std::string& AbstractType::getMangledName() const {
-		return pimpl->getMangledName();
-	}
-
 	u64 AbstractType::queryUnstablePerfectHash() const { return u64(pimpl.get()); }
 
 	// Specialized template definition and explicit instantiation.

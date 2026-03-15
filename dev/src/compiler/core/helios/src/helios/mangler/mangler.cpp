@@ -238,6 +238,8 @@ namespace compiler::helios::mangler {
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
 			    or kind(symbol_id) == SymbolKind::Method) {
+				// @TODO: #2255 Function qualifiers?
+
 				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
 				ret << getMangledSymbolType(ctx, function_type).str();
 
@@ -287,6 +289,7 @@ namespace compiler::helios::mangler {
 		std::string type(query::Context& ctx, tsh::FunctionAbstractType function_type) {
 			std::stringstream res;
 			res << "F" << getMangledSymbolType(ctx, function_type.getResultType()).str();
+			// @TODO: #2255 Function qualifiers?
 			for (auto& param: function_type.getParameterTypes())
 				res << getMangledSymbolType(ctx, param).str();
 			res << "E";

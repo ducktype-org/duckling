@@ -24,18 +24,21 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <ctv/numeric_value.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <init/init.hpp>
 #include <logger/logger.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/examples
 namespace {
@@ -317,7 +320,15 @@ namespace compiler::backend_llvm {
 				return list_type;
 			}
 			variant_case(tsl::ClassTypeLayout, class_layout) {
-				const auto class_name = class_layout.getSourceType().getMangledName();
+				// TODO:
+				//     FIXME :(
+				const auto class_name = base::anyCast<std::string>(
+					query::utils::withContextCompute([&](query::Context& ctx) {
+						return helios::mangler::getMangledAbstractType(
+							ctx, class_layout.getSourceType()
+						);
+					})
+				);
 
 				// Get the struct from the context, if it has been previously defined.
 				if (llvm::StructType* struct_type

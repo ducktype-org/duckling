@@ -399,7 +399,7 @@ namespace compiler::tsl {
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx), ctx) {}
 
-	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
+	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context&):
 		  TypeLayoutABC(helper.total_size, helper.class_type),
 		  num_fields(helper.field_layouts.size()),
 		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
