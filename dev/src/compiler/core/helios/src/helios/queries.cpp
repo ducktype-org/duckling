@@ -770,9 +770,10 @@ namespace compiler::helios {
 			void visitUsing(pst::Access<pst::Using>) override {}
 
 			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
-				if (assignment->getAssignmentType() != base::StrID("=")) {
+				auto op = assignment->getAssignmentType();
+				if (op != base::StrID("=") && op != base::StrID("+=") && op != base::StrID("-=")) {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Only simple `=` assignment is supported for now.",
+						base::strConcat("This assignment type: '", op, "'."),
 						assignment->getSourcePosition()
 					));
 					query::throwFailed();
@@ -790,15 +791,6 @@ namespace compiler::helios {
 					location_expr = makeBox<code::DerefExpr>(
 						ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
 					);
-
-				// The new `SymbolType` of `location_expr` is the location symbol without the
-				// ref/box specifier (as it was removed in the DerefExpr constructor). We now coerce
-				// the value expr to the type without the ref/box specifier.
-				auto new_value_expr_coerced
-					= getHoutOfExprWithExpectedType(
-						  ctx, val, location_expr->expression_type.getSymbolType()
-					)
-				          .valueOrThrow();
 
 				auto location_value_category
 					= location_expr->expression_type.getValueCategory().getCategory();
@@ -823,11 +815,76 @@ namespace compiler::helios {
 					return;
 				}
 
-				output(code::AssignmentStmt(
-					code::pstOrigin(assignment),
-					std::move(location_expr),
-					std::move(new_value_expr_coerced)
+				if (op == base::StrID("=")) {
+					// The new `SymbolType` of `location_expr` is the location symbol without the
+					// ref/box specifier (as it was removed in the DerefExpr constructor). We now
+					// coerce the value expr to the type without the ref/box specifier.
+					auto new_value_expr_coerced
+						= getHoutOfExprWithExpectedType(
+							  ctx, val, location_expr->expression_type.getSymbolType()
+						)
+					          .valueOrThrow();
+
+					output(code::AssignmentStmt(
+						code::pstOrigin(assignment),
+						std::move(location_expr),
+						std::move(new_value_expr_coerced)
+					));
+					return;
+				} else if (op == base::StrID("+=")) {
+					// @TODO: #1970 This implementation is temporary and should be handled by the
+					// `+=` operator in the future.
+					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto dyn_array
+							= location_type.getType().as<tsh::DynamicArrayAbstractType>();
+						auto element_type = dyn_array.getElementType();
+						auto value_expr_coerced
+							= getHoutOfExprWithExpectedType(ctx, val, element_type).valueOrThrow();
+
+						output(code::ExprStmt(
+							code::pstOrigin(assignment),
+							makeBox<code::ListPushExpr>(
+								code::pstOrigin(assignment),
+								std::move(location_expr),
+								std::move(value_expr_coerced)
+							)
+						));
+						return;
+					}
+				} else if (op == base::StrID("-=")) {
+					// @TODO: #1970 This implementation is temporary and should be handled by the
+					// `-=` operator in the future.
+					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto u64_type = tsh::SymbolType<>{
+							tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable
+						};
+
+						auto value_expr_coerced
+							= getHoutOfExprWithExpectedType(ctx, val, u64_type).valueOrThrow();
+
+						output(code::ExprStmt(
+							code::pstOrigin(assignment),
+							makeBox<code::ListPopExpr>(
+								code::pstOrigin(assignment),
+								std::move(location_expr),
+								std::move(value_expr_coerced)
+							)
+						));
+						return;
+					}
+				}
+
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"'", op, "' assignment for type: '", location_type.toString(), "'."
+					),
+					assignment->getSourcePosition()
 				));
+				query::throwFailed();
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {

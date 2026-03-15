@@ -384,6 +384,7 @@ namespace compiler::helios::code {
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
 		 * - `i64(42)` - used for explicit type casts.
 		 * - `i64[42]` - used for static array type creation.
+		 * - `List[i64]` - for dynamic array type creation.
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr

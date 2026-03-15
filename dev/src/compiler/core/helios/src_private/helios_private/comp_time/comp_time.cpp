@@ -1,6 +1,5 @@
 #include "comp_time.hpp"
 
-#include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
@@ -116,6 +115,55 @@ namespace compiler::helios {
 					                      base.getMutability() };
 			}
 
+			/**
+			 * @brief Evaluates indexing operations performed on meta types
+			 *
+			 * This includes:
+			 * - For type templates: specializing a TypeTemplate with a type when the index provided
+			 * is a meta type. Currently only implemented for the builtin List type.
+			 * - For static arrays: constructs a static array type with a fixed size `Int[10]` when
+			 * the index is a integral constant.
+			 *
+			 * @param base_type The meta-type being indexed.
+			 * @param index_ctv The evaluated CTV used as the index.
+			 * @return A QResult containing the newly constructed SymbolType wrapped in a
+			 * CTV.
+			 */
+			auto evaluateTypeIndexing(
+				const tsh::SymbolType<>& base_type, const ctv::CompileTimeValue& index_ctv
+			) -> query::QResult<ctv::CompileTimeValue> {
+				auto base_abs = base_type.getType();
+
+				if (base_abs.getKind() == tsh::Kind::TypeTemplate) {
+					// If base is a TypeTemplate type, we expect a meta in the index expression. It
+					// instantiates the type template.
+					auto template_type = base_abs.as<tsh::TypeTemplateAbstractType>();
+					// We just call `.value()` here since the type correctness should be verified
+					// earlier.
+					auto elem_type = index_ctv.get<tsh::SymbolType<>>().value();
+
+					// Instantiate the type template.
+					auto instantiated_abs_type = template_type.instantiate(ctx, elem_type);
+
+					return CompileTimeValue{ tsh::SymbolType<>{
+						instantiated_abs_type,
+						base_type.getRefKind(),
+						base_type.getMutability(),
+					} };
+				} else {
+					// If base is meta and not a type template, then the index should be an integral
+					// constant. This expression creates a new static array type.
+					auto maybe_size = index_ctv.get<NumericValue>().value();
+					CORE_ASSERT(
+						maybe_size.isIntegral(),
+						"Static array type creation with non-integral size. This should be caught "
+						"earlier."
+					);
+					usize size = static_cast<usize>(maybe_size.coerceTo<u64>().value());
+					return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
+				}
+			}
+
 			void visitIndexExpr(const code::IndexExpr& expr) final {
 				auto base_res = evalHoutExpr(ctx, expr.base.ref());
 				if (base_res.hasFailed()) {
@@ -125,7 +173,7 @@ namespace compiler::helios {
 
 				const auto& base_ctv = base_res.valueOrThrow();
 
-				// Index expr on meta is evaluated to a static array.
+				// Index expr on meta is evaluated to a static array type or a list type.
 				if (auto maybe_type = base_ctv.get<tsh::SymbolType<>>()) {
 					auto index_res = evalHoutExpr(ctx, expr.index.ref());
 					if (index_res.hasFailed()) {
@@ -133,32 +181,16 @@ namespace compiler::helios {
 						return;
 					}
 
-					const auto& index_ctv  = index_res.valueOrThrow();
-					auto        maybe_size = index_ctv.get<NumericValue>();
-
-					// Index has to be a comp-time evaluated integral constant.
-					if (maybe_size && maybe_size->isIntegral()) {
-						usize size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
-						result
-							= CompileTimeValue{ sinkStaticArrayDimension(ctx, *maybe_type, size) };
-						return;
-					}
-
-					// Base is meta, but index isn't integral. This is an error.
-					// @TODO: #1919 In the future meta index expression on meta could create a List[T].
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Evaluating index expressions with a meta base and non-integral "
-						"argument at compile time",
-						expr.origin.getSourcePosition()
-					));
-
-					result = query::Failed();
+					auto indexing_res = evaluateTypeIndexing(*maybe_type, index_res.valueOrThrow());
+					result            = indexing_res.valueOrThrow();
 					return;
 				}
 
-				// @TODO: #1922 If base is not meta, this is a normal index expression. Implement that.
+				// @TODO: #1922 If base is not meta and not a type template, this is a normal index
+				// expression. Implement that.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Evaluating index expressions with non-meta base at compile time.",
+					"Evaluating index expressions with non-meta and non-type-template base at "
+					"compile time.",
 					expr.origin.getSourcePosition()
 				));
 				result = query::Failed();
@@ -698,6 +730,20 @@ namespace compiler::helios {
 			void visitReusableExpr(const code::ReusableExpr& reusable) override {
 				evaluateSubExpr(reusable.inner.ref());
 			}
+
+			void visitListPushExpr(const code::ListPushExpr& expr) final {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Evaluating list push expression at compile time.",
+					expr.origin.getSourcePosition()
+				));
+			}
+
+			void visitListPopExpr(const code::ListPopExpr& expr) final {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Evaluating list pop expression at compile time.",
+					expr.origin.getSourcePosition()
+				));
+			}
 		};
 
 		/**
@@ -813,11 +859,10 @@ namespace compiler::helios {
 
 			// Retrieve the functions return type.
 			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
-			if (callee_abs_type.getKind() != tsh::Kind::Function) {
-				CORE_PANIC(
-					"Attempting to call a non_function type during VM compile time evaluation"
-				);
-			}
+			CORE_ASSERT(
+				callee_abs_type.getKind() == tsh::Kind::Function,
+				"Attempting to call a non_function type during VM compile time evaluation"
+			);
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result = executeInVm(

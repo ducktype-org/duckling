@@ -46,6 +46,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(DefaultValueExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
+	EXPR_VISITOR(ListPushExpr)
+	EXPR_VISITOR(ListPopExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context&, ElementOrigin origin):
 		  Expr(
@@ -281,7 +283,7 @@ namespace compiler::helios::code {
 		  inner(inner),
 		  first_use(first_use) {}
 
-	tsh::AbstractType builtinOperationToReturnType(
+	tsh::AbstractType builtinBinaryOperationToReturnType(
 		query::Context&         ctx,
 		const BuiltinBinary     operation,
 		const tsh::AbstractType lhs_type,
@@ -344,7 +346,7 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  // @TODO: #2171 Select type of expression based on result type of the operation.
 				  tsh::SymbolType{
-					  builtinOperationToReturnType(
+					  builtinBinaryOperationToReturnType(
 						  ctx,
 						  operation,
 						  lhs->expression_type.getType(),
@@ -603,10 +605,41 @@ namespace compiler::helios::code {
 		);
 	}
 
+	tsh::AbstractType builtinUnaryOperationToReturnType(
+		query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
+	) {
+		using enum BuiltinUnary;
+		switch (operation) {
+		case BuiltinUnary::IntegerNegation:
+		case BuiltinUnary::FloatNegation:
+		case BuiltinUnary::BooleanNot:
+		case BuiltinUnary::Ref:
+		case BuiltinUnary::Box:
+		case BuiltinUnary::Const:
+			// For most of the unary operators the result is the same as their argument type:
+			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
+			return argument_type;
+		case BuiltinUnary::Len: {
+			return tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
+		}
+		default:
+			CORE_UNREACHABLE();
+		}
+	}
+
 	UnaryOperatorExpr::UnaryOperatorExpr(
-		ElementOrigin origin, BuiltinUnary operation, Box<Expr> expr
+		query::Context& ctx, ElementOrigin origin, BuiltinUnary operation, Box<Expr> expr
 	):
-		  Expr(expr->expression_type, origin),
+		  Expr(
+			  tsh::ExpressionType<>{
+				  tsh::SymbolType<>{ builtinUnaryOperationToReturnType(
+										 ctx, operation, expr->expression_type.getType()
+									 ),
+	                                 tsh::ReferenceKind::Direct,
+	                                 tsh::Mutability::Mutable },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary) },
+			  origin
+		  ),
 		  operation(operation),
 		  expr(std::move(expr)) {}
 
@@ -641,6 +674,10 @@ namespace compiler::helios::code {
 			break;
 		case BuiltinUnary::Const:
 			out << "const ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Len:
+			out << "len ";
 			expr->debugPrint(out);
 			break;
 		default:
@@ -1033,5 +1070,69 @@ namespace compiler::helios::code {
 
 	Box<Expr> LiftToTypeExpr::clone() const {
 		return makeBox<LiftToTypeExpr>(expression_type, origin, value_expr->clone());
+	}
+
+	ListPushExpr::ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element):
+		  Expr(
+			  tsh::ExpressionType(
+				  tsh::SymbolType<>(
+					  tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+				  ),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  list(std::move(list)),
+		  element(std::move(element)) {}
+
+	ListPushExpr::ListPushExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> list, Box<Expr> element
+	):
+		  Expr(expression_type, origin),
+		  list(std::move(list)),
+		  element(std::move(element)) {}
+
+	void ListPushExpr::debugPrint(std::ostream& out) const {
+		out << "list_push(";
+		list->debugPrint(out);
+		out << ", ";
+		element->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> ListPushExpr::clone() const {
+		return makeBox<ListPushExpr>(expression_type, origin, list->clone(), element->clone());
+	}
+
+	ListPopExpr::ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count):
+		  Expr(
+			  tsh::ExpressionType(
+				  tsh::SymbolType<>(
+					  tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+				  ),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  list(std::move(list)),
+		  count(std::move(count)) {}
+
+	ListPopExpr::ListPopExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> list, Box<Expr> count
+	):
+		  Expr(expression_type, origin),
+		  list(std::move(list)),
+		  count(std::move(count)) {}
+
+	void ListPopExpr::debugPrint(std::ostream& out) const {
+		out << "list_pop(";
+		list->debugPrint(out);
+		out << ", ";
+		count->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> ListPopExpr::clone() const {
+		return makeBox<ListPopExpr>(expression_type, origin, list->clone(), count->clone());
 	}
 }

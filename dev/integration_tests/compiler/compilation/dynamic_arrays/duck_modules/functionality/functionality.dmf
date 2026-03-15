@@ -1,0 +1,52 @@
+fun testBigRealloc() -> () = {
+    var l: List[i64];
+    var i = 0;
+    while (i < 100) {
+        l += i;
+        i = i + 1;
+    }
+
+    builtin_output_u64(len l); # 100
+
+    builtin_output_i64(l[0]);   # 0
+    builtin_output_i64(l[49]);  # 49
+    builtin_output_i64(l[99]);  # 99
+}
+
+fun testPushPopPushPopPushPop() -> () = {
+    var l: List[i64];
+    
+    var i = 0;
+    while (i < 10) { l += i; i = i + 1; }
+    
+    l -= 5;
+    builtin_output_u64(len l); # 5
+    
+    i = 0;
+    while (i < 20) { l += (i + 100); i = i + 1; }
+    
+    builtin_output_u64(len l); # 25
+    builtin_output_i64(l[0]);       # 0
+    builtin_output_i64(l[4]);       # 4
+    builtin_output_i64(l[5]);       # 100
+    builtin_output_i64(l[24]);      # 119
+}
+
+fun testPopTooBig() -> () = {
+    var l: List[i64];
+    l += 1; l += 2;
+    
+    l -= 10; # Try removing 10 elements, although only 2 exist.
+    builtin_output_u64(len l); # 0
+    
+    l += 555;
+    builtin_output_i64(l[0]); # 555
+}
+
+fun main() -> i32 = {
+    testBigRealloc();
+    testPushPopPushPopPushPop();
+    testPopTooBig();
+    
+    return 0;
+}
