@@ -596,9 +596,13 @@ impl GathererState {
 
 /// A struct containing all the information gathered by the gatherer.
 pub struct GatheredInfo {
+    /// The gathered manifests of the packages referenced in requests.
     pub gathered_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+    /// The intersection of the manifest defined features and features referenced in the requests.
     pub possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    /// The set of the possible versions of the packages satisfying a given location.
     pub versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
+    /// The translation from [`InternedLocation`] to [`InternedExpandedLocation`].
     pub location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
 }
 
