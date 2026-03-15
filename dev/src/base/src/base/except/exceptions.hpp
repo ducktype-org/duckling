@@ -17,6 +17,7 @@
 #include <exception>
 #include <string>
 #include <string_view>
+#include <cstring>
 #include <utility>  // IWYU pragma: export
 
 namespace base {
@@ -85,6 +86,20 @@ namespace base {
 		"    In " __FILE__ ":" STRINGIFY_2(__LINE__),                   \
 		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
 	)
+
+/**
+ * @brief Checks regardless of build-type, usefull eg. in system function result checks.
+ */
+#define CORE_CHECK(cond, what, ...)                                                             \
+	if (!(cond)) {                                                                              \
+		DETAIL_THROW_PANIC("    Check failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__); \
+	}
+
+/**
+ * @brief Checks for error in system function result, explanation based on std::strerror and errno.
+ */
+#define SYSTEM_CHECK(cond, what, ...) \
+	CORE_CHECK(cond, what, std::strerror(errno) __VA_OPT__(, ) __VA_ARGS__)
 
 #if defined(BUILD_TYPE_DEV)
 	/**
