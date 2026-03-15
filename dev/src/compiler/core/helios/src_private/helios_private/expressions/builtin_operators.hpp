@@ -37,6 +37,9 @@ namespace compiler::helios::code {
 		BuiltinBinary op;
 	};
 
+	// Type for storing a mapping between regular binary builtin symbols and related helpful data.
+	// The `symbol` in the data is the same as the key. We predict that the value type will
+	// grow in complexity as we introduce more features, so we keep the symbol for convenience.
 	using RegularBinaryBuiltinSymbolMap = base::StableHashMap<SymID, RegularBinaryBuiltin>;
 
 	/**
