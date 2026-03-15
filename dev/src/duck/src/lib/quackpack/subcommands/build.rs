@@ -21,7 +21,7 @@ pub struct BuildOptions<'duck> {
     pub strict_errors: bool,
 }
 
-pub fn compile<'duck>(options: BuildOptions<'duck>) -> QuackResult<()> {
+pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let BuildOptions {
         package,
         used_features,
