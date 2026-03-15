@@ -81,7 +81,6 @@ namespace compiler::repl {
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_str == "i64")
 						return std::to_string(exit_value->readBytes<i64>());
-					// @TODO: #1795 DVM should also use f32 and f64.
 					else if (type_str == "f32")
 						return std::to_string(exit_value->readBytes<f32>());
 					else if (type_str == "f64")

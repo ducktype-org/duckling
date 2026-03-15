@@ -11,17 +11,17 @@ metadata:
 params:
   header_message:
     description: "The header message of the placeholder error."
-  
+
   description:
     description: "The detailed description of the placeholder error."
-  
+
   code:
     description: "The code snippet where the placeholder is located."
-  
+
   code_location:
     description: "Location of the code snippet."
     component_type: "code_location"
-  
+
   pointer_message_content:
     description: "The pointer message indicating the cause location."
 
@@ -42,7 +42,7 @@ pointer_messages:
   cause:
     priority: 1
     type: "error"
-    content: 
+    content:
       param: "pointer_message_content"
 
 

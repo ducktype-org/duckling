@@ -58,6 +58,7 @@ pub fn setup_mock_packages(root: &Path) {
             .write(manifest)
             .unwrap();
     }
+    root.try_fsync_dir().unwrap();
 }
 
 /// Creates packages for the following scenario:
@@ -157,6 +158,7 @@ features:
         ",
         )
         .unwrap();
+    root.try_fsync_dir().unwrap();
 }
 
 /// Generate mock [`VenvFreeze`].
