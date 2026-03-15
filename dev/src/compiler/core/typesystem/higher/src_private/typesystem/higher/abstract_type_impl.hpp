@@ -451,10 +451,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::String;
 
-		[[nodiscard]]
-		StringAbstractTypeImpl() {
-			representation = "string";
-		}
+		StringAbstractTypeImpl() { representation = "string"; }
 
 		/**
 		 * @brief Strings have nontrivial destructors because destruction of a string requires to

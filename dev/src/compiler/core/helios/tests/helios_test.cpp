@@ -2139,8 +2139,7 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
 		ASSERT_EQUAL(
-			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32bi32bf64bE1a1bE$metadata_v123",
-			mangled_goo.str()
+			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32bi32bf64bE1a1bE$metadata_v123", mangled_goo.str()
 		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
