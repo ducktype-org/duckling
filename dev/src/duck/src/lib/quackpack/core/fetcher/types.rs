@@ -70,14 +70,14 @@ pub struct GitCloneResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-/// Response of getting multimetadata from a registry.
+/// Response for getting multimetadata from a registry.
 pub struct MultiMetadata {
     /// All published versions of the package.
     pub packages_metadata: Vec<registry::Manifest>,
 }
 
 #[derive(Debug, Deserialize)]
-/// Response of searching for a package in a registry.
+/// Response for searching for a package in a registry.
 pub struct SearchResult {
     /// All matched packages.
     pub result: Vec<Package>,

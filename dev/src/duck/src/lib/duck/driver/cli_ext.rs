@@ -17,7 +17,7 @@ pub trait CommandExt: Sized {
         self._arg_impl(multi("features", help).short('F'))
     }
 
-    /// Same as [`add_features`](Self::add_features), but `-F`/`--features` flag conflict with
+    /// Same as [`add_features`](Self::add_features), but `-F`/`--features` flag conflicts with
     /// `with`.
     fn add_features_conflicting(self, help: &'static str, with: &'static str) -> Self {
         self._arg_impl(multi("features", help).short('F').conflicts_with(with))

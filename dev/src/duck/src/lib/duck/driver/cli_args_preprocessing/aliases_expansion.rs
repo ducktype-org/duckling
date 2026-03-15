@@ -135,7 +135,7 @@ fn parse_alias_args(new_cli_args: impl Iterator<Item = OsString>) -> QuackResult
         .try_get_matches_from(new_cli_args)?)
 }
 
-/// Check for aliases' cycle.
+/// Check for an aliases cycle.
 fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResult<()> {
     if visited.contains(&next.into()) {
         qp_bail!(

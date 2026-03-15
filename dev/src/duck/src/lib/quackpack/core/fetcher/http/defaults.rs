@@ -28,7 +28,7 @@ pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(60);
 /// An arbitrary value.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 
-/// Maximal allow number of redirects.
+/// Maximal allowed number of redirects.
 pub const MAX_REDIRECTS: usize = 5;
 /// `application/json` value for the Content-type header.
 pub const _APPLICATION_JSON: &str = "application/json";

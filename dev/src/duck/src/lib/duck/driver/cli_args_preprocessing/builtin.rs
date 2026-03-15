@@ -29,7 +29,7 @@ pub fn get_builtin_aliases() -> impl Iterator<Item = &'static str> {
 ///
 /// Builtin aliases may (and should) return false.
 ///
-/// To check if `name` is builtin alias, use [`get_builtin_alias_expansion`] instead.
+/// To check if `name` is a builtin alias, use [`get_builtin_alias_expansion`] instead.
 pub fn is_builtin_subcommand(name: &str) -> bool {
     exec_for(name).is_some()
 }

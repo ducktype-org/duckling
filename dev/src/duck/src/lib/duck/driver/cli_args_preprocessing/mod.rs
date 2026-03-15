@@ -1,4 +1,4 @@
-//! A module containing functionality for preprocessing CLI arguments.
+//! A module containing a functionality for preprocessing CLI arguments.
 
 pub mod aliases_expansion;
 pub mod builtin;

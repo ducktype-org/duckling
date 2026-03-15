@@ -88,7 +88,7 @@ fn possible_targets(
     Ok(targets)
 }
 
-/// Get all closest targets to the `bad_cmd`, which are no longer than `max_fix_dist` (in terms of
+/// Get all closest targets to the `bad_cmd`, which are no further than `max_fix_dist` (in terms of
 /// the Levenshtein distance).
 fn find_closest_targets<'a>(
     bad_cmd: &str,
@@ -107,7 +107,7 @@ fn find_closest_targets<'a>(
 
 /// Update closest targets given the actual stack, target, and `max_fix_dist`.
 ///
-/// This function will __only__ keep those values, which are (currently) the closest to the target,
+/// This function will __only__ keep those values, which are (currently) closest to the target,
 /// and all have exactly the same distance.
 fn update_closest_targets<'a>(
     mut acc: Vec<(&'a str, u32)>,
