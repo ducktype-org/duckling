@@ -10,6 +10,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+/// A struct describing a dependency of a package on some location.
 pub struct DependencyEdge {
     pub parent: ExpandedPackage,
     pub dependency_loc: InternedExpandedLocation,
@@ -17,6 +18,8 @@ pub struct DependencyEdge {
 }
 
 impl DependencyEdge {
+    /// Given a package and a manifest entry describing its dependency,
+    /// creates a [`DependencyEdge`].
     pub fn from_manifest_and_parent(
         parent: ExpandedPackage,
         manifest_dependency: &Dependency,
