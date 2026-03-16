@@ -4,7 +4,7 @@
 __attribute__((weak)) extern int patchable;
 
 int simple_function_plus_1(int x) {
-	if (x == 2137) {
+	if (x == 1234567) {
 		x += patchable;
 	}
 
@@ -16,7 +16,7 @@ int calling_simple_odd(int x) {
 }
 
 int recursive_fibonacci(int x) {
-	if (x == 2137) {
+	if (x == 1234567) {
 		x += patchable;
 	}
 
@@ -37,7 +37,7 @@ int calling_fibonacci_sum(int x) {
 }
 
 int* calling_libc(int x) {
-	if (x == 2137) {
+	if (x == 1234567) {
 		x += patchable;
 	}
 	
