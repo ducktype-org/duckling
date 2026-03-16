@@ -1,4 +1,4 @@
-# TODO: #2282 resolve this earlier
+# @TODO: #2282 resolve this earlier
 find_program(LLVM_LLC NAMES llc-19 llc REQUIRED)
 find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
 find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)

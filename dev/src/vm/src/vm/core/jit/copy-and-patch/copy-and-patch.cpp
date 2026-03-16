@@ -17,7 +17,7 @@ namespace vm::jit::cnp {
 
 		constexpr static auto stencils = Stencils out{ .binary    = std::to_array(_bin),
 			                                           .functions = {
-#include "wrapper-nm"
+#include <wrapper-nm>
 													   } };
 
 		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
