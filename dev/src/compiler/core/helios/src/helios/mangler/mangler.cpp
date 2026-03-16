@@ -70,10 +70,10 @@ namespace compiler::helios::mangler {
 	u64 KeyOf_MangledType::queryUnstablePerfectHash() const {
 		variant_match(type_key) {
 			variant_case(tsh::AbstractType, type) {
-				return u64(hashing::justHash(type_key.index(), type.queryUnstablePerfectHash()));
+				return std::hash<base::Bit256>()(hashing::justHash(type_key.index(), type.queryUnstablePerfectHash()));
 			}
 			variant_case(tsh::SymbolType<>, type) {
-				return u64(hashing::justHash(type_key.index(), type.queryUnstablePerfectHash()));
+				return std::hash<base::Bit256>()(hashing::justHash(type_key.index(), type.queryUnstablePerfectHash()));
 			}
 			variant_default {
 				CORE_UNREACHABLE();
