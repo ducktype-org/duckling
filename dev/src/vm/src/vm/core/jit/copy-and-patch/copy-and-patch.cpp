@@ -28,7 +28,7 @@ namespace vm::jit::cnp {
 			opcodes | std::views::transform(get_opfunc_size), 0, std::plus{}
 		);
 
-		auto       memory = JitMemory::allocate(size);
+		auto  memory = JitMemory::allocate(size);
 		byte* next   = memory.memory;
 
 		auto add_instr = [&](auto binary) {

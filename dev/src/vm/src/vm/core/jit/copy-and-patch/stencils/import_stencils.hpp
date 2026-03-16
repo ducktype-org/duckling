@@ -29,7 +29,7 @@ namespace vm::jit::cnp {
 		using LoadedStencilsT = LoadedStencils<BinarySize, NumFunctions>;
 
 		std::array<byte, BinarySize> binary;
-		LLVM_nm_data                      functions[NumFunctions];
+		LLVM_nm_data                 functions[NumFunctions];
 
 		LoadedStencilsT load() const;
 	};

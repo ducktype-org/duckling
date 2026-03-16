@@ -44,8 +44,7 @@ public:
 private:
 	void printBinary() {
 		std::cerr << "Binary:\n";
-		for (byte c: stencils.binary())
-			std::cerr << std::hex << (int) (unsigned char) c << ' ';
+		for (byte c: stencils.binary()) std::cerr << std::hex << (int) (unsigned char) c << ' ';
 		std::cerr << "\nFunctions:\n";
 		for (LLVM_nm_data data: stencils.functions()) std::cerr << data.name << '\n';
 	}

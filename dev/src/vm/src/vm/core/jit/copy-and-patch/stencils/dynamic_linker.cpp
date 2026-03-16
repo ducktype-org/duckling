@@ -17,7 +17,7 @@ namespace vm::jit::cnp {
 
 		auto write_n = [&]() {
 			usize to_write = binary.size();
-			auto   ptr      = binary.data();
+			auto  ptr      = binary.data();
 			while (to_write) {
 				ssize_t ret = write(fd, ptr, to_write);
 				SYSTEM_CHECK(ret != -1, "write failed: ");
