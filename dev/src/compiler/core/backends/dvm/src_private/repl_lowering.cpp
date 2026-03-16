@@ -22,6 +22,12 @@ namespace compiler::backend_vm {
 
 	internal::ProgramLoweringContext& ReplLoweringContext::getContext() { return *m_context; }
 
+	void ReplLoweringContext::setContext(query::Context& query_ctx) {
+		m_context->setContext(query_ctx);
+	}
+
+	void ReplLoweringContext::invalidateContext() { m_context->invalidateContext(); }
+
 	const vm::code::Function& ReplLoweringContext::lowerAndKeepLirFunction(
 		CRef<lir::Function> lir_function
 	) {

@@ -17,6 +17,7 @@
 #include <unistd.h>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -51,9 +52,6 @@ namespace compiler::repl {
 		  m_frontend(),
 		  m_lowering_context() {
 		initDVM();
-		query::utils::withContextDo([this](query::Context& ctx) {
-			m_lowering_context.emplace(ctx);
-		});
 	}
 
 	bool ReplSession::isCommand(std::string_view line) const {
@@ -179,6 +177,13 @@ namespace compiler::repl {
 		hout_unit.functions.emplace_back(&expr_wrapper.value());
 
 		query::utils::withContextDo([&](query::Context& ctx) {
+			// Initialize context on first use or update it for this scope
+			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+			m_lowering_context->setContext(ctx);  // Update context for this scope
+
+			// Defer: invalidate when exiting this scope, even on early return
+			defer(m_lowering_context->invalidateContext());
+
 			try {
 				CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
@@ -251,7 +256,7 @@ namespace compiler::repl {
 			CORE_DEV_LOG(REPL, "Querying QueryReplInstructionWrapper\n");
 			instr_wrapper = ctx.query<QueryReplInstructionWrapper>({
 				.stmt    = stmt,
-				.counter = m_inputs_counter,
+				.counter = m_line_counter,
 			});
 
 			CORE_DEV_LOG(REPL, "Getting mangled name\n");
@@ -278,7 +283,9 @@ namespace compiler::repl {
                 )
                     .c_str()
             );
-			auto load_result = compileAndLoad(ctx, hout_unit, module_name.strView(), m_dvm_pid);
+			auto load_result = compileAndLoad(
+				ctx, hout_unit, module_name.strView(), m_dvm_pid, m_lowering_context.value()
+			);
 			if (!load_result.has_value()) {
 				error_message = "DVM load error: " + load_result.error();
 				std::cerr << error_message << "\n";
@@ -317,6 +324,13 @@ namespace compiler::repl {
 			= query::entryPoint<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
+			// Initialize context on first use or update it for this scope
+			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+			m_lowering_context->setContext(ctx);  // Update context for this scope
+
+			// Defer: invalidate when exiting this scope, even on early return
+			defer(m_lowering_context->invalidateContext());
+
 			try {
 				// The stmt parameter is used only here, for logging. It's not needed for the actual
 				// query since QueryModuleHOUT already compiles the entire module containing the

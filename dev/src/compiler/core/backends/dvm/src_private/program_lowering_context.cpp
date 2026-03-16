@@ -12,7 +12,8 @@
 
 using namespace compiler::backend_vm::internal;
 
-const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
+const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(
+	CRef<tsl::TypeLayout> layout
 ) {
 	if (tsl_type_to_dvm.contains(layout)) {
 		return tsl_type_to_dvm.at(layout);
@@ -161,33 +162,41 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
 		}
 		variant_case_novalue(tsl::PointerTypeLayout) {
-			query_ctx_for_errors.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat(
-					"DVM backend does not yet support pointer types. Offending type layout: ",
-					layout->toStringDefinition(query_ctx_for_errors),
-					". This usually means you used a pointer in compile time."
-				),
-				base::Optional<dia::SourcePosition>()
-			));
+			if (query_ctx_for_errors.has_value()) {
+				query_ctx_for_errors.value()->logInt(
+					makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"DVM backend does not yet support pointer types. Offending type "
+							"layout: ",
+							layout->toStringDefinition(*query_ctx_for_errors.value()),
+							". This usually means you used a pointer in compile time."
+						),
+						base::Optional<dia::SourcePosition>()
+					)
+				);
+			}
 			query::throwFailed();
 		}
 		variant_default {
-			query_ctx_for_errors.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat(
-					"During TypeLayout lowering in DVM code generation - type not handled "
-					"yet: ",
-					layout->toStringDefinition(query_ctx_for_errors)
-				),
-				base::Optional<dia::SourcePosition>()
-			));
+			if (query_ctx_for_errors.has_value()) {
+				query_ctx_for_errors.value()->logInt(
+					makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"During TypeLayout lowering in DVM code generation - type not handled "
+							"yet: ",
+							layout->toStringDefinition(*query_ctx_for_errors.value())
+						),
+						base::Optional<dia::SourcePosition>()
+					)
+				);
+			}
 			query::throwFailed();
 		}
 	}
 	CORE_UNREACHABLE();
 }
 
-std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram(
-) {
+std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram() {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
 	collection.functions.insert(

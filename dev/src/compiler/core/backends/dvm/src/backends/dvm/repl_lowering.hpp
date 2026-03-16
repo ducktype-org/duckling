@@ -44,6 +44,21 @@ namespace compiler::backend_vm {
 		internal::ProgramLoweringContext& getContext();
 
 		/**
+		 * @brief Set the query context for error reporting during compilation.
+		 *
+		 * Should be called when entering a query scope with active context.
+		 * Must be paired with invalidateContext() when exiting the scope.
+		 */
+		void setContext(query::Context& query_ctx);
+
+		/**
+		 * @brief Clear the query context after compilation.
+		 *
+		 * Should be called when exiting the query scope to prevent dangling references.
+		 */
+		void invalidateContext();
+
+		/**
 		 * @brief Lower a LIR function into DVM bytecode function.
 		 * @note If the function was already lowered, this is a no-op.
 		 */
