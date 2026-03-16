@@ -11,22 +11,22 @@
 	#include <iostream>
 
 namespace vm::jit::cnp {
-	inline size_t get_page_size() {
-		static size_t page_size = std::invoke([]() {
+	inline usize get_page_size() {
+		static usize page_size = std::invoke([]() {
 			long result = sysconf(_SC_PAGESIZE);
 			SYSTEM_CHECK(result != -1, "couldn't get the page size");
-			return static_cast<size_t>(result);
+			return static_cast<usize>(result);
 		});
 
 		return page_size;
 	}
 
-	JitMemory JitMemory::allocate(size_t size) {
+	JitMemory JitMemory::allocate(usize size) {
 		size = (size + get_page_size() - 1) / get_page_size() * get_page_size();
 		CORE_ASSERT(size % get_page_size() == 0, "should be aligned to page size");
 		int  flags = MAP_ANONYMOUS | MAP_PRIVATE;
 		auto memory
-			= reinterpret_cast<std::byte*>(mmap(NULL, size, PROT_READ | PROT_WRITE, flags, -1, 0));
+			= reinterpret_cast<byte*>(mmap(NULL, size, PROT_READ | PROT_WRITE, flags, -1, 0));
 
 		SYSTEM_CHECK(memory != MAP_FAILED, "unable to allocate memory");
 		return JitMemory{ .memory = memory, .size = size };
@@ -50,7 +50,7 @@ namespace vm::jit::cnp {
 	#include <iostream>
 
 namespace vm::jit::cnp {
-	size_t get_page_size() {
+	usize get_page_size() {
 		static SYSTEM_INFO system_info = []() {
 			SYSTEM_INFO system_info;
 			GetSystemInfo(&system_info);
@@ -59,11 +59,11 @@ namespace vm::jit::cnp {
 		return system_info.dwPageSize;
 	}
 
-	JitMemory JitMemory::allocate(size_t size) {
+	JitMemory JitMemory::allocate(usize size) {
 		CORE_ASSERT(size % get_page_size() == 0, "should be aligned to page size");
 		int   flags = MAP_ANONYMOUS | MAP_PRIVATE;
 		auto* memory
-			= reinterpret_cast<std::byte*>(VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE););
+			= reinterpret_cast<byte*>(VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE););
 
 		return JitMemory{ .memory = memory, .size = size };
 	}

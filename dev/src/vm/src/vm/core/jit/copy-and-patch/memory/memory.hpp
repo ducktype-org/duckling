@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cstddef>
+#include <base/types/ints.hpp>
 
 namespace vm::jit::cnp {
 
 struct JitMemory {
-	static JitMemory allocate(size_t size);
+	static JitMemory allocate(usize size);
 
 	void mark_executable();
 	void free_jit_memory();
@@ -15,8 +16,8 @@ struct JitMemory {
 		return reinterpret_cast<const Func*>(memory);
 	}
 
-	std::byte* memory;
-	size_t     size;
+	byte* memory;
+	usize     size;
 };
 
 }

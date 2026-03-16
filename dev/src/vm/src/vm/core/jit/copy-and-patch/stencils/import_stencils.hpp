@@ -21,20 +21,20 @@ namespace vm::jit::cnp {
 		std::vector<StencilHole> relocation = {};
 	};
 
-	template<size_t BinarySize, size_t NumFunctions>
+	template<usize BinarySize, usize NumFunctions>
 	struct LoadedStencils;
 
-	template<size_t BinarySize, size_t NumFunctions>
+	template<usize BinarySize, usize NumFunctions>
 	struct Stencils {
 		using LoadedStencilsT = LoadedStencils<BinarySize, NumFunctions>;
 
-		std::array<std::byte, BinarySize> binary;
+		std::array<byte, BinarySize> binary;
 		LLVM_nm_data                      functions[NumFunctions];
 
 		LoadedStencilsT load() const;
 	};
 
-	template<size_t BinarySize, size_t NumFunctions>
+	template<usize BinarySize, usize NumFunctions>
 	struct LoadedStencils {
 		using StencilsT = Stencils<BinarySize, NumFunctions>;
 
@@ -43,22 +43,22 @@ namespace vm::jit::cnp {
 				                   .dynlib   = DynamicLibrary::load(stencils.binary) };
 		}
 
-		auto stencil_binary(this auto&& self, size_t index) {
+		auto stencil_binary(this auto&& self, usize index) {
 			return self.stencil_binary(self.stencils.functions[index]);
 		}
 
-		std::span<const std::byte> stencil_binary(const LLVM_nm_data& func_data) const {
+		std::span<const byte> stencil_binary(const LLVM_nm_data& func_data) const {
 			auto begin = dynlib.findSymbol(func_data.name);
 			return std::span(begin, begin + func_data.size);
 		}
 
 		auto& functions() const { return stencils.functions; }
 
-		std::span<const std::byte> binary() const {
-			return std::span((const std::byte*) stencils.binary.data(), stencils.binary.size());
+		std::span<const byte> binary() const {
+			return std::span((const byte*) stencils.binary.data(), stencils.binary.size());
 		}
 
-		void relocate(const LLVM_nm_data& func_data, std::byte* new_address) {
+		void relocate(const LLVM_nm_data& func_data, byte* new_address) {
 			auto binary = stencil_binary(func_data);
 			std::ranges::copy(binary, new_address);
 
@@ -70,7 +70,7 @@ namespace vm::jit::cnp {
 		DynamicLibrary dynlib;
 	};
 
-	template<size_t BinarySize, size_t NumFunctions>
+	template<usize BinarySize, usize NumFunctions>
 	inline LoadedStencils<BinarySize, NumFunctions> Stencils<BinarySize, NumFunctions>::load() const {
 		return LoadedStencilsT::load(*this);
 	}

@@ -11,17 +11,17 @@
 	#include <cstring>
 
 namespace vm::jit::cnp {
-	inline DynamicLibrary DynamicLibrary::load(std::span<const std::byte> binary) {
+	inline DynamicLibrary DynamicLibrary::load(std::span<const byte> binary) {
 		int fd = memfd_create("lib", 0);
 		SYSTEM_CHECK(fd != -1, "memfd_create failed:");
 
 		auto write_n = [&]() {
-			size_t to_write = binary.size();
+			usize to_write = binary.size();
 			auto   ptr      = binary.data();
 			while (to_write) {
 				ssize_t ret = write(fd, ptr, to_write);
 				SYSTEM_CHECK(ret != -1, "write failed: ");
-				size_t written = (size_t) ret;
+				usize written = (usize) ret;
 				to_write -= written;
 				ptr += written;
 			}

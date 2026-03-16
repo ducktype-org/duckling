@@ -21,7 +21,7 @@ PUSH_DIAGNOSTIC ALLOW_EXTENSIONS constexpr static char full_elf[] = {
 };
 POP_DIAGNOSTIC
 
-static auto stencils = Stencils { .binary = std::bit_cast<std::array<std::byte, sizeof(full_elf)>>(full_elf),
+static auto stencils = Stencils { .binary = std::bit_cast<std::array<byte, sizeof(full_elf)>>(full_elf),
 	                                                             .functions = {
 #include "mock_stencils-nm"
 																 }
@@ -44,7 +44,7 @@ public:
 private:
 	void printBinary() {
 		std::cerr << "Binary:\n";
-		for (std::byte c: stencils.binary())
+		for (byte c: stencils.binary())
 			std::cerr << std::hex << (int) (unsigned char) c << ' ';
 		std::cerr << "\nFunctions:\n";
 		for (LLVM_nm_data data: stencils.functions()) std::cerr << data.name << '\n';

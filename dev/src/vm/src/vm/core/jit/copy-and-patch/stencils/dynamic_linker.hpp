@@ -10,10 +10,10 @@ namespace vm::jit::cnp {
 		int   lib_fd;
 		void* lib_handle;
 
-		template<class T = std::byte>
+		template<class T = byte>
 		T* findSymbol(const char* name) const;
 
-		static DynamicLibrary load(std::span<const std::byte> binary);
+		static DynamicLibrary load(std::span<const byte> binary);
 	};
 }
 

@@ -5,7 +5,7 @@
 #include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit::cnp {
-	using JitOpFun = void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::VMThread*);
+	using JitOpFun = void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::VMThread*);
 
 	JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
 		PUSH_DIAGNOSTIC       ALLOW_EXTENSIONS;
@@ -24,12 +24,12 @@ namespace vm::jit::cnp {
 		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
 			return stencils.functions[static_cast<u64>(opcode)].size;
 		};
-		size_t size = std::ranges::fold_left(
+		usize size = std::ranges::fold_left(
 			opcodes | std::views::transform(get_opfunc_size), 0, std::plus{}
 		);
 
 		auto       memory = JitMemory::allocate(size);
-		std::byte* next   = memory.memory;
+		byte* next   = memory.memory;
 
 		auto add_instr = [&](auto binary) {
 			std::ranges::copy(binary, next);

@@ -8,7 +8,7 @@ namespace vm::jit::cnp {
 // for now only a single(ext-less) instruction
 #define HANDLE_MICRO_INSTR(opcode_name)                                                \
 	void wrapper_##opcode_name(                                                        \
-		MicroInstruction instr, std::byte* local_stack, Frame* frame, VMThread& thread \
+		MicroInstruction instr, byte* local_stack, Frame* frame, VMThread& thread \
 	) {                                                                                \
 		CORE_ASSERT(                                                                   \
 			getInstructionOpcode(instr) == low::MicroOpcode::opcode_name,              \
