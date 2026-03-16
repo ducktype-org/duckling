@@ -13,8 +13,11 @@ mod tests;
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
+/// Where should we cache metdata.
 pub enum CacheLocation<'a> {
+    /// Cache metadata in memory.
     Memory,
+    /// Cache metadata in path.
     Path(&'a Path),
 }
 
@@ -28,6 +31,7 @@ impl std::fmt::Display for CacheLocation<'_> {
 }
 
 #[derive(Debug)]
+/// All columns present in the database.
 enum Columns {
     Name,
     Version,
@@ -36,6 +40,7 @@ enum Columns {
 }
 
 impl Columns {
+    /// Get the SQLite column name.
     const fn name(&self) -> &'static str {
         match self {
             Columns::Name => "name",
@@ -45,6 +50,7 @@ impl Columns {
         }
     }
 
+    /// Get the type of the SQLite column.
     const fn sqlite_type(&self) -> &'static str {
         match self {
             Columns::Name => "TEXT NOT NULL",
@@ -55,6 +61,7 @@ impl Columns {
     }
 }
 
+/// Name of the table where we save metadata.
 const TABLE_NAME: &str = "packages_manifests";
 
 #[derive(Debug)]

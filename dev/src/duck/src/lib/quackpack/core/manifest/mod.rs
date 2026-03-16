@@ -35,7 +35,7 @@ pub struct Manifest {
 }
 
 impl Manifest {
-    /// Create a new manifest.
+    /// Create a new [`Manifest`].
     pub fn new(
         root_description: RootDescription,
         features: Features,

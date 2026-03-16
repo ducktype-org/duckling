@@ -105,11 +105,11 @@ impl Storage {
         self.venvs_dir.join(venv_id)
     }
 
-    pub fn vevn_metadata(&self, venv_id: VenvId) -> PathBuf {
+    pub fn venv_metadata(&self, venv_id: VenvId) -> PathBuf {
         self.venv_dir(venv_id).join(METADATA_FILENAME)
     }
 
-    pub fn vevn_backup_metadata(&self, venv_id: VenvId) -> PathBuf {
+    pub fn venv_backup_metadata(&self, venv_id: VenvId) -> PathBuf {
         self.venv_dir(venv_id).join(BACKUP_METADATA_FILENAME)
     }
 
