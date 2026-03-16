@@ -59,7 +59,7 @@ namespace lsp {
 		u64                line;
 		u64                start_character;
 		u64                length;
-		StandardTokenType               type;
+		StandardTokenType  type;
 		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 

@@ -4,6 +4,7 @@
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
+
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios::ls {

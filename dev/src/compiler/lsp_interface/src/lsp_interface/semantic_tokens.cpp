@@ -227,7 +227,6 @@ namespace lsp {
 	using namespace compiler::helios;
 
 	class TokenHoutExprVisitor final: public code::HoutExprVisitorEmpty {
-
 	public:
 		static bool supports(pst::Access<pst::LangElement> element) {
 			if (element.dynamicCast<pst::ExprElement>().has_value()

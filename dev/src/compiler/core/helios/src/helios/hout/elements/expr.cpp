@@ -751,11 +751,7 @@ namespace compiler::helios::code {
 	}
 
 	AccessExpr::AccessExpr(
-		query::Context& ctx,
-		ElementOrigin   origin,
-		Box<Expr>       base,
-		const SymID     field,
-		ElementOrigin   field_origin
+		query::Context& ctx, ElementOrigin origin, Box<Expr> base, const SymID field
 	):
 		  // @TODO: #1549 Value category usage is not correct here.
 		  Expr(
@@ -766,8 +762,7 @@ namespace compiler::helios::code {
 			  origin
 		  ),
 		  base(std::move(base)),
-		  field(field),
-		  field_origin(field_origin) {
+		  field(field) {
 		CORE_ASSERT(kind(field) == SymbolKind::Field, "Field in AccessExpr must be a field symbol");
 	}
 
@@ -775,13 +770,11 @@ namespace compiler::helios::code {
 		const tsh::ExpressionType<>& expression_type,
 		ElementOrigin                origin,
 		Box<Expr>                    base,
-		const SymID                  field,
-		ElementOrigin                field_origin
+		const SymID                  field
 	):
 		  Expr(expression_type, origin),
 		  base(std::move(base)),
-		  field(field),
-		  field_origin(field_origin) {
+		  field(field) {
 		CORE_ASSERT(kind(field) == SymbolKind::Field, "Field in AccessExpr must be a field symbol");
 	}
 
@@ -791,7 +784,7 @@ namespace compiler::helios::code {
 	}
 
 	Box<Expr> AccessExpr::clone() const {
-		return makeBox<AccessExpr>(expression_type, origin, base->clone(), field, field_origin);
+		return makeBox<AccessExpr>(expression_type, origin, base->clone(), field);
 	}
 
 	IndexExpr::IndexExpr(query::Context&, ElementOrigin origin, Box<Expr> base, Box<Expr> index):
