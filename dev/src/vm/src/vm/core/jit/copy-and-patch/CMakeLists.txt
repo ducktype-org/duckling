@@ -33,7 +33,11 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     # Analyze and generate data from the binary
     add_custom_command(
         OUTPUT ${nm_out}
-        COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py" "${linked_out}" "--output=${nm_out}"
+        COMMAND python3 
+        "${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py" 
+        "${linked_out}" 
+        "--output=${nm_out}"
+        "--llvm-nm=${LLVM_NM}"
         DEPENDS ${linked_out} ${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py
         VERBATIM
     )
