@@ -31,8 +31,6 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
 	VM_RUNTIME_EXCEPTION(VMFoundMemoryLeakException, "Memory leak detected");
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
-<<<<<<< main
-=======
 
 #define VM_RUNTIME_EXCEPTION_WITH_PARAM(name, msg, type)                 \
 	struct name: public VMRuntimeException {                             \
@@ -44,5 +42,4 @@ namespace vm::exceptions {
 	}
 
 	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMResourceDoesNotExist, "Resource does not exist", std::string);
->>>>>>> main
 }

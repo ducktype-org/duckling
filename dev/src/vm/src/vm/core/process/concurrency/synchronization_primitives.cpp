@@ -2,7 +2,6 @@
 
 namespace vm {
 	Ref<std::mutex> SynchronizationPrimitives::getMutex(usize mutex_id) {
-<<<<<<< main
 		return mutex_pool.maybeGet(mutex_id).expect("Mutex does not exist");
 	}
 
@@ -18,12 +17,4 @@ namespace vm {
 
 	void SynchronizationPrimitives::removeCV(usize cv_id) { cv_pool.remove(cv_id); }
 
-=======
-		return mutex_pool.maybeGet(mutex_id).expect<exceptions::VMResourceDoesNotExist>("mutex");
-	}
-
-	usize SynchronizationPrimitives::addMutex() { return mutex_pool.add(); }
-
-	void SynchronizationPrimitives::removeMutex(usize mutex_id) { mutex_pool.remove(mutex_id); }
->>>>>>> main
 }

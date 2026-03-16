@@ -113,12 +113,7 @@ namespace vm::builtins {
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
-<<<<<<< main
 		return thread.process.getSynchronizationPrimitives().addMutex();
-=======
-		usize mutex_id = thread.process.getSynchronizationPrimitives().addMutex();
-		return mutex_id;
->>>>>>> main
 	}
 
 	void FunctionHandlers::builtinLockMutex(VMThread& thread, u64 mutex_id) {
