@@ -3,13 +3,13 @@
 #include "dynamic_linker.hpp"
 #include "relocations.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstring>
 #include <span>
 #include <string_view>
 #include <vector>
-#include <algorithm>
 
 namespace vm::jit::cnp {
 	struct LLVM_nm_data {
@@ -28,8 +28,8 @@ namespace vm::jit::cnp {
 	struct Stencils {
 		using LoadedStencilsT = LoadedStencils<BinarySize, NumFunctions>;
 
-		std::array<char, BinarySize> binary;  // why c++, why char
-		LLVM_nm_data                 functions[NumFunctions];
+		std::array<std::byte, BinarySize> binary;
+		LLVM_nm_data                      functions[NumFunctions];
 
 		LoadedStencilsT load() const;
 	};
@@ -48,12 +48,7 @@ namespace vm::jit::cnp {
 		}
 
 		std::span<const std::byte> stencil_binary(const LLVM_nm_data& func_data) const {
-			auto begin = reinterpret_cast<const std::byte*>(dynlib.findSymbol(func_data.name));
-			return std::span(begin, begin + func_data.size);
-		}
-
-		std::span<std::byte> stencil_binary(const LLVM_nm_data& func_data) {
-			auto begin = reinterpret_cast<std::byte*>(dynlib.findSymbol(func_data.name));
+			auto begin = dynlib.findSymbol(func_data.name);
 			return std::span(begin, begin + func_data.size);
 		}
 

@@ -21,10 +21,12 @@ PUSH_DIAGNOSTIC ALLOW_EXTENSIONS constexpr static char full_elf[] = {
 };
 POP_DIAGNOSTIC
 
-static auto stencils = Stencils{ .binary = std::to_array(full_elf),
+static auto stencils = Stencils { .binary = std::bit_cast<std::array<std::byte, sizeof(full_elf)>>(full_elf),
 	                                                             .functions = {
 #include "mock_stencils-nm"
-																 } }.load();
+																 }
+}
+.load();
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS

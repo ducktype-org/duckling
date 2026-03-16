@@ -1,10 +1,10 @@
 #include "memory.hpp"
 
 #if __unix__
-	#include <base/except/exceptions.hpp>
-	
 	#include <sys/mman.h>
 	#include <unistd.h>
+
+	#include <base/except/exceptions.hpp>
 
 	#include <cstddef>
 	#include <functional>
@@ -61,8 +61,8 @@ namespace vm::jit::cnp {
 
 	JitMemory JitMemory::allocate(size_t size) {
 		CORE_ASSERT(size % get_page_size() == 0, "should be aligned to page size");
-		int        flags = MAP_ANONYMOUS | MAP_PRIVATE;
-		std::byte* memory
+		int   flags = MAP_ANONYMOUS | MAP_PRIVATE;
+		auto* memory
 			= reinterpret_cast<std::byte*>(VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE););
 
 		return JitMemory{ .memory = memory, .size = size };
