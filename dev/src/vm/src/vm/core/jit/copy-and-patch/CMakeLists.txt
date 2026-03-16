@@ -33,9 +33,9 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     # Analyze and generate data from the binary
     add_custom_command(
         OUTPUT ${nm_out}
-        COMMAND python3 
-        "${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py" 
-        "${linked_out}" 
+        COMMAND python3
+        "${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py"
+        "${linked_out}"
         "--output=${nm_out}"
         "--llvm-nm=${LLVM_NM}"
         DEPENDS ${linked_out} ${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py
@@ -86,7 +86,11 @@ target_compile_options(mock_stencils PRIVATE
     -fno-semantic-interposition
 )
 process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
-duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES)
+
+add_library(Stencils OBJECT memory/memory.cpp stencils/dynamic_linker.cpp)
+make_module(Stencils USES Base)
+
+duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES Base Stencils)
 
 # prepare to include it in the full LTO of opfuncs
 add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)

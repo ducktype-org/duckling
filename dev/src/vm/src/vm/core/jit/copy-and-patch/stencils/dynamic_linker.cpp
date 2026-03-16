@@ -12,7 +12,7 @@
 	#include <format>
 
 namespace vm::jit::cnp {
-	inline DynamicLibrary DynamicLibrary::load(std::span<const byte> binary) {
+	DynamicLibrary DynamicLibrary::load(std::span<const byte> binary) {
 		int fd = memfd_create("lib", 0);
 		SYSTEM_CHECK(fd != -1, "memfd_create failed:");
 
@@ -38,11 +38,11 @@ namespace vm::jit::cnp {
 		return DynamicLibrary{ .lib_fd = fd, .lib_handle = handle };
 	}
 
-	template<class T>
-	inline T* DynamicLibrary::findSymbol(const char* name) const {
+	template<>
+	std::byte* DynamicLibrary::findSymbol(const char* name) const {
 		void* sym_loc = dlsym(lib_handle, name);
 		CORE_CHECK(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
-		return reinterpret_cast<T*>(sym_loc);
+		return reinterpret_cast<std::byte*>(sym_loc);
 	}
 }
 

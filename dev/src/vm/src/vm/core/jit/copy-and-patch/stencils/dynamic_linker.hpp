@@ -13,7 +13,12 @@ namespace vm::jit::cnp {
 		void* lib_handle;
 
 		template<class T = byte>
-		T* findSymbol(const char* name) const;
+		T* findSymbol(const char* name) const {
+			return reinterpret_cast<T*>(findSymbol<byte>(name));
+		}
+
+		template<>
+		std::byte* findSymbol(const char* name) const;
 
 		static DynamicLibrary load(std::span<const byte> binary);
 	};

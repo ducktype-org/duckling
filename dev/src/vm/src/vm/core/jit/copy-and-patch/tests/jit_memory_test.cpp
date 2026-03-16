@@ -21,12 +21,12 @@ constexpr static char FULL_ELF[] = {
 };
 POP_DIAGNOSTIC
 
-static auto stencils = Stencils { .binary = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
-	                                                             .functions = {
+static auto stencils
+	= Stencils{ .binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
+	            .functions = std::array {
 #include <mock_stencils-nm>
-																 }
-}
-.load();
+					}
+				 }.load();
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -58,20 +58,20 @@ private:
 	void testSimple() {
 		auto foo_code = FIND_FUNC("simple_function_plus_1");
 		auto memory   = JitMemory::allocate(foo_code.size);
-		std::ranges::copy(stencils.stencil_binary(foo_code), memory.memory);
-		memory.mark_executable();
+		std::ranges::copy(stencils.stencilBinary(foo_code), memory.memory);
+		memory.markExecutable();
 
-		auto simple = memory.into_func<int(int)>();
+		auto simple = memory.intoFunc<int(int)>();
 		for (int i = 0; i < 10; ++i) ASSERT_EQUAL(std::invoke(simple, i), i + 1);
 	}
 
 	void testRecursive() {
 		auto foo_code = FIND_FUNC("recursive_fibonacci");
 		auto memory   = JitMemory::allocate(foo_code.size);
-		std::ranges::copy(stencils.stencil_binary(foo_code), memory.memory);
-		memory.mark_executable();
+		std::ranges::copy(stencils.stencilBinary(foo_code), memory.memory);
+		memory.markExecutable();
 
-		auto fibonacci = memory.into_func<int(int)>();
+		auto fibonacci = memory.intoFunc<int(int)>();
 		ASSERT_EQUAL(std::invoke(fibonacci, 0), 1);
 		ASSERT_EQUAL(std::invoke(fibonacci, 1), 1);
 		ASSERT_EQUAL(std::invoke(fibonacci, 2), 2);
