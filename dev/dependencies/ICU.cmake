@@ -6,6 +6,8 @@ set(ICU_RELEASE "${ICU_RELEASE_PREFIX}sources.tgz")
 set(ICU_CONTROL "SHA512=92feddfe81c57336f386c7cbc9f6d976bf349db148a77a247c4559676f51116115c8c52c4d907feb50933f72ab75fd8e48be092bf9c8ca33a3e8fabc9372a5d6")
 
 # Used in github actions
+# The ubuntu release cannot simply be set to the latest and shiniest version,
+# check the available one on the ICU github release page.
 set(ICU_UBUNTU_VERSION "22.04")
 set(ICU_UBUNTU_RELEASE "${ICU_RELEASE_PREFIX}Ubuntu${ICU_UBUNTU_VERSION}-x64.tgz")
 set(ICU_UBUNTU_CONTROL "SHA512=58c74a109fb32c22315d78f7a4c913deaea6b0a55553759b9efb817f4b18587862cb756fb165d352ccfe17591e5354b90aab25f6d05de56172e38a129ee73c5e")
