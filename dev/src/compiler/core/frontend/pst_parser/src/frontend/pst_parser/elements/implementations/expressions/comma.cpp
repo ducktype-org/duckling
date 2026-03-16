@@ -4,28 +4,33 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> Comma::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Comma" << std::endl;
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> Comma::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
-		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
+		u64 length = state.ctokens().size();
+
+		auto pos = dia::SourcePosition(
+			state.getPosition(), state.getPosition(base::safeIntConv<i64>(length) - 1).getEnd()
+		);
 
 		std::vector<i64> ends;
 		for (i64 i = 0; i < length; i++)
 			if (state[i].is(Special::Comma)) ends.push_back(i);
-		if (ends.empty()) return Lower::parse(state, length);
+
+		if (ends.empty()) return Lower::parse(state);
+
 		auto out   = makeBox<Comma>(state);
 		i64  start = -1;
 
 		for (auto end: ends) {
 			out->expressions.emplace_back();
-			PARSE().with(&out->expressions.back(), Lower::parse, end - 1 - start);
-			PARSE().one(Special::Comma);
+			PARSE().autoFallbackLen(end - 1 - start).with(&out->expressions.back(), Lower::parse);
+			state.parse(out).one(Special::Comma);
 			start = end;
 		}
 		if (start + 1 != length) {
 			out->expressions.emplace_back();
-			PARSE().with(&out->expressions.back(), Lower::parse, length - 1 - start);
+			PARSE().with(&out->expressions.back(), Lower::parse);
 		}
 		PST_RETURN out;
 	}

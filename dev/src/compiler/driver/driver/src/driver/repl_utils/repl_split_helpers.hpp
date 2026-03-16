@@ -1,8 +1,3 @@
-/**
- * @file utils.hpp
- * @brief Utility helpers for the Duckling REPL.
- */
-
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>

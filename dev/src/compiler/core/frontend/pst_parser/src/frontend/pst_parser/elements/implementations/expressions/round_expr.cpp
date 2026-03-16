@@ -6,8 +6,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> RoundExpr::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> RoundExpr::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))) {
 			// This should (probably) never happen with how it's called by the parser
@@ -16,12 +18,12 @@ namespace pst::expr {
 			));
 		}
 
-		if (state[0].getRecursive().size() == 0) return UnitExpr::parse(state, length);
+		if (state[0].getRecursive().size() == 0) return UnitExpr::parse(state);
 
 		auto out = makeBox<RoundExpr>(state);
 
 		PARSE().goDown();
-		PARSE().with(&out->expr, Comma::parse, (i64) state.ctokens().size());
+		PARSE().with(&out->expr, Comma::parse);
 		PARSE().goUpAndSkip();
 
 		PST_RETURN out;

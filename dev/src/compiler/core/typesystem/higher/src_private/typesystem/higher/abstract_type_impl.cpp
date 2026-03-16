@@ -2,6 +2,7 @@
 
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -254,6 +255,35 @@ namespace compiler::tsh {
 
 	CRef<TypeInterface> ImportAbstractTypeImpl::getInterface(query::Context&) const {
 		CORE_PANIC("Import type interface does not exist (we can add it if we find a use case).");
+	}
+
+	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Type template interface not yet implemented");
+	}
+
+	AbstractType TypeTemplateAbstractTypeImpl::instantiate(
+		query::Context& ctx, const SymbolType<>& element_type
+	) const {
+		variant_match(source) {
+			variant_case(BuiltinKind, builtin) {
+				switch (builtin) {
+				case TypeTemplateAbstractType::BuiltinKind::List: {
+					return ctx.query<tsh::QueryDynamicArrayType>({ element_type });
+				}
+				default: {
+					throw base::NotYetImplemented(base::strConcat(
+						"Instantiation of a builtin type template type: ", representation
+					));
+				}
+				}
+			}
+			variant_default {
+				throw base::NotYetImplemented(base::strConcat(
+					"Instantiation of a non-builtin type template type: ", representation
+				));
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx

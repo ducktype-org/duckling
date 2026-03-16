@@ -52,7 +52,7 @@ public:
 
 protected:
 	void beforeAll() override {
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {
 					.package_name = package_name,
@@ -69,6 +69,7 @@ protected:
 				.execution_options     = { .worker_count = 1 },
 			}
 		);
+		ASSERT_TRUE(init_result.status().isOk());
 	}
 
 private:

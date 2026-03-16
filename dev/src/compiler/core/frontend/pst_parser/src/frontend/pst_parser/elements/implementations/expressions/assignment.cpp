@@ -5,8 +5,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> Assignment::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		u64 length = state.ctokens().size();
 
 		auto pos
 			= dia::SourcePosition(state.getPosition(), state.getPosition((i64) length - 1).getEnd());
@@ -20,20 +22,19 @@ namespace pst::expr {
 					place = i;
 				} else {
 					state.logInt(makeBox<MultipleAssignmentError>(pos));
-					fastForward(state, length);
 					return nullptr;
 				}
 			}
 		}
-		if (!found) return Lower::parse(state, length);
+		if (!found) return Lower::parse(state);
 		auto out = makeBox<Assignment>(state);
 
-		PARSE().with(&out->variables, Lower::parse, +place);
+		PARSE().autoFallbackLen(place).with(&out->variables, Lower::parse);
 
 		out->type = state[0].getValue();
 		PARSE().eatOne();
 
-		PARSE().with(&out->value, Lower::parse, length - place - 1);
+		PARSE().with(&out->value, Lower::parse);
 
 		PST_RETURN out;
 	}

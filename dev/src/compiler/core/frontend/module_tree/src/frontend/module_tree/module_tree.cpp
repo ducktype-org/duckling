@@ -599,7 +599,6 @@ namespace compiler::frontend {
 		// Update module hash for the parent module since the number of children changed
 		// Adding a submodule does not change the path component hash of the module so we do not
 		// need to invalidate hash For all SourceFiles and Submodules
-		// @TODO: #1253 every update and change to module should invalidate query caches
 		module->updateModuleHash();
 	}
 
@@ -624,8 +623,7 @@ namespace compiler::frontend {
 		);
 
 		module->m_other_files.at(ext_id).push_back(file);
-		//@TODO: do we need to update the module here? #1253
-		// module->update();
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
@@ -674,8 +672,7 @@ namespace compiler::frontend {
 		);
 
 		files.erase(it);
-		//@TODO: do we need to update the module here? #1253
-		// module->update();
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::setParent(

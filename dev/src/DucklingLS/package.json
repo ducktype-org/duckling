@@ -3,7 +3,8 @@
     "displayName": "DucklingLS",
     "description": "Duckling Language Server",
     "version": "0.0.1",
-    "author": "zpp-2.1",
+    "icon": "images/icon.png",
+    "author": "Ducktype",
     "categories": [
         "Programming Languages"
     ],
@@ -29,9 +30,9 @@
                     "duckling"
                 ],
                 "extensions": [
-                    ".rift",
                     ".dl",
-                    ".duckling",
+                    ".duck",
+                    ".🦆",
                     ".dmf"
                 ],
                 "configuration": "./language-configuration.json"
@@ -53,6 +54,12 @@
                     "type": "number",
                     "default": 100,
                     "description": "Controls the maximum number of problems produced by the server."
+                },
+                "DucklingLanguageServer.executablePath": {
+                    "scope": "machine",
+                    "type": "string",
+                    "default": "~/.local/bin/duck_ls",
+                    "markdownDescription": "Path to the `duck_ls` binary. Supports `~` for the home directory. Defaults to `~/.local/bin/duck_ls`. Run `comp-copy.py` to install the binary there, or set this to a custom path if you installed it elsewhere."
                 },
                 "DucklingLanguageServer.trace.server": {
                     "scope": "window",

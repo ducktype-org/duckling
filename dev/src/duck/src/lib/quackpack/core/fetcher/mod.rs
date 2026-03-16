@@ -111,7 +111,7 @@ impl<'duck> Fetcher<'duck> {
     /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
     pub fn get_package_all_metadata(
-        &self,
+        &mut self,
         url: &Url,
         package_name: StrId,
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
