@@ -39,7 +39,7 @@ namespace compiler::repl {
 			);
 		}
 
-		auto module_unique_name = base::StrID(module_name.data());
+		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
@@ -81,7 +81,6 @@ namespace compiler::repl {
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_str == "i64")
 						return std::to_string(exit_value->readBytes<i64>());
-					// @TODO: #1795 DVM should also use f32 and f64.
 					else if (type_str == "f32")
 						return std::to_string(exit_value->readBytes<f32>());
 					else if (type_str == "f64")

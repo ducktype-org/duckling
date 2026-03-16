@@ -12,7 +12,7 @@ namespace pst {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			state.parse(out).all(Keyword::While, &out->optional_name, &out->condition, &out->body);
+			PARSE().all(Keyword::While, &out->optional_name, &out->condition, &out->body);
 		})
 
 		PST_RETURN out;
