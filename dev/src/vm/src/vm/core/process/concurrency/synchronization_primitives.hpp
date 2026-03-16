@@ -31,8 +31,6 @@ namespace vm {
 
 		/**
 		 * @brief Adds new mutex into pool.
-
-
 		 */
 		usize addMutex();
 
