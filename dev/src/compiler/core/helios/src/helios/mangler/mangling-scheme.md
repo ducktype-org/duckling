@@ -37,6 +37,7 @@ either in the scheme or it's implementation, they should be reflected here.
 
 // note that function symbols nad function types are different
 <function> ::= <function-type> <parameter-name>* "E"
+               where <fumction-type>.<argument-type>.count == <parameter-name>.count
 
 <parameter-name> ::= <identifier>
 
