@@ -213,7 +213,7 @@ namespace vm {
 				frame->block_stack.size(), frame->local_stack_head
 			);
 			frame->block_stack.push_back(block);
-			frame->local_stack_head += type->getSize();
+			frame->local_stack_head += type->getSize().asInt();
 		}
 
 		static
@@ -231,7 +231,7 @@ namespace vm {
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
-			frame->local_stack_head -= type->getSize();
+			frame->local_stack_head -= type->getSize().asInt();
 		}
 
 		static
@@ -267,10 +267,10 @@ namespace vm {
 				= thread.process_memory.getBlockViewUnsafe(variant_pointer.getBlock());
 			auto variant_data_view = base::ModRawView(
 				variant_block_data_view.getBegin() + variant_pointer.getOffset(),
-				variant_type->getSize()
+				variant_type->getSize().asInt()
 			);
 
-			switch (variant_type_tag_size) {
+			switch (variant_type_tag_size.asInt()) {
 			case 1:
 				// byte, using uint8_t below since byte is not std::integral
 				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
@@ -285,7 +285,7 @@ namespace vm {
 				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
 				break;
 			default:
-				CORE_PANIC("Invalid variant size: ", variant_type_tag_size);
+				CORE_PANIC("Invalid variant size: ", variant_type_tag_size.asInt());
 			}
 		}
 

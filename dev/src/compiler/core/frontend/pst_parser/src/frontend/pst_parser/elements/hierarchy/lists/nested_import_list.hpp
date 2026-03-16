@@ -10,7 +10,7 @@ namespace pst {
 	class NestedImportList final:
 		  public List<ImportChain, internal::NameGetters::nestedImportList> {
 	public:
-		explicit NestedImportList(const dia::SourcePosition& pos): List(pos) {
+		explicit NestedImportList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::NestedImportList;
 		}
 

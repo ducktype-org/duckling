@@ -10,7 +10,7 @@ namespace pst {
 		NAMED_CHILD(expr, AssignmentExprHolder);
 
 	public:
-		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos) {
+		explicit ExprStmt(const LangParserState& state): Stmt(StmtKind::ExprStmt, state) {
 			this->element_kind = ElementKind::ExprStmt;
 		}
 

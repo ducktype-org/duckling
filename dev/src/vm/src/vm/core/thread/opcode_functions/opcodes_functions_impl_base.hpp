@@ -36,6 +36,8 @@
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
 #endif
+#include <base/types/floats.hpp>
+
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -241,8 +243,8 @@ namespace vm {
 
 	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
-#define FLOAT_64_TYPE double
-#define FLOAT_32_TYPE float
+#define FLOAT_64_TYPE f64
+#define FLOAT_32_TYPE f32
 #define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                         \
 	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)   \
 	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)   \
@@ -473,7 +475,7 @@ namespace vm {
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
 				byte* args_pointer
-					= result_pointer + (is_void ? 0 : ext_func->result_type->getSize());
+					= result_pointer + (is_void ? 0 : ext_func->result_type->getSize().asInt());
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
@@ -487,7 +489,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
 		{
 			auto& called_func = thread.executing_program->getFunctions()[instr->arg0];
-			builtins::setThreadCtx(called_func.name.str());
+			thread.setThreadCtx(called_func.name.str());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -689,7 +691,7 @@ namespace vm {
 		{
 			auto       dst_block_idx = frame->local_offset_to_block_idx[instr->arg0];
 			auto       dst_block     = frame->block_stack[dst_block_idx];
-			const auto type_size     = thread.process_memory.getBlockType(dst_block)->getSize();
+			const auto type_size = thread.process_memory.getBlockType(dst_block)->getSize().asInt();
 			std::memcpy(local_stack + instr->arg0, local_stack + instr->arg1, type_size);
 		}
 		FUNCTION_CONT(1);
@@ -701,7 +703,7 @@ namespace vm {
 			std::memcpy(
 				thread.process_memory.getBlockViewUnsafe(dst_block).getBegin(),
 				local_stack + instr->arg1,
-				thread.process_memory.getBlockType(dst_block)->getSize()
+				thread.process_memory.getBlockType(dst_block)->getSize().asInt()
 			);
 		}
 		FUNCTION_CONT(1);
@@ -713,7 +715,7 @@ namespace vm {
 			std::memcpy(
 				local_stack + instr->arg0,
 				thread.process_memory.getBlockViewUnsafe(src_block).getBegin(),
-				thread.process_memory.getBlockType(src_block)->getSize()
+				thread.process_memory.getBlockType(src_block)->getSize().asInt()
 			);
 		}
 		FUNCTION_CONT(1);
@@ -932,7 +934,7 @@ namespace vm {
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index        = readFromStack<u64>(local_stack, instr[1].arg0);
-			auto data_offset  = usize(index * element_type->getSize());
+			auto data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), data_offset }
@@ -948,7 +950,7 @@ namespace vm {
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index        = readFromStack<u64>(local_stack, instr[1].arg0);
-			auto data_offset  = usize(index * element_type->getSize());
+			auto data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), data_offset }

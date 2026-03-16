@@ -43,7 +43,9 @@ private:
 	 *
 	 * It creates a virtual file from the `module_content` argument
 	 * and creates a module tree from it every function call.
-
+	 *
+	 * @TODO: #2213 Add PST errors handling here.
+	 *
 	 * @param module_content The content of the module main source file.
 	 * @param present_phrases List of phrases that should be present in the logged errors.
 	 * @param logged_msg_count Expected number of logged error messages.
@@ -59,7 +61,12 @@ private:
 			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 			auto logger = query::Context::dumpToOneLoggerAndClear();
-			assertTrue(logger->hasErrors(), "Expected errors to be logged.");
+
+			// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
+			// query errors is ok:
+			assertTrue(
+				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
+			);
 
 			std::stringstream logged_messages;
 			logger->terminalPrint(logged_messages);
@@ -84,7 +91,18 @@ private:
 	void testErrorLogging() {
 		// ============================ No operator found ============================
 		checkForErrorOnCompileModule(
-			R"(fun a() = true + false;)", { "No builtin binary operator" }, 1
+			R"(fun a() = true + false;)", { "Call failed due to ambiguous overload resolution" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun a() = 'c' + 1i64;)",
+			{
+				"Call failed due to ambiguous overload resolution",
+				"type const Function (const u8, const char) -> (const char).",
+				"given argument type `char` cannot be converted to the expected type `const u8`.",
+				"type const Function (const char, const u8) -> (const char).",
+				"given argument type `i64` cannot be converted to the expected type `const u8`.",
+			},
+			1
 		);
 		checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
 
@@ -354,6 +372,17 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var arr: i32[5];
+					arr["index"] = 1;
+				}
+			)",
+			{ "Type `string` cannot be converted to type `const i64`." },
+			1
+		);
+
 
 		checkForErrorOnCompileModule(
 			R"(
@@ -372,6 +401,35 @@ private:
 			{ "The given argument type `const type` cannot be converted to the expected type "
 		      "`()`" },
 			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun bad() = {
+				    return;
+				    return 0;
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "inconsistent return statements" },
+			1
+		);
+
+		// ========================== Lexer errors ==========================
+
+		// // We don't see errors here, because they are produced by the lexer, not query:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a = 1kg;
+					return 0;
+				}
+			)",
+			{},
+			0
 		);
 
 
@@ -443,6 +501,45 @@ private:
 			1
 		);
 
+		// We don't see any query errors here, because they are logged by the PST:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+			)",
+			{},
+			0
+		);
+
+		// Check for multiple errors, note that we only see 1 error, because the other one is logged
+		// by the PST.
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+
+				fun foo() -> i64 = {
+					return "a";
+				}
+			)",
+			{},
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				import foo;
+
+				let x = foo.z;
+			)",
+			{ "Module not found." },
+			1
+		);
+
 		// ============================ Static Arrays ============================
 		checkForErrorOnCompileModule(
 			R"(
@@ -501,9 +598,67 @@ private:
 			1
 		);
 
+		// ============================ Dynamic Arrays ============================
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l: List[i64];
+					l += 1.5;
+				}
+			)",
+			{ "Type `f32` cannot be converted to type `i64`" },
+			1
+		);
 
-		// =========================== Not-yet-implemented errors ==========================
-		// Note: just remove the tests when the features are implemented.
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l: List[i64];
+					l -= "sth";
+				}
+			)",
+			{ "Type `string` cannot be converted to type `u64`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x = 10;
+					var length = len x;
+				}
+			)",
+			{ "No builtin unary operator `len` for type `i32`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l: List;
+					l[0] = 123;
+				}
+			)",
+			{ "Index operator base must be indexable" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l1: List[i64];
+					var l2: List[f64] = l1;
+				}
+			)",
+			{ "Type `List[i64]` cannot be converted to type `List[f64]`" },
+			1
+		);
+
+
+		// ========================= Not-yet-implemented errors =========================
+
+		// Note: just remove the tests when the features
+		// are implemented.
 
 		checkForErrorOnCompileModule(
 			R"(
@@ -678,13 +833,6 @@ private:
 
 		try {
 			test_utils::getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.

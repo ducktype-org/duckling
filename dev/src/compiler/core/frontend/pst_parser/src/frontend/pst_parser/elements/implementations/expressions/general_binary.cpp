@@ -35,24 +35,28 @@ namespace pst::expr {
 	 */
 	MBox<ExprElement> GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
 		if (std::holds_alternative<i64>(expr)) {
-			return Lower::parse(state, std::get<i64>(expr));
+			fallbackLen(state, base::safeIntConv<u64>(std::get<i64>(expr)));
+			auto out = Lower::parse(state);
+			exitFallback(state);
+			return out;
 		} else {
 			auto op  = std::get<Box<OperatorBuilder>>(expr).ref();
-			auto out = makeBox<GeneralBinary>(state.getPosition(), op->type);
+			auto out = makeBox<GeneralBinary>(state, op->type);
 
-			state.parse(out).with(&out->left, parseRecursive, op->lhs);
-			state.parse(out).one(op->type);
-			state.parse(out).with(&out->right, parseRecursive, op->rhs);
+			PARSE().with(&out->left, parseRecursive, op->lhs);
+			PARSE().one(op->type);
+			PARSE().with(&out->right, parseRecursive, op->rhs);
 
 			PST_RETURN out;
 		}
 	}
 
-	MBox<ExprElement> GeneralBinary::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> GeneralBinary::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
-		auto pos
-			= dia::SourcePosition(state.getPosition(), state.getPosition((i64) length - 1).getEnd());
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
+
+		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
 		i64 fwd            = 0;
 		i64 reduced_length = length;
@@ -68,13 +72,15 @@ namespace pst::expr {
 		PST_WHILE(fwd < reduced_length) {
 			next = skipAtom(state, fwd, reduced_length);
 			if (fwd == next)
-				makeBox<tpc::NoIdentifierError>(state.getPosition(fwd), state[fwd].describe());
+				state.logInt(
+					makeBox<tpc::NoIdentifierError>(state.getPosition(fwd), state[fwd].describe())
+				);
 			if (next < reduced_length - 1)  // Not a suffix operator or end of expression
 				operators.push_back(next);
 			fwd = std::min(next + 1, reduced_length);
 		}
 
-		if (operators.size() == 0) return Lower::parse(state, length);
+		if (operators.size() == 0) return Lower::parse(state);
 
 		struct Partial {
 			BuilderExpr lhs;
@@ -102,7 +108,7 @@ namespace pst::expr {
 			stack.push({ std::move(lhs), fwd, curr_prec });
 		}
 
-		BuilderExpr rhs = length - operators.back() - 1;
+		BuilderExpr rhs = base::safeIntConv<i64>(length) - operators.back() - 1;
 		PST_WHILE(!stack.empty()) {
 			Partial partial = std::move(stack.top());
 			stack.pop();

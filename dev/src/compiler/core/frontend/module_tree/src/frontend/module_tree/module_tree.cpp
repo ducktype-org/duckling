@@ -599,7 +599,6 @@ namespace compiler::frontend {
 		// Update module hash for the parent module since the number of children changed
 		// Adding a submodule does not change the path component hash of the module so we do not
 		// need to invalidate hash For all SourceFiles and Submodules
-		// @TODO: #1253 every update and change to module should invalidate query caches
 		module->updateModuleHash();
 	}
 
@@ -624,8 +623,7 @@ namespace compiler::frontend {
 		);
 
 		module->m_other_files.at(ext_id).push_back(file);
-		//@TODO: do we need to update the module here? #1253
-		// module->update();
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
@@ -674,8 +672,7 @@ namespace compiler::frontend {
 		);
 
 		files.erase(it);
-		//@TODO: do we need to update the module here? #1253
-		// module->update();
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::setParent(
@@ -841,7 +838,6 @@ namespace compiler::frontend {
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
 		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesFromFile(file);
-		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
 		for (auto& source_file: source_files) source_file->update();
 	}
 
@@ -1008,15 +1004,20 @@ namespace compiler::frontend {
 			= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				file_id
 			);
-		auto pst              = file->getPST();
-		auto root_id          = pst->getRootElement().unlock(ctx)->getID();
-		auto maybe_put_result = root_element_file_back_map.maybePut(root_id, file_id);
-		if (!maybe_put_result) {
-			// If the key already exists, assert that it maps to the same value
-			CORE_ASSERT(
-				root_element_file_back_map.getCopy(root_id) == file_id,
-				"Root element ID already exists in back map with a different file ID"
-			);
+		auto pst           = file->getPST();
+		auto root_optional = pst->getRootElement().unlockOpt(ctx);
+
+		if (root_optional.has_value()) {
+			auto root_id = root_optional.value()->getID();
+
+			auto maybe_put_result = root_element_file_back_map.maybePut(root_id, file_id);
+			if (!maybe_put_result) {
+				// If the key already exists, assert that it maps to the same value
+				CORE_ASSERT(
+					root_element_file_back_map.getCopy(root_id) == file_id,
+					"Root element ID already exists in back map with a different file ID"
+				);
+			}
 		}
 
 		return pst;

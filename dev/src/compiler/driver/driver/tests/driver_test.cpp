@@ -52,7 +52,7 @@ public:
 
 protected:
 	void beforeAll() override {
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {
 					.package_name = package_name,
@@ -64,11 +64,12 @@ protected:
 				.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
-				.debug_options         = {},
-				.incremental           = {},
-				.execution_options     = {},
+				.debug_options         = { },
+				.incremental           = { },
+				.execution_options     = { .worker_count = 1 },
 			}
 		);
+		ASSERT_TRUE(init_result.status().isOk());
 	}
 
 private:

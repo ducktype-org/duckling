@@ -4,28 +4,28 @@
 
 namespace pst {
 	MBox<ImportStarHides> ImportStarHides::parse(LangParserState& state) {
-		auto out = makeBox<ImportStarHides>(state.getPosition());
+		auto out = makeBox<ImportStarHides>(state);
 
 		tpc::Identifier id;
 
-		state.parse(out).all(&id);
+		PARSE().all(&id);
 		out->names.push_back(id);
 
 		PST_WHILE(state[0].is(NamedOperator::Period)) {
-			state.parse(out).all(NamedOperator::Period, &id);
+			PARSE().all(NamedOperator::Period, &id);
 			out->names.push_back(id);
 		}
 
-		state.parse(out).one(NamedOperator::PeriodStar);
+		PARSE().one(NamedOperator::PeriodStar);
 
-		if (state.parse(out).tryEat(Keyword::Hides)) {
+		if (PARSE().tryEat(Keyword::Hides)) {
 			out->hides.emplace();
 
-			state.parse(out).all(&id);
+			PARSE().all(&id);
 			out->hides->push_back(id);
 
 			PST_WHILE(state[0].is(Special::Comma)) {
-				state.parse(out).all(Special::Comma, &id);
+				PARSE().all(Special::Comma, &id);
 				out->hides->push_back(id);
 			}
 		}
@@ -55,7 +55,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ImportStarHides::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ImportStarHides::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, names);
 		addToHash(partial_hash, hides.has_value());
 		if (hides) addToHash(partial_hash, *hides);

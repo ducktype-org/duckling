@@ -150,12 +150,14 @@ namespace base {
  * When possible use CORE_ASSERT instead alongside RELEASE_NOEXCEPT if needed.
  * @note If this assertion fails the program will be terminated.
  */
-#define CORE_ASSERT_NOEXCEPT(cond, what, ...)                         \
-	bool CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = false; \
-	try {                                                             \
-		CORE_ASSERT(cond, what __VA_OPT__(, ) __VA_ARGS__);           \
-	} catch (const base::Panic& e) {                                  \
-		e.printToCerr();                                              \
-		CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = true;   \
-	}                                                                 \
-	if (CONCAT_2(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); }
+#define CORE_ASSERT_NOEXCEPT(cond, what, ...)                                          \
+	{                                                                                  \
+		bool CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = false;              \
+		try {                                                                          \
+			CORE_ASSERT(cond, what __VA_OPT__(, ) __VA_ARGS__);                        \
+		} catch (const base::Panic& e) {                                               \
+			e.printToCerr();                                                           \
+			CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = true;                \
+		}                                                                              \
+		if (CONCAT_2(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); } \
+	}

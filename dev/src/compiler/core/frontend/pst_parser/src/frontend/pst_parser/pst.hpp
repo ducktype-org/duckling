@@ -27,9 +27,6 @@ namespace pst {
 	 *
 	 * Program - Top level is unordered
 	 * Script - Top level is ordered
-	 *
-	 * Currently doesn't change anything
-	 * @TODO: #1891 Will add the behaviour
 	 */
 	enum class PSTType {
 		Program,
@@ -178,7 +175,7 @@ namespace pst {
 		 */
 		void signGenerated() {
 			if (auto ref = element.internalMut()) {
-				LangElement::HashAlg partial_hash{};
+				HashAlg partial_hash{};
 				ref->calcSignature(partial_hash);
 				auto hash = partial_hash.finalize();
 				ref->signGenerated(hash);

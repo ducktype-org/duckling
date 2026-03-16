@@ -334,7 +334,8 @@ namespace compiler::helios::code {
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				const auto lookup_result = h_interface.lookup(query_ctx, ident->getName().value);
+				const auto lookup_qresult = h_interface.lookup(query_ctx, ident->getName().value);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
@@ -383,6 +384,7 @@ namespace compiler::helios::code {
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
 		 * - `i64(42)` - used for explicit type casts.
 		 * - `i64[42]` - used for static array type creation.
+		 * - `List[i64]` - for dynamic array type creation.
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
@@ -537,9 +539,9 @@ namespace compiler::helios::code {
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
-			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
-			                         .lookup(query_ctx, expr_access->getName().value);
-
+			auto lookup_qresult    = HInterface::ofTypeInstance(current_expr_type)
+			                          .lookup(query_ctx, expr_access->getName().value);
+			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
 			// Note that if multiple symbols were found, it results in an error and enters
 			// the following if statement. This is temporary, as symbol ambiguity should be
@@ -645,8 +647,9 @@ namespace compiler::helios::code {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
 				auto current_expr_type = current_expr->expression_type.getType();
-				auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
-				                         .lookup(query_ctx, expr_access->getName().value);
+				auto lookup_qresult    = HInterface::ofTypeInstance(current_expr_type)
+				                          .lookup(query_ctx, expr_access->getName().value);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -700,8 +703,9 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState> {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
-				                         .lookup(query_ctx, expr_access->getName().value);
+				auto lookup_qresult = HInterface::ofSymbol(namespace_like_symbol)
+				                          .lookup(query_ctx, expr_access->getName().value);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 				// @TODO: #1412 fix dealias
 				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
@@ -847,7 +851,7 @@ namespace compiler::helios::code {
 			const std::vector<SymID>&     candidates,
 			pst::Access<pst::LangElement> callee_element,
 			pst::Access<pst::expr::Call>  call_expr
-		) -> query::QResult<base::Box<CallExpr>> {
+		) -> query::QResult<base::Box<Expr>> {
 			if (candidates.size() >= 1 && kind(candidates[0]) == SymbolKind::Method) {
 				// @TODO: #2135 handle ambiguity in class scopes
 
@@ -855,10 +859,11 @@ namespace compiler::helios::code {
 				auto find_self_arg = [&] -> query::QResult<SymID> {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ call_expr });
 
-					auto sym_list_result = HInterface::ofScopeWithParents(scope)
-					                           .lookup(ctx, base::StrID("self"))
-					                           ->getAsSingle();
-					UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
+					auto lookup_qresult
+						= HInterface::ofScopeWithParents(scope).lookup(ctx, base::StrID("self"));
+
+					UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+					UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result->getAsSingle());
 
 					variant_match(sym_list) {
 						variant_case(SymbolList, result) { return result.back(); }

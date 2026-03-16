@@ -55,7 +55,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
+	DECLARE_QUERY(QueryLinkedScope, SymID, query::QResult<ScopeID>, ({}));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -489,6 +489,9 @@ namespace compiler::helios {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymbolData> output_symbol_data;
 
+					auto char_type = tsh::SymbolType<>(
+						tsh::getCharType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+					);
 					auto i32_type = tsh::SymbolType<>(
 						tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
@@ -521,41 +524,48 @@ namespace compiler::helios {
 							tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 						);
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data
-						= { {
-							{
-								base::StrID("builtin_input_i64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
-							},
-							{
-								base::StrID("builtin_output_i64"),
-								ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
-							},
-							{
-								base::StrID("builtin_input_u64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, u64_type }),
-							},
-							{
-								base::StrID("builtin_output_u64"),
-								ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type }),
-							},
-							{
-								base::StrID("builtin_input_f64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, f64_type }),
-							},
-							{
-								base::StrID("builtin_output_f64"),
-								ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type }),
-							},
-							{
-								base::StrID("builtin_input_string"),
-								ctx.query<tsh::QueryFunctionType>({ {}, str_type }),
-							},
-							{
-								base::StrID("builtin_output_string"),
-								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type }),
-							},
-						} };
+					std::array function_data = {
+						std::make_pair(
+							base::StrID("builtin_input_char"),
+							ctx.query<tsh::QueryFunctionType>({ {}, char_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_char"),
+							ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_i64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, i64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_i64"),
+							ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_u64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, u64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_u64"),
+							ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_f64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, f64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_f64"),
+							ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_string"),
+							ctx.query<tsh::QueryFunctionType>({ {}, str_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_string"),
+							ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
+						),
+					};
 
 					for (auto& [name, type]: function_data) {
 						auto sym_data
@@ -605,7 +615,7 @@ namespace compiler::helios {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInSymbol, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->common.kind) {
 			case SymbolKind::Using:
@@ -620,7 +630,7 @@ namespace compiler::helios {
 				// when QueryLookupInSymbol will get more and more
 				// per-symbol-kind cases.
 
-				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
+				UNPACK_QRESULT(auto linked_scope =, ctx.query<QueryLinkedScope>(key.symbol));
 				return *HInterface::ofScope(linked_scope)
 				            .lookup(ctx, key.name, { key.follow_wildcards });
 			}
@@ -636,16 +646,16 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
-	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-		struct QueryLinkedScopeVisitor final: pst::PstVisitorPanicky {
+	struct IMPLEMENT_QUERY(QueryLinkedScope, query::QResult<ScopeID>) {
+		struct QueryLinkedScopeVisitor final: pst::PstVisitorEmpty {
 			query::Context& ctx;
 			QKey            key;
 
 			QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
 
-			base::Optional<ScopeID> result_scope;
+			base::Optional<query::QResult<ScopeID>> result_scope;
 
-			void output(ScopeID out) {
+			void output(query::QResult<ScopeID> out) {
 				CORE_ASSERT(result_scope.empty(), "Output already set");
 				result_scope.emplace(out);
 			}
@@ -682,8 +692,9 @@ namespace compiler::helios {
 
 				if (!maybe_imported_module.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Module not found", import_stmt->getSourcePosition()
+						"Module not found.", import_stmt->getSourcePosition()
 					));
+					output(query::Failed());
 					return;
 				}
 
@@ -708,8 +719,16 @@ namespace compiler::helios {
 				key.ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
-			default:
-				throw base::NotYetImplemented("Getting linked scope for some SymbolKind...");
+			default: {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"Linked scope for this symbol kind is not implemented yet: ",
+						key.ref->common.kind
+					),
+					stmt(ctx, key.ref).value()->getSourcePosition()
+				));
+				return query::Failed();
+			}
 			}
 		}
 
@@ -997,7 +1016,7 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& expr) override {
-				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
+				for (const auto& sub_expr: expr.comparisons) sub_expr->acceptVisitor(*this);
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) override {

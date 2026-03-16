@@ -5,22 +5,21 @@
 namespace pst {
 
 	MBox<Attribute> Attribute::parse(LangParserState& state) {
-		auto           position = state.getPosition();
-		Box<Attribute> out      = makeBox<Attribute>(position);
+		Box<Attribute> out = makeBox<Attribute>(state);
 
 		if (!assertStmtChoice<Attribute>(state, state[0].is(Special::AtSign))) return nullptr;
 
-		state.parse(out).all(Special::AtSign, &out->name);
+		PARSE().all(Special::AtSign, &out->name);
 
 		// @TODO: Make a more general solution to dotted names that can't have stars
 		if (out->name.internal() && out->name.internal()->getStar())
 			state.logSafeError(makeBox<AttrStarError>(out->name.internal()->getSourcePosition()));
-		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
+		if (state[0].isBracketGroup(Token::BracketType::Round)) PARSE().one(&out->args);
 
 		PST_RETURN out;
 	}
 
-	LangElement::HashAlg& Attribute::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Attribute::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

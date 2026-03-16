@@ -1,3 +1,4 @@
+
 /**
  * @file instruction_definitions.hpp
  * @brief Contains definitions of all high bytecode instructions. Can be used for generating

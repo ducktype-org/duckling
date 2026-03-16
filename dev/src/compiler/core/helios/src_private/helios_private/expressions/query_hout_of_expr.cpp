@@ -2,17 +2,18 @@
 
 #include "coercions.hpp"
 #include "errors.hpp"
+#include "function_calls/call_processing.hpp"
 #include "numeric_literals.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/chain_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/expressions/builtin_operations.hpp>
+#include <helios_private/expressions/builtin_operators.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -53,11 +54,30 @@ namespace compiler::helios::code {
 			};
 
 		public:
-			UnknownEscapeSequenceError(dia::SourcePosition source_position, std::string sequence):
+			UnknownEscapeSequenceError(
+				const dia::SourcePosition& source_position, std::string sequence
+			):
 				  MessageWithCodeFragmentAndCause(source_position) {
 				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
 				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
 			}
+		};
+
+		/**
+		 * @brief This error message is used when a character literal contains more than one
+		 * character.
+		 */
+		class InvalidCharacterLiteralError final: public dia_int::MessageWithCodeFragment {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "error",
+					     .family        = "parser",
+					     .name          = "invalid_character_literal" };
+			}
+
+		public:
+			explicit InvalidCharacterLiteralError(const dia::SourcePosition& source_position):
+				  MessageWithCodeFragment(source_position) {}
 		};
 
 		/**
@@ -76,8 +96,7 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator()
-				    == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
+				if (bin_op->getOperator() == lang_def::NamedOperator::Pipe) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
@@ -94,8 +113,7 @@ namespace compiler::helios::code {
 			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(
-				expr.unlock(ctx)->getOperator()
-					== lang_def::operatorToStr(lang_def::NamedOperator::Pipe),
+				expr.unlock(ctx)->getOperator() == lang_def::NamedOperator::Pipe,
 				"Not a variant operator"
 			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
@@ -115,7 +133,7 @@ namespace compiler::helios::code {
 			/**
 			 * The "output" of the visitor.
 			 */
-			base::Optional<base::Box<Expr>> node;
+			base::Optional<Box<Expr>> node;
 
 			void visitUnitExpr(pst::Access<pst::expr::UnitExpr> elem) override {
 				node = makeBox<LiteralUnitExpr>(ctx, pstOrigin(elem));
@@ -134,51 +152,54 @@ namespace compiler::helios::code {
 				}
 			}
 
-			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
+			void visitExprCharValue(pst::Access<pst::expr::ExprCharValue> stmt) override {
 				const auto escaped_string  = stmt->getValue().value.strView();
 				const auto unescape_result = base::unescapeString(escaped_string);
-				variant_match(unescape_result) {
-					variant_case(base::UnescapedString, result) {
-						node = makeBox<LiteralStringExpr>(
-							ctx, pstOrigin(stmt), base::StrID(result.value)
-						);
+				match_optional(unescape_result) {
+					opt_some(result) {
+						if (result.value.size() == 1) {
+							node
+								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
+						} else {
+							ctx.logInt(
+								makeBox<InvalidCharacterLiteralError>(stmt->getSourcePosition())
+							);
+						}
 					}
-					variant_case(base::UnknownEscapeSequence, error) {
+					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
 							stmt->getSourcePosition(), error.value
 						));
 					}
-					variant_default CORE_UNREACHABLE();
 				}
 			}
 
-			/**
-			 * If a valid builtin exists (special characters only), returns it.
-			 * Otherwise, returns None.
-			 */
-			base::Optional<Box<Expr>> binaryBuiltin(
-				pst::Access<pst::expr::BinaryOperator> expr, Box<Expr> lhs, Box<Expr> rhs
-			) {
-				auto result = findBinaryBuiltin(ctx, expr->getOperator(), lhs.ref(), rhs.ref());
-
-				match_optional(result) {
-					opt_some_move(value) {
-						auto [operation, lhs_coercion, rhs_coercion] = value;
-
-						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
-
-						return makeBox<BinaryOperatorExpr>(
-							ctx,
-							pstOrigin(expr),
-							operation,
-							std::move(coerced_lhs),
-							std::move(coerced_rhs)
+			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
+				const auto escaped_string  = stmt->getValue().value.strView();
+				const auto unescape_result = base::unescapeString(escaped_string);
+				match_optional(unescape_result) {
+					opt_some(result) {
+						node = makeBox<LiteralStringExpr>(
+							ctx, pstOrigin(stmt), base::StrID(result.value)
 						);
 					}
-					opt_none { return {}; }
+					opt_err(error) {
+						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+							stmt->getSourcePosition(), error.value
+						));
+					}
 				}
-				return {};
+			}
+
+			static bool isNumericType(const tsh::AbstractType type) {
+				return type.getKind() == tsh::Kind::Integral or type.getKind() == tsh::Kind::Float;
+			}
+
+			static bool isNumericOperator(const lexer::Operator op) {
+				// Only operators which allow their arguments to undergo numeric promotion.
+				static const std::set<std::string> numeric_ops
+					= { "+", "-", "*", "/", "%", "**", "<", "<=", ">", ">=", "==", "!=" };
+				return numeric_ops.contains(op.str());
 			}
 
 			/**
@@ -193,16 +214,74 @@ namespace compiler::helios::code {
 					opt_some_move(value) {
 						auto [operation, coercion] = value;
 						auto coerced               = coercion.coerce(ctx, std::move(expr));
-						return makeBox<UnaryOperatorExpr>(origin, operation, std::move(coerced));
+						return makeBox<UnaryOperatorExpr>(
+							ctx, origin, operation, std::move(coerced)
+						);
 					}
 					opt_none { return {}; }
 				}
 				CORE_UNREACHABLE();
 			}
 
+			/**
+			 * @brief Finds the appropriate binary operator to call and constructs the corresponding
+			 * HOUT expression. Consumes the provided expressions of the arguments.
+			 * @param op The operator
+			 * @param lhs The precomputed left-hand side argument
+			 * @param rhs The precomputed right-hand side argument
+			 * @param scope The scope in which the operator call happens
+			 */
+			[[nodiscard]]
+			Box<Expr> resolveBinaryOperator(
+				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
+			) const {
+				const auto lhs_type = lhs->expression_type.getSymbolType();
+				const auto rhs_type = rhs->expression_type.getSymbolType();
+
+				// Binary operator resolution now happens in two steps:
+				// 1. If the arguments are both numeric (integral or float) and the operator is a
+				// built-in arithmetic operator, we look for promotions from left to right and from
+				// right to left, and then use the built-in operator on the promoted-to type.
+				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
+				//    a. The calling scope (a user can define a standalone function named `+`).
+				//    b. The type of the left-hand side argument (for an operator method).
+				// Next, we perform typical overload resolution.
+
+				// Step 1. — special path for numeric promotions
+				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
+				    && isNumericOperator(op)) {
+					auto numeric_builtin_opt
+						= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+					auto new_origin = elementOrigin(lhs->origin, rhs->origin);
+
+					if_opt_some(numeric_builtin_opt, numeric_builtin) {
+						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
+						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+						return makeBox<BinaryOperatorExpr>(
+							ctx, new_origin, operation, std::move(coerced_lhs), std::move(coerced_rhs)
+						);
+					}
+				}
+
+				// Step 2. — Regular lookup and overload resolution
+				const auto lookup_result
+					= HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
+				// @TODO: #1412 fix dealias
+				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				for (const auto [builtin_operator_sym, _]:
+				     *ctx.query<QueryRegularBinaryBuiltinSymbols>({})) {
+					if (name(builtin_operator_sym) == op.value)
+						all_candidates.push_back(builtin_operator_sym);
+				}
+				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
+				    .valueOrThrow();
+			}
+
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				if (stmt->getOperator() == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
+				const auto op = stmt->getOperator();
+				if (op == lang_def::NamedOperator::Pipe) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
@@ -229,37 +308,16 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// Default case (typical operators, built-in or user-defined)
 				auto lhs_res = fromPST(ctx, stmt->getLeftOperand());
 				auto rhs_res = fromPST(ctx, stmt->getRightOperand());
-
-				// @todo: make failure more explicit...
-				if (lhs_res.hasFailed() or rhs_res.hasFailed()) return;  // failed
 
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
-				auto lhs_type = lhs->expression_type.getSymbolType();
-				auto rhs_type = rhs->expression_type.getSymbolType();
-
-				// @todo here we should:
-				// * lookup for user defined operators
-				// * type check
-				// * make function call
-				// For now we support just builtins
-
-				auto builtin = binaryBuiltin(stmt, std::move(lhs), std::move(rhs));
-				if (builtin.has_value()) {
-					node = std::move(builtin).value();
-					return;
-				} else {
-					ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
-						stmt->getSourcePosition(),
-						stmt->getOperator().str(),
-						makeBox<InteractiveType>(ctx, lhs_type),
-						makeBox<InteractiveType>(ctx, rhs_type)
-					));
-					// failed
-				}
+				node = resolveBinaryOperator(
+					op, std::move(lhs), std::move(rhs), ctx.query<QueryPrimaryCodeScopeFor>({ stmt })
+				);
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
@@ -379,6 +437,16 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
+				case pst::Keyword::List: {
+					node = makeBox<LiteralTypeExpr>(
+						ctx,
+						pstOrigin(stmt),
+						ctx.query<tsh::QueryTypeTemplateType>(
+							{ tsh::TypeTemplateAbstractType::BuiltinKind::List }
+						)
+					);
+					break;
+				}
 				case pst::Keyword::Self: {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
@@ -415,7 +483,8 @@ namespace compiler::helios::code {
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Suffix operators are not implemented yet in HOUT, since they don't exist yet.",
+					"Suffix operators are not implemented yet in HOUT, since they don't exist "
+					"yet.",
 					stmt->getSourcePosition()
 				));
 				return;  // failed
@@ -436,8 +505,7 @@ namespace compiler::helios::code {
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
-				if (stmt->getOperator()
-				    == lang_def::operatorToStr(lang_def::NamedOperator::Ampersand)) {
+				if (stmt->getOperator() == lang_def::NamedOperator::Ampersand) {
 					// @TODO: #1956 remove the check bellow.
 					// This is a temporary check to prevent us from taking reference of types that
 					// do not carry information.
@@ -449,7 +517,6 @@ namespace compiler::helios::code {
 						));
 						return;  // failed
 					}
-
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as the
 					// `unique`/`leaking` specifiers.
@@ -504,61 +571,44 @@ namespace compiler::helios::code {
 				using namespace ::std::views;
 
 				const auto& pst_operators  = stmt->getOperators();
-				size_t      operator_count = std::ranges::size(pst_operators);
-				size_t      expr_count     = operator_count + 1;
+				auto        operator_count = usize(std::ranges::size(pst_operators));
+				usize       expr_count     = operator_count + 1;
 
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
-				for (size_t i = 0; i < expr_count; ++i) {
+				for (usize i = 0; i < expr_count; ++i) {
 					auto result = fromPST(ctx, stmt->getSubExpr(i));
-					if (result.hasFailed())
-						return;
-					else
-						result_exprs.push_back(std::move(result.valueOrThrow()));
+					if (result.hasFailed()) return;
+					result_exprs.push_back(std::move(result.valueOrThrow()));
 				}
 
-				// @todo here we should:
-				// * lookup for user defined operators
-				// * type check
-				// * make function call
-				// For now we support just builtins
+				// Comparison chain construction is unusual, because it reuses some of its
+				// arguments. Thus, we need to appropriately construct ReusableExpr instances,
+				// which we pass to operator resolution. The resolved expressions (binary operators
+				// or calls) are then passed to the final ChainComparisonExpr.
 
-				// if no function call is found, we try to use builtin operators:
+				// The lhs argument of the comparison to be processed.
+				auto lhs = std::move(result_exprs.at(0));
+				// The scope of the entire expression.
+				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
+				// The resolved comparisons.
+				std::vector<Box<Expr>> comparisons;
+				comparisons.reserve(operator_count);
 
-				std::vector<BuiltinBinary> operators;
-				operators.reserve(operator_count);
-				for (size_t i = 0; i < operator_count; ++i) {
-					auto lhs_type = result_exprs.at(i)->expression_type.getSymbolType();
-					auto rhs_type = result_exprs.at(i + 1)->expression_type.getSymbolType();
+				// Perform operator resolution for each operator in the chain. Reuse the expressions
+				// which are between two operators. The last expressions is not reused, but that's fine.
+				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
+					const auto op = pst_operators.at(op_idx);
+					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
+					auto next_lhs = rhs->nextUse();
 
-					auto result = findBinaryBuiltin(
-						ctx,
-						pst_operators.at(i),
-						result_exprs.at(i).ref(),
-						result_exprs.at(i + 1).ref()
+					comparisons.emplace_back(
+						resolveBinaryOperator(op, std::move(lhs), std::move(rhs), scope)
 					);
-
-					if (result) {
-						auto [op, lhs_coercion, rhs_coercion] = std::move(result).value();
-						result_exprs[i] = lhs_coercion.coerce(ctx, std::move(result_exprs[i]));
-						result_exprs[i + 1]
-							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
-						operators.push_back(op);
-					} else {
-						ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
-							stmt->getSourcePosition(),
-							pst_operators.at(i).str(),
-							makeBox<InteractiveType>(ctx, lhs_type),
-							makeBox<InteractiveType>(ctx, rhs_type)
-						));
-
-						return;
-					}
+					lhs = std::move(next_lhs);
 				}
 
-				node = makeBox<ChainComparisonExpr>(
-					ctx, pstOrigin(stmt), std::move(result_exprs), std::move(operators)
-				);
+				node = makeBox<ChainComparisonExpr>(ctx, pstOrigin(stmt), std::move(comparisons));
 			}
 		};
 
