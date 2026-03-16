@@ -9,20 +9,20 @@ namespace vm::jit::cnp {
 
 	JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
 		PUSH_DIAGNOSTIC       ALLOW_EXTENSIONS;
-		static constexpr char _bin[] = {
+		static constexpr char BIN[] = {
 #embed "wrapper-so" suffix(, )
 			0
 		};
 		POP_DIAGNOSTIC
 
-		constexpr static auto stencils = Stencils out{ .binary    = std::to_array(_bin),
+		constexpr static auto STENCILS = Stencils out{ .binary    = std::to_array(BIN),
 			                                           .functions = {
 #include <wrapper-nm>
 													   } };
 
 		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
 		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
-			return stencils.functions[static_cast<u64>(opcode)].size;
+			return STENCILS.functions[static_cast<u64>(opcode)].size;
 		};
 		usize size = std::ranges::fold_left(
 			opcodes | std::views::transform(get_opfunc_size), 0, std::plus{}
@@ -37,7 +37,7 @@ namespace vm::jit::cnp {
 		};
 
 		for (low::MicroOpcode opcode: opcodes)
-			add_instr(stencils.stencil_binary(static_cast<u64>(opcode)));
+			add_instr(STENCILS.stencilBinary(static_cast<u64>(opcode)));
 		return memory.into_func<JitOpFun>();
 	}
 }

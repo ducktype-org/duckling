@@ -11,7 +11,7 @@
 	#include <iostream>
 
 namespace vm::jit::cnp {
-	inline usize get_page_size() {
+	inline usize getPageSize() {
 		static usize page_size = std::invoke([]() {
 			long result = sysconf(_SC_PAGESIZE);
 			SYSTEM_CHECK(result != -1, "couldn't get the page size");
@@ -22,25 +22,23 @@ namespace vm::jit::cnp {
 	}
 
 	JitMemory JitMemory::allocate(usize size) {
-		size = (size + get_page_size() - 1) / get_page_size() * get_page_size();
-		CORE_ASSERT(size % get_page_size() == 0, "should be aligned to page size");
+		size = (size + getPageSize() - 1) / getPageSize() * getPageSize();
+		CORE_ASSERT(size % getPageSize() == 0, "should be aligned to page size");
 		int  flags = MAP_ANONYMOUS | MAP_PRIVATE;
 		auto memory
-			= reinterpret_cast<byte*>(mmap(NULL, size, PROT_READ | PROT_WRITE, flags, -1, 0));
+			= reinterpret_cast<byte*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, flags, -1, 0));
 
 		SYSTEM_CHECK(memory != MAP_FAILED, "unable to allocate memory");
 		return JitMemory{ .memory = memory, .size = size };
 	}
 
-	void JitMemory::mark_executable() {
+	void JitMemory::markExecutable() {
 		SYSTEM_CHECK(
 			mprotect(memory, size, PROT_READ | PROT_EXEC) == 0, "unable to mark memory as executable"
 		);
 	}
 
-	void JitMemory::free_jit_memory() {
-		SYSTEM_CHECK(munmap(memory, size), "unable to free memory");
-	}
+	void JitMemory::freeJitMemory() { SYSTEM_CHECK(munmap(memory, size), "unable to free memory"); }
 }
 
 #elif _WIN32
@@ -50,7 +48,7 @@ namespace vm::jit::cnp {
 	#include <iostream>
 
 namespace vm::jit::cnp {
-	usize get_page_size() {
+	usize getPageSize() {
 		static SYSTEM_INFO system_info = []() {
 			SYSTEM_INFO system_info;
 			GetSystemInfo(&system_info);
@@ -60,7 +58,7 @@ namespace vm::jit::cnp {
 	}
 
 	JitMemory JitMemory::allocate(usize size) {
-		CORE_ASSERT(size % get_page_size() == 0, "should be aligned to page size");
+		CORE_ASSERT(size % getPageSize() == 0, "should be aligned to page size");
 		int   flags = MAP_ANONYMOUS | MAP_PRIVATE;
 		auto* memory
 			= reinterpret_cast<byte*>(VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE););

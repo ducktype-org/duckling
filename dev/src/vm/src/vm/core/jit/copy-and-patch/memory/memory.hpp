@@ -9,11 +9,11 @@ namespace vm::jit::cnp {
 	struct JitMemory {
 		static JitMemory allocate(usize size);
 
-		void mark_executable();
-		void free_jit_memory();
+		void markExecutable();
+		void freeJitMemory();
 
 		template<class Func>
-		const Func* into_func() const {
+		const Func* intoFunc() const {
 			return reinterpret_cast<const Func*>(memory);
 		}
 

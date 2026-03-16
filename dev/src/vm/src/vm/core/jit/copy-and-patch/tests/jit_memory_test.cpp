@@ -1,6 +1,4 @@
-#include "../memory/memory.cpp"
 #include "../memory/memory.hpp"
-#include "../stencils/dynamic_linker.cpp"
 #include "../stencils/import_stencils.hpp"
 
 #include <base/pointers/box.hpp>
@@ -16,12 +14,14 @@ using vm::jit::cnp::LLVM_nm_data;
 using vm::jit::cnp::Stencils;
 
 
-PUSH_DIAGNOSTIC ALLOW_EXTENSIONS constexpr static char full_elf[] = {
+PUSH_DIAGNOSTIC
+ALLOW_EXTENSIONS
+constexpr static char FULL_ELF[] = {
 #embed "mock_stencils-so" suffix(, )
 };
 POP_DIAGNOSTIC
 
-static auto stencils = Stencils { .binary = std::bit_cast<std::array<byte, sizeof(full_elf)>>(full_elf),
+static auto stencils = Stencils { .binary = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
 	                                                             .functions = {
 #include <mock_stencils-nm>
 																 }
@@ -49,14 +49,14 @@ private:
 		for (LLVM_nm_data data: stencils.functions()) std::cerr << data.name << '\n';
 	}
 
-	constexpr static auto find_func = [](auto name) {
+	constexpr static auto FIND_FUNC = [](auto name) {
 		for (LLVM_nm_data data: stencils.functions())
 			if (data.name == name) return data;
 		CORE_PANIC("No function with that name");
 	};
 
 	void testSimple() {
-		auto foo_code = find_func("simple_function_plus_1");
+		auto foo_code = FIND_FUNC("simple_function_plus_1");
 		auto memory   = JitMemory::allocate(foo_code.size);
 		std::ranges::copy(stencils.stencil_binary(foo_code), memory.memory);
 		memory.mark_executable();
@@ -66,7 +66,7 @@ private:
 	}
 
 	void testRecursive() {
-		auto foo_code = find_func("recursive_fibonacci");
+		auto foo_code = FIND_FUNC("recursive_fibonacci");
 		auto memory   = JitMemory::allocate(foo_code.size);
 		std::ranges::copy(stencils.stencil_binary(foo_code), memory.memory);
 		memory.mark_executable();

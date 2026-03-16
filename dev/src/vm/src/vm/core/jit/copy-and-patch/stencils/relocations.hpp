@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/types/ints.hpp>
+
 #include <cstddef>
 
 namespace vm::jit::cnp {

@@ -9,6 +9,7 @@
 	#include <unistd.h>
 
 	#include <cstring>
+	#include <format>
 
 namespace vm::jit::cnp {
 	inline DynamicLibrary DynamicLibrary::load(std::span<const byte> binary) {
@@ -21,7 +22,7 @@ namespace vm::jit::cnp {
 			while (to_write) {
 				ssize_t ret = write(fd, ptr, to_write);
 				SYSTEM_CHECK(ret != -1, "write failed: ");
-				usize written = (usize) ret;
+				auto written = static_cast<usize>(ret);
 				to_write -= written;
 				ptr += written;
 			}
@@ -29,18 +30,18 @@ namespace vm::jit::cnp {
 		write_n();
 		lseek(fd, 0, SEEK_SET);
 
-		char path[64];
-		sprintf(path, "/proc/self/fd/%d", fd);
-		void* handle = dlopen(path, RTLD_NOW);
-		CORE_CHECK(handle, "dlopen failed: ", dlerror());
 
-		return DynamicLibrary{ fd, handle };
+		auto  path   = std::format("/proc/self/fd/{}", fd);
+		void* handle = dlopen(path.data(), RTLD_NOW);
+		CORE_CHECK(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+
+		return DynamicLibrary{ .lib_fd = fd, .lib_handle = handle };
 	}
 
 	template<class T>
 	inline T* DynamicLibrary::findSymbol(const char* name) const {
 		void* sym_loc = dlsym(lib_handle, name);
-		CORE_CHECK(sym_loc, "dlsym failed: ", dlerror());
+		CORE_CHECK(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 		return reinterpret_cast<T*>(sym_loc);
 	}
 }

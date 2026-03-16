@@ -95,11 +95,14 @@ namespace base {
 		DETAIL_THROW_PANIC("    Check failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__); \
 	}
 
+// NOLINTBEGIN(concurrency-mt-unsafe)
 /**
  * @brief Checks for error in system function result, explanation based on std::strerror and errno.
  */
 #define SYSTEM_CHECK(cond, what, ...) \
 	CORE_CHECK(cond, what, std::strerror(errno) __VA_OPT__(, ) __VA_ARGS__)
+// NOLINTEND(concurrency-mt-unsafe)
+
 
 #if defined(BUILD_TYPE_DEV)
 	/**
