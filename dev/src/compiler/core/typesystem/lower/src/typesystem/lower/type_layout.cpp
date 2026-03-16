@@ -142,10 +142,15 @@ namespace compiler::tsl {
 		}
 	}
 
+	TypeLayoutABC::TypeLayoutABC(const Bits size, const tsh::AbstractType source_type, query::Context& ctx):
+		size(size),
+		source_type(source_type),
+		mangled_name(ctx.query<helios::mangler::QueryMangledType>({source_type})->valueOrThrow()) {}
+
 	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
 		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3, dynamic_array_type),
+		  TypeLayoutABC(POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3, dynamic_array_type, ctx),
 		  element_layout(ctx.query<QuerySymbolTypeLayout>(dynamic_array_type.getElementType())) {}
 
 	std::string DynamicArrayTypeLayout::toStringDefinition(
@@ -171,7 +176,7 @@ namespace compiler::tsl {
 		  TypeLayoutABC(
 			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getSize()
 				  * static_array_type.getSize(),
-			  static_array_type
+			  static_array_type, ctx
 		  ),
 		  element_layout(ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())),
 		  element_count(static_array_type.getSize()) {}
@@ -213,7 +218,7 @@ namespace compiler::tsl {
 		const VariantTypeLayoutConstructionHelper& helper, query::Context& ctx
 	):
 		  TypeLayoutABC(
-			  bytes2bits(helper.offsets[1]) + helper.max_component_size, helper.variant_type
+			  bytes2bits(helper.offsets[1]) + helper.max_component_size, helper.variant_type, ctx
 		  ),
 		  tag_offset{ 0 },                   // 0 bytes
 		  tag_size{ 8 },                     // 8 bits
@@ -291,10 +296,10 @@ namespace compiler::tsl {
 	};
 
 	TupleTypeLayout::TupleTypeLayout(const tsh::TupleAbstractType tuple_type, query::Context& ctx):
-		  TupleTypeLayout(TupleTypeLayoutConstructionHelper(tuple_type, ctx)) {}
+		  TupleTypeLayout(TupleTypeLayoutConstructionHelper(tuple_type, ctx), ctx) {}
 
-	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper):
-		  TypeLayoutABC(helper.total_size, helper.tuple_type),
+	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper, query::Context& ctx):
+		  TypeLayoutABC(helper.total_size, helper.tuple_type, ctx),
 		  num_components(helper.component_layouts.size()),
 		  component_offsets(std::move(helper).component_offsets),
 		  layout_idx_to_component_idx(std::move(helper).layout_idx_to_component_idx),
@@ -399,8 +404,8 @@ namespace compiler::tsl {
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx), ctx) {}
 
-	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context&):
-		  TypeLayoutABC(helper.total_size, helper.class_type),
+	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
+		  TypeLayoutABC(helper.total_size, helper.class_type, ctx),
 		  num_fields(helper.field_layouts.size()),
 		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
 		for (u32 i = 0; i < num_fields; i++) {
@@ -451,11 +456,11 @@ namespace compiler::tsl {
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, pointer_type),
+		  TypeLayoutABC(POINTER_SIZE, pointer_type, ctx),
 		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())) {}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
-		  TypeLayoutABC(POINTER_SIZE, symbol_type.getType()),
+		  TypeLayoutABC(POINTER_SIZE, symbol_type.getType(), ctx),
 		  pointee(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
