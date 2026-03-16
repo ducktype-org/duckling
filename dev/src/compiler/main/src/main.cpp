@@ -15,7 +15,7 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>

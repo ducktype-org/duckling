@@ -8,7 +8,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/dotted_name.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/hout/elements.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
