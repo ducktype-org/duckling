@@ -196,7 +196,7 @@ impl DetailedSource {
 /// Conditions, from which any has to be true, in order to enable this dependency.
 pub struct DependencyCondition {
     /// Enable this dependency/feature if we build the root package with at least one of the
-    /// specified features. (Emitted field means always build)
+    /// specified features. (Omitted field means always build)
     pub package_features: Option<Vec<String>>,
 }
 
