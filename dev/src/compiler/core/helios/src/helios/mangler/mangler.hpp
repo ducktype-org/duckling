@@ -106,12 +106,3 @@ template<>
 struct std::hash<compiler::helios::mangler::KeyOf_MangledSymbol> final {
 	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledSymbol& key) const;
 };
-
-/**
- * Hashed used for the perfect hash of KeyOf_MangledType.
- * @TODO: #2027 likely remove.
- */
-template<>
-struct std::hash<compiler::helios::mangler::KeyOf_MangledType> final {
-	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledType& key) const;
-};

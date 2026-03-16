@@ -68,20 +68,17 @@ namespace compiler::helios::mangler {
 	}
 
 	u64 KeyOf_MangledType::queryUnstablePerfectHash() const {
-		static concurrent::ConHashMap<KeyOf_MangledType, u64> hashes{};
-		static std::atomic<u64>                               next
-			= 1;  // start from 1, so that 0 can be used as an "empty value"
-
-		u64 result = 0;
-
-		hashes.maybePutAndUpdate(*this, 0, [&result](Ref<u64> existing) {
-			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
-			result = *existing;
-		});
-
-		CORE_ASSERT(result != 0, "Hash value not set!");
-
-		return result;
+		variant_match(type_key) {
+			variant_case(tsh::AbstractType, type) {
+				return u64(hashing::justHash(type_key.index(), type.queryUnstablePerfectHash()));
+			}
+			variant_case(tsh::SymbolType<>, type) {
+				return u64(hashing::justHash(type_key.index(), type.queryUnstablePerfectHash()));
+			}
+			variant_default {
+				CORE_UNREACHABLE();
+			}
+		}
 	}
 
 	namespace internal {
@@ -661,20 +658,6 @@ std::size_t std::hash<compiler::helios::mangler::KeyOf_MangledSymbol>::operator(
 		variant_case(compiler::helios::SymID, sym_id) { return sym_id.queryUnstablePerfectHash(); }
 		variant_case(compiler::helios::mangler::special_symbol_keys::LIRModuleID, mod_id) {
 			return mod_id.id.getInnerID().asInt();
-		}
-		variant_default { CORE_UNREACHABLE(); }
-	}
-	CORE_UNREACHABLE();
-}
-
-std::size_t std::hash<compiler::helios::mangler::KeyOf_MangledType>::operator()(
-	const compiler::helios::mangler::KeyOf_MangledType& key
-) const {
-	// this does not need to be perfect, just good enough to avoid often collisions in the hash map.
-	variant_match(key.type_key) {
-		variant_case(compiler::tsh::AbstractType, type) { return type.queryUnstablePerfectHash(); }
-		variant_case(compiler::tsh::SymbolType<>, type) {
-			return std::hash<std::string>{}(type.queryUnstablePerfectHash().toStringHex());
 		}
 		variant_default { CORE_UNREACHABLE(); }
 	}
