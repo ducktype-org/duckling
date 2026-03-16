@@ -13,7 +13,7 @@ pub struct SyncOptions {
     pub overwrite: bool,
     /// Assume, that freezefile doesn't change.
     pub frozen: bool,
-    /// Disallow any errors in a solver.
+    /// Disallow any errors in foreign packages' manifests.
     pub strict_errors: bool,
 }
 

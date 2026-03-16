@@ -1,4 +1,4 @@
-//! Loading packages from a disk.
+//! Loading packages from the disk.
 use std::{marker::PhantomData, path::Path};
 
 use tracing::{debug, trace};
@@ -31,7 +31,7 @@ impl AllowGlobalPackage {
 }
 
 // Disallow creating PackageLoader instances.
-/// A loader of packages from a disk.
+/// A loader of packages from the disk.
 pub struct PackageLoader(PhantomData<()>);
 
 impl PackageLoader {

@@ -1,4 +1,4 @@
-//! A general package's abstraction.
+//! A general package abstraction.
 use crate::quackpack::{
     core::{Manifest, storage::freeze::FreezeDep},
     schemas::manifest::Manifest as ManifestSchema,

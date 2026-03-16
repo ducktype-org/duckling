@@ -1,4 +1,4 @@
-//! Duck-library consists of the two main modules: [`duck`], which is responsible for the binary side
+//! Duck-library consists of two main modules: [`duck`], which is responsible for the binary side
 //! of the duck-binary, and [`quackpack`], the main package manager logic.
 //!
 //! Notable modules are:

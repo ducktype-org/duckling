@@ -58,7 +58,7 @@ pub struct Dependency {
 #[derive(Debug)]
 /// A dependency versions which can be present in one of the two ways:
 /// 1. as a list of strings, where each string is a valid version,
-/// 2. as a string of versions which are separated by `" or "` keyword (extra spaces are ignored).
+/// 2. as a string of versions which are separated by an `" or "` keyword (extra spaces are ignored).
 pub struct OredSemver(pub Vec<Version>);
 
 impl<'de> Deserialize<'de> for OredSemver {
