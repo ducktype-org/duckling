@@ -17,9 +17,6 @@ namespace vm {
 		 */
 		base::StableObjectPool<std::mutex, u64, false> mutex_pool;
 
-
-		i64 next_cv_id = 0;
-
 		/**
 		 * @brief Pool for condition variables used in the process.
 		 */
