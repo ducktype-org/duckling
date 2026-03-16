@@ -16,6 +16,7 @@
 #include "frontend/pst_parser/pst_visitor.hpp"
 #include "helios/hout/elements/expr.hpp"
 #include "helios/hout/origin.hpp"
+#include "helios/symbols/query_type_of_symbol.hpp"
 #include "helios/symbols/symbol_id_utils.hpp"
 #include "utils.hpp"
 
@@ -28,6 +29,7 @@
 
 #include "diagnostic/source_position.hpp"
 #include "lexer/token.hpp"
+#include "query_framework/entry/query_entry_point.hpp"
 #include <query_framework/entry/with_context_do.hpp>
 
 #include <algorithm>
@@ -96,7 +98,8 @@ namespace lsp {
 		StandardTokenType   correct_type;
 
 		[[nodiscard]] bool isPrecalculatedFor(const CRef<lexer::Token>& token) const {
-			return token->getPosition() == position;
+			// We should compare based on whole position, not just the end.
+			return token->getPosition().getEnd() == position.getEnd();
 		}
 	};
 
@@ -122,6 +125,7 @@ namespace lsp {
 			case pst::ElementKind::ClassField:
 			case pst::ElementKind::Param:
 			case pst::ElementKind::CallArgument:
+			case pst::ElementKind::Const:
 				return true;
 			default:
 				return false;
@@ -203,25 +207,26 @@ namespace lsp {
 				out(elem->getArgName().position, StandardTokenType::Parameter);
 			}
 		}
+
+		void visitConst(pst::Access<pst::Const> elem) override {
+			StandardTokenType token_type = StandardTokenType::Variable;
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto symbol = compiler::helios::ls::getSymbolOfStmt(ctx, elem);
+				if (symbol.hasFailed()) return;
+				auto qresult
+					= ctx.query<compiler::helios::QueryTypeOfSymbol>({ symbol.valueOrPanic() });
+				if (qresult->hasFailed()) return;
+				auto symbol_type = qresult->valueOrPanic();
+				if (symbol_type.getType().getKind() == compiler::tsh::Kind::Meta)
+					token_type = StandardTokenType::Type;
+			});
+			out(elem->getNameIdent().position, token_type);
+		}
 	};
 
 	using namespace compiler::helios;
 
 	class TokenHoutExprVisitor final: public code::HoutExprVisitorEmpty {
-		static base::Optional<dia::SourcePosition> findIdentifierInPstElem(
-			const pst::Access<pst::LangElement>& pst_elem
-		) {
-			for (auto sub_elem: pst_elem->viewSubElements()) {
-				variant_match(sub_elem) {
-					variant_case(pst::LangElement::SubToken, token) {
-						if (token->getType() == lexer::Token::Type::Identifier)
-							return token->getPosition();
-					}
-				}
-			}
-
-			return {};
-		}
 
 	public:
 		static bool supports(pst::Access<pst::LangElement> element) {
@@ -265,13 +270,7 @@ namespace lsp {
 		}
 
 		void visitIdentifierExpr(const code::IdentifierExpr& elem) override {
-			if_opt_none(elem.origin.getPSTElement()) return;
-			auto pst_elem_locked = elem.origin.getPSTElement().value();
-
-			if_opt_none(pst_elem_locked.illegalAccess()) return;
-			auto pst_elem = pst_elem_locked.illegalAccess().value();
-
-			auto maybe_position = findIdentifierInPstElem(pst_elem);
+			auto maybe_position = elem.origin.getSourcePosition();
 			if_opt_none(maybe_position) return;
 			auto position = maybe_position.value();
 
@@ -295,6 +294,18 @@ namespace lsp {
 			case SymbolKind::Field:
 				out(position, StandardTokenType::Property);
 				return;
+			case SymbolKind::Const: {
+				auto qresult = query::entryPoint<QueryTypeOfSymbol>({ elem.symbol });
+				if (qresult->hasValue()) {
+					auto symbol_type = qresult->valueOrPanic();
+					if (symbol_type.getType().getKind() == compiler::tsh::Kind::Meta) {
+						out(position, StandardTokenType::Type);
+						return;
+					}
+				}
+				out(position, StandardTokenType::Variable);
+				return;
+			}
 			default:
 				out(position, StandardTokenType::Variable);
 				return;
@@ -347,13 +358,7 @@ namespace lsp {
 		void visitAccessExpr(const code::AccessExpr& elem) override {
 			elem.base->acceptVisitor(*this);
 
-			if_opt_none(elem.field_origin.getPSTElement()) return;
-			auto pst_elem_locked = elem.field_origin.getPSTElement().value();
-			if_opt_none(pst_elem_locked.illegalAccess()) return;
-
-			auto pst_elem = pst_elem_locked.illegalAccess().value();
-
-			auto maybe_position = findIdentifierInPstElem(pst_elem);
+			auto maybe_position = elem.origin.getSourcePosition();
 			if_opt_none(maybe_position) return;
 			out(maybe_position.value(), StandardTokenType::Property);
 		}

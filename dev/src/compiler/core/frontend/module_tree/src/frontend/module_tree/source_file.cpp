@@ -14,6 +14,11 @@
 
 namespace {
 	/**
+	 * @brief Map storing FileID of each parsed PST (by root element ID).
+	 */
+	concurrent::ConHashMap<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
+
+	/**
 	 * @brief A value pair storing the information about a file.
 	 */
 	struct PathState final {
@@ -104,6 +109,19 @@ namespace compiler::frontend {
 			auto pst_type = getModuleRef(linked_module)->isReplModule() ? pst::PSTType::Script
 			                                                            : pst::PSTType::Program;
 			parse_tree.emplace(pst::PST(file, pst_type, getComponentHash()));
+
+			auto root_optional = parse_tree.value().getRootElement().illegalAccess();
+			if (root_optional.has_value()) {
+				auto root_id          = root_optional.value()->getID();
+				auto maybe_put_result = root_element_file_back_map.maybePut(root_id, getFileID());
+				if (!maybe_put_result) {
+					CORE_ASSERT(
+						root_element_file_back_map.getCopy(root_id) == getFileID(),
+						"Root element ID already exists in back map with a different file ID"
+					);
+				}
+			}
+
 			return &parse_tree.value();
 		}
 	}
@@ -140,6 +158,11 @@ namespace compiler::frontend {
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
 
+		if (source_file->parse_tree.has_value()) {
+			auto root_id = source_file->parse_tree.value().getRootElement().illegalAccess();
+			if (root_id.has_value()) root_element_file_back_map.erase(root_id.value()->getID());
+		}
+
 		// Remove the `Path -> (SourceFiles, SharedView)` if the value vector is empty.
 		path_registry.eraseIf(abs_path, [&](Ref<PathState> state) {
 			std::erase(state->instances, source_file);
@@ -169,5 +192,9 @@ namespace compiler::frontend {
 			}
 			if (!is_tracked) CORE_PANIC("dangling reference used after removing SourceFile");
 		});
+	}
+
+	base::Optional<FileID> getFileIDOfPSTRoot(pst::PstID root_element_id) {
+		return root_element_file_back_map.atMaybeCopy(root_element_id);
 	}
 }

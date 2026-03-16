@@ -5,6 +5,7 @@
 #include <frontend/module_tree/access.hpp>
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
+#include <frontend/pst_parser/pst_id.hpp>
 #include <frontend/pst_parser/pst.hpp>
 
 #include <base/collections/optional.hpp>
@@ -159,4 +160,9 @@ namespace compiler::frontend {
 		SourceFile& operator=(const SourceFile&) = delete;
 		SourceFile(SourceFile&&) noexcept        = default;
 	};
+
+	/**
+	 * Returns FileID for a parsed PST root element if known.
+	 */
+	base::Optional<FileID> getFileIDOfPSTRoot(pst::PstID root_element_id);
 }

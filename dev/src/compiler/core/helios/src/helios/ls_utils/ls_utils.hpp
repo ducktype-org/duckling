@@ -14,4 +14,6 @@ namespace compiler::helios::ls {
 	CRef<query::QResult<Box<code::Expr>>> getHoutExpr(
 		query::Context& ctx, pst::Access<pst::ExprElement> element
 	);
+
+	query::QResult<SymID> getSymbolOfStmt(query::Context& ctx, pst::Access<pst::LangElement> element);
 }
