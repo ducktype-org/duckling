@@ -1,5 +1,6 @@
 #pragma once
 
+#include "token_parser_core/common_elements.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -24,6 +25,11 @@ namespace pst {
 		[[nodiscard]]
 		base::StrID getName() const {
 			return name.value;
+		}
+
+		[[nodiscard]]
+		tpc::Identifier getNameIdent() const {
+			return name;
 		}
 
 		bool trailingSemicolon() override;

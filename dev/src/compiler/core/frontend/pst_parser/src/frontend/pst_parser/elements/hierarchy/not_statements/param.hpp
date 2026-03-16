@@ -36,6 +36,9 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]] tpc::Identifier getNameIdent() const { return name; }
+
+
 		[[nodiscard]]
 		base::Optional<AccessLocked<UniversalExprHolder>> getValue() const;
 

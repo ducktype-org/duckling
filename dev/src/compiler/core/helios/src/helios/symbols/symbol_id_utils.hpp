@@ -78,6 +78,8 @@ namespace compiler::helios {
 	 */
 	pst::AccessLocked<pst::LangElement> symbolPst(SymID);
 
+	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id);
+
 	/**
 	 * @brief Pretty prints the symbol.
 	 */

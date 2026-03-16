@@ -133,6 +133,12 @@ namespace compiler::helios {
 		return getSymRef(id)->getPSTData()->getElement();
 	}
 
+	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
+		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstSymbolData> data) {
+			return data->getElement();
+		});
+	}
+
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element

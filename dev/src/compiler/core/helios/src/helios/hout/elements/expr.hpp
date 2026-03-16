@@ -488,10 +488,17 @@ namespace compiler::helios::code {
 	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.
 	 */
 	struct AccessExpr final: public Expr {
-		Box<Expr> base;
-		SymID     field;
+		Box<Expr>     base;
+		SymID         field;
+		ElementOrigin field_origin; // This is only needed by the LS
 
-		AccessExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> base, SymID field);
+		AccessExpr(
+			query::Context& ctx,
+			ElementOrigin   origin,
+			Box<Expr>       base,
+			SymID           field,
+			ElementOrigin   field_origin
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -505,7 +512,8 @@ namespace compiler::helios::code {
 			const tsh::ExpressionType<>& expression_type,
 			ElementOrigin                origin,
 			Box<Expr>                    base,
-			SymID                        field
+			SymID                        field,
+			ElementOrigin                field_origin
 		);
 	};
 

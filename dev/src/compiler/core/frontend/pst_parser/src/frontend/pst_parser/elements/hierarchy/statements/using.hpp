@@ -8,7 +8,7 @@ namespace pst {
 	/**
 	 * @brief Using statement
 	 */
-	class Using final: public Stmt {
+class Using final: public Stmt {
 		NAMED_CHILD(names, DottedName);
 
 	public:

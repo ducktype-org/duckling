@@ -66,7 +66,8 @@ namespace compiler::helios::houtgen {
 						ctx,
 						code::generatedOrigin(),
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-						fields.at(i).getSymbol()
+						fields.at(i).getSymbol(),
+						code::generatedOrigin()
 					),
 					makeBox<code::IdentifierExpr>(
 						ctx, code::generatedOrigin(), ctor_decl.parameters.at(i).helios_symbol

@@ -567,7 +567,8 @@ namespace compiler::helios::code {
 							query_ctx,
 							pstOrigin(current_expr->origin, expr_access),
 							std::move(current_expr),
-							sym
+							sym,
+							pstOrigin(expr_access)
 						);
 						return ChainState::ofExpr(std::move(node));
 					} else if (kind(sym) == SymbolKind::Namespace) {
@@ -834,7 +835,8 @@ namespace compiler::helios::code {
 				ctx,
 				pst_element_origin,
 				makeBox<DerefExpr>(ctx, generatedOrigin(), std::move(self_expr)),
-				field_symbol
+				field_symbol,
+				pstOrigin(pst_elem)
 			);
 		}
 

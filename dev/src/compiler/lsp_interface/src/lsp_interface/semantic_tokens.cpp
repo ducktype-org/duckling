@@ -5,41 +5,60 @@
  */
 #include "semantic_tokens.hpp"
 
+#include "frontend/pst_parser/access.hpp"
+#include "frontend/pst_parser/element_kind.hpp"
+#include "frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp"
+#include "frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp"
+#include "frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp"
+#include "frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp"
+#include "frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp"
+#include "frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp"
+#include "frontend/pst_parser/pst_visitor.hpp"
+#include "helios/hout/elements/expr.hpp"
+#include "helios/hout/origin.hpp"
+#include "helios/symbols/symbol_id_utils.hpp"
 #include "utils.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <helios/hout/visitors.hpp>
+#include <helios/ls_utils/ls_utils.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "diagnostic/source_position.hpp"
+#include "lexer/token.hpp"
 #include <query_framework/entry/with_context_do.hpp>
 
-#include <iostream>
+#include <algorithm>
 #include <map>
 #include <string>
+#include <unordered_set>
 
 namespace lsp {
-	SemanticToken::SemanticToken(CRef<lexer::Token> source):
+
+	SemanticToken::SemanticToken(CRef<lexer::Token> source, StandardTokenType type):
 		  source_token(source),
 		  line(source->getPosition().getStartLineColumn().first - 1),
 		  start_character(source->getPosition().getStartLineColumn().second - 1),
 		  length(source->getPosition().getEnd() - source->getPosition().getStart() + 1),
-		  type(translateType(source->getType())) {}
+		  type(type) {}
 
-	Type SemanticToken::translateType(lexer::Token::Type type) {
+	SemanticToken::SemanticToken(CRef<lexer::Token> source):
+		  SemanticToken(source, translateType(source->getType())) {}
+
+	StandardTokenType SemanticToken::translateType(lexer::Token::Type type) {
 		using lTT = lexer::Token::Type;
-		using sT  = Type;
+		using sT  = StandardTokenType;
 		switch (type) {
 		case lTT::Keyword:
 			return sT::Keyword;
-		// case lTT::Identifier: return;
 		case lTT::NumLiteral:
 			return sT::Number;
 		case lTT::String:
 			return sT::String;
 		case lTT::FormattedString:
 			return sT::String;
-		// case lTT::BracketGroup: return;
 		case lTT::Operator:
 			return sT::Operator;
 		case lTT::Comment:
@@ -72,28 +91,368 @@ namespace lsp {
 		return jsonDict(result);
 	}
 
+	struct PrecalculatedSemanticToken {
+		dia::SourcePosition position;
+		StandardTokenType   correct_type;
+
+		[[nodiscard]] bool isPrecalculatedFor(const CRef<lexer::Token>& token) const {
+			return token->getPosition() == position;
+		}
+	};
+
+	struct TokenContext {
+		std::deque<PrecalculatedSemanticToken> precalculated{};
+		base::Optional<StandardTokenType>      default_identifier_type{};
+		bool                                   precalculate_for_children = true;
+	};
+
+	struct TokenTopLevelVisitor final: public pst::PstVisitorEmpty {
+		static bool supports(pst::Access<pst::LangElement> element) {
+			// For now we only support precalculation for function declarations, but this can be
+			// extended in the future.
+			switch (element->getElementKind()) {
+			case pst::ElementKind::Import:
+			case pst::ElementKind::Using:
+			case pst::ElementKind::Alias:
+			case pst::ElementKind::Namespace:
+			case pst::ElementKind::Fun:
+			case pst::ElementKind::FunDecl:
+			case pst::ElementKind::Class:
+			case pst::ElementKind::ClassMethod:
+			case pst::ElementKind::ClassField:
+			case pst::ElementKind::Param:
+			case pst::ElementKind::CallArgument:
+				return true;
+			default:
+				return false;
+			}
+		}
+
+		static void precalculateTokens(pst::Access<pst::LangElement> element, TokenContext& ctx) {
+			TokenTopLevelVisitor visitor(ctx.precalculated);
+			element->acceptVisitor(visitor);
+		}
+
+		explicit TokenTopLevelVisitor(std::deque<PrecalculatedSemanticToken>& identified_tokens):
+			  identified_tokens(identified_tokens) {}
+
+		std::deque<PrecalculatedSemanticToken>& identified_tokens;
+
+
+		~TokenTopLevelVisitor() override = default;
+
+		void out(dia::SourcePosition position, StandardTokenType correct_type) {
+			identified_tokens.push_back({ position, correct_type });
+		}
+
+		void visitImport(pst::Access<pst::Import> elem) override {
+			auto chain_locked = elem->getImportChain();
+			if_opt_none(chain_locked.illegalAccess()) return;
+			auto chain = chain_locked.illegalAccess().value();
+			auto names = chain->getNames();
+			std::cerr << "Import names: ";
+
+			for (auto name: names) {
+				out(name.position, StandardTokenType::Namespace);
+				std::cerr << name.value.strView() << " ";
+			}
+		}
+
+		void visitUsing(pst::Access<pst::Using>) override {
+			// For now empty
+		}
+
+		void visitAlias(pst::Access<pst::Alias>) override {
+			// Same as using
+		}
+
+		void visitNamespace(pst::Access<pst::Namespace> elem) override {
+			out(elem->getNameIdent().position, StandardTokenType::Namespace);
+		}
+
+		void visitClass(pst::Access<pst::Class> elem) override {
+			out(elem->getNameIdent().position, StandardTokenType::Class);
+		}
+
+		void visitFun(pst::Access<pst::Fun> elem) override {
+			out(elem->getNameIdentifier().position, StandardTokenType::Function);
+		}
+
+		void visitFunDecl(pst::Access<pst::FunDecl> elem) override {
+			out(elem->getNameIdentifier().position, StandardTokenType::Function);
+		}
+
+		void visitVariable(pst::Access<pst::Variable> elem) override {
+			out(elem->getNameIdent().position, StandardTokenType::Variable);
+		}
+
+		void visitMethod(pst::Access<pst::Method> elem) override {
+			out(elem->getNameIdentifier().position, StandardTokenType::Method);
+		}
+
+		void visitField(pst::Access<pst::Field> elem) override {
+			out(elem->getNameIdent().position, StandardTokenType::Property);
+		}
+
+		void visitParam(pst::Access<pst::Param> elem) override {
+			out(elem->getNameIdent().position, StandardTokenType::Parameter);
+		}
+
+		void visitCallArgument(pst::Access<pst::CallArgument> elem) override {
+			if_opt_some(elem->getArgName().value, _) {
+				out(elem->getArgName().position, StandardTokenType::Parameter);
+			}
+		}
+	};
+
+	using namespace compiler::helios;
+
+	class TokenHoutExprVisitor final: public code::HoutExprVisitorEmpty {
+		static base::Optional<dia::SourcePosition> findIdentifierInPstElem(
+			const pst::Access<pst::LangElement>& pst_elem
+		) {
+			for (auto sub_elem: pst_elem->viewSubElements()) {
+				variant_match(sub_elem) {
+					variant_case(pst::LangElement::SubToken, token) {
+						if (token->getType() == lexer::Token::Type::Identifier)
+							return token->getPosition();
+					}
+				}
+			}
+
+			return {};
+		}
+
+	public:
+		static bool supports(pst::Access<pst::LangElement> element) {
+			if (element.dynamicCast<pst::ExprElement>().has_value()
+			    && element.dynamicCast<pst::expr::Assignment>().empty()) {
+				return true;
+			}
+			return false;
+		}
+
+		static void precalculateTokens(pst::Access<pst::LangElement> element, TokenContext& result) {
+			auto expr_element = element.dynamicCast<pst::ExprElement>().value();
+
+			result.precalculate_for_children = false;
+
+			MCRef<query::QResult<Box<code::Expr>>> hout_expr_result;
+			query::utils::withContextDo([&](query::Context& ctx) {
+				hout_expr_result = compiler::helios::ls::getHoutExpr(ctx, expr_element);
+			});
+			if (hout_expr_result->hasFailed()) return;
+
+			auto&                hout_expr = hout_expr_result->valueOrPanic();
+			TokenHoutExprVisitor visitor(result.precalculated);
+			hout_expr->acceptVisitor(visitor);
+			result.default_identifier_type.emplace(StandardTokenType::Namespace);
+		}
+
+		explicit TokenHoutExprVisitor(std::deque<PrecalculatedSemanticToken>& identified_tokens):
+			  identified_tokens(identified_tokens) {}
+
+		std::deque<PrecalculatedSemanticToken>& identified_tokens;
+
+		~TokenHoutExprVisitor() override = default;
+
+		void out(dia::SourcePosition pos, StandardTokenType correct_type) {
+			identified_tokens.push_back({ pos, correct_type });
+		}
+
+		void out(CRef<lexer::Token> token, StandardTokenType correct_type) {
+			identified_tokens.push_back({ token->getPosition(), correct_type });
+		}
+
+		void visitIdentifierExpr(const code::IdentifierExpr& elem) override {
+			if_opt_none(elem.origin.getPSTElement()) return;
+			auto pst_elem_locked = elem.origin.getPSTElement().value();
+
+			if_opt_none(pst_elem_locked.illegalAccess()) return;
+			auto pst_elem = pst_elem_locked.illegalAccess().value();
+
+			auto maybe_position = findIdentifierInPstElem(pst_elem);
+			if_opt_none(maybe_position) return;
+			auto position = maybe_position.value();
+
+			switch (kind(elem.symbol)) {
+			case SymbolKind::Namespace:
+				out(position, StandardTokenType::Namespace);
+				return;
+			case SymbolKind::Function:
+			case SymbolKind::FunctionDeclaration:
+				out(position, StandardTokenType::Function);
+				return;
+			case SymbolKind::Method:
+				out(position, StandardTokenType::Method);
+				return;
+			case SymbolKind::Parameter:
+				out(position, StandardTokenType::Parameter);
+				return;
+			case SymbolKind::Class:
+				out(position, StandardTokenType::Class);
+				return;
+			case SymbolKind::Field:
+				out(position, StandardTokenType::Property);
+				return;
+			default:
+				out(position, StandardTokenType::Variable);
+				return;
+			}
+		}
+
+		void visitReusableExpr(const code::ReusableExpr& elem) override {
+			static std::unordered_set<code::HOUTExprID> visited_exprs;
+			if (visited_exprs.contains(elem.inner->getID())) return;
+			visited_exprs.insert(elem.inner->getID());
+			elem.inner->acceptVisitor(*this);
+		}
+
+		void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& elem) override {
+			elem.lhs->acceptVisitor(*this);
+			elem.rhs->acceptVisitor(*this);
+		}
+
+		void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& elem) override {
+			elem.expr->acceptVisitor(*this);
+		}
+
+		void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& elem) override {
+			elem.condition->acceptVisitor(*this);
+			elem.if_true->acceptVisitor(*this);
+			elem.if_false->acceptVisitor(*this);
+		}
+
+		void visitChainComparisonExpr(const code::ChainComparisonExpr& elem) override {
+			for (const auto& comparison: elem.comparisons) comparison->acceptVisitor(*this);
+		}
+
+		void visitParenthesisExpr(const code::ParenthesisExpr& elem) override {
+			elem.inner->acceptVisitor(*this);
+		}
+
+		void visitTupleExpr(const code::TupleExpr& elem) override {
+			for (const auto& item: elem.elements) item->acceptVisitor(*this);
+		}
+
+		void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& elem) override {
+			for (const auto& arg: elem.subtypes) arg->acceptVisitor(*this);
+		}
+
+		void visitCallExpr(const code::CallExpr& elem) override {
+			elem.callee->acceptVisitor(*this);
+			for (const auto& arg: elem.arguments) arg->acceptVisitor(*this);
+		}
+
+		void visitAccessExpr(const code::AccessExpr& elem) override {
+			elem.base->acceptVisitor(*this);
+
+			if_opt_none(elem.field_origin.getPSTElement()) return;
+			auto pst_elem_locked = elem.field_origin.getPSTElement().value();
+			if_opt_none(pst_elem_locked.illegalAccess()) return;
+
+			auto pst_elem = pst_elem_locked.illegalAccess().value();
+
+			auto maybe_position = findIdentifierInPstElem(pst_elem);
+			if_opt_none(maybe_position) return;
+			out(maybe_position.value(), StandardTokenType::Property);
+		}
+
+		void visitIndexExpr(const code::IndexExpr& elem) override {
+			elem.base->acceptVisitor(*this);
+			elem.index->acceptVisitor(*this);
+		}
+
+		void visitSequenceExpr(const code::SequenceExpr& elem) override {
+			for (const auto& item: elem.expressions) item->acceptVisitor(*this);
+		}
+
+		void visitBoxOfExpr(const code::BoxOfExpr& elem) override {
+			elem.inner->acceptVisitor(*this);
+		}
+
+		void visitRefOfExpr(const code::RefOfExpr& elem) override {
+			elem.inner->acceptVisitor(*this);
+		}
+
+		void visitDerefExpr(const code::DerefExpr& elem) override {
+			elem.inner->acceptVisitor(*this);
+		}
+
+		void visitCastExpr(const code::CastExpr& elem) override {
+			elem.source_expr->acceptVisitor(*this);
+		}
+
+		void visitLiftToTypeExpr(const code::LiftToTypeExpr& elem) override {
+			elem.value_expr->acceptVisitor(*this);
+		}
+
+		void visitListPushExpr(const code::ListPushExpr& elem) override {
+			elem.list->acceptVisitor(*this);
+			elem.element->acceptVisitor(*this);
+		}
+
+		void visitListPopExpr(const code::ListPopExpr& elem) override {
+			elem.list->acceptVisitor(*this);
+			elem.count->acceptVisitor(*this);
+		}
+	};
+
+	base::Optional<TokenContext> precalculateTokensForNode(pst::Access<pst::LangElement> elem) {
+		TokenContext result;
+
+		if (TokenTopLevelVisitor::supports(elem))
+			TokenTopLevelVisitor::precalculateTokens(elem, result);
+		else if (TokenHoutExprVisitor::supports(elem))
+			TokenHoutExprVisitor::precalculateTokens(elem, result);
+		else
+			return {};
+
+		// I am not sure if having this sort has 0-impact when the queue is empty,
+		// and it is empty in 90% of cases.
+		std::ranges::sort(
+			result.precalculated, std::ranges::less{}, &PrecalculatedSemanticToken::position
+		);
+		return result;
+	}
+
 	void getSemanticTokens(
-		pst::AccessLocked<pst::LangElement> element, std::vector<SemanticToken>& token_list
+		pst::AccessLocked<pst::LangElement> element_locked,
+		std::vector<SemanticToken>&         result,
+		TokenContext&                       token_context
 	) {
-		if (not element.illegalAccess().has_value()) return;
+		base::Optional<TokenContext> new_local_context;
 
-		auto unlocked = element.illegalAccess().value();
+		if (not element_locked.illegalAccess().has_value()) return;
+		auto element = element_locked.illegalAccess().value();
 
-		for (auto sub: unlocked->viewSubElements()) {
+		if (token_context.precalculate_for_children)
+			new_local_context = precalculateTokensForNode(element);
+
+		auto& local_context
+			= (new_local_context.has_value()) ? new_local_context.value() : token_context;
+
+		for (auto sub: element->viewSubElements()) {
 			variant_match(sub) {
 				variant_case(pst::LangElement::SubToken, token) {
+					auto& precalculated_candidate = local_context.precalculated.front();
 					// add token to list
-					auto semantic_token = SemanticToken(token);
-					token_list.push_back(semantic_token);
+					if (precalculated_candidate.isPrecalculatedFor(token)) {
+						result.emplace_back(token, precalculated_candidate.correct_type);
+						local_context.precalculated.pop_front();
+					} else if (local_context.default_identifier_type.has_value()
+					           && token->getType() == lexer::Token::Type::Identifier) {
+						result.emplace_back(token, local_context.default_identifier_type.value());
+					} else {
+						result.emplace_back(token);
+					}
 				}
 				variant_case(pst::LangElement::Child, child) {
 					// recursive token generation
-					getSemanticTokens(child, token_list);
+					getSemanticTokens(child, result, local_context);
 				}
 				variant_case(pst::LangElement::NamedChild, child) {
-					// recursive token generation
-					// @TODO figure out if we want to use the name somehow
-					getSemanticTokens(child.element, token_list);
+					getSemanticTokens(child.element, result, local_context);
 				}
 			}
 		}
@@ -107,9 +466,10 @@ namespace lsp {
 	) {
 		std::vector<SemanticToken> tokens;
 		for (auto& file: files) {
-			auto pst     = file->getPST();
-			auto element = pst->getRootElement();
-			getSemanticTokens(element, tokens);
+			auto         pst     = file->getPST();
+			auto         element = pst->getRootElement();
+			TokenContext token_context;
+			getSemanticTokens(element, tokens, token_context);
 		}
 
 		std::vector<std::string> token_strings(tokens.size());
