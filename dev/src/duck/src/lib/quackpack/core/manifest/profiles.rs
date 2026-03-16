@@ -7,11 +7,11 @@ use crate::{QuackError, QuackResult, StrId, qp_bail, qp_bail_internal, qp_err};
 #[derive(Clone, Debug)]
 /// List of specific options which should be passed to the compiler.
 pub struct Profile {
-    opt_level: OptLevel,
-    dvm_bytecode: bool,
-    no_incremental: bool,
-    no_c_std: bool,
-    inherits: Option<StrId>,
+    pub opt_level: OptLevel,
+    pub dvm_bytecode: bool,
+    pub incremental: bool,
+    pub c_std: bool,
+    pub inherits: Option<StrId>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -25,32 +25,13 @@ pub enum OptLevel {
     Z,
 }
 
-impl Profile {
-    /// Creates a new [`Profile`].
-    pub fn new(
-        opt_level: OptLevel,
-        dvm_bytecode: bool,
-        no_incremental: bool,
-        no_c_std: bool,
-        inherits: Option<StrId>,
-    ) -> Self {
-        Self {
-            opt_level,
-            dvm_bytecode,
-            no_incremental,
-            no_c_std,
-            inherits,
-        }
-    }
-}
-
 impl From<registry::Profile> for Profile {
     fn from(value: registry::Profile) -> Self {
         Self {
             opt_level: value.opt_level.into(),
             dvm_bytecode: value.dvm_bytecode,
-            no_incremental: value.no_incremental,
-            no_c_std: value.no_c_std,
+            incremental: value.incremental,
+            c_std: value.c_std,
             inherits: value.inherits.map(Into::into),
         }
     }
@@ -61,8 +42,8 @@ impl From<Profile> for registry::Profile {
         registry::Profile {
             opt_level: value.opt_level.into(),
             dvm_bytecode: value.dvm_bytecode,
-            no_incremental: value.no_incremental,
-            no_c_std: value.no_c_std,
+            incremental: value.incremental,
+            c_std: value.c_std,
             inherits: value.inherits.map(Into::into),
         }
     }
@@ -73,6 +54,11 @@ impl From<Profile> for registry::Profile {
 pub struct Profiles(HashMap<StrId, Profile>);
 
 impl Profiles {
+    /// Get the underlying mapping from profile names to profiles.
+    pub fn get_profiles(&self) -> &HashMap<StrId, Profile> {
+        &self.0
+    }
+
     /// Creates a new [`Profiles`] instance from a given map and checks its validity.
     pub fn new(profiles: HashMap<StrId, Profile>) -> QuackResult<Self> {
         let result = Self(profiles);
@@ -89,7 +75,7 @@ impl Profiles {
             };
             if !self.0.contains_key(&parent) && !PREDEFINED_PROFILES.contains_key(&parent) {
                 qp_bail!(
-                    "Profile \"{profile_name}\" inherits from a non-existent profile \"{parent}\""
+                    "Profile `{profile_name}` inherits from a non-existent profile `{parent}`"
                 );
             }
         }
@@ -235,10 +221,34 @@ mod test {
 
     #[test]
     fn profiles_inheritance_cycle() {
-        let prof_a = Profile::new(OptLevel::S, false, false, false, Some("b".into()));
-        let prof_b = Profile::new(OptLevel::S, false, false, false, Some("c".into()));
-        let prof_c = Profile::new(OptLevel::S, false, false, false, Some("d".into()));
-        let prof_d = Profile::new(OptLevel::S, false, false, false, Some("b".into()));
+        let prof_a = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("b".into()),
+        };
+        let prof_b = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("c".into()),
+        };
+        let prof_c = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("d".into()),
+        };
+        let prof_d = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("a".into()),
+        };
         let profiles_map = [
             ("a".into(), prof_a),
             ("b".into(), prof_b),
@@ -257,7 +267,13 @@ mod test {
 
     #[test]
     fn profile_inheritance_self_cycle() {
-        let prof_a = Profile::new(OptLevel::S, false, false, false, Some("a".into()));
+        let prof_a = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("a".into()),
+        };
         let profiles_map = [("a".into(), prof_a)].into();
         let err = Profiles::new(profiles_map).unwrap_err();
         assert!(err.to_string() == "Inheritance in user-defined profiles cycles: a <- a");
@@ -265,15 +281,33 @@ mod test {
 
     #[test]
     fn inheritance_from_predefined() {
-        let prof_a = Profile::new(OptLevel::S, false, false, false, Some("dev".into()));
+        let prof_a = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("dev".into()),
+        };
         let profiles_map = [("a".into(), prof_a)].into();
         Profiles::new(profiles_map).unwrap();
     }
 
     #[test]
     fn cycle_with_overwritten_predefined() {
-        let prof_a = Profile::new(OptLevel::S, false, false, false, Some("dev".into()));
-        let prof_dev = Profile::new(OptLevel::S, false, false, false, Some("a".into()));
+        let prof_a = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("dev".into()),
+        };
+        let prof_dev = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("a".into()),
+        };
         let profiles_map = [("a".into(), prof_a), ("dev".into(), prof_dev)].into();
         let err = Profiles::new(profiles_map).unwrap_err();
         let possible_error_msgs = [
@@ -285,7 +319,13 @@ mod test {
 
     #[test]
     fn inheritance_from_nonexistent_profile() {
-        let prof_a = Profile::new(OptLevel::S, false, false, false, Some("b".into()));
+        let prof_a = Profile {
+            opt_level: OptLevel::S,
+            dvm_bytecode: false,
+            incremental: false,
+            c_std: false,
+            inherits: Some("b".into()),
+        };
         let profiles_map = [("a".into(), prof_a)].into();
         let err = Profiles::new(profiles_map).unwrap_err();
         assert!(err.to_string() == "Profile \"a\" inherits from a non-existent profile \"b\"");

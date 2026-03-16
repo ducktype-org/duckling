@@ -111,8 +111,8 @@ pub enum DependencyFeature {
 pub struct Profile {
     pub opt_level: OptLevel,
     pub dvm_bytecode: bool,
-    pub no_incremental: bool,
-    pub no_c_std: bool,
+    pub incremental: bool,
+    pub c_std: bool,
     pub inherits: Option<String>,
 }
 

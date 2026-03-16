@@ -44,7 +44,10 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: &DuckCtx) -> Quac
         .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
     scope.pop();
 
-    let profiles = parse_profiles(schema.profiles.as_ref())?;
+    scope.push("profiles".into());
+    let profiles = parse_profiles(schema.profiles.as_ref(), &mut scope)
+        .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
+    scope.pop();
 
     let authors = metadata
         .authors
@@ -80,13 +83,23 @@ fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResul
 }
 
 /// Parse [`Profiles`] from the given compiler flags mapping.
-fn parse_profiles(input: Option<&HashMap<String, ProfileSchema>>) -> QuackResult<Profiles> {
+fn parse_profiles(
+    input: Option<&HashMap<String, ProfileSchema>>,
+    scope: &mut Scope,
+) -> QuackResult<Profiles> {
     let Some(input) = input else {
         return Ok(Profiles::default());
     };
     let profiles_map: QuackResult<HashMap<StrId, Profile>> = input
         .iter()
-        .map(|(k, v)| (parse_profile(v)).map(|new_v| (k.into(), new_v)))
+        .map(|(k, v)| {
+            scope.push(k.into());
+            let result = (parse_profile(v))
+                .map(|new_v| (k.into(), new_v))
+                .with_context(|| format!("when parsing the field `{}`", scope.format()));
+            scope.pop();
+            result
+        })
         .collect();
     Profiles::new(profiles_map?)
 }
@@ -101,7 +114,7 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
             SchemaOptLevel::Number(2) => OptLevel::Two,
             SchemaOptLevel::Number(3) => OptLevel::Three,
             SchemaOptLevel::Number(n) => qp_bail!(
-                "Unknown optimization level \"{n}\". Optimization levels are 0, 1, 2, 3, s, z."
+                "Unknown optimization level `{n}`. Optimization levels are 0, 1, 2, 3, s, z."
             ),
             SchemaOptLevel::String(str) => match str.as_ref() {
                 "s" => OptLevel::S,
@@ -113,7 +126,7 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
                 "2" => OptLevel::Two,
                 "3" => OptLevel::Three,
                 str => qp_bail!(
-                    "Unknown optimization level \"{str}\". Optimization levels are 0, 1, 2, 3, s, z."
+                    "Unknown optimization level `{str}`. Optimization levels are 0, 1, 2, 3, s, z."
                 ),
             },
         }
@@ -121,14 +134,14 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
         DEFAULT_OPT_LEVEL
     };
     let dvm_bytecode = input.dvm_bytecode.unwrap_or(false);
-    let no_incremental = input.no_incremental.unwrap_or(false);
-    let no_c_std = input.no_c_std.unwrap_or(false);
+    let incremental = input.incremental.unwrap_or(true);
+    let c_std = input.c_std.unwrap_or(true);
     let inherits = input.inherits.clone().map(Into::into);
-    Ok(Profile::new(
+    Ok(Profile {
         opt_level,
         dvm_bytecode,
-        no_incremental,
-        no_c_std,
+        incremental,
+        c_std,
         inherits,
-    ))
+    })
 }

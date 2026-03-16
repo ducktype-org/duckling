@@ -231,8 +231,8 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
 pub struct Profile {
     pub opt_level: Option<OptLevel>,
     pub dvm_bytecode: Option<bool>,
-    pub no_incremental: Option<bool>,
-    pub no_c_std: Option<bool>,
+    pub incremental: Option<bool>,
+    pub c_std: Option<bool>,
     pub inherits: Option<String>,
 }
 
