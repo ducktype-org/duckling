@@ -17,7 +17,7 @@ namespace {
 	 * @brief Map storing FileID of each parsed PST (by root element ID)
 	 * @note: as of right now it is needed only for QueryPrimaryCodeScopeFor for acquiring
 	 * the root scope via extendQueryModuleIDOfPST.
-	 * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put
+	 * @TODO: #2289 Either delete root scopes and add to PST some kind of "module nodes" or put
 	 * information from this map into PST nodes.
 	 *
 	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used
