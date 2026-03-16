@@ -2,8 +2,8 @@ include(FetchContent)
 
 # Downloads and sets up tree sitter parser for usage with c++
 
-set(TREE_SITTER_COMMIT "12fb31826b8469cc7b9788e72bceee5af1cf0977")
-set(TREE_SITTER_CPP_COMMIT "30f973c2244f0bff444186185f475c3bd76bc3a5")
+set(TREE_SITTER_COMMIT "534c4a074cd461ab30d1c8a54bf733d3050221a0")  # 0.26.6, released 2026-02-25
+set(TREE_SITTER_CPP_COMMIT "f41e1a044c8a84ea9fa8577fdd2eab92ec96de02")  # 0.23.4, released 2024-11-11
 
 set(TS_URL "https://github.com/tree-sitter/tree-sitter/archive/${TREE_SITTER_COMMIT}.zip")
 set(TS_CPP_URL "https://github.com/tree-sitter/tree-sitter-cpp/archive/${TREE_SITTER_CPP_COMMIT}.zip")

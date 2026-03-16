@@ -1,6 +1,6 @@
 include(FetchContent)
 
-set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
+set(ASIO_COMMIT "03cf5f86a780dd102f1cdd3a59d1244d12143e46")  # 1.38.0, released 2025-10-30
 
 FetchContent_Declare(
 	asio

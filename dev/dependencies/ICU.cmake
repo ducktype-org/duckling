@@ -1,8 +1,14 @@
 include(FetchContent)
 
-set(ICU_VERSION_REQUIRED "74.1")
-set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
-set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b71d146812f5e66db95f044e8aaa11b94e99edd4a48ab1aa8efbe3d72a73870cd56b564c2")
+set(ICU_VERSION_REQUIRED "78.2")  # released 2026-01-09
+set(ICU_RELEASE_PREFIX "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION_REQUIRED}/icu4c-${ICU_VERSION_REQUIRED}-")
+set(ICU_RELEASE "${ICU_RELEASE_PREFIX}sources.tgz")
+set(ICU_CONTROL "SHA512=92feddfe81c57336f386c7cbc9f6d976bf349db148a77a247c4559676f51116115c8c52c4d907feb50933f72ab75fd8e48be092bf9c8ca33a3e8fabc9372a5d6")
+
+# Used in github actions
+set(ICU_UBUNTU_VERSION "22.04")
+set(ICU_UBUNTU_RELEASE "${ICU_RELEASE_PREFIX}Ubuntu${ICU_UBUNTU_VERSION}-x64.tgz")
+set(ICU_UBUNTU_CONTROL "SHA512=58c74a109fb32c22315d78f7a4c913deaea6b0a55553759b9efb817f4b18587862cb756fb165d352ccfe17591e5354b90aab25f6d05de56172e38a129ee73c5e")
 
 # Based on: https://github.com/meta-toolkit/meta-cmake/blob/master/FindOrBuildICU.cmake
 # Windows building is removed because it's very version-dependent
@@ -42,10 +48,10 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 		message(FATAL_ERROR "   -- Please download the latest ICU binaries from http://site.icu-project.org/download")
 	elseif(DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
 		# Be careful this is mostly for github actions
-	message("-- Downloading ubuntu icu build for ubuntu 22.04")
+        message("-- Downloading ubuntu icu build for ubuntu ${ICU_UBUNTU_VERSION}")
 
-		set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-2/icu4c-74_2-Ubuntu22.04-x64.tgz")
-		set(ICU_CONTROL "MD5=6786f210e101e0440582ba2d9a057aed")
+        set(ICU_RELEASE "${ICU_UBUNTU_RELEASE}")
+        set(ICU_CONTROL "${ICU_UBUNTU_CONTROL}")
 
 		FetchContent_Declare(
 			ubuntu-icu
@@ -68,9 +74,9 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 		set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
 		target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
 
-		add_library(icu18n IMPORTED SHARED GLOBAL)
-		set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
-		target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
+		add_library(icui18n IMPORTED SHARED GLOBAL)
+		set_target_properties(icui18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
+		target_include_directories(icui18n INTERFACE ${ICU_INCLUDE_DIRS})
 
 		add_library(icuuc IMPORTED SHARED GLOBAL)
 		set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
@@ -97,7 +103,7 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 			set(ICU_MAKE_EXTRA_FLAGS "-j${CORES}")
 		endif()
 
-		set(ICU_EP_PREFIX ${PROJECT_BINARY_DIR}/_deps/icu-${FindOrBuildICU_VERSION}-build)
+        set(ICU_EP_PREFIX ${PROJECT_BINARY_DIR}/_deps/icu-${ICU_VERSION_REQUIRED}-build)
 
 		set(ICU_EP_LIBICUDATA ${ICU_EP_PREFIX}/lib/libicudata.a)
 		set(ICU_EP_LIBICUI18N ${ICU_EP_PREFIX}/lib/libicui18n.a)
@@ -109,11 +115,11 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 			PREFIX
 				${ICU_EP_PREFIX}
 			DOWNLOAD_DIR
-				${PROJECT_BINARY_DIR}/_deps/icu-${FindOrBuildICU_VERSION}-src
+                ${PROJECT_BINARY_DIR}/_deps/icu-${ICU_VERSION_REQUIRED}-src
 			URL
-				${FindOrBuildICU_URL}
+                ${ICU_RELEASE}
 			URL_HASH
-				${FindOrBuildICU_URL_HASH}
+                ${ICU_CONTROL}
 			PATCH_COMMAND
 				${ICU_EP_PATCH_COMMAND}
 			CONFIGURE_COMMAND
@@ -172,9 +178,9 @@ else()
 	set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
 	target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
 
-	add_library(icu18n IMPORTED SHARED GLOBAL)
-	set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
-	target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
+	add_library(icui18n IMPORTED SHARED GLOBAL)
+	set_target_properties(icui18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
+	target_include_directories(icui18n INTERFACE ${ICU_INCLUDE_DIRS})
 
 	add_library(icuuc IMPORTED SHARED GLOBAL)
 	set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
@@ -187,8 +193,8 @@ else()
 endif()
 
 add_library(unicode INTERFACE)
-target_link_libraries(unicode INTERFACE ICU::i18n ICU::uc ICU::io ICU::data)
-set(ICU_LIBRARIES ICU::i18n ICU::uc ICU::data ICU::io)
+target_link_libraries(unicode INTERFACE icui18n icuuc icuio icudata)
+set(ICU_LIBRARIES icui18n icuuc icuio icudata)
 
 message("-- ICU version: ${ICU_VERSION}")
 message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")

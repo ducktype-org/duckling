@@ -9,9 +9,9 @@ Duckling is a C++23 programming language project with a comprehensive build syst
 ### Bootstrap and Dependencies
 - Install system dependencies:
   ```bash
-  sudo apt update -y && sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 gcc-14 lcov llvm-19 llvm-19-dev clang-tidy-19 clang-format-19 libzstd-dev zlib1g-dev -y
+  sudo apt update -y && sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 gcc-14 lcov llvm-20 llvm-20-dev clang-tidy-20 clang-format-20 libzstd-dev zlib1g-dev -y
   ```
-- **CRITICAL**: Always use g++-14 and gcc-14 compilers. LLVM 19.1.0+ is required.
+- **CRITICAL**: Always use g++-14 and gcc-14 compilers. LLVM 20.1.0+ is required.
 - Enter the development directory: `cd dev/`
 - Initialize repository:
   ```bash
@@ -180,7 +180,7 @@ python3 toolbox.py pr-validate   # Comprehensive PR validation
 
 ### Build Issues
 - **Linker killed (signal 9)**: Use `ninja -j1` or `ninja -j2` to reduce memory usage
-- **LLVM not found**: Ensure `llvm-19-dev` is installed: `sudo apt install llvm-19 llvm-19-dev`
+- **LLVM not found**: Ensure `llvm-20-dev` is installed: `sudo apt install llvm-20 llvm-20-dev`
 - **Compiler errors**: Verify g++-14 is installed and specified in setup-build
 
 ### Test Issues

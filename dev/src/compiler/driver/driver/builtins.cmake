@@ -46,7 +46,7 @@ file(GLOB POTENTIAL_CLANG_PATHS
 
 # Find the actual clang binary
 find_program(CLANG_BIN
-        NAMES clang clang-19
+        NAMES clang clang-20
         PATHS ${POTENTIAL_CLANG_PATHS}
         VALIDATOR check_clang_version
 )
