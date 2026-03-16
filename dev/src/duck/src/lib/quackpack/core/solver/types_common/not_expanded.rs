@@ -139,6 +139,10 @@ impl Location {
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+/// Type describing a package from the point of the gathering manifests process.
+/// This contains a [`Location`] and a version.
+/// For git and local dependencies the version field is [`None`] and for registry
+/// dependencies the version field contains the version of the dependency.
 pub struct Package {
     pub location: InternedLocation,
     pub version: Option<Version>,
@@ -170,6 +174,7 @@ impl Package {
         }
     }
 
+    /// Create the appropriate [`ExpandedPackage`] from this [`Package`].
     pub fn resolve(
         self,
         location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,

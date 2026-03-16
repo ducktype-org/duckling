@@ -1,7 +1,7 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/errors.hpp>

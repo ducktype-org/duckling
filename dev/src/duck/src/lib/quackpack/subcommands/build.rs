@@ -1,3 +1,4 @@
+//! `build` subcommand execution logic.
 use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::{
@@ -11,16 +12,25 @@ use crate::{
 };
 
 #[derive(Debug)]
+/// Options for compiling a project.
 pub struct BuildOptions<'duck> {
+    /// Package to compile.
     pub package: PackageCtx<'duck>,
+    /// Enabled features from the CLI.
     pub used_features: Vec<FeatureName>,
+    /// Selected build profile.
     pub profile: StrId,
+    /// Artefact from [`SyncOptions`].
     pub global: bool,
+    /// Artefact from [`SyncOptions`].
     pub overwrite: bool,
+    /// Artefact from [`SyncOptions`].
     pub frozen: bool,
+    /// Artefact from [`SyncOptions`].
     pub strict_errors: bool,
 }
 
+/// Compile given options.
 pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let BuildOptions {
         package,
@@ -43,13 +53,13 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let _compile_lock = lock
         .to_compile_lock(&storage, package.to_venv_id())
         .context("failed to acquire a compile lock")?;
-    let bctx = BuildContext {
+    let bcx = BuildContext {
         package: &package,
         freeze: venv.into(),
         storage,
         used_features,
         profile,
     };
-    compile::compile(bctx)?;
+    compile::compile(bcx)?;
     Ok(())
 }

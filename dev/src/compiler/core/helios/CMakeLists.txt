@@ -23,7 +23,8 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_code_generation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 
-	src/helios/queries.cpp
+	src/helios/queries/queries.cpp
+	src/helios/queries/function_queries.cpp
     src/helios/scope_id.cpp
 	src/helios/hout/hout.cpp
 	src/helios/hout/elements/stmt.cpp
