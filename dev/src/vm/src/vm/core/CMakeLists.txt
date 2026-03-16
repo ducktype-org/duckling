@@ -7,6 +7,7 @@ add_files(
 		process/type_metadata/type.cpp
 		process/memory/memory.cpp
 		process/concurrency/gil.cpp
+		process/concurrency/condition_variable.cpp
 		process/concurrency/synchronization_primitives.cpp
 )
 
