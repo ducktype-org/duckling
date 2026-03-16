@@ -60,7 +60,6 @@ namespace lsp {
 		u64                start_character;
 		u64                length;
 		StandardTokenType  type;
-		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 
 	std::string getSemanticTokens(base::Ref<compiler::frontend::SourceFile>);

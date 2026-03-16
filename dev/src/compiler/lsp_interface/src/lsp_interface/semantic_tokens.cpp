@@ -5,35 +5,33 @@
  */
 #include "semantic_tokens.hpp"
 
-#include "frontend/pst_parser/access.hpp"
-#include "frontend/pst_parser/element_kind.hpp"
-#include "frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp"
-#include "frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp"
-#include "frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp"
-#include "frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp"
-#include "frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp"
-#include "frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp"
-#include "frontend/pst_parser/pst_visitor.hpp"
-#include "helios/hout/elements/expr.hpp"
-#include "helios/hout/origin.hpp"
-#include "helios/symbols/query_type_of_symbol.hpp"
-#include "helios/symbols/symbol_id_utils.hpp"
 #include "utils.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/element_kind.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios/hout/elements/expr.hpp>
+#include <helios/hout/origin.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/ls_utils/ls_utils.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "diagnostic/source_position.hpp"
-#include "lexer/token.hpp"
-#include "query_framework/entry/query_entry_point.hpp"
+#include <diagnostic/source_position.hpp>
+#include <lexer/token.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
 #include <algorithm>
-#include <map>
 #include <string>
 #include <unordered_set>
 
@@ -81,16 +79,10 @@ namespace lsp {
 	}
 
 	std::string SemanticToken::toJSON() {
-		std::map<std::string, std::string> result;
-
-		result["line"]           = std::to_string(this->line);
-		result["startCharacter"] = std::to_string(this->start_character);
-		result["length"]         = std::to_string(this->length);
-		// lst expects token type to be a number, not descriptive name
-		result["tokenType"]      = std::to_string(static_cast<int8_t>(this->type));
-		result["tokenModifiers"] = "0";  // @TODO Duckling LSP 2.0
-
-		return jsonDict(result);
+		return "{\"line\":" + std::to_string(this->line) + ",\"startCharacter\":"
+		     + std::to_string(this->start_character) + ",\"length\":" + std::to_string(this->length)
+		     + ",\"tokenType\":" + std::to_string(static_cast<int8_t>(this->type))
+		     + ",\"tokenModifiers\":0}";
 	}
 
 	struct PrecalculatedSemanticToken {
