@@ -1,3 +1,4 @@
+//! Main entry to parsing a manifest at the given path.
 use std::path::Path;
 
 use itertools::Itertools;

@@ -16,7 +16,7 @@ pub struct Env {
 }
 
 impl Env {
-    /// Create new default [`Env`].
+    /// Create a new default [`Env`].
     pub fn new() -> Self {
         Self::new_from(std::env::vars_os().collect())
     }
@@ -51,11 +51,11 @@ impl Env {
 
     /// Get environmental variable pointed by `key`.
     ///
-    /// # Arguments
+    /// ## Arguments
     ///
     /// * `key` - key for environmental variable. Must implement [`AsRef<OsStr>`].
     ///
-    /// # Returns
+    /// ## Returns
     /// [`Option<&OsStr>`]. [`None`] variant indicates missing key, [`Some`]: existing key.
     ///
     pub fn get_os(&self, key: impl AsRef<OsStr>) -> Option<&OsStr> {
@@ -83,9 +83,9 @@ impl Env {
         self.get_os(key).is_some()
     }
 
-    /// Get environmental variable pointed by `key` and convert it to UTF-8.
+    /// Get environmental variable pointed by `key` and convert it to utf8.
     ///
-    /// # Arguments
+    /// ## Arguments
     ///
     /// * `key` - key for environmental variable. Must implement [`AsRef<Str>`].
     pub fn get(&self, key: impl AsRef<OsStr>) -> QuackResult<&str> {

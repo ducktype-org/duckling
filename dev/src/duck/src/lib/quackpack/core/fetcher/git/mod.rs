@@ -82,6 +82,7 @@ impl GitClient {
     }
 }
 
+/// A helper trait for repository methods.
 trait RepositoryExt {
     /// Checkout `self` into a given commit.
     fn checkout_commit(&self, commit: StrId) -> QuackResult<()>;

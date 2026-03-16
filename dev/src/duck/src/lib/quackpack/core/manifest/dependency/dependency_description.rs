@@ -1,3 +1,4 @@
+//! Essential data for identifying a dependency.
 use crate::QuackResult;
 use crate::StrId;
 use crate::qp_bail;
@@ -15,7 +16,7 @@ pub struct DependencyDescription {
 }
 
 impl DependencyDescription {
-    /// Create a new `DependencyDescription`.
+    /// Create a new [`DependencyDescription`].
     pub fn new(
         manifest_name: StrId,
         versions: Vec<Version>,
@@ -46,7 +47,7 @@ impl DependencyDescription {
         self.source
     }
 
-    /// Destroy this description into inner parts
+    /// Destroy this description into inner parts.
     pub fn decompose(self) -> (StrId, Vec<Version>, InternedSource) {
         let Self {
             manifest_name,

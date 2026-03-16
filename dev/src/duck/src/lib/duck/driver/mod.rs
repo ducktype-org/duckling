@@ -11,6 +11,7 @@ use cli_ext::CommandExt;
 
 use crate::duck::driver::styles::get_styles;
 
+/// Create main cli parser.
 fn cli() -> Command {
     Command::new(crate_name!())
         .version(crate_version!())
@@ -24,6 +25,7 @@ fn cli() -> Command {
         .styles(get_styles())
 }
 
+/// Same as [`cli`], but ignores any errors and `help`/`--help` early exits.
 fn cli_no_err() -> Command {
     cli()
         .disable_help_subcommand(true)

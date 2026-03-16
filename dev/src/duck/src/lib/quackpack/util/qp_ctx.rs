@@ -1,3 +1,4 @@
+//! Trait extension used in parsing manifests.
 use url::Url;
 
 use crate::{DuckCtx, QuackResult, QuackResultContext, quackpack::core::fetcher};

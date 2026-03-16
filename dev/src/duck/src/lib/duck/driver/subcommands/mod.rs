@@ -16,6 +16,7 @@ mod sync;
 mod tree;
 mod unsync;
 
+/// Get parsers for all the builtin subcommands.
 pub fn subcommands() -> Vec<Command> {
     vec![
         add::get_parser(),
@@ -35,8 +36,12 @@ pub fn subcommands() -> Vec<Command> {
     ]
 }
 
+/// Function signature which subcommands execution logic follows.
 pub type ExecFn = fn(&DuckCtx, &ArgMatches) -> QuackResult<()>;
 
+/// Get the [`ExecFn`] for the given subcommand name.
+///
+/// Returns [`None`], if `name` is not a valid duck builtin subcommand name.
 pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
         "add" => add::execute,

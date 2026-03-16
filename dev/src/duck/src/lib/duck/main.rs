@@ -4,6 +4,7 @@ use crate::{DuckCtx, duck::util::terminal::Terminal};
 use crate::{QuackError, QuackResult, qp_bail_internal};
 use tracing::debug;
 
+/// Actual main entry point for the duck-binary.
 pub fn main() {
     setup_logger();
     let mut ctx = match DuckCtx::new() {
@@ -19,6 +20,7 @@ pub fn main() {
     }
 }
 
+/// Setup [`tracing`] loggers.
 pub fn setup_logger() {
     use tracing_subscriber::{
         EnvFilter, Layer,
@@ -36,6 +38,7 @@ pub fn setup_logger() {
     debug!("start = {:#?}", std::time::SystemTime::now());
 }
 
+/// Print returned [`QuackError`] to the appropriate [`Terminal`] and exit.
 fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal) -> ! {
     if matches!(error.display_place(), DisplayPlace::StdOut) {
         if let Err(e) = print_message(&error, stdout) {
@@ -47,6 +50,7 @@ fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal)
     std::process::exit(error.exit_code())
 }
 
+/// Print [`QuackError`] as a message.
 fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
     for (i, msg) in msgs.stack().enumerate() {
         if i > 0 {
@@ -68,11 +72,13 @@ fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
     Ok(())
 }
 
+/// Print [`QuackError`] as an error.
 fn print_error(error: &QuackError, term: &Terminal) {
     print_errors_stack(error, term);
     print_internals(error, term);
 }
 
+/// Print stack of [`QuackError`]s.
 fn print_errors_stack(error: &QuackError, term: &Terminal) {
     for (i, e) in error.stack().enumerate() {
         if i == 0 {
@@ -102,6 +108,9 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
     }
 }
 
+/// Print all internal errors in the [`QuackError`] stack.
+///
+/// This is done at the end, so URL shows at the bottom of the user's terminal.
 fn print_internals(error: &QuackError, term: &Terminal) {
     let mut internal_errors = false;
     for e in error.stack() {

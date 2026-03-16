@@ -1,3 +1,8 @@
+//! [`Fetcher`] manages all network-related clients.
+//!
+//! It incorporates [`DucknestClient`](ducknest::DucknestClient) with
+//! [`ManifestCache`](cache::ManifestCache), and provides another layer of abstraction over the
+//! [`GitClient`](git::GitClient).
 use std::path::{Path, PathBuf};
 
 use tempfile::TempDir;
@@ -39,7 +44,9 @@ pub struct Fetcher<'duck> {
 }
 
 impl<'duck> Fetcher<'duck> {
+    /// Filename of the default package's compressed source.
     const DEFAULT_BLOB_FILENAME: &'static str = "source.tar.gz";
+    /// URL of the default Ducknest instance.
     pub const DEFAULT_REGISTRY_URL: &'static str = "http://localhost:9001";
 
     /// Create a new [`Fetcher`].
@@ -189,6 +196,7 @@ impl<'duck> Fetcher<'duck> {
         Ok((result, dir))
     }
 
+    /// Get the [`DuckCtx`] used to construct this [`Fetcher`] instance.
     pub fn ctx(&self) -> &DuckCtx {
         self.ctx
     }
