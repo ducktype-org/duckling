@@ -35,10 +35,9 @@ namespace vm::jit::cnp {
 		void* handle = dlopen(path.data(), RTLD_NOW);
 		CORE_CHECK(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 
-		return DynamicLibrary{ .lib_fd = fd, .lib_handle = handle };
+		return DynamicLibrary{fd, handle };
 	}
 
-	template<>
 	std::byte* DynamicLibrary::findSymbol(const char* name) const {
 		void* sym_loc = dlsym(lib_handle, name);
 		CORE_CHECK(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
