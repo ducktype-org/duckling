@@ -133,6 +133,15 @@ void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionPa
 	lir::LIRLocalRef lir_func_param
 ) {
 	createLirLocalToDVMMapping(lir_func_param);
+	if_opt_some(fun_di_builder_opt, builder) {
+		if_opt_some(lir_func_param->metadata.source_code_name, param_name) {
+			builder.addParameter(
+				lir_func_param->parameter_index.value(),
+				param_name.str(),
+				lir_func_param->metadata.position.map(translateDIPosition)
+			);
+		}
+	}
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::beginBlock(lir::BlockRef block) {

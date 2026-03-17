@@ -36,6 +36,8 @@ namespace debug_info {
 		base::Optional<std::string>    function_name;
 		base::Optional<SourcePosition> position;
 
+		std::vector<std::pair<u64, VariableMetadata>> parameter_indexes_to_metadata;
+
 		std::vector<std::pair<u64, InstructionMetadata>> instr_offsets_to_metadata;
 		std::vector<std::pair<u64, VariableMetadata>>    instr_offsets_to_variable_init;
 	};

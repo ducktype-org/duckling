@@ -13,27 +13,31 @@ namespace debug_info {
 		  mangled_name(std::move(mangled_name)),
 		  metadata(std::move(metadata)) {}
 
-	FunctionBuilder& FunctionBuilder::addInstruction(u64 offset, InstructionMetadata metadata) {
-		this->metadata.instr_offsets_to_metadata.emplace_back(offset, std::move(metadata));
-		return *this;
-	}
-
 	FunctionBuilder& FunctionBuilder::addInstruction(u64 offset, SourcePosition position) {
-		return addInstruction(offset, InstructionMetadata{ .position = std::move(position) });
-	}
-
-	FunctionBuilder& FunctionBuilder::addVariableInit(u64 offset, VariableMetadata metadata) {
-		this->metadata.instr_offsets_to_variable_init.emplace_back(offset, std::move(metadata));
+		this->metadata.instr_offsets_to_metadata.emplace_back(
+			offset, InstructionMetadata{ .position = std::move(position) }
+		);
 		return *this;
 	}
 
 	FunctionBuilder& FunctionBuilder::addVariableInit(
 		u64 offset, std::string variable_name, base::Optional<SourcePosition> position
 	) {
-		return addVariableInit(
+		this->metadata.instr_offsets_to_variable_init.emplace_back(
 			offset,
 			VariableMetadata{ .name = std::move(variable_name), .position = std::move(position) }
 		);
+		return *this;
+	}
+
+	FunctionBuilder& FunctionBuilder::addParameter(
+		u64 index, std::string parameter_name, base::Optional<SourcePosition> position
+	) {
+		this->metadata.parameter_indexes_to_metadata.emplace_back(
+			index,
+			VariableMetadata{ .name = std::move(parameter_name), .position = std::move(position) }
+		);
+		return *this;
 	}
 
 	DebugInfoBuilder& FunctionBuilder::end() {
@@ -67,6 +71,7 @@ namespace debug_info {
 	) {
 		auto fun_metadata = FunctionMetadata{ .function_name             = std::move(function_name),
 			                                  .position                  = std::move(position),
+			                                  .parameter_indexes_to_metadata = {},
 			                                  .instr_offsets_to_metadata = {},
 			                                  .instr_offsets_to_variable_init = {} };
 		return { *this, std::move(mangled_name), std::move(fun_metadata) };

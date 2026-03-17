@@ -134,7 +134,7 @@ namespace compiler::driver {
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 			if (key.build_debug_info && key.backend_type == BackendType::DVM) {
 				names.debug_info_file
-					= key.queryStablePerfectHash().toStringHex() + "stable.di.json";
+					= key.queryStablePerfectHash().toStringHex() + ".stable.di.json";
 			}
 			return names;
 		}

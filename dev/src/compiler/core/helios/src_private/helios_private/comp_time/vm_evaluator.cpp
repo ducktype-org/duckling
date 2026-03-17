@@ -271,7 +271,7 @@ namespace {
 		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
 		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx);
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
@@ -280,7 +280,7 @@ namespace {
 
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 		auto bytecode = m.build();
-		return comptime_dvm.loadCode(bytecode);
+		return comptime_dvm.loadCode(bytecode.code_collection);
 	}
 
 	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(

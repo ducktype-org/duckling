@@ -24,7 +24,7 @@ namespace compiler::driver {
 			return hashing::justHash<hashing::SHA256>(artifact.file.getFilePath().string());
 		}
 
-		debug_info::FilePosition resolvePosition(const debug_info::PstHashPostion& pos) {
+		debug_info::FilePosition calculateSourcePosition(const debug_info::PstHashPostion& pos) {
 			auto source_position
 				= pst::LangElement::getByStableHash(pos.postion_scope_begin)
 				      .illegalAccess()
@@ -86,7 +86,7 @@ namespace compiler::driver {
 			}
 
 			auto debug_info = std::move(debug_info_or_error.value());
-			debug_info.resolvePositions(resolvePosition);
+			debug_info.resolvePositions(calculateSourcePosition);
 
 			auto output = getQueryArtifactsCollection()->fileArtifactAtOrNew(
 				base::StrID(outputArtifactName(key).c_str())
