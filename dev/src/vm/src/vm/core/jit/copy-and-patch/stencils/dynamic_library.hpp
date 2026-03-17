@@ -8,6 +8,12 @@
 #if __unix__
 
 namespace vm::jit::cnp {
+
+	/**
+	 * @brief Links an in-memory dynamic library into the current process, 
+	 * allows to find where the symbols in it live.
+	 * @details It is a wrapper over a system linker.
+	 */
 	struct DynamicLibrary {
 		DynamicLibrary()                                 = delete;
 		DynamicLibrary(const DynamicLibrary&)            = delete;

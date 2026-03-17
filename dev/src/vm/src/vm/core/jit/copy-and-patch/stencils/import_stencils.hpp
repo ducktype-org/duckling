@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dynamic_linker.hpp"
+#include "dynamic_library.hpp"
 #include "relocations.hpp"
 
 #include <algorithm>

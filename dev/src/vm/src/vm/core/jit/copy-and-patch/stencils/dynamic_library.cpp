@@ -1,4 +1,4 @@
-#include "dynamic_linker.hpp"
+#include "dynamic_library.hpp"
 
 #include <base/except/exceptions.hpp>
 
