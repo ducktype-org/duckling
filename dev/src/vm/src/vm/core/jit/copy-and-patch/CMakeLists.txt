@@ -36,7 +36,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         -shared
         ${linked_out}-1
         -o ${linked_out}
-        DEPENDS ${extra_deps}
+        DEPENDS ${binary_file} ${extra_deps}
     )
     set_source_files_properties("${linked_out}" PROPERTIES GENERATED TRUE)
 
@@ -104,7 +104,7 @@ target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
 set(cp_stencils "${CMAKE_CURRENT_BINARY_DIR}/wrapper")
 
-process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "wrapper")
+process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "wrapper" $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> )
 set(wrapper_binary_artifacts
     "${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm"
     "${CMAKE_CURRENT_BINARY_DIR}/wrapper-so"
