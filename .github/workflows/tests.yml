@@ -315,6 +315,9 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --filter "integration_tests/compiler" --duckc-worker-count 4
 
+      # failure() makes this step run even when a previous step has failed (which would otherwise
+      # cause all subsequent steps to be skipped). The additional conditions ensure this step only
+      # runs when at least one of the integration test steps actually failed.
       - name: Upload integration tests log file
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure' || steps.integration-tests-multithreaded-only-compiler.outcome == 'failure') }}
         uses: actions/upload-artifact@v4
