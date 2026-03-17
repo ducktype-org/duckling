@@ -777,6 +777,18 @@ private:
 			{ "Feature not implemented", "compile time evaluation" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { fun foo() = 0; }
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "zero-sized classes" },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
