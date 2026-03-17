@@ -6,11 +6,15 @@ use crate::{QuackError, QuackResult, StrId, qp_bail, qp_bail_internal, qp_err};
 
 #[derive(Clone, Debug)]
 /// List of specific options which should be passed to the compiler.
+/// All fields are wrapped in [`Option`],
+/// since this is a tight abstraction over the real, yaml manifest entry.
+/// Expansion of inheritance and providing defaults is done in the
+/// [`compile::profiles`](`crate::quackpack::core::compile::profiles`) module.
 pub struct Profile {
-    pub opt_level: OptLevel,
-    pub dvm_bytecode: bool,
-    pub incremental: bool,
-    pub c_std: bool,
+    pub opt_level: Option<OptLevel>,
+    pub dvm_bytecode: Option<bool>,
+    pub incremental: Option<bool>,
+    pub c_std: Option<bool>,
     pub inherits: Option<StrId>,
 }
 
@@ -28,7 +32,7 @@ pub enum OptLevel {
 impl From<registry::Profile> for Profile {
     fn from(value: registry::Profile) -> Self {
         Self {
-            opt_level: value.opt_level.into(),
+            opt_level: value.opt_level.map(Into::into),
             dvm_bytecode: value.dvm_bytecode,
             incremental: value.incremental,
             c_std: value.c_std,
@@ -40,7 +44,7 @@ impl From<registry::Profile> for Profile {
 impl From<Profile> for registry::Profile {
     fn from(value: Profile) -> Self {
         registry::Profile {
-            opt_level: value.opt_level.into(),
+            opt_level: value.opt_level.map(Into::into),
             dvm_bytecode: value.dvm_bytecode,
             incremental: value.incremental,
             c_std: value.c_std,
@@ -222,31 +226,31 @@ mod test {
     #[test]
     fn profiles_inheritance_cycle() {
         let prof_a = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("b".into()),
         };
         let prof_b = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("c".into()),
         };
         let prof_c = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("d".into()),
         };
         let prof_d = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("b".into()),
         };
         let profiles_map = [
@@ -268,10 +272,10 @@ mod test {
     #[test]
     fn profile_inheritance_self_cycle() {
         let prof_a = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("a".into()),
         };
         let profiles_map = [("a".into(), prof_a)].into();
@@ -282,10 +286,10 @@ mod test {
     #[test]
     fn inheritance_from_predefined() {
         let prof_a = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("dev".into()),
         };
         let profiles_map = [("a".into(), prof_a)].into();
@@ -295,17 +299,17 @@ mod test {
     #[test]
     fn cycle_with_overwritten_predefined() {
         let prof_a = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("dev".into()),
         };
         let prof_dev = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("a".into()),
         };
         let profiles_map = [("a".into(), prof_a), ("dev".into(), prof_dev)].into();
@@ -320,10 +324,10 @@ mod test {
     #[test]
     fn inheritance_from_nonexistent_profile() {
         let prof_a = Profile {
-            opt_level: OptLevel::S,
-            dvm_bytecode: false,
-            incremental: false,
-            c_std: false,
+            opt_level: Some(OptLevel::S),
+            dvm_bytecode: Some(false),
+            incremental: Some(false),
+            c_std: Some(false),
             inherits: Some("b".into()),
         };
         let profiles_map = [("a".into(), prof_a)].into();

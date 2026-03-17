@@ -104,11 +104,9 @@ fn parse_profiles(
     Profiles::new(profiles_map?)
 }
 
-static DEFAULT_OPT_LEVEL: OptLevel = OptLevel::Three;
-
 fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
     let opt_level = if let Some(schema_opt_level) = &input.opt_level {
-        match &schema_opt_level {
+        Some(match &schema_opt_level {
             SchemaOptLevel::Number(0) => OptLevel::Zero,
             SchemaOptLevel::Number(1) => OptLevel::One,
             SchemaOptLevel::Number(2) => OptLevel::Two,
@@ -129,13 +127,13 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
                     "Unknown optimization level `{str}`. Optimization levels are 0, 1, 2, 3, s, z."
                 ),
             },
-        }
+        })
     } else {
-        DEFAULT_OPT_LEVEL
+        None
     };
-    let dvm_bytecode = input.dvm_bytecode.unwrap_or(false);
-    let incremental = input.incremental.unwrap_or(true);
-    let c_std = input.c_std.unwrap_or(true);
+    let dvm_bytecode = input.dvm_bytecode;
+    let incremental = input.incremental;
+    let c_std = input.c_std;
     let inherits = input.inherits.clone().map(Into::into);
     Ok(Profile {
         opt_level,

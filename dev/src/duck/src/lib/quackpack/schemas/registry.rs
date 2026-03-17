@@ -109,10 +109,10 @@ pub enum DependencyFeature {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Profile {
-    pub opt_level: OptLevel,
-    pub dvm_bytecode: bool,
-    pub incremental: bool,
-    pub c_std: bool,
+    pub opt_level: Option<OptLevel>,
+    pub dvm_bytecode: Option<bool>,
+    pub incremental: Option<bool>,
+    pub c_std: Option<bool>,
     pub inherits: Option<String>,
 }
 
