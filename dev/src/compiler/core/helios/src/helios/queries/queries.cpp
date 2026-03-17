@@ -158,7 +158,6 @@ namespace compiler::helios {
 			bool is_failed = false;
 
 			for (const auto& method: methods) {
-			
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
 				// llvm panics. This check is put inside the for, to only check it if the methods
@@ -166,7 +165,7 @@ namespace compiler::helios {
 				if (not class_type.carriesInformation(ctx)) {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Methods of zero-sized classes are not yet implemented due to ZST not "
-					    "being properly supported yet.",
+						"being properly supported yet.",
 						symbolPst(method.getSymbol()).map([&](auto pst) {
 							return pst.unlock(ctx)->getSourcePosition();
 						})
