@@ -744,7 +744,10 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
 			// this should probably be changed/expanded in the future:
-			return getInterface(ctx)->getElements().size() != 0;
+			u64 fields_count = 0;
+			for (const auto& element: getInterface(ctx)->getElements())
+				if (element.isField()) fields_count++;
+			return fields_count != 0;
 		}
 	};
 
