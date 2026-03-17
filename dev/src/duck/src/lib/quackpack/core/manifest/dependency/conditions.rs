@@ -1,3 +1,4 @@
+//! Conditions describing whether a dependency should be enabled.
 use std::collections::HashSet;
 
 use crate::QuackError;
@@ -34,7 +35,7 @@ impl Conditions {
         })
     }
 
-    /// Check if conditions are met for the given enabled features.
+    /// Check, if conditions are met for the given enabled features.
     /// This checks `any(system) and any(arch) and any(flags)`.
     // @TODO: #1353 Do we want to take an `impl IntoIterator`, or a `Vec`, or a `HashSet`?
     //  Connected with !TODO in `are_features_enabled`.
@@ -42,6 +43,7 @@ impl Conditions {
         self.are_features_enabled(enabled_features)
     }
 
+    /// Check, if enabled features for this package enable this dependency.
     fn are_features_enabled(
         &self,
         enabled_features: impl IntoIterator<Item = FeatureName>,

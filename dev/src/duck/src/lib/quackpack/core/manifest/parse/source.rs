@@ -1,3 +1,6 @@
+//! Parse a dependency source.
+//!
+//! This is the hardest (and most crucial) part of the parsing process.
 use std::path::{Path, PathBuf};
 
 use tracing::debug;
@@ -272,6 +275,7 @@ fn resolve_local_dep_root(
     }
 }
 
+/// Parse a url of a git dependency.
 fn parse_git_url(manifest_git_url: &str, package_root: &Path, ctx: &DuckCtx) -> QuackResult<Url> {
     let git_url = Url::parse(manifest_git_url);
     let mut err: QuackError = match git_url {

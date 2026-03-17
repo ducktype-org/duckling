@@ -11,12 +11,16 @@ use crate::{
     },
 };
 
-pub fn get_possible_realisations(
+/// For a given dpendency entry from the manifest and
+/// given all the found versions of a package from some location,
+/// find all the packages satisfying the dependency.
+pub fn get_possible_realizations(
     dependency_description: &Dependency,
     versions_for_location: &HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
 ) -> QuackResult<Vec<ExpandedPackage>> {
     if dependency_description.is_pinned() {
+        // For a pinned dependency only one package can be a realization.
         let version = dependency_description
             .desc()
             .versions()
@@ -34,6 +38,8 @@ pub fn get_possible_realisations(
         ))) else {
             return Ok(vec![]);
         };
+        // Baseline versions are the versions specified in the manifest,
+        // with which we want to check the compatibility of the existing packages.
         let baseline_versions = if location.is_local() || location.is_git() {
             vec![None]
         } else {
@@ -85,7 +91,7 @@ mod test {
                 ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
                 Location,
             },
-            util::get_possible_realisations,
+            util::get_possible_realizations,
         },
         util_common::path_ops_ext::PathOpsExt,
     };
@@ -141,7 +147,7 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
             .unwrap();
         assert_eq!(
             res,
@@ -193,7 +199,7 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
             .unwrap();
         assert_eq!(
             HashSet::from_iter(res),

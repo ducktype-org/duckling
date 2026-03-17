@@ -1,3 +1,4 @@
+//! A context of a package  parsed from the disk.
 use std::path::PathBuf;
 
 use crate::{
@@ -6,7 +7,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-/// Context of a parsed package on a disk.
+/// A context of a package  parsed from the disk.
 pub struct PackageCtx<'duck> {
     package: Package,
     venv_config: VenvConfig,

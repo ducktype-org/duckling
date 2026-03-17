@@ -105,7 +105,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 return Err(errors.into_iter().next().unwrap());
             }
         }
-        state.into_gathered_info()
+        state.try_into()
     }
 
     /// Helper for [`Gatherer::explore()`], creates a dummy [`ManifestsRequest`] for the root package to update the state

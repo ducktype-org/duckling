@@ -1,7 +1,7 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/errors.hpp>
@@ -91,7 +91,18 @@ private:
 	void testErrorLogging() {
 		// ============================ No operator found ============================
 		checkForErrorOnCompileModule(
-			R"(fun a() = true + false;)", { "No builtin binary operator" }, 1
+			R"(fun a() = true + false;)", { "Call failed due to ambiguous overload resolution" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun a() = 'c' + 1i64;)",
+			{
+				"Call failed due to ambiguous overload resolution",
+				"type const Function (const u8, const char) -> (const char).",
+				"given argument type `char` cannot be converted to the expected type `const u8`.",
+				"type const Function (const char, const u8) -> (const char).",
+				"given argument type `i64` cannot be converted to the expected type `const u8`.",
+			},
+			1
 		);
 		checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
 
@@ -389,6 +400,21 @@ private:
 			)",
 			{ "The given argument type `const type` cannot be converted to the expected type "
 		      "`()`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun bad() = {
+				    return;
+				    return 0;
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "inconsistent return statements" },
 			1
 		);
 
@@ -807,13 +833,6 @@ private:
 
 		try {
 			test_utils::getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.

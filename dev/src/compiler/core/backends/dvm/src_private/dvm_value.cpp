@@ -78,6 +78,8 @@ DVMImmediate::DVMImmediate(i32 value): value(translateToU64(value)) {}
 
 DVMImmediate::DVMImmediate(u32 value): value(translateToU64(value)) {}
 
+DVMImmediate::DVMImmediate(char value): value(translateToU64(value)) {}
+
 [[nodiscard]] vm::opargs::OpCodeArg DVMLabel::asArgument() const {
 	return vm::opargs::Label{ name };
 }

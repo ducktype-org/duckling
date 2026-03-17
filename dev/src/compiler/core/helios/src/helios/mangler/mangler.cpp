@@ -7,7 +7,8 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -184,7 +185,7 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto current_pst = symbolPst(symbol_id).unlock(ctx);
+				auto current_pst = symbolPst(symbol_id).value().unlock(ctx);
 				while (true) {
 					auto ancestor     = current_pst;
 					auto ancestor_opt = ancestor->getParent();
@@ -308,9 +309,9 @@ namespace compiler::helios::mangler {
 				return path(ctx, symbol_id);
 			}
 			default:
-				throw base::LogicError{ base::strConcat(
-					"Cannot mangle symbol of type: ", symbolPst(symbol_id).unlock(ctx)->elementType()
-				) };
+				throw base::LogicError{
+					base::strConcat("Cannot mangle symbol of type: ", kind(symbol_id))
+				};
 				break;
 			}
 		}
