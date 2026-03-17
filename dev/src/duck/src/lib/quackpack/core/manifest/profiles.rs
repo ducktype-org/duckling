@@ -247,7 +247,7 @@ mod test {
             dvm_bytecode: false,
             incremental: false,
             c_std: false,
-            inherits: Some("a".into()),
+            inherits: Some("b".into()),
         };
         let profiles_map = [
             ("a".into(), prof_a),
@@ -328,6 +328,6 @@ mod test {
         };
         let profiles_map = [("a".into(), prof_a)].into();
         let err = Profiles::new(profiles_map).unwrap_err();
-        assert!(err.to_string() == "Profile \"a\" inherits from a non-existent profile \"b\"");
+        assert!(err.to_string() == "Profile `a` inherits from a non-existent profile `b`");
     }
 }
