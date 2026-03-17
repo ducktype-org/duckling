@@ -5,7 +5,7 @@
  */
 
 
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -41,6 +41,7 @@ public:
 		TESTER_ADD_TEST(testLifetimeFlags);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(staticArrayTest);
+		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 	}
@@ -528,6 +529,57 @@ private:
 		ASSERT_TRUE(found_zero_init_b);
 		ASSERT_TRUE(found_index_proj);
 		ASSERT_TRUE(found_nested_proj);
+	}
+
+	void dynamicArrayTest() {
+		auto module   = getLIROfModule(path("modules/dynamic_arrays"));
+		auto lir_func = module.lirFunc("dynamic_array_test");
+
+		using namespace compiler::lir;
+
+		bool found_zero_init        = false;
+		bool found_push_with_params = false;
+		bool found_pop_with_params  = false;
+		bool found_len              = false;
+		bool found_free             = false;
+
+		for (const auto& block: lir_func->block_order) {
+			for (const auto& instr: block->instructions) {
+				switch (instr.operation) {
+				case Operation::ZeroInitialize:
+					found_zero_init = true;
+					break;
+				case Operation::ListPush: {
+					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
+					auto& params = std::get<ListOperationParameters>(instr.extra_params);
+					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
+					found_push_with_params = true;
+					break;
+				}
+				case Operation::ListPop: {
+					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
+					auto& params = std::get<ListOperationParameters>(instr.extra_params);
+					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
+					found_pop_with_params = true;
+					break;
+				}
+				case Operation::ListLen:
+					found_len = true;
+					break;
+				case Operation::ListFree:
+					found_free = true;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+
+		ASSERT_TRUE(found_zero_init);
+		ASSERT_TRUE(found_push_with_params);
+		ASSERT_TRUE(found_pop_with_params);
+		ASSERT_TRUE(found_len);
+		ASSERT_TRUE(found_free);
 	}
 
 	void metaFunctionsTest() {

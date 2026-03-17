@@ -28,9 +28,15 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf, 
-	AllocBox,
-	// @TODO: #1894 This approach may be temporary and depends on how we handle destructors in the future.
-	FreeBox,
+	BoxAlloc,
+	// @TODO: #1894 This approach (for both `BoxFree` and `ListFree`) may be temporary and 
+	// depends on how we handle destructors in the future.
+	BoxFree,
+	ListFree,
+
+	ListPush,
+	ListPop,
+	ListLen,
 
 	/**
 		@brief Placeholder.
@@ -425,10 +431,18 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout> target_layout;
 	};
 
+	struct ListOperationParameters final {
+		/**
+		 * @brief The element layout for generic `ListPush` and `ListPop` operations.
+		 */
+		CRef<tsl::TypeLayout> element_layout;
+	};
+
 	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+	using InstrParameters
+		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
 
 	/**
 	 * @brief Single instruction of LIR code.

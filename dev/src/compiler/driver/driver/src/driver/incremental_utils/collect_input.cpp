@@ -1,4 +1,5 @@
-#include <driver_private/collect_input.hpp>
+#include "collect_input.hpp"
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -72,6 +73,23 @@ namespace compiler::driver {
 		}
 	}
 
+	void collectQueryInputsFromPst(
+		CRef<pst::PST<>> pst_ref, std::vector<query::external::InputData>& out
+	) {
+		auto root = pst_ref->getRootElement();
+		if (auto maybe_root = root.illegalAccess()) {
+			auto root_unlocked = maybe_root.value();
+			out.emplace_back(pst::internal::PSTAccessSideInput::getID(), root_unlocked->getHash());
+		}
+
+		auto elems = pst::viewAllSubTreeElements(root);
+		for (auto& el: elems)
+			if (auto maybe_elem = el.illegalAccess()) {
+				auto ptr = maybe_elem.value();
+				out.emplace_back(pst::internal::PSTAccessSideInput::getID(), ptr->getHash());
+			}
+	}
+
 	/**
 	 * @brief Collect all input data (QueryID + hash) from the global packages.
 	 * This includes:
@@ -123,20 +141,6 @@ namespace compiler::driver {
 			}
 		}
 
-		auto collect_from_pst = [&](auto& pst_ref) {
-			auto root = pst_ref->getRootElement();
-			if (auto maybe = root.illegalAccess()) {
-				auto el = maybe.value();
-				out->emplace_back(pst::internal::PSTAccessSideInput::getID(), el->getHash());
-			}
-			auto elems = pst::viewAllSubTreeElements(root);
-			for (auto& el: elems)
-				if (auto maybe = el.illegalAccess()) {
-					auto ptr = maybe.value();
-					out->emplace_back(pst::internal::PSTAccessSideInput::getID(), ptr->getHash());
-				}
-		};
-
 		// Process main source file if present
 		if (module_ref->hasMainSourceFile()) {
 			auto sf = module_ref->getMainSourceFile();
@@ -152,7 +156,7 @@ namespace compiler::driver {
 			out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
 
 			auto pst = sf_mut->getPST();
-			collect_from_pst(pst);
+			collectQueryInputsFromPst(pst, *out);
 		}
 
 		// Process other source files
@@ -168,7 +172,7 @@ namespace compiler::driver {
 			out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
 
 			auto pst = sf_mut->getPST();
-			collect_from_pst(pst);
+			collectQueryInputsFromPst(pst, *out);
 		}
 
 		// Recurse into submodules
@@ -176,15 +180,27 @@ namespace compiler::driver {
 			collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);
 	}
 
-	std::vector<query::external::InputData> collectInputDataFromGlobalPackages() {
+	namespace {
+		std::vector<query::external::InputData> collectInputDataFromGlobalPackagesImpl(
+			const LookupsMap& lookups_map
+		) {
+			std::vector<query::external::InputData> out;
+
+			const auto& packages = global_state::getPackages();
+			for (const auto& pkg: packages)
+				collectFromModule(lookups_map, pkg.root_module, base::Ref(&out));
+
+			return out;
+		}
+	}
+
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromPrevMetadata() {
 		// This function should only be called after loading previous graph and metadata.
 		CORE_ASSERT(
 			query::external::prevMetadataExists(),
 			"Previous metadata must be loaded before collecting input data. This indicates a bug "
 			"in driver initialization."
 		);
-
-		std::vector<query::external::InputData> out;
 
 		// Collect all metadata_ModuleLookup to recreate ModuleChildSideInput nodes.
 		// If a child that was looked up is in the same state as in the previous compilation
@@ -203,11 +219,15 @@ namespace compiler::driver {
 			query::external::getMetadataFromAllPrevNodes<frontend::metadata_ModuleLookup>()
 		);
 
-		const auto& packages = global_state::getPackages();
-		for (const auto& pkg: packages)
-			collectFromModule(lookups_map, pkg.root_module, base::Ref(&out));
+		return collectInputDataFromGlobalPackagesImpl(lookups_map);
+	}
 
-		return out;
+	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromCurrentMetadata() {
+		LookupsMap lookups_map = createLookupMap(
+			query::external::getMetadataFromAllCurrentNodes<frontend::metadata_ModuleLookup>()
+		);
+
+		return collectInputDataFromGlobalPackagesImpl(lookups_map);
 	}
 
 }  // namespace compiler::driver

@@ -36,7 +36,7 @@ jobs:
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install gvc, LLVM and nlohmann_json
         run: sudo apt -y install libgraphviz-dev llvm-20 clang-20 llvm-20-dev nlohmann-json3-dev ${{ env.CXX_COMPILER }} ${{ env.CC_COMPILER }}
@@ -94,7 +94,7 @@ jobs:
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Fetch origin/main for the following steps, because by default repo on the runners contains just the bare-minimum.
       - name: Fetch origin/main

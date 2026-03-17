@@ -1,7 +1,6 @@
-#include "queries.hpp"
+#include "function_queries.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -14,7 +13,6 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -24,6 +22,7 @@
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
+#include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -45,197 +44,6 @@ namespace compiler::helios {
 	 * @brief Query function return type, deduced based on return statements in its body.
 	 */
 	DECLARE_QUERY(QueryReturnTypeDeduction, SymID, CRef<query::QResult<tsh::SymbolType<>>>, ({}))
-
-	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// We want to continue gathering other entities
-			// even if some function queries fail,
-			// so we store in this variable whether any failure occurred,
-			// and return failure at the end if so.
-			bool is_failed = false;
-
-			MCRef<std::vector<ScopeID>> scopes_to_process;
-
-			auto scopes_in_module = ctx.query<QueryScopesInModule>(key);
-			variant_match(scopes_in_module->value) {
-				variant_case(QueryScopesInModuleValue::Success, success) {
-					scopes_to_process = &success.scopes;
-				}
-				variant_case(QueryScopesInModuleValue::Failure, failure) {
-					scopes_to_process = &failure.partial_scopes;
-					is_failed
-						= true;  // we mark the whole query as failed, even if we have some scopes
-				}
-				variant_default { CORE_UNREACHABLE(); }
-			}
-
-			HOUTUnit out;
-
-			std::vector<query::TaskHandle> scheduled_tasks;
-			std::vector<SymID>             class_symbols;
-
-			for (auto scope: *scopes_to_process) {
-				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
-
-				for (auto sym: *symbols_in_scope) {
-					// grab constants:
-					if (kind(sym) == SymbolKind::Const)
-						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
-					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
-
-					// grab functions:
-					if (kind(sym) == SymbolKind::Function)
-						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
-					if (kind(sym) == SymbolKind::Class) class_symbols.emplace_back(sym);
-				}
-			}
-
-			for (auto class_sym: class_symbols) {
-				// we postpone this past function scheduling, as
-				// appendClassConstructors may be time consuming.
-				appendClassConstructors(out.functions, class_sym, ctx);
-				if (appendClassMethodsWithFail(out.functions, class_sym, ctx)) {
-					is_failed = true;
-					continue;
-				}
-			}
-
-			for (auto handler: scheduled_tasks) {
-				// we "catch" failure here to continue gathering other functions:
-				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
-				if (hout_function->hasFailed()) {
-					is_failed = true;
-					continue;
-				} else {
-					out.functions.emplace_back(&hout_function->valueOrPanic());
-				}
-			}
-
-			if (is_failed) return query::Failed();
-
-			return out;
-		}
-
-		/**
-		 * Append the constructors of a class to the provided vector of functions.
-		 * @param out_functions The vector of functions to be modified.
-		 * @param class_sym The symbol of the class, whose constructors are to be appended.
-		 * @param ctx The query context.
-		 */
-		static void appendClassConstructors(
-			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
-		) {
-			CORE_ASSERT(
-				kind(class_sym) == SymbolKind::Class,
-				"Invalid argument exception: expected class symbol"
-			);
-
-			// For now, we handle only the class's primary constructor.
-			// @TODO: #1290 Handle auxiliary constructors.
-
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
-			const auto& implicit_ctor
-				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
-			out_functions.emplace_back(&implicit_ctor);
-		}
-
-		/**
-		 * Append the methods of a class to the provided vector of functions.
-		 * @param out_functions The vector of functions to be modified.
-		 * @param class_sym The symbol of the class, whose methods are to be appended.
-		 * @param ctx The query context.
-		 *
-		 * @return Whether any method queries failed.
-		 */
-		static bool appendClassMethodsWithFail(
-			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
-		) {
-			CORE_ASSERT(
-				kind(class_sym) == SymbolKind::Class,
-				"Invalid argument exception: expected class symbol"
-			);
-
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
-
-			auto methods = class_type.getInterface(ctx)->getMethodsView();
-
-
-			bool is_failed = false;
-
-			for (const auto& method: methods) {
-				auto method_sym  = method.getSymbol();
-				auto hout_method = ctx.query<QueryCodeOfFun>(method_sym);
-				if (hout_method->hasFailed()) {
-					is_failed = true;
-					continue;
-				} else {
-					out_functions.emplace_back(&hout_method->valueOrPanic());
-				}
-			}
-			return is_failed;
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUT);
-
-	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<CRef<HOUTUnit>>>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<CRef<HOUTUnit>> out = { &ctx.query<QueryModuleHOUT>(key)->valueOrThrow() };
-
-			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
-			for (auto submodule: *submodules) {
-				// @TODO optimize multiple concatenations
-				auto submodule_hout
-					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
-				for (const auto& i: submodule_hout) out.push_back(i);
-			}
-			return out;
-		}
-
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUTRecursively);
-
-	struct IMPLEMENT_QUERY(QueryTopLevelEntities, query::QResult<HOUTUnit>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// go over all top level symbols and get theirs hout
-			// store it in some vector or something
-			// lookup all and stuff
-
-			auto main_file_root_scope = queryRootScopeOfMainModuleFile(ctx, key);
-
-			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
-
-			HOUTUnit out;
-
-			for (auto sym: *symbols_in_module_root) {
-				// grab constants:
-				if (kind(sym) == SymbolKind::Const)
-					out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
-				if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-					out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
-				// grab functions:
-				if (kind(sym) == SymbolKind::Function)
-					out.functions.emplace_back(&ctx.query<QueryCodeOfFun>(sym)->valueOrThrow());
-			}
-
-			return out;
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
 	struct IMPLEMENT_QUERY(QueryReturnTypeDeduction, query::QResult<tsh::SymbolType<>>) {
 		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
@@ -320,6 +128,13 @@ namespace compiler::helios {
 					                ->valueOrThrow()
 					                .ref();
 					output(expr->expression_type.getSymbolType());
+				} else {
+					// "void" return should actually deduce to unit type:
+					output(tsh::SymbolType<>{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					});
 				}
 			}
 
@@ -475,6 +290,9 @@ namespace compiler::helios {
 			}
 		};
 
+		/**
+		 * @brief Get the declaration of an implicit class constructor.
+		 */
 		static PResult getImplicitCtorDecl(
 			Context& ctx, const houtgen::GeneratedSymbolData::ImplicitConstructor& ctor_data
 		) {
@@ -570,6 +388,43 @@ namespace compiler::helios {
 			};
 		}
 
+		/**
+		 * @brief Get the declaration of a builtin function, or one which does not have its
+		 * parameters specified anywhere. The parameter symbols are set as compiler-generated.
+		 */
+		static PResult getBuiltinDecl(Context& ctx, QKey fun) {
+			const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ fun })
+			                              ->valueOrThrow()
+			                              .getType()
+			                              .as<tsh::FunctionAbstractType>();
+			const auto return_type = builtin_type.getResultType();
+			auto       parameters  = std::vector<code::Parameter>{};
+			for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
+				const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+					base::StrID(base::strConcat("_", i).c_str()),
+					houtgen::GeneratedSymbolData{
+						houtgen::GeneratedSymbolData::Parameter{
+							.function_symbol = fun,
+							.parameter_index = i,
+						},
+					},
+				});
+				parameters.emplace_back(
+					name(param_symbol),
+					param_type,
+					std::nullopt,
+					param_symbol,
+					code::generatedOrigin()
+				);
+			}
+			return HOUTFunctionDeclaration{
+				fun,
+				return_type,
+				std::move(parameters),
+				code::generatedOrigin(),
+			};
+		}
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (kind(key)) {
 			case SymbolKind::Function:
@@ -585,7 +440,12 @@ namespace compiler::helios {
 						variant_match(generated_data.data) {
 							variant_case(
 								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
-							) return getImplicitCtorDecl(ctx, ctor_data);
+							) {
+								return getImplicitCtorDecl(ctx, ctor_data);
+							}
+							variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+								return getBuiltinDecl(ctx, key);
+							}
 							variant_default {
 								// Other generated symbols are not functions.
 								CORE_UNREACHABLE();
@@ -593,33 +453,7 @@ namespace compiler::helios {
 						}
 					}
 					variant_case(builtin::BuiltinFunctionData, builtin) {
-						const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ key })
-						                              ->valueOrThrow()
-						                              .getType()
-						                              .as<tsh::FunctionAbstractType>();
-						const auto return_type = builtin_type.getResultType();
-						auto       parameters  = std::vector<code::Parameter>{};
-						for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
-							const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
-								base::StrID(base::strConcat("_", i).c_str()),
-								houtgen::GeneratedSymbolData{
-									houtgen::GeneratedSymbolData::Parameter{
-										.function_symbol = key,
-										.parameter_index = i,
-									},
-								},
-							});
-							parameters.emplace_back(
-								name(param_symbol),
-								param_type,
-								std::nullopt,
-								param_symbol,
-								code::generatedOrigin()
-							);
-						}
-						return HOUTFunctionDeclaration{
-							key, return_type, std::move(parameters), code::generatedOrigin()
-						};
+						return getBuiltinDecl(ctx, key);
 					}
 					variant_default { CORE_UNREACHABLE(); }
 				}
@@ -636,35 +470,6 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
 
 	struct IMPLEMENT_QUERY(QueryCodeOfFun, query::QResult<HOUTFunction>) {
-		/**
-		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or
-		 * pst::CodeBlockOrStmt Might be changed into query in the future
-		 */
-		template<class Container>
-		static auto queryCodeOfCodeBlock(
-			query::Context& ctx, const Container& container, tsh::SymbolType<> return_type
-		) {
-			code::CodeBlock block({});
-			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
-				HoutStmtMaker stmt_maker(ctx, return_type);
-				auto          unlocked = stmt.unlockOpt(ctx);
-				if (!unlocked.has_value()) {
-					// @TODO: #1753 change here to grab errors from all statements.
-					query::throwFailed();
-				}
-				unlocked.value()->acceptVisitor(stmt_maker);
-
-				if (stmt_maker.is_failed) {
-					// @TODO: #1753 change here to grab errors from all statements.
-					query::throwFailed();
-				}
-
-				if (stmt_maker.out.has_value())
-					block.statements.emplace_back(std::move(stmt_maker.out.value()));
-			}
-			return block;
-		}
-
 		/**
 		 * Creates HOUT code block from single-statement function body.
 		 * i.e.: handles the `fun abc() = expr;` case.
@@ -698,282 +503,6 @@ namespace compiler::helios {
 			}
 		}
 
-		/**
-		 * @brief Visitor that creates HOUT statements from PST statements.
-		 * It is used locally in queryCodeOfCodeBlock.
-		 */
-		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
-			query::Context&   ctx;
-			tsh::SymbolType<> return_type;
-
-			/**
-			 * Whether the statement generation has failed.
-			 */
-			bool is_failed = false;
-
-			/**
-			 * The output statement.
-			 * If is_failed is false, but out is empty, it means that the PST statement
-			 * did not produce any HOUT statement (e.g., alias or using).
-			 */
-			base::Optional<Box<code::Stmt>> out;
-
-			HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type):
-				  ctx(ctx),
-				  return_type(return_type) {}
-
-			// @TODO: #1710 visits for all valid stmt-s
-
-			// @TODO: #1710 some stuff in here are also symbols (like named if's)
-			// "query symbol in scope" should be able to just work
-			// and provide correct symbols for lookup, but some care
-			// has to be taken, to ensure consistency between this code and scope states.
-
-			template<class T>
-			void output(T&& value) {
-				this->out.emplace(makeBox<std::remove_reference_t<T>>(std::forward<T>(value)));
-			}
-
-			void visitReturn(pst::Access<pst::Return> stmt) override {
-				if (auto val = stmt->getValue()) {
-					auto expr_coerced = getHoutOfExprWithExpectedType(
-											ctx, val.value().unlock(ctx)->getExpr(), return_type
-					)
-					                        .valueOrThrow();
-					output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced)));
-				} else {
-					output(code::VoidReturnStmt(code::pstOrigin(stmt)));
-				}
-			}
-
-			void visitAlias(pst::Access<pst::Alias>) override {}
-
-			void visitUsing(pst::Access<pst::Using>) override {}
-
-			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
-				if (assignment->getAssignmentType() != base::StrID("=")) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Only simple `=` assignment is supported for now.",
-						assignment->getSourcePosition()
-					));
-					query::throwFailed();
-				}
-
-				auto var = assignment->getVariables();
-				auto val = assignment->getValue();
-
-				auto location_expr = ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow()->clone();
-
-				// If left side of the assignment is a ref/box, we have to dereference it and store
-				// the value in the memory pointed by the ref/box.
-				auto location_type = location_expr->expression_type.getSymbolType();
-				if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
-					location_expr = makeBox<code::DerefExpr>(
-						ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
-					);
-
-				// The new `SymbolType` of `location_expr` is the location symbol without the
-				// ref/box specifier (as it was removed in the DerefExpr constructor). We now coerce
-				// the value expr to the type without the ref/box specifier.
-				auto new_value_expr_coerced
-					= getHoutOfExprWithExpectedType(
-						  ctx, val, location_expr->expression_type.getSymbolType()
-					)
-				          .valueOrThrow();
-
-				auto location_value_category
-					= location_expr->expression_type.getValueCategory().getCategory();
-				if (location_value_category == tsh::PrimaryCategory::Literal) {
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Left side of assignment is a literal",
-						var.unlock(ctx)->getSourcePosition(),
-						"",
-						"here"
-					));
-					query::throwFailed();
-					return;
-				}
-
-				auto location_mutability = location_type.getMutability();
-				if (location_mutability == tsh::Mutability::Immutable) {
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Left side of assignment can't be immutable.",
-						assignment->getSourcePosition()
-					));
-					query::throwFailed();
-					return;
-				}
-
-				output(code::AssignmentStmt(
-					code::pstOrigin(assignment),
-					std::move(location_expr),
-					std::move(new_value_expr_coerced)
-				));
-			}
-
-			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
-				// @TODO: handle null here
-				auto inner_expr = stmt->getExpr().unlock(ctx)->getExpr().unlock(ctx);
-
-				// here if we encounter an assignment expression
-				// we should create an assignment statement:
-				if (auto assignment_opt = inner_expr.dynamicCast<pst::expr::Assignment>()) {
-					handleAssignmentExpr(assignment_opt.value());
-					return;
-				}
-
-				// else just create an expression statement:
-
-				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })->valueOrThrow()->clone();
-				output(code::ExprStmt(code::pstOrigin(stmt), std::move(expr)));
-			}
-
-			void visitIf(pst::Access<pst::If> stmt) override {
-				// in the future we must also handle here different if-s variants
-				// for example: `if (let a = ...) {}`.
-				auto bool_type = tsh::SymbolType<>{
-					tsh::getBoolType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-				auto condition = getHoutOfExprWithExpectedType(
-									 ctx, stmt->getCondition().unlock(ctx)->getExpr(), bool_type
-				)
-				                     .valueOrThrow();
-
-				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody(), return_type);
-
-				match_optional(stmt->getElseBody()) {
-					opt_some(else_body) {
-						output(code::IfStmt(
-							code::pstOrigin(stmt),
-							std::move(condition),
-							std::move(then_body),
-							queryCodeOfCodeBlock(ctx, else_body, return_type)
-						));
-					}
-					opt_none {
-						output(code::IfStmt(
-							code::pstOrigin(stmt), std::move(condition), std::move(then_body)
-						));
-					}
-				}
-			}
-
-			void visitWhile(pst::Access<pst::While> stmt) override {
-				auto bool_type = tsh::SymbolType<>{
-					tsh::getBoolType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-				auto condition = getHoutOfExprWithExpectedType(
-									 ctx, stmt->getCondition().unlock(ctx)->getExpr(), bool_type
-				)
-				                     .valueOrThrow();
-
-				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody(), return_type);
-
-				output(code::WhileStmt(code::pstOrigin(stmt), std::move(condition), std::move(body))
-				);
-			}
-
-			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
-
-				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-
-				if (stmt->getValue().empty()) {
-					// no initial value case
-
-					if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
-						ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getSourcePosition()));
-						is_failed = true;
-						return;
-					}
-
-					// @TODO: #1921 This is not a proper way to handle default initialization. Make
-					// it better.
-					auto initial_value
-						= makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), symbol_type);
-					output(code::VariableStmt(
-						code::pstOrigin(stmt), std::move(initial_value), symbol_type, symbol
-					));
-				} else {
-					auto initial_value_coerced
-						= getHoutOfExprWithExpectedType(
-							  ctx, stmt->getValue().value().unlock(ctx)->getExpr(), symbol_type
-						)
-					          .valueOrThrow();
-
-
-					output(code::VariableStmt(
-						code::pstOrigin(stmt), std::move(initial_value_coerced), symbol_type, symbol
-					));
-				}
-			}
-
-			void visitConst(pst::Access<pst::Const>) override {
-				// Consts inside functions do not produce any HOUT statement.
-				// They are translated to HOUT global data instead.
-			}
-
-			void visitContinue(pst::Access<pst::Continue> stmt) override {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"`continue` statements are not supported yet.", stmt->getSourcePosition()
-				));
-				is_failed = true;
-			}
-
-			void visitBreak(pst::Access<pst::Break> stmt) override {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"`break` statements are not supported yet.", stmt->getSourcePosition()
-				));
-				is_failed = true;
-			}
-
-			void visitRedo(pst::Access<pst::Redo> stmt) override {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"`redo` statements are not supported yet.", stmt->getSourcePosition()
-				));
-				is_failed = true;
-			}
-
-			void visitThrow(pst::Access<pst::Throw> stmt) override {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"`throw` statements are not supported yet.", stmt->getSourcePosition()
-				));
-				is_failed = true;
-			}
-
-			void visitDefer(pst::Access<pst::Defer> stmt) override {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"`defer` statements are not supported yet.", stmt->getSourcePosition()
-				));
-				is_failed = true;
-			}
-
-			void visitRestart(pst::Access<pst::Restart> stmt) override {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"`restart` statements are not supported yet.", stmt->getSourcePosition()
-				));
-				is_failed = true;
-			}
-
-			void visitFor(pst::Access<pst::For> stmt) override {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"`for` statements are not supported yet.", stmt->getSourcePosition()
-				));
-				is_failed = true;
-			}
-
-			void visitFun(pst::Access<pst::Fun> function) override {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Nested functions are not supported yet.", function->getSourcePosition()
-				));
-				is_failed = true;
-			}
-		};
-
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -1000,9 +529,7 @@ namespace compiler::helios {
 						body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
-					code::CodeBlock function_body
-						= queryCodeOfCodeBlock(ctx, body, decl.return_type);
-					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
+					output_body = houtgen::compileCodeOfCodeBlock(ctx, body, decl.return_type);
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 

@@ -15,11 +15,12 @@
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <hashing/component_hash.hpp>
@@ -78,7 +79,7 @@ namespace compiler::driver {
 			static std::atomic<u64>                                next_module_number = 1;
 
 			u64 id = 0;
-			module_number_cache.maybePutAndUpdate(key.module_id, 0, [&](Ref<u64> number) {
+			module_number_cache.maybePutAndUpdate(key.module_id, u64{ 0 }, [&](Ref<u64> number) {
 				if (*number == 0) {
 					// this is a new module
 					*number = next_module_number.fetch_add(1, std::memory_order_relaxed);
@@ -207,6 +208,21 @@ namespace compiler::driver {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
+
+	base::OkBad compileScript(
+		[[maybe_unused]] const CompilerModeOfOperationAndOptions::ScriptMode& mode,
+		[[maybe_unused]] BackendType                                          backend_type,
+		[[maybe_unused]] const linker::LinkingOptions&                        linking_options
+	) {
+		// Steps:
+		// 1. Read mode.script_file content
+		// 2. Call repl::splitInputIntoStatements() to split into individual statement strings
+		// 3. For each statement: create a chained REPL module (ReplData with parent link)
+		// 4. For each module: compile and collect .dbc/.o artifacts
+		// 5. DVM:  merge CodeCollections and serialize to mode.output_path as .dbc
+		//    LLVM: compile entry-point module + link all .o files somehow (not yet sure how)
+		throw base::NotYetImplemented("compileScript");
+	}
 
 	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,

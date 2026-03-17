@@ -1,3 +1,4 @@
+//! Parsing of the manifest from its schema.
 use std::{collections::HashMap, path::Path};
 
 use tracing::debug;

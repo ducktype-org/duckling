@@ -1,3 +1,4 @@
+//! Managing a single dependency abstraction.
 use crate::{QuackError, QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
 mod conditions;
@@ -80,6 +81,7 @@ impl Dependency {
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
     }
 
+    /// Get the required root packages mentioned in the manifest.
     pub fn enableing_features(&self) -> &[FeatureName] {
         let Some(conditions) = &self.conditions else {
             return &[];
@@ -90,6 +92,7 @@ impl Dependency {
         features
     }
 
+    /// Whether this dependency was aliased in the manifest.
     pub fn is_aliased(&self) -> bool {
         self.real_name() != self.desc().manifest_name()
     }

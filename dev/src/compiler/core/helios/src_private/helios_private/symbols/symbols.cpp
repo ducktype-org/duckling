@@ -9,7 +9,8 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -489,6 +490,9 @@ namespace compiler::helios {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymbolData> output_symbol_data;
 
+					auto char_type = tsh::SymbolType<>(
+						tsh::getCharType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+					);
 					auto i32_type = tsh::SymbolType<>(
 						tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
@@ -521,41 +525,48 @@ namespace compiler::helios {
 							tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 						);
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data
-						= { {
-							{
-								base::StrID("builtin_input_i64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
-							},
-							{
-								base::StrID("builtin_output_i64"),
-								ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
-							},
-							{
-								base::StrID("builtin_input_u64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, u64_type }),
-							},
-							{
-								base::StrID("builtin_output_u64"),
-								ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type }),
-							},
-							{
-								base::StrID("builtin_input_f64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, f64_type }),
-							},
-							{
-								base::StrID("builtin_output_f64"),
-								ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type }),
-							},
-							{
-								base::StrID("builtin_input_string"),
-								ctx.query<tsh::QueryFunctionType>({ {}, str_type }),
-							},
-							{
-								base::StrID("builtin_output_string"),
-								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type }),
-							},
-						} };
+					std::array function_data = {
+						std::make_pair(
+							base::StrID("builtin_input_char"),
+							ctx.query<tsh::QueryFunctionType>({ {}, char_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_char"),
+							ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_i64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, i64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_i64"),
+							ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_u64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, u64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_u64"),
+							ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_f64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, f64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_f64"),
+							ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_string"),
+							ctx.query<tsh::QueryFunctionType>({ {}, str_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_string"),
+							ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
+						),
+					};
 
 					for (auto& [name, type]: function_data) {
 						auto sym_data
@@ -1006,7 +1017,7 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& expr) override {
-				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
+				for (const auto& sub_expr: expr.comparisons) sub_expr->acceptVisitor(*this);
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) override {

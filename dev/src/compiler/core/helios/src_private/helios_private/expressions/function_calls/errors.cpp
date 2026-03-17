@@ -2,18 +2,14 @@
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
-#include <frontend/pst_parser/element_kind.hpp>
-#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <helios/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>

@@ -88,8 +88,14 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::AllocBox:
-			return Operation::AllocBox;
+		case mir::Operation::BoxAlloc:
+			return Operation::BoxAlloc;
+		case mir::Operation::ListPush:
+			return Operation::ListPush;
+		case mir::Operation::ListPop:
+			return Operation::ListPop;
+		case mir::Operation::ListLen:
+			return Operation::ListLen;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -512,8 +518,29 @@ namespace compiler::lir {
 					}
 					return curr_block;
 				}
+				case mir::Operation::ListPush:
+				case mir::Operation::ListPop: {
+					auto output = getOutput(mir_instruction.output);
+					auto args   = getLocations(mir_instruction.arguments);
+
+					const auto& list_place = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
+
+					auto dynamic_array_type
+						= list_place.type.getType().as<tsh::DynamicArrayAbstractType>();
+					auto element_layout
+						= ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType());
+
+					curr_block->instructions.emplace_back(
+						mir2lirOperation(mir_instruction.operation, false),
+						output,
+						std::move(args),
+						ListOperationParameters{ .element_layout = element_layout }
+					);
+					return curr_block;
+				}
 				case mir::Operation::AddressOf:
-				case mir::Operation::AllocBox:
+				case mir::Operation::ListLen:
+				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -573,6 +600,23 @@ namespace compiler::lir {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
+					// @TODO: #929 The whole DestructIf implementation is a stub. Implement it once
+					// we know how to call destructors.
+
+					if (type.getRefKind() == tsh::ReferenceKind::Direct
+					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto lir_place = getLocation(to_destruct);
+
+						if (lir_place.has_value()) {
+							curr_block->instructions.emplace_back(
+								Operation::ListFree,
+								base::Optional<LIRPlace>{},
+								std::vector{ lir_place.value() }
+							);
+							return curr_block;
+						}
+					}
+
 					// @TODO: #1894 This is a stub just to test the overall box free'ing logic.
 					// Currently this approach generates a free on every DestructIf if it operates
 					// on a box type (even if the box was moved). This will cause double free's if
@@ -584,7 +628,7 @@ namespace compiler::lir {
 						// FreeBox is discarded if it operates on no information (ex. Unit).
 						if (lir_place.has_value()) {
 							curr_block->instructions.emplace_back(
-								Operation::FreeBox,
+								Operation::BoxFree,
 								base::Optional<LIRPlace>{},
 								std::vector{ lir_place.value() }
 							);
@@ -592,14 +636,12 @@ namespace compiler::lir {
 						}
 					}
 
-					// @TODO: #929 Implement it, once we know how to call destructors
 					CORE_DEV_LOG(
 						Compiler,
 						"DestructIf not implemented for types with non-trivial "
 						"destructors, skipping",
 						"\n"
 					);
-
 
 					return curr_block;
 				}
