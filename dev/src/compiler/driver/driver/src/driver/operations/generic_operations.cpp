@@ -194,11 +194,13 @@ namespace compiler::driver {
 				dvm_file.close();
 
 				if (key.build_debug_info) {
-					std::ofstream dvm_di(
+					auto& di       = dvm_module_data.debug_info.value();
+					di.module_path = debug_info_art.value().file.getFilePath().getPath().string();
+					std::ofstream di_file(
 						debug_info_art.value().file.getFilePath().getPath(), std::ios::binary
 					);
-					debug_info::saveToStream(dvm_module_data.debug_info.value(), dvm_di);
-					dvm_di.close();
+					debug_info::saveToStream(di, di_file);
+					di_file.close();
 				}
 
 				break;
@@ -333,10 +335,8 @@ namespace compiler::driver {
 				return base::BAD;
 			}
 		}
-		
-		for (auto& di_art : debug_info_artifacts) {
 
-		}
+		for (auto& di_art: debug_info_artifacts) {}
 
 		return result;
 	}
