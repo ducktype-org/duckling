@@ -401,7 +401,14 @@ namespace vm {
 	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
-			CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                            \
+			CORE_DEV_LOG(                                                                           \
+				DVMDetails,                                                                         \
+				"Executed opcode: ",                                                                \
+				#opcode_name,                                                                       \
+				" Thread: ",                                                                        \
+				getRunningThreadId().asInt(),                                                       \
+				"\n"                                                                                \
+			);                                                                                      \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \
@@ -751,4 +758,10 @@ namespace vm {
 	void VMThread::setThreadCtx(std::string name) { thread_ctx = std::move(name); }
 
 	std::string VMThread::getThreadCtx() { return thread_ctx; }
+
+	api::ThreadID VMThread::getRunningThreadId() {
+		api::ThreadID id
+			= static_cast<api::ThreadID>(std::hash<std::thread::id>{}(exec_thread->get_id()));
+		return id;
+	}
 }
