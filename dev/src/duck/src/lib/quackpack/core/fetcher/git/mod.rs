@@ -3,14 +3,10 @@
 use std::path::Path;
 
 use crate::{
-    QpCtx, QuackResult, QuackResultContext, StrId,
-    quackpack::{
-        core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
-        util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
-    },
+    DuckCtx, QuackResult, QuackResultContext, StrId,
+    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
 };
 
-use async_scoped::TokioScope;
 use git2::Oid;
 use git2::{Repository, build::RepoBuilder};
 
@@ -27,7 +23,7 @@ impl GitClient {
     pub fn clone_blocking(
         source: &Git,
         destination: &Path,
-        ctx: &QpCtx<'_>,
+        ctx: &DuckCtx,
     ) -> QuackResult<GitCloneResponse> {
         let mut builder = RepoBuilder::new();
 
@@ -84,22 +80,9 @@ impl GitClient {
             package,
         })
     }
-
-    /// Same as [`clone_blocking`](Self::clone_blocking), but wrapped in an async bloat.
-    pub async fn clone_async(
-        source: &Git,
-        destination: &Path,
-        ctx: &QpCtx<'_>,
-    ) -> QuackResult<GitCloneResponse> {
-        let (_, results) = TokioScope::scope_and_block(|spawner| {
-            spawner.spawn_blocking(|| Self::clone_blocking(source, destination, ctx))
-        });
-
-        let results = unpack_tokio_scoped_vector(results)?;
-        extract_single_item_from_vec(results)?
-    }
 }
 
+/// A helper trait for repository methods.
 trait RepositoryExt {
     /// Checkout `self` into a given commit.
     fn checkout_commit(&self, commit: StrId) -> QuackResult<()>;

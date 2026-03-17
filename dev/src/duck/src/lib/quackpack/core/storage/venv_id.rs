@@ -5,9 +5,12 @@ use crate::{
     quackpack::core::{Manifest, Package, PackageCtx},
 };
 
+/// A unique venv's identifier.
 pub type VenvId = StrId;
 
+/// Create [`VenvId`] from self.
 pub trait ToVenvId {
+    /// Convert self to [`VenvId`].
     fn to_venv_id(&self) -> VenvId;
 }
 
@@ -61,6 +64,7 @@ impl ToVenvId for Package {
 
 impl ToVenvId for Manifest {
     fn to_venv_id(&self) -> VenvId {
+        // VenvId of a manifest is a package's name.
         self.root_description().name()
     }
 }

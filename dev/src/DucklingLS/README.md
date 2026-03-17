@@ -1,10 +1,6 @@
 # Duckling Language Server
 
-This Language Server works for ```.duckling``` files. It has the following language features:
-- Syntax Highlighting
-- Completions
-- Diagnostics
-- Folding
+This Language Server works for Duckling files.
 
 ## Structure
 
@@ -19,12 +15,30 @@ This Language Server works for ```.duckling``` files. It has the following langu
         └── server.ts // Language Server entry point
 ```
 
+## Configuration
+
+The extension looks for the `duck_ls` binary at `~/.local/bin/duck_ls` by default.
+
+To use a different path, open VS Code Settings (`Ctrl+,`), search for **Duckling**, and set:
+
+| Setting | Description | Default |
+|---|---|---|
+| `DucklingLanguageServer.executablePath` | Path to the `duck_ls` binary. Supports `~`. | `~/.local/bin/duck_ls` |
+
+Or add this to your `settings.json`:
+
+```json
+{
+    "DucklingLanguageServer.executablePath": "/custom/path/to/duck_ls"
+}
+```
+
 ## Running the Language Server
 
 ### Running the language server for testers
 
 1. Go to the `/dev/src/DucklingLS` directory.
-2. Compile `lsp_daemon` using the `./comp-copy.py <name-of-the-build-dir>` command.
+2. Compile and install `duck_ls` to `~/.local/bin/` using the `./comp-copy.py <name-of-the-build-dir>` command.
 3. Run `npm install` to install the dependencies.
 4. Run `npm compile` to compile the typescript to the js in the `out` directories.
 5. 
@@ -37,7 +51,7 @@ directory to this directory, which is a root folder of the extension.
 ### Running the language server for developers
 
 - Copy contents of `.vscode.template` to `.vscode` in the root folder (of the whole project).
-- Copy `lsp_daemon` binary file to `/dev/DucklingLS/bin/`.
+- Run `./comp-copy.py <build-dir>` to install `duck_ls` to `~/.local/bin/`, or copy it manually and set `DucklingLanguageServer.executablePath` in your VS Code settings.
 - Go to `/dev/DucklingLS` folder and run `npm install`. This installs all necessary npm modules in both the client and server folder.
 - Press Ctrl+Shift+B to start building the project. The project should automatically compile in watch mode (new terminal named `npm: watch` should appear - you can check in the bottom right). If a window pops up asking you to select a task to run, select `npm: watch` - this will start the compiler in watch mode. Alternatively you can try to skip compiling it yourself and just run the launch config `Launch Client` (see below) - it should start the compiler in watch mode as a part of the launch config.
 - Check if section `npm scripts` is visible in the bottom left corner of VSC (if you can't see it check the VSC explorer options - three dots in the top right corner of the explorer and select `npm scripts` if it's not checked). Not having this section is not a blocker but it's useful to have.

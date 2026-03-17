@@ -15,15 +15,15 @@ namespace pst {
 
 		if (!assertStmtChoice<Class>(state, state[0].is(Keyword::Class))) return nullptr;
 
-		state.parse(out).all(Keyword::Class, &out->name);
+		PARSE().all(Keyword::Class, &out->name);
 
-		if (state.parse(out).tryEat(Keyword::Extends)) state.parse(out).one(&out->base);
-		if (state.parse(out).tryEat(Keyword::Implements)) state.parse(out).one(&out->implements);
+		if (PARSE().tryEat(Keyword::Extends)) PARSE().one(&out->base);
+		if (PARSE().tryEat(Keyword::Implements)) PARSE().one(&out->implements);
 
 		PST_NEW_CONTEXT({
 			state.setContextClassName(out->name);
 			state.setContextBlockOrdering(BlockOrderType::Unordered);
-			state.parse(out).one(&out->body);
+			PARSE().one(&out->body);
 		})
 
 		PST_RETURN out;

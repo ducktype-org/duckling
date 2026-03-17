@@ -93,7 +93,7 @@ namespace compiler::mir {
 						// Assume constructors are valid (every use is after construct).
 						construction_block.emplace(flag.local->id, block.key);
 					}
-					// Ommit destruct flag - LIR will handle it.
+					// Omit destruct flag - LIR will handle it.
 				}
 				return base::OK;
 			};

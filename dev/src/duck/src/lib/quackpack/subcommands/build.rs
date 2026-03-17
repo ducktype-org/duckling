@@ -1,5 +1,6 @@
+//! `build` subcommand execution logic.
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId,
+    QuackResult, QuackResultContext, StrId,
     quackpack::{
         core::{
             FeatureName, PackageCtx,
@@ -11,20 +12,27 @@ use crate::{
 };
 
 #[derive(Debug)]
+/// Options for compiling a project.
 pub struct BuildOptions<'duck> {
-    pub ctx: &'duck DuckCtx,
+    /// Package to compile.
     pub package: PackageCtx<'duck>,
+    /// Enabled features from the CLI.
     pub used_features: Vec<FeatureName>,
+    /// Selected build profile.
     pub profile: StrId,
+    /// Artefact from [`SyncOptions`].
     pub global: bool,
+    /// Artefact from [`SyncOptions`].
     pub overwrite: bool,
+    /// Artefact from [`SyncOptions`].
     pub frozen: bool,
+    /// Artefact from [`SyncOptions`].
     pub strict_errors: bool,
 }
 
-pub fn compile<'duck>(options: BuildOptions<'duck>) -> QuackResult<()> {
+/// Compile given options.
+pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let BuildOptions {
-        ctx,
         package,
         used_features,
         profile,
@@ -33,33 +41,25 @@ pub fn compile<'duck>(options: BuildOptions<'duck>) -> QuackResult<()> {
         frozen,
         strict_errors,
     } = options;
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-    let (lock, venv, storage) = rt.block_on(async {
-        sync(
-            ctx,
-            &package,
-            SyncOptions {
-                global,
-                overwrite,
-                frozen,
-                strict_errors,
-            },
-        )
-    })?;
+    let (lock, venv, storage) = sync(
+        &package,
+        SyncOptions {
+            global,
+            overwrite,
+            frozen,
+            strict_errors,
+        },
+    )?;
     let _compile_lock = lock
         .to_compile_lock(&storage, package.to_venv_id())
         .context("failed to acquire a compile lock")?;
-    let bctx = BuildContext {
-        duck_ctx: ctx,
+    let bcx = BuildContext {
         package: &package,
         freeze: venv.into(),
         storage,
         used_features,
         profile,
     };
-    compile::compile(bctx)?;
+    compile::compile(bcx)?;
     Ok(())
 }

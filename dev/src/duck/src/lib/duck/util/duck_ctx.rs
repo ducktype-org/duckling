@@ -101,6 +101,11 @@ impl DuckCtx {
     pub fn set_offline(&mut self, offline: bool) {
         self.offline = offline;
     }
+
+    /// Get the path of the default packages' storage in [`DuckHome`].
+    pub fn default_storage_root(&self) -> &Path {
+        self.duck_home().storage_dir()
+    }
 }
 
 #[cfg(test)]

@@ -10,12 +10,21 @@ use crate::duck::driver::{
     cli_args_preprocessing::builtin::{get_builtin_alias_expansion, is_builtin_subcommand},
 };
 
+/// Recursively replace current subcommand with an expanded user alias.
+///
+/// It supports expansions to the builtin subcommands, builtin aliases, and user defined (external)
+/// subcommands.
+///
+/// Multiple aliases (aliases to aliases/aliases using other aliases) are supported too.
+///
+/// __NOTE:__ Global CLI flags may be lost during this process. You should extract them beforehand.
 pub fn expand_aliases(
     args: ArgMatches,
     ctx: &DuckCtx,
     external_cmds: &HashMap<String, PathBuf>,
     mut visited: Vec<String>,
 ) -> QuackResult<ArgMatches> {
+    // User hasn't provided a subcommand, ignore...
     let Some((subcmd, subcmd_args)) = args.subcommand() else {
         return Ok(args);
     };
@@ -70,6 +79,10 @@ pub fn expand_aliases(
     }
 }
 
+/// Return a new [`ArgMatches`] after replacing the builtin alias with its subcommand.
+///
+/// `builtin` is __expanded__ builtin alias (for example, for alias `b` we expect `build` to be
+/// passed as `builtin`), and `args` are parsed [`ArgMatches`] __with the builtin subcommand__.
 fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatches> {
     let builtin = OsString::from(builtin);
     Ok(cli().no_binary_name(true).try_get_matches_from(chain(
@@ -78,6 +91,11 @@ fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatc
     ))?)
 }
 
+/// Expand single user alias.
+///
+/// `alias` is alias we're expanding, `alias_args` are [`ArgMatches`] for that `alias`, `alias_expansion`
+/// is expanded alias (taken from [`DuckCtx`]), and `visited` is a vector of already expanded
+/// aliases (in order to detect cycles).
 fn expand_single_alias(
     alias: &str,
     alias_args: &ArgMatches,
@@ -95,6 +113,10 @@ fn expand_single_alias(
     Ok(parsed)
 }
 
+/// Get __all__ CLI args for the __expanded__ alias `alias`, and parent `subcmd_args`.
+///
+/// For example, for alias `foo = "bar -1"`, and command `duck foo a -b`, you should pass
+/// `alias = "bar -1"`, and args for `foo a -b`, and get `"bar", "-1", "a", "-b"` in return.
 fn args_from_alias(alias: &str, subcmd_args: &ArgMatches) -> impl Iterator<Item = OsString> {
     let split = alias.split(' ').map(OsString::from);
     chain(
@@ -106,12 +128,14 @@ fn args_from_alias(alias: &str, subcmd_args: &ArgMatches) -> impl Iterator<Item 
     )
 }
 
+/// Parse new cli args. They should __not__ include a binary name.
 fn parse_alias_args(new_cli_args: impl Iterator<Item = OsString>) -> QuackResult<ArgMatches> {
     Ok(cli()
         .no_binary_name(true)
         .try_get_matches_from(new_cli_args)?)
 }
 
+/// Check for an aliases cycle.
 fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResult<()> {
     if visited.contains(&next.into()) {
         qp_bail!(
