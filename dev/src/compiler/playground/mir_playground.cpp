@@ -1,5 +1,6 @@
 #include <frontend/module_tree/module_tree.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <clah/clah.hpp>
@@ -8,9 +9,10 @@
 #include <query_framework/entry/query_entry_point.hpp>
 
 void printContextErrors() {
-	if (query::Context::int_logger.messageCount() > 0) {
+	auto logger = query::Context::dumpToOneLoggerAndClear();
+	if (logger->messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::int_logger.dumpLog(true, std::cerr);
+		logger->dumpLog(true, std::cerr);
 	}
 }
 

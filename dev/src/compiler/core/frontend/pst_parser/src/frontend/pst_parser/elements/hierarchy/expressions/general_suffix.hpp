@@ -11,13 +11,13 @@ namespace pst::expr {
 		using Lower = GeneralPrefix;
 		using Self  = GeneralSuffix;
 
-		static MBox<ExprElement> parseRecursive(LangParserState& state, i64 length, u64 iter);
+		static MBox<ExprElement> parseRecursive(LangParserState& state, u64 iter);
 
 	public:
-		explicit GeneralSuffix(const dia::SourcePosition& pos, Operator op):
-			  SuffixOperator(pos, op, 450) {}
+		explicit GeneralSuffix(const LangParserState& state, Operator op):
+			  SuffixOperator(state, op, 450) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~GeneralSuffix() override = default;
 	};

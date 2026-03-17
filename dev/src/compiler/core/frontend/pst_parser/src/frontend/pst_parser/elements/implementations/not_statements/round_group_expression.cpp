@@ -4,24 +4,23 @@
 
 namespace pst {
 	MBox<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<RoundGroupExpr>(position);
+		auto out = makeBox<RoundGroupExpr>(state);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
 			state.logInt(makeBox<RoundExprStartError>(state.getPosition()));
 			return nullptr;
 		}
 
-		state.parse(out).goDown();
-		if (state.notEmpty()) state.parse(out).one(&out->expr);
-		state.parse(out).goUpAndSkip();
+		PARSE().goDown();
+		PARSE().one(&out->expr);
+		PARSE().goUpAndSkip();
 
 		PST_RETURN out;
 	}
 
 	void RoundGroupExpr::dprint(std::ostream& out) const { nullAwareDprint(expr, out); }
 
-	LangElement::HashAlg& RoundGroupExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& RoundGroupExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 }

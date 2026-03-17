@@ -15,10 +15,7 @@ namespace pst {
 	// Used to not include full state definition
 	namespace internal {
 		Box<LangParserState> makeState(
-			tpc::TokenStream&&,
-			Box<LangParserContext>&&,
-			Ref<dia::Logger>     logger,
-			Ref<dia_int::Logger> int_logger
+			tpc::TokenStream&&, Box<LangParserContext>&&, Ref<dia_int::Logger> int_logger
 		);
 		std::vector<ImportType> extractState(Box<LangParserState>);
 
@@ -30,9 +27,6 @@ namespace pst {
 	 *
 	 * Program - Top level is unordered
 	 * Script - Top level is ordered
-	 *
-	 * Currently doesn't change anything
-	 * @TODO: #1891 Will add the behaviour
 	 */
 	enum class PSTType {
 		Program,
@@ -97,16 +91,20 @@ namespace pst {
                     token_data.tokens.size()
                 ),
                 std::move(parsing_ctx),
-                file->getLogger(),
                 file->getIntLogger()
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			internal::finalizeParsing(state_box.refMut());
 			imports = internal::extractState(std::move(state_box));
-			if (not hasErrors()) {
-				calcElementPathHash();
-				calcHashes();
-			}
+
+
+			// Note: hash calculation should work even on errors in PST.
+			// We let it be calculated to don't worry about hash beeing unavailable during the
+			// compiler initialization phase, but we generally stop the compilation when there are
+			// errors anyway. if it breaks consider wrapping the lines in `if (not hasErrors())` and
+			// handling it differently.
+			calcElementPathHash();
+			calcHashes();
 		}
 
 		static Box<LangParserContext> makeParserContext(PSTContext&& pst_ctx) {
@@ -177,7 +175,7 @@ namespace pst {
 		 */
 		void signGenerated() {
 			if (auto ref = element.internalMut()) {
-				LangElement::HashAlg partial_hash{};
+				HashAlg partial_hash{};
 				ref->calcSignature(partial_hash);
 				auto hash = partial_hash.finalize();
 				ref->signGenerated(hash);

@@ -6,7 +6,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -161,7 +161,8 @@ namespace compiler::helios {
 				variant_case(PstSymbolData, pst_data) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
 					if (kind(key) == SymbolKind::Function
-					    or kind(key) == SymbolKind::FunctionDeclaration)
+					    or kind(key) == SymbolKind::FunctionDeclaration
+					    or kind(key) == SymbolKind::Method)
 						return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);

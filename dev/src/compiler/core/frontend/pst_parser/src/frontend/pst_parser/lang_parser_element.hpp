@@ -3,14 +3,17 @@
 #include "access.hpp"
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
+#include "elements/lang_state_unmethods.hpp"
+#include "pst_config.hpp"
 #include "pst_id.hpp"
+
+#include <concurrent/base/collections/hash_map.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <hashing/component_hash.hpp>
-#include <hashing/hash.hpp>
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
@@ -26,23 +29,15 @@ namespace pst {
 
 	class PstVisitor;
 
+	class StablePosition;
+
+	class LangParserState;
+
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
-	protected:
-		/**
-		 * @brief Hash algorithm used for PST stable hashing
-		 * @TODO: #1337 Swap to CRC256
-		 */
-		using HashAlg = hashing::StatefulHash<hashing::SHA256>;
-
 	public:
-		/**
-		 * @brief Hash type for PST stable hashing
-		 */
-		using HashType = HashAlg::result_type;
-
 		using SubToken = base::CRef<lexer::Token>;
 
 		/**
@@ -70,18 +65,25 @@ namespace pst {
 
 		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
-		explicit LangElement(const dia::SourcePosition& position):
-			  source_position(position),
+		explicit LangElement(const LangParserState& state):
+			  source_position(internal::getPosition(state)),
+			  context_hash(internal::getContextHash(state)),
 			  id(PstID::next()) {}
 
 		LangElement(const LangElement&) = delete;
 		LangElement(LangElement&&)      = delete;
 
 		/**
-		 * @brief Position covering the whole element
+		 * @brief Position covering the whole element.
 		 */
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
+
+		/**
+		 * @brief The stable position of an element.
+		 */
+		[[nodiscard]]
+		StablePosition getStablePosition() const;
 
 		/**
 		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
@@ -223,10 +225,8 @@ namespace pst {
 		/**
 		 * @brief Map from stable hash to lang element for all created elements.
 		 * @note Used to view dependent tokens of node in the query graph and for HELIOS PST origin.
-		 * @TODO: #1974 When dealing with parallelization of elements parsing be careful with this
-		 * map.
 		 */
-		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
+		static concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
 
 		using InternalChild = Ref<LangElement>;
 
@@ -238,6 +238,7 @@ namespace pst {
 		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
 
 		dia::SourcePosition source_position;
+		HashType            context_hash;
 		std::vector<InternalSubElement>
 			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
 		base::Optional<AccessLocked<LangElement>>
@@ -343,18 +344,18 @@ namespace pst {
 		 * @brief Calculates the signature of the whole PST sub-tree. Assumes the hashes are already
 		 * calculated.
 		 */
-		void calcSignature(LangElement::HashAlg& partial_hash) const;
+		void calcSignature(HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Signs the hashes of the whole PST sub-tree with given signature.
 		 */
-		void signGenerated(LangElement::HashType& signature);
+		void signGenerated(HashType& signature);
 
 		/**
 		 * @brief Used to add additional data that is generic to multiple elements for example in
 		 * Stmt.
 		 */
-		virtual LangElement::HashAlg& addGenericDataToHash(LangElement::HashAlg& partial_hash) const;
+		virtual HashAlg& addGenericDataToHash(HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Adds the element specific information to the hash (Not generic ones such as number

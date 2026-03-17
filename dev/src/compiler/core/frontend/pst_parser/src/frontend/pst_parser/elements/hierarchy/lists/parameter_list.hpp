@@ -9,7 +9,7 @@ namespace pst {
 	 */
 	class ParamList final: public List<Param, internal::NameGetters::parameterList> {
 	public:
-		explicit ParamList(const dia::SourcePosition& pos): List(pos) {
+		explicit ParamList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::ParamList;
 		}
 

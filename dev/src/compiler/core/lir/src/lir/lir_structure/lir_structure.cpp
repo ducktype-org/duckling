@@ -87,6 +87,22 @@ namespace compiler::lir {
 							  = class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
 						  current_layout = class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					  }
+					  variant_case(IndexProjection, index) {
+						  variant_match(current_layout->getVariant()) {
+							  variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
+								  current_layout = static_array_layout.getElementLayout();
+							  }
+							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
+								  current_layout = dynamic_array_layout.getElementLayout();
+							  }
+							  variant_default {
+								  CORE_PANIC(
+									  "Cannot index into non-array type in LIR: Current layout: ",
+									  current_layout->toStringIdentification()
+								  );
+							  }
+						  }
+					  }
 					  variant_case_novalue(DerefProjection) {
 						  const auto& pointer_layout
 							  = std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
@@ -232,6 +248,10 @@ namespace compiler::lir {
 				variant_case(CastParameters, params) {
 					output << "{ from:" << params.source_type.toString()
 						   << ", to:" << params.target_type.toString() << " }";
+				}
+				variant_case(ListOperationParameters, params) {
+					output << "{ element_layout:" << params.element_layout->toStringIdentification()
+						   << " }";
 				}
 			}
 			output << " ";

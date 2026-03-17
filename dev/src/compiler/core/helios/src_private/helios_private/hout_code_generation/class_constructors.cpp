@@ -1,7 +1,7 @@
 #include "class_constructors.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -52,7 +52,10 @@ namespace compiler::helios::houtgen {
                 = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
             });
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
-				code::generatedOrigin(), std::nullopt, result_symbol_type, result_symbol
+				code::generatedOrigin(),
+				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), result_symbol_type),
+				result_symbol_type,
+				result_symbol
 			)));
 
 			// - Assign each field from the corresponding parameter.

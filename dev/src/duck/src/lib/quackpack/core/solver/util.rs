@@ -11,12 +11,16 @@ use crate::{
     },
 };
 
-pub fn get_possible_realisations(
+/// For a given dpendency entry from the manifest and
+/// given all the found versions of a package from some location,
+/// find all the packages satisfying the dependency.
+pub fn get_possible_realizations(
     dependency_description: &Dependency,
     versions_for_location: &HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
 ) -> QuackResult<Vec<ExpandedPackage>> {
     if dependency_description.is_pinned() {
+        // For a pinned dependency only one package can be a realization.
         let version = dependency_description
             .desc()
             .versions()
@@ -34,6 +38,8 @@ pub fn get_possible_realisations(
         ))) else {
             return Ok(vec![]);
         };
+        // Baseline versions are the versions specified in the manifest,
+        // with which we want to check the compatibility of the existing packages.
         let baseline_versions = if location.is_local() || location.is_git() {
             vec![None]
         } else {
@@ -78,14 +84,14 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, QpCtx, StrId,
+        DuckCtx, StrId,
         quackpack::core::{
             Version, parse_manifest,
             types_common::{
                 ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
                 Location,
             },
-            util::get_possible_realisations,
+            util::get_possible_realizations,
         },
         util_common::path_ops_ext::PathOpsExt,
     };
@@ -95,6 +101,7 @@ mod test {
         let manifest = dir.path().join("x");
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
+        dir.path().try_fsync_dir().unwrap();
         (dir, manifest)
     }
 
@@ -113,7 +120,7 @@ dependencies:
 "#,
         );
         let ctx = DuckCtx::default();
-        let pkg = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
@@ -128,9 +135,9 @@ dependencies:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
-        let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
+        let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
-            exp_location_b.clone(),
+            exp_location_b,
             HashSet::from([
                 Some(Version::new(0, 0, 1)),
                 Some(Version::new(1, 0, 0)),
@@ -140,9 +147,8 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res =
-            get_possible_realisations(&dependency, &versions_for_location, &location_resolver)
-                .unwrap();
+        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
+            .unwrap();
         assert_eq!(
             res,
             vec![ExpandedPackage {
@@ -166,7 +172,7 @@ dependencies:
 "#,
         );
         let ctx = DuckCtx::default();
-        let pkg = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
@@ -181,9 +187,9 @@ dependencies:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
-        let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
+        let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
-            exp_location_b.clone(),
+            exp_location_b,
             HashSet::from([
                 Some(Version::new(0, 0, 1)),
                 Some(Version::new(1, 0, 0)),
@@ -193,22 +199,21 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res =
-            get_possible_realisations(&dependency, &versions_for_location, &location_resolver)
-                .unwrap();
+        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
+            .unwrap();
         assert_eq!(
             HashSet::from_iter(res),
             HashSet::from([
                 ExpandedPackage {
-                    location: exp_location_b.clone(),
+                    location: exp_location_b,
                     version: Some(Version::new(1, 0, 3))
                 },
                 ExpandedPackage {
-                    location: exp_location_b.clone(),
+                    location: exp_location_b,
                     version: Some(Version::new(1, 0, 5))
                 },
                 ExpandedPackage {
-                    location: exp_location_b.clone(),
+                    location: exp_location_b,
                     version: Some(Version::new(1, 3, 3))
                 }
             ])

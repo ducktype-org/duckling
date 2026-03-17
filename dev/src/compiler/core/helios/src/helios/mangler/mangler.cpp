@@ -7,7 +7,8 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -22,6 +23,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
@@ -51,7 +53,7 @@ namespace compiler::helios::mangler {
 
 		u64 result = 0;
 
-		hashes.maybePutAndUpdate(*this, 0, [&result](Ref<u64> existing) {
+		hashes.maybePutAndUpdate(*this, 0u, [&result](Ref<u64> existing) {
 			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
 			result = *existing;
 		});
@@ -183,7 +185,7 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto current_pst = symbolPst(symbol_id).unlock(ctx);
+				auto current_pst = symbolPst(symbol_id).value().unlock(ctx);
 				while (true) {
 					auto ancestor     = current_pst;
 					auto ancestor_opt = ancestor->getParent();
@@ -236,7 +238,8 @@ namespace compiler::helios::mangler {
 			// @TODO: #1568 use type mangling for parameter and return types.
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function
-			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
+			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
+			    or kind(symbol_id) == SymbolKind::Method) {
 				ret = "F";
 
 				const auto& fun_decl
@@ -249,9 +252,9 @@ namespace compiler::helios::mangler {
 				}
 
 				ret += "E";
-			} else if (kind(symbol_id) == SymbolKind::Method) {
-				// @future: add methods when they are implemented
-				ret = "Ftodo_method_typeE";
+			} else {
+				CORE_USER_LOG("Tried to mangle non function-like symbol as a function-like.");
+				CORE_UNREACHABLE();
 			}
 
 			return ret;
@@ -295,6 +298,14 @@ namespace compiler::helios::mangler {
 							) {
 								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
 							}
+							variant_case(
+								houtgen::GeneratedSymbolData::ReplInstructionWrapper,
+								repl_instr_wrapper
+							) {
+								return base::strConcat(
+									"__repl_instr_wrapper_", repl_instr_wrapper.counter
+								);
+							}
 							// Other cases of generated symbols cannot be functions.
 						}
 					}
@@ -306,9 +317,9 @@ namespace compiler::helios::mangler {
 				return path(ctx, symbol_id);
 			}
 			default:
-				throw base::LogicError{ base::strConcat(
-					"Cannot mangle symbol of type: ", symbolPst(symbol_id).unlock(ctx)->elementType()
-				) };
+				throw base::LogicError{
+					base::strConcat("Cannot mangle symbol of type: ", kind(symbol_id))
+				};
 				break;
 			}
 		}

@@ -106,6 +106,22 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getElementType();
 	}
 
+	SymbolType<> StaticArrayAbstractType::getElementType() const {
+		return toCPimpl(pimpl)->getElementType();
+	}
+
+	TypeTemplateAbstractType::Source TypeTemplateAbstractType::getSource() const {
+		return toCPimpl(pimpl)->getSource();
+	}
+
+	AbstractType TypeTemplateAbstractType::instantiate(
+		query::Context& ctx, const SymbolType<>& element_type
+	) const {
+		return toCPimpl(pimpl)->instantiate(ctx, element_type);
+	}
+
+	usize StaticArrayAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
+
 	/*****************\
 	|  NOMINAL TYPES  |
 	\*****************/
@@ -181,9 +197,11 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)
 	INSTANTIATE_CHECKED_CAST(DynamicArrayAbstractType)
+	INSTANTIATE_CHECKED_CAST(StaticArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(VariantAbstractType)
 	INSTANTIATE_CHECKED_CAST(ClassAbstractType)
 	INSTANTIATE_CHECKED_CAST(NamespaceAbstractType)
 	INSTANTIATE_CHECKED_CAST(ModuleAbstractType)
 	INSTANTIATE_CHECKED_CAST(MetaAbstractType)
+	INSTANTIATE_CHECKED_CAST(TypeTemplateAbstractType)
 }

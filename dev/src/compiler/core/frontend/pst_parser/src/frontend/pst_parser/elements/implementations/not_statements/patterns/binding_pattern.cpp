@@ -5,9 +5,8 @@
 namespace pst {
 	MBox<BindingPattern> BindingPattern::parse(LangParserState& state) {
 		if (!state[0].isIdentifier()) return nullptr;
-		auto position = state.getPosition();
-		auto out      = makeBox<BindingPattern>(position);
-		state.parse(out).one(&out->name);
+		auto out = makeBox<BindingPattern>(state);
+		PARSE().one(&out->name);
 		PST_RETURN out;
 	}
 
@@ -19,7 +18,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& BindingPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& BindingPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		return partial_hash;
 	}

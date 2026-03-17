@@ -1,16 +1,19 @@
+//! Core quackpack's modules.
+pub mod compile;
 pub mod fetcher;
 mod manifest;
+mod package;
 mod package_ctx;
 mod package_loader;
-mod solver;
+pub mod solver;
 pub mod storage;
 mod venv_config;
 mod version;
+
 pub use manifest::*;
 pub use package::*;
 pub use package_ctx::*;
 pub use package_loader::*;
 pub use solver::*;
-mod package;
 pub use venv_config::*;
 pub use version::Version;

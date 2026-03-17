@@ -31,6 +31,7 @@ namespace compiler::backend_vm::internal {
 		DVMImmediate(i64 value);
 		DVMImmediate(i32 value);
 		DVMImmediate(u32 value);
+		DVMImmediate(char value);
 		DVMImmediate(bool value);
 		DVMImmediate(float value);
 		DVMImmediate(double value);

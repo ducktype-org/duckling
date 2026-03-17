@@ -1,20 +1,18 @@
-import { Diagnostic, Connection } from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
+import { Diagnostic, Connection, DocumentUri } from "vscode-languageserver";
 import { getDocumentSettings } from "./server";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 
 export async function validateDuckling(
-	textDocument: TextDocument, 
+	uri: DocumentUri, 
 	connection: Connection, 
 	compilerDaemonClient: CompilerDaemonClient
 ): Promise<void> {
-	const settings = await getDocumentSettings(textDocument.uri);
+	const settings = await getDocumentSettings(uri);
 
 	// Get the errors from the compiler daemon
-	let errorsMap = await compilerDaemonClient.getErrors(textDocument.uri, connection);
+	let errorsMap = await compilerDaemonClient.getErrors(uri, connection);
 
 	for (const [uri, diagnostics] of Object.entries(errorsMap)) {
-		let problems = 0;
 		const filteredDiagnostics = diagnostics.slice(0, settings.maxNumberOfProblems);
 
 		// Send the computed diagnostics to the client

@@ -69,7 +69,7 @@ private:
 	}
 
 	void emptyVariant() {
-		loadInvalidDbc("empty_variant.dbc", { vm::code::EmptyVariantError::ERR_MSG });
+		loadInvalidDbc("empty_variant.dbc", { vm::code::TooFewVariantAlternativesError::ERR_MSG });
 	}
 
 	void variantTypeTagTest() {

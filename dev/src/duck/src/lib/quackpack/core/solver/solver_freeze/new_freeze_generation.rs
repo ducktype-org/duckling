@@ -178,7 +178,7 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, QpCtx, StrId,
+        DuckCtx, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
@@ -195,6 +195,7 @@ mod test {
         let manifest = dir.path().join("x");
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
+        dir.path().try_fsync_dir().unwrap();
         (dir, manifest)
     }
 
@@ -230,10 +231,9 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -300,11 +300,11 @@ metadata:
             freeze_a.dependencies_realization
                 == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
-        assert!(freeze_c.dependencies_realization == HashMap::new());
-        assert!(freeze_c.features == HashSet::new());
+        assert!(freeze_c.dependencies_realization.is_empty());
+        assert!(freeze_c.features.is_empty());
     }
 
     #[test]
@@ -337,10 +337,9 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -404,8 +403,8 @@ metadata:
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         assert!(!new_freeze.package_freezes.contains_key(&exp_pkg_c));
         assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
     }
 
@@ -441,10 +440,9 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -511,10 +509,10 @@ metadata:
             freeze_a.dependencies_realization
                 == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
-        assert!(freeze_a.features == HashSet::new());
-        assert!(freeze_b.dependencies_realization == HashMap::new());
+        assert!(freeze_a.features.is_empty());
+        assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
-        assert!(freeze_c.dependencies_realization == HashMap::new());
-        assert!(freeze_c.features == HashSet::new());
+        assert!(freeze_c.dependencies_realization.is_empty());
+        assert!(freeze_c.features.is_empty());
     }
 }

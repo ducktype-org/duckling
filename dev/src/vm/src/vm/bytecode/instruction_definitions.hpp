@@ -1,3 +1,4 @@
+
 /**
  * @file instruction_definitions.hpp
  * @brief Contains definitions of all high bytecode instructions. Can be used for generating
@@ -391,6 +392,8 @@ DEF_INSTR(jmpIfNot_label, (vm::opargs::Label, label))
 DEF_INSTR(call_func, (vm::opargs::FunctionName, function))
 DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
+
+DEF_INSTR(set_threadctx, (vm::opargs::FunctionName, function))
 
 // return while performing a tail call
 DEF_INSTR(ret_tailcall_func, (vm::opargs::FunctionName, function))

@@ -10,9 +10,8 @@ namespace pst {
 			return nullptr;
 		}
 
-		auto position = state.getPosition();
-		auto out      = makeBox<ValuePattern>(position);
-		state.parse(out).one(&out->expression);
+		auto out = makeBox<ValuePattern>(state);
+		PARSE().one(&out->expression);
 
 		PST_RETURN out;
 	}
@@ -29,7 +28,7 @@ namespace pst {
 		return expression.give();
 	}
 
-	LangElement::HashAlg& ValuePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ValuePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

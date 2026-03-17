@@ -22,6 +22,9 @@ either in the scheme or it's implementation, they should be reflected here.
 // if it's correct.
 <repl-expression-wrapper> ::= "__repl_expr_wrapper_" <base-10-number>
 
+// Same with REPL instruction wrappers.
+<repl-instruction-wrapper> ::= "__repl_instr_wrapper_" <base-10-number>
+
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>
 

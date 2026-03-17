@@ -28,7 +28,7 @@ namespace vm {
 
 	public:
 		BlockData allocate(TypeCRef type) {
-			auto             size = type->getSize();
+			auto             size = type->getSize().asInt();
 			auto             ptr  = heapAllocOrThrow(size);
 			base::OwningView view{ ptr, size };
 			allocated.push_back(std::move(view));
@@ -42,7 +42,7 @@ namespace vm {
 		 *  to assign the correct type to the new `BlockData` object.
 		 */
 		BlockData dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
-			auto       size = inner_type->getSize() * n;
+			auto       size = inner_type->getSize().asInt() * n;
 			std::byte* ptr  = heapAllocOrThrow(size);
 			allocated.emplace_back(ptr, size);
 			return BlockData{ table_type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>(this) };

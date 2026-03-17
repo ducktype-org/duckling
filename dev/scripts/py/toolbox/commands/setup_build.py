@@ -11,7 +11,7 @@ from ..impl.helpers import (
     default_linker_from_ctx,
     default_gcov_from_ctx,
 )
-from click import Choice, option, command
+from click import Choice, option, command, prompt
 
 
 @command()
@@ -59,7 +59,7 @@ from click import Choice, option, command
     default=False,
     is_flag=True,
     # this skips the prompt if the build is optimised
-    cls=PromptForCoverageIfBuildNotOptimised
+    cls=PromptForCoverageIfBuildNotOptimised,
 )
 @option(
     "-d",
@@ -121,6 +121,46 @@ from click import Choice, option, command
     type=Choice(["asan", "tsan", "ubsan"], case_sensitive=False),
     default=None,
 )
+@option(
+    "--use-replxx/--no-use-replxx",
+    help="Whether to use replxx library for REPL frontend.",
+    type=bool,
+    default=True,
+    is_flag=True,
+)
+@option(
+    "--enable-jit",
+    prompt="Enable JIT",
+    help="Whether or not to enable JIT compilation.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
-    setup_build_impl(*args, **kwargs)
+
+    enable_jit = kwargs.pop("enable_jit")
+
+    if enable_jit:
+        llvm_linker = prompt(
+            "Path to LLVM linker, llvm-link",
+        )
+        opt_path = prompt(
+            "Path to LLVM optimizer, opt",
+        )
+    else:
+        llvm_linker = None
+        opt_path = None
+
+    kwargs.update(
+        {
+            "enable_jit": enable_jit,
+            "llvm_linker": llvm_linker,
+            "opt_path": opt_path,
+        }
+    )
+
+    setup_build_impl(
+        *args,
+        **kwargs,
+    )

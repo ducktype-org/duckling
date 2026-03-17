@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use futures::future::join_all;
-
 use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
         Dependency, FeatureName, Manifest,
-        gathering::{fetch_types::FetchResult, gatherer::Gatherer},
+        gathering::{
+            fetch_types::{FetchResponse, FetchSuccess},
+            gatherer::Gatherer,
+        },
         git_access::GitAccess,
         solver_freeze::{SolverFreeze, SolverPackageFreeze},
         types_common::ExpandedPackage,
@@ -16,9 +17,9 @@ use crate::{
 impl SolverFreeze {
     /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
     /// to later check whether their dependencies are still satisfied inside the freeze.
-    pub async fn get_prev_freeze_manifests<'duck, GitAccessImpl: GitAccess>(
+    pub fn get_prev_freeze_manifests<Access: GitAccess>(
         &self,
-        gatherer: &'duck Gatherer<'duck, GitAccessImpl>,
+        gatherer: &mut Gatherer<'_, '_, '_, Access>,
     ) -> QuackResult<HashMap<ExpandedPackage, Box<Manifest>>> {
         let mut tasks = vec![];
         for pkg in self.package_freezes.keys() {
@@ -26,23 +27,23 @@ impl SolverFreeze {
                 continue;
             }
             if let Ok(request) = pkg.create_manifest_request() {
-                tasks.push(Box::pin(gatherer.fetch(request)));
+                tasks.push(gatherer.fetch(request));
             }
         }
-        let results = join_all(tasks).await;
+        let results = tasks;
         let mut manifests = HashMap::new();
-        for fetch_result in results {
-            let fetch_result = fetch_result?;
-            if let Some(fetch_result) = fetch_result.0 {
-                match fetch_result {
-                    FetchResult::Pinned(pinned_result) => {
+        for fetch_response in results {
+            let fetch_response = fetch_response?;
+            if let FetchResponse::Success(success_response) = fetch_response.0 {
+                match success_response {
+                    FetchSuccess::Pinned(pinned_success) => {
                         manifests.insert(
-                            pinned_result.expanded_package,
-                            pinned_result.fetched_manifest,
+                            pinned_success.expanded_package,
+                            pinned_success.fetched_manifest,
                         );
                     }
-                    FetchResult::NotPinned(not_pinned_result) => {
-                        manifests.extend(not_pinned_result.fetched_manifests);
+                    FetchSuccess::NotPinned(not_pinned_success) => {
+                        manifests.extend(not_pinned_success.fetched_manifests);
                     }
                 }
             }
@@ -61,8 +62,18 @@ impl SolverFreeze {
     pub fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
-        new_root: ExpandedPackage,
-    ) -> QuackResult<Self> {
+    ) -> QuackResult<(Self, bool)> {
+        self.retain_not_flawed_pkgs(manifests)?;
+        self.substitute_root_pkg(manifests)
+    }
+
+    /// Helper for [`Self::find_maximal_correct_dep_solution`]
+    /// Retains freezes of the old root package and all the packages which have dependencies
+    /// transitively satisfied.
+    fn retain_not_flawed_pkgs(
+        &mut self,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
+    ) -> QuackResult<()> {
         let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests)?;
         let reversed_graph = self.reversed_dependency_graph();
         let mut visited = HashSet::new();
@@ -78,20 +89,7 @@ impl SolverFreeze {
         }
         self.package_freezes
             .retain(|pkg, _| *pkg == self.main_pkg || still_satisfied_pkgs.contains(pkg));
-        let main_pkg_freeze = self
-            .package_freezes
-            .get_mut(&self.main_pkg)
-            .context_internal("Main package was not put into package freezes")?;
-        main_pkg_freeze
-            .dependencies_realization
-            .retain(|_, realization| still_satisfied_pkgs.contains(realization));
-        let main_pkg_freeze = self
-            .package_freezes
-            .remove(&self.main_pkg)
-            .context_internal("Main package was not put into package freezes")?;
-        self.package_freezes.insert(new_root, main_pkg_freeze);
-        self.main_pkg = new_root;
-        Ok(self)
+        Ok(())
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
@@ -115,6 +113,11 @@ impl SolverFreeze {
                     is_every_dep_satisfied = false;
                     break;
                 };
+                // We get rid of packages which depend on the main package, as they are not needed.
+                if *realization == self.main_pkg {
+                    is_every_dep_satisfied = false;
+                    break;
+                }
                 let Some(realization_freeze) = self.package_freezes.get(realization) else {
                     is_every_dep_satisfied = false;
                     break;
@@ -181,7 +184,7 @@ impl SolverFreeze {
             .is_superset(&HashSet::from_iter(forced_child_features)))
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_not_flawed_pkgs`].
     /// Expands the notion of a flawed package in a dfs-like manner, by applying a rule that
     /// if for some package and its dependency, the realization is flawed, the package is as well.
     fn flawed_pkgs_dfs(
@@ -202,7 +205,7 @@ impl SolverFreeze {
         }
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_not_flawed_pkgs`].
     /// Generates the graph used by [`Self::flawed_pkgs_dfs`].
     fn reversed_dependency_graph(&self) -> HashMap<ExpandedPackage, Vec<ExpandedPackage>> {
         let mut reversed_graph: HashMap<ExpandedPackage, Vec<ExpandedPackage>> = HashMap::new();
@@ -212,6 +215,52 @@ impl SolverFreeze {
             }
         }
         reversed_graph
+    }
+
+    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// In the freeze, removes the old root and substitutes its package freeze as the new root's package freeze.
+    /// Keeps only still satisfied realizations from the old root's package freeze.
+    fn substitute_root_pkg(
+        mut self,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
+    ) -> QuackResult<(Self, bool)> {
+        let main_pkg_freeze = self
+            .package_freezes
+            .get(&self.main_pkg)
+            .context_internal("Main package was not put into package freezes")?;
+        let main_manifest = manifests
+            .get(&self.main_pkg)
+            .context_internal("Main package manifest not provided")?;
+        // Check which main package dependencies are still satisfied.
+        let mut still_satisfied_root_deps = HashSet::new();
+        for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
+            if let Some(dependency) = main_manifest.dependencies().get_dependency(*alias)
+                && let Some(realization_freeze) = self.package_freezes.get(realization)
+                && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
+            {
+                still_satisfied_root_deps.insert(*alias);
+            }
+        }
+        // Leave only still satisfied dependencies.
+        let main_pkg_freeze = self
+            .package_freezes
+            .get_mut(&self.main_pkg)
+            .context_internal("Main package was not put into package freezes")?;
+        main_pkg_freeze
+            .dependencies_realization
+            .retain(|alias, _| still_satisfied_root_deps.contains(alias));
+        let all_main_pkg_deps_satisfied = main_manifest
+            .dependencies()
+            .all_dependencies()
+            .keys()
+            .all(|alias| main_pkg_freeze.dependencies_realization.contains_key(alias));
+        // Change the previous main package to the new root package.
+        let main_pkg_freeze = self
+            .package_freezes
+            .remove(&self.main_pkg)
+            .context_internal("Main package was not put into package freezes")?;
+        self.package_freezes.insert(self.main_pkg, main_pkg_freeze);
+        Ok((self, all_main_pkg_deps_satisfied))
     }
 }
 
@@ -226,7 +275,7 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, QpCtx, StrId,
+        DuckCtx, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
@@ -240,6 +289,7 @@ mod test {
         let manifest = dir.path().join("x");
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
+        dir.path().try_fsync_dir().unwrap();
         (dir, manifest)
     }
 
@@ -274,9 +324,8 @@ features:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -312,9 +361,9 @@ features:
             ]),
             main_pkg: exp_pkg_a,
         };
-        let new_freeze = prev_freeze
+        let (new_freeze, _) = prev_freeze
             .clone()
-            .find_maximal_correct_dep_solution(&manifests, exp_pkg_a)
+            .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         assert!(new_freeze == prev_freeze);
     }
@@ -347,9 +396,8 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -385,13 +433,13 @@ metadata:
             ]),
             main_pkg: exp_pkg_a,
         };
-        let new_freeze = prev_freeze
+        let (new_freeze, _) = prev_freeze
             .clone()
-            .find_maximal_correct_dep_solution(&manifests, exp_pkg_a)
+            .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         assert!(new_freeze.package_freezes.len() == 1);
-        assert!(freeze_a.dependencies_realization == HashMap::new());
+        assert!(freeze_a.dependencies_realization.is_empty());
         assert!(freeze_a.features == HashSet::from([FeatureName::new("foo")]));
     }
 
@@ -427,10 +475,9 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -477,14 +524,14 @@ metadata:
             ]),
             main_pkg: exp_pkg_a,
         };
-        let new_freeze = prev_freeze
-            .find_maximal_correct_dep_solution(&manifests, exp_pkg_a)
+        let (new_freeze, _) = prev_freeze
+            .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
         assert!(new_freeze.package_freezes.len() == 2);
-        assert!(freeze_a.dependencies_realization == HashMap::new());
-        assert!(freeze_c.dependencies_realization == HashMap::new());
+        assert!(freeze_a.dependencies_realization.is_empty());
+        assert!(freeze_c.dependencies_realization.is_empty());
     }
 
     #[test]
@@ -530,11 +577,10 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
-        let manifest_d = parse_manifest(&path_d, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
+        let manifest_d = parse_manifest(&path_d, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -595,13 +641,13 @@ metadata:
             ]),
             main_pkg: exp_pkg_a,
         };
-        let new_freeze = prev_freeze
-            .find_maximal_correct_dep_solution(&manifests, exp_pkg_a)
+        let (new_freeze, _) = prev_freeze
+            .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_d = new_freeze.package_freezes.get(&exp_pkg_d).unwrap();
         assert!(new_freeze.package_freezes.len() == 2);
-        assert!(freeze_a.dependencies_realization == HashMap::new());
-        assert!(freeze_d.dependencies_realization == HashMap::new());
+        assert!(freeze_a.dependencies_realization.is_empty());
+        assert!(freeze_d.dependencies_realization.is_empty());
     }
 }

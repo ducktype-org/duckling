@@ -3,7 +3,7 @@
  */
 
 #include <ctv/ctv.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -38,6 +38,8 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
+		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(moveValidation);
 	}
 
@@ -689,7 +691,7 @@ private:
 			using namespace compiler::mir;
 			for (const auto& block_id: mir_func.block_order) {
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					if (instr.operation == Operation::AllocBox) {
+					if (instr.operation == Operation::BoxAlloc) {
 						// var b_int: box i32 = 42;
 						// var b_point: box Point = Point(10, 20);
 						const auto& arg = instr.arguments[0];
@@ -764,6 +766,138 @@ private:
 		});
 	}
 
+	void staticArraysTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/static_arrays")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& hout_func = unit.functions.at(0);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
+			                     ->valueOrThrow();
+
+			bool found_zero_init_arr          = false;
+			bool found_zero_init_pts          = false;
+			bool found_index_projection       = false;
+			bool found_complex_pts_projection = false;
+
+			using namespace compiler::mir;
+
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					if (instr.operation == Operation::ZeroInitialize) {
+						auto& out_place = instr.output.value();
+						auto  local     = out_place.getBase<MIRLocalRef>();
+						if (local->getName() == "arr") found_zero_init_arr = true;
+						if (local->getName() == "pts") found_zero_init_pts = true;
+					}
+
+					if ((instr.operation == Operation::Assign
+					     || instr.operation == Operation::AddressOf)
+					    && instr.output.has_value()) {
+						auto& out_place = instr.output.value();
+						auto  local     = out_place.getBase<MIRLocalRef>();
+
+						if (local->getName() == "arr" && out_place.projection_chain.size() == 1) {
+							bool is_index = std::holds_alternative<MIRPlace::IndexProjection>(
+								out_place.projection_chain[0].storage
+							);
+							if (is_index) found_index_projection = true;
+						}
+
+						if (out_place.projection_chain.size() == 2) {
+							const auto& chain = out_place.projection_chain;
+
+							bool is_idx
+								= std::holds_alternative<MIRPlace::IndexProjection>(chain[0].storage
+							    );
+							bool is_fld
+								= std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage
+							    );
+
+							if (is_idx && is_fld) {
+								auto field = std::get<MIRPlace::FieldProjection>(chain[1].storage);
+								if (compiler::helios::name(field.field_id) == base::StrID("x"))
+									found_complex_pts_projection = true;
+							}
+						}
+					}
+				}
+			}
+
+			ASSERT_TRUE(found_zero_init_arr);
+			ASSERT_TRUE(found_zero_init_pts);
+			ASSERT_TRUE(found_index_projection);
+			ASSERT_TRUE(found_complex_pts_projection);
+		});
+	}
+
+	void dynamicArraysTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/dynamic_arrays")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& hout_func = unit.functions.at(0);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
+			                     ->valueOrThrow();
+
+			bool found_zero_init        = false;
+			bool found_push             = false;
+			bool found_pop              = false;
+			bool found_len              = false;
+			bool found_index_projection = false;
+
+			using namespace compiler::mir;
+
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					switch (instr.operation) {
+					case Operation::ZeroInitialize: {
+						auto& out_place = instr.output.value();
+						if (out_place.getBase<MIRLocalRef>()->getName() == "l")
+							found_zero_init = true;
+						break;
+					}
+					case Operation::ListPush:
+						found_push = true;
+						break;
+					case Operation::ListPop:
+						found_pop = true;
+						break;
+					case Operation::ListLen:
+						found_len = true;
+						break;
+					case Operation::Assign:
+					case Operation::Cast: {
+						if (instr.output.has_value()) {
+							auto& out_place = instr.output.value();
+							if (out_place.getBase<MIRLocalRef>()->getName() == "l"
+							    && out_place.projection_chain.size() == 1) {
+								bool is_index = std::holds_alternative<MIRPlace::IndexProjection>(
+									out_place.projection_chain[0].storage
+								);
+								if (is_index) found_index_projection = true;
+							}
+						}
+						break;
+					}
+					default:
+						break;
+					}
+				}
+			}
+
+			ASSERT_TRUE(found_zero_init);
+			ASSERT_TRUE(found_push);
+			ASSERT_TRUE(found_pop);
+			ASSERT_TRUE(found_len);
+			ASSERT_TRUE(found_index_projection);
+		});
+	}
+
 	void moveValidation() {
 		// @note This test is very fragile and may require hotfixes even after unrelated changes.
 		// Proper tests can be written once 'move' is implemented. It should contain usage of 'if',
@@ -787,7 +921,7 @@ private:
 						.instructions[4]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_good1).isOk());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_good1).isOk());
 				}
 
 				if (fun->declaration->original_name.str() == "good2") {
@@ -795,12 +929,12 @@ private:
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                          ->valueOrThrow();
 
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[3]);
 					compiler::mir::Instruction&   assignment
-						= mir_rep_good2.blocks[mir_rep_good2.block_order[2]].instructions[0];
+						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
 
 					// If this test fails use the following to find the correct Instruction.
-					// mir_rep.debugPrint(std::cerr);
+					// mir_rep_good2.debugPrint(std::cerr);
 					// assignment.debugPrint(std::cerr);
 					assertEqual(
 						compiler::mir::Operation::Assign,
@@ -812,7 +946,7 @@ private:
 					);
 					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_good2).isOk());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_good2).isOk());
 				}
 
 				if (fun->declaration->original_name.str() == "good3") {
@@ -823,10 +957,10 @@ private:
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good3.local_list[2]);
 
 					mir_rep_good3.blocks[mir_rep_good3.block_order[2]]
-						.instructions[1]
+						.instructions[2]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_good3).isOk());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_good3).isOk());
 				}
 
 				if (fun->declaration->original_name.str() == "good4") {
@@ -840,7 +974,7 @@ private:
 						.instructions[2]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_good4).isOk());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_good4).isOk());
 				}
 
 				if (fun->declaration->original_name.str() == "bad1") {
@@ -854,7 +988,7 @@ private:
 						.instructions[2]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_bad1).isBad());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad1).isBad());
 				}
 
 				if (fun->declaration->original_name.str() == "bad2") {
@@ -867,7 +1001,7 @@ private:
 						.instructions[0]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_bad2).isBad());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad2).isBad());
 				}
 
 				if (fun->declaration->original_name.str() == "bad3") {
@@ -880,7 +1014,7 @@ private:
 						.instructions[0]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_bad3).isBad());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad3).isBad());
 				}
 			}
 		});

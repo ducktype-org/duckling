@@ -10,6 +10,7 @@
 #include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -477,7 +478,7 @@ namespace compiler::tsh {
 		static constexpr Kind STATIC_KIND = Kind::DynamicArray;
 
 		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
-			representation = base::strConcat("dynamic_array(", element.toString(), ")");
+			representation = base::strConcat("List[", element.toString(), "]");
 		}
 
 		[[nodiscard]]
@@ -495,6 +496,69 @@ namespace compiler::tsh {
 		 * requires to free memory.
 		 */
 		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+	};
+
+	class StaticArrayAbstractTypeImpl final: public AbstractTypeImpl {
+		SymbolType<> element_type;
+		usize        size;  // Number of elements in the array.
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::StaticArray;
+
+		StaticArrayAbstractTypeImpl(const SymbolType<> element, const usize size):
+			  element_type(element),
+			  size(size) {
+			representation = base::strConcat(element.toString(), "[", base::toString(size), "]");
+		}
+
+		[[nodiscard]]
+		SymbolType<> getElementType() const {
+			return element_type;
+		}
+
+		/**
+		 * @brief Gets the compile-time constant size of the array.
+		 * @return The size of the array.
+		 */
+		[[nodiscard]]
+		usize getSize() const {
+			return size;
+		}
+
+		[[nodiscard]]
+		bool isImplicitlyCoercible(AbstractType target, query::Context&) const override {
+			// Static arrays are implicitly coercible to dynamic arrays storing the same type.
+			if (target.getKind() == Kind::DynamicArray) {
+				auto dynamic_array_type = DynamicArrayAbstractType(target);
+				return dynamic_array_type.getElementType() == element_type;
+			}
+
+			return false;
+		}
+
+		/**
+		 * @brief Static arrays have trivial destructors if the inner type has a noOpDestructor.
+		 */
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			return element_type.getType().hasNoOpDestructor();
+		}
+
+		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
+			// Static Arrays don't carry information if they don't contain any elements or contain
+			// types that don't carry information.
+			return element_type.getType().carriesInformation(ctx) && size > 0;
+		}
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -765,5 +829,47 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+	};
+
+	class TypeTemplateAbstractTypeImpl final: public AbstractTypeImpl {
+		using Source      = TypeTemplateAbstractType::Source;
+		using BuiltinKind = TypeTemplateAbstractType::BuiltinKind;
+
+		Source source;
+
+	public:
+		static constexpr Kind STATIC_KIND = Kind::TypeTemplate;
+
+		[[nodiscard]] Kind getKind() const override { return STATIC_KIND; }
+
+		TypeTemplateAbstractTypeImpl(Source source): source(source) {
+			variant_match(source) {
+				variant_case(BuiltinKind, builtin) {
+					switch (builtin) {
+					case BuiltinKind::List: {
+						representation = "List";
+						break;
+					}
+					default:
+						CORE_UNREACHABLE();
+					}
+				}
+				variant_case(helios::SymID, sym) {
+					representation = base::strConcat("Type template: ", name(sym).str());
+				}
+			}
+		}
+
+		[[nodiscard]] Source getSource() const { return source; }
+
+		[[nodiscard]] AbstractType instantiate(
+			query::Context& ctx, const SymbolType<>& element_type
+		) const;
+
+		[[nodiscard]] bool carriesInformation(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		CRef<TypeInterface> getInterface(query::Context&) const override;
 	};
 }

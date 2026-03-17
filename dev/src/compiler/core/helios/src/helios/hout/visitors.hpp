@@ -18,9 +18,11 @@ namespace compiler::helios::code {
 		LiteralUnitExpr,
 		LiteralNumericExpr,
 		LiteralBoolExpr,
+		LiteralCharExpr,
 		LiteralStringExpr,
 		LiteralTypeExpr,
 		IdentifierExpr,
+		ReusableExpr,
 		BinaryOperatorExpr,
 		UnaryOperatorExpr,
 		TernaryOperatorExpr,
@@ -30,11 +32,15 @@ namespace compiler::helios::code {
 		VariantTypeConstructorExpr,
 		CallExpr,
 		AccessExpr,
+		IndexExpr,
 		SequenceExpr,
 		BoxOfExpr,
 		RefOfExpr,
 		DerefExpr,
+		DefaultValueExpr,
 		CastExpr,
-		LiftToTypeExpr
+		LiftToTypeExpr,
+		ListPushExpr,
+		ListPopExpr
 	);
 }

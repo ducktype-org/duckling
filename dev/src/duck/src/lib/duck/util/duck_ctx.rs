@@ -19,6 +19,7 @@ pub struct DuckCtx {
     user_home: PathBuf,
     duck_home: DuckHome,
     env: Env,
+    offline: bool,
 }
 
 impl DuckCtx {
@@ -41,6 +42,7 @@ impl DuckCtx {
             user_home,
             duck_home,
             env,
+            offline: false,
         })
     }
 
@@ -91,6 +93,19 @@ impl DuckCtx {
     pub fn duck_home(&self) -> &DuckHome {
         &self.duck_home
     }
+
+    pub fn is_offline(&self) -> bool {
+        self.offline
+    }
+
+    pub fn set_offline(&mut self, offline: bool) {
+        self.offline = offline;
+    }
+
+    /// Get the path of the default packages' storage in [`DuckHome`].
+    pub fn default_storage_root(&self) -> &Path {
+        self.duck_home().storage_dir()
+    }
 }
 
 #[cfg(test)]
@@ -107,6 +122,20 @@ impl Default for DuckCtx {
             cwd: current_dir().unwrap(),
             duck_home,
             user_home,
+            offline: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn assert_send_sync_package() {
+        fn assert_send<T: Send>() {}
+        fn assert_sync<T: Sync>() {}
+        assert_send::<DuckCtx>();
+        assert_sync::<DuckCtx>();
     }
 }

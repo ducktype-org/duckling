@@ -44,11 +44,13 @@ public:
 		TESTER_ADD_TEST(simplePointer);
 		TESTER_ADD_TEST(simpleString);
 		TESTER_ADD_TEST(simpleDynamicArray);
+		TESTER_ADD_TEST(simpleStaticArray);
 		TESTER_ADD_TEST(simpleTuple);
 		TESTER_ADD_TEST(simpleVariant);
 		TESTER_ADD_TEST(simpleFunction);
 		TESTER_ADD_TEST(simpleLanguageElements);
 		TESTER_ADD_TEST(simpleMeta);
+		TESTER_ADD_TEST(simpleTypeTemplate);
 		TESTER_ADD_TEST(simpleExpressionType);
 		TESTER_ADD_TEST(simpleValueCategory);
 		TESTER_ADD_TEST(simpleImplicitCoercibility);
@@ -338,6 +340,74 @@ private:
 	}
 
 	/**
+	 * Test that static arrays with different properties are treated as different types
+	 * and that they are correctly cast and handled.
+	 */
+	void simpleStaticArray() {
+		const auto int_16
+			= getIntegralTypeNoContext(16, compiler::tsh::IntegralAbstractType::Signedness::Signed);
+		const auto int_32
+			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
+
+		const auto arr_1 = query::entryPoint<QueryStaticArrayType>({ st(int_16), 10 });
+
+		assertTrue(arr_1.getKind() == StaticArray, "StaticArray should have kind StaticArray.");
+		assertTrue(arr_1.getElementType() == st(int_16), "Element type should be as constructed.");
+		assertTrue(arr_1.getSize() == 10, "Size should be as constructed.");
+
+		const AbstractType            type_arr = arr_1;
+		const StaticArrayAbstractType arr_2    = type_arr;
+		assertTrue(arr_2.getKind() == StaticArray, "StaticArray should survive casting.");
+		assertTrue(arr_2.getSize() == 10, "Size should survive casting.");
+
+		const auto arr_3 = query::entryPoint<QueryStaticArrayType>({ st(int_16), 10 });
+		assertTrue(
+			arr_1 == arr_3, "StaticArrays with the same element type and size should be equal."
+		);
+
+		const auto arr_4_diff_type = query::entryPoint<QueryStaticArrayType>({ st(int_32), 10 });
+		assertTrue(
+			arr_1 != arr_4_diff_type,
+			"StaticArrays with different element types should be different."
+		);
+
+		const auto arr_5_diff_size = query::entryPoint<QueryStaticArrayType>({ st(int_16), 20 });
+		assertTrue(
+			arr_1 != arr_5_diff_size, "StaticArrays with different sizes should be different."
+		);
+
+		const auto arr_6_diff_mut
+			= query::entryPoint<QueryStaticArrayType>({ st(int_16, true), 10 });
+		assertTrue(
+			arr_1 != arr_6_diff_mut,
+			"StaticArrays with element with different mutability should be different."
+		);
+
+		assertTrue(arr_1.hasNoOpDestructor(), "StaticArray of Ints should have a no-op destructor.");
+
+		const auto str_type = getStringType();
+		const auto arr_str  = query::entryPoint<QueryStaticArrayType>({ st(str_type), 5 });
+		assertFalse(
+			arr_str.hasNoOpDestructor(), "StaticArray of Strings should not have a no-op destructor."
+		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertTrue(arr_1.carriesInformation(ctx), "Array of ints should carry information");
+			const auto unit = getUnitType();
+
+			const auto unit_array = ctx.query<QueryStaticArrayType>({ st(unit), 10 });
+			assertFalse(
+				unit_array.carriesInformation(ctx), "Array of units should not carry information"
+			);
+
+			const auto empty_array = ctx.query<QueryStaticArrayType>({ st(int_16), 0 });
+			assertFalse(
+				empty_array.carriesInformation(ctx), "Empty array should not carry information"
+			);
+		});
+	}
+
+	/**
 	 * Test that tuples with different components are treated as different types
 	 * and that they are correctly cast.
 	 */
@@ -509,6 +579,67 @@ private:
 		const AbstractType     meta_type = meta;
 		const MetaAbstractType met_3     = meta_type;
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
+	}
+
+	void simpleTypeTemplate() {
+		query::utils::withContextDo([&](query::Context& ctx) -> void {
+			const auto list_template_type
+				= ctx.query<QueryTypeTemplateType>({ TypeTemplateAbstractType::BuiltinKind::List });
+
+			assertTrue(
+				list_template_type.getKind() == TypeTemplate,
+				"Type template for List should have kind TypeTemplate."
+			);
+
+			assertTrue(
+				list_template_type.carriesInformation(ctx),
+				"Type templates should not carry information."
+			);
+
+			assertTrue(
+				list_template_type.hasNoOpDestructor(),
+				"Type templates should have a no-op destructor."
+			);
+
+			const auto list_template_type_2
+				= ctx.query<QueryTypeTemplateType>({ TypeTemplateAbstractType::BuiltinKind::List });
+			assertTrue(
+				list_template_type == list_template_type_2,
+				"Queries for the same type template should return the same type object."
+			);
+
+
+			const auto i64_type
+				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
+			const auto i32_type
+				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
+			const auto i64_st             = st(i64_type);
+			const auto i32_st             = st(i32_type);
+			const auto instantiated_abs   = list_template_type.instantiate(ctx, i64_st);
+			const auto instantiated_abs_2 = list_template_type_2.instantiate(ctx, i64_st);
+			const auto instantiated_abs_3 = list_template_type_2.instantiate(ctx, i32_st);
+			const auto expected           = ctx.query<QueryDynamicArrayType>({ i64_st });
+			const auto expected_2         = ctx.query<QueryDynamicArrayType>({ i32_st });
+			assertTrue(
+				expected == instantiated_abs,
+				"Instantiating list type template should produce a dynamic array of i64"
+			);
+			assertTrue(
+				expected_2 == instantiated_abs_3,
+				"Instantiating list type template should produce a dynamic array of i32"
+			);
+			assertTrue(
+				instantiated_abs_2 == instantiated_abs,
+				"Two same type templates instantiated with the same type should produce the same "
+				"type"
+			);
+			assertFalse(
+				instantiated_abs_3 == instantiated_abs,
+				"Two same type templates instantiated with different types should produce a "
+				"different "
+				"type"
+			);
+		});
 	}
 
 	void simpleExpressionType() {

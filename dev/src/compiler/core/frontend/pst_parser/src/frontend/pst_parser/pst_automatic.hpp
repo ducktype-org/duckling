@@ -17,7 +17,6 @@
 #pragma once
 
 #include "access.hpp"
-#include "elements/lang_state_unmethods.hpp"
 #include "lang_parser_element.hpp"
 
 #include <token_parser_core/automatic.hpp>
@@ -25,6 +24,15 @@
 
 #define PST_AUTOMATIC_SKIP(ret) \
 	if (state.isSkipping()) { return ret; }
+
+#define PARSE() state.parse(out)
+/**
+ * @brief This macro saves the current context and restores it after executing code from the argument.
+ */
+#define PST_NEW_CONTEXT(code)       \
+	state.parse(out).saveContext(); \
+	code;                           \
+	state.parse(out).exitSoftFallback();
 
 namespace pst {
 	using lang_def::Keyword;
@@ -34,14 +42,6 @@ namespace pst {
 
 	class LangParserState;
 	using TokenStreamCondition = bool(const TokenStream&, i64);
-
-	/**
-	 * @brief Forces pass by value. Sometimes usefull in parse templates
-	 */
-	template<typename T>
-	T fwdVal(T& t) {
-		return t;
-	}
 
 	template<typename State>
 	class PSTAutomatic {
@@ -107,13 +107,15 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
-		 * @param result The place to store the parsed identifier.
+		 * @brief Parses a keyword to @p result. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed keyword.
 		 */
 		PSTAutomatic& one(tpc::Keyword* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isKeyword()) {
-				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+				state.logInt(makeBox<tpc::NoKeywordError>(
+					state.getPosition(), state.ctokens().peek().describe()
+				));
 				*result = Keyword::NotAKeyword;
 				return *this;
 			}
@@ -129,7 +131,9 @@ namespace pst {
 		PSTAutomatic& one(tpc::Identifier* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+				state.logInt(makeBox<tpc::NoIdentifierError>(
+					state.getPosition(), state.ctokens().peek().describe()
+				));
 				result->value = base::StrID("<error>");
 				return *this;
 			}
@@ -508,6 +512,13 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Automatic safe conversion version of autoFallbackLen
+		 */
+		PSTAutomatic& autoFallbackLen(i64 length) {
+			return autoFallbackLen(base::safeIntConv<u64>(length));
+		}
+
+		/**
 		 * @brief Setup a fallback for parsing. The fallback is automatically exited when
 		 * PSTAutomatic is destructed at the end of the expression.
 		 *
@@ -521,6 +532,15 @@ namespace pst {
 			);
 			active_fallback = true;
 			return fallbackUntil<until>();
+		}
+
+		/**
+		 * @brief Sets a simple soft fallback that is only used to save context
+		 */
+		PSTAutomatic& saveContext() {
+			constexpr auto CONST_TRUE = [](const TokenStream&, i64) { return true; };
+
+			return setSoftFallback(CONST_TRUE);
 		}
 
 		/**
@@ -552,6 +572,19 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Setup a soft fallback for parsing. It limits resets the after-error parsing
+		 * short-cutting(using the condition) when exited.
+		 */
+		PSTAutomatic& setSoftFallback(std::function<TokenStreamCondition> fun) {
+			if (state.isSkipping()) {
+				state.skipEntry();
+				return *this;
+			}
+			state.setSoftFallback(fun);
+			return *this;
+		}
+
+		/**
 		 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when
 		 * exited.
 		 */
@@ -560,6 +593,18 @@ namespace pst {
 				if (!state.removeEntry()) return *this;
 			}
 			state.exitFallback();
+			return *this;
+		}
+
+		/**
+		 * @brief Exit a soft fallback for parsing. It resets the after-error parsing short-cutting
+		 * when exited.
+		 */
+		PSTAutomatic& exitSoftFallback() {
+			if (state.isSkipping()) {
+				if (!state.removeEntry()) return *this;
+			}
+			state.exitSoftFallback();
 			return *this;
 		}
 
@@ -620,4 +665,20 @@ namespace pst {
 	 * currently being parsed. For example in statement parsing.
 	 */
 	void exitFallback(LangParserState& state);
+
+	/**
+	 * @brief Setup a soft fallback for parsing. It resets the
+	 * after-error parsing short-cutting (using the condition) when exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is
+	 * currently being parsed. For example in statement parsing.
+	 */
+	void setSoftFallback(LangParserState& state, TokenStreamCondition fun);
+
+	/**
+	 * @brief Exit a soft fallback for parsing. It resets the after-error parsing short-cutting
+	 * (using the saved condition) when exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is
+	 * currently being parsed. For example in statement parsing.
+	 */
+	void exitSoftFallback(LangParserState& state);
 }

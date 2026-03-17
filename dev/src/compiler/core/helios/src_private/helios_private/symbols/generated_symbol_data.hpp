@@ -1,7 +1,9 @@
 #pragma once
 
+#include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
@@ -26,6 +28,14 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		struct BuiltinOperator final {
+			// The type of the builtin operator this symbol represents.
+			tsh::FunctionAbstractType operator_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		/**
 		 * Represents a compiler-generated parameter of a function. This function may itself be
 		 * compiler-generated, such as the `ImplicitConstructor`.
@@ -33,6 +43,17 @@ namespace compiler::helios::houtgen {
 		struct Parameter final {
 			SymID function_symbol;  // The symbol of the function this parameter belongs to.
 			u64   parameter_index;  // The index of the parameter in the function's signature.
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * Represents a compiler-generated `self` parameter of a class method.
+		 */
+		struct SelfParameter final {
+			SymID   method_symbol;
+			ScopeID scope;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -65,14 +86,41 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper> data;
+		/**
+		 * Represents a compiler-generated function wrapper for REPL instructions.
+		 * This is used to wrap a single REPL instruction (if/while/for/block) in a
+		 * synthetic void function so the DVM can execute it via runFunction.
+		 */
+		struct ReplInstructionWrapper final {
+			u64 counter;
 
-		explicit GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper>& data
-		);
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		std::variant<
+			ImplicitConstructor,
+			BuiltinOperator,
+			Parameter,
+			SelfParameter,
+			Variable,
+			ReplExpressionWrapper,
+			ReplInstructionWrapper>
+			data;
+
+		explicit GeneratedSymbolData(const std::variant<
+									 ImplicitConstructor,
+									 BuiltinOperator,
+									 Parameter,
+									 SelfParameter,
+									 Variable,
+									 ReplExpressionWrapper,
+									 ReplInstructionWrapper>& data);
 
 		[[nodiscard]]
-		base::Bit256      queryUnstablePerfectHash() const;
-		tsh::SymbolType<> getType(query::Context& ctx) const;
+		base::Bit256                          queryUnstablePerfectHash() const;
+		tsh::SymbolType<>                     getType(query::Context& ctx) const;
+		[[nodiscard]] ScopeID                 getScope() const;
+		[[nodiscard]] base::Optional<ScopeID> maybeScope() const;
 	};
 }

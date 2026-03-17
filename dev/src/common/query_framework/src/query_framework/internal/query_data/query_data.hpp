@@ -1,5 +1,7 @@
 #pragma once
 
+#include <query_framework/utils/query_hash.hpp>
+
 #include <string_view>
 
 namespace query {
@@ -71,6 +73,19 @@ namespace query {
 		};
 
 		/**
+		 * @brief Struct holding all the data related to query caching, like erase function pointer.
+		 */
+		struct QueryCacheData final {
+			using InternalEraseFunctionType = bool (*)(QueryStableHash);
+
+			/**
+			 * Pointer to the function that can erase the query result from its cache based on the
+			 * key hash.
+			 */
+			InternalEraseFunctionType erase_function;
+		};
+
+		/**
 		 * Struct holding universal, comp-time meta data of each query type.
 		 * It is set per query, and stored in the query-interface struct, so it can be accessed
 		 * anywhere in the pogram. Additionally it is stored in QueryID data, so it can be accessed
@@ -89,11 +104,15 @@ namespace query {
 			QueryKind        kind;
 			std::string_view name;
 			QueryTags        tags;
+			QueryCacheData   cache_data;
 
-			constexpr QueryData(QueryKind kind, std::string_view name, QueryTags tags):
+			constexpr QueryData(
+				QueryKind kind, std::string_view name, QueryTags tags, QueryCacheData cache_data
+			):
 				  kind(kind),
 				  name(name),
-				  tags(tags) {}
+				  tags(tags),
+				  cache_data(cache_data) {}
 
 			constexpr QueryData(const QueryData&) = default;
 

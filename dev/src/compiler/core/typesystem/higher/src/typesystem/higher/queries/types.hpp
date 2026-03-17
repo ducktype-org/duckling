@@ -10,6 +10,7 @@
 #include "../types.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -103,6 +104,44 @@ namespace compiler::tsh {
 	 */
 	DECLARE_QUERY(
 		QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType, ({ .uses_qresult = false })
+	)
+
+	/**
+	 * @brief Key for QueryStaticArrayType.
+	 */
+	struct KeyFor_QueryStaticArrayType final {
+		/**
+		 * @brief The type of the elements in the array.
+		 */
+		SymbolType<> element_type;
+
+		/**
+		 * @brief The compile-time constant size of the array.
+		 */
+		usize size;
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryStaticArrayType&) const
+			= default;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(element_type, size);
+		}
+	};
+
+
+	/**
+	 * @brief Query to get the StaticArray type.
+	 * The AbstractType of the elements and their count is given as a key.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryStaticArrayType,
+		KeyFor_QueryStaticArrayType,
+		StaticArrayAbstractType,
+		({ .uses_qresult = false })
 	)
 
 	/**
@@ -228,5 +267,35 @@ namespace compiler::tsh {
 		QueryClassType, compiler::helios::SymID, ClassAbstractType, ({ .uses_qresult = false })
 	)
 
+	/**
+	 * @brief Key for QueryTypeTemplateType.
+	 */
+	struct KeyFor_QueryTypeTemplateType final {
+		TypeTemplateAbstractType::Source source;
 
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryTypeTemplateType&) const
+			= default;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher{};
+			addToHash(hasher, source.index());
+			VISIT(source, value, addToHash(hasher, value));
+			return hasher.finalize();
+		}
+	};
+
+
+	/**
+	 * @brief Query to get the TypeTemplate.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryTypeTemplateType,
+		KeyFor_QueryTypeTemplateType,
+		TypeTemplateAbstractType,
+		({ .uses_qresult = false })
+	)
 }

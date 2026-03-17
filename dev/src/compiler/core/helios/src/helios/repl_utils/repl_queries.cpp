@@ -8,13 +8,16 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/dotted_name.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/hout/elements.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 #include <logger/logger.hpp>
@@ -79,17 +82,64 @@ namespace compiler::repl {
 			);
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");
-			auto decl_ptr = new helios::HOUTFunctionDeclaration(
-				synthetic_symbol, return_type, std::vector<helios::code::Parameter>{}
-			);
-			auto decl = base::CRef<helios::HOUTFunctionDeclaration>(decl_ptr);
+			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
 
 			CORE_DEV_LOG(REPL, "QueryReplExpressionWrapper completed successfully\n");
-			return { helios::code::generatedOrigin(), decl, code_block };
+			return { helios::code::generatedOrigin(), &decl, code_block };
 		}
 
 		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplExpressionWrapper)
+
+	base::Bit256 QueryReplInstructionWrapper_Key::queryUnstablePerfectHash() const {
+		auto stmt_hash = stmt.illegalAccess().value()->getHash();
+		return hashing::justHash<hashing::SHA256>(stmt_hash, counter);
+	}
+
+	struct IMPLEMENT_QUERY(QueryReplInstructionWrapper, helios::HOUTFunction) {
+		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			CORE_DEV_LOG(REPL, "QueryReplInstructionWrapper: Starting\n");
+
+			// Unit (not Void) is the correct return type for procedures.
+			// Per the language spec: "void ... cannot be the type of a variable, or cannot
+			// be returned from a function".
+			// Unit is "the return type of a procedure, i.e. a function without a
+			// meaningful result" and is properly lowered to ReturnVoid by MIR/LIR.
+			auto void_type = tsh::SymbolType<>{
+				tsh::getUnitType(),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			};
+
+			CORE_DEV_LOG(REPL, "Compiling instruction into HOUT code block\n");
+			auto code_block = std::make_shared<helios::code::CodeBlock>(
+				helios::houtgen::compileSingleStatement(ctx, key.stmt, void_type)
+			);
+
+			// Void functions require an explicit return statement at the end.
+			code_block->statements.emplace_back(
+				base::makeBox<helios::code::VoidReturnStmt>(helios::code::generatedOrigin())
+			);
+
+			CORE_DEV_LOG(REPL, "Creating synthetic symbol for instruction wrapper\n");
+			auto synthetic_symbol = ctx.query<helios::houtgen::QueryGeneratedSymbol>(
+				{ .name = base::StrID("__repl_instr_wrapper__"),
+			      .generated_symbol_data
+			      = helios::houtgen::GeneratedSymbolData{ helios::houtgen::GeneratedSymbolData::ReplInstructionWrapper{
+					  .counter = key.counter } } }
+			);
+
+			CORE_DEV_LOG(REPL, "Creating function declaration\n");
+			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
+
+			CORE_DEV_LOG(REPL, "QueryReplInstructionWrapper completed successfully\n");
+			return { helios::code::generatedOrigin(), &decl, code_block };
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplInstructionWrapper)
 }  // namespace compiler::repl

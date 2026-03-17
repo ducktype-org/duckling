@@ -30,6 +30,10 @@ namespace compiler::helios::code {
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
+
+		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const {
+			return origin.getStablePosition();
+		}
 	};
 
 	/**
@@ -47,6 +51,7 @@ namespace compiler::helios::code {
 		tsh::SymbolType<>         type;
 		base::Optional<Box<Expr>> initial_value;
 		SymID                     helios_symbol;
+		ElementOrigin             origin;
 	};
 
 	/***********************\
@@ -79,23 +84,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
-
-	private:
-		// This constructor is used when one cannot possibly set an initial
-		// value, for example for the result variable of a class's constructor.
-		VariableStmt(
-			ElementOrigin             origin,
-			base::Optional<Box<Expr>> initial_value,
-			tsh::SymbolType<>         type,
-			const SymID               helios_symbol
-		):
-			  Stmt(origin),
-			  initial_value(std::move(initial_value)),
-			  type(type),
-			  helios_symbol(helios_symbol) {}
-
-		// Friend for constructing VariableStmt without initial value.
-		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 	};
 
 	/**

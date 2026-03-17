@@ -1,7 +1,8 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 
 #include <base/extend_cpp/defer.hpp>
 
@@ -14,9 +15,10 @@
 #include <iostream>
 
 void printContextErrors() {
-	if (query::Context::int_logger.messageCount() > 0) {
+	auto logger = query::Context::dumpToOneLoggerAndClear();
+	if (logger->messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::int_logger.dumpLog(true, std::cerr);
+		logger->dumpLog(true, std::cerr);
 	}
 }
 

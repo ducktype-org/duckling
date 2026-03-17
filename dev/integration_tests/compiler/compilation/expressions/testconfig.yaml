@@ -26,11 +26,12 @@ Tests:
 
   comparison-chain:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
+#      @TODO: #2179 Re-enable when ops on globals are implemented.
+#      dvm:
+#        backend: dvm
+#        Output:
+#          String: ""
+#        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -128,7 +129,7 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-  
+
   coercions:
     Cases:
       dvm:
@@ -142,11 +143,43 @@ Tests:
           String: ""
         ExitCode: 0
 
+  default_init:
+    Cases:
+      # @TODO: #1916 When arrays are handled in DVM, add a DVM case.
+      # @TODO: #1560 When records are handled in DVM, add a DVM case.
+      llvm:
+        backend: llvm
+        Output:
+          String: "0\n0\n0\n0\n0\n0\n"
+        ExitCode: 0
+
+  zero_init:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "0\n0\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "0\n0\n"
+        ExitCode: 0
+
   strings:
     Cases:
       llvm:
         backend: llvm
         Input:
-         String: "Test"
+          String: "Test"
         Output:
           String: "Test\nHello, world!\n"
+
+  chars:
+    Cases:
+      llvm:
+        backend: llvm
+        Input:
+          String: "Xd;"
+        Output:
+          String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"

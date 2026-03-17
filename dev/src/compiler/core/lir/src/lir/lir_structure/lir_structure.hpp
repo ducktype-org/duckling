@@ -3,15 +3,18 @@
 #include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
+#include <frontend/pst_parser/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
+#include <mir/mir_structure/mir_metadata.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -27,9 +30,15 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf, 
-	AllocBox,
-	// @TODO: #1894 This approach may be temporary and depends on how we handle destructors in the future.
-	FreeBox,
+	BoxAlloc,
+	// @TODO: #1894 This approach (for both `BoxFree` and `ListFree`) may be temporary and 
+	// depends on how we handle destructors in the future.
+	BoxFree,
+	ListFree,
+
+	ListPush,
+	ListPop,
+	ListLen,
 
 	/**
 		@brief Placeholder.
@@ -91,6 +100,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	BooleanNot,
 
 	Cast,
+	ZeroInitialize,
 
 	Call,
 
@@ -102,6 +112,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 namespace compiler::lir {
 	struct LIRLocal;
+	struct LIRValue;
 	struct Block;
 	struct Function;
 
@@ -229,20 +240,27 @@ namespace compiler::lir {
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
-	 * It contains of a base variable and a projection chain (either field projections or deref
-	 * projections if eny of the elements was a reference)
+	 * It contains of a base variable and a projection chain - field projections, index projections
+	 * or deref projections (if any of the elements was a reference))
 	 *
 	 * For example:
 	 * - For an access like `a.b.c`, where `a` is a local or global variable, and `b` and
 	 * `c` are fields within that variable, this structure would contain the base variable (`a`) and
 	 * the projection chain (`[FieldProjection(`b`), FieldProjection(`c`)]`).
+	 *
 	 * - If `a` was a reference type, the access expression `a.b.c` would contain the base variable
 	 * (`a`) and the projection chain (`[DerefProjection, FieldProjection(`b`),
 	 * FieldProjection(`c`)]`).
+	 *
 	 * - Additionally, if field `b` was a reference type, an additional
 	 * `DerefProjection` would be inserted right after `FieldProjection(`b`).
 	 *
-	 * For access to the whole variable with a direct specifier (e.g., just `a`), the projection
+	 * - In case of `class_array[ix].some_field` the projection chain would contain:
+	 *     - An index projection with the `index` set to the MIRValue representing `ix`
+	 *     - A deref projection since the `[]` returns a reference to the inner element.
+	 *     - An field projection with `field_id` set to `some_field`
+	 *
+	 * - For access to the whole variable with a direct specifier (e.g., just `a`), the projection
 	 * chain would be empty.
 	 */
 	struct LIRPlace final {
@@ -255,18 +273,31 @@ namespace compiler::lir {
 			bool          operator==(const FieldProjection&) const = default;
 		};
 
+		struct IndexProjection {
+			// Box is needed because of the cyclic dependency:
+			// IndexProjection -> LIRValue -> LIRPlace -> LIRValue.
+			// We also want MIRPlace to be copyable, thus it's Shared.
+			SharedBox<LIRValue> index;
+			bool                operator==(const IndexProjection&) const = default;
+		};
+
 		/**
 		 * @brief A single projection which transforms a LIRPlace. This includes dereferencing,
-		 * field access and in the future index access for array elements.
+		 * field access and index access for array elements.
 		 */
 		struct Projection {
-			std::variant<DerefProjection, FieldProjection> storage;
+			std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
 
 			static Projection field(helios::SymID field_id) {
 				return Projection(FieldProjection(field_id));
 			}
 
 			static Projection deref() { return Projection(DerefProjection()); }
+
+			static Projection index(const LIRValue& index) {
+				auto index_shared = base::makeSharedBox<LIRValue>(index);
+				return Projection(IndexProjection{ std::move(index_shared) });
+			}
 
 			bool operator==(const Projection& other) const = default;
 		};
@@ -402,10 +433,26 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout> target_layout;
 	};
 
+	struct ListOperationParameters final {
+		/**
+		 * @brief The element layout for generic `ListPush` and `ListPop` operations.
+		 */
+		CRef<tsl::TypeLayout> element_layout;
+	};
+
 	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+	using InstrParameters
+		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
+
+	struct InstructionMetadata {
+		base::Optional<pst::StablePosition> position;
+
+		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
+
+		InstructionMetadata() = default;
+	};
 
 	/**
 	 * @brief Single instruction of LIR code.
@@ -415,8 +462,8 @@ namespace compiler::lir {
 		base::Optional<LIRPlace> output;
 		std::vector<LIRValue>    arguments;
 		InstrParameters          extra_params{ NoInstrParameters{} };
+		InstructionMetadata      metadata;
 
-		// @TODO: each Instruction should have source position reference
 
 		Instruction()                       = default;
 		Instruction(const Instruction&)     = default;
@@ -428,12 +475,14 @@ namespace compiler::lir {
 			const Operation          operation,
 			base::Optional<LIRPlace> output,
 			std::vector<LIRValue>    arguments,
+			InstructionMetadata      metadata,
 			InstrParameters          extra_parameters = NoInstrParameters{}
 		):
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
-			  extra_params(extra_parameters) {}
+			  extra_params(extra_parameters),
+			  metadata(metadata) {}
 	};
 
 	/**
@@ -444,6 +493,11 @@ namespace compiler::lir {
 	struct Block final {
 		std::vector<Instruction> instructions;
 		Instruction              terminator;
+	};
+
+	struct FunctionMetadata {
+		base::Optional<pst::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
 	};
 
 	/**
@@ -460,6 +514,8 @@ namespace compiler::lir {
 		base::StableVector<LIRLocal> local_list;
 
 		std::vector<BlockRef> block_order;
+
+		FunctionMetadata metadata;
 
 		/**
 		 * @brief Checks if block order uniquely stores

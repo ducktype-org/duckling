@@ -130,6 +130,16 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDynamicArrayType)
 
+	struct IMPLEMENT_QUERY(QueryStaticArrayType, StaticArrayAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return { key.element_type, key.size };
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStaticArrayType)
+
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult { return { key.components }; }
 
@@ -169,4 +179,11 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
 
+	struct IMPLEMENT_QUERY(QueryTypeTemplateType, TypeTemplateAbstractType::Impl) {
+		static auto provide(Context&, const QKey& key) -> PResult { return { key.source }; }
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeTemplateType)
 }

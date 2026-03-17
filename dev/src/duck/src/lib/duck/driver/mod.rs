@@ -2,7 +2,7 @@ use clap::{Command, crate_name, crate_version};
 
 pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
-pub mod global_cli_options;
+pub mod global_options;
 pub mod run;
 pub mod styles;
 pub mod subcommands;
@@ -11,6 +11,7 @@ use cli_ext::CommandExt;
 
 use crate::duck::driver::styles::get_styles;
 
+/// Create main cli parser.
 fn cli() -> Command {
     Command::new(crate_name!())
         .version(crate_version!())
@@ -18,11 +19,13 @@ fn cli() -> Command {
         .add_quiet()
         .add_chdir()
         .add_color()
+        .add_offline()
         .allow_external_subcommands(true)
         .subcommands(subcommands::subcommands())
         .styles(get_styles())
 }
 
+/// Same as [`cli`], but ignores any errors and `help`/`--help` early exits.
 fn cli_no_err() -> Command {
     cli()
         .disable_help_subcommand(true)
