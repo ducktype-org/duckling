@@ -13,27 +13,31 @@ namespace debug_info {
 		  mangled_name(std::move(mangled_name)),
 		  metadata(std::move(metadata)) {}
 
-	FunctionBuilder& FunctionBuilder::addInstruction(u64 offset, InstructionMetadata metadata) {
-		this->metadata.instr_offsets_to_metadata.emplace_back(offset, std::move(metadata));
-		return *this;
-	}
-
 	FunctionBuilder& FunctionBuilder::addInstruction(u64 offset, SourcePosition position) {
-		return addInstruction(offset, InstructionMetadata{ .position = std::move(position) });
-	}
-
-	FunctionBuilder& FunctionBuilder::addVariableInit(u64 offset, VariableMetadata metadata) {
-		this->metadata.instr_offsets_to_variable_init.emplace_back(offset, std::move(metadata));
+		this->metadata.instr_offsets_to_metadata.emplace_back(
+			offset, InstructionMetadata{ .position = std::move(position) }
+		);
 		return *this;
 	}
 
 	FunctionBuilder& FunctionBuilder::addVariableInit(
-		u64 offset, std::string variable_name, SourcePosition position
+		u64 offset, std::string variable_name, base::Optional<SourcePosition> position
 	) {
-		return addVariableInit(
+		this->metadata.instr_offsets_to_variable_init.emplace_back(
 			offset,
 			VariableMetadata{ .name = std::move(variable_name), .position = std::move(position) }
 		);
+		return *this;
+	}
+
+	FunctionBuilder& FunctionBuilder::addParameter(
+		u64 index, std::string parameter_name, base::Optional<SourcePosition> position
+	) {
+		this->metadata.parameter_indexes_to_metadata.emplace_back(
+			index,
+			VariableMetadata{ .name = std::move(parameter_name), .position = std::move(position) }
+		);
+		return *this;
 	}
 
 	DebugInfoBuilder& FunctionBuilder::end() {
@@ -45,11 +49,9 @@ namespace debug_info {
 	// DebugInfoBuilder
 	// --------------------------------------------------------------------------
 
-	DebugInfoBuilder::DebugInfoBuilder(
-		Target target, std::string module_path, SourcePositionsType source_positions_type
-	) {
+	DebugInfoBuilder::DebugInfoBuilder(Target target, SourcePositionsType source_positions_type) {
 		info.target                = target;
-		info.module_path           = std::move(module_path);
+		info.module_path           = "";
 		info.source_positions_type = source_positions_type;
 	}
 
@@ -63,22 +65,16 @@ namespace debug_info {
 	}
 
 	FunctionBuilder DebugInfoBuilder::beginFunction(
-		std::string mangled_name, std::string function_name, SourcePosition position
+		std::string                    mangled_name,
+		base::Optional<std::string>    function_name,
+		base::Optional<SourcePosition> position
 	) {
-		return beginFunction(
-			std::move(mangled_name),
-			FunctionMetadata{ .function_name
-		                      = base::Optional<std::string>{ std::move(function_name) },
-		                      .position = base::Optional<SourcePosition>{ std::move(position) },
-		                      .instr_offsets_to_metadata      = {},
-		                      .instr_offsets_to_variable_init = {} }
-		);
-	}
-
-	FunctionBuilder DebugInfoBuilder::beginFunction(
-		std::string mangled_name, FunctionMetadata metadata
-	) {
-		return { *this, std::move(mangled_name), std::move(metadata) };
+		auto fun_metadata = FunctionMetadata{ .function_name             = std::move(function_name),
+			                                  .position                  = std::move(position),
+			                                  .parameter_indexes_to_metadata = {},
+			                                  .instr_offsets_to_metadata = {},
+			                                  .instr_offsets_to_variable_init = {} };
+		return { *this, std::move(mangled_name), std::move(fun_metadata) };
 	}
 
 	void DebugInfoBuilder::finalizeFunction(std::string mangled_name, FunctionMetadata metadata) {
