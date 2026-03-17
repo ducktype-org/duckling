@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <vector>
+#include <base/pointers/box.hpp>
 
 namespace logger {
 	namespace {
@@ -11,6 +12,14 @@ namespace logger {
 			static std::vector<DevLogCategories> enabled_categories;
 			return &enabled_categories;
 		}
+
+        Ref<std::ostream> current_stream = &std::cout;
+
+        Ref<std::ostream> getOutputStream(){
+            return current_stream;
+        }
+
+
 	}
 
 	bool isCategoryEnabled(DevLogCategories category) {
@@ -22,7 +31,7 @@ namespace logger {
 	namespace internal {
 		void logMessage(std::string_view message) {
 			// In the future this could be directed to a file or other streams.
-			std::cout << message;
+			(*getOutputStream()) << message;
 		}
 	}
 
@@ -31,6 +40,10 @@ namespace logger {
 			if (enabled_category == category) return;
 		getEnabledCategories()->push_back(category);
 	}
+
+    void setDevLogOutputStream(Ref<std::ostream> str){
+        current_stream = str;
+    }
 
 /**
  * This macro is made to ensure a compilation error when

@@ -2,6 +2,7 @@
 
 #include "module_flags/module_flags.hpp"  // IWYU pragma: keep
 
+#include <base/pointers/ref.hpp>
 #include <base/str/str_utils.hpp>         // IWYU pragma: export
 
 #include <string_view>
@@ -45,6 +46,12 @@ namespace logger {
 	 * Enables logging for the specified category.
 	 */
 	void enableDevCategory(DevLogCategories category);
+
+	/**
+	 * Changes output stream used for logs.
+     * DEFAULT: stdout
+	 */
+    void setDevLogOutputStream(Ref<std::ostream> str);
 
 	/**
 	 * Enables logging for the specified category by its string name.

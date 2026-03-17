@@ -11,6 +11,7 @@
 #include <vm/core/thread/low_program/instruction.hpp>
 
 #include <exception>
+#include <fstream>
 
 void showVersion() {
 	std::cout << "VM version 0.0.\n";
@@ -63,6 +64,8 @@ clah::Clah getVmClah() {
 	                       .addPositional(clah::FileParser::make("file"))
 	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
 	                       .setHandler([](const clah::ParsingResult& options) {
+                               std::ofstream fs("log.txt", std::ios::out);
+                               logger::setDevLogOutputStream(&fs);
 							   vm::Supervisor::get();
 							   auto                     file = options.getPositional<fs::File>(0);
 							   std::vector<std::string> args;
