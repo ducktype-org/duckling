@@ -146,11 +146,9 @@ namespace lsp {
 			if_opt_none(chain_locked.illegalAccess()) return;
 			auto chain = chain_locked.illegalAccess().value();
 			auto names = chain->getNames();
-			std::cerr << "Import names: ";
 
 			for (auto name: names) {
 				out(name.position, StandardTokenType::Namespace);
-				std::cerr << name.value.strView() << " ";
 			}
 		}
 
