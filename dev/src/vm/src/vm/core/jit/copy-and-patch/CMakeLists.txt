@@ -15,18 +15,28 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-so")
     set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-nm")
 
-
-    # Force resolution of local function calls (is it needed?)
+# the point here is to force out any relative dependencies between the functions,
+# as it would interfere with template jit-ing. This involves shrinking PLT 
+# as much as possible (as plt stubs are functions). All of those options 
+# (even though unreasonable) seem to be necessary to avoid a linker error.
     add_custom_command(
         OUTPUT ${linked_out}
-        COMMAND ${CMAKE_CXX_COMPILER}
-        -Bsymbolic-functions
+        COMMAND ${CMAKE_C_COMPILER}
+        -O3
         -fno-plt
-        -shared
         -fPIC
+        -fno-pie
+        -ffunction-sections
+        -mcmodel=large
+        -c
         ${binary_file}
+        -o ${linked_out}-1
+        COMMAND ${CMAKE_C_COMPILER}
+        -fPIC
+        -shared
+        ${linked_out}-1
         -o ${linked_out}
-        DEPENDS ${binary_file} ${extra_deps}
+        DEPENDS ${extra_deps}
     )
     set_source_files_properties("${linked_out}" PROPERTIES GENERATED TRUE)
 
@@ -54,7 +64,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
 
     # Include data generated from the binary
     set_property(
-        SOURCE "${destination_file_abs}"
+        SOURCE "${destination_file}"
         DIRECTORY ${destination_scopes}
         APPEND
         PROPERTY INCLUDE_DIRECTORIES
@@ -63,7 +73,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
 
     # Embed the binary
     set_property(
-        SOURCE "${destination_file_abs}"
+        SOURCE "${destination_file}"
         DIRECTORY ${destination_scopes}
         APPEND
         PROPERTY COMPILE_OPTIONS
@@ -71,7 +81,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     )
 
     set_property(
-        SOURCE "${destination_file_abs}"
+        SOURCE "${destination_file}"
         DIRECTORY ${destination_scopes}
         APPEND
         PROPERTY OBJECT_DEPENDS
@@ -79,13 +89,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     )
 endfunction()
 
-add_library(mock_stencils OBJECT tests/mock_stencils.c)
-target_compile_options(mock_stencils PRIVATE
-    -fPIC
-    -fno-plt
-    -fno-semantic-interposition
-)
-process_to_binary("$<TARGET_OBJECTS:mock_stencils>" tests/jit_memory_test.cpp "mock_stencils" mock_stencils)
+process_to_binary(${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.c tests/jit_memory_test.cpp "mock_stencils")
 
 add_library(Stencils OBJECT memory/memory.cpp stencils/dynamic_linker.cpp)
 make_module(Stencils USES Base)
@@ -100,20 +104,7 @@ target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
 set(cp_stencils "${CMAKE_CURRENT_BINARY_DIR}/wrapper")
 
-# compile to binary
-add_custom_command(
-    OUTPUT ${cp_stencils}
-    COMMAND ${LLVM_LLC}
-    -filetype=obj
-    --relocation-model=pic
-    -O3
-    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>
-    -o
-    ${cp_stencils}
-    DEPENDS CommonVMBitcode_sc
-)
-
-process_to_binary("${cp_stencils}" copy-and-patch.cpp "wrapper")
+process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "wrapper")
 set(wrapper_binary_artifacts
     "${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm"
     "${CMAKE_CURRENT_BINARY_DIR}/wrapper-so"

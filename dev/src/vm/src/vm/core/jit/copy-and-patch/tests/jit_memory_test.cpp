@@ -58,7 +58,7 @@ private:
 	void testSimple() {
 		auto foo_code = FIND_FUNC("simple_function_plus_1");
 		auto memory   = JitMemory::allocate(foo_code.size);
-		std::ranges::copy(stencils.stencilBinary(foo_code), memory.memory);
+		stencils.relocate(foo_code, memory.memory);
 		memory.markExecutable();
 
 		auto simple = memory.intoFunc<int(int)>();
@@ -68,7 +68,7 @@ private:
 	void testRecursive() {
 		auto foo_code = FIND_FUNC("recursive_fibonacci");
 		auto memory   = JitMemory::allocate(foo_code.size);
-		std::ranges::copy(stencils.stencilBinary(foo_code), memory.memory);
+		stencils.relocate(foo_code, memory.memory);
 		memory.markExecutable();
 
 		auto fibonacci = memory.intoFunc<int(int)>();
@@ -81,13 +81,22 @@ private:
 	}
 
 	void testCallingSimple() {
-		auto simple = stencils.dynlib.findSymbol<int(int)>("calling_simple_odd");
+		auto foo_code = FIND_FUNC("calling_simple_odd");
+		auto memory   = JitMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.memory);
+		memory.markExecutable();
+		
+		auto simple = memory.intoFunc<int(int)>();
 		for (int i = 0; i < 10; ++i) ASSERT_EQUAL(std::invoke(simple, i), 2 * i + 1);
 	}
 
 	void testCallingRecursive() {
-		auto fibonacci_sum = stencils.dynlib.findSymbol<int(int)>("calling_fibonacci_sum");
-
+		auto foo_code = FIND_FUNC("calling_fibonacci_sum");
+		auto memory   = JitMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.memory);
+		memory.markExecutable();
+		
+		auto fibonacci_sum = memory.intoFunc<int(int)>();
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 0), 1);
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 1), 2);
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 2), 6);
@@ -95,7 +104,12 @@ private:
 	}
 
 	void testCallingLibc() {
-		auto calling_libc    = stencils.dynlib.findSymbol<int*(int)>("calling_libc");
+		auto foo_code = FIND_FUNC("calling_libc");
+		auto memory   = JitMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.memory);
+		memory.markExecutable();
+		
+		auto calling_libc = memory.intoFunc<int*(int)>();
 		auto from_jit_memory = base::Box<int>::fromPointer(std::invoke(calling_libc, 100));
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL(from_jit_memory.get()[i], i);
 	}
