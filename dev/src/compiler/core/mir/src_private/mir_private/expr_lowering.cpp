@@ -198,6 +198,8 @@ namespace compiler::mir {
 				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
 				{},
 				expr_scope,
+				{},
+				{ ternary_expr.getPosition() },
 			});
 
 			// Return (always value).

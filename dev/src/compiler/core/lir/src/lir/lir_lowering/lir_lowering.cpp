@@ -671,19 +671,23 @@ namespace compiler::lir {
 				case mir::Operation::ReturnValue: {
 					// The returned value may have been discarded due to being information-less.
 					if (auto args = getLocations(mir_terminator.arguments); args.size() == 0)
-						curr_block->terminator = Instruction{ Operation::ReturnVoid, {}, {} };
-					else
 						curr_block->terminator
-							= Instruction{ Operation::ReturnValue, {}, std::move(args) };
+							= Instruction{ Operation::ReturnVoid, {}, {}, mir_terminator.metadata };
+					else
+						curr_block->terminator = Instruction{
+							Operation::ReturnValue, {}, std::move(args), mir_terminator.metadata
+						};
 					break;
 				}
 				case mir::Operation::ReturnVoid:
 				case mir::Operation::Jump:
 				case mir::Operation::Branch: {
-					auto args              = getLocations(mir_terminator.arguments);
-					curr_block->terminator = Instruction{
-						mir2lirOperation(mir_terminator.operation, false), {}, std::move(args)
-					};
+					auto args = getLocations(mir_terminator.arguments);
+					curr_block->terminator
+						= Instruction{ mir2lirOperation(mir_terminator.operation, false),
+						               {},
+						               std::move(args),
+						               mir_terminator.metadata };
 					break;
 				}
 				case mir::Operation::FunctionEnd: {
@@ -810,16 +814,11 @@ namespace compiler::lir {
 		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType());
 
 		Block entry_block;
-		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
+		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {}, {} };
 
 		for (const auto& function: functions) {
 			entry_block.instructions.push_back(Instruction{
-				Operation::Call,
-				{},
-				{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
-
-				,
-			});
+				Operation::Call, {}, { LIRValue{ FunctionLiteral::fromFunction(*function) } }, {} });
 		}
 
 		base::StableVector<Block> blocks;
@@ -834,7 +833,7 @@ namespace compiler::lir {
 			             .blocks             = std::move(blocks),
 			             .local_list         = {},
 			             .block_order        = { entry_block_ref },
-			             .metadata           = { {}, {} } };
+			             .metadata           = { .position = {}, .source_code_name = {} } };
 	}
 
 }

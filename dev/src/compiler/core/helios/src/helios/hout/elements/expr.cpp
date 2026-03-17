@@ -44,10 +44,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 
-	base::Optional<pst::StablePosition> Expr::getPosition() const {
-		return origin.getStablePosition();
-	}
-
 	LiteralUnitExpr::LiteralUnitExpr(query::Context&, ElementOrigin origin):
 		  Expr(
 			  tsh::ExpressionType<>(

@@ -19,7 +19,7 @@ namespace pst {
 
 	private:
 		/**
-		 * @brief Node hash that is defines one end of the position range.
+		 * @brief Node hash that defines one end of the position range.
 		 *
 		 * @note We don't know that this node comes before or after
 		 * the @p end_scope_node, but the resulting position is always defined

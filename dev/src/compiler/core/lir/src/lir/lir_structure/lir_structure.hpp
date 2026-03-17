@@ -461,7 +461,7 @@ namespace compiler::lir {
 			const Operation          operation,
 			base::Optional<LIRPlace> output,
 			std::vector<LIRValue>    arguments,
-			InstructionMetadata      metadata         = {},
+			InstructionMetadata      metadata,
 			InstrParameters          extra_parameters = NoInstrParameters{}
 		):
 			  operation(operation),

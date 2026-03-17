@@ -169,6 +169,8 @@ namespace compiler::mir {
 				},
 				{},
 				condition_scope,
+				{},
+				{ stmt.getPosition() },
 			});
 
 			output({ lowered_condition.begin });
@@ -229,6 +231,8 @@ namespace compiler::mir {
 				},
 				{},
 				condition_scope,
+				{},
+				{ stmt.getPosition() },
 			});
 
 			output({ entry_block });
