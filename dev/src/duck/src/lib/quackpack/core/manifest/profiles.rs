@@ -4,7 +4,7 @@ use crate::quackpack::core::compile::profiles::PREDEFINED_PROFILES;
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, QuackResult, StrId, qp_bail, qp_bail_internal, qp_err};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 /// List of specific options which should be passed to the compiler.
 /// All fields are wrapped in [`Option`],
 /// since this is a tight abstraction over the real, yaml manifest entry.
@@ -18,7 +18,7 @@ pub struct Profile {
     pub inherits: Option<StrId>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 /// Enum for different possible optimization levels in the compiler.
 pub enum OptLevel {
     Zero,

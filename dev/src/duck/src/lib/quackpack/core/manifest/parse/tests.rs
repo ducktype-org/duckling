@@ -1,11 +1,11 @@
-use std::{env::home_dir, path::PathBuf};
+use std::{collections::HashMap, env::home_dir, path::PathBuf};
 
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
 use crate::{
     DuckCtx, QpCtx, StrId,
-    quackpack::core::{BranchOrTag, Source, Version},
+    quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version},
     util_common::path_ops_ext::PathOpsExt,
 };
 
@@ -940,4 +940,79 @@ metadata:
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
+}
+
+#[test]
+fn profiles_parse() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.10
+
+profiles:
+  prof1:
+    opt_level: s
+    dvm_bytecode: true
+  prof2:
+    inherits: prof1
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+    let profiles = summary.profiles();
+    assert!(
+        *profiles.get_profiles()
+            == HashMap::from([
+                (
+                    "prof1".into(),
+                    Profile {
+                        opt_level: Some(OptLevel::S),
+                        dvm_bytecode: Some(true),
+                        incremental: None,
+                        c_std: None,
+                        inherits: None
+                    }
+                ),
+                (
+                    "prof2".into(),
+                    Profile {
+                        opt_level: None,
+                        dvm_bytecode: None,
+                        incremental: None,
+                        c_std: None,
+                        inherits: Some("prof1".into())
+                    }
+                )
+            ])
+    )
+}
+
+#[test]
+fn unknown_opt_level() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.10
+
+profiles:
+  prof1:
+    opt_level: x
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `profiles`",
+                "when parsing the field `profiles.prof1`",
+                "Unknown optimization level `x`. Optimization levels are 0, 1, 2, 3, s, z."
+            ]
+        )
+    );
 }
