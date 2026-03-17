@@ -15,10 +15,11 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     set(linked_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-so")
     set(nm_out "${CMAKE_CURRENT_BINARY_DIR}/${binary_artifact_prefix}-nm")
 
-# the point here is to force out any relative dependencies between the functions,
+# The point here is to force out any relative dependencies between the functions,
 # as it would interfere with template jit-ing. This involves shrinking PLT 
 # as much as possible (as plt stubs are functions). All of those options 
 # (even though unreasonable) seem to be necessary to avoid a linker error.
+# @TODO: #2296 This takes way too long, ccache/make targets to simplify.
     add_custom_command(
         OUTPUT ${linked_out}
         COMMAND ${CMAKE_C_COMPILER}
