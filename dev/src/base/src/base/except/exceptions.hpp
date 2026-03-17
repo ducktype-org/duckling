@@ -99,7 +99,7 @@ namespace base {
 /**
  * @brief Checks for error in system function result, explanation based on std::strerror and errno.
  */
-#define SYSTEM_CHECK(cond, what, ...) \
+#define CORE_ASSERT_SYSCALL(cond, what, ...) \
 	CORE_ASSERT_STRONG(cond, what, std::strerror(errno) __VA_OPT__(, ) __VA_ARGS__)
 // NOLINTEND(concurrency-mt-unsafe)
 
