@@ -10,7 +10,7 @@
 #include <string>
 
 using vm::jit::cnp::JitFuncMemory;
-using vm::jit::cnp::LLVM_nm_data;
+using vm::jit::cnp::StencilData;
 using vm::jit::cnp::Stencils;
 
 
@@ -23,7 +23,7 @@ POP_DIAGNOSTIC
 
 static auto stencils
 	= Stencils{ .binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
-	            .functions = std::array {
+	            .stencils = std::array {
 #include <mock_stencils-nm>
 					}
 				 }.load();
@@ -46,11 +46,11 @@ private:
 		std::cerr << "Binary:\n";
 		for (byte c: stencils.binary()) std::cerr << std::hex << (int) (unsigned char) c << ' ';
 		std::cerr << "\nFunctions:\n";
-		for (LLVM_nm_data data: stencils.functions()) std::cerr << data.name << '\n';
+		for (StencilData data: stencils.functions()) std::cerr << data.name << '\n';
 	}
 
 	constexpr static auto FIND_FUNC = [](auto name) {
-		for (LLVM_nm_data data: stencils.functions())
+		for (StencilData data: stencils.functions())
 			if (data.name == name) return data;
 		CORE_PANIC("No function with that name");
 	};

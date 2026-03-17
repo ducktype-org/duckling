@@ -12,7 +12,11 @@
 #include <vector>
 
 namespace vm::jit::cnp {
-	struct LLVM_nm_data {
+
+	/**
+	 * @brief All informations used for future patching of the copied stencil.
+	 */
+	struct StencilData {
 		const char*              name;
 		const char*              type;
 		int                      place;
@@ -21,6 +25,9 @@ namespace vm::jit::cnp {
 		std::vector<StencilHole> relocation = {};
 	};
 
+	/**
+	 * @brief Stencils that have been dynamically linked (had their dependencies resolved).
+	 */
 	template<usize BinarySize, usize NumFunctions>
 	struct LoadedStencils;
 
@@ -28,9 +35,12 @@ namespace vm::jit::cnp {
 	struct Stencils {
 		using LoadedStencilsT = LoadedStencils<BinarySize, NumFunctions>;
 
-		std::array<byte, BinarySize>           binary;
-		std::array<LLVM_nm_data, NumFunctions> functions;
+		std::array<byte, BinarySize>          binary;
+		std::array<StencilData, NumFunctions> stencils;
 
+		/**
+		 * @brief Dynamically link the stored stencils, resolving their dependencies.
+		 */
 		[[nodiscard]] LoadedStencilsT load() const;
 	};
 
@@ -38,34 +48,44 @@ namespace vm::jit::cnp {
 	struct LoadedStencils {
 		using StencilsT = Stencils<BinarySize, NumFunctions>;
 
+		LoadedStencils()                                 = delete;
+		LoadedStencils(const LoadedStencils&)            = delete;
+		LoadedStencils& operator=(const LoadedStencils&) = delete;
+
+		LoadedStencils(LoadedStencils&&)            = default;
+		LoadedStencils& operator=(LoadedStencils&&) = default;
+		~LoadedStencils() = default;
+
+		/**
+		 * @brief Dynamically link the stored stencils, resolving their dependencies.
+		 */
 		[[nodiscard]] static LoadedStencils load(StencilsT stencils) {
 			return LoadedStencils{ .stencils = std::move(stencils),
 				                   .dynlib   = DynamicLibrary::load(stencils.binary) };
 		}
 
-		[[nodiscard]] auto stencilBinary(this auto&& self, usize index) {
-			return self.stencilBinary(self.stencils.functions[index]);
+		/**
+		 * @brief Get the span of a stencil.
+		 */
+		[[nodiscard]] std::span<const byte> stencilBinary(const StencilData& stencil_data) const {
+			auto begin = dynlib.findSymbol(stencil_data.name);
+			return std::span(begin, begin + stencil_data.size);
 		}
 
-		[[nodiscard]] std::span<const byte> stencilBinary(const LLVM_nm_data& func_data) const {
-			auto begin = dynlib.findSymbol(func_data.name);
-			return std::span(begin, begin + func_data.size);
-		}
+		[[nodiscard]] auto& functions() const { return stencils.stencils; }
 
-		[[nodiscard]] auto& functions() const { return stencils.functions; }
-
-		[[nodiscard]] std::span<const byte> binary() const {
-			return std::span((const byte*) stencils.binary.data(), stencils.binary.size());
-		}
-
-		void relocate(const LLVM_nm_data& func_data, byte* new_address) {
-			auto binary = stencilBinary(func_data);
+		/**
+		 * @brief Copy and patch a stencil into a given address.
+		 */
+		void relocate(const StencilData& stencil_data, byte* new_address) {
+			auto binary = stencilBinary(stencil_data);
 			std::ranges::copy(binary, new_address);
 
-			for (const StencilHole& hole: func_data.relocation)
+			for (const StencilHole& hole: stencil_data.relocation)
 				hole.relocate(binary.data(), new_address);
 		}
 
+	private:
 		StencilsT      stencils;
 		DynamicLibrary dynlib;
 	};

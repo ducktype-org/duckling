@@ -24,7 +24,7 @@ def generate_stencils(llvm_nm: str, binary: str, output_file):
 
         name = ' '.join(name_split)
         
-        output_file.write("LLVM_nm_data {" + f'.name = "{name}", .type = "{type}", .place = {place}, .size = {size}' + "},\n")
+        output_file.write("StencilData {" + f'.name = "{name}", .type = "{type}", .place = {place}, .size = {size}' + "},\n")
 
 @click.command()
 @click.option(
