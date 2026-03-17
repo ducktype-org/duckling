@@ -77,7 +77,7 @@ namespace compiler::driver {
 	};
 
 	struct CompileModuleArtifacts {
-		artifacts::FileArtifact object_art;
+		artifacts::FileArtifact                 object_art;
 		base::Optional<artifacts::FileArtifact> debug_info_art;
 	};
 

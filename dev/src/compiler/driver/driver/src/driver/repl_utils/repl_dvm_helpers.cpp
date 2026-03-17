@@ -49,7 +49,8 @@ namespace compiler::repl {
 
 		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data, ctx, false);
 
-		return vm::api::loadCode(pid, dvm_code_collection.code).transform_error(vm::api::errorToString);
+		return vm::api::loadCode(pid, dvm_code_collection.code)
+		    .transform_error(vm::api::errorToString);
 	}
 
 	// @TODO: #1817 This approach is hacky.

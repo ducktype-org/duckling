@@ -6,6 +6,9 @@
 
 namespace compiler::driver {
 
+	constexpr std::string_view DEBUG_INFO_FINAL_EXTENSION  = ".di.json";
+	constexpr std::string_view DEBUG_INFO_STABLE_EXTENSION = ".stable.di.json";
+
 	struct KeyOf_DebugInfoResolvePositions final {
 		artifacts::FileArtifact input_artifact;
 
@@ -33,4 +36,3 @@ namespace compiler::driver {
 		})
 	);
 }
-

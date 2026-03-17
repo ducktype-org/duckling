@@ -1,4 +1,5 @@
 #include "cast_operation_lowering.hpp"
+#include "debug_info_utils.hpp"
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
@@ -17,12 +18,6 @@ using namespace compiler;
 using namespace vm::code::builders;
 
 namespace {
-	debug_info::SourcePosition translateDIPosition(const pst::StablePosition stable_pos) {
-		return { .line_col_position = debug_info::PstHashPostion{
-					 .postion_scope_begin = stable_pos.begin_scope_node,
-					 .postion_scope_end   = stable_pos.end_scope_node,
-				 } };
-	}
 
 	bool isComparison(OpKind op) {
 		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpLt

@@ -40,6 +40,7 @@ public:
 		// wont test what they are supposed to:
 		TESTER_ADD_TEST(graphConsistencyAfterOptimizationTest);
 		TESTER_ADD_TEST(objFileGenerated);
+		TESTER_ADD_TEST(debugInfoGenerated);
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
 		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(packageCompiles);
@@ -414,12 +415,33 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
-			                    .valueOrPanic();
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
+			          .valueOrPanic();
 
-			ASSERT_TRUE(module_o.file.exists());
+			ASSERT_TRUE(artifacts.object_art.file.exists());
+			ASSERT_TRUE(artifacts.debug_info_art.empty());
 
-			fs::FileManager::deleteFile(module_o.file);
+			fs::FileManager::deleteFile(artifacts.object_art.file);
+		});
+	}
+
+	void debugInfoGenerated() {
+		using namespace compiler;
+
+		auto module
+			= frontend::createModuleTree(fs::File(path("modules/functions_1")), package_name);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, true })
+			          .valueOrPanic();
+
+			ASSERT_TRUE(artifacts.object_art.file.exists());
+			ASSERT_TRUE(artifacts.debug_info_art.value().file.exists());
+
+			fs::FileManager::deleteFile(artifacts.object_art.file);
+			fs::FileManager::deleteFile(artifacts.debug_info_art.value().file);
 		});
 	}
 
@@ -435,7 +457,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 
 			auto module_name = base::StrID(
 				base::strConcat(
@@ -514,21 +537,23 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
-			                    .valueOrPanic();
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
+			          .valueOrPanic();
 
-			assertTrue(module_o.file.exists(), "Object file does not exist");
+			assertTrue(artifacts.object_art.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_o.file.getFilePath().getPath());
+			std::filesystem::remove(artifacts.object_art.file.getFilePath().getPath());
 		});
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module_dbc = ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM })
-			                      .valueOrPanic();
-			assertTrue(module_dbc.file.exists(), "Object file does not exist");
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, false })
+			          .valueOrPanic();
+			assertTrue(artifacts.object_art.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_dbc.file.getFilePath().getPath());
+			std::filesystem::remove(artifacts.object_art.file.getFilePath().getPath());
 
 			auto run_result = driver::runModuleOnDVM(ctx, module);
 			ASSERT_TRUE(run_result.has_value());
@@ -558,7 +583,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 		});
 
 		// Serialize current graph

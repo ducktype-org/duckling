@@ -5,9 +5,8 @@
 
 #include "generic_operations.hpp"
 
-#include "debug_info_source_pos.hpp"
-
 #include "debug_info/debug_info_io.hpp"
+#include "debug_info_source_pos.hpp"
 
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
@@ -134,7 +133,7 @@ namespace compiler::driver {
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 			if (key.build_debug_info && key.backend_type == BackendType::DVM) {
 				names.debug_info_file
-					= key.queryStablePerfectHash().toStringHex() + ".stable.di.json";
+					= key.queryStablePerfectHash().toStringHex().append(DEBUG_INFO_STABLE_EXTENSION);
 			}
 			return names;
 		}
@@ -149,15 +148,15 @@ namespace compiler::driver {
 			}
 			CRef lir_data = &lir_data_result->valueOrThrow();
 
-			auto output_name = getModuleOutputName(key);
-			auto output      = getQueryArtifactsCollection()->fileArtifactAtOrNew(
-                base::StrID(output_name.object_file.c_str())
+			auto output_names = getModuleOutputName(key);
+			auto code_output      = getQueryArtifactsCollection()->fileArtifactAtOrNew(
+                base::StrID(output_names.object_file.c_str())
             );
 
-			base::Optional<artifacts::FileArtifact> debug_info_art;
+			base::Optional<artifacts::FileArtifact> debug_info_output;
 			if (key.build_debug_info && key.backend_type == BackendType::DVM) {
-				debug_info_art.emplace(getQueryArtifactsCollection()->fileArtifactAtOrNew(
-					base::StrID(output_name.debug_info_file->c_str())
+				debug_info_output.emplace(getQueryArtifactsCollection()->fileArtifactAtOrNew(
+					base::StrID(output_names.debug_info_file->c_str())
 				));
 			}
 
@@ -170,7 +169,7 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
-						output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
+						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 
@@ -190,16 +189,16 @@ namespace compiler::driver {
 			}
 			case BackendType::DVM: {
 				auto dvm_module_data = compileLIRModuleToDVM(lir_data, ctx, key.build_debug_info);
-				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
+				std::ofstream dvm_file(code_output.file.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_module_data.code, dvm_file);
 				dvm_file.close();
 
 				if (key.build_debug_info) {
 					auto& di       = dvm_module_data.debug_info.value();
-					di.module_path = debug_info_art.value().file.getFilePath().getPath().string();
+					di.module_path = code_output.file.getFilePath().getPath().string();
 					std::ofstream di_file(
-						debug_info_art.value().file.getFilePath().getPath(), std::ios::binary
+						debug_info_output.value().file.getFilePath().getPath(), std::ios::binary
 					);
 					debug_info::saveToStream(di, di_file);
 					di_file.close();
@@ -211,8 +210,8 @@ namespace compiler::driver {
 				CORE_PANIC("bad backend type");
 			}
 
-			return CompileModuleArtifacts{ .object_art     = std::move(output),
-				                           .debug_info_art = std::move(debug_info_art) };
+			return CompileModuleArtifacts{ .object_art     = std::move(code_output),
+				                           .debug_info_art = std::move(debug_info_output) };
 		}
 
 		/**

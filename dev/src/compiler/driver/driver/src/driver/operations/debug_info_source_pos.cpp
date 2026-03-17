@@ -4,11 +4,11 @@
 
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <global_state/artifacts_location.hpp>
+
+#include <hashing/hash.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <token_source/source.hpp>
-
-#include <hashing/hash.hpp>
 
 #include <fstream>
 
@@ -17,19 +17,17 @@ namespace compiler::driver {
 	namespace {
 		base::Bit256 hashDebugInfoContent(const artifacts::FileArtifact& artifact) {
 			auto content_safe = artifact.file.getContentSafe();
-			if (content_safe.has_value()) {
+			if (content_safe.has_value())
 				return hashing::justHash<hashing::SHA256>(content_safe->view().stringView());
-			}
 
 			return hashing::justHash<hashing::SHA256>(artifact.file.getFilePath().string());
 		}
 
 		debug_info::FilePosition calculateSourcePosition(const debug_info::PstHashPostion& pos) {
-			auto source_position
-				= pst::LangElement::getByStableHash(pos.postion_scope_begin)
-				      .illegalAccess()
-				      .value()
-				      ->getSourcePosition();
+			auto source_position = pst::LangElement::getByStableHash(pos.postion_scope_begin)
+			                           .illegalAccess()
+			                           .value()
+			                           ->getSourcePosition();
 
 			if_opt_some(pos.postion_scope_end, end_hash) {
 				auto end_position = pst::LangElement::getByStableHash(end_hash)
@@ -65,11 +63,15 @@ namespace compiler::driver {
 		QUERY_AUTO_CACHE_COPY
 
 		static std::string outputArtifactName(const QKey& key) {
-			return key.input_artifact.file.stem() + ".di.json";
+			auto stable_di_name = key.input_artifact.file.name();
+			auto base_name      = stable_di_name.substr(0, stable_di_name.size() - DEBUG_INFO_STABLE_EXTENSION.size());
+			return base_name.append(DEBUG_INFO_FINAL_EXTENSION);
 		}
 
 		static auto provide([[maybe_unused]] query::Context& ctx, const QKey& key) -> PResult {
-			std::ifstream input_file(key.input_artifact.file.getFilePath().getPath(), std::ios::binary);
+			std::ifstream input_file(
+				key.input_artifact.file.getFilePath().getPath(), std::ios::binary
+			);
 			if (!input_file.is_open()) {
 				CORE_USER_LOG("Failed to open debug-info artifact for reading\n");
 				return query::Failed();
@@ -78,9 +80,7 @@ namespace compiler::driver {
 			auto debug_info_or_error = debug_info::loadFromStream(input_file);
 			if (!debug_info_or_error.has_value()) {
 				CORE_USER_LOG(
-					"Failed to parse debug-info artifact: ",
-					debug_info_or_error.error(),
-					"\n"
+					"Failed to parse debug-info artifact: ", debug_info_or_error.error(), "\n"
 				);
 				return query::Failed();
 			}
@@ -115,10 +115,11 @@ namespace compiler::driver {
 
 		static auto deleteFromDisc(const QKey& key) -> bool {
 			auto artifact_name = outputArtifactName(key);
-			return getQueryArtifactsCollection()->deleteFileArtifact(base::StrID(artifact_name.c_str()));
+			return getQueryArtifactsCollection()->deleteFileArtifact(
+				base::StrID(artifact_name.c_str())
+			);
 		}
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(DebugInfoResolvePositions);
 }
-

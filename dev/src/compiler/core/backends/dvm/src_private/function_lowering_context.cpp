@@ -1,7 +1,7 @@
 #include "function_lowering_context.hpp"
 
+#include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
-#include "frontend/pst_parser/stable_position.hpp"
 #include "program_lowering_context.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
@@ -26,15 +26,6 @@ using namespace compiler::backend_vm::internal;
 			base::strConcat("Type ", base::typeName<tp>(), " for: ", reason) \
 		);                                                                   \
 	}
-
-namespace {
-	debug_info::SourcePosition translateDIPosition(const pst::StablePosition stable_pos) {
-		return { .line_col_position = debug_info::PstHashPostion{
-					 .postion_scope_begin = stable_pos.begin_scope_node,
-					 .postion_scope_end   = stable_pos.end_scope_node,
-				 } };
-	}
-}
 
 FunctionLoweringContext::FunctionLoweringContext(
 	ProgramLoweringContext&                     program_context,
@@ -169,7 +160,7 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	function.body                  = std::move(function_body);
 
 	if_opt_some(fun_di_builder_opt, builder) { builder.end(); }
-	
+
 	return function;
 }
 

@@ -2,6 +2,7 @@
 
 #include "debug_info/debug_info.hpp"
 #include "debug_info/debug_info_builder.hpp"
+#include "debug_info_utils.hpp"
 #include "function_lowering_context.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
@@ -25,7 +26,7 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 		if_opt_some(debug_info_builder, builder) {
 			builder.addType(vm::code::typeName(dvm_type).str(), layout->getSourceType().toString());
 		}
-		
+
 		return tsl_type_to_dvm.at(layout);
 	}
 }
@@ -110,19 +111,12 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 		func_param_types.push_back(lowerAndKeepTslType(param_layout));
 
 
-	auto map_stable_position = [](pst::StablePosition pos) -> debug_info::SourcePosition {
-		return debug_info::SourcePosition{ .line_col_position = debug_info::PstHashPostion{
-											   .postion_scope_begin = pos.begin_scope_node,
-											   .postion_scope_end   = pos.end_scope_node,
-										   } };
-	};
-
 	base::Optional<debug_info::FunctionBuilder> function_di_builder_opt;
 	if_opt_some(debug_info_builder, builder) {
 		function_di_builder_opt.emplace(builder.beginFunction(
 			lir_function->mangled_name.str(),
 			lir_function->metadata.source_code_name.map([](auto str_id) { return str_id.str(); }),
-			lir_function->metadata.position.map(map_stable_position)
+			lir_function->metadata.position.map(translateDIPosition)
 		));
 	}
 
