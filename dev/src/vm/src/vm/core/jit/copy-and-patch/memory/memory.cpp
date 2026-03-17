@@ -6,6 +6,7 @@
 
 	#include <base/except/exceptions.hpp>
 
+	#include <cassert>
 	#include <cstddef>
 	#include <functional>
 	#include <iostream>
@@ -21,7 +22,7 @@ namespace vm::jit::cnp {
 		return page_size;
 	}
 
-	JitMemory JitMemory::allocate(usize size) {
+	JitFuncMemory JitFuncMemory::allocate(usize size) {
 		size = (size + getPageSize() - 1) / getPageSize() * getPageSize();
 		CORE_ASSERT(size % getPageSize() == 0, "should be aligned to page size");
 		int  flags = MAP_ANONYMOUS | MAP_PRIVATE;
@@ -29,16 +30,16 @@ namespace vm::jit::cnp {
 			= reinterpret_cast<byte*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, flags, -1, 0));
 
 		SYSTEM_CHECK(memory != MAP_FAILED, "unable to allocate memory");
-		return JitMemory{ .memory = memory, .size = size };
+		return JitFuncMemory{ memory, size };
 	}
 
-	void JitMemory::markExecutable() {
+	void JitFuncMemory::markExecutable() {
 		SYSTEM_CHECK(
-			mprotect(memory, size, PROT_READ | PROT_EXEC) == 0, "unable to mark memory as executable"
+			mprotect(addr, size, PROT_READ | PROT_EXEC) == 0, "unable to mark memory as executable"
 		);
 	}
 
-	void JitMemory::freeJitMemory() { SYSTEM_CHECK(munmap(memory, size), "unable to free memory"); }
+	JitFuncMemory::~JitFuncMemory() noexcept { assert(munmap(addr, size) == 0); }
 }
 
 #elif _WIN32

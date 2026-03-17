@@ -28,8 +28,8 @@ namespace vm::jit::cnp {
 			opcodes | std::views::transform(get_opfunc_size), 0, std::plus{}
 		);
 
-		auto  memory = JitMemory::allocate(size);
-		byte* next   = memory.memory;
+		auto  memory = JitFuncMemory::allocate(size);
+		byte* next   = memory.addr;
 
 		auto add_instr = [&](auto binary) {
 			std::ranges::copy(binary, next);

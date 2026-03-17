@@ -9,7 +9,7 @@
 #include <cstring>
 #include <string>
 
-using vm::jit::cnp::JitMemory;
+using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::LLVM_nm_data;
 using vm::jit::cnp::Stencils;
 
@@ -57,8 +57,8 @@ private:
 
 	void testSimple() {
 		auto foo_code = FIND_FUNC("simple_function_plus_1");
-		auto memory   = JitMemory::allocate(foo_code.size);
-		stencils.relocate(foo_code, memory.memory);
+		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.addr);
 		memory.markExecutable();
 
 		auto simple = memory.intoFunc<int(int)>();
@@ -67,8 +67,8 @@ private:
 
 	void testRecursive() {
 		auto foo_code = FIND_FUNC("recursive_fibonacci");
-		auto memory   = JitMemory::allocate(foo_code.size);
-		stencils.relocate(foo_code, memory.memory);
+		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.addr);
 		memory.markExecutable();
 
 		auto fibonacci = memory.intoFunc<int(int)>();
@@ -82,8 +82,8 @@ private:
 
 	void testCallingSimple() {
 		auto foo_code = FIND_FUNC("calling_simple_odd");
-		auto memory   = JitMemory::allocate(foo_code.size);
-		stencils.relocate(foo_code, memory.memory);
+		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.addr);
 		memory.markExecutable();
 		
 		auto simple = memory.intoFunc<int(int)>();
@@ -92,8 +92,8 @@ private:
 
 	void testCallingRecursive() {
 		auto foo_code = FIND_FUNC("calling_fibonacci_sum");
-		auto memory   = JitMemory::allocate(foo_code.size);
-		stencils.relocate(foo_code, memory.memory);
+		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.addr);
 		memory.markExecutable();
 		
 		auto fibonacci_sum = memory.intoFunc<int(int)>();
@@ -105,8 +105,8 @@ private:
 
 	void testCallingLibc() {
 		auto foo_code = FIND_FUNC("calling_libc");
-		auto memory   = JitMemory::allocate(foo_code.size);
-		stencils.relocate(foo_code, memory.memory);
+		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.addr);
 		memory.markExecutable();
 		
 		auto calling_libc = memory.intoFunc<int*(int)>();
