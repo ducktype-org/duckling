@@ -67,10 +67,10 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 		set(ICU_PREFIX ${PROJECT_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local)
 		set(ICU_INCLUDE_DIRS ${ICU_PREFIX}/include)
 
-		set(ICU_DATA_LIBRARY ${ICU_PREFIX}/lib/libicudata.so.74)
-		set(ICU_I18N_LIBRARY ${ICU_PREFIX}/lib/libicui18n.so.74)
-		set(ICU_UC_LIBRARY ${ICU_PREFIX}/lib/libicuuc.so.74)
-		set(ICU_IO_LIBRARY ${ICU_PREFIX}/lib/libicuio.so.74)
+		set(ICU_DATA_LIBRARY "${ICU_PREFIX}/lib/libicudata.so.${ICU_VERSION_REQUIRED}")
+		set(ICU_I18N_LIBRARY "${ICU_PREFIX}/lib/libicui18n.so.${ICU_VERSION_REQUIRED}")
+		set(ICU_UC_LIBRARY "${ICU_PREFIX}/lib/libicuuc.so.${ICU_VERSION_REQUIRED}")
+		set(ICU_IO_LIBRARY "${ICU_PREFIX}/lib/libicuio.so.${ICU_VERSION_REQUIRED}")
 
 		add_library(icudata IMPORTED SHARED GLOBAL)
 		set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
