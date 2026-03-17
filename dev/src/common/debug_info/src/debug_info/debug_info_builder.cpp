@@ -69,10 +69,10 @@ namespace debug_info {
 		base::Optional<std::string>    function_name,
 		base::Optional<SourcePosition> position
 	) {
-		auto fun_metadata = FunctionMetadata{ .function_name             = std::move(function_name),
-			                                  .position                  = std::move(position),
-			                                  .parameter_indexes_to_metadata = {},
-			                                  .instr_offsets_to_metadata = {},
+		auto fun_metadata = FunctionMetadata{ .function_name = std::move(function_name),
+			                                  .position      = std::move(position),
+			                                  .parameter_indexes_to_metadata  = {},
+			                                  .instr_offsets_to_metadata      = {},
 			                                  .instr_offsets_to_variable_init = {} };
 		return { *this, std::move(mangled_name), std::move(fun_metadata) };
 	}

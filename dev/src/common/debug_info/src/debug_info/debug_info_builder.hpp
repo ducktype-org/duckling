@@ -38,7 +38,7 @@ namespace debug_info {
 		 * @brief Convenience overload: wraps @p position in an InstructionMetadata.
 		 */
 		FunctionBuilder& addInstruction(u64 offset, SourcePosition position);
-		
+
 		/**
 		 * @brief Convenience overload: builds VariableMetadata from name + position.
 		 */

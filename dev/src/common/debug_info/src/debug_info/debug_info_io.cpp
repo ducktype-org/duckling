@@ -147,7 +147,7 @@ namespace debug_info {
 		j = json::object();
 		if (v.function_name) j["function_name"] = *v.function_name;
 		if (v.position) j["position"] = *v.position;
-		j["parameter_indexes_to_metadata"] = sorted_parameter_indexes_to_metadata;
+		j["parameter_indexes_to_metadata"]  = sorted_parameter_indexes_to_metadata;
 		j["instr_offsets_to_metadata"]      = sorted_instr_offsets_to_metadata;
 		j["instr_offsets_to_variable_init"] = sorted_instr_offsets_to_variable_init;
 	}
