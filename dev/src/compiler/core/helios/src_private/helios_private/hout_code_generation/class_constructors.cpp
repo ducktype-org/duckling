@@ -53,7 +53,9 @@ namespace compiler::helios::houtgen {
             });
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
 				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), result_symbol_type),
+				makeBox<code::DefaultValueExpr>(
+					ctx, code::generatedOrigin(), result_symbol_type.getType()
+				),
 				result_symbol_type,
 				result_symbol
 			)));

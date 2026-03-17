@@ -1,5 +1,8 @@
 #include "hout_stmt_compilation.hpp"
 
+#include "helios/symbols/symbol_id.hpp"
+#include "helios_private/hout_code_generation/default_constructors.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -299,10 +302,11 @@ namespace compiler::helios::houtgen {
 					return;
 				}
 
-				// @TODO: #1921 This is not a proper way to handle default initialization. Make
-				// it better.
+				// TODOP: Rethink clone.
 				auto initial_value
-					= makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), symbol_type);
+					= ctx.query<houtgen::QueryDefaultInitializerExpr>(symbol_type.getType())
+				          ->valueOrThrow()
+				          ->clone();
 				output(code::VariableStmt(
 					code::pstOrigin(stmt), std::move(initial_value), symbol_type, symbol
 				));

@@ -18,10 +18,7 @@ namespace compiler::helios::houtgen {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryClassConstructor,
-		tsh::ClassAbstractType,
-		CRef<query::QResult<HOUTFunction>>,
-		({})
+		QueryClassConstructor, tsh::ClassAbstractType, CRef<query::QResult<HOUTFunction>>, ({})
 	);
 
 	/**

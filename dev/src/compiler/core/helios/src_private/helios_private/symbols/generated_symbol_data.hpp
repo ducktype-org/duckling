@@ -58,20 +58,6 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		/**
-		 * Represents a compiler-generated implicit constructor for a class.
-		 *
-		 * The implicit constructor is a function that takes parameters for each field of the class
-		 * and returns an instance of the class with those fields initialised accordingly.
-		 * TODOP: Comment
-		 */
-		struct DefaultTupleConstructor final {
-			tsh::AbstractType array_type;
-
-			[[nodiscard]]
-			base::Bit256 queryUnstablePerfectHash() const;
-		};
-
 		struct BuiltinOperator final {
 			// The type of the builtin operator this symbol represents.
 			tsh::FunctionAbstractType operator_type;
@@ -146,7 +132,6 @@ namespace compiler::helios::houtgen {
 			ImplicitConstructor,
 			DefaultClassConstructor,
 			DefaultStaticArrayConstructor,
-			DefaultTupleConstructor,
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,

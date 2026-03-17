@@ -15,6 +15,15 @@ namespace compiler::helios {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::DefaultClassConstructor::queryUnstablePerfectHash() const {
+			return { class_symbol.queryUnstablePerfectHash() };
+		}
+
+		base::Bit256 GeneratedSymbolData::DefaultStaticArrayConstructor::queryUnstablePerfectHash(
+		) const {
+			return { array_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
 			return { operator_type.queryUnstablePerfectHash() };
 		}

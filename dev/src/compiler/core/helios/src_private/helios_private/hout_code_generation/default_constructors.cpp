@@ -68,14 +68,14 @@ namespace compiler::helios::houtgen {
 
 			// By default all fields with no initial value are zeroed.
 			// var result: Class = <default_initializer>;
-			body.emplace_back(
-				makeBox<code::VariableStmt>(
-					code::generatedOrigin(),
-					makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), result_symbol_type),
-					result_symbol_type,
-					result_symbol
-				)
-			);
+			body.emplace_back(makeBox<code::VariableStmt>(
+				code::generatedOrigin(),
+				makeBox<code::DefaultValueExpr>(
+					ctx, code::generatedOrigin(), result_symbol_type.getType()
+				),
+				result_symbol_type,
+				result_symbol
+			));
 
 			// - Assign each field with the initializing expression or a default value expression.
 			for (const auto& field: fields) {
@@ -103,34 +103,29 @@ namespace compiler::helios::houtgen {
 							// Otherwise initialize it with the default initializer expression.
 							return ctx
 							    .query<QueryDefaultInitializerExpr>(field.getType(ctx).getType())
-							    .valueOrThrow();
+							    ->valueOrThrow()
+							    ->clone();
 						}
 					}
 					CORE_UNREACHABLE();
 				}();
 
-				body.emplace_back(
-					makeBox<code::AssignmentStmt>(
+				body.emplace_back(makeBox<code::AssignmentStmt>(
+					code::generatedOrigin(),
+					makeBox<code::AccessExpr>(
+						ctx,
 						code::generatedOrigin(),
-						makeBox<code::AccessExpr>(
-							ctx,
-							code::generatedOrigin(),
-							makeBox<code::IdentifierExpr>(
-								ctx, code::generatedOrigin(), result_symbol
-							),
-							field.getSymbol()
-						),
-						std::move(init_expr)
-					)
-				);
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
+						field.getSymbol()
+					),
+					std::move(init_expr)
+				));
 			}
 
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-				)
-			);
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
+			));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(
@@ -180,78 +175,70 @@ namespace compiler::helios::houtgen {
 			      .generated_symbol_data
 			      = GeneratedSymbolData{ Variable{ ctor_symbol, 0, array_sym_type } } }
 			);
-			body.emplace_back(
-				makeBox<code::VariableStmt>(
-					code::generatedOrigin(),
-					makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), array_sym_type),
-					array_sym_type,
-					res_sym
-				)
-			);
+			body.emplace_back(makeBox<code::VariableStmt>(
+				code::generatedOrigin(),
+				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), array_type),
+				array_sym_type,
+				res_sym
+			));
 
 			// Generate the loop only if the static array is not empty.
 			if (size > 0) {
-				auto i64_type = tsh::SymbolType<>{
-					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable
-				};
+				auto i64_abs_type
+					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+				auto i64_type = tsh::SymbolType<>{ i64_abs_type,
+					                               tsh::ReferenceKind::Direct,
+					                               tsh::Mutability::Mutable };
 				// var i: i64 = 0;
 				const SymID i_sym = ctx.query<QueryGeneratedSymbol>(
 					{ .name = base::StrID("i"),
 				      .generated_symbol_data
 				      = GeneratedSymbolData{ Variable{ ctor_symbol, 1, i64_type } } }
 				);
-				auto zero_val = numeric_value::NumericValue::createOfType(i64_type).expect(
-					"i64 creation failed"
-				);
-				body.emplace_back(
-					makeBox<code::VariableStmt>(
-						code::generatedOrigin(),
-						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-						array_sym_type,
-						res_sym
-					)
-				);
+				auto zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
+				                    .expect("i64 creation failed");
+				body.emplace_back(makeBox<code::VariableStmt>(
+					code::generatedOrigin(),
+					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
+					array_sym_type,
+					res_sym
+				));
 
 				// while (i < size) { res[i] = default_init(T); i = i + 1; }
 				code::CodeBlock loop_body{};
-				auto            element_init
-					= ctx.query<QueryDefaultInitializerExpr>(element_abs_type).valueOrThrow();
+				auto element_init = ctx.query<QueryDefaultInitializerExpr>(element_abs_type)
+				                        ->valueOrThrow()
+				                        ->clone();
 
 				// res[i] = default_init(T)
-				loop_body.statements.emplace_back(
-					makeBox<code::AssignmentStmt>(
+				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IndexExpr>(
+						ctx,
 						code::generatedOrigin(),
-						makeBox<code::IndexExpr>(
-							ctx,
-							code::generatedOrigin(),
-							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-						),
-						element_init->clone()
-					)
-				);
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
+					),
+					element_init->clone()
+				));
 
 				// i = i + 1
-				auto one_val = numeric_value::NumericValue::createOfType(i64_type, 1)
+				auto one_val = numeric_value::NumericValue::createOfType(i64_type.getType(), 1)
 				                   .expect("i64 creation failed");
-				loop_body.statements.emplace_back(
-					makeBox<code::AssignmentStmt>(
+				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
+					makeBox<code::BinaryOperatorExpr>(
+						ctx,
 						code::generatedOrigin(),
+						code::BuiltinBinary::IntegerAdd,
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-						makeBox<code::BinaryOperatorExpr>(
-							ctx,
-							code::generatedOrigin(),
-							code::BuiltinBinary::IntegerAdd,
-							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-							makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
-						)
+						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
 					)
-				);
+				));
 
 				// i < size
-				auto size_val = numeric_value::NumericValue::createOfType(i64_type, size)
+				auto size_val = numeric_value::NumericValue::createOfType(i64_abs_type, size)
 				                    .expect("i64 creation failed");
 				auto condition = makeBox<code::BinaryOperatorExpr>(
 					ctx,
@@ -261,20 +248,16 @@ namespace compiler::helios::houtgen {
 					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), size_val)
 				);
 
-				body.emplace_back(
-					makeBox<code::WhileStmt>(
-						code::generatedOrigin(), std::move(condition), std::move(loop_body)
-					)
-				);
+				body.emplace_back(makeBox<code::WhileStmt>(
+					code::generatedOrigin(), std::move(condition), std::move(loop_body)
+				));
 			}
 
 			// return result
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
-				)
-			);
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
+			));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(
@@ -341,27 +324,21 @@ namespace compiler::helios::houtgen {
 				);
 			}
 			case tsh::Kind::Tuple: {
-				ctx.logInt(
-					makeBox<dia_int::NotYetImplementedCodeError>(
-						"Generating default constructors for tuple types.", std::nullopt
-					)
-				);
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Generating default constructors for tuple types.", std::nullopt
+				));
 				return query::Failed();
 			}
 			case tsh::Kind::Variant:
 			case tsh::Kind::Function:
 			case tsh::Kind::Reference: {  // TODOP: What is that? We should have that as a reference
 				                          // specifier?
-				ctx.logInt(
-					makeBox<dia_int::PlaceholderCodeError>(
-						base::strConcat(
-							"Variables of type `",
-							type.toString(),
-							"` must be explicitly initialized"
-						),
-						dia::SourcePosition::fakePosition()  // TODOP: Fix?
-					)
-				);
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					base::strConcat(
+						"Variables of type `", type.toString(), "` must be explicitly initialized"
+					),
+					dia::SourcePosition::fakePosition()  // TODOP: Fix?
+				));
 				return query::Failed();
 			}
 			// These should not be default initialized.
