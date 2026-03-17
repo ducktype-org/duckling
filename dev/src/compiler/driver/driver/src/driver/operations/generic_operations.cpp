@@ -5,6 +5,8 @@
 
 #include "generic_operations.hpp"
 
+#include "debug_info_source_pos.hpp"
+
 #include "debug_info/debug_info_io.hpp"
 
 #include <driver/module_flags/module_flags.hpp>
@@ -336,7 +338,13 @@ namespace compiler::driver {
 			}
 		}
 
-		for (auto& di_art: debug_info_artifacts) {}
+		for (auto& di_art: debug_info_artifacts) {
+			auto resolve_result = query::entryPoint<DebugInfoResolvePositions>({ di_art });
+			if (resolve_result.hasFailed()) {
+				CORE_USER_LOG("Resolving debug info source positions failed!\n");
+				return base::BAD;
+			}
+		}
 
 		return result;
 	}
