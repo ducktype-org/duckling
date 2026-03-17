@@ -339,8 +339,11 @@ namespace compiler::helios {
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
 				// Get the initial value for the field from the PST.
-				const auto field_pst_data
-					= symbolPst(field.getSymbol()).unlock(ctx).dynamicCast<pst::Field>().value();
+				const auto field_pst_data = symbolPst(field.getSymbol())
+				                                .value()
+				                                .unlock(ctx)
+				                                .dynamicCast<pst::Field>()
+				                                .value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
 					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
