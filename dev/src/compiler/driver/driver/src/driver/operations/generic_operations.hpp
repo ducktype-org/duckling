@@ -67,12 +67,18 @@ namespace compiler::driver {
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;
 		BackendType        backend_type;
+		bool               build_debug_info;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
 
 		[[nodiscard]]
 		base::Bit256 queryStablePerfectHash() const;
+	};
+
+	struct CompileModuleArtifacts {
+		artifacts::FileArtifact object_art;
+		base::Optional<artifacts::FileArtifact> debug_info_art;
 	};
 
 	/**
@@ -89,7 +95,7 @@ namespace compiler::driver {
 	DECLARE_QUERY(
 		CompileModule,
 		KeyOf_CompileModule,
-		query::QResult<artifacts::FileArtifact>,
+		query::QResult<CompileModuleArtifacts>,
 		({
 			.used_hashes             = query::UsedHashes::StableHash,
 			.can_be_loaded_from_disk = true,

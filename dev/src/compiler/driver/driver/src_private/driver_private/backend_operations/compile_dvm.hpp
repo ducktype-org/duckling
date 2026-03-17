@@ -2,15 +2,23 @@
 
 #include "../lir_module_data.hpp"
 
+#include <debug_info/debug_info.hpp>
+
 #include <query_framework/context/context_fd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 
 namespace compiler::driver {
+
+	struct DVMModuleData {
+		vm::code::CodeCollection              code;
+		base::Optional<debug_info::DebugInfo> debug_info;
+	};
+
 	/**
 	 * @brief Compiles the LIRModuleData to DVM CodeCollection.
 	 */
-	vm::code::CodeCollection compileLIRModuleToDVM(
-		CRef<LIRModuleData> lir_module, query::Context& query_ctx
+	[[nodiscard]] DVMModuleData compileLIRModuleToDVM(
+		CRef<LIRModuleData> lir_module, query::Context& query_ctx, bool build_debug_info
 	);
 }

@@ -28,7 +28,7 @@ namespace debug_info {
 	}
 
 	FunctionBuilder& FunctionBuilder::addVariableInit(
-		u64 offset, std::string variable_name, SourcePosition position
+		u64 offset, std::string variable_name, base::Optional<SourcePosition> position
 	) {
 		return addVariableInit(
 			offset,
@@ -45,11 +45,9 @@ namespace debug_info {
 	// DebugInfoBuilder
 	// --------------------------------------------------------------------------
 
-	DebugInfoBuilder::DebugInfoBuilder(
-		Target target, std::string module_path, SourcePositionsType source_positions_type
-	) {
+	DebugInfoBuilder::DebugInfoBuilder(Target target, SourcePositionsType source_positions_type) {
 		info.target                = target;
-		info.module_path           = std::move(module_path);
+		info.module_path           = "";
 		info.source_positions_type = source_positions_type;
 	}
 
@@ -63,22 +61,15 @@ namespace debug_info {
 	}
 
 	FunctionBuilder DebugInfoBuilder::beginFunction(
-		std::string mangled_name, std::string function_name, SourcePosition position
+		std::string                    mangled_name,
+		base::Optional<std::string>    function_name,
+		base::Optional<SourcePosition> position
 	) {
-		return beginFunction(
-			std::move(mangled_name),
-			FunctionMetadata{ .function_name
-		                      = base::Optional<std::string>{ std::move(function_name) },
-		                      .position = base::Optional<SourcePosition>{ std::move(position) },
-		                      .instr_offsets_to_metadata      = {},
-		                      .instr_offsets_to_variable_init = {} }
-		);
-	}
-
-	FunctionBuilder DebugInfoBuilder::beginFunction(
-		std::string mangled_name, FunctionMetadata metadata
-	) {
-		return { *this, std::move(mangled_name), std::move(metadata) };
+		auto fun_metadata = FunctionMetadata{ .function_name             = std::move(function_name),
+			                                  .position                  = std::move(position),
+			                                  .instr_offsets_to_metadata = {},
+			                                  .instr_offsets_to_variable_init = {} };
+		return { *this, std::move(mangled_name), std::move(fun_metadata) };
 	}
 
 	void DebugInfoBuilder::finalizeFunction(std::string mangled_name, FunctionMetadata metadata) {

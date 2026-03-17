@@ -7,12 +7,24 @@
 
 namespace compiler::backend_vm {
 
-	DVMCodeBuilder::DVMCodeBuilder(query::Context& query_ctx):
-		  program_context(makeBox<internal::ProgramLoweringContext>(query_ctx)) {}
+	DVMCodeBuilder::DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info):
+		  program_context(makeBox<internal::ProgramLoweringContext>(query_ctx, build_debug_info)),
+		  build_debug_info(build_debug_info) {}
 
-	vm::code::CodeCollection DVMCodeBuilder::build() const {
+	DVMBuilderResult DVMCodeBuilder::build() const {
 		match_optional(program_context->validateAndProduceProgram()) {
-			opt_some(program) return program;
+			opt_some(program) {
+				if (build_debug_info)
+					return {
+						.code_collection = program,
+						.debug_info      = program_context->buildDebugInfo(),
+					};
+				else
+					return {
+						.code_collection = program,
+						.debug_info      = {},
+					};
+			}
 			opt_err(error) CORE_PANIC("Failed to validate DVM module: ", error);
 		}
 		CORE_UNREACHABLE();

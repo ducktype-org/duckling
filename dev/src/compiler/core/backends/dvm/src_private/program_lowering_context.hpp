@@ -1,7 +1,9 @@
 #pragma once
 
+#include "debug_info/debug_info.hpp"
 #include "dvm_value.hpp"
 
+#include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -22,7 +24,15 @@ namespace compiler::backend_vm::internal {
 		query::Context& query_ctx_for_errors;
 
 	public:
-		ProgramLoweringContext(query::Context& query_ctx): query_ctx_for_errors(query_ctx) {}
+		ProgramLoweringContext(query::Context& query_ctx, bool build_debug_info):
+			  query_ctx_for_errors(query_ctx),
+			  debug_info_builder(
+				  (build_debug_info
+		               ? debug_info::DebugInfoBuilder(
+							 debug_info::Target::DBC, debug_info::SourcePositionsType::PstHash
+						 )
+		               : base::Optional<debug_info::DebugInfoBuilder>{})
+			  ) {}
 
 		/**
 		 * @brief Lowers a LIR function into DVM bytecode function.
@@ -74,6 +84,8 @@ namespace compiler::backend_vm::internal {
 		 */
 		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
 
+		[[nodiscard]] debug_info::DebugInfo buildDebugInfo();
+
 	private:
 		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
@@ -92,5 +104,8 @@ namespace compiler::backend_vm::internal {
 		// Using names as keys to avoid issues with CRef hash/equality.
 		base::HashMap<base::StrID, DVMGlobal>            global_name_to_dvm;
 		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
+
+		// Debug info builder, used only if build_debug_info is true.
+		base::Optional<debug_info::DebugInfoBuilder> debug_info_builder;
 	};
 }

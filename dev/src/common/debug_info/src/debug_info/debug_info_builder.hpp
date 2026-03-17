@@ -53,7 +53,7 @@ namespace debug_info {
 		 * @brief Convenience overload: builds VariableMetadata from name + position.
 		 */
 		FunctionBuilder& addVariableInit(
-			u64 offset, std::string variable_name, SourcePosition position
+			u64 offset, std::string variable_name, base::Optional<SourcePosition> position
 		);
 
 		/**
@@ -83,7 +83,7 @@ namespace debug_info {
 	 *
 	 * Typical usage:
 	 * @code
-	 *   DebugInfo info = DebugInfoBuilder(Target::DBC, "mymodule.dmf",
+	 *   DebugInfo info = DebugInfoBuilder(Target::DBC,
 	 *                                     SourcePositionsType::PstHash)
 	 *     .addType("_TMyType", "MyType")
 	 *     .beginFunction("foo", "foo", functionPos)
@@ -96,9 +96,9 @@ namespace debug_info {
 	 */
 	class DebugInfoBuilder {
 	public:
-		DebugInfoBuilder(
-			Target target, std::string module_path, SourcePositionsType source_positions_type
-		);
+		DebugInfoBuilder(Target target, SourcePositionsType source_positions_type);
+
+		void setModulePath(std::string module_path) { info.module_path = std::move(module_path); }
 
 		// ------------------------------------------------------------------
 		// Types
@@ -117,18 +117,12 @@ namespace debug_info {
 		// Functions
 
 		/**
-		 * @brief Begins construction of a function entry from a pre-built FunctionMetadata.
-		 *
-		 * Instructions can be appended on the returned FunctionBuilder; call its
-		 * end() to return here and continue building.
-		 */
-		FunctionBuilder beginFunction(std::string mangled_name, FunctionMetadata metadata);
-
-		/**
 		 * @brief Convenience overload: builds FunctionMetadata from name + position.
 		 */
 		FunctionBuilder beginFunction(
-			std::string mangled_name, std::string function_name, SourcePosition position
+			std::string                    mangled_name,
+			base::Optional<std::string>    function_name,
+			base::Optional<SourcePosition> position
 		);
 
 		// ------------------------------------------------------------------

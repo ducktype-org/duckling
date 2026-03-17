@@ -138,6 +138,11 @@ namespace compiler::lir {
 		static FunctionLiteral fromFunction(const Function&);
 	};
 
+	struct LIRLocalMetadata {
+		base::Optional<base::StrID>         source_code_name;
+		base::Optional<pst::StablePosition> position;
+	};
+
 	/**
 	 * @brief Description of a LIR Local variable or function argument.
 	 * @note This structure should only be stored directly in LIR Function, as part of the
@@ -157,15 +162,19 @@ namespace compiler::lir {
 		 */
 		base::Optional<u64> parameter_index;
 
+		LIRLocalMetadata metadata;
+
 	private:
 		LIRLocal(
 			const base::Optional<helios::SymID> helios_id,
 			const CRef<tsl::TypeLayout>         layout,
-			const base::Optional<u64>           parameter_index
+			const base::Optional<u64>           parameter_index,
+			LIRLocalMetadata                    metadata
 		):
 			  helios_id(helios_id),
 			  layout(layout),
-			  parameter_index(parameter_index) {}
+			  parameter_index(parameter_index),
+			  metadata(metadata) {}
 
 		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
 

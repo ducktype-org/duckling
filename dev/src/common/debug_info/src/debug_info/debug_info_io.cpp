@@ -99,12 +99,17 @@ namespace debug_info {
 	// -- VariableMetadata
 
 	void to_json(json& j, const VariableMetadata& v) {
-		j = json{ { "name", v.name }, { "position", v.position } };
+		j         = json::object();
+		j["name"] = v.name;
+		if (v.position) j["position"] = *v.position;
 	}
 
 	void from_json(const json& j, VariableMetadata& v) {
 		j.at("name").get_to(v.name);
-		j.at("position").get_to(v.position);
+		if (j.contains("position") && !j.at("position").is_null())
+			v.position = j.at("position").get<SourcePosition>();
+		else
+			v.position = std::nullopt;
 	}
 
 	// -- TypeMetadata

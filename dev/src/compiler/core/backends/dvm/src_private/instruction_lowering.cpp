@@ -17,6 +17,13 @@ using namespace compiler;
 using namespace vm::code::builders;
 
 namespace {
+	debug_info::SourcePosition translateDIPosition(const pst::StablePosition stable_pos) {
+		return { .line_col_position = debug_info::PstHashPostion{
+					 .postion_scope_begin = stable_pos.begin_scope_node,
+					 .postion_scope_end   = stable_pos.end_scope_node,
+				 } };
+	}
+
 	bool isComparison(OpKind op) {
 		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpLt
 		    || op == OpKind::cmpLe || op == OpKind::cmpGt || op == OpKind::cmpGe
@@ -184,6 +191,12 @@ void FunctionLoweringContext::handleCall(
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
+	if_opt_some(fun_di_builder_opt, builder) {
+		if_opt_some(lir_instruction.metadata.position, pos) {
+			builder.addInstruction(instructionsCount(), translateDIPosition(pos));
+		}
+	}
+
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
 	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
@@ -279,6 +292,12 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
 	)));
 
+	if_opt_some(fun_di_builder_opt, builder) {
+		if_opt_some(lir_terminator.metadata.position, pos) {
+			builder.addInstruction(instructionsCount(), translateDIPosition(pos));
+		}
+	}
+
 	if (lir_terminator.operation == lir::Operation::Branch) {
 		auto bool_arg    = lowerLirValue(lir_terminator.arguments.at(0));
 		auto true_block  = lowerLirValue(lir_terminator.arguments.at(1));
@@ -299,9 +318,7 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 				pushInstruction({ OpKind::jmpIfNot, false_block });
 			}
 		}
-	}
-
-	else if (lir_terminator.operation == lir::Operation::ReturnVoid) {
+	} else if (lir_terminator.operation == lir::Operation::ReturnVoid) {
 		pushInstruction({ OpKind::ret });
 	} else if (lir_terminator.operation == lir::Operation::Jump) {
 		CORE_ASSERT(

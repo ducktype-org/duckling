@@ -1,6 +1,7 @@
 
 #include "dvm_internal_fwd.hpp"
 
+#include <debug_info/debug_info.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include <base/pointers/ref.hpp>
@@ -11,13 +12,18 @@
 
 namespace compiler::backend_vm {
 
+	struct DVMBuilderResult {
+		vm::code::CodeCollection              code_collection;
+		base::Optional<debug_info::DebugInfo> debug_info;
+	};
+
 	/**
 	 * @brief A statefull collection of code lowered into VM bytecode.
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 */
 	class DVMCodeBuilder final {
 	public:
-		DVMCodeBuilder(query::Context& query_ctx);
+		DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info);
 
 		/**
 		 * @brief Inserts a LIR function into the module.
@@ -46,10 +52,12 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Validates and builds module's representation as DVM program.
 		 */
-		[[nodiscard]] vm::code::CodeCollection build() const;
+		[[nodiscard]] DVMBuilderResult build() const;
 
 	private:
 		// A Boxed pointer to allow forward declaration in order to hide implementation details.
 		Box<internal::ProgramLoweringContext> program_context;
+
+		bool build_debug_info;
 	};
 }
