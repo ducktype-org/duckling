@@ -55,9 +55,15 @@ namespace compiler::repl {
 		return !line.empty() && line[0] == '/';
 	}
 
+	frontend::ModuleID ReplSession::getCurrentModuleID() const {
+		CORE_ASSERT(!m_history.empty(), "No current REPL module available");
+		return m_history.back().module_id;
+	}
+
 	ReplResult ReplSession::executeSingleStatement(frontend::ModuleID module_id) {
 		base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
 		base::Optional<pst::AccessLocked<pst::Stmt>>     instr_stmt_opt;
+		base::Optional<pst::AccessLocked<pst::Stmt>>     top_level_stmt_opt;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
 			auto pst       = getFilePST(ctx, main_file);
@@ -65,6 +71,8 @@ namespace compiler::repl {
 			expr_stmt_opt  = pst::extractSingleExpression(ctx, root);
 			if (!expr_stmt_opt.has_value())
 				instr_stmt_opt = pst::extractSingleInstruction(ctx, root);
+			if (!expr_stmt_opt.has_value() && !instr_stmt_opt.has_value())
+				top_level_stmt_opt = pst::extractSingleTopLevelStatement(ctx, root);
 		});
 
 		if (expr_stmt_opt.has_value()) {
@@ -78,7 +86,8 @@ namespace compiler::repl {
 		}
 
 		CORE_DEV_LOG(REPL, "Processing statement as definition\n");
-		return handleDefinition(module_id);
+		CORE_ASSERT(top_level_stmt_opt.has_value(), "Expected a single top-level statement");
+		return handleDefinition(top_level_stmt_opt.value());
 	}
 
 	bool ReplSession::handleCommand(std::string_view line) {
@@ -155,11 +164,7 @@ namespace compiler::repl {
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
 			CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
-			// Use the last module ID for expression evaluation context
-			// Expressions are always evaluated in the context of a module, so history should not be
-			// empty
-			CORE_ASSERT(!m_history.empty(), "Expression evaluated with no module context");
-			auto eval_module_id = m_history.back().module_id;
+			auto eval_module_id = getCurrentModuleID();
 			auto module_name    = base::StrID(
                 base::strConcat(
                     "repl_module_",
@@ -210,8 +215,10 @@ namespace compiler::repl {
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CORE_DEV_LOG(REPL, "Querying QueryReplInstructionWrapper\n");
-			instr_wrapper = ctx.query<QueryReplInstructionWrapper>({ .stmt    = stmt,
-			                                                         .counter = m_inputs_counter });
+			instr_wrapper = ctx.query<QueryReplInstructionWrapper>({
+				.stmt    = stmt,
+				.counter = m_inputs_counter,
+			});
 
 			CORE_DEV_LOG(REPL, "Getting mangled name\n");
 			auto mangled_name = helios::mangler::getSimpleMangledName(
@@ -229,8 +236,7 @@ namespace compiler::repl {
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
 			CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
-			CORE_ASSERT(!m_history.empty(), "Instruction evaluated with no module context");
-			auto eval_module_id = m_history.back().module_id;
+			auto eval_module_id = getCurrentModuleID();
 			auto module_name    = base::StrID(
                 base::strConcat(
                     "repl_module_",
@@ -267,15 +273,20 @@ namespace compiler::repl {
 		return ReplResult::success(output_message);
 	}
 
-	ReplResult ReplSession::handleDefinition(frontend::ModuleID module_id) {
+	ReplResult ReplSession::handleDefinition(const pst::AccessLocked<pst::Stmt>& stmt) {
 		std::string output_message;
 		std::string error_message;
 		bool        had_error = false;
+		auto        module_id = getCurrentModuleID();
 
 		const auto& hout_unit
 			= query::entryPoint<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
+			// The stmt parameter is used only here, for logging. It's not needed for the actual query
+			// since QueryModuleHOUT already compiles the entire module containing the statement.
+			auto stmt_kind = stmt.unlock(ctx)->getElementKind();
+			CORE_DEV_LOG(REPL, "Definition statement kind: ", static_cast<u32>(stmt_kind), "\n");
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
 			auto module_name = base::StrID(

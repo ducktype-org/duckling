@@ -148,10 +148,10 @@ namespace compiler::repl {
 		/**
 		 * @brief Compile and load definitions (functions, variables, etc.) into the REPL environment.
 		 *
-		 * @param module_id The module containing the definitions to load
+		 * @param stmt The top-level statement being treated as a definition
 		 * @return ReplResult indicating success or error
 		 */
-		ReplResult handleDefinition(frontend::ModuleID module_id);
+		ReplResult handleDefinition(const pst::AccessLocked<pst::Stmt>& stmt);
 
 		/**
 		 * @brief Compile and execute a single instruction (if/while/for/block) in the REPL.
@@ -163,6 +163,14 @@ namespace compiler::repl {
 		 * @return ReplResult indicating success or error
 		 */
 		ReplResult handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt);
+
+		/**
+		 * @brief Return the currently processed REPL module.
+		 *
+		 * The current module is the most recently created module in REPL history.
+		 * It is later compiled to HOUT and sent to DVM for execution.
+		 */
+		[[nodiscard]] frontend::ModuleID getCurrentModuleID() const;
 
 		/**
 		 * @brief Initialize the DVM process for code execution.
