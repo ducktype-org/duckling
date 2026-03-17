@@ -54,14 +54,13 @@ namespace vm::jit::cnp {
 
 		LoadedStencils(LoadedStencils&&)            = default;
 		LoadedStencils& operator=(LoadedStencils&&) = default;
-		~LoadedStencils() = default;
+		~LoadedStencils()                           = default;
 
 		/**
 		 * @brief Dynamically link the stored stencils, resolving their dependencies.
 		 */
 		[[nodiscard]] static LoadedStencils load(StencilsT stencils) {
-			return LoadedStencils{ .stencils = std::move(stencils),
-				                   .dynlib   = DynamicLibrary::load(stencils.binary) };
+			return LoadedStencils{ std::move(stencils), DynamicLibrary::load(stencils.binary) };
 		}
 
 		/**
@@ -88,6 +87,10 @@ namespace vm::jit::cnp {
 	private:
 		StencilsT      stencils;
 		DynamicLibrary dynlib;
+
+		LoadedStencils(StencilsT _stencils, DynamicLibrary _dynlib):
+			  stencils{ std::move(_stencils) },
+			  dynlib{ std::move(_dynlib) } {}
 	};
 
 	template<usize BinarySize, usize NumFunctions>

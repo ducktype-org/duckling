@@ -42,13 +42,6 @@ public:
 	}
 
 private:
-	void printBinary() {
-		std::cerr << "Binary:\n";
-		for (byte c: stencils.binary()) std::cerr << std::hex << (int) (unsigned char) c << ' ';
-		std::cerr << "\nFunctions:\n";
-		for (StencilData data: stencils.functions()) std::cerr << data.name << '\n';
-	}
-
 	constexpr static auto FIND_FUNC = [](auto name) {
 		for (StencilData data: stencils.functions())
 			if (data.name == name) return data;
@@ -85,7 +78,7 @@ private:
 		auto memory   = JitFuncMemory::allocate(foo_code.size);
 		stencils.relocate(foo_code, memory.addr);
 		memory.markExecutable();
-		
+
 		auto simple = memory.intoFunc<int(int)>();
 		for (int i = 0; i < 10; ++i) ASSERT_EQUAL(std::invoke(simple, i), 2 * i + 1);
 	}
@@ -95,7 +88,7 @@ private:
 		auto memory   = JitFuncMemory::allocate(foo_code.size);
 		stencils.relocate(foo_code, memory.addr);
 		memory.markExecutable();
-		
+
 		auto fibonacci_sum = memory.intoFunc<int(int)>();
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 0), 1);
 		ASSERT_EQUAL(std::invoke(fibonacci_sum, 1), 2);
@@ -108,8 +101,8 @@ private:
 		auto memory   = JitFuncMemory::allocate(foo_code.size);
 		stencils.relocate(foo_code, memory.addr);
 		memory.markExecutable();
-		
-		auto calling_libc = memory.intoFunc<int*(int)>();
+
+		auto calling_libc    = memory.intoFunc<int*(int)>();
 		auto from_jit_memory = base::Box<int>::fromPointer(std::invoke(calling_libc, 100));
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL(from_jit_memory.get()[i], i);
 	}
