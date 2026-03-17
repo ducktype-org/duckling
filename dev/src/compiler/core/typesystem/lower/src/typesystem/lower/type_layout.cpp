@@ -142,10 +142,13 @@ namespace compiler::tsl {
 		}
 	}
 
-	TypeLayoutABC::TypeLayoutABC(const Bits size, const tsh::AbstractType source_type, query::Context& ctx):
-		size(size),
-		source_type(source_type),
-		mangled_name(ctx.query<helios::mangler::QueryMangledType>({source_type})->valueOrThrow()) {}
+	TypeLayoutABC::TypeLayoutABC(
+		const Bits size, const tsh::AbstractType source_type, query::Context& ctx
+	):
+		  size(size),
+		  source_type(source_type),
+		  mangled_name(ctx.query<helios::mangler::QueryMangledType>({ source_type })->valueOrThrow()
+	      ) {}
 
 	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
 		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
@@ -176,7 +179,8 @@ namespace compiler::tsl {
 		  TypeLayoutABC(
 			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getSize()
 				  * static_array_type.getSize(),
-			  static_array_type, ctx
+			  static_array_type,
+			  ctx
 		  ),
 		  element_layout(ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())),
 		  element_count(static_array_type.getSize()) {}
@@ -364,14 +368,12 @@ namespace compiler::tsl {
 
 		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(CRef<tsh::TypeInterface>
 		                                                                   interface) {
-			const auto&                        elements = interface->getElementsByName();
+			const auto&                        elements = interface->getElements();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
 
-			for (const auto& val: elements | std::views::values) {
-				for (const auto& element: val)
-					if (element.isField()) fields.push_back(element);
-			}
+			for (const auto& element: elements)
+				if (element.isField()) fields.push_back(element);
 
 			return fields;
 		}

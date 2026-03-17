@@ -34,11 +34,11 @@ namespace compiler::tsl {
 		 */
 		tsh::AbstractType source_type;
 
-		
+
 		/**
 		 * @brief Compact textual representation of the underlying AbstractType.
 		 */
-		base::StrID mangled_name = base::StrID{"__unmangled__"};
+		base::StrID mangled_name = base::StrID{ "__unmangled__" };
 
 	public:
 		// Needed for default generation of copy constructor in deriving classes.
@@ -172,7 +172,9 @@ namespace compiler::tsl {
 		explicit IntegralTypeLayout(const tsh::CharAbstractType char_type, query::Context& ctx):
 			  TypeLayoutABC(CHAR_SIZE, char_type, ctx) {}
 
-		explicit IntegralTypeLayout(const tsh::IntegralAbstractType integral_type, query::Context& ctx):
+		explicit IntegralTypeLayout(
+			const tsh::IntegralAbstractType integral_type, query::Context& ctx
+		):
 			  TypeLayoutABC(integral_type.getSize(), integral_type, ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
@@ -460,7 +462,9 @@ namespace compiler::tsl {
 		std::vector<CRef<TypeLayout>> layout_idx_to_layout;
 
 		// Delegate constructor.
-		explicit TupleTypeLayout(struct TupleTypeLayoutConstructionHelper&& helper, query::Context& ctx);
+		explicit TupleTypeLayout(
+			struct TupleTypeLayoutConstructionHelper&& helper, query::Context& ctx
+		);
 
 		TupleTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
 
@@ -622,7 +626,9 @@ namespace compiler::tsl {
 	 */
 	class FunctionalTypeLayout final: public TypeLayoutABC {
 		// @TODO: Add support for function objects
-		explicit FunctionalTypeLayout(const tsh::FunctionAbstractType function_type, query::Context& ctx):
+		explicit FunctionalTypeLayout(
+			const tsh::FunctionAbstractType function_type, query::Context& ctx
+		):
 			  TypeLayoutABC(POINTER_SIZE, function_type, ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
@@ -647,7 +653,9 @@ namespace compiler::tsl {
 		 * @brief Construct a PointerLayout for a RawPointer.
 		 * @param raw_pointer_type The source RawPointer.
 		 */
-		explicit PointerTypeLayout(const tsh::RawPointerAbstractType raw_pointer_type, query::Context& ctx):
+		explicit PointerTypeLayout(
+			const tsh::RawPointerAbstractType raw_pointer_type, query::Context& ctx
+		):
 			  TypeLayoutABC(POINTER_SIZE, raw_pointer_type, ctx) {}
 
 		/**
