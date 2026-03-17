@@ -6,7 +6,6 @@
 
 	#include <base/except/exceptions.hpp>
 
-	#include <cassert>
 	#include <cstddef>
 	#include <functional>
 	#include <iostream>
@@ -15,7 +14,7 @@ namespace vm::jit::cnp {
 	inline usize getPageSize() {
 		static usize page_size = std::invoke([]() {
 			long result = sysconf(_SC_PAGESIZE);
-			SYSTEM_CHECK(result != -1, "couldn't get the page size");
+			CORE_ASSERT_SYSCALL(result != -1, "couldn't get the page size");
 			return static_cast<usize>(result);
 		});
 
@@ -32,17 +31,19 @@ namespace vm::jit::cnp {
 		auto memory
 			= reinterpret_cast<byte*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, flags, -1, 0));
 
-		SYSTEM_CHECK(memory != MAP_FAILED, "unable to allocate memory");
+		CORE_ASSERT_SYSCALL(memory != MAP_FAILED, "unable to allocate memory");
 		return JitFuncMemory{ memory, size };
 	}
 
 	void JitFuncMemory::markExecutable() {
-		SYSTEM_CHECK(
+		CORE_ASSERT_SYSCALL(
 			mprotect(addr, size, PROT_READ | PROT_EXEC) == 0, "unable to mark memory as executable"
 		);
 	}
 
-	JitFuncMemory::~JitFuncMemory() noexcept { assert(munmap(addr, size) == 0); }
+	JitFuncMemory::~JitFuncMemory() noexcept {
+		CORE_ASSERT_NOEXCEPT(munmap(addr, size) == 0, std::strerror(errno));
+	}
 }
 
 #elif _WIN32

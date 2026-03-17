@@ -14,14 +14,14 @@
 namespace vm::jit::cnp {
 	DynamicLibrary DynamicLibrary::load(std::span<const byte> binary) {
 		int fd = memfd_create("lib", 0);
-		SYSTEM_CHECK(fd != -1, "memfd_create failed:");
+		CORE_ASSERT_SYSCALL(fd != -1, "memfd_create failed:");
 
 		auto write_n = [&]() {
 			usize to_write = binary.size();
 			auto  ptr      = binary.data();
 			while (to_write) {
 				ssize_t ret = write(fd, ptr, to_write);
-				SYSTEM_CHECK(ret != -1, "write failed: ");
+				CORE_ASSERT_SYSCALL(ret != -1, "write failed: ");
 				auto written = static_cast<usize>(ret);
 				to_write -= written;
 				ptr += written;
