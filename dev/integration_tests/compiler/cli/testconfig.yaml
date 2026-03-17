@@ -16,14 +16,6 @@ Tests:
         run_args: "-,"
         ExitCode: 1
 
-  # @TODO: Remove - temporary test to verify that the CI log upload step works on failure
-  ci-log-upload-verification:
-    Cases:
-      always-fail:
-        # Runs `duckc -h` which exits 0, but expects exit code 1, so this always fails
-        run_args: "-h"
-        ExitCode: 1
-
   cli-options-dev-logs:
     Cases:
       empty-dev-logs:
