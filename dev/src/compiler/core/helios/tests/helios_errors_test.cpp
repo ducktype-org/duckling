@@ -222,6 +222,8 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				class MyClass {
+					var dummy: i64 = 0; # to avoid ZST
+
 					fun method(x: i64) = {
 						return x + 1;
 					}
@@ -238,6 +240,8 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				class MyClass {
+					var dummy: i64 = 0; # to avoid ZST
+
 					fun method(x: i64) = {
 						return x + 1;
 					}
@@ -254,6 +258,8 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				class MyClass {
+					var dummy: i64 = 0; # to avoid ZST
+
 					fun method(x: i64) = {
 						return x + 1;
 					}
@@ -775,6 +781,18 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "compile time evaluation" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { fun foo() = 0; }
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "zero-sized classes" },
 			1
 		);
 	}

@@ -1135,4 +1135,5 @@ namespace compiler::helios::code {
 	Box<Expr> ListPopExpr::clone() const {
 		return makeBox<ListPopExpr>(expression_type, origin, list->clone(), count->clone());
 	}
+
 }
