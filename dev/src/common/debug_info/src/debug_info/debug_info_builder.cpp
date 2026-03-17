@@ -14,7 +14,7 @@ namespace debug_info {
 		  metadata(std::move(metadata)) {}
 
 	FunctionBuilder& FunctionBuilder::addInstruction(u64 offset, SourcePosition position) {
-		this->metadata.instr_offsets_to_metadata.emplace_back(
+		metadata.instr_offsets_to_metadata.emplace_back(
 			offset, InstructionMetadata{ .position = std::move(position) }
 		);
 		return *this;
@@ -23,7 +23,7 @@ namespace debug_info {
 	FunctionBuilder& FunctionBuilder::addVariableInit(
 		u64 offset, std::string variable_name, base::Optional<SourcePosition> position
 	) {
-		this->metadata.instr_offsets_to_variable_init.emplace_back(
+		metadata.instr_offsets_to_variable_init.emplace_back(
 			offset,
 			VariableMetadata{ .name = std::move(variable_name), .position = std::move(position) }
 		);
@@ -33,7 +33,7 @@ namespace debug_info {
 	FunctionBuilder& FunctionBuilder::addParameter(
 		u64 index, std::string parameter_name, base::Optional<SourcePosition> position
 	) {
-		this->metadata.parameter_indexes_to_metadata.emplace_back(
+		metadata.parameter_indexes_to_metadata.emplace_back(
 			index,
 			VariableMetadata{ .name = std::move(parameter_name), .position = std::move(position) }
 		);
@@ -51,7 +51,6 @@ namespace debug_info {
 
 	DebugInfoBuilder::DebugInfoBuilder(Target target, SourcePositionsType source_positions_type) {
 		info.target                = target;
-		info.module_path           = "";
 		info.source_positions_type = source_positions_type;
 	}
 
