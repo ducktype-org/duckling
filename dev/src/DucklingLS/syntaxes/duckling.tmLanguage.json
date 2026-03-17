@@ -1,15 +1,73 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Duckling",
-	"patterns": [
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#strings"
-		}
-	],
-	"repository": {
-	},
-	"scopeName": "source.duckling"
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Duckling",
+  "scopeName": "source.duckling",
+
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#blocks" },
+    { "include": "#parens" }
+  ],
+
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.duckling",
+          "match": "#.*$"
+        },
+        {
+          "name": "comment.block.duckling",
+          "begin": "#\\{",
+          "end": "#\\}"
+        }
+      ]
+    },
+
+    "blocks": {
+      "patterns": [
+        {
+          "name": "meta.block.duckling",
+          "begin": "\\{",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.block.begin.duckling"
+            }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.block.end.duckling"
+            }
+          },
+          "patterns": [
+            { "include": "#comments" },
+            { "include": "#blocks" },
+            { "include": "#parens" }
+          ]
+        }
+      ]
+    },
+
+    "parens": {
+      "patterns": [
+        {
+          "name": "punctuation.section.parens.begin.duckling",
+          "match": "\\("
+        },
+        {
+          "name": "punctuation.section.parens.end.duckling",
+          "match": "\\)"
+        },
+        {
+          "name": "punctuation.section.brackets.begin.duckling",
+          "match": "\\["
+        },
+        {
+          "name": "punctuation.section.brackets.end.duckling",
+          "match": "\\]"
+        }
+      ]
+    }
+  }
 }

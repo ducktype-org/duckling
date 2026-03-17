@@ -147,9 +147,7 @@ namespace lsp {
 			auto chain = chain_locked.illegalAccess().value();
 			auto names = chain->getNames();
 
-			for (auto name: names) {
-				out(name.position, StandardTokenType::Namespace);
-			}
+			for (auto name: names) out(name.position, StandardTokenType::Namespace);
 		}
 
 		void visitUsing(pst::Access<pst::Using>) override {
@@ -247,6 +245,7 @@ namespace lsp {
 			  identified_tokens(identified_tokens) {}
 
 		std::deque<PrecalculatedSemanticToken>& identified_tokens;
+		std::unordered_set<code::HOUTExprID>    visited_reusable_exprs;
 
 		~TokenHoutExprVisitor() override = default;
 
@@ -302,9 +301,8 @@ namespace lsp {
 		}
 
 		void visitReusableExpr(const code::ReusableExpr& elem) override {
-			static std::unordered_set<code::HOUTExprID> visited_exprs;
-			if (visited_exprs.contains(elem.inner->getID())) return;
-			visited_exprs.insert(elem.inner->getID());
+			if (visited_reusable_exprs.contains(elem.inner->getID())) return;
+			visited_reusable_exprs.insert(elem.inner->getID());
 			elem.inner->acceptVisitor(*this);
 		}
 
