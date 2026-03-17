@@ -158,10 +158,7 @@ namespace compiler::helios {
 			bool is_failed = false;
 
 			for (const auto& method: methods) {
-				std::cerr << "Processing method " << name(method.getSymbol()).strView()
-						  << " of class " << name(class_sym).strView() << "\n";
-				std::cerr << class_type.carriesInformation(ctx) << "\n";
-
+			
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
 				// llvm panics. This check is put inside the for, to only check it if the methods
