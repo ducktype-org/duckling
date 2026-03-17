@@ -80,7 +80,8 @@ namespace compiler::helios {
 				// we postpone this past function scheduling, as
 				// appendClassConstructors may be time consuming.
 				appendClassConstructors(out.functions, class_sym, ctx);
-				auto append_methods_result = appendClassMethodsWithFail(out.functions, class_sym, ctx);
+				auto append_methods_result
+					= appendClassMethodsWithFail(out.functions, class_sym, ctx);
 				if (append_methods_result) {
 					is_failed = true;
 					continue;
@@ -157,21 +158,23 @@ namespace compiler::helios {
 			bool is_failed = false;
 
 			for (const auto& method: methods) {
-
-				std::cerr << "Processing method " << name(method.getSymbol()).strView() << " of class "
-				          << name(class_sym).strView() << "\n";
+				std::cerr << "Processing method " << name(method.getSymbol()).strView()
+						  << " of class " << name(class_sym).strView() << "\n";
 				std::cerr << class_type.carriesInformation(ctx) << "\n";
 
 				// @TODO: #1956 remove this if when ZST refs are supported
-				// we fail here, because otherwise we try to lower a self pointer to a ZST type and llvm panics.
-				// This check is put inside the for, to only check it if the methods are actually present,
-				// and to provide a more specific error location.
+				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
+				// llvm panics. This check is put inside the for, to only check it if the methods
+				// are actually present, and to provide a more specific error location.
 				if (not class_type.carriesInformation(ctx)) {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Methods of zero-sized classes are not yet implemented due to ZST not being properly supported yet.",
-						symbolPst(method.getSymbol()).map([&](auto pst) { return pst.unlock(ctx)->getSourcePosition(); })
+						"Methods of zero-sized classes are not yet implemented due to ZST not "
+					    "being properly supported yet.",
+						symbolPst(method.getSymbol()).map([&](auto pst) {
+							return pst.unlock(ctx)->getSourcePosition();
+						})
 					));
-					return true; // failed
+					return true;  // failed
 				}
 
 
