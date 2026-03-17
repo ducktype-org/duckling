@@ -41,14 +41,7 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(counter);
 		}
 
-		GeneratedSymbolData::GeneratedSymbolData(const std::variant<
-												 ImplicitConstructor,
-												 BuiltinOperator,
-												 Parameter,
-												 SelfParameter,
-												 Variable,
-												 ReplExpressionWrapper,
-												 ReplInstructionWrapper>& data):
+		GeneratedSymbolData::GeneratedSymbolData(const GeneratedSymbolDataVariant& data):
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
@@ -59,6 +52,7 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> GeneratedSymbolData::getType(query::Context& ctx) const {
 			variant_match(data) {
+				// TODOP: Add here
 				variant_case(ImplicitConstructor, ctor) {
 					const auto class_type
 						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })

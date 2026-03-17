@@ -6,6 +6,9 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "typesystem/higher/abstract_type.hpp"
+#include "typesystem/higher/mutability.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -1024,14 +1027,22 @@ namespace compiler::helios::code {
 		return makeBox<DerefExpr>(expression_type, origin, inner->clone());
 	}
 
-	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::SymbolType<> type):
+	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::AbstractType type):
 		  Expr(
-			  tsh::ExpressionType<>(type, tsh::ValueCategory(tsh::PrimaryCategory::Literal)), origin
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType<>{
+					  type,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
+			  origin
 		  ),
 		  type(type) {}
 
 	DefaultValueExpr::DefaultValueExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
 	):
 		  Expr(expression_type, origin),
 		  type(type) {}

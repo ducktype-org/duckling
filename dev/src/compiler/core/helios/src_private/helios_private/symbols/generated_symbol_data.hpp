@@ -1,5 +1,7 @@
 #pragma once
 
+#include "typesystem/higher/abstract_type.hpp"
+
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
@@ -23,6 +25,48 @@ namespace compiler::helios::houtgen {
 		 */
 		struct ImplicitConstructor final {
 			SymID class_symbol;  // The symbol of the class this constructor belongs to.
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * Represents a compiler-generated implicit constructor for a class.
+		 *
+		 * The implicit constructor is a function that takes parameters for each field of the class
+		 * and returns an instance of the class with those fields initialised accordingly.
+		 * TODOP: Comment
+		 */
+		struct DefaultClassConstructor final {
+			SymID class_symbol;  // The symbol of the class this constructor belongs to.
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * Represents a compiler-generated implicit constructor for a class.
+		 *
+		 * The implicit constructor is a function that takes parameters for each field of the class
+		 * and returns an instance of the class with those fields initialised accordingly.
+		 * TODOP: Comment
+		 */
+		struct DefaultStaticArrayConstructor final {
+			tsh::AbstractType array_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * Represents a compiler-generated implicit constructor for a class.
+		 *
+		 * The implicit constructor is a function that takes parameters for each field of the class
+		 * and returns an instance of the class with those fields initialised accordingly.
+		 * TODOP: Comment
+		 */
+		struct DefaultTupleConstructor final {
+			tsh::AbstractType array_type;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -98,24 +142,20 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		std::variant<
+		using GeneratedSymbolDataVariant = std::variant<
 			ImplicitConstructor,
+			DefaultClassConstructor,
+			DefaultStaticArrayConstructor,
+			DefaultTupleConstructor,
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,
 			Variable,
 			ReplExpressionWrapper,
-			ReplInstructionWrapper>
-			data;
+			ReplInstructionWrapper>;
+		GeneratedSymbolDataVariant data;
 
-		explicit GeneratedSymbolData(const std::variant<
-									 ImplicitConstructor,
-									 BuiltinOperator,
-									 Parameter,
-									 SelfParameter,
-									 Variable,
-									 ReplExpressionWrapper,
-									 ReplInstructionWrapper>& data);
+		explicit GeneratedSymbolData(const GeneratedSymbolDataVariant& data);
 
 		[[nodiscard]]
 		base::Bit256                          queryUnstablePerfectHash() const;

@@ -1,0 +1,389 @@
+#include "default_constructors.hpp"
+
+#include "frontend/pst_parser/access.hpp"
+#include "frontend/pst_parser/elements/hierarchy/class_elements/field.hpp"
+#include "frontend/pst_parser/elements/hierarchy/expr_holders.hpp"
+#include "helios/hout/elements/expr.hpp"
+#include "helios/hout/origin.hpp"
+#include "helios_private/expressions/query_hout_of_expr.hpp"
+
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <typesystem/higher/queries/types.hpp>
+
+#include "base/collections/optional.hpp"
+#include "base/except/exceptions.hpp"
+#include <base/collections/stable_container.hpp>
+
+#include <query_framework/standard_query/query_impl.hpp>
+
+#include <optional>
+
+namespace compiler::helios::houtgen {
+	// -----------------------------------------------------------
+	//                  Class Default Constructors
+	// -----------------------------------------------------------
+	struct IMPLEMENT_QUERY(QueryDefaultClassConstructor, query::QResult<HOUTFunction>) {
+		static PResult provide(Context& ctx, const QKey class_type) {
+			// Preamble, get some basic data.
+			const SymID class_symbol    = class_type.getSymbol();
+			auto        class_interface = class_type.getInterface(ctx);
+
+			using DefaultClassConstructor = GeneratedSymbolData::DefaultClassConstructor;
+			using Variable                = GeneratedSymbolData::Variable;
+			using std::ranges::to;
+			using std::views::transform;
+
+			// Construct the constructor's type.
+			// @TODO: #1328 Properly handle value categories in class constructors.
+			const std::vector<tsh::InterfaceElement> fields
+				= class_interface->getFieldsView() | to<std::vector>();
+
+			// Prepare the ctor symbol and declaration.
+			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>(
+				{ .name = name(class_symbol),
+			      .generated_symbol_data
+			      = GeneratedSymbolData{ DefaultClassConstructor{ class_symbol } } }
+			);
+
+
+			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
+
+			// Prepare the body of the constructor.
+			std::vector<Box<code::Stmt>> body{};
+			// - One declaration, one assignment per field, one return.
+			body.reserve(1 + fields.size() + 1);
+
+			// - Declare result variable.
+			const auto  result_symbol_type = ctor_decl.return_type;
+			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
+					 .name = base::StrID("result"),
+					 .generated_symbol_data
+                = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+            });
+
+			// By default all fields with no initial value are zeroed.
+			// var result: Class = <default_initializer>;
+			body.emplace_back(
+				makeBox<code::VariableStmt>(
+					code::generatedOrigin(),
+					makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), result_symbol_type),
+					result_symbol_type,
+					result_symbol
+				)
+			);
+
+			// - Assign each field with the initializing expression or a default value expression.
+			for (const auto& field: fields) {
+				const auto field_pst_data = symbolPst(field.getSymbol())
+				                                .value()
+				                                .unlock(ctx)
+				                                .dynamicCast<pst::Field>()
+				                                .value();
+				auto field_init_expr_opt = field_pst_data->getInit();
+
+				auto init_expr = [&]() -> Box<code::Expr> {
+					match_optional(field_init_expr_opt) {
+						opt_some(field_init) {
+							// TODOP: This could probably get comp-timed
+							// If the field has an initializer value we use it.
+							const auto field_type = field.getType(ctx);
+							auto       expr
+								= getHoutOfExprWithExpectedType(
+									  ctx, field_init.unlock(ctx)->getExpr().unlock(ctx), field_type
+								)
+							          .valueOrThrow();
+							return expr;
+						}
+						opt_none {
+							// Otherwise initialize it with the default initializer expression.
+							return ctx
+							    .query<QueryDefaultInitializerExpr>(field.getType(ctx).getType())
+							    .valueOrThrow();
+						}
+					}
+					CORE_UNREACHABLE();
+				}();
+
+				body.emplace_back(
+					makeBox<code::AssignmentStmt>(
+						code::generatedOrigin(),
+						makeBox<code::AccessExpr>(
+							ctx,
+							code::generatedOrigin(),
+							makeBox<code::IdentifierExpr>(
+								ctx, code::generatedOrigin(), result_symbol
+							),
+							field.getSymbol()
+						),
+						std::move(init_expr)
+					)
+				);
+			}
+
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
+				)
+			);
+
+			// Finally, create the HOUTFunction object.
+			return HOUTFunction(
+				code::generatedOrigin(),
+				&ctor_decl,
+				std::make_shared<const code::CodeBlock>(code::CodeBlock{
+					.statements = std::move(body),
+				})
+			);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultClassConstructor);
+
+	// -----------------------------------------------------------
+	//              Static Array Default Constructors
+	// -----------------------------------------------------------
+	struct IMPLEMENT_QUERY(QueryDefaultStaticArrayConstructor, query::QResult<HOUTFunction>) {
+		static PResult provide(Context& ctx, const QKey array_type) {
+			// Preamble, get some basic data.
+			const auto  element_abs_type = array_type.getElementType().getType();
+			const usize size             = array_type.getSize();
+			const auto  array_sym_type   = tsh::SymbolType<>{ array_type,
+				                                              tsh::ReferenceKind::Direct,
+				                                              tsh::Mutability::Mutable };
+
+			using DefaultStaticArrayConstructor
+				= GeneratedSymbolData::DefaultStaticArrayConstructor;
+			using Variable = GeneratedSymbolData::Variable;
+
+			// Prepare the ctor symbol and declaration.
+			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
+				.name = base::StrID("init_array"),
+				.generated_symbol_data
+				= GeneratedSymbolData{ DefaultStaticArrayConstructor{ array_type } },
+			});
+
+			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
+
+			std::vector<Box<code::Stmt>> body{};
+
+			// var res: T[N];
+			const SymID res_sym = ctx.query<QueryGeneratedSymbol>(
+				{ .name = base::StrID("result"),
+			      .generated_symbol_data
+			      = GeneratedSymbolData{ Variable{ ctor_symbol, 0, array_sym_type } } }
+			);
+			body.emplace_back(
+				makeBox<code::VariableStmt>(
+					code::generatedOrigin(),
+					makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), array_sym_type),
+					array_sym_type,
+					res_sym
+				)
+			);
+
+			// Generate the loop only if the static array is not empty.
+			if (size > 0) {
+				auto i64_type = tsh::SymbolType<>{
+					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable
+				};
+				// var i: i64 = 0;
+				const SymID i_sym = ctx.query<QueryGeneratedSymbol>(
+					{ .name = base::StrID("i"),
+				      .generated_symbol_data
+				      = GeneratedSymbolData{ Variable{ ctor_symbol, 1, i64_type } } }
+				);
+				auto zero_val = numeric_value::NumericValue::createOfType(i64_type).expect(
+					"i64 creation failed"
+				);
+				body.emplace_back(
+					makeBox<code::VariableStmt>(
+						code::generatedOrigin(),
+						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
+						array_sym_type,
+						res_sym
+					)
+				);
+
+				// while (i < size) { res[i] = default_init(T); i = i + 1; }
+				code::CodeBlock loop_body{};
+				auto            element_init
+					= ctx.query<QueryDefaultInitializerExpr>(element_abs_type).valueOrThrow();
+
+				// res[i] = default_init(T)
+				loop_body.statements.emplace_back(
+					makeBox<code::AssignmentStmt>(
+						code::generatedOrigin(),
+						makeBox<code::IndexExpr>(
+							ctx,
+							code::generatedOrigin(),
+							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
+							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
+						),
+						element_init->clone()
+					)
+				);
+
+				// i = i + 1
+				auto one_val = numeric_value::NumericValue::createOfType(i64_type, 1)
+				                   .expect("i64 creation failed");
+				loop_body.statements.emplace_back(
+					makeBox<code::AssignmentStmt>(
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
+						makeBox<code::BinaryOperatorExpr>(
+							ctx,
+							code::generatedOrigin(),
+							code::BuiltinBinary::IntegerAdd,
+							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
+							makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
+						)
+					)
+				);
+
+				// i < size
+				auto size_val = numeric_value::NumericValue::createOfType(i64_type, size)
+				                    .expect("i64 creation failed");
+				auto condition = makeBox<code::BinaryOperatorExpr>(
+					ctx,
+					code::generatedOrigin(),
+					code::BuiltinBinary::IntegerLt,
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
+					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), size_val)
+				);
+
+				body.emplace_back(
+					makeBox<code::WhileStmt>(
+						code::generatedOrigin(), std::move(condition), std::move(loop_body)
+					)
+				);
+			}
+
+			// return result
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
+				)
+			);
+
+			// Finally, create the HOUTFunction object.
+			return HOUTFunction(
+				code::generatedOrigin(),
+				&ctor_decl,
+				std::make_shared<const code::CodeBlock>(code::CodeBlock{
+					.statements = std::move(body),
+				})
+			);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultStaticArrayConstructor);
+
+	// -----------------------------------------------------------
+	//                      TOP LEVEL QUERY
+	// -----------------------------------------------------------
+	struct IMPLEMENT_QUERY(QueryDefaultInitializerExpr, query::QResult<Box<code::Expr>>) {
+		static PResult provide(Context& ctx, const QKey type) {
+			switch (type.getKind()) {
+			// Primitives and simple types are zero-initialized.
+			case tsh::Kind::Byte:
+			case tsh::Kind::Bool:
+			case tsh::Kind::Char:
+			case tsh::Kind::Unit:
+			case tsh::Kind::Flag:
+			case tsh::Kind::Integral:
+			case tsh::Kind::Float:
+			case tsh::Kind::RawPointer:
+			case tsh::Kind::Pointer:
+			case tsh::Kind::Optional:
+			case tsh::Kind::Enum:          // TODOP: What is that.
+			case tsh::Kind::DynamicArray:  // DynamicArray is default initialized by an empty
+			                               // dynamic array.
+			case tsh::Kind::String: {      // String is default initialized with an empty string.
+				return makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), type);
+			}
+			// The following require a more sophisticated constructor logic.
+			case tsh::Kind::StaticArray: {
+				auto array_type = type.as<tsh::StaticArrayAbstractType>();
+				auto ctor
+					= ctx.query<QueryDefaultStaticArrayConstructor>(array_type)->valueOrThrow();
+				return makeBox<code::CallExpr>(
+					ctx,
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), ctor.declaration->original_symbol
+					),
+					std::vector<Box<code::Expr>>{}
+				);
+			}
+			case tsh::Kind::Class: {
+				auto class_type = type.as<tsh::ClassAbstractType>();
+				auto ctor = ctx.query<QueryDefaultClassConstructor>(class_type)->valueOrThrow();
+				return makeBox<code::CallExpr>(
+					ctx,
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), ctor.declaration->original_symbol
+					),
+					std::vector<Box<code::Expr>>{}
+				);
+			}
+			case tsh::Kind::Tuple: {
+				ctx.logInt(
+					makeBox<dia_int::NotYetImplementedCodeError>(
+						"Generating default constructors for tuple types.", std::nullopt
+					)
+				);
+				return query::Failed();
+			}
+			case tsh::Kind::Variant:
+			case tsh::Kind::Function:
+			case tsh::Kind::Reference: {  // TODOP: What is that? We should have that as a reference
+				                          // specifier?
+				ctx.logInt(
+					makeBox<dia_int::PlaceholderCodeError>(
+						base::strConcat(
+							"Variables of type `",
+							type.toString(),
+							"` must be explicitly initialized"
+						),
+						dia::SourcePosition::fakePosition()  // TODOP: Fix?
+					)
+				);
+				return query::Failed();
+			}
+			// These should not be default initialized.
+			case tsh::Kind::TypeTemplate:
+			case tsh::Kind::Namespace:
+			case tsh::Kind::CodeBlock:
+			case tsh::Kind::Module:
+			case tsh::Kind::Import:
+			case tsh::Kind::VTable:
+			case tsh::Kind::Meta:
+			case tsh::Kind::Void: {
+				// TODOP: Change that to a proper error.
+				CORE_PANIC("Default initialization if a non-value type: ", type.toString());
+			}
+			default: {
+				CORE_UNREACHABLE();
+			}
+			}
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
+}
