@@ -8,6 +8,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/dotted_name.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -81,16 +82,10 @@ namespace compiler::repl {
 			);
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");
-			auto decl_ptr = new helios::HOUTFunctionDeclaration(
-				synthetic_symbol,
-				return_type,
-				std::vector<helios::code::Parameter>{},
-				helios::code::generatedOrigin()
-			);
-			auto decl = base::CRef<helios::HOUTFunctionDeclaration>(decl_ptr);
+			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
 
 			CORE_DEV_LOG(REPL, "QueryReplExpressionWrapper completed successfully\n");
-			return { helios::code::generatedOrigin(), decl, code_block };
+			return { helios::code::generatedOrigin(), &decl, code_block };
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -137,16 +132,10 @@ namespace compiler::repl {
 			);
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");
-			auto decl_ptr = new helios::HOUTFunctionDeclaration(
-				synthetic_symbol,
-				void_type,
-				std::vector<helios::code::Parameter>{},
-				helios::code::generatedOrigin()
-			);
-			auto decl = base::CRef<helios::HOUTFunctionDeclaration>(decl_ptr);
+			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
 
 			CORE_DEV_LOG(REPL, "QueryReplInstructionWrapper completed successfully\n");
-			return { helios::code::generatedOrigin(), decl, code_block };
+			return { helios::code::generatedOrigin(), &decl, code_block };
 		}
 
 		QUERY_AUTO_CACHE_COPY

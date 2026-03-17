@@ -53,7 +53,7 @@ namespace compiler::helios::mangler {
 
 		u64 result = 0;
 
-		hashes.maybePutAndUpdate(*this, 0, [&result](Ref<u64> existing) {
+		hashes.maybePutAndUpdate(*this, 0u, [&result](Ref<u64> existing) {
 			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
 			result = *existing;
 		});
