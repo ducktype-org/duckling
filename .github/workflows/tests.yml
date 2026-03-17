@@ -315,6 +315,13 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --filter "integration_tests/compiler" --duckc-worker-count 4
 
+      - name: Upload integration tests log file
+        if: ${{ failure() && (steps.integration-tests.outcome == 'failure' || steps.integration-tests-multithreaded-only-compiler.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-tests-log-${{ matrix.build-type }}
+          path: /tmp/dit.log
+
       - name: Test Coverage After Integration Tests
         id: test-coverage-itests
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
