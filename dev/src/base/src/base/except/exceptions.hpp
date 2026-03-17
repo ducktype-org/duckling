@@ -88,9 +88,9 @@ namespace base {
 	)
 
 /**
- * @brief Checks regardless of build-type, usefull eg. in system function result checks.
+ * @brief Checks regardless of build-type, useful eg. in system function result checks.
  */
-#define CORE_CHECK(cond, what, ...)                                                             \
+#define CORE_ASSERT_STRONG(cond, what, ...)                                                             \
 	if (!(cond)) {                                                                              \
 		DETAIL_THROW_PANIC("    Check failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__); \
 	}
