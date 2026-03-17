@@ -45,7 +45,7 @@ jobs:
             cc: gcc-14
             gcov: gcov-14
             linker: MOLD
-            cache-prefix: build
+            cache-prefix: gcc-build
           - name: clang
             cxx: clang++-19
             cc: clang-19
@@ -125,8 +125,7 @@ jobs:
       - name: Install clang
         # Necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
-        # clang-tools-19 provides clang-scan-deps-19, required for C++20 modules support in CMake when using clang
-        run: sudo apt -y install clang-19 clang-tools-19
+        run: sudo apt -y install clang-19
 
       - name: Install xxd
         # Necessary to embed LLVM bitcode into duckc source files.
