@@ -110,11 +110,6 @@ set(wrapper_binary_artifacts
     "${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm"
     "${CMAKE_CURRENT_BINARY_DIR}/wrapper-so"
 )
-add_custom_target(
-    cp-stencils-target
-    DEPENDS
-    ${wrapper_binary_artifacts}
-)
 
 add_files(
     memory/memory.cpp
