@@ -1,6 +1,9 @@
 include(FetchContent)
 
-set(ICU_VERSION_REQUIRED "78.2")  # released 2026-01-09
+# released 2026-01-09
+set(ICU_VERSION_MAJOR "78")
+set(ICU_VERSION_MINOR "2")
+set(ICU_VERSION_REQUIRED "${ICU_VERSION_MAJOR}.${ICU_VERSION_MINOR}")
 set(ICU_RELEASE_PREFIX "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION_REQUIRED}/icu4c-${ICU_VERSION_REQUIRED}-")
 set(ICU_RELEASE "${ICU_RELEASE_PREFIX}sources.tgz")
 set(ICU_CONTROL "SHA512=92feddfe81c57336f386c7cbc9f6d976bf349db148a77a247c4559676f51116115c8c52c4d907feb50933f72ab75fd8e48be092bf9c8ca33a3e8fabc9372a5d6")
@@ -67,10 +70,12 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 		set(ICU_PREFIX ${PROJECT_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local)
 		set(ICU_INCLUDE_DIRS ${ICU_PREFIX}/include)
 
-		set(ICU_DATA_LIBRARY "${ICU_PREFIX}/lib/libicudata.so.${ICU_VERSION_REQUIRED}")
-		set(ICU_I18N_LIBRARY "${ICU_PREFIX}/lib/libicui18n.so.${ICU_VERSION_REQUIRED}")
-		set(ICU_UC_LIBRARY "${ICU_PREFIX}/lib/libicuuc.so.${ICU_VERSION_REQUIRED}")
-		set(ICU_IO_LIBRARY "${ICU_PREFIX}/lib/libicuio.so.${ICU_VERSION_REQUIRED}")
+        # Even though there are symlinks for the exact version, it ends up not being able to find it.
+        # This has to use only the major.
+        set(ICU_DATA_LIBRARY "${ICU_PREFIX}/lib/libicudata.so.${ICU_VERSION_MAJOR}")
+		set(ICU_I18N_LIBRARY "${ICU_PREFIX}/lib/libicui18n.so.${ICU_VERSION_MAJOR}")
+		set(ICU_UC_LIBRARY "${ICU_PREFIX}/lib/libicuuc.so.${ICU_VERSION_MAJOR}")
+		set(ICU_IO_LIBRARY "${ICU_PREFIX}/lib/libicuio.so.${ICU_VERSION_MAJOR}")
 
 		add_library(icudata IMPORTED SHARED GLOBAL)
 		set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
