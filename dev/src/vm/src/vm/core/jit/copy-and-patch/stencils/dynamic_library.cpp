@@ -33,14 +33,14 @@ namespace vm::jit::cnp {
 
 		auto  path   = std::format("/proc/self/fd/{}", fd);
 		void* handle = dlopen(path.data(), RTLD_NOW);
-		CORE_CHECK(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+		CORE_ASSERT_STRONG(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 
 		return DynamicLibrary{fd, handle };
 	}
 
 	std::byte* DynamicLibrary::findSymbol(const char* name) const {
 		void* sym_loc = dlsym(lib_handle, name);
-		CORE_CHECK(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+		CORE_ASSERT_STRONG(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 		return reinterpret_cast<std::byte*>(sym_loc);
 	}
 }
