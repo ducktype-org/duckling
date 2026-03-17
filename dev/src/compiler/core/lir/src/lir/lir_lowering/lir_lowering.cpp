@@ -541,6 +541,7 @@ namespace compiler::lir {
 						mir2lirOperation(mir_instruction.operation, false),
 						output,
 						std::move(args),
+						InstructionMetadata{},
 						ListOperationParameters{ .element_layout = element_layout }
 					);
 					return curr_block;
@@ -619,7 +620,8 @@ namespace compiler::lir {
 							curr_block->instructions.emplace_back(
 								Operation::ListFree,
 								base::Optional<LIRPlace>{},
-								std::vector{ lir_place.value() }
+								std::vector{ lir_place.value() },
+								InstructionMetadata{}
 							);
 							return curr_block;
 						}

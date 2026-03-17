@@ -117,7 +117,11 @@ namespace compiler::mir {
 			auto assign_hole   = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			lowered_inner.storeResultInGivenPlace(
-				MIRPlace(target_location), assign_hole, { flagConstruct(target_location) }, expr_scope
+				MIRPlace(target_location),
+				assign_hole,
+				{ flagConstruct(target_location) },
+				expr_scope,
+				{}
 			);
 
 			valueOutput(lowered_inner.begin, target_location);
@@ -360,6 +364,8 @@ namespace compiler::mir {
 					comps_left == 0 ? std::vector{ flagConstruct(boolean_output) }
 									: std::vector<OperationFlag>{},
 					expr_scope,
+					{},
+					{ comp->getPosition() },
 				});
 				next_block = comp_cont;
 			}
