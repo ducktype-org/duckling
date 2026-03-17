@@ -45,6 +45,8 @@ namespace compiler::repl {
 		int run();
 
 	private:
+		// Forward declarations for test classes
+		friend class ReplSimulationTest;
 		/**
 		 * @brief Process a single line of input from the user.
 		 *
