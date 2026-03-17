@@ -141,6 +141,18 @@ namespace lexer {
 		return { Type::TypeSpecifier, literal, position };
 	}
 
+	Token Token::makeFormattedString(base::RawView full_view, Tokens&& tokens, const dia::SourcePosition position) {
+		return { Type::FormattedString, full_view, std::move(tokens), position };
+	}
+
+	Token Token::makeFormatStringSubString(base::RawView string, const dia::SourcePosition position) {
+		return { Type::FormatStringSubString, string, position };
+	}
+
+	Token Token::makeFormatStringSubExpression(Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition position) {
+		return { Type::FormatStringSubExpression, std::move(tokens), std::move(sentinel_begin), std::move(sentinel_end), position , BracketType::Curly};
+	}
+
 	Token Token::makeNumLiteralGroup(
 		base::RawView full_view, Token&& value, Token&& specifier, const dia::SourcePosition& position
 	) {
