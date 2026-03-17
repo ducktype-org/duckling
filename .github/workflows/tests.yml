@@ -318,7 +318,7 @@ jobs:
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
       # runs when at least one of the integration test steps actually failed.
-      - name: Upload integration tests log file
+      - name: Cat itests log file on failure
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure' || steps.integration-tests-multithreaded-only-compiler.outcome == 'failure') }}
         run: cat /tmp/dit.log
 
