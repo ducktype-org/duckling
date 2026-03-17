@@ -23,8 +23,11 @@ namespace vm::jit::cnp {
 	}
 
 	JitFuncMemory JitFuncMemory::allocate(usize size) {
+		// Aligns the size to page boundaries
+		// ceil(a / b) = floor((a + b - 1) / b)
 		size = (size + getPageSize() - 1) / getPageSize() * getPageSize();
 		CORE_ASSERT(size % getPageSize() == 0, "should be aligned to page size");
+
 		int  flags = MAP_ANONYMOUS | MAP_PRIVATE;
 		auto memory
 			= reinterpret_cast<byte*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, flags, -1, 0));
