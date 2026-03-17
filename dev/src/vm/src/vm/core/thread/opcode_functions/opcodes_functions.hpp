@@ -122,7 +122,14 @@ namespace vm {
 			const bool called_rets_void = called_func.result_type->getName() == "void";
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
-				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
+				CORE_DEV_LOG(
+					DVMDetails,
+					"function, ",
+					called_func.name.str(),
+					", ",
+					thread.getRunningThreadId().asInt(),
+                    ";\n"
+				);
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size

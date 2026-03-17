@@ -403,11 +403,11 @@ namespace vm {
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(                                                                           \
 				DVMDetails,                                                                         \
-				"Executed opcode: ",                                                                \
+				"opcode, ",                                                                \
 				#opcode_name,                                                                       \
-				" Thread: ",                                                                        \
+				", ",                                                                        \
 				getRunningThreadId().asInt(),                                                       \
-				"\n"                                                                                \
+				";\n"                                                                                \
 			);                                                                                      \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
