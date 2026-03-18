@@ -1,86 +1,200 @@
+# ==================================== UTILS ====================================
+fun printSeparator() -> () = {
+    builtin_output_string("=================\n");
+}
+
+fun printSmallSeparator() -> () = {
+    builtin_output_string("+++++\n");
+}
+
+# ==================================== PRIMITIVES ====================================
+fun printPrimitives(a: ref Primitives) -> () = {
+    builtin_output_i64(a.a);                    # 0
+    builtin_output_f64(a.b);                    # 0.0
+    builtin_output_i64(if a.c then 1 else 0);   # 0
+    builtin_output_char(a.d);                   # ''
+    builtin_output_char(a.d + 65u8);            # 'A'
+    builtin_output_string(a.e);                 # ""
+    builtin_output_u64(len a.f);                # Empty List
+
+    # builtin_output_i64(d);                  # TODOP: Crash
+    # builtin_output_i64(e);                  # TODOP: Crash
+    # builtin_output_string(e);               # ""
+    # builtin_output_u64(len g);              # 0
+}
+
+fun printPrimitives(a: ref Primitives2) -> () = {
+    builtin_output_i64(a.a);                    # 0
+    builtin_output_f64(a.b);                    # 0.0
+    builtin_output_i64(if a.c then 1 else 0);   # 0
+    builtin_output_char(a.d);                   # ''
+    builtin_output_char(a.d + 65u8);            # 'A'
+    builtin_output_string(a.e);                 # ""
+    builtin_output_u64(len a.f);                # Empty List
+
+    # builtin_output_i64(a.g);                # Empty List
+    # builtin_output_i64(d);                  # TODOP: Crash
+    # builtin_output_i64(e);                  # TODOP: Crash
+    # builtin_output_string(e);               # ""
+    # builtin_output_u64(len g);              # 0
+}
+
+fun printPrimitives(a: ref InitializedPrimitives) -> () = {
+    builtin_output_i64(a.a);                    # 0
+    builtin_output_f64(a.b);                    # 0.0
+    builtin_output_i64(if a.c then 1 else 0);   # 0
+    builtin_output_char(a.d);                   # 'A'
+    builtin_output_char(a.d + 2u8);            # 'C'
+    builtin_output_string(a.e);                 # "kajak"
+
+    # builtin_output_i64(a.g);                # Empty List
+    # builtin_output_i64(d);                  # TODOP: Crash
+    # builtin_output_i64(e);                  # TODOP: Crash
+    # builtin_output_string(e);               # ""
+    # builtin_output_u64(len g);              # 0
+}
+
+class Primitives {
+    a: i32;         # 0
+    b: f64;         # 0.0
+    c: bool;        # false
+    d: char;        # ''
+    e: str;         # ""
+    f: List[i32];   # empty list
+    # i: ();        # TODOP: What?
+    # g: ref i32;     # TODOP: NullPtr but should crash
+    # h: box i32;     # TODOP: Crash. Currently SegFaults
+    # j: type;        # TODOP: What? Unit?
+}
+
+class Primitives2 {
+    a: i32;         # 0
+    b: f64;         # 0.0
+    c: bool;        # false
+    d: char;        # ''
+    e: str;         # ""
+    f: List[i32];   # empty list
+    # i: ();        # TODOP: What?
+    # g: ref i32;     # TODOP: NullPtr but should crash
+    # h: box i32;     # TODOP: Crash. Currently SegFaults
+    # j: type;        # TODOP: What? Unit?
+}
+
+class InitializedPrimitives {
+    a: i32 = 1;         # 0
+    b: f64 = 1.0;         # 0.0
+    c: bool = true;        # false
+    d: char = 'A';        # ''
+    e: str = "kajak\n";         # ""
+    j: type = i32;        # TODOP: What? Unit?
+    # i: ();        # TODOP: What?
+    # g: ref i32;     # TODOP: NullPtr but should crash
+    # h: box i32;     # TODOP: Crash. Currently SegFaults
+}
+
+# This intentionally uses a different class to check if the default 
+# constructor was correctly inserted in case of globals (and wasn't 
+# inserted accidentally because it was used by a local).
+var g_a: Primitives2;
+
+fun testPrimitives() -> () = {
+    var a: Primitives; 
+    printPrimitives(&a);
+    # Check that the list is usable after default init.
+    a.f += 1;
+    a.f += 2;
+    a.f += 3;
+    builtin_output_u64(len a.f);
+    printSmallSeparator(); 
+   
+    printPrimitives(&g_a);
+    # Check that the list is usable after default init.
+    g_a.f += 1;
+    g_a.f += 2;
+    g_a.f += 3;
+    builtin_output_u64(len g_a.f);
+    printSmallSeparator(); 
+
+    var b: InitializedPrimitives;
+    printPrimitives(&b);
+    printSmallSeparator(); 
+    
+    # const b: Primitives; # TODOP: Broken
+}
+
+# ==================================== NAMING COLLISION ====================================
+# TODOP: Broken
+# class NamingCollision {
+#     result: i64;
+#     i: i64;
+#     ctor_symbol: i64;
+# }
+
+# fun testNamingCollision() -> () = {
+#     var a: NamingCollision;
+#     builtin_output_i64(a.result);
+#     builtin_output_i64(a.i);
+#     builtin_output_i64(a.ctor_symbol);
+# }
+
+
+# ==================================== MULTI-DIM ARRAYS ====================================
+# TODOP: Broken
 class Simple {
-    x: i64 = 123;
+    x: i64 = 1;
     y: i32;         # Should be 0
 }
 
-class Nested {
-    s: Simple;
-    active: bool = true;
-}
+# class Matrix {
+#     matrix: Simple[2][3][2];
+# }
 
-class ArrayContainer {
-    points: Simple[3];
-}
+# fun testMultiDimArrays() -> () = {
+#     var m: Matrix;
+#     builtin_output_i64(m.matrix[0][0][0].x); # 1
+# }
 
-fun test_primitives() = {
-    var a: i32;
-    var b: f64;
-    var c: bool;
-    builtin_output_i64(a);                  # 0
-    builtin_output_f64(b);                  # 0.0
-    builtin_output_i64(if c then 1 else 0); # 0
-}
+# ==================================== ZERO-SIZED ARRAYS ====================================
+# TODOP: Broken
+# class ZeroArray {
+#     matrix: Simple[0];
+# }
 
-fun test_class_init() = {
-    var s: Simple;
-    builtin_output_i64(s.x);                        # 123
-    builtin_output_i64(s.y);                        # 0
+# fun testZeroSizedArray() -> () = {
+#     var m: ZeroArray;
+# }
 
-    var n: Nested;
-    builtin_output_i64(n.s.x);                      # 123
-    builtin_output_i64(if n.active then 1 else 0);  # 1
-}
+# ==================================== NESTED CLASSES ====================================
+class Deep { val: i64 = 999; val2: i64; }
+class Middle { d: Deep[2]; }
+class Outer { m: Middle[2]; }
 
-fun test_array_of_primitives() = {
-    var arr: i64[5];
-    var i = 0;
-    var sum = 0i64;
-    while (i < 5) {
-        sum = sum + arr[i];
-        i = i + 1;
-    }
-    builtin_output_i64(sum);        # 0
-}
-
-fun test_array_of_classes() = {
-    var arr: Simple[2];
-    builtin_output_i64(arr[0].x); # 123
-    builtin_output_i64(arr[1].x); # 123
-
-    var container: ArrayContainer;
-    builtin_output_i64(container.points[2].x);  # 123
-}
-
-class Deep {
-    val: i64 = 999;
-}
-class Middle {
-    d: Deep[2];
-}
-class Outer {
-    m: Middle[2];
-}
-
-fun test_deep_nesting() = {
+fun testDeepNesting() = {
     var o: Outer;
+
     builtin_output_i64(o.m[1].d[1].val);    # 999
+    builtin_output_i64(o.m[1].d[1].val2);   # 0
+    builtin_output_i64(o.m[0].d[1].val);    # 999
+    builtin_output_i64(o.m[1].d[0].val);    # 999
 }
 
-fun main() -> i32 = {
-    builtin_output_i64(11111111);
-    test_primitives();
 
-    # builtin_output_i64(22222222);
-    # test_class_init();
+fun main() -> i64 = {
+    printSeparator();
+    testPrimitives();
 
-    # builtin_output_i64(33333333);
-    # test_array_of_primitives();
-
-    # builtin_output_i64(44444444);
-    # test_array_of_classes();
-
-    # builtin_output_i64(55555555);
-    # test_deep_nesting();
+    # TODOP: Broken
+    # printSeparator();
+    # testNamingCollision();
+    # printSeparator();
+    # testMultiDimArrays();
+    
+    # printSeparator();
+    # testZeroSizedArray();
+    
+    printSeparator();
+    testDeepNesting();
 
     return 0;
 }
+

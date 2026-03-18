@@ -61,7 +61,7 @@ namespace compiler::helios::houtgen {
 			// - Declare result variable.
 			const auto  result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name = base::StrID("result"),
+					 .name = base::StrID("__result"),
 					 .generated_symbol_data
                 = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
             });
@@ -160,7 +160,7 @@ namespace compiler::helios::houtgen {
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name = base::StrID("init_array"),
+				.name = base::StrID("__init_array"),
 				.generated_symbol_data
 				= GeneratedSymbolData{ DefaultStaticArrayConstructor{ array_type } },
 			});
@@ -171,7 +171,7 @@ namespace compiler::helios::houtgen {
 
 			// var res: T[N];
 			const SymID res_sym = ctx.query<QueryGeneratedSymbol>(
-				{ .name = base::StrID("result"),
+				{ .name = base::StrID("__result"),
 			      .generated_symbol_data
 			      = GeneratedSymbolData{ Variable{ ctor_symbol, 0, array_sym_type } } }
 			);
@@ -191,7 +191,7 @@ namespace compiler::helios::houtgen {
 					                               tsh::Mutability::Mutable };
 				// var i: i64 = 0;
 				const SymID i_sym = ctx.query<QueryGeneratedSymbol>(
-					{ .name = base::StrID("i"),
+					{ .name = base::StrID("__i"),
 				      .generated_symbol_data
 				      = GeneratedSymbolData{ Variable{ ctor_symbol, 1, i64_type } } }
 				);
