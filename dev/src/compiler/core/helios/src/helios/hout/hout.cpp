@@ -140,8 +140,7 @@ namespace compiler::helios {
                               .valueOrThrow();
                       } else {
                           // TODOP: Error handling.
-                          return ctx
-                              .query<houtgen::QueryDefaultInitializerExpr>(variable_type.getType())
+                          return ctx.query<houtgen::QueryDefaultInitializerExpr>(variable_type)
                               ->valueOrThrow()
                               ->clone();
                       }

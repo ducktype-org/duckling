@@ -1,5 +1,7 @@
 #pragma once
 
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <helios/hout/hout.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -71,10 +73,11 @@ namespace compiler::helios::houtgen {
 	 * - `code::ListInitExpr` - for dynamic arrays. This maps to a call to the builtin ListInit
 	 * function in LLVM.
 	 *
-	 * TODOP: Should return ref?
+	 * Logs an error if the type cannot be default initialized (f.e. is a ref/box/unit).
+	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryDefaultInitializerExpr, tsh::AbstractType, CRef<query::QResult<Box<code::Expr>>>, ({})
+		QueryDefaultInitializerExpr, tsh::SymbolType<>, CRef<query::QResult<Box<code::Expr>>>, ({})
 	);
 }

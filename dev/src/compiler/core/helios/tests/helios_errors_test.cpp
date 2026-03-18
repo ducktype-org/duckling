@@ -495,6 +495,26 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
+					var x: ref i64;
+				}
+			)",
+			{ "Type `ref i32` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: box i64;
+				}
+			)",
+			{ "Type `box i32` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
 					var n = 42;
                     if (true) {
                         var n = 24;

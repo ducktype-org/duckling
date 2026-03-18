@@ -303,10 +303,9 @@ namespace compiler::helios::houtgen {
 				}
 
 				// TODOP: Rethink clone.
-				auto initial_value
-					= ctx.query<houtgen::QueryDefaultInitializerExpr>(symbol_type.getType())
-				          ->valueOrThrow()
-				          ->clone();
+				auto initial_value = ctx.query<houtgen::QueryDefaultInitializerExpr>(symbol_type)
+				                         ->valueOrThrow()
+				                         ->clone();
 				output(code::VariableStmt(
 					code::pstOrigin(stmt), std::move(initial_value), symbol_type, symbol
 				));

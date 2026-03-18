@@ -1,11 +1,13 @@
 #include "default_constructors.hpp"
 
+#include "diagnostic_interactive/placeholder.hpp"
 #include "frontend/pst_parser/access.hpp"
 #include "frontend/pst_parser/elements/hierarchy/class_elements/field.hpp"
 #include "frontend/pst_parser/elements/hierarchy/expr_holders.hpp"
 #include "helios/hout/elements/expr.hpp"
 #include "helios/hout/origin.hpp"
 #include "helios_private/expressions/query_hout_of_expr.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -17,8 +19,11 @@
 
 #include "base/collections/optional.hpp"
 #include "base/except/exceptions.hpp"
+#include "base/pointers/box.hpp"
+#include "base/str/str_utils.hpp"
 #include <base/collections/stable_container.hpp>
 
+#include "diagnostic/source_position.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <optional>
@@ -101,8 +106,7 @@ namespace compiler::helios::houtgen {
 						}
 						opt_none {
 							// Otherwise initialize it with the default initializer expression.
-							return ctx
-							    .query<QueryDefaultInitializerExpr>(field.getType(ctx).getType())
+							return ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
 							    ->valueOrThrow()
 							    ->clone();
 						}
@@ -148,11 +152,11 @@ namespace compiler::helios::houtgen {
 	struct IMPLEMENT_QUERY(QueryDefaultStaticArrayConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey array_type) {
 			// Preamble, get some basic data.
-			const auto  element_abs_type = array_type.getElementType().getType();
-			const usize size             = array_type.getSize();
-			const auto  array_sym_type   = tsh::SymbolType<>{ array_type,
-				                                              tsh::ReferenceKind::Direct,
-				                                              tsh::Mutability::Mutable };
+			const auto  element_type   = array_type.getElementType();
+			const usize size           = array_type.getSize();
+			const auto  array_sym_type = tsh::SymbolType<>{ array_type,
+				                                            tsh::ReferenceKind::Direct,
+				                                            tsh::Mutability::Mutable };
 
 			using DefaultStaticArrayConstructor
 				= GeneratedSymbolData::DefaultStaticArrayConstructor;
@@ -206,9 +210,8 @@ namespace compiler::helios::houtgen {
 
 				// while (i < size) { res[i] = default_init(T); i = i + 1; }
 				code::CodeBlock loop_body{};
-				auto element_init = ctx.query<QueryDefaultInitializerExpr>(element_abs_type)
-				                        ->valueOrThrow()
-				                        ->clone();
+				auto            element_init
+					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow()->clone();
 
 				// res[i] = default_init(T)
 				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
@@ -278,22 +281,33 @@ namespace compiler::helios::houtgen {
 	//                      TOP LEVEL QUERY
 	// -----------------------------------------------------------
 	struct IMPLEMENT_QUERY(QueryDefaultInitializerExpr, query::QResult<Box<code::Expr>>) {
-		static PResult provide(Context& ctx, const QKey type) {
+		static PResult provide(Context& ctx, const QKey sym_type) {
+			// References and boxes can't be default initialized.
+			// TODOP: How to get a position here?
+			if (sym_type.getRefKind() != tsh::ReferenceKind::Direct) {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					base::strConcat("Type `", sym_type.toString(), "` cannot be default initialized"),
+					dia::SourcePosition::fakePosition()
+				));
+			}
+
+
+			const auto& type = sym_type.getType();
+
+
 			switch (type.getKind()) {
 			// Primitives and simple types are zero-initialized.
 			case tsh::Kind::Byte:
 			case tsh::Kind::Bool:
 			case tsh::Kind::Char:
-			case tsh::Kind::Unit:
 			case tsh::Kind::Flag:
 			case tsh::Kind::Integral:
 			case tsh::Kind::Float:
 			case tsh::Kind::RawPointer:
 			case tsh::Kind::Pointer:
 			case tsh::Kind::Optional:
-			case tsh::Kind::Enum:          // TODOP: What is that.
-			case tsh::Kind::DynamicArray:  // DynamicArray is default initialized by an empty
-			                               // dynamic array.
+			case tsh::Kind::Enum:
+			case tsh::Kind::DynamicArray:  // DynamicArray is default initialized by an empty list.
 			case tsh::Kind::String: {      // String is default initialized with an empty string.
 				return makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), type);
 			}
@@ -329,26 +343,24 @@ namespace compiler::helios::houtgen {
 				));
 				return query::Failed();
 			}
+			case tsh::Kind::Unit:
+			case tsh::Kind::Meta: {
+				// Meta and unit are initialized with a unit.
+				return makeBox<code::LiteralTypeExpr>(
+					ctx, code::generatedOrigin(), tsh::getUnitType()
+				);
+			}
 			case tsh::Kind::Variant:
 			case tsh::Kind::Function:
-			case tsh::Kind::Reference: {  // TODOP: What is that? We should have that as a reference
-				                          // specifier?
+			case tsh::Kind::Reference: {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					base::strConcat(
-						"Variables of type `", type.toString(), "` must be explicitly initialized"
-					),
-					dia::SourcePosition::fakePosition()  // TODOP: Fix?
+					base::strConcat("Type `", sym_type.toString(), "` cannot be default initialized"),
+					dia::SourcePosition::fakePosition()  // TODOP: Fix
 				));
 				return query::Failed();
 			}
 			// These should not be default initialized.
 			case tsh::Kind::TypeTemplate:
-			case tsh::Kind::Namespace:
-			case tsh::Kind::CodeBlock:
-			case tsh::Kind::Module:
-			case tsh::Kind::Import:
-			case tsh::Kind::VTable:
-			case tsh::Kind::Meta:
 			case tsh::Kind::Void: {
 				// TODOP: Change that to a proper error.
 				CORE_PANIC("Default initialization if a non-value type: ", type.toString());
