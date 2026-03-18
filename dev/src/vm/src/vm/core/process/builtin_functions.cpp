@@ -141,7 +141,9 @@ namespace vm::builtins {
 		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
 
 		thread.releaseGil();
-		// @TODO: #2304 Possible UB if the mutex is not actually locked by this thread.
+		// @TODO: #2109 Possible UB if the mutex is not actually locked by this thread.
+		// @TODO: #2109 If lock tries to accqquire other mutex than used before then we sould return
+		// error.
 		cv->wait(mutex);
 		thread.keepOrAcquireGil();
 	}
