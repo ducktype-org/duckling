@@ -99,12 +99,17 @@ namespace debug_info {
 	// -- VariableMetadata
 
 	void to_json(json& j, const VariableMetadata& v) {
-		j = json{ { "name", v.name }, { "position", v.position } };
+		j         = json::object();
+		j["name"] = v.name;
+		if (v.position) j["position"] = *v.position;
 	}
 
 	void from_json(const json& j, VariableMetadata& v) {
 		j.at("name").get_to(v.name);
-		j.at("position").get_to(v.position);
+		if (j.contains("position") && !j.at("position").is_null())
+			v.position = j.at("position").get<SourcePosition>();
+		else
+			v.position = std::nullopt;
 	}
 
 	// -- TypeMetadata
@@ -129,6 +134,12 @@ namespace debug_info {
 			{},
 			&decltype(sorted_instr_offsets_to_variable_init)::value_type::first
 		);
+		auto sorted_parameter_indexes_to_metadata = v.parameter_indexes_to_metadata;
+		std::ranges::sort(
+			sorted_parameter_indexes_to_metadata,
+			{},
+			&decltype(sorted_parameter_indexes_to_metadata)::value_type::first
+		);
 
 		// Build explicitly: Optional<string> and Optional<SourcePosition> aren't
 		// in the debug_info namespace, so ADL won't find our generic to_json helpers
@@ -136,6 +147,7 @@ namespace debug_info {
 		j = json::object();
 		if (v.function_name) j["function_name"] = *v.function_name;
 		if (v.position) j["position"] = *v.position;
+		j["parameter_indexes_to_metadata"]  = sorted_parameter_indexes_to_metadata;
 		j["instr_offsets_to_metadata"]      = sorted_instr_offsets_to_metadata;
 		j["instr_offsets_to_variable_init"] = sorted_instr_offsets_to_variable_init;
 	}
@@ -151,11 +163,23 @@ namespace debug_info {
 			v.position = j.at("position").get<SourcePosition>();
 		else
 			v.position = std::nullopt;
+		if (j.contains("parameter_indexes_to_metadata"))
+			j.at("parameter_indexes_to_metadata").get_to(v.parameter_indexes_to_metadata);
+		else
+			v.parameter_indexes_to_metadata.clear();
 		j.at("instr_offsets_to_metadata").get_to(v.instr_offsets_to_metadata);
 		if (j.contains("instr_offsets_to_variable_init"))
 			j.at("instr_offsets_to_variable_init").get_to(v.instr_offsets_to_variable_init);
 		else
 			v.instr_offsets_to_variable_init.clear();
+		if (!std::ranges::is_sorted(
+				v.parameter_indexes_to_metadata,
+				{},
+				&decltype(v.parameter_indexes_to_metadata)::value_type::first
+			))
+			throw nlohmann::json::other_error::create(
+				501, "parameter_indexes_to_metadata is not sorted by index", &j
+			);
 		if (!std::ranges::is_sorted(
 				v.instr_offsets_to_metadata,
 				{},
