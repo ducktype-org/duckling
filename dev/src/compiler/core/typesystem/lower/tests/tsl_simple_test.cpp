@@ -442,10 +442,10 @@ private:
 		using namespace compiler::helios;
 		using namespace test_utils;
 
-		// This test reproduces the bug reported in issue where a class containing a static
-		// array field causes an assertion failure during LLVM lowering because the compiler
-		// computed the wrong offset for the array field (using total array size for alignment
-		// instead of element size).
+		// This test reproduces the bug reported in the "[Compiler] Bug in lowering of the class
+		// layout" issue: a class containing a static array field caused an assertion failure
+		// during LLVM lowering because the compiler computed the wrong offset for the array
+		// field (using total array size for alignment instead of element size).
 		auto [_, root_scope]           = getModule(fs::File(path("class_layout_with_array")));
 		const SymID database_symbol    = getChain("Database", root_scope).back();
 
