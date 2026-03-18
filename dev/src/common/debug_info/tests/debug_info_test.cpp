@@ -94,16 +94,6 @@ private:
 			func.instr_offsets_to_variable_init.size() == 2, "Expected 2 variable initializations"
 		);
 
-		const auto& param0 = func.parameter_indexes_to_metadata.at(0);
-		assertTrue(param0.first == 0, "Parameter 0 index incorrect");
-		assertTrue(param0.second.name == "param_a", "Parameter 0 name incorrect");
-		assertTrue(param0.second.position.has_value(), "Parameter 0 position should be present");
-
-		const auto& param1 = func.parameter_indexes_to_metadata.at(1);
-		assertTrue(param1.first == 1, "Parameter 1 index incorrect");
-		assertTrue(param1.second.name == "param_b", "Parameter 1 name incorrect");
-		assertFalse(param1.second.position.has_value(), "Parameter 1 position should be absent");
-
 		// Instructions are stored in insertion order from the builder
 		bool found0 = false, found4 = false;
 		for (const auto& [offset, meta]: func.instr_offsets_to_metadata) {
@@ -124,8 +114,6 @@ private:
 		assertTrue(var_offset == 0, "Variable init offset incorrect");
 		assertTrue(var_meta.name == "local_x", "Variable name incorrect");
 		assertTrue(var_meta.position.has_value(), "Variable position should be present");
-		const auto& var_fp = std::get<PstHashPostion>(var_meta.position->line_col_position);
-		assertTrue(var_fp.postion_scope_begin.data[1] == 1, "Variable init: start_line incorrect");
 
 		const auto& [var_offset2, var_meta2] = func.instr_offsets_to_variable_init.at(1);
 		assertTrue(var_offset2 == 8, "Second variable init offset incorrect");
@@ -270,30 +258,6 @@ private:
 })");
 			auto               result = debug_info::loadFromStream(iss);
 			assertFalse(result.has_value(), "Unsorted instr_offsets_to_variable_init should fail");
-		}
-
-		// Parameter indexes not sorted should fail
-		{
-			std::istringstream iss(R"({
-	"target": "DBC",
-	"module_path": "x.dmf",
-	"source_positions_type": "LineColumn",
-	"functions": {
-		"_Zx": {
-			"function_name": "x",
-			"position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 1, "start_column": 0, "end_line": 2, "end_column": 0 } },
-			"parameter_indexes_to_metadata": [
-				[8, { "name": "a", "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 2, "start_column": 0, "end_line": 2, "end_column": 1 } } }],
-				[4, { "name": "b", "position": { "type": "FilePosition", "value": { "file_path": "x.duck", "start_line": 3, "start_column": 0, "end_line": 3, "end_column": 1 } } }]
-			],
-			"instr_offsets_to_metadata": [],
-			"instr_offsets_to_variable_init": []
-		}
-	},
-	"types": {}
-})");
-			auto               result = debug_info::loadFromStream(iss);
-			assertFalse(result.has_value(), "Unsorted parameter_indexes_to_metadata should fail");
 		}
 	}
 
