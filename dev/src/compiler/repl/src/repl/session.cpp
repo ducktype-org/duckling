@@ -255,59 +255,89 @@ namespace compiler::repl {
 		CORE_DEV_LOG(REPL, "Starting handleInstruction\n");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			CORE_DEV_LOG(REPL, "Querying QueryReplInstructionWrapper\n");
-			instr_wrapper = ctx.query<QueryReplInstructionWrapper>({
-				.stmt    = stmt,
-				.counter = m_line_counter,
-			});
+			try {
+				CORE_DEV_LOG(REPL, "Querying QueryReplInstructionWrapper\n");
+				instr_wrapper = ctx.query<QueryReplInstructionWrapper>({
+					.stmt    = stmt,
+					.counter = m_line_counter,
+				});
 
-			CORE_DEV_LOG(REPL, "Getting mangled name\n");
-			auto mangled_name = helios::mangler::getSimpleMangledName(
-				ctx, instr_wrapper->declaration->original_symbol
-			);
-			wrapper_func_name = mangled_name.strView();
-			CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
+				CORE_DEV_LOG(REPL, "Getting mangled name\n");
+				auto mangled_name = helios::mangler::getSimpleMangledName(
+					ctx, instr_wrapper->declaration->original_symbol
+				);
+				wrapper_func_name = mangled_name.strView();
+				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
+			} catch (const base::Panic& e) {
+				error_message = "Instruction evaluation failed: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
+			} catch (const std::exception& e) {
+				error_message
+					= "Unexpected error during instruction evaluation: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
+			}
 		});
+
+		if (had_error) return ReplResult::error(error_message);
 
 		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
 		helios::HOUTUnit hout_unit;
 		hout_unit.functions.emplace_back(&instr_wrapper.value());
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+			// Initialize context on first use or update it for this scope
+			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+			m_lowering_context->setContext(ctx);  // Update context for this scope
 
-			CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
-			auto eval_module_id = getCurrentModuleID();
-			auto module_name    = base::StrID(
-                base::strConcat(
-                    "repl_module_",
-                    frontend::ModuleTree::getPathComponentHash(eval_module_id).hash.toStringHex()
-                )
-                    .c_str()
-            );
-			auto load_result = compileAndLoad(
-				ctx, hout_unit, module_name.strView(), m_dvm_pid, m_lowering_context.value()
-			);
-			if (!load_result.has_value()) {
-				error_message = "DVM load error: " + load_result.error();
+			// Defer: invalidate when exiting this scope, even on early return
+			defer(m_lowering_context->invalidateContext());
+
+			try {
+				CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+
+				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
+				auto eval_module_id = getCurrentModuleID();
+				auto module_name    = base::StrID(
+                    base::strConcat(
+                        "repl_module_",
+                        frontend::ModuleTree::getPathComponentHash(eval_module_id).hash.toStringHex()
+                    )
+                        .c_str()
+                );
+				auto load_result = compileAndLoad(
+					ctx, hout_unit, module_name.strView(), m_dvm_pid, m_lowering_context.value()
+				);
+				if (!load_result.has_value()) {
+					error_message = "DVM load error: " + load_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+
+				CORE_DEV_LOG(REPL, "Instruction compiled and loaded to DVM\n");
+
+				// Instructions always return unit — run and join without reading an exit value.
+				auto run_result = vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
+				                      .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
+				                      .transform_error(vm::api::errorToString);
+				if (run_result.has_value()) {
+					std::cout << "Instruction executed.\n";
+				} else {
+					error_message = "Runtime error: " + run_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+			} catch (const base::Panic& e) {
+				error_message = "Compilation/execution error: " + std::string(e.what());
 				std::cerr << error_message << "\n";
 				had_error = true;
-				return;
-			}
-
-			CORE_DEV_LOG(REPL, "Instruction compiled and loaded to DVM\n");
-
-			// Instructions always return unit — run and join without reading an exit value.
-			auto run_result = vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
-			                      .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
-			                      .transform_error(vm::api::errorToString);
-			if (run_result.has_value()) {
-				std::cout << "Instruction executed.\n";
-			} else {
-				error_message = "Runtime error: " + run_result.error();
+			} catch (const std::exception& e) {
+				error_message = "Unexpected error: " + std::string(e.what());
 				std::cerr << error_message << "\n";
 				had_error = true;
-				return;
 			}
 		});
 
