@@ -35,6 +35,7 @@ namespace compiler::tsl {
 		 * For most types this equals the minimum of 8 and the type's byte size.
 		 * For array types this equals the element alignment so that the struct
 		 * offsets computed here match what LLVM produces.
+		 * For struct types this equals the maximum alignment of their fields, etc.
 		 */
 		Bytes alignment;
 
@@ -138,7 +139,7 @@ namespace compiler::tsl {
 		 * types larger than 4 bytes align to 8, larger than 2 to 4, etc.
 		 */
 		static Bytes computeDefaultAlignment(const Bits size_in_bits) {
-			const Bytes size_in_bytes{ (usize(size_in_bits) + 7) / 8 };
+			const Bytes size_in_bytes = base::bits2bytesRoundUp(size_in_bits);
 			if (size_in_bytes > Bytes(4)) return Bytes(8);
 			if (size_in_bytes > Bytes(2)) return Bytes(4);
 			if (size_in_bytes > Bytes(1)) return Bytes(2);

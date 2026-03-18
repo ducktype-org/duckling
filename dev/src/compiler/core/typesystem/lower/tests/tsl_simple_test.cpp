@@ -442,53 +442,37 @@ private:
 		using namespace compiler::helios;
 		using namespace test_utils;
 
-		// This test reproduces the bug reported in the "[Compiler] Bug in lowering of the class
-		// layout" issue: a class containing a static array field caused an assertion failure
-		// during LLVM lowering because the compiler computed the wrong offset for the array
-		// field (using total array size for alignment instead of element size).
+		// This test considers a class containing a static array to check if the element
+		// alignment is computed correctly.
 		auto [_, root_scope]           = getModule(fs::File(path("class_layout_with_array")));
-		const SymID database_symbol    = getChain("Database", root_scope).back();
+		const SymID class_symbol    = getChain("ClassWithArray", root_scope).back();
 
 		withContextDo([&](query::Context& ctx) -> void {
-			const ClassAbstractType database_type      = ctx.query<QueryClassType>(database_symbol);
-			CRef<TypeInterface>     database_interface = database_type.getInterface(ctx);
+			const ClassAbstractType class_type      = ctx.query<QueryClassType>(class_symbol);
+			CRef<TypeInterface>     class_interface = class_type.getInterface(ctx);
 
-			const SymID element1_symbol = [&] {
-				const auto& matching
-					= database_interface->getElementsWithName(base::StrID("element1"));
+			auto getElementSymbol = [&](const std::string& name) {
+				const auto& matching = class_interface->getElementsWithName(base::StrID(name));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
-			}();
-			const SymID element2_symbol = [&] {
-				const auto& matching
-					= database_interface->getElementsWithName(base::StrID("element2"));
-				ASSERT_TRUE(matching.size() == 1);
-				return matching.at(0).getSymbol();
-			}();
-			const SymID element3_symbol = [&] {
-				const auto& matching
-					= database_interface->getElementsWithName(base::StrID("element3"));
-				ASSERT_TRUE(matching.size() == 1);
-				return matching.at(0).getSymbol();
-			}();
-			const SymID elements_symbol = [&] {
-				const auto& matching
-					= database_interface->getElementsWithName(base::StrID("elements"));
-				ASSERT_TRUE(matching.size() == 1);
-				return matching.at(0).getSymbol();
-			}();
+			};
 
-			auto database_layout = ctx.query<QueryAbstractTypeLayout>(database_type);
+			const SymID element1_symbol = getElementSymbol("element1");
+			const SymID element2_symbol = getElementSymbol("element2");
+			const SymID element3_symbol = getElementSymbol("element3");
+			const SymID elements_symbol = getElementSymbol("elements");
+
+			const auto class_layout = ctx.query<QueryAbstractTypeLayout>(class_type);
 
 			// element1(4) + element2(4) + element3(4) + elements(8) = 20 bytes.
 			// No padding needed because all fields are 4-byte aligned.
 			assertEqual(
-				database_layout->getSize(),
+				class_layout->getSize(),
 				BYTE_SIZE * 20,
 				"Class layout size should account for array element alignment."
 			);
 
-			variant_match(database_layout->getVariant()) {
+			variant_match(class_layout->getVariant()) {
 				variant_case(ClassTypeLayout, l) {
 					// elements: i32[2] must be placed at offset 12 (4-byte aligned),
 					// not offset 16 (8-byte aligned), because the array's alignment is
@@ -504,7 +488,7 @@ private:
 				}
 				variant_default { fail("Layout of Database class should be class-like."); }
 			}
-			testPrinting(database_layout, ctx, true);
+			testPrinting(class_layout, ctx, true);
 		});
 	}
 
