@@ -538,14 +538,6 @@ DEF_INSTR(
  */
 DEF_INSTR(strOutput_lptr, (vm::opargs::StackLocalPtr, string_ptr))
 
-// ========= TYPE OPERATIONS ========
-// Casts a primitive type in-place. This does nothing at runtime, but is needed
-// for type checking.
-DEF_INSTR(cast_l8_type, (vm::opargs::StackLocal8, value), (vm::opargs::Type, target_type))
-DEF_INSTR(cast_l16_type, (vm::opargs::StackLocal16, value), (vm::opargs::Type, target_type))
-DEF_INSTR(cast_l32_type, (vm::opargs::StackLocal32, value), (vm::opargs::Type, target_type))
-DEF_INSTR(cast_l64_type, (vm::opargs::StackLocal64, value), (vm::opargs::Type, target_type))
-
 // ========= CONVERSION OPERATIONS ========
 
 // Sign Extension

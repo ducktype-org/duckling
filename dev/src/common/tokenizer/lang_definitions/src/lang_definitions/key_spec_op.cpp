@@ -152,7 +152,6 @@ namespace lang_def {
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::BCFunction, "function", KeywordFlags() },
 			{ Keyword::BCType, "type", KeywordFlags() },
-			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPointer, "pointer", KeywordFlags() },
 			{ Keyword::BCFixedSizeTable, "fixed_size_table", KeywordFlags() },
 			{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },

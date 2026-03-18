@@ -11,6 +11,9 @@
 namespace vm::code {
 	/**
 	 * @brief Represents a very simple primitive, like 8-byte integer, 4-byte float, etc.
+	 * @TODO: Fill the #
+	 * @note As of # It's not possible to create new primitive types in bytecode, as we found it was
+	 * redundant.
 	 */
 	struct PrimitiveType final: ElementBase {
 		PrimitiveType() = default;

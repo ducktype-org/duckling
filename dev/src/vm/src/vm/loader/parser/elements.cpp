@@ -557,19 +557,6 @@ namespace vm::loader::parser {
 		base::StrID name = state.tokens().next().getValue();
 
 		switch (type) {
-		case lang_def::Keyword::BCPrimitive: {
-			lexer::Token value = state.tokens().next();
-			if (!value.isNumLiteralGroup()) {
-				state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Expected a numeric literal after here.", state.getPosition()
-				));
-			} else {
-				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
-				tp.bytecode_pos = out->position;
-				out->datatype   = tp;
-			}
-			break;
-		}
 		case lang_def::Keyword::BCPointer: {
 			auto pointed_type = state.tokens().next();
 			if (!pointed_type.isIdentifier())

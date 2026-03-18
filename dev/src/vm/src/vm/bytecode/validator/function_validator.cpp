@@ -138,15 +138,6 @@ public:
 
 	const LocalStackEntry& front() const { return stack_state.front(); }
 
-	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
-		auto  local_name = VISIT(local, l, return l.var_name);
-		auto& curr_type  = local_name_to_type.at(local_name);
-		auto  new_type   = types_ctx->at(type.type_name);
-		curr_type        = new_type;
-		for (auto& entry: stack_state)
-			if (entry.local_name == local_name) entry.type = new_type;
-	}
-
 	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
 
 	CRef<valid_type::ValidType> at(base::StrID local_name) const {
@@ -504,18 +495,6 @@ class FunctionValidator {
 					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
-			instr_case(Op_cast_l8_type, instr) {
-				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
-			}
-			instr_case(Op_cast_l16_type, instr) {
-				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
-			}
-			instr_case(Op_cast_l32_type, instr) {
-				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
-			}
-			instr_case(Op_cast_l64_type, instr) {
-				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
-			}
 
 			instr_case_novalue(Comment) {}
 			instr_case(Op_mov_l8_imm, instr) {
@@ -1391,22 +1370,6 @@ class FunctionValidator {
 		if (!inherits) throw InvalidUpcastError(instruction);
 	}
 
-	void validatePrimitiveCast(
-		const opargs::OpCodePrimitiveArg& local,
-		const opargs::Type&               type,
-		const Instruction&                instruction,
-		const LocalStack&                 current_stack
-	) const {
-		// These are guaranteed to exist by `validateArgTypes`.
-		const auto curr_type      = current_stack.at(VISIT(local, l, return l.var_name));
-		const auto new_type       = types_ctx.at(type.type_name);
-		const auto curr_primitive = curr_type->getKindAs<valid_type::finalized::Primitive>();
-
-		const auto new_primitive = new_type->maybeGetKindAs<valid_type::finalized::Primitive>()
-		                               .expect<NonPrimitiveCastError>(type);
-		if (curr_primitive->size != new_primitive->size) throw CastSizeMismatchError(instruction);
-	}
-
 	void validateFunctionEnd() const {
 		if (function.body.empty()
 		    || (visited_instructions.back()
@@ -1515,14 +1478,6 @@ class FunctionValidator {
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
-#define HANDLE_CAST(SIZE)                                          \
-	instr_case(Op_cast_l##SIZE##_type, instr) {                    \
-		local_stack.castPrimitive(instr.value, instr.target_type); \
-		index++;                                                   \
-	}
-
-				FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
-#undef HANDLE_CAST
 				instr_default { index++; }
 			}
 		}
