@@ -192,16 +192,13 @@ namespace base {
 			  private_optional(value) {}
 
 		template<class... Args>
-		// This overload has to be disjoint from above plain copy/move constructors.
-		requires(sizeof...(Args) != 1) && std::is_constructible_v<T, Args...>
+		requires(sizeof...(Args) >= 2) && std::is_constructible_v<T, Args...>
 		constexpr explicit Optional(Args&&... args
-		) noexcept(std::is_nothrow_constructible_v<T, Args&&...>):
+		) noexcept(std::is_nothrow_constructible_v<T, Args...>):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		template<class U = T>
-		// This overload has to be disjoint from above plain copy/move constructors.
-		requires(!std::same_as<std::remove_cvref_t<U>, base::Optional<T>>)
-		     && std::is_constructible_v<T, U>
+		requires(!std::is_same_v<std::remove_cvref_t<U>, Optional>) && std::is_constructible_v<T, U>
 		constexpr Optional(U&& value) noexcept(std::is_nothrow_constructible_v<T, U&&>):
 			  private_optional(std::forward<U>(value)) {}
 
@@ -214,9 +211,7 @@ namespace base {
 		explicit constexpr operator bool() const noexcept { return has_value(); }
 
 		template<class U = T>
-		// This overload has to be disjoint from above plain copy/move assignments.
-		requires(!std::same_as<std::remove_cvref_t<U>, base::Optional<T>>)
-		     && std::is_constructible_v<T, U>
+		requires(!std::is_same_v<std::remove_cvref_t<U>, Optional>) && std::is_constructible_v<T, U>
 		constexpr Optional& operator=(U&& value
 		) noexcept(std::is_nothrow_constructible_v<T, U&&> && std::is_nothrow_assignable_v<T, U&&>) {
 			private_optional = std::forward<U>(value);
