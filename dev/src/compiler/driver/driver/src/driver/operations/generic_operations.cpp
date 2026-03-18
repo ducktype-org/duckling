@@ -202,6 +202,9 @@ namespace compiler::driver {
 				serialize_to_artifact(code_output, dvm_module_data.code, vm::code::serializeCode);
 
 				if (key.build_debug_info) {
+					dvm_module_data.debug_info.value().module_path
+						= code_output.file.getFilePath().string();
+
 					serialize_to_artifact(
 						debug_info_output.value(),
 						dvm_module_data.debug_info.value(),
