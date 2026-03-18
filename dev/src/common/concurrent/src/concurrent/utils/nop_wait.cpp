@@ -1,6 +1,6 @@
 
 #include "nop_wait.hpp"
-
+// @TODO: #2308 Use the mentioned flags here
 #if defined(__x86_64__) || defined(__i386__)
 	#include <immintrin.h>
 #elif defined(__aarch64__) || defined(__arm__)
