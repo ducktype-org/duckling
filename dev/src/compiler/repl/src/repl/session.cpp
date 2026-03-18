@@ -149,8 +149,10 @@ namespace compiler::repl {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			try {
 				CORE_DEV_LOG(REPL, "Querying QueryReplExpressionWrapper\n");
-				expr_wrapper = ctx.query<QueryReplExpressionWrapper>({ .expr_stmt = expr_stmt,
-				                                                       .counter = m_line_counter });
+				expr_wrapper = ctx.query<QueryReplExpressionWrapper>({
+					.expr_stmt = expr_stmt,
+					.counter   = m_line_counter,
+				});
 
 				CORE_DEV_LOG(REPL, "Getting mangled name\n");
 				auto mangled_name = helios::mangler::getSimpleMangledName(

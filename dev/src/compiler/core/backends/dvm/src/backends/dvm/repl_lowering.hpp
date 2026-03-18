@@ -7,7 +7,7 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
-#include <query_framework/context/context.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 
@@ -23,6 +23,12 @@ namespace compiler::backend_vm {
 	 * for use in REPL sessions. The underlying context maintains state across multiple
 	 * REPL statement compilations, allowing later statements to reference symbols
 	 * (functions, globals, types) defined in earlier statements.
+	 *
+	 * @note This wrapper doesn't add any complicated logic,
+	 * it is a simple wrapper for the ProgramLoweringContext.
+	 *
+	 * @note Feel Free to refactor this class if a better way of managing
+	 * the REPL context is found.
 	 */
 	class ReplLoweringContext final {
 	public:
@@ -59,6 +65,13 @@ namespace compiler::backend_vm {
 		void invalidateContext();
 
 		/**
+		 * @brief Get the currently set query context.
+		 *
+		 * @return Optional reference to the active query context.
+		 */
+		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const;
+
+		/**
 		 * @brief Lower a LIR function into DVM bytecode function.
 		 * @note If the function was already lowered, this is a no-op.
 		 */
@@ -78,6 +91,14 @@ namespace compiler::backend_vm {
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
 		const vm::code::TypeOfData& lowerAndKeepTslType(base::CRef<tsl::TypeLayout> layout);
+
+		/**
+		 * @brief Check if a query context is currently set.
+		 *
+		 * @return true if a query context has been set via setContext() and not yet
+		 *         invalidated, false otherwise.
+		 */
+		[[nodiscard]] bool hasContext() const;
 
 	private:
 		// Pimpl: store pointer to complete type, with details in CPP

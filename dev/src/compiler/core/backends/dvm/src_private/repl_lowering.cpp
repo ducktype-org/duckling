@@ -28,6 +28,10 @@ namespace compiler::backend_vm {
 
 	void ReplLoweringContext::invalidateContext() { m_context->invalidateContext(); }
 
+	base::Optional<base::Ref<query::Context>> ReplLoweringContext::getActiveContext() const {
+		return m_context->getActiveContext();
+	}
+
 	const vm::code::Function& ReplLoweringContext::lowerAndKeepLirFunction(
 		CRef<lir::Function> lir_function
 	) {

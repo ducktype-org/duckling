@@ -45,7 +45,12 @@ namespace compiler::repl {
 		int run();
 
 	private:
-		// Forward declarations for test classes.
+		/**
+		 * @brief Grant ReplSimulationTest access to private members for testing.
+		 *
+		 * Allows the test suite to access private methods and members to verify
+		 * internal behavior without exposing them in the public API.
+		 */
 		friend class ReplSimulationTest;
 		/**
 		 * @brief Process a single line of input from the user.

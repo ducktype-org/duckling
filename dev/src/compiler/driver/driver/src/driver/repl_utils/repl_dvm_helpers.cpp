@@ -29,6 +29,13 @@ namespace compiler::repl {
 		vm::PID                          pid,
 		backend_vm::ReplLoweringContext& lowering_context
 	) {
+		auto active_ctx = lowering_context.getActiveContext();
+		CORE_ASSERT(
+			active_ctx.has_value() && active_ctx.value().get() == &ctx,
+			"ReplLoweringContext's active query context must match the ctx parameter passed to "
+			"compileAndLoad()"
+		);
+
 		// Debug: Log HOUT functions before compilation
 		for (const auto& hout_func: hout_unit.functions) {
 			CORE_DEV_LOG(

@@ -19,7 +19,7 @@ namespace compiler::backend_vm::internal {
 		 * errors.
 		 * Remove this field when applicable.
 		 */
-		base::Optional<query::Context*> query_ctx_for_errors;
+		base::Optional<Ref<query::Context>> query_ctx_for_errors;
 
 	public:
 		/**
@@ -52,6 +52,15 @@ namespace compiler::backend_vm::internal {
 		 * Should be called when exiting the query scope to prevent dangling references.
 		 */
 		void invalidateContext() { query_ctx_for_errors = std::nullopt; }
+
+		/**
+		 * @brief Get the currently set query context.
+		 *
+		 * @return Optional reference to the active query context.
+		 */
+		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const {
+			return query_ctx_for_errors;
+		}
 
 		/**
 		 * @brief Lowers a LIR function into DVM bytecode function.

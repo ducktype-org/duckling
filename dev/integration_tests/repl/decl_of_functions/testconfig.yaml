@@ -1,4 +1,6 @@
 # Tests for declaration of functions in REPL
+# @TODO: #2245 add option to not print "=>" or duckling,
+# add eventual error ignore.
 
 Tests:
   basic_declarations:
@@ -16,7 +18,6 @@ Tests:
           File: "interactions/nested_calls.rtf"
         Output:
           String: "@{begining}\n=> 42\n@{end}"
-      # @TODO: #2245 future test more things need to be discussed    
       # resilience:
       #   Input:
       #     File: "interactions/resilience.rtf"

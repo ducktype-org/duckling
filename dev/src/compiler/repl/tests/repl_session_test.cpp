@@ -10,9 +10,8 @@
 
 #include <string_view>
 
-using namespace compiler;
-
 namespace compiler::repl {
+
 	/**
 	 * @brief Practical REPL simulation tests
 	 *
@@ -44,7 +43,7 @@ namespace compiler::repl {
 		 * that the session structure is initialized, not that DVM spawned successfully.
 		 */
 		void testReplSessionInitialization() {
-			repl::ReplSession session;
+			ReplSession session;
 
 			// Verify internal state is initialized correctly
 			assertTrue(
@@ -61,7 +60,7 @@ namespace compiler::repl {
 		 * This test verifies the command detection logic through processLine.
 		 */
 		void testReplProcessLineWithCommand() {
-			repl::ReplSession session;
+			ReplSession session;
 
 			// Test with a help command
 			std::string_view help_cmd    = "/help";
@@ -70,7 +69,7 @@ namespace compiler::repl {
 			// Help command should be recognized and processed
 			// It should not result in an error (though it may result in various statuses)
 			assertTrue(
-				help_result.status != repl::ReplResult::Status::Error,
+				help_result.status != ReplResult::Status::Error,
 				"Help command should be processed without error"
 			);
 		}
@@ -82,7 +81,7 @@ namespace compiler::repl {
 		 * This test verifies that processLine routes code appropriately.
 		 */
 		void testReplProcessLineWithCode() {
-			repl::ReplSession session;
+			ReplSession session;
 
 			// Test with a simple variable declaration
 			std::string_view var_decl = "var x: i32 = 42;";
@@ -91,7 +90,7 @@ namespace compiler::repl {
 			// The result should indicate execution was attempted
 			// (may succeed, error, or have incomplete input)
 			assertTrue(
-				result.status != repl::ReplResult::Status::Exit, "Code input should not trigger exit"
+				result.status != ReplResult::Status::Exit, "Code input should not trigger exit"
 			);
 		}
 
@@ -102,7 +101,7 @@ namespace compiler::repl {
 		 * and other lines are identified as code.
 		 */
 		void testReplCommandDetection() {
-			repl::ReplSession session;
+			ReplSession session;
 
 			// Test various inputs to verify command detection
 			std::vector<std::string_view> commands = { "/exit", "/help", "/history" };
@@ -126,7 +125,7 @@ namespace compiler::repl {
 		 * and that the line counter is incremented appropriately.
 		 */
 		void testReplHistoryTracking() {
-			repl::ReplSession session;
+			ReplSession session;
 
 			// Initial state
 			auto initial_history_size = session.m_history.size();
@@ -168,7 +167,7 @@ namespace compiler::repl {
 		 * Thread-safe: does not capture stdout (compatible with parallel testing).
 		 */
 		void testReplArithmeticExpressions() {
-			repl::ReplSession session;
+			ReplSession session;
 
 			// Define test cases
 			struct ArithmeticTest {
@@ -203,8 +202,8 @@ namespace compiler::repl {
 				auto result = session.processLine(test.input);
 
 				// The key test: expression should process without error or exit
-				bool status_ok = result.status != repl::ReplResult::Status::Exit
-				              && result.status != repl::ReplResult::Status::Error;
+				bool status_ok = result.status != ReplResult::Status::Exit
+				              && result.status != ReplResult::Status::Error;
 
 				// Build assertion message
 				std::string assertion_msg = "Expression '";
@@ -222,7 +221,7 @@ namespace compiler::repl {
 		 *
 		 */
 		void testReplVariableLookup() {
-			repl::ReplSession session;
+			ReplSession session;
 
 			// Define test cases: (input, description)
 			struct VariableLookupTest {
@@ -245,7 +244,7 @@ namespace compiler::repl {
 				auto result = session.processLine(test.input);
 
 				// The key test: each statement should process without error or exit
-				bool status_ok = result.status != repl::ReplResult::Status::Exit
+				bool status_ok = result.status != ReplResult::Status::Exit
 				              && result.status != repl::ReplResult::Status::Error;
 
 				// Build detailed assertion message
