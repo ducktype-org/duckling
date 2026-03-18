@@ -2,7 +2,6 @@
 
 #include <backends/dvm/repl_lowering.hpp>
 #include <helios/hout/hout.hpp>
-#include <typesystem/higher/type_interface.hpp>
 
 #include <query_framework/context/context.hpp>
 

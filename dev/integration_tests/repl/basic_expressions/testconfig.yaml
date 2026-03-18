@@ -15,12 +15,13 @@ Tests:
           File: "simple_numeric/simple_numeric2.rtf"
         Output:
           String: "@{begining}\n=> 17878\n@{end}"
-      # Future test more things need to be discussed    
+      
+      # @TODO: #2245 future test we need to add a flag to ignore errors in checking out.    
       # resilience:
       #   Input:
       #     File: "simple_numeric/resilience.rtf"
       #   Output:
-      #     String: "@{begining}\nduckling> => 4\nduckling> duckling> => 42\n@{end}"
+      #     String: "@{begining}\n => 4\n => 42\n@{end}"
   multiple_numeric:
     Cases:
       manymen:

@@ -18,6 +18,10 @@
 #include <vm/api/vm.hpp>
 
 namespace compiler::repl {
+	// Platform portability check: DVM assumes bool is 1 byte (stored as i8).
+	// float and double sizes are already validated in base/types/floats.hpp.
+	static_assert(sizeof(bool) == 1, "bool must be 1 byte for DVM compatibility");
+
 	std::expected<void, std::string> compileAndLoad(
 		query::Context&                  ctx,
 		const helios::HOUTUnit&          hout_unit,
@@ -45,6 +49,8 @@ namespace compiler::repl {
 			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_unique_name })
 		           ->valueOrPanic();
 
+		// @TODO #2246 check if we can avoid repeating the logic from compileLirToModuleData.
+		// This is strictly connected to the loading dvm context.
 		vm::code::CodeCollection new_code;
 
 		// We mimic the same idea as in compiling a single module,

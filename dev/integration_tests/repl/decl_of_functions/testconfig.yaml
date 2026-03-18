@@ -16,7 +16,7 @@ Tests:
           File: "interactions/nested_calls.rtf"
         Output:
           String: "@{begining}\n=> 42\n@{end}"
-      # Future test more things need to be discussed    
+      # @TODO: #2245 future test more things need to be discussed    
       # resilience:
       #   Input:
       #     File: "interactions/resilience.rtf"
