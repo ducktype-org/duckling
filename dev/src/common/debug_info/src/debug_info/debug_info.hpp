@@ -28,13 +28,15 @@ namespace debug_info {
 	};
 
 	struct VariableMetadata final {
-		std::string    name;
-		SourcePosition position;
+		std::string                    name;
+		base::Optional<SourcePosition> position;
 	};
 
 	struct FunctionMetadata final {
 		base::Optional<std::string>    function_name;
 		base::Optional<SourcePosition> position;
+
+		std::vector<std::pair<u64, VariableMetadata>> parameter_indexes_to_metadata;
 
 		std::vector<std::pair<u64, InstructionMetadata>> instr_offsets_to_metadata;
 		std::vector<std::pair<u64, VariableMetadata>>    instr_offsets_to_variable_init;
@@ -49,19 +51,20 @@ namespace debug_info {
 	enum class SourcePositionsType : u32 { PstHash, LineColumn };
 
 	struct DebugInfo final {
-		Target      target;         // for now only DBC (maybe in future other targets)
-		std::string module_path;    // path to the module this debug info is for
+		Target      target{};         // for now only DBC (maybe in future other targets)
+		std::string module_path{};    // path to the module this debug info is for
 		SourcePositionsType
-			source_positions_type;  // whether the debug info uses stable positions or not
+			source_positions_type{};  // whether the debug info uses stable positions or not
 
-		base::Map<std::string, FunctionMetadata> functions;
-		base::Map<std::string, TypeMetadata>     types;
+		base::Map<std::string, FunctionMetadata> functions{};
+		base::Map<std::string, TypeMetadata>     types{};
 
 		/**
 		 * @brief Resolves every PstHashPostion in this DebugInfo in-place.
 		 *
 		 * Covers the position of every FunctionMetadata entry and every
-		 * InstructionMetadata within each function. Positions that are already
+		 * InstructionMetadata and VariableMetadata (when present) within each
+		 * function. Positions that are already
 		 * FilePosition entries are left unchanged. Sets source_positions_type
 		 * to SourcePositionsType::LineColumn.
 		 *

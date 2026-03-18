@@ -35,25 +35,22 @@ namespace debug_info {
 	class FunctionBuilder {
 	public:
 		/**
-		 * @brief Adds an instruction entry at @p offset with the given full metadata.
-		 */
-		FunctionBuilder& addInstruction(u64 offset, InstructionMetadata metadata);
-
-		/**
 		 * @brief Convenience overload: wraps @p position in an InstructionMetadata.
 		 */
 		FunctionBuilder& addInstruction(u64 offset, SourcePosition position);
 
 		/**
-		 * @brief Adds a variable-initialization entry at @p offset with full metadata.
-		 */
-		FunctionBuilder& addVariableInit(u64 offset, VariableMetadata metadata);
-
-		/**
 		 * @brief Convenience overload: builds VariableMetadata from name + position.
 		 */
 		FunctionBuilder& addVariableInit(
-			u64 offset, std::string variable_name, SourcePosition position
+			u64 offset, std::string variable_name, base::Optional<SourcePosition> position
+		);
+
+		/**
+		 * @brief Adds parameter metadata under a parameter index.
+		 */
+		FunctionBuilder& addParameter(
+			u64 index, std::string parameter_name, base::Optional<SourcePosition> position
 		);
 
 		/**
@@ -83,10 +80,11 @@ namespace debug_info {
 	 *
 	 * Typical usage:
 	 * @code
-	 *   DebugInfo info = DebugInfoBuilder(Target::DBC, "mymodule.dmf",
+	 *   DebugInfo info = DebugInfoBuilder(Target::DBC,
 	 *                                     SourcePositionsType::PstHash)
 	 *     .addType("_TMyType", "MyType")
 	 *     .beginFunction("foo", "foo", functionPos)
+	 *       .addParameter(0, "arg0", arg0Pos)
 	 *       .addInstruction(0,  instrPos0)
 	 *       .addVariableInit(0, "x", varPos0)
 	 *       .addInstruction(4,  instrPos4)
@@ -96,9 +94,9 @@ namespace debug_info {
 	 */
 	class DebugInfoBuilder {
 	public:
-		DebugInfoBuilder(
-			Target target, std::string module_path, SourcePositionsType source_positions_type
-		);
+		DebugInfoBuilder(Target target, SourcePositionsType source_positions_type);
+
+		void setModulePath(std::string module_path) { info.module_path = std::move(module_path); }
 
 		// ------------------------------------------------------------------
 		// Types
@@ -117,18 +115,12 @@ namespace debug_info {
 		// Functions
 
 		/**
-		 * @brief Begins construction of a function entry from a pre-built FunctionMetadata.
-		 *
-		 * Instructions can be appended on the returned FunctionBuilder; call its
-		 * end() to return here and continue building.
-		 */
-		FunctionBuilder beginFunction(std::string mangled_name, FunctionMetadata metadata);
-
-		/**
 		 * @brief Convenience overload: builds FunctionMetadata from name + position.
 		 */
 		FunctionBuilder beginFunction(
-			std::string mangled_name, std::string function_name, SourcePosition position
+			std::string                    mangled_name,
+			base::Optional<std::string>    function_name,
+			base::Optional<SourcePosition> position
 		);
 
 		// ------------------------------------------------------------------
