@@ -10,7 +10,7 @@
 namespace vm::jit::cnp {
 
 	/**
-	 * @brief Links an in-memory dynamic library into the current process, 
+	 * @brief Links an in-memory dynamic library into the current process,
 	 * allows to find where the symbols in it live.
 	 * @details It is a wrapper over a system linker.
 	 */
@@ -26,9 +26,9 @@ namespace vm::jit::cnp {
 		static DynamicLibrary load(std::span<const byte> binary);
 
 	private:
-		DynamicLibrary(int _lib_fd, void* _lib_handle):
-			  lib_fd{ _lib_fd },
-			  lib_handle{ _lib_handle } {}
+		DynamicLibrary(int in_lib_fd, void* in_lib_handle):
+			  lib_fd{ in_lib_fd },
+			  lib_handle{ in_lib_handle } {}
 
 		int   lib_fd;
 		void* lib_handle;

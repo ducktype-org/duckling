@@ -22,7 +22,7 @@ namespace vm::jit::cnp {
 		switch (type) {
 			break;
 		case HoleType::Movable:
-			*reinterpret_cast<int*>(to + offset) += (to - from);
+			*reinterpret_cast<i64*>(to + offset) += (to - from);
 			break;
 		}
 	}

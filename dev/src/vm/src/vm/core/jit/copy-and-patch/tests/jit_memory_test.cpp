@@ -13,9 +13,9 @@ using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
 using vm::jit::cnp::Stencils;
 
-
 PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 constexpr static char FULL_ELF[] = {
 #embed "mock_stencils-so" suffix(, )
 };

@@ -7,7 +7,7 @@
 namespace vm::jit::cnp {
 
 	struct JitFuncMemory {
-		JitFuncMemory()                            = delete;
+		JitFuncMemory()                                = delete;
 		JitFuncMemory(const JitFuncMemory&)            = delete;
 		JitFuncMemory& operator=(const JitFuncMemory&) = delete;
 
@@ -33,7 +33,7 @@ namespace vm::jit::cnp {
 		usize size;
 
 	private:
-		JitFuncMemory(byte* _addr, usize _size): addr{ _addr }, size{ _size } {}
+		JitFuncMemory(byte* in_addr, usize in_size): addr{ in_addr }, size{ in_size } {}
 	};
 
 }

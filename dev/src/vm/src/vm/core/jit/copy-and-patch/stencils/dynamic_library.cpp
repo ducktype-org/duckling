@@ -35,7 +35,7 @@ namespace vm::jit::cnp {
 		void* handle = dlopen(path.data(), RTLD_NOW);
 		CORE_ASSERT_STRONG(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 
-		return DynamicLibrary{fd, handle };
+		return DynamicLibrary{ fd, handle };
 	}
 
 	std::byte* DynamicLibrary::findSymbol(const char* name) const {

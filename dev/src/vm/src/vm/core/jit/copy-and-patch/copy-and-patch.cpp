@@ -8,10 +8,11 @@ namespace vm::jit::cnp {
 	using JitOpFun = void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::VMThread*);
 
 	JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
-		PUSH_DIAGNOSTIC       ALLOW_EXTENSIONS;
+		PUSH_DIAGNOSTIC
+		ALLOW_EXTENSIONS
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		static constexpr char BIN[] = {
 #embed "wrapper-so" suffix(, )
-			0
 		};
 		POP_DIAGNOSTIC
 

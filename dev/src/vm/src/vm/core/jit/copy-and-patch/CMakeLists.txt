@@ -95,7 +95,7 @@ process_to_binary(${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.c tests/jit_me
 add_library(Stencils OBJECT memory/memory.cpp stencils/dynamic_library.cpp)
 make_module(Stencils USES Base)
 
-duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES Base Stencils)
+duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES Base Stencils Tester)
 
 # prepare to include it in the full LTO of opfuncs
 add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)

@@ -88,9 +88,9 @@ namespace vm::jit::cnp {
 		StencilsT      stencils;
 		DynamicLibrary dynlib;
 
-		LoadedStencils(StencilsT _stencils, DynamicLibrary _dynlib):
-			  stencils{ std::move(_stencils) },
-			  dynlib{ std::move(_dynlib) } {}
+		LoadedStencils(StencilsT in_stencils, DynamicLibrary in_dynlib):
+			  stencils{ std::move(in_stencils) },
+			  dynlib{ std::move(in_dynlib) } {}
 	};
 
 	template<usize BinarySize, usize NumFunctions>
