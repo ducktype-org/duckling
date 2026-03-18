@@ -85,10 +85,10 @@ namespace lsp {
 		const dia_int::lsp::EvaluationContext&                  ctx,
 		std::ostream&                                           out
 	) {
-		static base::Optional<base::HashMap<base::StrID, std::vector<Box<dia_int::lsp::Diagnostic>>>>
+		static base::Optional<base::StableHashMap<base::StrID, std::vector<Box<dia_int::lsp::Diagnostic>>>>
 			previous_diag_by_file_opt{};
 
-		base::HashMap<base::StrID, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
+		base::StableHashMap<base::StrID, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
 
 		// We always want to have at least an entry for the queried file for better experience
 		diagnostics_by_file.emplace(

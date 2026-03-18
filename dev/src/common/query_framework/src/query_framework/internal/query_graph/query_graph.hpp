@@ -6,7 +6,7 @@
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/base/locks/assert_lock.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>

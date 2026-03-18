@@ -1,6 +1,6 @@
 #include "key_spec_op.hpp"
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/misc/init_guard.hpp>
 #include <base/misc/raw_view.hpp>

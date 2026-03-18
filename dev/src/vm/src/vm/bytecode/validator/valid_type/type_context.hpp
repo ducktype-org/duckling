@@ -25,7 +25,7 @@ namespace vm::code {
 		 */
 		void insertAndValidate(
 			const std::vector<TypeOfData>&                   new_types,
-			const base::HashMap<base::StrID, FuncSignature>& function_signatures
+			const base::StableHashMap<base::StrID, FuncSignature>& function_signatures
 		);
 
 		[[nodiscard]] const valid_type::ValidTypeMap& getCurrentTypes() const;

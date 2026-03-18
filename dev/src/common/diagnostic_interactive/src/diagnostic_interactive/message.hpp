@@ -244,7 +244,7 @@ namespace dia_int {
 		 * @brief Additional messages that are not attached directly to this diagnostic,
 		 * but may be the link destination or explore link target.
 		 */
-		base::HashMap<std::string, Box<MessageBase>> linked_messages;
+		base::StableHashMap<std::string, Box<MessageBase>> linked_messages;
 
 		bool has_been_built = false;
 
@@ -252,7 +252,7 @@ namespace dia_int {
 
 
 		dia_args::Message buildMessages(
-			base::HashMap<std::string, dia_args::Message>& additional_messages
+			base::StableHashMap<std::string, dia_args::Message>& additional_messages
 		);
 
 	protected:

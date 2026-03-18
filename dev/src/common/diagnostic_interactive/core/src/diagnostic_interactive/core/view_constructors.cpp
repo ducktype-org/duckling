@@ -104,7 +104,7 @@ namespace dia_int {
 
 	CodeSection buildCodeSection(
 		const state::CodeBlockComponent&                                     block,
-		const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
+		const base::StableHashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
 		StyleType                                                            style_type
 	) {
 		CodeSection section;
@@ -145,13 +145,13 @@ namespace dia_int {
 	class MessageBuilder: public state::ComponentVisitor {
 		std::vector<Section>&                                                sections;
 		std::string                                                          current_text;
-		const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs;
+		const base::StableHashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs;
 		StyleType                                                            style_type;
 
 	public:
 		MessageBuilder(
 			std::vector<Section>&                                                sections,
-			const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
+			const base::StableHashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
 			StyleType                                                            style_type
 		):
 			  sections(sections),

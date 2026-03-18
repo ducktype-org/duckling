@@ -222,7 +222,7 @@ namespace query::internal {
 		std::deque<Task> global_pool;
 
 		/// Per-worker task pools.
-		base::HashMap<WRef, std::deque<Task>> worker_pools;
+		base::StableHashMap<WRef, std::deque<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
 		/// @TODO: #1988 #2035 hash map per query id? Or even stronger, lock free data structure.

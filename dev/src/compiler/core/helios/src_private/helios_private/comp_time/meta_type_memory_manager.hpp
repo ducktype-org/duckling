@@ -2,7 +2,7 @@
 
 #include <typesystem/higher/symbol_type.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/box.hpp>
 
 namespace compiler::helios::comptime_ops {
@@ -27,7 +27,7 @@ namespace compiler::helios::comptime_ops {
 			}
 		};
 
-		base::HashMap<tsh::SymbolType<>, Box<tsh::SymbolType<>>, SymbolTypeHasher> allocated_types;
+		base::StableHashMap<tsh::SymbolType<>, Box<tsh::SymbolType<>>, SymbolTypeHasher> allocated_types;
 		MetaTypeMemoryManager() = default;
 
 	public:

@@ -8,7 +8,7 @@
  */
 #pragma once
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
@@ -57,7 +57,7 @@ namespace vm {
 		 *
 		 * Used when creating pointers to local variables.
 		 */
-		base::HashMap<u64, u64> local_offset_to_block_idx;
+		base::StableHashMap<u64, u64> local_offset_to_block_idx;
 
 		/**
 		 * @brief Mapping from ID of block to the offset on the local stack.
@@ -66,7 +66,7 @@ namespace vm {
 		 * local_offset_to_block_idx of the called function (to make is possible
 		 * to create a pointer to a passed argument).
 		 */
-		base::HashMap<u64, u64> block_idx_to_local_offset;
+		base::StableHashMap<u64, u64> block_idx_to_local_offset;
 
 		/**
 		 * @brief First free byte in the local stack.

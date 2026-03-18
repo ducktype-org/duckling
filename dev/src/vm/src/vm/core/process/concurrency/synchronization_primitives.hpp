@@ -1,4 +1,4 @@
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/object_pool.hpp>
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>

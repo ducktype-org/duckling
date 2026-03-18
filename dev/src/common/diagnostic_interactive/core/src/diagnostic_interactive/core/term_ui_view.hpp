@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
@@ -38,7 +38,7 @@ namespace dia_int::term_ui_view {
 		u64         col;
 
 		std::vector<CodeLine>              lines;
-		base::HashMap<u64, PointerMessage> pointers;
+		base::StableHashMap<u64, PointerMessage> pointers;
 
 		/**
 		 * The end line of the error span (not entire code block).

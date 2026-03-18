@@ -1,3 +1,4 @@
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -15,7 +16,7 @@ public:
 
 private:
 	void testMapAtMaybe() {
-		base::HashMap<int, std::string> m;
+		base::StableHashMap<int, std::string> m;
 		m.put(1, "one");
 		m.put(2, "two");
 		ASSERT_EQUAL(true, m.contains(1));

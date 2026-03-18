@@ -89,7 +89,16 @@ namespace base {
 		}
 
 		SingleTypeMemoryPoolAllocator& operator=(const SingleTypeMemoryPoolAllocator&) = delete;
-		SingleTypeMemoryPoolAllocator& operator=(SingleTypeMemoryPoolAllocator&&)      = delete;
+
+		SingleTypeMemoryPoolAllocator& operator=(SingleTypeMemoryPoolAllocator&& other) noexcept {
+			buffers = std::move(other.buffers);
+			free_list = std::move(other.free_list);
+			IF_BUILD_TYPE_DEV(allocated_count = other.allocated_count;)
+			next_item_idx = other.next_item_idx;
+			IF_BUILD_TYPE_DEV(other.allocated_count = 0;)
+			other.next_item_idx = BufferItemIndex{};
+			return *this;
+		}
 
 		/**
 		 * Allocates a new object in the pool and constructs it with the given arguments.

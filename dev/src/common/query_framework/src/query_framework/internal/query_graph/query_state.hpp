@@ -8,7 +8,7 @@
 #include <diagnostic_interactive/logger_fwd.hpp>
 #include <diagnostic_interactive/message_fwd.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>

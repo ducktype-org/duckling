@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
@@ -78,14 +78,14 @@ namespace vm::code::valid_type {
 			 * this type, including inherited ones. Maps method name to its type.
 			 * @note Unimplemented methods *do* exist in this map, but do not exist in the vtable.
 			 */
-			base::HashMap<base::StrID, ValidTypeID> available_methods;
+			base::StableHashMap<base::StrID, ValidTypeID> available_methods;
 
 			/**
 			 * @brief A map from virtual method name to the name of the function that implements it.
 			 * Contains all the implementations of virtual methods for this class/interface.
 			 * Unimplemented methods do not exist in the vtable.
 			 */
-			base::HashMap<base::StrID, base::StrID> vtable;
+			base::StableHashMap<base::StrID, base::StrID> vtable;
 
 			/**
 			 * @brief Class kind. If this type is a class, contains information about its superclass

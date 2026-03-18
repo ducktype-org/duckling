@@ -64,7 +64,7 @@ namespace compiler::helios {
 	 */
 	void checkForAliases(
 		query::Context&                                        ctx,
-		base::HashMap<std::string, Box<dia_int::MessageBase>>& linked_messages,
+		base::StableHashMap<std::string, Box<dia_int::MessageBase>>& linked_messages,
 		pst::Access<pst::LangElement>                          elem
 	) {
 		auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();

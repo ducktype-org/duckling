@@ -4,7 +4,7 @@
 #include <diagnostic_interactive/logger.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
@@ -425,7 +425,7 @@ namespace query::internal {
 
 		// First create Map NodeID -> usize to optimize future algorithms that can operate on usize
 		// IDs and work on plain vectors instead of hash maps
-		base::HashMap<NodeID, LocalNodeID> node_to_idx;
+		base::StableHashMap<NodeID, LocalNodeID> node_to_idx;
 		std::vector<NodeID>                idx_to_node;
 
 		for (const auto& [node, _]: *node_deps) {

@@ -93,7 +93,7 @@ class LocalStack {
 	// the following are CRefs instead of const& to allow copy/move.
 
 	CRef<valid_type::ValidTypeMap>                          types_ctx;
-	base::HashMap<base::StrID, CRef<valid_type::ValidType>> local_name_to_type;
+	base::StableHashMap<base::StrID, CRef<valid_type::ValidType>> local_name_to_type;
 
 public:
 	LocalStack(const LocalStack&)            = default;
@@ -162,14 +162,14 @@ public:
 class FunctionValidator {
 	const valid_type::ValidTypeMap&                  types_ctx;
 	const ObjIdNameMap<GlobalData>&                  globals;
-	const base::HashMap<base::StrID, FuncSignature>& signatures;
+	const base::StableHashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const Function&                                  function;
 
 	std::vector<bool>                                        visited_instructions;
-	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
-	base::HashMap<base::StrID, usize>                        index_of_label;
-	base::HashMap<base::StrID, std::vector<Instruction>>     jumps_to_label;
+	base::StableHashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
+	base::StableHashMap<base::StrID, usize>                        index_of_label;
+	base::StableHashMap<base::StrID, std::vector<Instruction>>     jumps_to_label;
 
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
@@ -1545,7 +1545,7 @@ public:
 	FunctionValidator(
 		const valid_type::ValidTypeMap&                  types_ctx,
 		const ObjIdNameMap<GlobalData>&                  globals,
-		const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const base::StableHashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const Function&                                  function
 	):
@@ -1571,7 +1571,7 @@ public:
 vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	const valid_type::ValidTypeMap&                  types,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
-	const base::HashMap<base::StrID, FuncSignature>& signatures,
+	const base::StableHashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 	const Function&                                  function
 ) {

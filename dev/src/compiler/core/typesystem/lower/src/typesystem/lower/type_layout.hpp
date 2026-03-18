@@ -5,7 +5,7 @@
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bits_and_bytes.hpp>

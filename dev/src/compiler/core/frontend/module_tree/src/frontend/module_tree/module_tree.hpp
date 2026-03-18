@@ -4,7 +4,7 @@
 #include "module_id.hpp"
 #include "source_file.hpp"
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -135,11 +135,11 @@ namespace compiler::frontend {
 
 		/**
 		 * Accesses all the other files that are located inside the module.
-		 * @return A base::HashMap that maps a file extension to a vector
+		 * @return A base::StableHashMap that maps a file extension to a vector
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
+		const base::StableHashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
@@ -252,8 +252,8 @@ namespace compiler::frontend {
 
 		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
 		std::vector<base::Ref<SourceFile>>                m_source_files;
-		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>>
+		base::StableHashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
+		base::StableHashMap<base::StrID, std::vector<fs::File>>
 			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
 		                    // happening with them. Do not use this in query unless AccessLocked is
 		                    // implemented for this
@@ -429,8 +429,8 @@ namespace compiler::frontend {
 		base::Optional<fs::File>                          m_main_source_file_path;
 		std::vector<fs::File>                             m_source_file_paths;
 		base::StrID                                       m_package_id;
-		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
+		base::StableHashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
+		base::StableHashMap<base::StrID, std::vector<fs::File>> m_other_files;
 
 		base::StrID m_name;
 		bool        m_finalized;

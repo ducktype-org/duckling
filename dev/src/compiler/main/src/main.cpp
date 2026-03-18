@@ -78,7 +78,7 @@ clah::Parameter getLlvmOptLevelParam() {
 global_state::BackendOptions getBackendOptionsFromClap(const clah::ParsingResult& parsing_result) {
 	using LLVMOptimizationLevel = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
 	using enum LLVMOptimizationLevel;
-	static const base::HashMap<std::string, LLVMOptimizationLevel> str_to_llvm_opt_level{
+	static const base::StableHashMap<std::string, LLVMOptimizationLevel> str_to_llvm_opt_level{
 		{ "0", O0 }, { "1", O1 }, { "2", O2 }, { "3", O3 }, { "s", Os }, { "z", Oz },
 	};
 	const auto llvm_optimization_level

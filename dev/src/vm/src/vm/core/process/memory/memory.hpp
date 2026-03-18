@@ -7,7 +7,7 @@
 #include "pointer.hpp"
 #include "thread_stack.hpp"
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -30,8 +30,8 @@ namespace vm {
 
 		std::deque<ThreadStack> threads_frame_stacks;
 
-		base::HashMap<GlobalDataID, base::OwningView> global_data;
-		base::HashMap<GlobalDataID, Ref<Block>>       global_blocks;
+		base::StableHashMap<GlobalDataID, base::OwningView> global_data;
+		base::StableHashMap<GlobalDataID, Ref<Block>>       global_blocks;
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing

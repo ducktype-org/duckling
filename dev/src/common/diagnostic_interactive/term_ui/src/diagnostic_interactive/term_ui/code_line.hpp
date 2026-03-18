@@ -4,7 +4,7 @@
 
 #include <diagnostic_interactive/core/term_ui_view.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 
 namespace term_ui {
@@ -26,7 +26,7 @@ namespace term_ui {
 	std::vector<Highlight> printAndCalculateHighlights(
 		const dia_int::term_ui_view::CodeLine&                           line,
 		u64                                                              tab_space,
-		const base::HashMap<u64, dia_int::term_ui_view::PointerMessage>& ctx,
+		const base::StableHashMap<u64, dia_int::term_ui_view::PointerMessage>& ctx,
 		std::ostream&                                                    out
 	);
 }

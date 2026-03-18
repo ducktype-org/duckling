@@ -173,8 +173,8 @@ namespace dia_int::state {
 		template_file::Metadata                         metadata,
 		Box<Component>                                  header,
 		MBox<Component>                                 description,
-		base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
-		base::HashMap<std::string, ExploreEdge>         explore_links
+		base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages,
+		base::StableHashMap<std::string, ExploreEdge>         explore_links
 	):
 		  metadata(std::move(metadata)),
 		  header(std::move(header)),
@@ -264,7 +264,7 @@ namespace dia_int::state {
 		// 2. Description
 		if (description) description->acceptVisitor(collector);
 
-		// 3. Explore links (iterate in insertion order if HashMap preserves it,
+		// 3. Explore links (iterate in insertion order if StableHashMap preserves it,
 		//    otherwise order is unspecified but we still collect them)
 		for (const auto& [name, edge]: explore_links) edge.content->acceptVisitor(collector);
 

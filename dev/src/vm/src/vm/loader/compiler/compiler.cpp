@@ -88,7 +88,7 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::linkLabelArguments(
-		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
+		low::MicroBytecode& instructions, const base::StableHashMap<usize, usize>& label_map
 	) {
 		for (auto [instr_idx, instr]: std::views::enumerate(instructions)) {
 			auto       opcode_num = std::to_underlying(getInstructionOpcode(instr));
@@ -159,7 +159,7 @@ namespace vm::loader::compiler {
 
 		// Label positions in high bytecode, used only for graph traversing
 		// in this function. Not used when lowering to microbytecode.
-		base::HashMap<base::StrID, usize> label_positions{};
+		base::StableHashMap<base::StrID, usize> label_positions{};
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			instr_match(instr) {
 				instr_case(code::instructions::Op_label, label) {

@@ -2,7 +2,7 @@
 
 #include <diagnostic_interactive/message.hpp>
 
-#include <base/collections/maps.hpp>      // base::Map
+#include <base/collections/stable_hashmap.hpp>      // base::Map
 #include <base/collections/optional.hpp>  // base::Optional
 #include <base/str/str_utils.hpp>         // base::strConcat
 

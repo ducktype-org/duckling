@@ -162,7 +162,7 @@ namespace dia_int::template_file {
 		auto metadata = Metadata::fromYaml(node["metadata"]);
 		auto params   = yamlToMap<Parameter>(node, "params");
 
-		base::HashMap<std::string, Box<Component>> macros;
+		base::StableHashMap<std::string, Box<Component>> macros;
 		if (const auto macros_node = node["macros"]; macros_node && macros_node.IsMap())
 			macros = yamlToBoxMap<Component>(node, "macros");
 

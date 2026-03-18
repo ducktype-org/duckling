@@ -27,7 +27,7 @@ namespace {
 	concurrent::ConHashMap<std::filesystem::path, PathState> path_registry;
 
 	/**
-	 * Concurrent Stable HashMap that stores all SourceFile instances.
+	 * Concurrent Stable StableHashMap that stores all SourceFile instances.
 	 */
 	concurrent::ConHashMap<usize, compiler::frontend::SourceFile> files;
 	std::atomic<usize>                                            next_storage_key = 0;

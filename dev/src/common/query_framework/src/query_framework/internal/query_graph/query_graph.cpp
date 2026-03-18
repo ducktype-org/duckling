@@ -171,7 +171,7 @@ namespace query::internal {
 	std::vector<byte> QueryGraph::serialize() const {
 		std::vector<NodeID> nodes;
 		nodes.reserve(node_deps->size());
-		base::HashMap<NodeID, usize> node_to_index;
+		base::StableHashMap<NodeID, usize> node_to_index;
 		node_to_index.reserve(node_deps->size());
 
 		usize next_index = 0;

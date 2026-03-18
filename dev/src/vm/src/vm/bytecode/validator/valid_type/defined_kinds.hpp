@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
@@ -67,12 +67,12 @@ namespace vm::code::valid_type {
 			/**
 			 * @brief Virtual methods declared just in this structure.
 			 */
-			base::HashMap<base::StrID, ValidTypeID> new_virtual_methods;
+			base::StableHashMap<base::StrID, ValidTypeID> new_virtual_methods;
 
 			/**
 			 * @brief New implementations provided in this structure.
 			 */
-			base::HashMap<base::StrID, base::StrID> implementations;
+			base::StableHashMap<base::StrID, base::StrID> implementations;
 
 			/**
 			 * @brief Class kind. If this type is a class, contains information about its superclass

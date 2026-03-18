@@ -147,7 +147,7 @@ namespace compiler::frontend {
 		return ModuleChildAccessLocked(getModuleID(), name, child);
 	}
 
-	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
+	const base::StableHashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
 		return m_other_files;
 	}
 
@@ -981,7 +981,7 @@ namespace compiler::frontend {
 	/*******************
 	 * QuerySubmodules *
 	 *******************/
-	struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
+	struct IMPLEMENT_QUERY(QuerySubmodules, base::StableHashMap<base::StrID COMMA ModuleID>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			const auto& module_tree = GetModuleID_Functor::get(key);
 

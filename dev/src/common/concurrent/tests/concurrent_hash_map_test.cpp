@@ -818,7 +818,7 @@ private:
 		using Value = u64;
 
 		// Common interface for both implementations
-		class HashMapInterface {
+		class StableHashMapInterface {
 		public:
 			[[nodiscard]]
 			virtual bool maybePut(const Key& key, const Value& value)
@@ -830,11 +830,11 @@ private:
 			virtual bool erase(const Key& key)
 				= 0;
 
-			virtual ~HashMapInterface() = default;
+			virtual ~StableHashMapInterface() = default;
 		};
 
 		// Wrapper for ConHashMap
-		class ConHashMapWrapper: public HashMapInterface {
+		class ConHashMapWrapper: public StableHashMapInterface {
 			concurrent::ConHashMap<Key, Value> map;
 
 		public:
@@ -851,7 +851,7 @@ private:
 		};
 
 		// Wrapper for std::unordered_map
-		class SequentialHashMapWrapper: public HashMapInterface {
+		class SequentialHashMapWrapper: public StableHashMapInterface {
 			std::unordered_map<Key, Value> map;
 
 		public:
@@ -880,7 +880,7 @@ private:
 			auto sequential = makeBox<SequentialHashMapWrapper>();
 
 			using RaceTester = concurrent::tester::RaceTester<
-				HashMapInterface,
+				StableHashMapInterface,
 				ConHashMapWrapper,
 				SequentialHashMapWrapper,
 				bool,
@@ -905,7 +905,7 @@ private:
 							  // maybePut operation (30%)
 							  executor.execute(
 								  base::strConcat("maybePut(", key, ", ", value, ")"),
-								  [key, value](Ref<HashMapInterface> map) {
+								  [key, value](Ref<StableHashMapInterface> map) {
 									  return map->maybePut(key, value);
 								  }
 							  );
@@ -913,13 +913,13 @@ private:
 							  // atMaybeCopy operation (35%)
 							  executor.execute(
 								  base::strConcat("atMaybeCopy(", key, ")"),
-								  [key](Ref<HashMapInterface> map) { return map->atMaybeCopy(key); }
+								  [key](Ref<StableHashMapInterface> map) { return map->atMaybeCopy(key); }
 							  );
 						  } else {
 							  // erase operation (35%)
 							  executor.execute(
 								  base::strConcat("erase(", key, ")"),
-								  [key](Ref<HashMapInterface> map) { return map->erase(key); }
+								  [key](Ref<StableHashMapInterface> map) { return map->erase(key); }
 							  );
 						  }
 					  }

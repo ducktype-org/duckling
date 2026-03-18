@@ -2,7 +2,7 @@
 
 #include "template_file.hpp"
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/visitor.hpp>
 #include <base/pointers/box.hpp>
 
@@ -239,15 +239,15 @@ namespace dia_int::state {
 		template_file::Metadata                         metadata;
 		Box<Component>                                  header;
 		MBox<Component>                                 description;
-		base::HashMap<PointerMessageID, PointerMessage> pointer_messages;
-		base::HashMap<std::string, ExploreEdge>         explore_links;
+		base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages;
+		base::StableHashMap<std::string, ExploreEdge>         explore_links;
 
 		Message(
 			template_file::Metadata                         metadata,
 			Box<Component>                                  header,
 			MBox<Component>                                 description,
-			base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
-			base::HashMap<std::string, ExploreEdge>         explore_links
+			base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages,
+			base::StableHashMap<std::string, ExploreEdge>         explore_links
 		);
 
 		/**

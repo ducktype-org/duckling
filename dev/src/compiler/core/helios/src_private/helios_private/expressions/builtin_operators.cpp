@@ -5,7 +5,7 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>

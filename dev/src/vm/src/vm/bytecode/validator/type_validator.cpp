@@ -54,7 +54,7 @@ namespace {
 	 */
 	template<FieldableTypeConcept FieldableType>
 	void insertFieldsRecursive(
-		base::HashMap<base::StrID, base::StrID>& fields,
+		base::StableHashMap<base::StrID, base::StrID>& fields,
 		const FieldableType&                     fieldable,
 		const TypeOfData&                        error_context,
 		const vm::ObjIdNameMap<TypeOfData>&      tod_types
@@ -82,7 +82,7 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
 	void insertVirtualMethodsRecursive(
-		base::HashMap<base::StrID, base::StrID>& virtual_methods,
+		base::StableHashMap<base::StrID, base::StrID>& virtual_methods,
 		const InheritableType&                   inh,
 		const ErrorContextType&                  error_context_inh,
 		const vm::ObjIdNameMap<TypeOfData>&      tod_types
@@ -118,7 +118,7 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
 	void insertImplementationsRecursive(
-		base::HashMap<base::StrID, base::StrID>& implementations,
+		base::StableHashMap<base::StrID, base::StrID>& implementations,
 		const InheritableType&                   inh,
 		const ErrorContextType&                  error_context_inh,
 		const vm::ObjIdNameMap<TypeOfData>&      tod_types
@@ -225,11 +225,11 @@ namespace {
 	template<InheritableTypeConcept InheritableType>
 	void validateImplementations(
 		const InheritableType&                           inh,
-		const base::HashMap<base::StrID, base::StrID>&   virtual_methods,
+		const base::StableHashMap<base::StrID, base::StrID>&   virtual_methods,
 		const vm::ObjIdNameMap<TypeOfData>&              tod_types,
-		const base::HashMap<base::StrID, FuncSignature>& functions
+		const base::StableHashMap<base::StrID, FuncSignature>& functions
 	) {
-		base::HashMap<base::StrID, base::StrID> implementations;
+		base::StableHashMap<base::StrID, base::StrID> implementations;
 		for (const auto& implementation: inh.implementations) {
 			if (implementations.contains(implementation.name))
 				throw DuplicatedVirtualMethodImplementationError(inh, implementation.name);
@@ -258,10 +258,10 @@ namespace {
 	 */
 	void validateAllMethodsImplemented(
 		const ClassType&                               clazz,
-		const base::HashMap<base::StrID, base::StrID>& virtual_methods,
+		const base::StableHashMap<base::StrID, base::StrID>& virtual_methods,
 		const vm::ObjIdNameMap<TypeOfData>&            tod_types
 	) {
-		base::HashMap<base::StrID, base::StrID> implementations;
+		base::StableHashMap<base::StrID, base::StrID> implementations;
 		insertImplementationsRecursive(implementations, clazz, clazz, tod_types);
 
 		for (auto& [name, _]: virtual_methods)
@@ -279,7 +279,7 @@ namespace {
 		for (auto& field: fieldable.fields)
 			if (!tod_types.contains(field.type)) throw UnknownSubtypeError(fieldable, field.type);
 
-		base::HashMap<base::StrID, base::StrID> fields;
+		base::StableHashMap<base::StrID, base::StrID> fields;
 		insertFieldsRecursive(fields, fieldable, fieldable, tod_types);
 	}
 
@@ -289,7 +289,7 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateImplementsDuplicates(const InheritableType& inh) {
-		base::HashMap<base::StrID, base::StrID> interfaces;
+		base::StableHashMap<base::StrID, base::StrID> interfaces;
 		for (const auto& impl: inh.implements) {
 			if (interfaces.contains(impl)) throw DuplicatedImplementsError(inh, impl);
 			interfaces.put(impl);
@@ -302,7 +302,7 @@ namespace {
 	void validateType(
 		const TypeOfData&                                type,
 		const vm::ObjIdNameMap<TypeOfData>&              tod_types,
-		const base::HashMap<base::StrID, FuncSignature>& functions
+		const base::StableHashMap<base::StrID, FuncSignature>& functions
 	) {
 		variant_match(type) {
 			variant_case(PrimitiveType, primitive) {
@@ -342,7 +342,7 @@ namespace {
 				validateFieldDuplicatesAndSubtypeExistence(data, tod_types);
 			}
 			variant_case(InterfaceType, interface) {
-				base::HashMap<base::StrID, base::StrID> virtual_methods;
+				base::StableHashMap<base::StrID, base::StrID> virtual_methods;
 				insertVirtualMethodsRecursive(virtual_methods, interface, interface, tod_types);
 
 				validateImplementsDuplicates(interface);
@@ -352,7 +352,7 @@ namespace {
 			variant_case(ClassType, clazz) {
 				// All virtual methods that can be implemented by this class (including superclass
 				// and interface vmethods as well).
-				base::HashMap<base::StrID, base::StrID> virtual_methods;
+				base::StableHashMap<base::StrID, base::StrID> virtual_methods;
 				insertVirtualMethodsRecursive(virtual_methods, clazz, clazz, tod_types);
 
 				validateFieldDuplicatesAndSubtypeExistence(clazz, tod_types);
@@ -373,7 +373,7 @@ namespace {
 		// Check for cycles in hierarchy.
 		enum Status { Waiting, Visited, Done };
 
-		base::HashMap<base::StrID, Status> status;
+		base::StableHashMap<base::StrID, Status> status;
 		for (const auto& [_t, _id, name]: tod_types.allData()) status.put(name, Waiting);
 
 		auto helper = [&](this auto self, const auto& type) {
@@ -413,7 +413,7 @@ namespace {
 		// Check for cycles in definitions.
 		enum Status { Waiting, Visited, Done };
 
-		base::HashMap<base::StrID, Status> status;
+		base::StableHashMap<base::StrID, Status> status;
 		for (const auto& [_t, _id, name]: tod_types.allData()) status.put(name, Waiting);
 
 		auto helper = [&](this auto self, const TypeOfData& type) {
@@ -487,7 +487,7 @@ namespace {
 		// All we need is to check the type names,
 		// because implementations must have as the first parameter a pointer to the object type,
 		// so this guarantees that they also come from the same tree.
-		base::HashMap<base::StrID, base::StrID> method_signatures;
+		base::StableHashMap<base::StrID, base::StrID> method_signatures;
 		for (const auto& [_t, _id, name]: tod_types.allData()) {
 			const auto& type = *tod_types.at(name);
 			variant_match(type) {
@@ -521,7 +521,7 @@ namespace {
 void vm::code::detail::validateTypes(
 	const ObjIdNameMap<TypeOfData>&                  tod_types,
 	const std::vector<usize>&                        new_types_id,
-	const base::HashMap<base::StrID, FuncSignature>& functions
+	const base::StableHashMap<base::StrID, FuncSignature>& functions
 ) {
 	validateTypeIntegrity(tod_types);
 	for (usize type_id: new_types_id) validateType(*tod_types.at(type_id), tod_types, functions);

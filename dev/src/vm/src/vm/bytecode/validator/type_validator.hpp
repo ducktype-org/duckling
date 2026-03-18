@@ -20,6 +20,6 @@ namespace vm::code::detail {
 	void validateTypes(
 		const ObjIdNameMap<TypeOfData>&                  tod_types,
 		const std::vector<usize>&                        new_types_id,
-		const base::HashMap<base::StrID, FuncSignature>& functions
+		const base::StableHashMap<base::StrID, FuncSignature>& functions
 	);
 }

@@ -38,7 +38,7 @@ namespace dia_int {
 		TemplateRegistrySingleton&  registry;
 		const dia_args::Diagnostic& diagnostic;
 
-		base::HashMap<dia_args::MessageID, state::MessageID> message_mapping;
+		base::StableHashMap<dia_args::MessageID, state::MessageID> message_mapping;
 	};
 
 	/**
@@ -49,8 +49,8 @@ namespace dia_int {
 	class MessageEvaluationContext final {
 	private:
 		// This is part of the result
-		base::HashMap<dia_args::PointerMessage, state::PointerMessageID> pointer_message_mapping;
-		base::HashMap<state::PointerMessageID, state::PointerMessage>    evaluated_pointer_messages;
+		base::StableHashMap<dia_args::PointerMessage, state::PointerMessageID> pointer_message_mapping;
+		base::StableHashMap<state::PointerMessageID, state::PointerMessage>    evaluated_pointer_messages;
 
 	public:
 		DiagnosticEvaluationContext& thread_ctx;
@@ -60,30 +60,30 @@ namespace dia_int {
 		/**
 		 * @brief The arguments the evaluator sees during the evaluation of the tree.
 		 */
-		const base::HashMap<std::string, Box<dia_args::Component>>& arguments;
+		const base::StableHashMap<std::string, Box<dia_args::Component>>& arguments;
 
 		/**
 		 * @brief The parameters defined for the message template.
 		 */
-		const base::HashMap<std::string, template_file::Parameter>& parameters;
+		const base::StableHashMap<std::string, template_file::Parameter>& parameters;
 
 		/**
 		 * @brief The macros the evaluator can use during the evaluation.
 		 */
-		const base::HashMap<std::string, Box<template_file::Component>>& macros;
+		const base::StableHashMap<std::string, Box<template_file::Component>>& macros;
 
 		/**
 		 * @brief The pointer messages provided by the message template.
 		 */
-		const base::HashMap<dia_args::PointerMessageID, template_file::PointerMessage>&
+		const base::StableHashMap<dia_args::PointerMessageID, template_file::PointerMessage>&
 			pointer_messages;
 
 		MessageEvaluationContext(
 			DiagnosticEvaluationContext&                                     thread_ctx,
-			const base::HashMap<std::string, Box<dia_args::Component>>&      arguments,
-			const base::HashMap<std::string, template_file::Parameter>&      parameters,
-			const base::HashMap<std::string, Box<template_file::Component>>& macros,
-			const base::HashMap<dia_args::PointerMessageID, template_file::PointerMessage>&
+			const base::StableHashMap<std::string, Box<dia_args::Component>>&      arguments,
+			const base::StableHashMap<std::string, template_file::Parameter>&      parameters,
+			const base::StableHashMap<std::string, Box<template_file::Component>>& macros,
+			const base::StableHashMap<dia_args::PointerMessageID, template_file::PointerMessage>&
 				pointer_messages
 		):
 			  thread_ctx(thread_ctx),
@@ -102,7 +102,7 @@ namespace dia_int {
 		 */
 		state::PointerMessageID evaluatePointerMessage(const dia_args::PointerMessage& pm);
 
-		const base::HashMap<state::PointerMessageID, state::PointerMessage>& getEvaluatedPointerMessages(
+		const base::StableHashMap<state::PointerMessageID, state::PointerMessage>& getEvaluatedPointerMessages(
 		) const {
 			return evaluated_pointer_messages;
 		}
@@ -567,7 +567,7 @@ namespace dia_int {
 			description = base::MBox<state::Component>(std::move(desc));
 		}
 
-		base::HashMap<std::string, state::ExploreEdge> evaluated_explore_links;
+		base::StableHashMap<std::string, state::ExploreEdge> evaluated_explore_links;
 		for (const auto& edge_input: message.explore_links) {
 			if (not message_template.explore_links.contains(edge_input.name)) {
 				throw TemplateEvaluationException(
@@ -697,7 +697,7 @@ namespace dia_int {
 			                           .priority
 			                           = static_cast<u32>(pointer_message_content.priority) }
 			);
-			this->pointer_message_mapping.insert_or_assign(pm, new_id);
+			this->pointer_message_mapping.put(pm, new_id);
 			return new_id;
 		} else {
 			const auto& message = thread_ctx.diagnostic.linked_messages.at(pm.message_id.value());
@@ -707,7 +707,7 @@ namespace dia_int {
             );
 			auto new_id = getNewID<state::PointerMessageID>();
 			this->evaluated_pointer_messages.put(new_id, std::move(evaluated_pointer_message));
-			this->pointer_message_mapping.insert_or_assign(pm, new_id);
+			this->pointer_message_mapping.put(pm, new_id);
 			return new_id;
 		}
 	}
@@ -748,8 +748,8 @@ namespace dia_int {
 				output,
 				ctx.diagnostic.linked_messages.at(
 					std::ranges::find_if(
-						ctx.message_mapping, [&](const auto& pair) { return pair.second == msg_id; }
-					)->first
+						ctx.message_mapping, [&](const auto& pair) { return pair.value == msg_id; }
+					)->key
 				),
 				evaluated_messages[msg_id]
 			);
@@ -769,7 +769,7 @@ namespace dia_int {
 		state::MessageID message_id_generator = 1;
 		for (const auto& [message_id, message]: thread.linked_messages)
 			if (message.metadata.template_type == "message")
-				thread_ctx.message_mapping.insert_or_assign(message_id, message_id_generator++);
+				thread_ctx.message_mapping.put(message_id, message_id_generator++);
 
 		std::vector<state::Message> messages;
 

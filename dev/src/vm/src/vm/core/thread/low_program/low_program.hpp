@@ -80,7 +80,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const { return global_data; }
 
-		const base::HashMap<u64, base::StrID>& getMethodNamePool() const {
+		const base::StableHashMap<u64, base::StrID>& getMethodNamePool() const {
 			return method_name_pool;
 		}
 
@@ -92,7 +92,7 @@ namespace vm::low {
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
-		base::HashMap<u64, base::StrID> method_name_pool{};
+		base::StableHashMap<u64, base::StrID> method_name_pool{};
 	};
 
 }

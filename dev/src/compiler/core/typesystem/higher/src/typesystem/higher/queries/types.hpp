@@ -9,7 +9,7 @@
 #include "../symbol_type.hpp"
 #include "../types.hpp"
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/add_to_hash.hpp>

@@ -2,6 +2,7 @@
 
 #include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/box.hpp>
@@ -267,15 +268,15 @@ namespace artifacts {
 		 * @note Accessed by \ref getRootCollection and \ref setRootCollection
 		 * @{
 		 */
-		base::HashMap<base::StrID, FileArtifact> file_artifacts;
-		base::HashMap<base::StrID, BlobArtifact> blob_artifacts;
-		base::HashMap<base::StrID, Box<Bytes>>   blob_data;
+		base::StableHashMap<base::StrID, FileArtifact> file_artifacts;
+		base::StableHashMap<base::StrID, BlobArtifact> blob_artifacts;
+		base::StableHashMap<base::StrID, Box<Bytes>>   blob_data;
 
 		/**
 		 * Box, because we may need stable refs. Cannot be base::StableHashMap, because we are using
 		 * a private constructor of collection.
 		 */
-		base::HashMap<base::StrID, Box<ArtifactCollection>> sub_collections;
+		base::StableHashMap<base::StrID, Box<ArtifactCollection>> sub_collections;
 		/**
 		 * @}
 		 */

@@ -27,7 +27,7 @@ namespace vm::loader::compiler::detail {
 		Compiler&                             compiler;
 		Compiler::FunctionCompilationContext& ctx;
 
-		base::HashMap<usize, usize> label_id_to_offset{};
+		base::StableHashMap<usize, usize> label_id_to_offset{};
 		usize                       next_instruction_index = 0;
 
 		low::MicroBytecode result;

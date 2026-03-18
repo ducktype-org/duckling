@@ -20,7 +20,7 @@ namespace vm::kind {
 		// @todo: change to strongly typed when it will be in utils
 		using FieldID = u64;
 
-		base::HashMap<base::StrID, FieldID> field_name_map;
+		base::StableHashMap<base::StrID, FieldID> field_name_map;
 		std::vector<FieldDesc>              fields;
 
 		base::Optional<InheritanceMetadata> inheritance_metadata;

@@ -6,7 +6,7 @@
 #include <vm/core/process/type_metadata/type.hpp>
 
 namespace vm::code {
-	using BuiltinTypesMap = base::HashMap<base::StrID, TypeOfData>;
+	using BuiltinTypesMap = base::StableHashMap<base::StrID, TypeOfData>;
 
 	const SpecialTypes& SpecialTypes::get() {
 		static_assert(

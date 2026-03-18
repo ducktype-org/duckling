@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/memory/single_type_memory_pool_allocator.hpp>
 #include <base/pointers/box.hpp>
 
@@ -155,7 +155,7 @@ namespace base {
 		}
 
 		/**
-		 * See docs of maybePut() method for for info.
+		 * See docs of maybePut() method for info.
 		 * @param key_hash Precomputed hash of the key.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
@@ -224,7 +224,7 @@ namespace base {
 		}
 
 		/**
-		 * See docs of contains() method for for info.
+		 * See docs of contains() method for info.
 		 * @param key_hash Precomputed hash of the key.
 		 */
 		[[nodiscard]]
@@ -236,7 +236,9 @@ namespace base {
 	public:
 		StableHashMap(): buckets(INITIAL_BUCKETS) {}
 
-		StableHashMap(const StableHashMap&) = delete;
+		StableHashMap(const StableHashMap& other) {
+			for (const auto& [k, v]: other) put(k, v);
+		}
 
 		StableHashMap(StableHashMap&& other) noexcept:
 			  buckets(std::move(other.buckets)),
@@ -246,16 +248,27 @@ namespace base {
 			other.buckets.resize(1, nullptr);
 		}
 
-		~StableHashMap() {
-			for (auto& bucket: buckets) {
-				MRef<Node> current_node = bucket;
-				while (current_node) {
-					MRef<Node> next_node = current_node->next;
-					node_allocator.justDestroy(current_node.toOpt().value());
-					current_node = next_node;
-				}
-			}
+		StableHashMap& operator=(const StableHashMap& other) {
+			clear();
+			for (const auto& [k, v]: other) put(k, v);
+			return *this;
 		}
+
+		StableHashMap& operator=(StableHashMap&& other) noexcept {
+			buckets             = std::move(other.buckets);
+			node_allocator      = std::move(other.node_allocator);
+			element_count       = other.element_count;
+			other.element_count = 0;
+			other.buckets.resize(1, nullptr);
+			return *this;
+		}
+
+		// Braced initializer list constructor
+		StableHashMap(std::initializer_list<std::pair<const KEY_T, DATA_T>> init) {
+			for (const auto& [k, v]: init) put(k, v);
+		}
+
+		~StableHashMap() { clear(); }
 
 		/**
 		 * Forward iterator over the key-value pairs in the map.
@@ -316,6 +329,8 @@ namespace base {
 			reference operator*() const { return current_node->key_value; }
 
 			pointer operator->() const { return &current_node->key_value; }
+
+			Ref<ValueT> ref() const { return &current_node->key_value; }
 
 			Iterator& operator++() {
 				if (current_node->next != nullptr) {
@@ -383,6 +398,26 @@ namespace base {
 			return maybePutAssumingHash(std::forward<K>(key), std::forward<D>(value), hash);
 		}
 
+		/**
+		 * If key is not in the container, inserts key->value into the container.
+		 * @param key Data key
+		 * @param value The data
+		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
+		 * already existed.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T, typename UpdateFunT>
+		Ref<KeyValuePair> putOrUpdate(
+			K&& key, D&& value, UpdateFunT update_fun
+		) {
+			if (auto mapping_exists = atMaybe(std::forward<K>(key))) {
+				auto ref = mapping_exists.value();
+				update_fun(*ref);
+				return ref;
+			}
+			// Mapping doesn't exist.
+			return put(std::forward<K>(key), std::forward<D>(value));
+		}
+
 		[[nodiscard]]
 		base::Optional<CRef<DATA_T>> atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT {
 			auto hash = keyHash(key);
@@ -401,9 +436,13 @@ namespace base {
 			return atMaybeCopyAssumingHash(key, hash);
 		}
 
-		DATA_T& operator[](const KEY_T& key) { return **atMaybe(key); }
+		DATA_T& at(const KEY_T& key) { return **atMaybe(key); }
 
-		const DATA_T& operator[](const KEY_T& key) const { return **atMaybe(key); }
+		const DATA_T& at(const KEY_T& key) const { return **atMaybe(key); }
+
+		DATA_T& operator[](const KEY_T& key) { return at(key); }
+
+		const DATA_T& operator[](const KEY_T& key) const { return at(key); }
 
 		[[nodiscard]]
 		bool contains(const KEY_T& key) const RELEASE_NOEXCEPT {
@@ -470,6 +509,15 @@ namespace base {
 			return element_count;
 		}
 
+		/**
+		 * Check if the container is empty.
+		 * @return Whether the container is empty.
+		 */
+		[[nodiscard]]
+		bool empty() const {
+			return element_count == 0;
+		}
+
 		IteratorT begin() RELEASE_NOEXCEPT {
 			u64        bucket_index = 0;
 			MRef<Node> current_node = nullptr;
@@ -502,6 +550,24 @@ namespace base {
 
 		ConstIteratorT end() const RELEASE_NOEXCEPT {
 			return ConstIteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
+		}
+
+		IteratorT find(KEY_T key) RELEASE_NOEXCEPT {
+			IteratorT it = begin();
+			while (it != end()) {
+				if (it->key == key) break;
+				++it;
+			}
+			return it;
+		}
+
+		ConstIteratorT find(KEY_T key) const RELEASE_NOEXCEPT {
+			ConstIteratorT it = begin();
+			while (it != end()) {
+				if (it->key == key) break;
+				++it;
+			}
+			return it;
 		}
 
 	private:

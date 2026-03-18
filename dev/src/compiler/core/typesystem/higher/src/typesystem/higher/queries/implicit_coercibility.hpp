@@ -31,7 +31,7 @@
 #include "../abstract_type.hpp"
 #include "../expression_type.hpp"
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <hashing/hash.hpp>
 #include <query_framework/query_int.hpp>

@@ -103,7 +103,7 @@ namespace {
 
 void TypeContext::insertAndValidate(
 	const std::vector<TypeOfData>&                   new_types,
-	const base::HashMap<base::StrID, FuncSignature>& function_signatures
+	const base::StableHashMap<base::StrID, FuncSignature>& function_signatures
 ) {
 	// Simple check for duplicates and forward declarations.
 	std::vector<CRef<TypeOfData>> really_new_types;

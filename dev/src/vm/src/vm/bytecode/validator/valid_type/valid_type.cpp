@@ -85,11 +85,11 @@ void valid_type::ValidType::defineClass(
 				structure.field_definitions.emplace_back(defined::DefinedField{
 					.name = field_def.first, .type = field_def.second });
 
-			base::HashMap<base::StrID, ValidTypeID> new_virtual_methods_map;
+			base::StableHashMap<base::StrID, ValidTypeID> new_virtual_methods_map;
 			for (const auto& method: new_virtual_methods)
 				new_virtual_methods_map.put(method.first, method.second);
 
-			base::HashMap<base::StrID, base::StrID> implementations_map;
+			base::StableHashMap<base::StrID, base::StrID> implementations_map;
 			for (const auto& impl: implementations)
 				implementations_map.put(impl.first, impl.second);
 
@@ -115,11 +115,11 @@ void valid_type::ValidType::defineInterface(
 ) {
 	variant_match(state) {
 		variant_case_novalue(Declared) {
-			base::HashMap<base::StrID, ValidTypeID> virtual_methods;
+			base::StableHashMap<base::StrID, ValidTypeID> virtual_methods;
 			for (const auto& method: new_virtual_methods)
 				virtual_methods.put(method.first, method.second);
 
-			base::HashMap<base::StrID, base::StrID> impls;
+			base::StableHashMap<base::StrID, base::StrID> impls;
 			for (const auto& impl: implementations) impls.put(impl.first, impl.second);
 
 			state

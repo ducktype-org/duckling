@@ -5,7 +5,7 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 
 #include <algorithm>
@@ -14,7 +14,7 @@
 namespace compiler::mir {
 	base::OkBad validateMoves(query::Context&, const Function& fun) {
 		using LocalSet      = std::unordered_set<LocalID>;
-		using BlockLocalSet = base::HashMap<BlockID, LocalSet>;
+		using BlockLocalSet = base::StableHashMap<BlockID, LocalSet>;
 
 		BlockLocalSet
 			moved_variables;  // Variables moved in Block, they can't be used after this Block,
@@ -24,7 +24,7 @@ namespace compiler::mir {
 			moved_variables.emplace(block.key, LocalSet());
 			used_variables.emplace(block.key, LocalSet());
 		}
-		base::HashMap<LocalID, BlockID>
+		base::StableHashMap<LocalID, BlockID>
 			construction_block;  // For each Local store where it is constructed.
 
 		// Analyze each block independently.
@@ -118,7 +118,7 @@ namespace compiler::mir {
 		};
 
 		// It should be HashSet<BlockID, state>, but there is no hash.
-		base::HashMap<BlockID, States> visited;  // with usable and not usable.
+		base::StableHashMap<BlockID, States> visited;  // with usable and not usable.
 
 		// Insert all blocks.
 		for (const auto& id: fun.block_order) visited.emplace(id, States());
@@ -160,7 +160,7 @@ namespace compiler::mir {
 	}
 
 	base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
-		base::HashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
+		base::StableHashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
 		for (auto& local: fun.local_list) {
 			if (local.helios_id.empty()) continue;
 

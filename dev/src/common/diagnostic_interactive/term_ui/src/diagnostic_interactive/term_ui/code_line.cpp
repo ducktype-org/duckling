@@ -14,7 +14,7 @@ namespace term_ui {
 	std::vector<Highlight> printAndCalculateHighlights(
 		const dia_int::term_ui_view::CodeLine&                           line,
 		u64                                                              tab_space,
-		const base::HashMap<u64, dia_int::term_ui_view::PointerMessage>& ctx,
+		const base::StableHashMap<u64, dia_int::term_ui_view::PointerMessage>& ctx,
 		std::ostream&                                                    out
 	) {
 		if_opt_some(line.line_no, number) { printLineStart(tab_space, number, out); }

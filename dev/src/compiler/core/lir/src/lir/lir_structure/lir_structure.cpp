@@ -7,7 +7,7 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/lower/queries.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <iomanip>

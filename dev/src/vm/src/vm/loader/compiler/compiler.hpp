@@ -60,7 +60,7 @@ namespace vm::loader::compiler {
 			 * This is a crucial lookup table used during the instruction lowering phase to
 			 * resolve symbolic method names into numeric IDs.
 			 */
-			base::HashMap<base::StrID, u64> method_name_to_id;
+			base::StableHashMap<base::StrID, u64> method_name_to_id;
 			/**
 			 * @brief A complete list of all bytecode functions which will be added in the
 			 * compilation process. Used when lowering call instructions to translate the function
@@ -85,7 +85,7 @@ namespace vm::loader::compiler {
 			/// The high level function definition.
 			const code::Function& function;
 			/// Temporary label IDs used before label linking.
-			base::HashMap<base::StrID, usize> label_id_map;
+			base::StableHashMap<base::StrID, usize> label_id_map;
 
 			struct LocalEntry {
 				u64      offset;
@@ -94,7 +94,7 @@ namespace vm::loader::compiler {
 
 			/// A mapping from a local variable's name to its offset on the function's local stack
 			/// and type.
-			base::HashMap<base::StrID, LocalEntry> locals_map{};
+			base::StableHashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size = 0;
 		};
@@ -158,7 +158,7 @@ namespace vm::loader::compiler {
 		 * the instructions again and fill out the correct offsets.
 		 */
 		void linkLabelArguments(
-			low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
+			low::MicroBytecode& instructions, const base::StableHashMap<usize, usize>& label_map
 		);
 
 		/**

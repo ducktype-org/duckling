@@ -1,7 +1,7 @@
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/source_position.hpp>
 
@@ -198,7 +198,7 @@ namespace dia_int {
 	}
 
 	dia_args::Message MessageBase::buildMessages(
-		base::HashMap<std::string, dia_args::Message>& additional_messages
+		base::StableHashMap<std::string, dia_args::Message>& additional_messages
 	) {
 		dia_args::Message msg;
 		msg.metadata = getMetadata();
@@ -221,7 +221,7 @@ namespace dia_int {
 		has_been_built = true;
 
 		Box<dia_args::Diagnostic>                     thread = makeBox<dia_args::Diagnostic>();
-		base::HashMap<std::string, dia_args::Message> additional_messages;
+		base::StableHashMap<std::string, dia_args::Message> additional_messages;
 
 		thread->main_message    = buildMessages(additional_messages);
 		thread->linked_messages = std::move(additional_messages);

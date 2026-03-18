@@ -762,12 +762,12 @@ namespace compiler::mir {
 		void debugPrint(std::ostream& os) const;
 
 		/**
-		 * @brief Checks if the id's from the HashMap match the id's in the blocks,
-		 * if all block_order elements are present in the HashMap and
+		 * @brief Checks if the id's from the StableHashMap match the id's in the blocks,
+		 * if all block_order elements are present in the StableHashMap and
 		 * if the jump targets exist.
 		 * Used for debugging.
 
-		 * @note If there is a block in the HashMap but not in the block_order,
+		 * @note If there is a block in the StableHashMap but not in the block_order,
 		 * it is considered invalid.
 		 */
 		base::OkBad validateBlockIDs() const;

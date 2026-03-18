@@ -34,11 +34,11 @@ namespace term_ui {
 	 * highlight
 	 */
 	HighlightResult renderHighlightAndMoveToNextState(
-		Line&                                                            str,
-		Highlight                                                        highlight,
-		u64                                                              line_no,
-		const base::HashMap<u64, dia_int::term_ui_view::PointerMessage>& pointers,
-		const base::HashMap<u64, std::pair<u64, u64>>& last_pointer_message_occurence
+		Line&                                                                  str,
+		Highlight                                                              highlight,
+		u64                                                                    line_no,
+		const base::StableHashMap<u64, dia_int::term_ui_view::PointerMessage>& pointers,
+		const base::StableHashMap<u64, std::pair<u64, u64>>& last_pointer_message_occurence
 	) {
 		auto [priority, beg, end, group, idx, lowering] = highlight;
 		u64         len                                 = end - beg;
@@ -85,8 +85,8 @@ namespace term_ui {
 
 	void print(const dia_int::term_ui_view::CodeSection& section, std::ostream& out) {
 		// Preprocessing
-		base::HashMap<u64, std::pair<u64, u64>> last_pointer_message_positions;
-		u64                                     tab_space = 0;
+		base::StableHashMap<u64, std::pair<u64, u64>> last_pointer_message_positions;
+		u64                                           tab_space = 0;
 
 		// for (auto x : section.pointers) {
 		// 	std::cout << "Pointer " << x.first << ": " << x.second.text << "\n";
@@ -98,7 +98,9 @@ namespace term_ui {
 				const auto& piece = line.pieces[i];
 				if (!piece.pointer_ids.empty())
 					for (u64 group: piece.pointer_ids)
-						last_pointer_message_positions.insertOrAssign(group, { l, i });
+						last_pointer_message_positions.putOrUpdate(
+							group, { l, i }, [l, i](auto& ref) { ref = { l, i }; }
+						);
 			}
 			tab_space = std::max(tab_space, minTabSpace(line));
 		}

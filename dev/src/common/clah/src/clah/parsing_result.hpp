@@ -7,8 +7,8 @@
 #pragma once
 #include "parameter.hpp"
 
-#include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/misc/anycast.hpp>
 #include <base/types/ints.hpp>
 
@@ -260,12 +260,12 @@ namespace clah {
 		 */
 		std::vector<CRef<Clah>> command_list{};
 
-		usize                               id_counter = 1;
-		base::HashMap<char, usize>          short_names_to_id;
-		base::HashMap<base::RawView, usize> long_names_to_id;
+		usize                                     id_counter = 1;
+		base::StableHashMap<char, usize>          short_names_to_id;
+		base::StableHashMap<base::RawView, usize> long_names_to_id;
 
-		base::HashMap<usize, ParsedValue> id_to_value;
-		std::vector<ParsedValue>          positional_values;
+		base::StableHashMap<usize, ParsedValue> id_to_value;
+		std::vector<ParsedValue>                positional_values;
 
 		// Values parsed with default value parser - that is
 		// they were passed additionally.

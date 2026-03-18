@@ -19,7 +19,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>

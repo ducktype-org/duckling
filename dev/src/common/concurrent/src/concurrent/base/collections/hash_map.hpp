@@ -29,7 +29,7 @@ namespace concurrent {
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
 	class ConHashMap final {
-		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
+		using StableHashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
 		using KeyHash = u64;
 
@@ -101,7 +101,7 @@ namespace concurrent {
 
 
 	public:
-		using KeyValuePair = typename HashMapType::KeyValuePair;
+		using KeyValuePair = typename StableHashMapType::KeyValuePair;
 
 		ConHashMap(): shards(SHARD_COUNT) {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
@@ -363,7 +363,7 @@ namespace concurrent {
 		 */
 		template<typename ValueT>
 		class LockedIterator final {
-			using InnerIterator = typename HashMapType::template Iterator<ValueT>;
+			using InnerIterator = typename StableHashMapType::template Iterator<ValueT>;
 
 			std::shared_ptr<WithAllShardsLock> lock_guard;
 
@@ -371,8 +371,8 @@ namespace concurrent {
 			/// This would have to change when number of shards is not compile-time constant
 			using ShardsPtr = std::conditional_t<
 				std::is_const_v<ValueT>,
-				const std::vector<HashMapType>*,
-				std::vector<HashMapType>*>;
+				const std::vector<StableHashMapType>*,
+				std::vector<StableHashMapType>*>;
 
 			ShardsPtr shards_ptr;
 
@@ -520,7 +520,7 @@ namespace concurrent {
 		/**
 		 * The shards of the map.
 		 */
-		std::vector<HashMapType> shards;
+		std::vector<StableHashMapType> shards;
 
 		/**
 		 * The locks protecting each shard.

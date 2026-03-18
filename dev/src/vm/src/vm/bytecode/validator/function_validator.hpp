@@ -11,7 +11,7 @@ namespace vm::code::detail {
 	Function validateAndExtractReachableCode(
 		const valid_type::ValidTypeMap&                  types,
 		const ObjIdNameMap<GlobalData>&                  globals_map,
-		const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const base::StableHashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_functions,
 		const Function&                                  function
 	);
