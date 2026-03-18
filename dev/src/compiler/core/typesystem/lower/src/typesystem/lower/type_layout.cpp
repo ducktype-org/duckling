@@ -92,10 +92,23 @@ namespace compiler::tsl {
 		 */
 		std::vector<Bytes> alignOffsetsForLayoutVector(const std::vector<CRef<TypeLayout>>& layouts
 		) {
-			std::vector<Bits> sizes;
-			sizes.reserve(layouts.size());
-			for (const auto& layout: layouts) sizes.push_back(layout->getSize());
-			return alignOffsetsForSizeVector(sizes);
+			std::vector<Bytes> offsets{};
+			offsets.reserve(layouts.size());
+			Bytes bytes_taken{ 0 };
+
+			for (const auto& layout: layouts) {
+				const Bytes size_in_bytes{ (usize(layout->getSize()) + 7) / 8 };
+				const usize alignment = usize(layout->getAlignment());
+
+				// Round up offset to nearest multiple of alignment.
+				bytes_taken = (bytes_taken + Bytes(alignment - 1)) / alignment * alignment;
+
+				// Save offset.
+				offsets.push_back(bytes_taken);
+				bytes_taken += size_in_bytes;
+			}
+
+			return offsets;
 		}
 
 		/**
@@ -171,6 +184,7 @@ namespace compiler::tsl {
 		  TypeLayoutABC(
 			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getSize()
 				  * static_array_type.getSize(),
+			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getAlignment(),
 			  static_array_type
 		  ),
 		  element_layout(ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())),
@@ -470,6 +484,8 @@ namespace compiler::tsl {
 	}
 
 	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }
+
+	Bytes TypeLayout::getAlignment() const { return VISIT(variant, l, return l.getAlignment()); }
 
 	tsh::AbstractType TypeLayout::getSourceType() const {
 		return VISIT(variant, l, return l.getSourceType());

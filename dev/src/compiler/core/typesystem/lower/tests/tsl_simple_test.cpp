@@ -24,7 +24,9 @@ public:
 		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(classTest);
+		TESTER_ADD_TEST(classWithArrayFieldTest);
 		TESTER_ADD_TEST(mutabilityTest);
 	}
 
@@ -260,6 +262,14 @@ private:
 				"Layout source type mismatch."
 			);
 
+			// The alignment of a static array must equal the element alignment,
+			// not be derived from the total array size.
+			assertEqual(
+				static_array_layout->getAlignment(),
+				i32_layout->getAlignment(),
+				"Static array alignment should equal the element alignment."
+			);
+
 			variant_match(static_array_layout->getVariant()) {
 				variant_case(StaticArrayTypeLayout, l) {
 					assertEqual(l.getElementCount(), count, "Stored element count mismatch.");
@@ -425,6 +435,76 @@ private:
 				variant_default { fail("Layout of class type should be class-like."); }
 			}
 			testPrinting(my_class_layout, ctx, true);
+		});
+	}
+
+	void classWithArrayFieldTest() {
+		using namespace compiler::helios;
+		using namespace test_utils;
+
+		// This test reproduces the bug reported in issue where a class containing a static
+		// array field causes an assertion failure during LLVM lowering because the compiler
+		// computed the wrong offset for the array field (using total array size for alignment
+		// instead of element size).
+		auto [_, root_scope]           = getModule(fs::File(path("class_layout_with_array")));
+		const SymID database_symbol    = getChain("Database", root_scope).back();
+
+		withContextDo([&](query::Context& ctx) -> void {
+			const ClassAbstractType database_type      = ctx.query<QueryClassType>(database_symbol);
+			CRef<TypeInterface>     database_interface = database_type.getInterface(ctx);
+
+			const SymID element1_symbol = [&] {
+				const auto& matching
+					= database_interface->getElementsWithName(base::StrID("element1"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
+			}();
+			const SymID element2_symbol = [&] {
+				const auto& matching
+					= database_interface->getElementsWithName(base::StrID("element2"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
+			}();
+			const SymID element3_symbol = [&] {
+				const auto& matching
+					= database_interface->getElementsWithName(base::StrID("element3"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
+			}();
+			const SymID elements_symbol = [&] {
+				const auto& matching
+					= database_interface->getElementsWithName(base::StrID("elements"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
+			}();
+
+			auto database_layout = ctx.query<QueryAbstractTypeLayout>(database_type);
+
+			// element1(4) + element2(4) + element3(4) + elements(8) = 20 bytes.
+			// No padding needed because all fields are 4-byte aligned.
+			assertEqual(
+				database_layout->getSize(),
+				BYTE_SIZE * 20,
+				"Class layout size should account for array element alignment."
+			);
+
+			variant_match(database_layout->getVariant()) {
+				variant_case(ClassTypeLayout, l) {
+					// elements: i32[2] must be placed at offset 12 (4-byte aligned),
+					// not offset 16 (8-byte aligned), because the array's alignment is
+					// determined by its element type (i32 = 4 bytes), not by its total
+					// size (8 bytes).
+					assertTrue(
+						l.getOffsetOfFieldSymbol(element1_symbol) == Bytes(0)
+							&& l.getOffsetOfFieldSymbol(element2_symbol) == Bytes(4)
+							&& l.getOffsetOfFieldSymbol(element3_symbol) == Bytes(8)
+							&& l.getOffsetOfFieldSymbol(elements_symbol) == Bytes(12),
+						"Array field offset must use element alignment, not total array size."
+					);
+				}
+				variant_default { fail("Layout of Database class should be class-like."); }
+			}
+			testPrinting(database_layout, ctx, true);
 		});
 	}
 
