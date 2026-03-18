@@ -27,4 +27,8 @@ namespace pst {
 		addToHash(partial_hash, arg_name);
 		return partial_hash;
 	}
+
+	void CallArgument::acceptVisitor(PstVisitor& visitor) const {
+		visitor.visitCallArgument(*this);
+	}
 }

@@ -37,10 +37,11 @@ add_library(HELIOS STATIC
 	src/helios/symbols/query_type_from_definition.cpp
 	src/helios/symbols/query_class_of_member.cpp
 	src/helios/symbols/symbol_abi.cpp
-	src/helios/utils/go_to_definition.cpp
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/repl_utils/repl_queries.cpp
+	src/helios/ls_utils/ls_utils.cpp
+	src/helios/utils/go_to_definition.cpp
 )
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher CTV LibVM MIR LIR DVMBackend)
@@ -55,5 +56,13 @@ duck_add_test(compiler helios_errors tests/helios_errors_test.cpp
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_stmt_compilation tests/helios_stmt_compilation_test.cpp
+	USES Base TypeSystemHigher PstParser HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler helios_repl_instruction_wrapper tests/helios_repl_instruction_wrapper_test.cpp
+	USES Base TypeSystemHigher PstParser HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler helios_repl_expression_wrapper tests/helios_repl_expression_wrapper_test.cpp
 	USES Base TypeSystemHigher PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
