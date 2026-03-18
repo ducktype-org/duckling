@@ -1011,7 +1011,7 @@ profiles:
             [
                 "when parsing the field `profiles`",
                 "when parsing the field `profiles.prof1`",
-                "Unknown optimization level `x`. Optimization levels are 0, 1, 2, 3, s, z."
+                "Unknown optimization level `x`. Optimization levels are 0, 1, 2, 3, s (or S), z (or Z)."
             ]
         )
     );

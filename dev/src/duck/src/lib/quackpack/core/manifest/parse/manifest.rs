@@ -112,7 +112,7 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
             SchemaOptLevel::Number(2) => OptLevel::Two,
             SchemaOptLevel::Number(3) => OptLevel::Three,
             SchemaOptLevel::Number(n) => qp_bail!(
-                "Unknown optimization level `{n}`. Optimization levels are 0, 1, 2, 3, s, z."
+                "Unknown optimization level `{n}`. Optimization levels are 0, 1, 2, 3, s (or S), z (or Z)."
             ),
             SchemaOptLevel::String(str) => match str.as_ref() {
                 "s" => OptLevel::S,
@@ -124,7 +124,7 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
                 "2" => OptLevel::Two,
                 "3" => OptLevel::Three,
                 str => qp_bail!(
-                    "Unknown optimization level `{str}`. Optimization levels are 0, 1, 2, 3, s, z."
+                    "Unknown optimization level `{str}`. Optimization levels are 0, 1, 2, 3, s (or S), z (or Z)."
                 ),
             },
         })
