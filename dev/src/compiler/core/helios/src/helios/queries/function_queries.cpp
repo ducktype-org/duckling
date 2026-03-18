@@ -339,8 +339,11 @@ namespace compiler::helios {
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
 				// Get the initial value for the field from the PST.
-				const auto field_pst_data
-					= symbolPst(field.getSymbol()).unlock(ctx).dynamicCast<pst::Field>().value();
+				const auto field_pst_data = symbolPst(field.getSymbol())
+				                                .value()
+				                                .unlock(ctx)
+				                                .dynamicCast<pst::Field>()
+				                                .value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
 					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
@@ -445,6 +448,32 @@ namespace compiler::helios {
 							}
 							variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);
+							}
+							variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper
+							) {
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
+							}
+							variant_case_novalue(houtgen::GeneratedSymbolData::ReplInstructionWrapper
+							) {
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
 							}
 							variant_default {
 								// Other generated symbols are not functions.

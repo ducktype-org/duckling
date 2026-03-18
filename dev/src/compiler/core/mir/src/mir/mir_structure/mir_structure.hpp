@@ -2,6 +2,7 @@
 
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
+#include "mir_metadata.hpp"
 
 #include <ctv/ctv.hpp>
 #include <typesystem/higher/types.hpp>
@@ -604,6 +605,8 @@ namespace compiler::mir {
 
 		InstrParameters extra_params{ NoInstrParameters{} };
 
+		InstructionMetadata metadata;
+
 		// @TODO: each Instruction should have source position reference
 
 		/**
@@ -626,13 +629,15 @@ namespace compiler::mir {
 			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
 			const ScopeRef             scope,
-			InstrParameters            extra_parameters = NoInstrParameters{}
+			InstrParameters            extra_parameters = NoInstrParameters{},
+			InstructionMetadata        metadata         = {}
 		):
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
 			  extra_params(extra_parameters),
+			  metadata(metadata),
 			  scope(scope) {}
 
 		void debugPrint(std::ostream& os) const;

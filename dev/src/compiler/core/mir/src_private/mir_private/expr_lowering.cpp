@@ -117,7 +117,11 @@ namespace compiler::mir {
 			auto assign_hole   = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			lowered_inner.storeResultInGivenPlace(
-				MIRPlace(target_location), assign_hole, { flagConstruct(target_location) }, expr_scope
+				MIRPlace(target_location),
+				assign_hole,
+				{ flagConstruct(target_location) },
+				expr_scope,
+				{}
 			);
 
 			valueOutput(lowered_inner.begin, target_location);
@@ -139,7 +143,9 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered_left.begin,
 				target_construction_hole,
-				Instruction(operation, {}, { res_left, res_right }, {}, expr_scope),
+				Instruction(
+					operation, {}, { res_left, res_right }, {}, expr_scope, {}, { expr.getPosition() }
+				),
 				result_type
 			);
 		}
@@ -157,7 +163,9 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered.begin,
 				target_construction_hole,
-				Instruction(operation, {}, { res_lowered }, {}, expr_scope),
+				Instruction(
+					operation, {}, { res_lowered }, {}, expr_scope, {}, { expr.getPosition() }
+				),
 				result_type
 			);
 		}
@@ -181,7 +189,8 @@ namespace compiler::mir {
 					MIRPlace(target_location),
 					assign_hole,
 					{ flagConstruct(target_location) },
-					expr_scope
+					expr_scope,
+					{}
 				);
 
 
@@ -202,6 +211,8 @@ namespace compiler::mir {
 				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
 				{},
 				expr_scope,
+				{},
+				{ ternary_expr.getPosition() },
 			});
 
 			// Return (always value).
@@ -239,7 +250,15 @@ namespace compiler::mir {
 			noValueOutput(
 				current,
 				hole,
-				Instruction(Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope),
+				Instruction(
+					Operation::MetaCreateVariant,
+					{},
+					subtype_values,
+					{},
+					expr_scope,
+					{},
+					{ expr.getPosition() }
+				),
 				result_type
 			);
 			return;
@@ -345,6 +364,8 @@ namespace compiler::mir {
 					comps_left == 0 ? std::vector{ flagConstruct(boolean_output) }
 									: std::vector<OperationFlag>{},
 					expr_scope,
+					{},
+					{ comp->getPosition() },
 				});
 				next_block = comp_cont;
 			}
@@ -380,13 +401,7 @@ namespace compiler::mir {
 			return noValueOutput(
 				sub_continuation,
 				call,
-				Instruction{
-					Operation::Call,
-					{},
-					args,
-					{},
-					expr_scope,
-				},
+				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -406,7 +421,8 @@ namespace compiler::mir {
 			                 expr_scope,
 			                 CastParameters{ .source_type
 			                                 = expr.source_expr->expression_type.getSymbolType(),
-			                                 .target_type = expr.target_type } },
+			                                 .target_type = expr.target_type },
+			                 { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -423,7 +439,15 @@ namespace compiler::mir {
 				noValueOutput(
 					lowered_inner.begin,
 					hole,
-					Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
+					Instruction(
+						Operation::AddressOf,
+						{},
+						{ res_inner },
+						{},
+						expr_scope,
+						{},
+						{ expr.getPosition() }
+					),
 					result_type
 				);
 			} else {
@@ -447,7 +471,9 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered_inner.begin,
 				hole,
-				Instruction(Operation::BoxAlloc, {}, { res_inner }, {}, expr_scope),
+				Instruction(
+					Operation::BoxAlloc, {}, { res_inner }, {}, expr_scope, {}, { expr.getPosition() }
+				),
 				result_type
 			);
 		}
@@ -733,17 +759,13 @@ namespace compiler::mir {
 		const MIRPlace&                   target,
 		BlockBuilder::InstructionHole&    hole,
 		const std::vector<OperationFlag>& flags,
-		ScopeRef                          scope
+		ScopeRef                          scope,
+		InstructionMetadata               metadata
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
 				hole.fill(Instruction{
-					Operation::Assign,
-					target,
-					{ val },
-					flags,
-					scope,
-				});
+					Operation::Assign, target, { val }, flags, scope, {}, metadata });
 			}
 			variant_case(Finalizer, res_data) {
 				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
@@ -751,6 +773,7 @@ namespace compiler::mir {
 				hole.fillNop(scope);
 				res_data.instr.output.emplace(target);
 				res_data.instr.flags.insert(res_data.instr.flags.end(), flags.begin(), flags.end());
+				res_data.instr.metadata = metadata;
 				res_data.hole.fill(res_data.instr);
 				value = target;
 			}

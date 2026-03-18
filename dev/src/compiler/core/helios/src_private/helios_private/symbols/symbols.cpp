@@ -130,8 +130,10 @@ namespace compiler::helios {
 		return getSymRef(id)->stmtCast(ctx);
 	}
 
-	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
-		return getSymRef(id)->getPSTData()->getElement();
+	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID id) {
+		return getSymRef(id)->getPSTDataOpt().map([](auto pst_data) {
+			return pst_data->getElement();
+		});
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
