@@ -39,11 +39,11 @@ impl DescriptionWithAnArticle for Value {
 
 macro_rules! delegate_getter {
     (
-            FunctionName: $name:ident,
-            ReturnType: $ret:ty,
-            DocType: $doc:ty,
-            HumanType: $human_type:literal,
-            CastFunctionName: $yaml_value_fn:ident $(,)?
+        FunctionName: $name:ident,
+        ReturnType: $ret:ty,
+        DocType: $doc:ty,
+        HumanType: $human_type:literal,
+        CastFunctionName: $yaml_value_fn:ident $(,)?
     ) => {
         #[doc = concat!("Get [`", stringify!($doc), "`] at the dotted key.")]
         pub fn $name(&self, key: &str) -> QuackResult<Option<$ret>> {
@@ -65,8 +65,8 @@ macro_rules! delegate_getter {
 
 macro_rules! delegate_setter {
     (
-            FunctionName: $name:ident,
-            InputType: $value:ty $(,)?
+        FunctionName: $name:ident,
+        InputType: $value:ty $(,)?
     ) => {
         #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
         pub fn $name(&mut self, key: &str, value: $value) -> QuackResult<()> {

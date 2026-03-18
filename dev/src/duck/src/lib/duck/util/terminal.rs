@@ -3,7 +3,6 @@ use std::io::Read;
 use std::io::Write;
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
-use paste::item;
 
 #[derive(Debug)]
 pub struct Terminal {
@@ -22,33 +21,21 @@ pub enum Verbosity {
 
 macro_rules! delegate_styles {
     (
-        $(
-            $name:ident => $value:literal $(+ $opt:ident )* $(,)?
-        ),*
+        FunctionName: $name:ident,
+        VerboseName: $verbose:ident,
+        Prefix: $value:literal,
+        OptionalStyles: $( $opt:ident $(+)? )* $(,)?
     ) => {
-    item! {
-        $(
-            pub fn $name(&self, text: impl ::std::fmt::Display) {
-                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
-                self.print_nl_impl(full_text, false);
-            }
+       pub fn $name(&self, text: impl ::std::fmt::Display) {
+           let full_text = format!("{} {}", style($value)$(.$opt())*, text);
+           self.print(full_text)
+       }
 
-            pub fn [<$name _verbose>](&self, text: impl ::std::fmt::Display) {
-                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
-                self.print_nl_impl(full_text, true);
-            }
-
-            pub fn [<$name _no_nl>](&self, text: impl ::std::fmt::Display) {
-                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
-                self.print_impl(full_text, false);
-            }
-            pub fn [<$name _verbose_no_nl>](&self, text: impl ::std::fmt::Display) {
-                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
-                self.print_impl(full_text, true);
-            }
-        )*
+       pub fn $verbose(&self, text: impl ::std::fmt::Display) {
+           let full_text = format!("{} {}", style($value)$(.$opt())*, text);
+           self.print_verbose(full_text)
+       }
     }
-    };
 }
 
 impl Verbosity {
@@ -86,61 +73,63 @@ impl Terminal {
         }
     }
 
-    fn print_nl_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
-        if self.verbosity.is_quiet() {
-            return;
-        }
-        if verbose_only && !self.verbosity.is_verbose() {
-            return;
-        };
-        if !self.colors_enabled {
-            drop(
-                self.term
-                    .write_line(WithoutAnsi::new(&text()).to_string().as_str()),
-            );
-        } else {
-            drop(self.term.write_line(&text()));
-        }
-    }
-
-    fn print_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
-        if self.verbosity.is_quiet() {
-            return;
-        }
-        if verbose_only && !self.verbosity.is_verbose() {
-            return;
-        };
-        let mut term = &self.term;
-        if !self.colors_enabled {
-            drop(term.write_all(WithoutAnsi::new(&text()).to_string().as_bytes()));
-        } else {
-            drop(term.write_all(text().as_bytes()));
-        }
-    }
-
     pub fn print(&self, text: impl Display) {
-        self.print_nl_impl(|| format!("{}", text), false);
+        if self.verbosity.is_quiet() {
+            return;
+        }
+        self.print_verbose(text)
     }
 
     pub fn print_verbose(&self, text: impl Display) {
-        self.print_nl_impl(|| format!("{}", text), true);
-    }
-
-    pub fn print_no_nl(&self, text: impl Display) {
-        self.print_impl(|| format!("{}", text), false);
-    }
-
-    pub fn print_verbose_no_nl(&self, text: impl Display) {
-        self.print_impl(|| format!("{}", text), true);
+        let mut term = &self.term;
+        let text = text.to_string();
+        if !self.colors_enabled {
+            drop(term.write_all(WithoutAnsi::new(&text).to_string().as_bytes()));
+        } else {
+            drop(term.write_all(text.as_bytes()));
+        }
     }
 
     delegate_styles! {
-        error => "Error:" + red + bold,
-        warning => "Warning:" + yellow + bold,
-        info => "Info:" + cyan + bold,
-        note => "Note:" + cyan + bold,
-        hint => "Hint:" + cyan + bold,
-        critical => "Critical:" + red + reverse + bold,
+        FunctionName: error,
+        VerboseName: error_verbose,
+        Prefix: "Error:",
+        OptionalStyles: red + bold,
+    }
+
+    delegate_styles! {
+        FunctionName: warning,
+        VerboseName: warning_verbose,
+        Prefix: "Warning:",
+        OptionalStyles: yellow + bold,
+    }
+
+    delegate_styles! {
+        FunctionName: info,
+        VerboseName: info_verbose,
+        Prefix: "Info:",
+        OptionalStyles: cyan + bold,
+    }
+
+    delegate_styles! {
+        FunctionName: note,
+        VerboseName: note_verbose,
+        Prefix: "Note:",
+        OptionalStyles: cyan + bold,
+    }
+
+    delegate_styles! {
+        FunctionName: hint,
+        VerboseName: hint_verbose,
+        Prefix: "Hint:",
+        OptionalStyles: cyan + bold,
+    }
+
+    delegate_styles! {
+        FunctionName: critical,
+        VerboseName: critical_verbose,
+        Prefix: "Critical:",
+        OptionalStyles: red + bold + reverse,
     }
 
     pub fn verbosity(&self) -> &Verbosity {
