@@ -11,23 +11,22 @@ namespace compiler::backend_vm {
 		  program_context(makeBox<internal::ProgramLoweringContext>(query_ctx, build_debug_info)),
 		  build_debug_info(build_debug_info) {}
 
-	DVMBuilderResult DVMCodeBuilder::build() const {
+	vm::code::CodeCollection DVMCodeBuilder::build() const {
 		match_optional(program_context->validateAndProduceProgram()) {
-			opt_some(program) {
-				if (build_debug_info)
-					return {
-						.code_collection = program,
-						.debug_info      = program_context->buildDebugInfo(),
-					};
-				else
-					return {
-						.code_collection = program,
-						.debug_info      = {},
-					};
-			}
+			opt_some(program) return program;
 			opt_err(error) CORE_PANIC("Failed to validate DVM module: ", error);
 		}
 		CORE_UNREACHABLE();
+	}
+
+	debug_info::DebugInfo DVMCodeBuilder::buildDebugInfo() {
+		if (!build_debug_info) {
+			CORE_PANIC(
+				"Debug info was not built for this module. To build debug info, construct the "
+				"DVMCodeBuilder with build_debug_info=true."
+			);
+		}
+		return program_context->buildDebugInfo();
 	}
 
 	void DVMCodeBuilder::insertLirFunction(CRef<lir::Function> lir_function) {

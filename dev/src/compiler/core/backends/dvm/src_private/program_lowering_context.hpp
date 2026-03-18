@@ -1,6 +1,5 @@
 #pragma once
 
-#include "debug_info/debug_info.hpp"
 #include "dvm_value.hpp"
 
 #include <debug_info/debug_info_builder.hpp>
@@ -84,6 +83,12 @@ namespace compiler::backend_vm::internal {
 		 */
 		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
 
+		/**
+		 * @brief Builts the debug info for the module.
+		 * This should only be called if the class was constructed with build_debug_info=true,
+		 * otherwise it will panic.
+		 * @note It does consume the internal state, so it should only be called once.
+		 */
 		[[nodiscard]] debug_info::DebugInfo buildDebugInfo();
 
 	private:
@@ -105,7 +110,7 @@ namespace compiler::backend_vm::internal {
 		base::HashMap<base::StrID, DVMGlobal>            global_name_to_dvm;
 		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
 
-		// Debug info builder, used only if build_debug_info is true.
+		// Optional debug info builder.
 		base::Optional<debug_info::DebugInfoBuilder> debug_info_builder;
 	};
 }

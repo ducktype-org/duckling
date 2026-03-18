@@ -138,6 +138,10 @@ namespace compiler::lir {
 		static FunctionLiteral fromFunction(const Function&);
 	};
 
+	/**
+	 * @brief Metadata for LIR local variables or function arguments.
+	 * Used by the backends for the DebugInfo.
+	 */
 	struct LIRLocalMetadata {
 		base::Optional<base::StrID>         source_code_name;
 		base::Optional<pst::StablePosition> position;

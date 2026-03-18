@@ -1,8 +1,8 @@
 #pragma once
 
-#include "debug_info/debug_info_builder.hpp"
 #include "dvm_value.hpp"
 
+#include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -118,6 +118,9 @@ namespace compiler::backend_vm::internal {
 		base::StrID                        function_name;
 		std::vector<vm::code::Instruction> function_body;
 
+		/**
+		 * @brief Optional debug info builder for the function.
+		 */
 		base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt;
 	};
 }

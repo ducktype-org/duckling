@@ -1,11 +1,10 @@
 #include "program_lowering_context.hpp"
 
-#include "debug_info/debug_info.hpp"
-#include "debug_info/debug_info_builder.hpp"
 #include "debug_info_utils.hpp"
 #include "function_lowering_context.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
+#include <debug_info/debug_info_builder.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -116,7 +115,7 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 		function_di_builder_opt.emplace(builder.beginFunction(
 			lir_function->mangled_name.str(),
 			lir_function->metadata.source_code_name.map([](auto str_id) { return str_id.str(); }),
-			lir_function->metadata.position.map(translateDIPosition)
+			lir_function->metadata.position.map(mapDIPosition)
 		));
 	}
 

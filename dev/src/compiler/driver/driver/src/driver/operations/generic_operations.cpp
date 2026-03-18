@@ -5,9 +5,9 @@
 
 #include "generic_operations.hpp"
 
-#include "debug_info/debug_info_io.hpp"
 #include "debug_info_source_pos.hpp"
 
+#include <debug_info/debug_info_io.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
@@ -149,7 +149,7 @@ namespace compiler::driver {
 			CRef lir_data = &lir_data_result->valueOrThrow();
 
 			auto output_names = getModuleOutputName(key);
-			auto code_output      = getQueryArtifactsCollection()->fileArtifactAtOrNew(
+			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
                 base::StrID(output_names.object_file.c_str())
             );
 
@@ -188,20 +188,25 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
+				auto serialize_to_artifact = [&](artifacts::FileArtifact& art,
+				                                 auto&                    source,
+				                                 auto                     serialize_fn) {
+					std::ofstream output_file(art.file.getFilePath().getPath(), std::ios::binary);
+					if (!output_file.is_open()) CORE_PANIC("Failed to open file for writing");
+					serialize_fn(source, output_file);
+					output_file.close();
+				};
+
 				auto dvm_module_data = compileLIRModuleToDVM(lir_data, ctx, key.build_debug_info);
-				std::ofstream dvm_file(code_output.file.getFilePath().getPath(), std::ios::binary);
-				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
-				vm::code::serialize(dvm_module_data.code, dvm_file);
-				dvm_file.close();
+
+				serialize_to_artifact(code_output, dvm_module_data.code, vm::code::serializeCode);
 
 				if (key.build_debug_info) {
-					auto& di       = dvm_module_data.debug_info.value();
-					di.module_path = code_output.file.getFilePath().getPath().string();
-					std::ofstream di_file(
-						debug_info_output.value().file.getFilePath().getPath(), std::ios::binary
+					serialize_to_artifact(
+						debug_info_output.value(),
+						dvm_module_data.debug_info.value(),
+						debug_info::saveToStream
 					);
-					debug_info::saveToStream(di, di_file);
-					di_file.close();
 				}
 
 				break;
@@ -321,6 +326,19 @@ namespace compiler::driver {
 
 		if (result.isBad()) return result;
 
+		if (backend == BackendType::DVM) {
+			// For DVM when we have debug info, we need to change the DebugInfo format from
+			// PstHashPosition to FilePosition.
+			for (auto& di_art: debug_info_artifacts) {
+				auto calculated_debug_info
+					= query::entryPoint<DebugInfoCalculatePositions>({ di_art });
+				if (calculated_debug_info.hasFailed()) {
+					CORE_USER_LOG("Calculating debug info source positions failed!\n");
+					return base::BAD;
+				}
+			}
+		}
+
 		if (backend == BackendType::LLVM) {
 			// Link all outputs into a single binary.
 			auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
@@ -333,14 +351,6 @@ namespace compiler::driver {
 
 			if (linking_result.isBad()) {
 				CORE_USER_LOG("Linking failed!\n");
-				return base::BAD;
-			}
-		}
-
-		for (auto& di_art: debug_info_artifacts) {
-			auto resolve_result = query::entryPoint<DebugInfoResolvePositions>({ di_art });
-			if (resolve_result.hasFailed()) {
-				CORE_USER_LOG("Resolving debug info source positions failed!\n");
 				return base::BAD;
 			}
 		}

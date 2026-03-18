@@ -129,7 +129,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionPa
 			builder.addParameter(
 				lir_func_param->parameter_index.value(),
 				param_name.str(),
-				lir_func_param->metadata.position.map(translateDIPosition)
+				lir_func_param->metadata.position.map(mapDIPosition)
 			);
 		}
 	}
@@ -188,9 +188,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_local->metadata.source_code_name, var_name) {
 			builder.addVariableInit(
-				instructionsCount(),
-				var_name.str(),
-				lir_local->metadata.position.map(translateDIPosition)
+				instructionsCount(), var_name.str(), lir_local->metadata.position.map(mapDIPosition)
 			);
 		}
 	}

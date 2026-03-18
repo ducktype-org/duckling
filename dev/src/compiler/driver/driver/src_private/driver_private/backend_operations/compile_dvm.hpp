@@ -10,6 +10,10 @@
 
 namespace compiler::driver {
 
+	/**
+	 * @brief Result of compiling a LIR module to DVM bytecode,
+	 * containing the bytecode and optionally the debug info if it was built.
+	 */
 	struct DVMModuleData {
 		vm::code::CodeCollection              code;
 		base::Optional<debug_info::DebugInfo> debug_info;

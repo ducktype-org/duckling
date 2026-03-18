@@ -188,7 +188,7 @@ void FunctionLoweringContext::handleCall(
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_instruction.metadata.position, pos) {
-			builder.addInstruction(instructionsCount(), translateDIPosition(pos));
+			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
 		}
 	}
 
@@ -289,7 +289,7 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_terminator.metadata.position, pos) {
-			builder.addInstruction(instructionsCount(), translateDIPosition(pos));
+			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
 		}
 	}
 

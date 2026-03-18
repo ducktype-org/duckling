@@ -21,10 +21,14 @@ namespace compiler::driver {
 
 		for (const auto& lir_function: data->functions) module.insertLirFunction(lir_function);
 
-		auto result = module.build();
+		auto code_collection = module.build();
+
+		base::Optional<debug_info::DebugInfo> debug_info_opt;
+		if (build_debug_info) debug_info_opt.emplace(module.buildDebugInfo());
+
 		return {
-			.code       = std::move(result.code_collection),
-			.debug_info = std::move(result.debug_info),
+			.code       = std::move(code_collection),
+			.debug_info = std::move(debug_info_opt),
 		};
 	}
 }

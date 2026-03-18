@@ -430,7 +430,7 @@ private:
 		using namespace compiler;
 
 		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_1")), package_name);
+			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto artifacts
@@ -453,7 +453,7 @@ private:
 		defer(compiler::driver::llvm_dump_ir = false; compiler::driver::llvm_dump_asm = false;);
 
 		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
+			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -482,7 +482,7 @@ private:
 		using namespace compiler;
 
 		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
+			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name);
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -500,7 +500,7 @@ private:
 
 		global_state::PackageInfo package_info{
 			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name),
+			= frontend::createModuleTree(fs::File(path("modules/functions_5")), package_name),
 		};
 
 		driver::compileEntirePackage(

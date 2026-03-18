@@ -1,11 +1,12 @@
 #include "debug_info_source_pos.hpp"
 
-#include "debug_info/debug_info_io.hpp"
-
+#include <debug_info/debug_info_io.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <global_state/artifacts_location.hpp>
 
 #include <hashing/hash.hpp>
+#include <query_framework/input_query/query_input.hpp>
+#include <query_framework/input_query/query_input_impl.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <token_source/source.hpp>
@@ -13,6 +14,24 @@
 #include <fstream>
 
 namespace compiler::driver {
+
+	/**
+	 * @brief The source position side input query, that should invalidate
+	 * when the source code changes.
+	 *
+	 * But because we do not track when the source code changes,
+	 * this input will always be invalidated,
+	 * so the debug info positions will be recalculated on every compilation.
+	 */
+	struct KeyOf_SourcePositions {
+		[[nodiscard]]
+		query::QueryStableHash queryStablePerfectHash() const {
+			return { 0, 0, 0, 0 };
+		}
+	};
+
+	DECLARE_QUERY_SIDE_INPUT(SourcePositions, KeyOf_SourcePositions);
+	IMPLEMENT_QUERY_SIDE_INPUT(SourcePositions);
 
 	namespace {
 		base::Bit256 hashDebugInfoContent(const artifacts::FileArtifact& artifact) {
@@ -50,21 +69,20 @@ namespace compiler::driver {
 		}
 	}  // namespace
 
-	base::Bit256 KeyOf_DebugInfoResolvePositions::queryUnstablePerfectHash() const {
+	base::Bit256 KeyOf_DebugInfoCalculatePositions::queryStablePerfectHash() const {
+		// This is important that we cache the whole content of the artifact.
 		return hashDebugInfoContent(input_artifact);
 	}
 
-	base::Bit256 KeyOf_DebugInfoResolvePositions::queryStablePerfectHash() const {
-		return hashDebugInfoContent(input_artifact);
-	}
-
-	struct IMPLEMENT_QUERY(DebugInfoResolvePositions, query::QResult<artifacts::FileArtifact>) {
+	struct IMPLEMENT_QUERY(DebugInfoCalculatePositions, query::QResult<artifacts::FileArtifact>) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
 
 		static std::string outputArtifactName(const QKey& key) {
 			auto stable_di_name = key.input_artifact.file.name();
-			auto base_name      = stable_di_name.substr(0, stable_di_name.size() - DEBUG_INFO_STABLE_EXTENSION.size());
+			auto base_name      = stable_di_name.substr(
+                0, stable_di_name.size() - DEBUG_INFO_STABLE_EXTENSION.size()
+            );
 			return base_name.append(DEBUG_INFO_FINAL_EXTENSION);
 		}
 
@@ -87,6 +105,7 @@ namespace compiler::driver {
 
 			auto debug_info = std::move(debug_info_or_error.value());
 			debug_info.resolvePositions(calculateSourcePosition);
+			ctx.query<SourcePositions>({});  // We depend on source positions.
 
 			auto output = getQueryArtifactsCollection()->fileArtifactAtOrNew(
 				base::StrID(outputArtifactName(key).c_str())
@@ -121,5 +140,5 @@ namespace compiler::driver {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(DebugInfoResolvePositions);
+	QUERY_IMPLEMENTATION_BOILERPLATE(DebugInfoCalculatePositions);
 }

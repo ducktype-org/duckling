@@ -280,7 +280,7 @@ namespace {
 
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 		auto bytecode = m.build();
-		return comptime_dvm.loadCode(bytecode.code_collection);
+		return comptime_dvm.loadCode(bytecode);
 	}
 
 	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(

@@ -11,12 +11,6 @@
 #include <vm/bytecode/bytecode.hpp>
 
 namespace compiler::backend_vm {
-
-	struct DVMBuilderResult {
-		vm::code::CodeCollection              code_collection;
-		base::Optional<debug_info::DebugInfo> debug_info;
-	};
-
 	/**
 	 * @brief A statefull collection of code lowered into VM bytecode.
 	 * @note If used improperly, query_ctx might become a dangling reference.
@@ -52,7 +46,13 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Validates and builds module's representation as DVM program.
 		 */
-		[[nodiscard]] DVMBuilderResult build() const;
+		[[nodiscard]] vm::code::CodeCollection build() const;
+
+		/**
+		 * @brief Builts the debug info for the module. This should only be called if the class
+		 * was constructed with build_debug_info=true, otherwise it will panic.
+		 */
+		[[nodiscard]] debug_info::DebugInfo buildDebugInfo();
 
 	private:
 		// A Boxed pointer to allow forward declaration in order to hide implementation details.
