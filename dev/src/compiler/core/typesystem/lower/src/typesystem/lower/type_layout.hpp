@@ -38,7 +38,7 @@ namespace compiler::tsl {
 		/**
 		 * @brief Compact textual representation of the underlying AbstractType.
 		 */
-		base::StrID mangled_name = base::StrID{ "__unmangled__" };
+		base::StrID mangled_name;
 
 	public:
 		// Needed for default generation of copy constructor in deriving classes.

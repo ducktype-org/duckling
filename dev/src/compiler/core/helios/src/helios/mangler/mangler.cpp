@@ -63,10 +63,6 @@ namespace compiler::helios::mangler {
 		return result;
 	}
 
-	constexpr auto KeyOf_MangledType::operator==(const KeyOf_MangledType& other) const {
-		return type_key == other.type_key;
-	}
-
 	u64 KeyOf_MangledType::queryUnstablePerfectHash() const {
 		variant_match(type_key) {
 			variant_case(tsh::AbstractType, type) {

@@ -56,11 +56,6 @@ namespace compiler::helios::mangler {
 
 		ManglingTypeKey type_key;
 
-		/**
-		 * @TODO: #2027 likely remove, it is used only by the hash map.
-		 */
-		constexpr auto operator==(const KeyOf_MangledType& other) const;
-
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 	};
