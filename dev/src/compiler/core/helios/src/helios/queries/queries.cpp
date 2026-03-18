@@ -1,5 +1,7 @@
 #include "queries.hpp"
 
+#include "helios_private/hout_code_generation/default_constructors.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -66,8 +68,19 @@ namespace compiler::helios {
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
-					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
+					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym)) {
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
+
+						auto type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+						if (type.getType().getKind() == tsh::Kind::StaticArray) {
+							std::cout << "QueryDefaultStaticArrayCtor\n";
+							auto arr_type = type.getType().as<tsh::StaticArrayAbstractType>();
+							auto arr_ctor
+								= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
+							          ->valueOrThrow();
+							out.functions.emplace_back(&arr_ctor);
+						}
+					}
 
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
@@ -118,7 +131,7 @@ namespace compiler::helios {
 				"Invalid argument exception: expected class symbol"
 			);
 
-			// For now, we handle only the class's primary constructor.
+			// For now, we handle only the class's primary constructor and the default constructor.
 			// @TODO: #1290 Handle auxiliary constructors.
 
 			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
@@ -127,7 +140,12 @@ namespace compiler::helios {
 			                            .as<tsh::ClassAbstractType>();
 			const auto& implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
+
+			const auto& default_ctor
+				= ctx.query<houtgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
+
 			out_functions.emplace_back(&implicit_ctor);
+			out_functions.emplace_back(&default_ctor);
 		}
 
 		/**

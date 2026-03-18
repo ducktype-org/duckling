@@ -1,5 +1,9 @@
 #include "function_queries.hpp"
 
+#include "helios/hout/origin.hpp"
+#include "typesystem/higher/mutability.hpp"
+#include "typesystem/higher/types.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -445,6 +449,36 @@ namespace compiler::helios {
 								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
 							) {
 								return getImplicitCtorDecl(ctx, ctor_data);
+							}
+							variant_case(
+								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor_data
+							) {
+								const auto class_type
+									= ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
+								          ->valueOrThrow()
+								          .getType()
+								          .as<tsh::ClassAbstractType>();
+
+								const auto return_type = tsh::SymbolType<>{
+									class_type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+								};
+
+								return HOUTFunctionDeclaration{
+									key, return_type, {}, code::generatedOrigin()
+								};
+							}
+							variant_case(
+								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor,
+								ctor_data
+							) {
+								const auto return_type
+									= tsh::SymbolType<>{ ctor_data.array_type,
+									                     tsh::ReferenceKind::Direct,
+									                     tsh::Mutability::Mutable };
+
+								return HOUTFunctionDeclaration{
+									key, return_type, {}, code::generatedOrigin()
+								};
 							}
 							variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);

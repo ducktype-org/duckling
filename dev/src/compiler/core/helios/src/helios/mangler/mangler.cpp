@@ -231,6 +231,18 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
+		 * @TODO: #1568 Remove this. I really needed it.
+		 */
+		std::string mangleType(const tsh::SymbolType<>& type) {
+			auto        abs_type = type.getType();
+			std::string s        = abs_type.toString();
+			std::ranges::replace(s, ' ', '_');
+			std::ranges::replace(s, '[', 'A');
+			std::ranges::replace(s, ']', 'E');
+			return s;
+		}
+
+		/**
 		 * @brief Returns mangled name of a function or method
 		 * @note: See mangling-scheme.md for details
 		 */
@@ -244,10 +256,10 @@ namespace compiler::helios::mangler {
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
-				ret += fun_decl.return_type.toString();
+				ret += mangleType(fun_decl.return_type);
 
 				for (const auto& param: fun_decl.parameters) {
-					ret += param.type.toString();
+					ret += mangleType(param.type);
 					ret += identifier(param.name.str());
 				}
 
@@ -290,8 +302,24 @@ namespace compiler::helios::mangler {
 						variant_match(gen_data.data) {
 							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "C" + funcType(ctx, symbol_id) + "E";
+
+								const auto ctor_suffix = "C" + funcType(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
+							}
+							variant_case(
+								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor
+							) {
+								const auto path_to_class = path(ctx, ctor.class_symbol);
+								std::cout << "Path to class: " << path_to_class << '\n';
+								const auto ctor_suffix = "K" + funcType(ctx, symbol_id) + "E";
+								return path_to_class + ctor_suffix;
+							}
+							variant_case(
+								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
+							) {
+								// TODOP: Link type mangling here
+								// TODOP: Update mangling-scheme
+								return "Hda" + ctor.array_type.toString() + "E";
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
