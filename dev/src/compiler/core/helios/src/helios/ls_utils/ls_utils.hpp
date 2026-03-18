@@ -1,5 +1,7 @@
 #pragma once
 
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/elements_list.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
