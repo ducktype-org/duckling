@@ -96,9 +96,13 @@ namespace lsp {
 	};
 
 	struct TokenContext {
-		std::deque<PrecalculatedSemanticToken> precalculated{};
-		base::Optional<StandardTokenType>      default_identifier_type{};
-		bool                                   precalculate_for_children = true;
+		std::vector<PrecalculatedSemanticToken> precalculated{};
+		base::Optional<StandardTokenType>       default_identifier_type{};
+		bool                                    precalculate_for_children = true;
+
+		PrecalculatedSemanticToken& getFirstPrecalculated() { return precalculated.back(); }
+
+		void advancePrecalculated() { precalculated.pop_back(); }
 	};
 
 	struct TokenTopLevelVisitor final: public pst::PstVisitorEmpty {
@@ -129,10 +133,10 @@ namespace lsp {
 			element->acceptVisitor(visitor);
 		}
 
-		explicit TokenTopLevelVisitor(std::deque<PrecalculatedSemanticToken>& identified_tokens):
+		explicit TokenTopLevelVisitor(std::vector<PrecalculatedSemanticToken>& identified_tokens):
 			  identified_tokens(identified_tokens) {}
 
-		std::deque<PrecalculatedSemanticToken>& identified_tokens;
+		std::vector<PrecalculatedSemanticToken>& identified_tokens;
 
 
 		~TokenTopLevelVisitor() override = default;
@@ -239,13 +243,26 @@ namespace lsp {
 			TokenHoutExprVisitor visitor(result.precalculated);
 			hout_expr->acceptVisitor(visitor);
 			result.default_identifier_type.emplace(StandardTokenType::Namespace);
+
+			if_opt_some(hout_expr->origin.getSourcePosition(), whole_expr_pos) {
+				// Filter the results.precalculated to only keep the tokens that are inside the
+				// expression position. This is needed because things like "default parameter value"
+				// are in the HOUT in the call, but their source position is the position of the function declaration.
+				auto is_inside_expr = [&](const PrecalculatedSemanticToken& token) {
+					return token.position.getStart() >= whole_expr_pos.getStart()
+					    && token.position.getEnd() <= whole_expr_pos.getEnd();
+				};
+				std::erase_if(result.precalculated, [&](const PrecalculatedSemanticToken& token) {
+					return !is_inside_expr(token);
+				});
+			}
 		}
 
-		explicit TokenHoutExprVisitor(std::deque<PrecalculatedSemanticToken>& identified_tokens):
+		explicit TokenHoutExprVisitor(std::vector<PrecalculatedSemanticToken>& identified_tokens):
 			  identified_tokens(identified_tokens) {}
 
-		std::deque<PrecalculatedSemanticToken>& identified_tokens;
-		std::unordered_set<code::HOUTExprID>    visited_reusable_exprs;
+		std::vector<PrecalculatedSemanticToken>& identified_tokens;
+		std::unordered_set<code::HOUTExprID>     visited_reusable_exprs;
 
 		~TokenHoutExprVisitor() override = default;
 
@@ -400,10 +417,11 @@ namespace lsp {
 		else
 			return {};
 
-		// I am not sure if having this sort has 0-impact when the queue is empty,
-		// and it is empty in 90% of cases.
 		std::ranges::sort(
-			result.precalculated, std::ranges::less{}, &PrecalculatedSemanticToken::position
+			result.precalculated,
+			[](const PrecalculatedSemanticToken& a, const PrecalculatedSemanticToken& b) {
+				return a.position.getEnd() > b.position.getEnd();  // bigger first, smaller last
+			}
 		);
 		return result;
 	}
@@ -427,13 +445,17 @@ namespace lsp {
 		for (auto sub: element->viewSubElements()) {
 			variant_match(sub) {
 				variant_case(pst::LangElement::SubToken, token) {
-					auto& precalculated_candidate = local_context.precalculated.front();
-					// add token to list
-					if (precalculated_candidate.isPrecalculatedFor(token)) {
-						result.emplace_back(token, precalculated_candidate.correct_type);
-						local_context.precalculated.pop_front();
-					} else if (local_context.default_identifier_type.has_value()
-					           && token->getType() == lexer::Token::Type::Identifier) {
+					if (not local_context.precalculated.empty()) {
+						auto& precalculated_candidate = local_context.getFirstPrecalculated();
+						// add token to list
+						if (precalculated_candidate.isPrecalculatedFor(token)) {
+							result.emplace_back(token, precalculated_candidate.correct_type);
+							local_context.advancePrecalculated();
+							continue;
+						}
+					}
+					if (local_context.default_identifier_type.has_value()
+					    && token->getType() == lexer::Token::Type::Identifier) {
 						result.emplace_back(token, local_context.default_identifier_type.value());
 					} else {
 						result.emplace_back(token);
