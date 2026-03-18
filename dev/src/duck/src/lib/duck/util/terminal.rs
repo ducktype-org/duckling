@@ -7,6 +7,7 @@ use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 use crate::duck::util::indent::indent;
 
 #[derive(Debug)]
+/// A struct which is responsible for printing to stdout/stderr.
 pub struct Terminal {
     term: Term,
     verbosity: Verbosity,
@@ -14,6 +15,7 @@ pub struct Terminal {
 }
 
 #[derive(Debug, Default)]
+/// A verbosity of a [`Terminal`].
 pub enum Verbosity {
     Quiet,
     #[default]
@@ -28,12 +30,20 @@ macro_rules! delegate_styles {
         Prefix: $value:literal,
         OptionalStyles: $( $opt:ident $(+)? )* $(,)?
     ) => {
+        #[inline]
+        /// Print a
+        #[doc = stringify!($name)]
+        /// message to the terminal.
        pub fn $name(&self, text: impl ::std::fmt::Display) {
            let full_text = format!("{} {}", style($value)$(.$opt())*, text);
            let full_text = indent_without_first_line(full_text, $value.len() + 1);
            self.print(full_text)
        }
 
+       #[inline]
+        /// Print a verbose
+        #[doc = stringify!($name)]
+        /// message to the terminal.
        pub fn $verbose(&self, text: impl ::std::fmt::Display) {
            let full_text = format!("{} {}", style($value)$(.$opt())*, text);
            let full_text = indent_without_first_line(full_text, $value.len() + 1);
@@ -43,24 +53,31 @@ macro_rules! delegate_styles {
 }
 
 impl Verbosity {
+    #[inline]
+    /// Check, if this verbosity is quiet.
     pub fn is_quiet(&self) -> bool {
         matches!(self, Verbosity::Quiet)
     }
 
+    #[inline]
+    /// Check, if this verbosity is verbose.
     pub fn is_verbose(&self) -> bool {
         matches!(self, Verbosity::Verbose)
     }
 }
 
 impl Terminal {
+    /// Set [`Verbosity`] on this [`Terminal`].
     pub fn set_verbosity(&mut self, verbosity: Verbosity) {
         self.verbosity = verbosity;
     }
 
+    /// Set whether colors are enabled on this terminal.
     pub fn set_color(&mut self, colors_enabled: bool) {
         self.colors_enabled = colors_enabled;
     }
 
+    /// Get the default [`Terminal`] for stdout.
     pub fn stdout() -> Terminal {
         Terminal {
             term: Term::stdout(),
@@ -69,6 +86,7 @@ impl Terminal {
         }
     }
 
+    /// Get the default [`Terminal`] for stderr.
     pub fn stderr() -> Terminal {
         Terminal {
             term: Term::stderr(),
@@ -77,20 +95,31 @@ impl Terminal {
         }
     }
 
+    /// Print a generic message to the terminal.
+    ///
+    /// If [`Verbosity`] is [`Quiet`](Verbosity::Quiet), this has no effect.
     pub fn print(&self, text: impl Display) {
         if self.verbosity.is_quiet() {
             return;
         }
-        self.print_verbose(text)
-    }
 
-    pub fn print_verbose(&self, text: impl Display) {
         let text = text.to_string();
         if !self.colors_enabled {
             let _ = self.term.write_line(&WithoutAnsi::new(&text).to_string());
         } else {
             let _ = self.term.write_line(&text);
         }
+    }
+
+    #[inline]
+    /// Print a generic verbose message to the terminal.
+    ///
+    /// If [`Verbosity`] is not [`Verbose`](Verbosity::Verbose), this has no effect.
+    pub fn print_verbose(&self, text: impl Display) {
+        if !self.verbosity.is_verbose() {
+            return;
+        }
+        self.print(text)
     }
 
     delegate_styles! {
@@ -135,10 +164,12 @@ impl Terminal {
         OptionalStyles: red + bold + reverse,
     }
 
+    /// Get the [`Verbosity`] of this [`Terminal`].
     pub fn verbosity(&self) -> &Verbosity {
         &self.verbosity
     }
 
+    /// Get the underlying [`Term`] used for printing.
     pub fn term(&self) -> &Term {
         &self.term
     }

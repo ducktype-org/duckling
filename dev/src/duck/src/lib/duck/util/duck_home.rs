@@ -37,7 +37,7 @@ macro_rules! ensure_file {
     ) => {
         /// Ensure that the file
         #[doc = $desc]
-        /// exists on a disk
+        /// exists on the disk
         pub fn $fn(&self) -> QuackResult<&Path> {
             use $crate::util_common::path_ops_ext::PathOpsExt;
             let file = self.$name();
@@ -55,7 +55,7 @@ macro_rules! ensure_dir {
     ) => {
         /// Ensure that the directory
         #[doc = $desc]
-        /// exists on a disk
+        /// exists on the disk
         pub fn $fn(&self) -> QuackResult<&Path> {
             use $crate::util_common::path_ops_ext::{MkdirOptions, PathOpsExt};
             let file = self.$name();
