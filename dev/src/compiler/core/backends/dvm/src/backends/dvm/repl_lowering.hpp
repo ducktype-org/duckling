@@ -24,7 +24,7 @@ namespace compiler::backend_vm {
 	 * REPL statement compilations, allowing later statements to reference symbols
 	 * (functions, globals, types) defined in earlier statements.
 	 */
-	class ReplLoweringContext {
+	class ReplLoweringContext final {
 	public:
 		explicit ReplLoweringContext(query::Context& query_ctx);
 		~ReplLoweringContext();
