@@ -79,29 +79,57 @@ namespace lsp {
 	}
 
 	std::string SemanticToken::toJSON() {
-		return "{\"line\":" + std::to_string(this->line) + ",\"startCharacter\":"
-		     + std::to_string(this->start_character) + ",\"length\":" + std::to_string(this->length)
-		     + ",\"tokenType\":" + std::to_string(static_cast<int8_t>(this->type))
-		     + ",\"tokenModifiers\":0}";
+		return std::format(
+			R"({{"line":{},"startCharacter":{},"length":{},"tokenType":{},"tokenModifiers":0}})",
+			line,
+			start_character,
+			length,
+			static_cast<int8_t>(type)
+		);
 	}
 
+	/**
+	 * @brief Represents a token we have identified the semantic meaning of
+	 * before we put it in the final result.
+	 */
 	struct PrecalculatedSemanticToken {
 		dia::SourcePosition position;
 		StandardTokenType   correct_type;
 
+		/**
+		 * @brief Checks if the precalculated token corresponds to the given token based on its
+		 * position.
+		 */
 		[[nodiscard]] bool isPrecalculatedFor(const CRef<lexer::Token>& token) const {
-			// We should compare based on whole position, not just the end.
+			// @TODO: #2301 Maybe in the futurue fix this to compare against whole position, not
+			// just end.
 			return token->getPosition().getEnd() == position.getEnd();
 		}
 	};
 
+	/**
+	 * @brief This is the context needed for the PST subtree evaluation.
+	 */
 	struct TokenContext {
+		/// List of tokens we have precalculated so far in the good order.
 		std::vector<PrecalculatedSemanticToken> precalculated{};
-		base::Optional<StandardTokenType>       default_identifier_type{};
-		bool                                    precalculate_for_children = true;
 
+		/// Some PST subtrees might want to change the default identifier token type for their children.
+		base::Optional<StandardTokenType> default_identifier_type{};
+
+		/// Whether we should invoke the semantic analysis for children of the node.
+		/// For example, we only analyze the top-level expression and do not call the semantic
+		/// analysis for the sub-expressions.
+		bool precalculate_for_children = true;
+
+		/**
+		 * @brief Get the closest precalculated token (first in the left-to-right order).
+		 */
 		PrecalculatedSemanticToken& getFirstPrecalculated() { return precalculated.back(); }
 
+		/**
+		 * @brief Remove the first precalculated token from the list, after we have used it.
+		 */
 		void advancePrecalculated() { precalculated.pop_back(); }
 	};
 
@@ -233,10 +261,11 @@ namespace lsp {
 
 			result.precalculate_for_children = false;
 
-			MCRef<query::QResult<Box<code::Expr>>> hout_expr_result;
-			query::utils::withContextDo([&](query::Context& ctx) {
-				hout_expr_result = compiler::helios::ls::getHoutExpr(ctx, expr_element);
-			});
+			auto hout_expr_result = std::any_cast<CRef<query::QResult<Box<code::Expr>>>>(
+				query::utils::withContextCompute([&](query::Context& ctx) {
+					return compiler::helios::ls::getHoutExpr(ctx, expr_element);
+				})
+			);
 			if (hout_expr_result->hasFailed()) return;
 
 			auto&                hout_expr = hout_expr_result->valueOrPanic();
@@ -245,9 +274,9 @@ namespace lsp {
 			result.default_identifier_type.emplace(StandardTokenType::Namespace);
 
 			if_opt_some(hout_expr->origin.getSourcePosition(), whole_expr_pos) {
-				// Filter the results.precalculated to only keep the tokens that are inside the
+				// Filter the results.pre-calculated to only keep the tokens that are inside the
 				// expression position. This is needed because things like "default parameter value"
-				// are in the HOUT in the call, but their source position is the position of the function declaration.
+				// are in the HOUT in the call, but their source position is in the function declaration.
 				auto is_inside_expr = [&](const PrecalculatedSemanticToken& token) {
 					return token.position.getStart() >= whole_expr_pos.getStart()
 					    && token.position.getEnd() <= whole_expr_pos.getEnd();
@@ -407,6 +436,11 @@ namespace lsp {
 		}
 	};
 
+	/**
+	 * @brief Do a precalculation pass for the given node.
+	 * @return A new context if some visitor accepted the node and did the precalculation,
+	 * or empty optional if no visitor supported the node.
+	 */
 	base::Optional<TokenContext> precalculateTokensForNode(pst::Access<pst::LangElement> elem) {
 		TokenContext result;
 
@@ -417,6 +451,10 @@ namespace lsp {
 		else
 			return {};
 
+		// We have to sort the precalculated tokens, because elements like for example
+		// methods have their first argument before the method name, meaning we can't ensure
+		// the right order without sorting. But the sorting is not expensive
+		// because the number of precalculated tokens is very small.
 		std::ranges::sort(
 			result.precalculated,
 			[](const PrecalculatedSemanticToken& a, const PrecalculatedSemanticToken& b) {

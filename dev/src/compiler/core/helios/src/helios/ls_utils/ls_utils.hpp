@@ -9,12 +9,16 @@
 
 namespace compiler::helios::ls {
 	/**
-	 * If expression is an identifier expression, returns its symbol ID.
-	 * otherwise returns an empty optional.
+	 * @brief Gets HOUT expression corresponding to a given PST expression.
+	 * Executes the query under the hood.
 	 */
 	CRef<query::QResult<Box<code::Expr>>> getHoutExpr(
 		query::Context& ctx, pst::Access<pst::ExprElement> element
 	);
 
+	/**
+	 * @brief Get SymID of a given PST element.
+	 * Executes the query under the hood.
+	 */
 	query::QResult<SymID> getSymbolOfStmt(query::Context& ctx, pst::Access<pst::LangElement> element);
 }

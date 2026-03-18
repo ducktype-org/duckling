@@ -162,7 +162,7 @@ namespace compiler::frontend {
 	};
 
 	/**
-	 * Returns FileID for a parsed PST root element if known.
+	 * @brief Returns FileID for a parsed PST root element if known.
 	 */
 	base::Optional<FileID> getFileIDOfPSTRoot(pst::PstID root_element_id);
 }
