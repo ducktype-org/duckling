@@ -1,0 +1,46 @@
+# This test checks that a class containing three 4-byte fields and one field
+# whose type is an 8-byte class compiles correctly, and that field assignment
+# and printing work as expected.
+#
+# The alignment of Inner is 4 bytes (driven by its i32 members).
+# The alignment of Outer is therefore also 4 bytes (max of 4, 4, 4, 4).
+# The LLVM struct layout must agree with what the compiler computes.
+
+class Inner {
+    x: i32 = i32(0);
+    y: i32 = i32(0);
+}
+
+class Outer {
+    a: i32 = i32(0);
+    b: i32 = i32(0);
+    c: i32 = i32(0);
+    inner: Inner = Inner(i32(0), i32(0));
+}
+
+fun main() -> i64 = {
+    # Construction
+    var o = Outer(i32(1), i32(2), i32(3), Inner(i32(4), i32(5)));
+    builtin_output_i64(o.a);      # 1
+    builtin_output_i64(o.b);      # 2
+    builtin_output_i64(o.c);      # 3
+    builtin_output_i64(o.inner.x); # 4
+    builtin_output_i64(o.inner.y); # 5
+
+    # Assignment to scalar field
+    o.a = i32(10);
+    builtin_output_i64(o.a);      # 10
+
+    # Assignment to nested class field
+    o.inner = Inner(i32(20), i32(30));
+    builtin_output_i64(o.inner.x); # 20
+    builtin_output_i64(o.inner.y); # 30
+
+    # Copy
+    var p = o;
+    p.b = i32(99);
+    builtin_output_i64(o.b);      # 2  (original unchanged)
+    builtin_output_i64(p.b);      # 99
+
+    return 0i64;
+}

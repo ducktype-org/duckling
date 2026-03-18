@@ -416,6 +416,13 @@ private:
 				my_class_layout->getSize() == BYTE_SIZE * 32,
 				"Class layout size should account for data alignment."
 			);
+			// The class alignment equals the max alignment of its members.
+			// f64, ref i32, box f16 are all 8-byte aligned, so class alignment = 8.
+			assertEqual(
+				my_class_layout->getAlignment(),
+				Bytes(8),
+				"Class alignment should equal the maximum alignment of its members."
+			);
 			assertTrue(
 				my_class_layout->getSourceType() == my_class_type,
 				"Layout should have source type as constructed."

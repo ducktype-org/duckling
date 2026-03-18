@@ -112,6 +112,17 @@ namespace compiler::tsl {
 		}
 
 		/**
+		 * @brief Gets the maximum alignment of a type layout in a vector.
+		 * @param layouts Vector of type layouts to aggregate over.
+		 * @return The maximum alignment of a type layout in the vector.
+		 */
+		Bytes maxTypeLayoutAlignmentInVector(const std::vector<CRef<TypeLayout>>& layouts) {
+			Bytes max{ 1 };
+			for (const auto& layout: layouts) max = std::max(max, layout->getAlignment());
+			return max;
+		}
+
+		/**
 		 * @brief Get the permutation of where the component types land in a layout based on
 		 * offsets.
 		 * @param offsets The offsets of the component types.
@@ -370,6 +381,11 @@ namespace compiler::tsl {
 		 */
 		std::vector<compiler::helios::SymID> layout_idx_to_sym_id;
 		Bits                                 total_size;
+		/**
+		 * The alignment of the class type, equal to the maximum alignment of its members.
+		 * An empty class has alignment 1.
+		 */
+		Bytes max_alignment;
 
 		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(CRef<tsh::TypeInterface>
 		                                                                   interface) {
@@ -407,14 +423,15 @@ namespace compiler::tsl {
 				  field_layouts.empty()
 					  ? Bits(0)
 					  : bytes2bits(field_offsets.back()) + field_layouts.back()->getSize()
-			  ) {}
+			  ),
+			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
 	};
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx), ctx) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
-		  TypeLayoutABC(helper.total_size, helper.class_type),
+		  TypeLayoutABC(helper.total_size, helper.max_alignment, helper.class_type),
 		  num_fields(helper.field_layouts.size()),
 		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id),
 		  mangled_name(ctx.query<compiler::helios::mangler::QueryMangledSymbol>(
