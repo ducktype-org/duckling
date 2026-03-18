@@ -79,6 +79,12 @@ namespace compiler::helios {
 	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID);
 
 	/**
+	 * @return PST element symbol was created from,
+	 * or empty optional if the symbol was not created from a PST element.
+	 */
+	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id);
+
+	/**
 	 * @brief Pretty prints the symbol.
 	 */
 	std::string prettyDebugPrint(SymID, query::Context&);
