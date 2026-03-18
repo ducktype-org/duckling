@@ -37,13 +37,18 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(return_type, counter);
 		}
 
+		base::Bit256 GeneratedSymbolData::ReplInstructionWrapper::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(counter);
+		}
+
 		GeneratedSymbolData::GeneratedSymbolData(const std::variant<
 												 ImplicitConstructor,
 												 BuiltinOperator,
 												 Parameter,
 												 SelfParameter,
 												 Variable,
-												 ReplExpressionWrapper>& data):
+												 ReplExpressionWrapper,
+												 ReplInstructionWrapper>& data):
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
@@ -122,6 +127,22 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(ReplInstructionWrapper, repl) {
+					// Unit (not Void) is the correct return type for procedures.
+					// Per the language spec: "void ... cannot be returned from a function".
+					const auto void_type = tsh::SymbolType<>{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+					const auto function_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ {}, void_type });
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -144,6 +165,9 @@ namespace compiler::helios {
 				variant_case(ReplExpressionWrapper, repl) {
 					CORE_PANIC("Can't get scope of repl expr wrapper yet.");
 				}
+				variant_case(ReplInstructionWrapper, repl) {
+					CORE_PANIC("Can't get scope of repl instruction wrapper yet.");
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -157,6 +181,7 @@ namespace compiler::helios {
 				variant_case(SelfParameter, param) { return param.scope; }
 				variant_case(Variable, var) { return {}; }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
+				variant_case(ReplInstructionWrapper, repl) { return {}; }
 				variant_default { CORE_PANIC("Unhandled symbol kind"); }
 			}
 			CORE_UNREACHABLE();
@@ -205,6 +230,9 @@ namespace compiler::helios {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper) {
+				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::ReplInstructionWrapper) {
 				kind = SymbolKind::Function;
 			}
 			variant_default { CORE_UNREACHABLE(); }

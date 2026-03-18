@@ -51,6 +51,32 @@ namespace pst {
 
 		return (*children.begin()).dynamicCast<Stmt>();
 	}
+
+	base::Optional<AccessLocked<Stmt>> extractSingleTopLevelStatement(
+		query::Context& ctx, const AccessLocked<LangElement>& root
+	) {
+		auto root_elem = root.unlock(ctx);
+		auto children  = root_elem->viewChildren();
+
+		auto it = children.begin();
+		if (it == children.end()) return {};
+
+		auto first_child = (*it).unlock(ctx);
+		++it;
+		if (it != children.end()) return {};
+
+		auto kind = first_child->getElementKind();
+
+		// Reject expression statements (already handled by extractSingleExpression)
+		if (kind == ElementKind::ExprStmt) return {};
+
+		// Reject control flow instructions (already handled by extractSingleInstruction)
+		if (kind == ElementKind::If || kind == ElementKind::While || kind == ElementKind::For
+		    || kind == ElementKind::Block)
+			return {};
+
+		return (*children.begin()).dynamicCast<Stmt>();
+	}
 }
 
 namespace pst::internal {

@@ -24,6 +24,7 @@
 namespace compiler::repl {
 	// for friend:
 	struct ImplementationOf_QueryReplExpressionWrapper;
+	struct ImplementationOf_QueryReplInstructionWrapper;
 }
 
 namespace compiler::helios {
@@ -84,6 +85,7 @@ namespace compiler::helios {
 		);
 		friend ImplementationOf_QueryDeclOfFun;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
+		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
 	};
 
 	/**
@@ -100,6 +102,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryCodeOfFun;
 		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
+		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
 
 	public:
 		HOUTFunction() = delete;
