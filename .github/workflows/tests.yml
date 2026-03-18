@@ -44,11 +44,12 @@ jobs:
             cxx: g++-14
             cc: gcc-14
             gcov: gcov-14
-            linker: MOLD
+            linker: mold
             cache-prefix: gcc-build
           - name: clang
             cxx: clang++-19
             cc: clang-19
+            linker: mold
             cache-prefix: clang-build
       fail-fast: false
 
@@ -132,7 +133,7 @@ jobs:
         run: sudo apt -y install xxd
 
       - name: Install mold
-        if: ${{ matrix.compiler.name == 'gcc' }}
+        if: ${{ matrix.compiler.linker == 'mold' }}
         run: sudo apt -y install mold
 
       - name: Install GCC 14 and gcov-14
@@ -142,7 +143,7 @@ jobs:
       - name: Install Ninja
         run: sudo apt -y install ninja-build
 
-      - name: Install Valgrind 
+      - name: Install Valgrind
         run: sudo apt -y install valgrind
 
       - name: Setup duck dependencies
