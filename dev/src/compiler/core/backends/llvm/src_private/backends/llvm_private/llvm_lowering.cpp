@@ -1060,10 +1060,6 @@ namespace compiler::backend_llvm {
 				auto layout      = output.layout;
 				auto result_type = typeFromLayout(module, layout);
 
-				CORE_ASSERT(
-					layout->is<tsl::TupleTypeLayout>(),
-					"Output of TuplePack should have tuple layout"
-				);
 				const auto& tuple_layout
 					= std::get<tsl::TupleTypeLayout>(output.layout->getVariant());
 
