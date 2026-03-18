@@ -40,24 +40,4 @@ namespace lsp {
 		return result;
 	}
 
-	void initPSTs(const fs::FilePath& path) {
-		auto vfile = fs::File(path);
-
-		if (vfile.isFile()) {
-			CORE_ASSERT(
-				ext_is_ok(path.extension()), "Files should already have Duckling extensions."
-			);
-			auto src_files = compiler::frontend::SourceFile::getSourceFilesFromFile(vfile);
-			for (auto& src_file: src_files) src_file->getPST();
-			return;
-		}
-
-		if (vfile.isDirectory()) {
-			for (const auto& sub_path: vfile.listFilePaths()) initPSTs(sub_path);
-			return;
-		}
-
-		CORE_UNREACHABLE();
-	}
-
 }
