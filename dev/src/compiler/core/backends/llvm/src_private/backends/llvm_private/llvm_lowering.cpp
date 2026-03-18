@@ -319,7 +319,6 @@ namespace compiler::backend_llvm {
 			variant_case(tsl::ClassTypeLayout, class_layout) {
 				const auto class_name = class_layout.getMangledName().strView();
 
-
 				// Get the struct from the context, if it has been previously defined.
 				if (llvm::StructType* struct_type
 				    = llvm::StructType::getTypeByName(llvm_context, class_name);
