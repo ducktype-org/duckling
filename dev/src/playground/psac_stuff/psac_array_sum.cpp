@@ -14,7 +14,7 @@ using ValueTp = unsigned int;
 // This makes the code segfault after everything.
 // using ValueTp = u64;
 // 
-constexpr usize ARRAY_SIZE = 32;
+constexpr usize ARRAY_SIZE = (1 << 18);
 constexpr usize TREE_SIZE  = 2 * ARRAY_SIZE;
 
 std::array<psac::Mod<ValueTp>, TREE_SIZE> value_tree;
@@ -65,8 +65,23 @@ psac_function(
 	});
 }
 
-int main() {
+int main(int argc, const char* argv[]) {
 	init::InitObject init;
+	
+	std::ios::sync_with_stdio(false);
+	std::cin.tie(nullptr);
+	
+	if(argc == 1) {
+		std::cout << "Usage: " << argv[0] << " [0/1/2]\n";
+		return 1;
+	}
+	int user_value = std::stoi(argv[1]);
+	if(user_value < 0 || user_value > 2) {
+		std::cout << "Usage: " << argv[0] << " [0/1/2]\n";
+		return 1;
+	}
+	
+	
 
 	// Array of type ValueTp
 	std::array<psac::Mod<ValueTp>, ARRAY_SIZE> arr;
@@ -88,18 +103,24 @@ int main() {
 	psac_write(&l_mod, 0);
 	psac::Mod<ValueTp> r_mod;
 	psac_write(&r_mod, ARRAY_SIZE);
+	
+	
+	if(user_value >= 1) {
+    	auto comp = psac_run(sum, &arr, &my_index_mod, &l_mod, &r_mod);
+    
+    	std::cout << "real_sum = " << simple_sum << '\n';
+    	std::cout << "psac_sum = " << value_tree.at(1).value << '\n';
+    
+        if(user_value >= 2) {
+           	simple_sum += (1'000 - arr[0].value);
+           	psac_write(&arr.at(0), 1'000);
+           	psac_propagate(comp);
+           
+           	std::cout << "real_sum = " << simple_sum << '\n';
+           	std::cout << "psac_sum = " << value_tree.at(1).value << '\n';
+        }
+	}
 
-	auto comp = psac_run(sum, &arr, &my_index_mod, &l_mod, &r_mod);
-
-	std::cout << "real_sum = " << simple_sum << '\n';
-	std::cout << "psac_sum = " << value_tree.at(1).value << '\n';
-
-	simple_sum += (1'000 - arr[0].value);
-	psac_write(&arr.at(0), 1'000);
-	psac_propagate(comp);
-
-	std::cout << "real_sum = " << simple_sum << '\n';
-	std::cout << "psac_sum = " << value_tree.at(1).value << '\n';
 
 	psac::GarbageCollector::run();
 }
