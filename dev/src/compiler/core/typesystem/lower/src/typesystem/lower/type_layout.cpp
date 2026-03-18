@@ -98,7 +98,7 @@ namespace compiler::tsl {
 
 			for (const auto& layout: layouts) {
 				const Bytes size_in_bytes = base::bits2bytesRoundUp(layout->getSize());
-				const usize alignment = usize(layout->getAlignment());
+				const usize alignment     = usize(layout->getAlignment());
 
 				// Round up offset to nearest multiple of alignment.
 				bytes_taken = (bytes_taken + Bytes(alignment - 1)) / alignment * alignment;

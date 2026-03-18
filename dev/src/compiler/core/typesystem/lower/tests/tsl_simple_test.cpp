@@ -444,8 +444,8 @@ private:
 
 		// This test considers a class containing a static array to check if the element
 		// alignment is computed correctly.
-		auto [_, root_scope]           = getModule(fs::File(path("class_layout_with_array")));
-		const SymID class_symbol    = getChain("ClassWithArray", root_scope).back();
+		auto [_, root_scope]     = getModule(fs::File(path("class_layout_with_array")));
+		const SymID class_symbol = getChain("ClassWithArray", root_scope).back();
 
 		withContextDo([&](query::Context& ctx) -> void {
 			const ClassAbstractType class_type      = ctx.query<QueryClassType>(class_symbol);
