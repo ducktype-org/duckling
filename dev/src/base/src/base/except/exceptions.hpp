@@ -147,20 +147,41 @@ namespace base {
 	#define CORE_UNREACHABLE() std::unreachable()
 #endif
 
-/**
- * Non throwing version of CORE_ASSERT.
- * Should be used only in places where noexcept is required.
- * When possible use CORE_ASSERT instead alongside RELEASE_NOEXCEPT if needed.
- * @note If this assertion fails the program will be terminated.
- */
-#define CORE_ASSERT_NOEXCEPT(cond, what, ...)                                          \
+#define CORE_ASSERT_NOEXCEPT_BASE(assert_type, cond, what, ...)                        \
 	{                                                                                  \
 		bool CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = false;              \
 		try {                                                                          \
-			CORE_ASSERT(cond, what __VA_OPT__(, ) __VA_ARGS__);                        \
+			assert_type(cond, what __VA_OPT__(, ) __VA_ARGS__);                        \
 		} catch (const base::Panic& e) {                                               \
 			e.printToCerr();                                                           \
 			CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = true;                \
 		}                                                                              \
 		if (CONCAT_2(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); } \
 	}
+
+/**
+ * Non throwing version of CORE_ASSERT.
+ * Should be used only in places where noexcept is required.
+ * When possible use CORE_ASSERT instead alongside RELEASE_NOEXCEPT if needed.
+ * @note If this assertion fails the program will be terminated.
+ */
+#define CORE_ASSERT_NOEXCEPT(cond, what, ...) \
+	CORE_ASSERT_NOEXCEPT_BASE(CORE_ASSERT, cond, what __VA_OPT__(, ) __VA_ARGS__)
+
+/**
+ * Non throwing version of CORE_ASSERT_STRONG.
+ * Should be used only in places where noexcept is required.
+ * When possible use CORE_ASSERT_STRONG instead alongside RELEASE_NOEXCEPT if needed.
+ * @note If this assertion fails the program will be terminated.
+ */
+#define CORE_ASSERT_STRONG_NOEXCEPT(cond, what, ...) \
+	CORE_ASSERT_NOEXCEPT_BASE(CORE_ASSERT_STRONG, cond, what __VA_OPT__(, ) __VA_ARGS__)
+
+/**
+ * Non throwing version of CORE_ASSERT_SYSCALL.
+ * Should be used only in places where noexcept is required.
+ * When possible use CORE_ASSERT_SYSCALL instead alongside RELEASE_NOEXCEPT if needed.
+ * @note If this assertion fails the program will be terminated.
+ */
+#define CORE_ASSERT_SYSCALL_NOEXCEPT(cond, what, ...) \
+	CORE_ASSERT_NOEXCEPT_BASE(CORE_ASSERT_SYSCALL, cond, what __VA_OPT__(, ) __VA_ARGS__)
