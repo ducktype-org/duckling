@@ -22,15 +22,4 @@ namespace lsp {
 	 */
 	std::string jsonDict(const std::map<std::string, std::string>& dict);
 
-
-	/**
-	 * @brief Recursively queries PSTs of the files.
-	 *
-	 * @param path Path to the file/folder to query the PST for or continue recursion from.
-	 *
-	 * @note The PSTs are queried only for Duckling files.
-	 * @note In the LS daemon context, the path should be within the virtual file system.
-	 */
-	void initPSTs(const fs::FilePath& path);
-
 }
