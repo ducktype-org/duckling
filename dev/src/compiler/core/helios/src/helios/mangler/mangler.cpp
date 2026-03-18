@@ -53,7 +53,7 @@ namespace compiler::helios::mangler {
 
 		u64 result = 0;
 
-		hashes.maybePutAndUpdate(*this, 0, [&result](Ref<u64> existing) {
+		hashes.maybePutAndUpdate(*this, 0u, [&result](Ref<u64> existing) {
 			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
 			result = *existing;
 		});
@@ -185,7 +185,7 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto current_pst = symbolPst(symbol_id).unlock(ctx);
+				auto current_pst = symbolPst(symbol_id).value().unlock(ctx);
 				while (true) {
 					auto ancestor     = current_pst;
 					auto ancestor_opt = ancestor->getParent();
@@ -298,6 +298,14 @@ namespace compiler::helios::mangler {
 							) {
 								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
 							}
+							variant_case(
+								houtgen::GeneratedSymbolData::ReplInstructionWrapper,
+								repl_instr_wrapper
+							) {
+								return base::strConcat(
+									"__repl_instr_wrapper_", repl_instr_wrapper.counter
+								);
+							}
 							// Other cases of generated symbols cannot be functions.
 						}
 					}
@@ -309,9 +317,9 @@ namespace compiler::helios::mangler {
 				return path(ctx, symbol_id);
 			}
 			default:
-				throw base::LogicError{ base::strConcat(
-					"Cannot mangle symbol of type: ", symbolPst(symbol_id).unlock(ctx)->elementType()
-				) };
+				throw base::LogicError{
+					base::strConcat("Cannot mangle symbol of type: ", kind(symbol_id))
+				};
 				break;
 			}
 		}
