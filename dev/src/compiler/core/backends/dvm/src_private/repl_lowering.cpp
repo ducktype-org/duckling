@@ -46,8 +46,7 @@ namespace compiler::backend_vm {
 		return m_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
 	}
 
-	const vm::code::TypeOfData& ReplLoweringContext::lowerAndKeepTslType(
-		CRef<tsl::TypeLayout> layout
+	const vm::code::TypeOfData& ReplLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
 	) {
 		return m_context->lowerAndKeepTslType(layout);
 	}

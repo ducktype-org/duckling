@@ -175,28 +175,23 @@ namespace compiler::repl {
 				std::string_view description;
 			};
 
-			std::vector<ArithmeticTest> tests = {
-				// Basic operations
-				{ "2 + 2", "2 + 2 should equal 4" },
-				{ "2 - 4", "2 - 4 should equal -2" },
-				{ "5 * 3", "5 * 3 should equal 15" },
-				{ "10 / 2", "10 / 2 should equal 5" },
-
-				// Operator precedence tests
-				{ "2 + 3 * 4", "2 + 3 * 4 should equal 14 (multiplication first)" },
-				{ "10 - 2 * 3", "10 - 2 * 3 should equal 4 (multiplication first)" },
-				{ "2 * 3 * 4", "2 * 3 * 4 should equal 24 (left associative)" },
-
-				// Complex expressions
-				{ "2 * 2387 + 1", "2 * 2387 + 1 should equal 4775" },
-				{ "100 / 2 - 5", "100 / 2 - 5 should equal 45" },
-				{ "1 + 2 * 3 + 4", "1 + 2 * 3 + 4 should equal 11" },
-
-				// Simple literals
-				{ "42", "Integer literal 42 should output 42" },
-				{ "0", "Zero should output 0" },
-				{ "1", "One should output 1" },
-			};
+			std::vector<ArithmeticTest> tests
+				= { { .input = "2 + 2", .description = "2 + 2 should equal 4" },
+				    { .input = "2 - 4", .description = "2 - 4 should equal -2" },
+				    { .input = "5 * 3", .description = "5 * 3 should equal 15" },
+				    { .input = "10 / 2", .description = "10 / 2 should equal 5" },
+				    { .input       = "2 + 3 * 4",
+				      .description = "2 + 3 * 4 should equal 14 (multiplication first)" },
+				    { .input       = "10 - 2 * 3",
+				      .description = "10 - 2 * 3 should equal 4 (multiplication first)" },
+				    { .input       = "2 * 3 * 4",
+				      .description = "2 * 3 * 4 should equal 24 (left associative)" },
+				    { .input = "2 * 2387 + 1", .description = "2 * 2387 + 1 should equal 4775" },
+				    { .input = "100 / 2 - 5", .description = "100 / 2 - 5 should equal 45" },
+				    { .input = "1 + 2 * 3 + 4", .description = "1 + 2 * 3 + 4 should equal 11" },
+				    { .input = "42", .description = "Integer literal 42 should output 42" },
+				    { .input = "0", .description = "Zero should output 0" },
+				    { .input = "1", .description = "One should output 1" } };
 
 			for (const auto& test: tests) {
 				auto result = session.processLine(test.input);
@@ -229,13 +224,12 @@ namespace compiler::repl {
 				std::string_view description;
 			};
 
-			std::vector<VariableLookupTest> tests = {
-				{ "var x = 4;", "Declare x with value 4" },
-				{ "x;", "Look up x" },
-				{ "var y = 5;", "Declare y with value 5" },
-				{ "var z = 6;", "Declare z with value 6" },
-				{ "y;", "Look up y" },
-			};
+			std::vector<VariableLookupTest> tests
+				= { { .input = "var x = 4;", .description = "Declare x with value 4" },
+				    { .input = "x;", .description = "Look up x" },
+				    { .input = "var y = 5;", .description = "Declare y with value 5" },
+				    { .input = "var z = 6;", .description = "Declare z with value 6" },
+				    { .input = "y;", .description = "Look up y" } };
 
 			// Track initial state
 			size_t initial_history_size = session.m_history.size();

@@ -227,13 +227,11 @@ namespace compiler::helios {
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				[[maybe_unused]] auto element_ptr = &*element;
-				CORE_PANIC(
-					base::strConcat(
-						"Scope of element for which scope does not make sense (or was not "
-						"added.): ",
-						typeid(*element_ptr).name()
-					)
-				);
+				CORE_PANIC(base::strConcat(
+					"Scope of element for which scope does not make sense (or was not "
+					"added.): ",
+					typeid(*element_ptr).name()
+				));
 			}
 
 			ScopeID parent = element->getParent().has_value()
