@@ -28,6 +28,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "query_framework/query_errors.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
@@ -1046,8 +1047,7 @@ namespace compiler::helios {
 				variant_case_novalue(PstSymbolData) {
 					// Just a pst function
 					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-
-					const auto& function_body = fun_hout_result.body;
+					const auto& function_body   = fun_hout_result.body;
 
 					HoutFunctionCallCollector visitor;
 					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
@@ -1060,19 +1060,12 @@ namespace compiler::helios {
 				}
 
 				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"QueryDirectFunctionCalls is not implemented for generated symbols "
-							"yet. ",
-							"The symbol in question is: ",
-							getSymRef(key)->common.name,
-							". "
-							"This usually means that a class was used inside compile time "
-							"evaluation."
-						),
-						std::nullopt
-					));
-					return query::Failed();
+					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
+					const auto& function_body   = fun_hout_result.body;
+
+					HoutFunctionCallCollector visitor;
+					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+					return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}

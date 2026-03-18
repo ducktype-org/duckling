@@ -200,8 +200,8 @@ namespace compiler::helios::houtgen {
 				body.emplace_back(makeBox<code::VariableStmt>(
 					code::generatedOrigin(),
 					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-					array_sym_type,
-					res_sym
+					i64_type,
+					i_sym
 				));
 
 				// while (i < size) { res[i] = default_init(T); i = i + 1; }

@@ -65,22 +65,22 @@ namespace compiler::helios {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
 				for (auto sym: *symbols_in_scope) {
+					// TODOP: Get the default Ctors.
+					const auto& type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+					if (type.getType().getKind() == tsh::Kind::StaticArray) {
+						std::cout << "QueryDefaultStaticArrayCtor\n";
+						auto        arr_type = type.getType().as<tsh::StaticArrayAbstractType>();
+						const auto& arr_ctor
+							= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
+						          ->valueOrThrow();
+						out.functions.emplace_back(&arr_ctor);
+					}
+
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
-					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym)) {
+					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
-
-						auto type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
-						if (type.getType().getKind() == tsh::Kind::StaticArray) {
-							std::cout << "QueryDefaultStaticArrayCtor\n";
-							auto arr_type = type.getType().as<tsh::StaticArrayAbstractType>();
-							auto arr_ctor
-								= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
-							          ->valueOrThrow();
-							out.functions.emplace_back(&arr_ctor);
-						}
-					}
 
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)

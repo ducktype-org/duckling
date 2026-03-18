@@ -1,5 +1,7 @@
 #include "mangler.hpp"
 
+#include "typesystem/higher/abstract_type.hpp"
+
 #include <concurrent/base/collections/hash_map.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
@@ -243,6 +245,17 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
+		 * @TODO: #1568 Remove this. I really needed it.
+		 */
+		std::string mangleType(const tsh::AbstractType& abs_type) {
+			std::string s = abs_type.toString();
+			std::ranges::replace(s, ' ', '_');
+			std::ranges::replace(s, '[', 'A');
+			std::ranges::replace(s, ']', 'E');
+			return s;
+		}
+
+		/**
 		 * @brief Returns mangled name of a function or method
 		 * @note: See mangling-scheme.md for details
 		 */
@@ -319,7 +332,7 @@ namespace compiler::helios::mangler {
 							) {
 								// TODOP: Link type mangling here
 								// TODOP: Update mangling-scheme
-								return "Hda" + ctor.array_type.toString() + "E";
+								return "Hda" + mangleType(ctor.array_type) + "E";
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper

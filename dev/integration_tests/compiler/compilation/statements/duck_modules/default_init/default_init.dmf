@@ -3,14 +3,14 @@ class Simple {
     y: i32;         # Should be 0
 }
 
-# class Nested {
-#     s: Simple;
-#     active: bool = true;
-# }
+class Nested {
+    s: Simple;
+    active: bool = true;
+}
 
-# class ArrayContainer {
-#     points: Simple[3];
-# }
+class ArrayContainer {
+    points: Simple[3];
+}
 
 fun printSeparator() -> () = {
     builtin_output_string("=================\n");
@@ -31,9 +31,9 @@ fun testClassInit() = {
     builtin_output_i64(s.x);                        # 123
     builtin_output_i64(s.y);                        # 0
 
-    # var n: Nested;
-    # builtin_output_i64(n.s.x);                      # 123
-    # builtin_output_i64(if n.active then 1 else 0);  # 1
+    var n: Nested;
+    builtin_output_i64(n.s.x);                      # 123
+    builtin_output_i64(if n.active then 1 else 0);  # 1
 }
 
 fun testArrayOfPrimitives() = {
@@ -47,29 +47,29 @@ fun testArrayOfPrimitives() = {
     builtin_output_i64(sum);        # 0
 }
 
-# fun test_array_of_classes() = {
-#     var arr: Simple[2];
-#     builtin_output_i64(arr[0].x); # 123
-#     builtin_output_i64(arr[1].x); # 123
+fun testArrayOfClasses() = {
+    var arr: Simple[2];
+    builtin_output_i64(arr[0].x); # 123
+    builtin_output_i64(arr[1].x); # 123
 
-#     var container: ArrayContainer;
-#     builtin_output_i64(container.points[2].x);  # 123
-# }
+    var container: ArrayContainer;
+    builtin_output_i64(container.points[2].x);  # 123
+}
 
-# class Deep {
-#     val: i64 = 999;
-# }
-# class Middle {
-#     d: Deep[2];
-# }
-# class Outer {
-#     m: Middle[2];
-# }
+class Deep {
+    val: i64 = 999;
+}
+class Middle {
+    d: Deep[2];
+}
+class Outer {
+    m: Middle[2];
+}
 
-# fun test_deep_nesting() = {
-#     var o: Outer;
-#     builtin_output_i64(o.m[1].d[1].val);    # 999
-# }
+fun testDeepNesting() = {
+    var o: Outer;
+    builtin_output_i64(o.m[1].d[1].val);    # 999
+}
 
 fun main() -> i32 = {
     printSeparator();
@@ -81,11 +81,11 @@ fun main() -> i32 = {
     printSeparator();
     testArrayOfPrimitives();
 
-    # builtin_output_i64(44444444);
-    # test_array_of_classes();
+    printSeparator();
+    testArrayOfClasses();
 
-    # builtin_output_i64(55555555);
-    # test_deep_nesting();
+    printSeparator();
+    testDeepNesting();
 
     return 0;
 }
