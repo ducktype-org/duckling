@@ -28,8 +28,8 @@ namespace lexer {
 			return "String";
 		case Type::Char:
 			return "Char";
-		case Type::FormattedString:
-			return "FormattedString";
+		case Type::FormatString:
+			return "FormatString";
 		case Type::BracketGroup:
 			return "BracketGroup";
 		case Type::Operator:
@@ -61,7 +61,7 @@ namespace lexer {
 		  recursive(std::move(recursive)),
 		  source_position(position) {
 		CORE_ASSERT(
-			type == Type::NumLiteralGroup || type == Type::FormattedString,
+			type == Type::NumLiteralGroup || type == Type::FormatString,
 			"Recursive token constructor called on non recursive token type"
 		);
 	}
@@ -141,16 +141,12 @@ namespace lexer {
 		return { Type::TypeSpecifier, literal, position };
 	}
 
-	Token Token::makeFormattedString(base::RawView full_view, Tokens&& tokens, const dia::SourcePosition position) {
-		return { Type::FormattedString, full_view, std::move(tokens), position };
+	Token Token::makeFormatString(base::RawView full_view, Tokens&& tokens, const dia::SourcePosition position) {
+		return { Type::FormatString, full_view, std::move(tokens), position };
 	}
 
 	Token Token::makeFormatStringSubString(base::RawView string, const dia::SourcePosition position) {
 		return { Type::FormatStringSubString, string, position };
-	}
-
-	Token Token::makeFormatStringSubExpression(Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition position) {
-		return { Type::FormatStringSubExpression, std::move(tokens), std::move(sentinel_begin), std::move(sentinel_end), position , BracketType::Curly};
 	}
 
 	Token Token::makeNumLiteralGroup(
@@ -246,7 +242,7 @@ namespace lexer {
 	}
 
 	bool Token::isRecursive() const {
-		return type == Type::BracketGroup || type == Type::FormattedString
+		return type == Type::BracketGroup || type == Type::FormatString
 		    || type == Type::NumLiteralGroup;
 	}
 
@@ -299,6 +295,8 @@ namespace lexer {
 	bool Token::isComment() const { return type == Type::Comment; }
 
 	bool Token::isString() const { return type == Type::String; }
+
+	bool Token::isFormatString() const { return type == Type::FormatString; }
 
 	bool Token::isChar() const { return type == Type::Char; }
 

@@ -41,9 +41,9 @@ namespace lexer {
 			TypeSpecifier,
 			String,
 			Char,
-			FormattedString,  ///< group
+			FormatString,  ///< group
 			FormatStringSubString,
-			FormatStringSubExpression, ///< group
+			FormatStringSubExpression,
 			BracketGroup,     ///< group storing opening bracket value in group_type
 			Operator,
 			Comment,
@@ -63,7 +63,7 @@ namespace lexer {
 			None   = 0,
 			Round  = '(',
 			Square = '[',
-			Curly  = '{',
+			Curly  = '{', ///< Is also used in format string
 			Angle  = 0x30'08,
 		};
 
@@ -78,9 +78,8 @@ namespace lexer {
 		static Token makeNumber(const base::RawView number, dia::SourcePosition);
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
 		static Token makeChar(base::RawView string, const dia::SourcePosition&);
-		static Token makeFormattedString(base::RawView full_view, Tokens&& tokens, const dia::SourcePosition);
+		static Token makeFormatString(base::RawView full_view, Tokens&& tokens, const dia::SourcePosition);
 		static Token makeFormatStringSubString(base::RawView string, const dia::SourcePosition);
-		static Token makeFormatStringSubExpression(Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition);
 		static Token
 			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition&);
 		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
@@ -204,6 +203,8 @@ namespace lexer {
 		bool isComment() const;
 		[[nodiscard]]
 		bool isString() const;
+		[[nodiscard]]
+		bool isFormatString() const;
 		[[nodiscard]]
 		bool isChar() const;
 
