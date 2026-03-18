@@ -348,13 +348,16 @@ namespace compiler::backend_llvm {
 
 				// - Then, check each field's offset.
 				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
-					const Bytes expected_offset = class_layout.getOffsetOfFieldSymbol(
-						class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
-					);
-					const auto actual_offset = Bytes(
+					[[maybe_unused]] const Bytes expected_offset
+						= class_layout.getOffsetOfFieldSymbol(
+							class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
+						);
+					[[maybe_unused]] const auto actual_offset = Bytes(
 						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
 					);
-					// TODOP: Tactical comment out.
+					// @TODO: #2163 This was tactically commented to make default constructors
+					// testable although the issue is not solved. Make it come back.
+
 					// CORE_ASSERT(
 					// 	expected_offset == actual_offset,
 					// 	base::strConcat(

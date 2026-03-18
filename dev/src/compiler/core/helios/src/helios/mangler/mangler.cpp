@@ -1,7 +1,5 @@
 #include "mangler.hpp"
 
-#include "typesystem/higher/abstract_type.hpp"
-
 #include <concurrent/base/collections/hash_map.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
@@ -330,7 +328,6 @@ namespace compiler::helios::mangler {
 							variant_case(
 								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 							) {
-								// TODOP: Link type mangling here
 								// TODOP: Update mangling-scheme
 								return "Hda" + mangleType(ctor.array_type) + "E";
 							}

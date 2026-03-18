@@ -1,7 +1,5 @@
 #include "numeric_value.hpp"
 
-#include "typesystem/higher/abstract_type.hpp"
-
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 

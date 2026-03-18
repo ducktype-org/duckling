@@ -178,10 +178,7 @@ namespace compiler::helios {
 				variant_case(houtgen::GeneratedSymbolData, generated_data) {
 					return generated_data.getType(ctx);
 				}
-				variant_default {
-					std::cout << symbol_ref->other.index() << '\n';
-					CORE_PANIC("Unknown symbol data type");
-				}
+				variant_default { CORE_PANIC("Unknown symbol data type"); }
 			}
 			CORE_UNREACHABLE();
 		}

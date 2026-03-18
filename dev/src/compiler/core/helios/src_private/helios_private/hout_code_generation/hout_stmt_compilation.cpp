@@ -1,8 +1,5 @@
 #include "hout_stmt_compilation.hpp"
 
-#include "helios/symbols/symbol_id.hpp"
-#include "helios_private/hout_code_generation/default_constructors.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -18,6 +15,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_code_generation/default_constructors.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
 #include <typesystem/higher/queries/types.hpp>
@@ -302,7 +300,6 @@ namespace compiler::helios::houtgen {
 					return;
 				}
 
-				// TODOP: Rethink clone.
 				auto initial_value = ctx.query<houtgen::QueryDefaultInitializerExpr>(symbol_type)
 				                         ->valueOrThrow()
 				                         ->clone();

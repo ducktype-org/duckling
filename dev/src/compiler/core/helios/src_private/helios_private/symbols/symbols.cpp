@@ -28,7 +28,6 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "query_framework/query_errors.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
@@ -1043,29 +1042,31 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
+
+			auto collect_deps = [&]() {
+				const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
+				const auto& function_body   = fun_hout_result.body;
+
+				HoutFunctionCallCollector visitor;
+				for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+				return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+			};
+
 			variant_match(getSymRef(key)->other) {
 				variant_case_novalue(PstSymbolData) {
-					// Just a pst function
-					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-					const auto& function_body   = fun_hout_result.body;
-
-					HoutFunctionCallCollector visitor;
-					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
-					return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+					// Just a PST function.
+					collect_deps();
 				}
-
 				variant_case(builtin::BuiltinFunctionData, btd_data) {
 					// Builtin functions have no dependencies
 					return {};
 				}
-
 				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
-					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-					const auto& function_body   = fun_hout_result.body;
-
-					HoutFunctionCallCollector visitor;
-					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
-					return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+					CORE_ASSERT(
+						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
+						"QueryDirectFunction calls called on a non-function symbol"
+					);
+					collect_deps();
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "typesystem/higher/abstract_type.hpp"
-
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -750,7 +748,6 @@ namespace compiler::helios::code {
 	 * Used for implicit variable initialization. This gets then mapped to `llvm::getNullValue(type)`.
 	 */
 	struct DefaultValueExpr final: public Expr {
-		// TODOP: AbstractType
 		tsh::AbstractType type;
 
 		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::AbstractType type);

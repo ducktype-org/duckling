@@ -1,10 +1,5 @@
 #include "queries.hpp"
 
-#include "helios/symbols/symbol_id.hpp"
-#include "helios_private/hout_code_generation/default_constructors.hpp"
-#include "typesystem/higher/kind.hpp"
-#include "typesystem/higher/types.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -21,6 +16,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
+#include <helios_private/hout_code_generation/default_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -33,9 +29,6 @@
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-
-#include <ranges>
-#include <unordered_set>
 
 namespace compiler::helios {
 
@@ -68,10 +61,9 @@ namespace compiler::helios {
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
 
-			auto register_ctor = [&](SymID sym) {
+			auto register_ctor_if_needed = [&](SymID sym) {
 				const auto& type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
 				if (type.getType().getKind() == tsh::Kind::StaticArray) {
-					std::cout << "QueryDefaultStaticArrayCtor\n";
 					auto        arr_type = type.getType().as<tsh::StaticArrayAbstractType>();
 					const auto& arr_ctor
 						= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
@@ -90,8 +82,8 @@ namespace compiler::helios {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
 				for (auto sym: *symbols_in_scope) {
-					std::cout << prettyDebugPrint(sym, ctx) << '\n';
-					register_ctor(sym);
+					// Register default constructors for all symbols that need them.
+					register_ctor_if_needed(sym);
 
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)
@@ -109,7 +101,7 @@ namespace compiler::helios {
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as
 				// appendClassConstructors may be time consuming.
-				appendClassConstructors(out.functions, class_sym, ctx);
+				appendImplicitClassConstructors(out.functions, class_sym, ctx);
 				auto append_methods_result
 					= appendClassMethodsWithFail(out.functions, class_sym, ctx);
 				if (append_methods_result) {
@@ -137,10 +129,14 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * Append the constructors of a class to the provided vector of functions.
+		 * Append the default constructors for symbols that need them.
 		 * @param out_functions The vector of functions to be modified.
-		 * @param class_sym The symbol of the class, whose constructors are to be appended.
+		 * @param ctors Symbol IDs of the top level default constructors.
 		 * @param ctx The query context.
+		 *
+		 * @note Generation of default constructors may cause creation of more then one generated
+		 * function. For example default constructor of `i32[3][2]`, calls the default constructor
+		 * of `i32[2]` which doesn't have a symbol.
 		 */
 		static void appendDefaultConstructors(
 			std::vector<CRef<HOUTFunction>>& out_functions,
@@ -149,7 +145,8 @@ namespace compiler::helios {
 		) {
 			std::set<SymID> all_required_functions;
 
-			// Collect all dependencies.
+			// Collect all dependencies - default ctors called by the default ctor, and eliminate
+			// duplicates.
 			for (SymID ctor_sym: ctors) {
 				auto transitive = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
 				for (SymID dependency: transitive) all_required_functions.insert(dependency);
@@ -158,7 +155,6 @@ namespace compiler::helios {
 			// Now insert them into the module.
 			for (SymID func_sym: all_required_functions) {
 				const auto& hout_res = ctx.query<QueryCodeOfFun>(func_sym)->valueOrThrow();
-				std::cout << "Appending: \n" << hout_res.debugPrint() << '\n';
 				out_functions.emplace_back(&hout_res);
 			}
 		}
@@ -169,7 +165,7 @@ namespace compiler::helios {
 		 * @param class_sym The symbol of the class, whose constructors are to be appended.
 		 * @param ctx The query context.
 		 */
-		static void appendClassConstructors(
+		static void appendImplicitClassConstructors(
 			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
 		) {
 			CORE_ASSERT(
@@ -177,7 +173,7 @@ namespace compiler::helios {
 				"Invalid argument exception: expected class symbol"
 			);
 
-			// For now, we handle only the class's primary constructor and the default constructor.
+			// For now, we handle only the class's primary constructor.
 			// @TODO: #1290 Handle auxiliary constructors.
 
 			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
@@ -186,7 +182,6 @@ namespace compiler::helios {
 			                            .as<tsh::ClassAbstractType>();
 			const auto& implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
-
 			out_functions.emplace_back(&implicit_ctor);
 		}
 

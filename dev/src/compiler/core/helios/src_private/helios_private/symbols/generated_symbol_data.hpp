@@ -1,7 +1,5 @@
 #pragma once
 
-#include "typesystem/higher/abstract_type.hpp"
-
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
@@ -31,11 +29,11 @@ namespace compiler::helios::houtgen {
 		};
 
 		/**
-		 * Represents a compiler-generated implicit constructor for a class.
+		 * Represents a compiler-generated default constructor for a class.
 		 *
-		 * The implicit constructor is a function that takes parameters for each field of the class
-		 * and returns an instance of the class with those fields initialised accordingly.
-		 * TODOP: Comment
+		 * The default constructor is a function that takes no parameters and initializes all class
+		 * fields with their initial values or default values if initial values where not provided.
+		 * Returns the initialized class.
 		 */
 		struct DefaultClassConstructor final {
 			SymID class_symbol;  // The symbol of the class this constructor belongs to.
@@ -45,11 +43,11 @@ namespace compiler::helios::houtgen {
 		};
 
 		/**
-		 * Represents a compiler-generated implicit constructor for a class.
+		 * Represents a compiler-generated default constructor for a static array type.
 		 *
-		 * The implicit constructor is a function that takes parameters for each field of the class
-		 * and returns an instance of the class with those fields initialised accordingly.
-		 * TODOP: Comment
+		 * The default constructor is a function that doesn't takes any parameters and loops through
+		 * the static array initializing it's fields with a default value (which may mean a call to
+		 * another constructor). Returns the initialized static array value.
 		 */
 		struct DefaultStaticArrayConstructor final {
 			tsh::AbstractType array_type;

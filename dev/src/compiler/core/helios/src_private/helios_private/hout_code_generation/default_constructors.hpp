@@ -1,6 +1,5 @@
 #pragma once
 
-#include "typesystem/higher/symbol_type.hpp"
 
 #include <helios/hout/hout.hpp>
 #include <typesystem/higher/types.hpp>

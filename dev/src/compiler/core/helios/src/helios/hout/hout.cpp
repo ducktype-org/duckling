@@ -1,7 +1,6 @@
 #include "hout.hpp"
 
 #include "elements.hpp"
-#include "helios_private/hout_code_generation/default_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
@@ -10,6 +9,7 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_code_generation/default_constructors.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -139,7 +139,6 @@ namespace compiler::helios {
                           return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
                               .valueOrThrow();
                       } else {
-                          // TODOP: Error handling.
                           return ctx.query<houtgen::QueryDefaultInitializerExpr>(variable_type)
                               ->valueOrThrow()
                               ->clone();

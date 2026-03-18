@@ -6,9 +6,6 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "typesystem/higher/abstract_type.hpp"
-#include "typesystem/higher/mutability.hpp"
-#include "typesystem/higher/symbol_type.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>

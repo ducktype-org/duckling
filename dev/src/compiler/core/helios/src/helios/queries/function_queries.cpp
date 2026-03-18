@@ -1,11 +1,5 @@
 #include "function_queries.hpp"
 
-#include "helios/hout/origin.hpp"
-#include "helios_private/hout_code_generation/default_constructors.hpp"
-#include "helios_private/symbols/generated_symbol_data.hpp"
-#include "typesystem/higher/mutability.hpp"
-#include "typesystem/higher/types.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -28,6 +22,7 @@
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
+#include <helios_private/hout_code_generation/default_constructors.hpp>
 #include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -38,7 +33,6 @@
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include "base/str/str_utils.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 

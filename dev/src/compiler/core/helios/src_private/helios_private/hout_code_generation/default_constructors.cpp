@@ -1,32 +1,16 @@
 #include "default_constructors.hpp"
 
-#include "diagnostic_interactive/placeholder.hpp"
-#include "frontend/pst_parser/access.hpp"
-#include "frontend/pst_parser/elements/hierarchy/class_elements/field.hpp"
-#include "frontend/pst_parser/elements/hierarchy/expr_holders.hpp"
-#include "helios/hout/elements/expr.hpp"
-#include "helios/hout/origin.hpp"
-#include "helios_private/expressions/query_hout_of_expr.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
+#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
-#include "base/pointers/box.hpp"
-#include "base/str/str_utils.hpp"
-#include <base/collections/stable_container.hpp>
-
-#include "diagnostic/source_position.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
-
-#include <optional>
 
 namespace compiler::helios::houtgen {
 	// -----------------------------------------------------------
