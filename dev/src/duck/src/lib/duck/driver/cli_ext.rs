@@ -2,7 +2,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser}
 
 use crate::{StrId, quackpack::core::Package};
 
-const DEFAULT_PROFILE: &str = "debug";
+const DEFAULT_PROFILE: &str = "dev";
 
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;
