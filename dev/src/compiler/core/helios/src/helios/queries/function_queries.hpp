@@ -25,6 +25,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query code of a function.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 * TODOP: Update comment cause generated symbols are now supported.
 	 *
 	 * \query_thread_safe_if_cache
 	 */

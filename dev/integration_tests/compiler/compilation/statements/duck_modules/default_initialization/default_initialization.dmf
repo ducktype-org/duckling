@@ -93,53 +93,37 @@ fun testPrimitives() -> () = {
     printPrimitives(&b);
     printSmallSeparator(); 
     
-    # TODOP: Can't put it in a class cause ZST fields are not filtered out and cause LLVM to hang.
+    # @TODO: #2306 Put a unit typed field in `Primitives`, etc. class once it's possible.
     var x: (); # This is default initialized by a unit.
     
     # const b: Primitives; # TODOP: Broken
 }
 
 # ==================================== NAMING COLLISION ====================================
-# TODOP: Broken
-# class NamingCollision {
-#     result: i64;
-#     i: i64;
-#     ctor_symbol: i64;
-# }
+class NamingCollision {
+    result: i64;
+    i: i64;
+    ctor_symbol: i64;
+}
 
-# fun testNamingCollision() -> () = {
-#     var a: NamingCollision;
-#     builtin_output_i64(a.result);
-#     builtin_output_i64(a.i);
-#     builtin_output_i64(a.ctor_symbol);
-# }
+fun testNamingCollision() -> () = {
+    var a: NamingCollision;
+    builtin_output_i64(a.result);
+    builtin_output_i64(a.i);
+    builtin_output_i64(a.ctor_symbol);
+}
 
 
 # ==================================== MULTI-DIM ARRAYS ====================================
-# TODOP: Broken
-class Simple {
-    x: i64 = 1;
-    y: i32;         # Should be 0
+class Simple { x: i64 = 1; y: i32; }
+class Matrix { matrix: Simple[2][3][2]; }
+
+fun testMultiDimArrays() -> () = {
+    var m: Matrix;
+    builtin_output_i64(m.matrix[0][0][0].x); # 1
+    builtin_output_i64(m.matrix[1][2][0].x); # 1
+    builtin_output_i64(m.matrix[1][2][0].y); # 0
 }
-
-# class Matrix {
-#     matrix: Simple[2][3][2];
-# }
-
-# fun testMultiDimArrays() -> () = {
-#     var m: Matrix;
-#     builtin_output_i64(m.matrix[0][0][0].x); # 1
-# }
-
-# ==================================== ZERO-SIZED ARRAYS ====================================
-# TODOP: Broken
-# class ZeroArray {
-#     matrix: Simple[0];
-# }
-
-# fun testZeroSizedArray() -> () = {
-#     var m: ZeroArray;
-# }
 
 # ==================================== NESTED CLASSES ====================================
 class Deep { val: i64 = 999; val2: i64; }
@@ -160,18 +144,14 @@ fun main() -> i64 = {
     printSeparator();
     testPrimitives();
 
-    # TODOP: Broken
-    # printSeparator();
-    # testNamingCollision();
+    printSeparator();
+    testDeepNesting();
+
+    printSeparator();
+    testNamingCollision();
     
-    # printSeparator();
-    # testMultiDimArrays();
-    
-    # printSeparator();
-    # testZeroSizedArray();
-    
-    # printSeparator();
-    # testDeepNesting();
+    printSeparator();
+    testMultiDimArrays();
 
     return 0;
 }

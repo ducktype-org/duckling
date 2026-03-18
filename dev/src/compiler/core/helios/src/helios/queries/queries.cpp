@@ -1,6 +1,9 @@
 #include "queries.hpp"
 
+#include "helios/symbols/symbol_id.hpp"
 #include "helios_private/hout_code_generation/default_constructors.hpp"
+#include "typesystem/higher/kind.hpp"
+#include "typesystem/higher/types.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -31,6 +34,9 @@
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <ranges>
+#include <unordered_set>
+
 namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
@@ -60,21 +66,32 @@ namespace compiler::helios {
 
 			std::vector<query::TaskHandle> scheduled_tasks;
 			std::vector<SymID>             class_symbols;
+			std::set<SymID>                default_ctors;
+
+			auto register_ctor = [&](SymID sym) {
+				const auto& type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+				if (type.getType().getKind() == tsh::Kind::StaticArray) {
+					std::cout << "QueryDefaultStaticArrayCtor\n";
+					auto        arr_type = type.getType().as<tsh::StaticArrayAbstractType>();
+					const auto& arr_ctor
+						= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
+					          ->valueOrThrow();
+					default_ctors.insert(arr_ctor.declaration->original_symbol);
+				} else if (type.getType().getKind() == tsh::Kind::Class) {
+					auto        class_type = type.getType().as<tsh::ClassAbstractType>();
+					const auto& class_ctor
+						= ctx.query<houtgen::QueryDefaultClassConstructor>(class_type)
+					          ->valueOrThrow();
+					default_ctors.insert(class_ctor.declaration->original_symbol);
+				}
+			};
 
 			for (auto scope: *scopes_to_process) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
 				for (auto sym: *symbols_in_scope) {
-					// TODOP: Get the default Ctors.
-					const auto& type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
-					if (type.getType().getKind() == tsh::Kind::StaticArray) {
-						std::cout << "QueryDefaultStaticArrayCtor\n";
-						auto        arr_type = type.getType().as<tsh::StaticArrayAbstractType>();
-						const auto& arr_ctor
-							= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
-						          ->valueOrThrow();
-						out.functions.emplace_back(&arr_ctor);
-					}
+					std::cout << prettyDebugPrint(sym, ctx) << '\n';
+					register_ctor(sym);
 
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)
@@ -101,6 +118,8 @@ namespace compiler::helios {
 				}
 			}
 
+			appendDefaultConstructors(out.functions, default_ctors, ctx);
+
 			for (auto handler: scheduled_tasks) {
 				// we "catch" failure here to continue gathering other functions:
 				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
@@ -115,6 +134,33 @@ namespace compiler::helios {
 			if (is_failed) return query::Failed();
 
 			return out;
+		}
+
+		/**
+		 * Append the constructors of a class to the provided vector of functions.
+		 * @param out_functions The vector of functions to be modified.
+		 * @param class_sym The symbol of the class, whose constructors are to be appended.
+		 * @param ctx The query context.
+		 */
+		static void appendDefaultConstructors(
+			std::vector<CRef<HOUTFunction>>& out_functions,
+			const std::set<SymID>&           ctors,
+			Context&                         ctx
+		) {
+			std::set<SymID> all_required_functions;
+
+			// Collect all dependencies.
+			for (SymID ctor_sym: ctors) {
+				auto transitive = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+				for (SymID dependency: transitive) all_required_functions.insert(dependency);
+			}
+
+			// Now insert them into the module.
+			for (SymID func_sym: all_required_functions) {
+				const auto& hout_res = ctx.query<QueryCodeOfFun>(func_sym)->valueOrThrow();
+				std::cout << "Appending: \n" << hout_res.debugPrint() << '\n';
+				out_functions.emplace_back(&hout_res);
+			}
 		}
 
 		/**
@@ -141,11 +187,7 @@ namespace compiler::helios {
 			const auto& implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
 
-			const auto& default_ctor
-				= ctx.query<houtgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
-
 			out_functions.emplace_back(&implicit_ctor);
-			out_functions.emplace_back(&default_ctor);
 		}
 
 		/**

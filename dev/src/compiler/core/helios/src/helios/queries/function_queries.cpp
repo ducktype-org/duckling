@@ -1,6 +1,8 @@
 #include "function_queries.hpp"
 
 #include "helios/hout/origin.hpp"
+#include "helios_private/hout_code_generation/default_constructors.hpp"
+#include "helios_private/symbols/generated_symbol_data.hpp"
 #include "typesystem/higher/mutability.hpp"
 #include "typesystem/higher/types.hpp"
 
@@ -36,6 +38,7 @@
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+#include "base/str/str_utils.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -623,18 +626,60 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			CORE_ASSERT(
-				kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
-				"Function creation called on non-function and non-method symbol"
-			);
-			CORE_ASSERT(
-				getSymRef(key)->getPSTDataOpt().has_value(),
-				"Query code of function does not support generated functions"
-			);
-			HOUTFunctionMaker func_maker(ctx, key);
-			stmt(ctx, key).value()->acceptVisitor(func_maker);
+			const auto& sym_ref = getSymRef(key);
+			// Non-generated symbol data.
+			if (sym_ref->getPSTDataOpt().has_value()) {
+				CORE_ASSERT(
+					kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
+					"Function creation called on non-function and non-method symbol"
+				);
+				HOUTFunctionMaker func_maker(ctx, key);
+				stmt(ctx, key).value()->acceptVisitor(func_maker);
 
-			return func_maker.out.value();
+				return func_maker.out.value();
+			}
+
+
+			// Generated symbol data.
+			variant_match(sym_ref->other) {
+				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
+					variant_match(gsd_data.data) {
+						variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
+							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
+							                       ->valueOrThrow()
+							                       .getType()
+							                       .as<tsh::ClassAbstractType>();
+							return ctx.query<houtgen::QueryImplicitClassConstructor>(type)
+							    ->valueOrThrow();
+						}
+						variant_case(houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor) {
+							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
+							                       ->valueOrThrow()
+							                       .getType()
+							                       .as<tsh::ClassAbstractType>();
+							return ctx.query<houtgen::QueryDefaultClassConstructor>(type)
+							    ->valueOrThrow();
+						}
+						variant_case(
+							houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
+						) {
+							return ctx
+							    .query<houtgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
+							    ->valueOrThrow();
+						}
+						variant_default {
+							CORE_PANIC(base::strConcat(
+								"QueryTypeOfSymbol: Generated symbol '",
+								prettyDebugPrint(key, ctx),
+								"' not supported"
+							));
+						}
+					}
+				}
+				variant_default {
+					CORE_PANIC("QueryCodeOfFun: Symbol is neither PST nor Generated");
+				}
+			}
 		}
 
 		QUERY_AUTO_CACHE_CREF

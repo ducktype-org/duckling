@@ -63,6 +63,7 @@ namespace compiler::helios::houtgen {
 			// - One declaration, one assignment per field, one return.
 			body.reserve(1 + fields.size() + 1);
 
+			// @TODO: #2307 Classes with a field named `__result`.
 			// - Declare result variable.
 			const auto  result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
@@ -343,11 +344,14 @@ namespace compiler::helios::houtgen {
 				));
 				return query::Failed();
 			}
-			case tsh::Kind::Unit:
+			case tsh::Kind::Unit: {
+				// Unit is default constructed with a unit.
+				return makeBox<code::LiteralUnitExpr>(ctx, code::generatedOrigin());
+			}
 			case tsh::Kind::Meta: {
-				// Meta and unit are initialized with a unit.
+				// Meta is default initialized with a void type.
 				return makeBox<code::LiteralTypeExpr>(
-					ctx, code::generatedOrigin(), tsh::getUnitType()
+					ctx, code::generatedOrigin(), tsh::getVoidType()
 				);
 			}
 			case tsh::Kind::Variant:
