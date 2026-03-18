@@ -1,9 +1,9 @@
 
 #include "nop_wait.hpp"
 
-#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+#if defined(__x86_64__) || defined(__i386__)
 	#include <immintrin.h>
-#elif defined(__aarch64__) || defined(__arm__) || defined(_M_ARM64) || defined(_M_ARM)
+#elif defined(__aarch64__) || defined(__arm__)
 	#if defined(_MSC_VER)
 		// Microsoft Visual C++ on ARM
 		#include <intrin.h>
