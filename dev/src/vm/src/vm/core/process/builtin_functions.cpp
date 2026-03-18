@@ -142,7 +142,7 @@ namespace vm::builtins {
 
 		thread.releaseGil();
 		// @TODO: #2304 Possible UB if the mutex is not actually locked by this thread.
-		cv->wait(mutex);
+		cv->wait(*mutex);
 		thread.keepOrAcquireGil();
 	}
 

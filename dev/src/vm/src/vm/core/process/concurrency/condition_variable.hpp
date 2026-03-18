@@ -15,7 +15,7 @@ namespace vm {
 		std::atomic<std::mutex*>    bound_mutex{ nullptr };
 
 	public:
-		void wait(base::Ref<std::mutex>& mutex);
+		void wait(std::mutex& mutex);
 		void notifyOne();
 		void notifyAll();
 	};
