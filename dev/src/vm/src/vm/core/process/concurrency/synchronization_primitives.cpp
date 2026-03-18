@@ -1,4 +1,5 @@
 #include "synchronization_primitives.hpp"
+
 #include <vm/core/process/exceptions.hpp>
 
 namespace vm {
@@ -11,7 +12,9 @@ namespace vm {
 	void SynchronizationPrimitives::removeMutex(usize mutex_id) { mutex_pool.remove(mutex_id); }
 
 	Ref<ConditionVariable> SynchronizationPrimitives::getCV(usize cv_id) {
-		return cv_pool.maybeGet(cv_id).expect<exceptions::VMResourceDoesNotExist>("conditional variable");
+		return cv_pool.maybeGet(cv_id).expect<exceptions::VMResourceDoesNotExist>(
+			"conditional variable"
+		);
 	}
 
 	usize SynchronizationPrimitives::addCV() { return cv_pool.add(); }
