@@ -2,8 +2,9 @@
 # whose type is an 8-byte class compiles correctly, and that field assignment
 # and printing work as expected.
 #
-# The alignment of Inner is 4 bytes (driven by its i32 members).
-# The alignment of Outer is therefore also 4 bytes (max of 4, 4, 4, 4).
+# The alignment of Inner is 4 bytes (driven by its i32 members, not its 8-byte total size).
+# The alignment of Outer is therefore also 4 bytes:
+#   max(align(a), align(b), align(c), align(inner)) = max(4, 4, 4, 4) = 4.
 # The LLVM struct layout must agree with what the compiler computes.
 
 class Inner {
