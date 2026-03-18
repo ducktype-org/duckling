@@ -1,7 +1,11 @@
+//! Module containing hex encoding (and, maybe in the future, decoding too).
+
+/// Encode data as a hex string.
 pub fn encode(data: impl AsRef<[u8]>) -> String {
     encode_inner(data.as_ref())
 }
 
+/// Helper for [`encode`].
 fn encode_inner(data: &[u8]) -> String {
     let mut encoded = "".to_owned();
     for byte in data {
@@ -12,10 +16,14 @@ fn encode_inner(data: &[u8]) -> String {
     encoded
 }
 
+/// Hex encode a single byte.
+#[inline]
 fn format_byte(byte: u8) -> [char; 2] {
     [format_hex(byte >> 4), format_hex(byte % 16)]
 }
 
+/// Hex encode a single hexadecimal digit.
+#[inline]
 fn format_hex(hex: u8) -> char {
     match hex {
         0 => '0',

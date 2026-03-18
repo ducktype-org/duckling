@@ -45,6 +45,17 @@ namespace pst {
 	base::Optional<AccessLocked<Stmt>> extractSingleInstruction(
 		query::Context& ctx, const AccessLocked<LangElement>& root
 	);
+
+	/**
+	 * @brief If @p root contains exactly one child and it is a Stmt, returns it.
+	 *
+	 * This is useful as a fallback in REPL dispatch when expression and instruction
+	 * extraction both fail and we want to treat the input as a single
+	 * top-level definition statement.
+	 */
+	base::Optional<AccessLocked<Stmt>> extractSingleTopLevelStatement(
+		query::Context& ctx, const AccessLocked<LangElement>& root
+	);
 }
 
 namespace pst::internal {

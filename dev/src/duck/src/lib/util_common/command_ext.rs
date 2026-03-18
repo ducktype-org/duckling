@@ -1,15 +1,18 @@
+//! A cross-platform trait extension for replacing the current process with an another.
+
 use std::convert::Infallible;
 use std::process::Command;
 
 use crate::QuackResult;
 use crate::QuackResultContext;
 
-/// Adds portable [`exec_replace`](CommandExt::exec_replace) to the [`Command`].
+/// Adds a portable [`exec_replace`](CommandExt::exec_replace) method to the [`Command`].
 pub trait CommandExt {
-    /// Replace current process with command from `Self` and execute it.
+    /// Replace the current process with command from [`Self`] and execute it.
     ///
-    /// # Returns
-    /// [`Err`](io::Error) variant means, that spawning new command failed.
+    /// ## Returns
+    ///
+    /// [`Err`](crate::QuackError) variant means, that spawning new command failed.
     /// Otherwise this function shall never return.
     fn exec_replace(&mut self) -> QuackResult<Infallible>;
 }

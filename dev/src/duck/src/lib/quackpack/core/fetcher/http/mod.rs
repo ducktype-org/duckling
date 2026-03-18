@@ -1,3 +1,4 @@
+//! General HTTP client, backed by [`curl`].
 use std::path::Path;
 
 use curl::easy::{Easy2, Handler, List};
@@ -11,6 +12,7 @@ mod defaults;
 mod handlers;
 
 #[derive(Debug, Clone)]
+/// Our implementation of a curl-backed HTTP client.
 pub struct HttpClient<'duck> {
     _ctx: &'duck DuckCtx,
 }
@@ -21,7 +23,7 @@ impl<'duck> HttpClient<'duck> {
         Self { _ctx: ctx }
     }
 
-    /// Create common [`Easy2`] handler.
+    /// Create a common [`Easy2`] handler.
     fn create_easy<H: Handler>(handler: H) -> QuackResult<Easy2<H>> {
         let mut easy = Easy2::new(handler);
         easy.useragent(defaults::DUCK_USER_AGENT)?;

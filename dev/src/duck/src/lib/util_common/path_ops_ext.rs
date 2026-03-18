@@ -48,6 +48,7 @@ impl DerefMut for FileLockGuard {
 }
 
 #[derive(Debug)]
+/// Helper for keeping an [`io::Error`] in [`QuackResult`] stack, with an extra message.
 pub struct IoErrorWithMsg {
     msg: String,
     source: io::Error,
@@ -95,14 +96,14 @@ pub trait PathOpsExt {
 
     /// Touch the file and its parent directories.
     ///
-    /// # Returns
+    /// ## Returns
     /// [`Ok(File)`](std::fs::File) if created successfully, otherwise an error, as reported by
     /// the [`PathOpsExt::mkdir`] or the [`OpenOptions::open`].
     fn touch(&self) -> Result<File, IoErrorWithMsg>;
 
     /// Create directories at given [`Path`].
     ///
-    /// # Returns
+    /// ## Returns
     /// [`Ok(())`](Ok) if created successfully, otherwise an error, as reported by
     /// the [`create_dir`], or the [`create_dir_all`].
     ///
@@ -119,7 +120,7 @@ pub trait PathOpsExt {
     ///
     /// This is essentially [`self.touch()?`](PathOpsExt::touch) followed by [`File::lock_shared`]/[`File::try_lock_shared`], with RAII bloat.
     ///
-    /// # Returns
+    /// ## Returns
     /// [`Ok(FileLockGuard)`](FileLockGuard) on a success.
     fn lock_shared(&self, should_block: ShouldBlock) -> Result<FileLockGuard, IoErrorWithMsg>;
 
@@ -134,7 +135,7 @@ pub trait PathOpsExt {
     /// Canonicalize `self` fully: expand `~` into the `$HOME`.
     ///
     /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// `UTF-8` path.
+    /// utf8 path.
     ///
     /// This function requires the __expand-user__ feature.
     fn expand_user(&self) -> QuackResult<PathBuf>;
@@ -142,7 +143,7 @@ pub trait PathOpsExt {
     /// Canonicalize `self` fully: expand `~` into a `home`.
     ///
     /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// `UTF-8` path.
+    /// ut8 path.
     ///
     /// This function requires the __expand-user__ feature.
     fn expand_user_with(&self, home: impl AsRef<str>) -> QuackResult<PathBuf>;
@@ -150,7 +151,7 @@ pub trait PathOpsExt {
     /// Canonicalize `self` fully: expand `~` into a `home()`.
     ///
     /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// `UTF-8` path.
+    /// utf8 path.
     ///
     /// This function requires the __expand-user__ feature.
     fn expand_user_with_fn<F, H>(&self, home: F) -> QuackResult<PathBuf>

@@ -1,5 +1,7 @@
 #include "stable_position.hpp"
 
+#include "lang_parser_element.hpp"
+
 #include <algorithm>
 
 namespace pst {
@@ -67,5 +69,11 @@ namespace pst {
 			begin_scope_node = min_start_hash;
 			end_scope_node   = max_end_hash;
 		}
+	}
+
+	StablePosition StablePosition::extendedWith(const StablePosition& other) const {
+		StablePosition copy = *this;
+		copy.extendWith(other);
+		return copy;
 	}
 }

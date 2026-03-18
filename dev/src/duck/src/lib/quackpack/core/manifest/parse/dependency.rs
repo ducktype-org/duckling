@@ -1,3 +1,4 @@
+//! Parsing of the {dev-,}dependencies fields in a manifest.
 use std::{collections::HashMap, path::Path};
 
 use super::source;
@@ -86,7 +87,7 @@ fn parse_single_dependency(
         .with_context(|| format!("when parsing the field `{}`", scope.format()))
 }
 
-/// Parse dependencies features
+/// Parse dependency's features
 fn parse_features(
     schema: Option<&Vec<FeatureSchema>>,
     scope: &mut Scope,
