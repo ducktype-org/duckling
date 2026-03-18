@@ -56,7 +56,7 @@ namespace compiler::repl {
 			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_unique_name })
 		           ->valueOrPanic();
 
-		// @TODO #2246 check if we can avoid repeating the logic from compileLirToModuleData.
+		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
 		// This is strictly connected to the loading dvm context.
 		vm::code::CodeCollection new_code;
 
