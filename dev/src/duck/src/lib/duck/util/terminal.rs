@@ -4,6 +4,8 @@ use std::io::Write;
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 
+use crate::duck::util::indent::indent;
+
 #[derive(Debug)]
 pub struct Terminal {
     term: Term,
@@ -28,11 +30,13 @@ macro_rules! delegate_styles {
     ) => {
        pub fn $name(&self, text: impl ::std::fmt::Display) {
            let full_text = format!("{} {}", style($value)$(.$opt())*, text);
+           let full_text = indent_without_first_line(full_text, $value.len() + 1);
            self.print(full_text)
        }
 
        pub fn $verbose(&self, text: impl ::std::fmt::Display) {
            let full_text = format!("{} {}", style($value)$(.$opt())*, text);
+           let full_text = indent_without_first_line(full_text, $value.len() + 1);
            self.print_verbose(full_text)
        }
     }
@@ -81,12 +85,11 @@ impl Terminal {
     }
 
     pub fn print_verbose(&self, text: impl Display) {
-        let mut term = &self.term;
         let text = text.to_string();
         if !self.colors_enabled {
-            drop(term.write_all(WithoutAnsi::new(&text).to_string().as_bytes()));
+            let _ = self.term.write_line(&WithoutAnsi::new(&text).to_string());
         } else {
-            drop(term.write_all(text.as_bytes()));
+            let _ = self.term.write_line(&text);
         }
     }
 
@@ -180,5 +183,51 @@ impl Read for &Terminal {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let mut term: &Term = &self.term;
         term.read(buf)
+    }
+}
+
+/// Indents all lines of `text` with `indentation`, expect for the first line.
+fn indent_without_first_line(text: String, indentation: usize) -> String {
+    let Some((first_line, rest)) = text.split_once('\n') else {
+        return text;
+    };
+    let rest = indent(rest, indentation);
+    format!("{first_line}\n{rest}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn indent_tests() {
+        assert_eq!(
+            "",
+            indent_without_first_line("".into(), 2),
+            "indent ignores empty lines"
+        );
+        assert_eq!(
+            "ala",
+            indent_without_first_line("ala".into(), 2),
+            "indent ignores first line"
+        );
+        assert_eq!(
+            "\n",
+            indent_without_first_line("\n".into(), 2),
+            "indent should keep trailing newline"
+        );
+        assert_eq!(
+            "ala
+  ma
+  kota",
+            indent_without_first_line("ala\nma\nkota".into(), 2)
+        );
+        assert_eq!(
+            "ala
+  ma
+  kota
+",
+            indent_without_first_line("ala\nma\nkota\n".into(), 2)
+        );
     }
 }
