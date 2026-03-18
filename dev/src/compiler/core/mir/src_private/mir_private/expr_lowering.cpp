@@ -204,14 +204,18 @@ namespace compiler::mir {
 		}
 
 		void visitTupleExpr(const hc::TupleExpr& expr) override {
+			auto hole = continuation->addHole();
+			
+			BlockBuilderRef       current = continuation;
 			std::vector<MIRValue> element_values;
 			element_values.reserve(expr.elements.size());
-			for (auto& element: expr.elements) {
+
+			for (auto& element: expr.elements | std::views::reverse) {
 				auto lowered_element = lowerSubExpr(*element, continuation);
 				element_values.push_back(lowered_element.getResult(function));
+				current = lowered_element.begin;
 			}
-
-			auto hole = continuation->addHole();
+			std::ranges::reverse(element_values);
 
 			return noValueOutput(
 				continuation,
