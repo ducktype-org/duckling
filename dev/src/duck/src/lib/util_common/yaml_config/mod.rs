@@ -1,12 +1,4 @@
 //! Implementation of traversing YAML documents, and getting/setting values at dotted keys.
-// We have to add it, because saphyr (YAML library) exposes this type explicitly,
-// so we have to pull it in order to use it.
-use ordered_float::OrderedFloat;
-use paste::item;
-use saphyr::{
-    LoadableYamlNode, Mapping, MappingOwned, Scalar, ScalarOwned, SequenceOwned, Yaml, YamlEmitter,
-    YamlOwned,
-};
 use std::{
     fmt,
     io::ErrorKind,
@@ -14,106 +6,72 @@ use std::{
 };
 use tracing::debug;
 
+use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
+
 use crate::{
-    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
+    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
     util_common::path_ops_ext::PathOpsExt,
 };
 
 use super::DescriptionWithAnArticle;
 
-impl DescriptionWithAnArticle for Yaml<'_> {
+impl DescriptionWithAnArticle for Value {
     fn desc_with_article(&self) -> &'static str {
         match self {
-            Self::Representation(..) => "an internal yaml representation",
-            Self::Value(Scalar::Null) => "a null",
-            Self::Value(Scalar::Boolean(..)) => "a boolean",
-            Self::Value(Scalar::Integer(..)) => "an integer",
-            Self::Value(Scalar::FloatingPoint(..)) => "a float",
-            Self::Value(Scalar::String(..)) => "a string",
+            Self::Null => "a null",
+            Self::Bool(..) => "a boolean",
+            Self::Number(n) => {
+                if n.is_f64() {
+                    "a float"
+                } else if n.is_u64() {
+                    "a positive integer"
+                } else {
+                    "an integer"
+                }
+            }
+            Self::String(..) => "a string",
             Self::Sequence(..) => "an array",
             Self::Mapping(..) => "a table",
             Self::Tagged(..) => "a tagged value",
-            Self::Alias(..) => "an alias",
-            Self::BadValue => "an invalid value",
         }
-    }
-}
-
-impl DescriptionWithAnArticle for YamlOwned {
-    fn desc_with_article(&self) -> &'static str {
-        Yaml::from(self).desc_with_article()
-    }
-}
-/// Helper trait for creating [`YamlOwned`] from different types.
-trait ToYamlOwned {
-    /// Convert `self` into an instance of [`YamlOwned`].
-    fn to_owned_yaml(&self) -> YamlOwned;
-}
-
-impl ToYamlOwned for str {
-    fn to_owned_yaml(&self) -> YamlOwned {
-        YamlOwned::Value(ScalarOwned::String(self.to_owned()))
     }
 }
 
 macro_rules! delegate_getter {
     (
-        $(
-            $name:ident => $yaml_value_fn:ident -> $ret:ty: $human_type:literal $(,)?
-        ),*
+        FunctionName: $name:ident,
+        ReturnType: $ret:ty,
+        DocType: $doc:ty,
+        HumanType: $human_type:literal,
+        CastFunctionName: $yaml_value_fn:ident $(,)?
     ) => {
-        item! {
-            $(
-                #[doc = concat!("Get [`", stringify!($ret), "`] at the dotted key.")]
-                pub fn [<get_ $name>](&self, key: &str) -> QuackResult<Option<$ret>> {
-                    let value = self.get(key)?;
-                    let Some(value) = value else {
-                        return Ok(None);
-                    };
-                    match value.[<as_ $yaml_value_fn>]() {
-                        Some(x) => Ok(Some(x)),
-                        None => Err(qp_err!("{}", self.make_location_error())).context(
-                            format!("the key `{key}` expects {}, not {}", $human_type, value.desc_with_article())
-                        )
-                    }
-                }
-            )*
+        #[doc = concat!("Get [`", stringify!($doc), "`] at the dotted key.")]
+        pub fn $name(&self, key: &str) -> QuackResult<Option<$ret>> {
+            let value = self.get(key)?;
+            let Some(value) = value else {
+                return Ok(None);
+            };
+            match value.$yaml_value_fn() {
+                Some(x) => Ok(Some(x)),
+                None => Err(qp_err!("{}", self.make_location_error())).context(format!(
+                    "the key `{key}` expects {}, not {}",
+                    $human_type,
+                    value.desc_with_article()
+                )),
+            }
         }
     };
 }
 
 macro_rules! delegate_setter {
     (
-        $(
-            $name:ident => $yaml_value_enum:ident -> $value:ty $(,)?
-        ),*
+        FunctionName: $name:ident,
+        InputType: $value:ty $(,)?
     ) => {
-        item! {
-            $(
-                #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
-                pub fn [<set_ $name>](&mut self, key: &str, value: $value) -> QuackResult<()> {
-                    let value = YamlOwned::$yaml_value_enum(value);
-                    self.set(key, value)
-                }
-            )*
-        }
-    };
-}
-
-macro_rules! delegate_scalar_setter {
-    (
-        $(
-            $name:ident => $yaml_value_enum:ident -> $value:ty $(,)?
-        ),*
-    ) => {
-        item! {
-            $(
-                #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
-                pub fn [<set_ $name>](&mut self, key: &str, value: $value) -> QuackResult<()> {
-                    let value = YamlOwned::Value(ScalarOwned::$yaml_value_enum(value));
-                    self.set(key, value)
-                }
-            )*
+        #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
+        pub fn $name(&mut self, key: &str, value: $value) -> QuackResult<()> {
+            let value: Value = value.into();
+            self.set(key, value)
         }
     };
 }
@@ -121,12 +79,12 @@ macro_rules! delegate_scalar_setter {
 #[derive(Default, Debug)]
 /// YAML config manager.
 pub struct YamlConfig {
-    content: MappingOwned,
+    content: Mapping,
     source: Option<PathBuf>,
 }
 
 impl YamlConfig {
-    /// Create a new [`YamlConfig`] from the TOML file at `path`.
+    /// Create a new [`YamlConfig`] from the YAML file at `path`.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
         debug!("parsing YAML config at `{}`", path.display());
         let content = match path.as_path().read_to_string() {
@@ -145,35 +103,25 @@ impl YamlConfig {
                 ));
             }
         };
-        let content = YamlOwned::load_from_str(&content).with_context(|| {
+        let content: Value = from_str(&content).with_context(|| {
             format!(
-                "when trying to parse a user config at `{}` into the YAML node",
+                "when trying to parse a user config at `{}` into the YAML value",
                 path.display()
             )
         })?;
-        // Make empty files work.
-        if content.is_empty() {
-            return Ok(Self::default());
-        }
-        let [content] = content.try_into().map_err(|docs: Vec<YamlOwned>| {
-            if docs.len() < 2 {
-                return qp_internal!("it should've been guarded by `.is_empty()` and LHS");
-            }
-            qp_err!(
-                "user config at `{}` has multiple ({}) YAML documents, which is not supported",
-                path.display(),
-                docs.len()
-            )
-        })?;
-        let content = content
-            .into_mapping()
-            .ok_or_else(|| qp_err!("user config at `{}` is not a YAML table", path.display()))?;
+        let content = match content {
+            Value::Mapping(mapping) => mapping,
+            // Make empty files work.
+            Value::Null => return Ok(Self::default()),
+            _ => qp_bail!("user config at `{}` is not a YAML table", path.display()),
+        };
         Ok(Self {
             content,
             source: Some(path),
         })
     }
 
+    /// Create an error message.
     pub fn make_location_error(&self) -> String {
         match self.source {
             Some(ref path) => format!("when parsing the configuration at `{}`", path.display()),
@@ -186,7 +134,7 @@ impl YamlConfig {
 
     #[track_caller]
     /// Get the value from the dotted key.
-    fn _get(&self, key: &str) -> QuackResult<Option<&YamlOwned>> {
+    fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
         debug!(
             "getting the key `{key}` from config at `{}`",
             self.source
@@ -203,19 +151,19 @@ impl YamlConfig {
                 "we've just asserted that the key is not empty, so split should return at least one element"
             )
         };
-        let mut current: &MappingOwned = &self.content;
+        let mut current: &Mapping = &self.content;
         for (i, &part) in parts.iter().enumerate() {
             if part.is_empty() {
                 return Err(Self::make_empty_key_fragment_error(i, key));
             }
-            let Some(next) = current.get(&part.to_owned_yaml()) else {
+            let Some(next) = current.get(part) else {
                 debug!(
                     "there is no table `[{part}]` in the chain `{}`",
                     parts[0..=i].join("."),
                 );
                 return Ok(None);
             };
-            let YamlOwned::Mapping(next) = next else {
+            let Value::Mapping(next) = next else {
                 qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
@@ -224,17 +172,17 @@ impl YamlConfig {
             };
             current = next;
         }
-        Ok(current.get(&last.to_owned_yaml()))
+        Ok(current.get(last))
     }
 
     /// Convenient wrapper around [`_get`](Self::_get).
-    fn get(&self, key: &str) -> QuackResult<Option<&YamlOwned>> {
+    fn get(&self, key: &str) -> QuackResult<Option<&Value>> {
         self._get(key).with_context(|| self.make_location_error())
     }
 
     #[track_caller]
     /// Set the value at the dotted key.
-    fn _set(&mut self, key: &str, value: YamlOwned) -> QuackResult<()> {
+    fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         if key.is_empty() {
             qp_bail_internal!("empty key")
         }
@@ -251,8 +199,8 @@ impl YamlConfig {
             }
 
             let next = current
-                .entry(part.to_owned_yaml())
-                .or_insert_with(|| YamlOwned::Mapping(Default::default()));
+                .entry(part.into())
+                .or_insert_with(|| Value::Mapping(Default::default()));
 
             let next_type = next.desc_with_article();
             let Some(next) = next.as_mapping_mut() else {
@@ -264,12 +212,12 @@ impl YamlConfig {
             };
             current = next;
         }
-        let _ = current.insert(last.to_owned_yaml(), value);
+        let _ = current.insert(last.into(), value);
         Ok(())
     }
 
     /// Convenient wrapper around [`_set`](Self::_set).
-    fn set(&mut self, key: &str, value: YamlOwned) -> QuackResult<()> {
+    fn set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         self._set(key, value)
             .with_context(|| self.make_location_error())
     }
@@ -290,34 +238,98 @@ impl YamlConfig {
     }
 
     delegate_getter! {
-        str => str -> &str: "a string",
-        array => sequence -> &SequenceOwned: "an array",
-        table => mapping -> &MappingOwned: "a table",
-        int => integer -> i64: "an integer",
-        float => floating_point -> f64: "a float",
-        bool => bool -> bool: "a boolean",
+        FunctionName: get_str,
+        ReturnType: &str,
+        DocType: str,
+        HumanType: "a string",
+        CastFunctionName: as_str,
+    }
+
+    delegate_getter! {
+        FunctionName: get_array,
+        ReturnType: &Sequence,
+        DocType: Sequence,
+        HumanType: "an array",
+        CastFunctionName: as_sequence,
+    }
+
+    delegate_getter! {
+        FunctionName: get_table,
+        ReturnType: &Mapping,
+        DocType: Mapping,
+        HumanType: "a table",
+        CastFunctionName: as_mapping,
+    }
+
+    delegate_getter! {
+        FunctionName: get_i64,
+        ReturnType: i64,
+        DocType: i64,
+        HumanType: "an integer",
+        CastFunctionName: as_i64,
+    }
+
+    delegate_getter! {
+        FunctionName: get_u64,
+        ReturnType: u64,
+        DocType: u64,
+        HumanType: "a positive integer",
+        CastFunctionName: as_u64,
+    }
+
+    delegate_getter! {
+        FunctionName: get_bool,
+        ReturnType: bool,
+        DocType: bool,
+        HumanType: "a boolean",
+        CastFunctionName: as_bool,
+    }
+
+    delegate_getter! {
+        FunctionName: get_f64,
+        ReturnType: f64,
+        DocType: f64,
+        HumanType: "a float",
+        CastFunctionName: as_f64,
     }
 
     delegate_setter! {
-        array => Sequence -> SequenceOwned,
-        table => Mapping -> MappingOwned
+        FunctionName: set_array,
+        InputType: Sequence,
     }
 
-    delegate_scalar_setter! {
-        bool => Boolean -> bool,
-        int => Integer -> i64,
-        str => String -> String,
+    delegate_setter! {
+        FunctionName: set_table,
+        InputType: Mapping,
     }
 
-    // We set this one manually, because YAML API is awful.
-    /// Get [`f64`] at the dotted key
-    pub fn set_float(&mut self, key: &str, value: f64) -> QuackResult<()> {
-        let value = YamlOwned::Value(ScalarOwned::FloatingPoint(OrderedFloat(value)));
-        self.set(key, value)
+    delegate_setter! {
+        FunctionName: set_bool,
+        InputType: bool,
     }
 
-    /// Get the root [`MappingOwned`] for this config.
-    pub fn get_root_table(&self) -> &MappingOwned {
+    delegate_setter! {
+        FunctionName: set_i64,
+        InputType: i64,
+    }
+
+    delegate_setter! {
+        FunctionName: set_u64,
+        InputType: u64,
+    }
+
+    delegate_setter! {
+        FunctionName: set_str,
+        InputType: String,
+    }
+
+    delegate_setter! {
+        FunctionName: set_f64,
+        InputType: f64,
+    }
+
+    /// Get the root [`Mapping`] for this config.
+    pub fn get_root_table(&self) -> &Mapping {
         &self.content
     }
 
@@ -335,18 +347,8 @@ impl YamlConfig {
 
 impl fmt::Display for YamlConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut emitter = YamlEmitter::new(f);
-        // Hack around two things:
-        //   1. MappingOwned doesn't implement Display
-        //   2. `.dump` takes `&Yaml<'_>` (COW version of YamlOwned), so we have to convert
-        //      types.
-        let yaml = Yaml::Mapping(
-            self.content
-                .iter()
-                .map(|(key, value)| (key.into(), value.into()))
-                .collect::<Mapping>(),
-        );
-        emitter.dump(&yaml).map_err(|_| fmt::Error)
+        let content = to_string(&self.content).map_err(|_| fmt::Error)?;
+        write!(f, "{}", content)
     }
 }
 
@@ -370,7 +372,7 @@ mod tests {
         assert!(matches!(config.get_table("a"), Ok(None)));
         assert!(matches!(config.get_array("a"), Ok(None)));
         assert!(matches!(config.get_str("a"), Ok(None)));
-        assert!(matches!(config.get_float("a"), Ok(None)));
+        assert!(matches!(config.get_f64("a"), Ok(None)));
         assert!(matches!(config.get_bool("a"), Ok(None)));
     }
 
@@ -392,11 +394,11 @@ foo:
         assert!(matches!(config.get_table("foo"), Ok(Some(..))));
         assert!(matches!(config.get_table("foo.a"), Ok(Some(..))));
         assert!(matches!(config.get_str("c"), Ok(Some("xd"))));
-        assert!(matches!(config.get_float("b"), Ok(Some(1.2))));
-        assert!(matches!(config.get_int("a"), Ok(Some(1))));
-        assert!(matches!(config.get_int("foo.a.a"), Ok(Some(1))));
+        assert!(matches!(config.get_f64("b"), Ok(Some(1.2))));
+        assert!(matches!(config.get_i64("a"), Ok(Some(1))));
+        assert!(matches!(config.get_i64("foo.a.a"), Ok(Some(1))));
         assert_eq!(
-            config.get_int("foo.xd.a").unwrap_err().to_string(),
+            config.get_i64("foo.xd.a").unwrap_err().to_string(),
             format!(
                 "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
@@ -424,7 +426,7 @@ foo:
             )
         );
         assert_eq!(
-            config.get_float("foo.xd.a").unwrap_err().to_string(),
+            config.get_f64("foo.xd.a").unwrap_err().to_string(),
             format!(
                 "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
@@ -442,7 +444,7 @@ foo:
                 .get_table("foo")
                 .unwrap()
                 .unwrap()
-                .get(&"xd".to_owned_yaml())
+                .get("xd")
                 .unwrap()
                 .as_str(),
             Some("c")
@@ -467,19 +469,13 @@ foo:
         );
         let mut config = YamlConfig::new(file.as_ref().to_path_buf()).unwrap();
         config.set_bool("a", true).unwrap();
-        config.set_int("b", 2137).unwrap();
-        config.set_table("c", MappingOwned::new()).unwrap();
-        config.set_array("foo", SequenceOwned::new()).unwrap();
+        config.set_i64("b", 2137).unwrap();
+        config.set_table("c", Mapping::new()).unwrap();
+        config.set_array("foo", Sequence::new()).unwrap();
         config
-            .set_table(
-                "e.bar.xd",
-                MappingOwned::from_iter([(
-                    "a".to_owned_yaml(),
-                    YamlOwned::Value(ScalarOwned::Integer(1)),
-                )]),
-            )
+            .set_table("e.bar.xd", Mapping::from_iter([("a".into(), 1.into())]))
             .unwrap();
-        let err = config.set_int("foo.a", 1).unwrap_err();
+        let err = config.set_i64("foo.a", 1).unwrap_err();
         assert_eq!(
             err.to_string(),
             format!(
@@ -489,16 +485,17 @@ foo:
         );
         assert_eq!(
             config.to_string(),
-            r#"---
-d: dx
+            "\
 a: true
 b: 2137
 c: {}
+d: dx
+foo: []
 e:
   bar:
     xd:
       a: 1
-foo: []"#
+"
         );
     }
 
@@ -518,7 +515,8 @@ b: 1
         assert_eq!(
             err.to_string(),
             format!(
-                "user config at `{}` has multiple (2) YAML documents, which is not supported",
+                "when trying to parse a user config at `{}` into the YAML value
+deserializing from YAML containing more than one document is not supported",
                 file.path().display()
             )
         )
