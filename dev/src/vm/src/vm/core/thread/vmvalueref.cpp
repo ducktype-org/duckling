@@ -5,7 +5,8 @@
 #include <vm/core/process/vmprocess.hpp>
 
 vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
-	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(type->getSize()));
+	vm::Pointer pointer
+		= begin.movedPointer(static_cast<i64>(index * static_cast<usize>(type->getSize())));
 	return { *process.get(), type, pointer };
 }
 
