@@ -17,7 +17,7 @@ PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 constexpr static char FULL_ELF[] = {
-#embed "mock_stencils-so" suffix(, )
+#embed "mock_stencils-so"
 };
 POP_DIAGNOSTIC
 
@@ -43,7 +43,7 @@ public:
 
 private:
 	constexpr static auto FIND_FUNC = [](auto name) {
-		for (StencilData data: stencils.functions())
+		for (StencilData data: stencils.stencilsData())
 			if (data.name == name) return data;
 		CORE_PANIC("No function with that name");
 	};

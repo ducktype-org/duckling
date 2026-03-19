@@ -71,7 +71,7 @@ namespace vm::jit::cnp {
 			return std::span(begin, begin + stencil_data.size);
 		}
 
-		[[nodiscard]] auto& stencils_data() const { return stencils.stencils_data; }
+		[[nodiscard]] auto& stencilsData() const { return stencils.stencils_data; }
 
 		/**
 		 * @brief Copy and patch a stencil into a given address.

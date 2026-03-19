@@ -12,18 +12,23 @@ namespace vm::jit::cnp {
 		ALLOW_EXTENSIONS
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		static constexpr char BIN[] = {
-#embed "wrapper-so" suffix(, )
+#embed "wrapper-so"
 		};
 		POP_DIAGNOSTIC
 
-		constexpr static auto STENCILS = Stencils out{ .binary    = std::to_array(BIN),
-			                                           .functions = {
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+		static constexpr StencilData DATA[] = {
 #include <wrapper-nm>
-													   } };
+		};
+
+		static constexpr auto STENCILS
+			= Stencils{ .binary        = std::bit_cast<std::array<byte, sizeof(BIN)>>(BIN),
+			            .stencils_data = std::to_array(DATA) };
+		auto loaded_stencils = STENCILS.load();
 
 		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
 		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
-			return STENCILS.functions[static_cast<u64>(opcode)].size;
+			return loaded_stencils.stencilsData().at(static_cast<u64>(opcode)).size;
 		};
 		usize size = std::ranges::fold_left(
 			opcodes | std::views::transform(get_opfunc_size), 0, std::plus{}
@@ -31,14 +36,10 @@ namespace vm::jit::cnp {
 
 		auto  memory = JitFuncMemory::allocate(size);
 		byte* next   = memory.addr;
-
-		auto add_instr = [&](auto binary) {
-			std::ranges::copy(binary, next);
-			next += std::ranges::size(binary);
-		};
-
-		for (low::MicroOpcode opcode: opcodes)
-			add_instr(STENCILS.stencilBinary(static_cast<u64>(opcode)));
-		return memory.into_func<JitOpFun>();
+		for (low::MicroOpcode opcode: opcodes) {
+			auto stencil_data = loaded_stencils.stencilsData().at(static_cast<u64>(opcode));
+			next              = loaded_stencils.relocate(stencil_data, next);
+		}
+		return memory.intoFunc<JitOpFun>();
 	}
 }
