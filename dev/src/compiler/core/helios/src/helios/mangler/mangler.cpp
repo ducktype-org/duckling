@@ -22,8 +22,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <hashing/add_to_hash.hpp>
-#include <hashing/hash_algorithm_utils.hpp>
+#include <hashing/hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -36,6 +35,16 @@
  * That file provides a detailed description and motivation for some design choices made here
  */
 namespace compiler::helios::mangler {
+
+	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) noexcept {
+		if (k.symbol_key.index() == 0)
+			addToHash(h, std::get<0>(k.symbol_key));
+		else if (k.symbol_key.index() == 1)
+			addToHash(h, std::get<1>(k.symbol_key));
+		addToHash(h, k.kind);
+		addToHash(h, k.mangling_scheme_version);
+		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
+	}
 
 	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
 		return hashing::justHash(*this).data.at(0);

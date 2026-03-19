@@ -1,6 +1,6 @@
 #include <helios/symbols/symbol_id.hpp>
 
-#include <hashing/add_to_hash.hpp>
+#include <hashing/hash_algorithm_utils.hpp>
 #include <query_framework/query_int.hpp>
 #include <string_id/string_id.hpp>
 
@@ -33,17 +33,7 @@ namespace compiler::helios::mangler {
 		u64                         mangling_scheme_version = 0;
 		base::Optional<std::string> additional_metadata     = std::nullopt;
 
-		friend constexpr void addToHash(
-			hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k
-		) noexcept {
-			if (k.symbol_key.index() == 0)
-				addToHash(h, std::get<0>(k.symbol_key));
-			else if (k.symbol_key.index() == 1)
-				addToHash(h, std::get<1>(k.symbol_key));
-			addToHash(h, k.kind);
-			addToHash(h, k.mangling_scheme_version);
-			if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
-		}
+		friend void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) noexcept;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
