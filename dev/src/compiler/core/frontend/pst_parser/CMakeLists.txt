@@ -36,6 +36,7 @@ file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
 	"${PST_SRC}/elements/implementations/expr_holders.cpp"
 	"${PST_SRC}/elements/implementations/meta/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/*.cpp"
+	"${PST_SRC}/elements/implementations/not_statements/import_chains/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/patterns/*.cpp"
 	"${PST_SRC}/elements/implementations/lists/*.cpp"
 )
@@ -46,6 +47,7 @@ set_source_files_properties(${OtherElementsImplementationFiles}
 add_library(PstParser
 	${PST_SRC}/lang_parser_element.cpp
 	${PST_SRC}/lang_parser_state.cpp
+	${PST_SRC}/stable_position.cpp
 	${PST_SRC}/test_utils/pst_test_utils.cpp
 	${PST_SRC}/access.cpp
 	${PST_SRC}/utility.cpp
@@ -75,3 +77,7 @@ make_module(PstParser USES DiagnosticInteractive Hashing Lexer UnicodeClassifica
 duck_add_test(compiler parser tests/parser_test.cpp USES PstParser)
 duck_add_test(compiler parser_builder tests/parser_builder_test.cpp USES PstParser)
 duck_add_test(compiler parser_errors tests/parser_errors_test.cpp USES PstParser)
+
+duck_add_test(compiler extract_single_expression tests/extract_single_expression_test.cpp USES PstParser)
+duck_add_test(compiler extract_single_instruction tests/extract_single_instruction_test.cpp USES PstParser)
+duck_add_test(compiler extract_single_top_level_statement tests/extract_single_top_level_statement_test.cpp USES PstParser)

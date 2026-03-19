@@ -105,10 +105,10 @@ DEF_MICRO_INSTR(mov_l16_g16, vm::opargs::StackLocal16, vm::opargs::Global16)
 DEF_MICRO_INSTR(mov_l8_g8, vm::opargs::StackLocal8, vm::opargs::Global8)
 DEF_MICRO_INSTR(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
 
-DEF_MICRO_INSTR(mov_lstr_lstr, vm::opargs::StackLocalStr, vm::opargs::StackLocalStr)
-DEF_MICRO_INSTR(mov_lstr_gstr, vm::opargs::StackLocalStr, vm::opargs::GlobalStr)
-DEF_MICRO_INSTR(mov_gstr_lstr, vm::opargs::GlobalStr, vm::opargs::StackLocalStr)
-DEF_MICRO_INSTR(mov_gstr_gstr, vm::opargs::GlobalStr, vm::opargs::GlobalStr)
+DEF_MICRO_INSTR(mov_lste_lste, vm::opargs::StackLocalSte, vm::opargs::StackLocalSte)
+DEF_MICRO_INSTR(mov_lste_gste, vm::opargs::StackLocalSte, vm::opargs::GlobalSte)
+DEF_MICRO_INSTR(mov_gste_lste, vm::opargs::GlobalSte, vm::opargs::StackLocalSte)
+DEF_MICRO_INSTR(mov_gste_gste, vm::opargs::GlobalSte, vm::opargs::GlobalSte)
 
 // does a shallow pointer copy
 DEF_MICRO_INSTR(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
@@ -360,46 +360,52 @@ DEF_MICRO_INSTR(cmpNull_lptr, vm::opargs::StackLocalPtr)
 // ========= VARIANT OPERATIONS ========
 
 
-// Sets `variant`'s inner type to `inner_type`. It also invalidates pointers to its data.
+/**
+ * Sets `variant`'s inner type to `inner_type`. It also invalidates pointers to its data.
+ * @note `ext_type` required to know the variant type quickly at runtime.
+ */
 DEF_MICRO_INSTR(
 	variantSetInner_lvnt_type,
 	vm::opargs::StackLocalVnt /* variant */,
-	vm::opargs::Type /* 		 inner_type */
+	vm::opargs::Type /* 		 inner_type
+    vm::opargs::Type 			 variant_type */
 )
 /**
  * @brief Sets `destination` to point at `variant`'s data. Expects `variant` to has `expected_type`
  * set, and if it's not, `destination` becomes nullptr.
- * @note `ext_type` required to know which type is to be expected. There is no other way to obtain
- * type information in the implementation.
+ * @note `ext_type_type` required to know the expected alternative and the variant type.
  */
 DEF_MICRO_INSTR(
 	variantGetInner_lptr_lvnt,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalVnt /* variant,
-    vm::opargs::Type 			 expected_type */
+    vm::opargs::Type 			 expected_type
+    vm::opargs::Type 			 variant_type */
 )
 
 /**
  * @brief Sets inner type of variant under `variant_ptr` to `inner_type`. It also invalidates
  * pointers to its data.
+ * @note `ext_type` required to know the variant type quickly at runtime.
  */
 DEF_MICRO_INSTR(
 	variantSetInner_lptr_type,
 	vm::opargs::StackLocalPtr /* variant_ptr */,
-	vm::opargs::Type /* 		 inner_type */
+	vm::opargs::Type /* 		 inner_type
+    vm::opargs::Type 			 variant_type */
 )
 
 /**
  * @brief Sets `destination` to point at data of variant under `variant_ptr`. Expects the variant to
  * have `expected_type` set, and if it's not, `destination` becomes nullptr.
- * @note `ext_type` required to know which type is to be expected. There is no other way to obtain
- * type information in the implementation.
+ * @note `ext_type_type` required to know the expected alternative and the variant type.
  */
 DEF_MICRO_INSTR(
 	variantGetInner_lptr_lptr,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalPtr /* variant_ptr,
-    vm::opargs::Type 			 expected_type */
+    vm::opargs::Type 			 expected_type
+    vm::opargs::Type 			 variant_type */
 )
 
 // ========= JUMPS ========
@@ -411,8 +417,14 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::opargs::Label)
 // ========= FUNCTION OPERATIONS ========
 
 DEF_MICRO_INSTR(call_func, vm::opargs::FunctionName)
+#ifdef ENABLE_JIT
+// call a function, with the possibility to compile it later
+DEF_MICRO_INSTR(jit_call_entrypoint, vm::opargs::FunctionName)
+#endif
 DEF_MICRO_INSTR(call_builtinfunc, vm::opargs::BuiltinFunctionName)
 DEF_MICRO_INSTR(call_cfunc, vm::opargs::ExtCFunctionName)
+
+DEF_MICRO_INSTR(set_threadctx, vm::opargs::FunctionName)
 
 // return while performing a tail call
 DEF_MICRO_INSTR(ret_tailcall_func, vm::opargs::FunctionName)
@@ -493,24 +505,24 @@ DEF_MICRO_INSTR(
 
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
-	structLea_lptr_lstr,
+	structLea_lptr_lste,
 	vm::opargs::StackLocalPtr /* destination */,
-	vm::opargs::StackLocalStr /* source,
+	vm::opargs::StackLocalSte /* source,
     vm::opargs::Field 			 field */
 )
 
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
-	structLoad_lany_lstr,
+	structLoad_lany_lste,
 	vm::opargs::StackLocalAny /* destination */,
-	vm::opargs::StackLocalStr /* data_struct,
+	vm::opargs::StackLocalSte /* data_struct,
     vm::opargs::Field 			 field */
 )
 
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
-	structStore_lstr_lany,
-	vm::opargs::StackLocalStr /* data_struct */,
+	structStore_lste_lany,
+	vm::opargs::StackLocalSte /* data_struct */,
 	vm::opargs::StackLocalAny /* source ,
     vm::opargs::Field 			 field */
 )
@@ -595,6 +607,72 @@ DEF_MICRO_INSTR(cast_l16_type, vm::opargs::StackLocal16, vm::opargs::Type)
 DEF_MICRO_INSTR(cast_l32_type, vm::opargs::StackLocal32, vm::opargs::Type)
 DEF_MICRO_INSTR(cast_l64_type, vm::opargs::StackLocal64, vm::opargs::Type)
 
+// ========= CONVERSION OPERATIONS ========
+// Sign Extension
+DEF_MICRO_INSTR(sext_l16_l8, vm::opargs::StackLocal16, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sext_l32_l8, vm::opargs::StackLocal32, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sext_l64_l8, vm::opargs::StackLocal64, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sext_l32_l16, vm::opargs::StackLocal32, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sext_l64_l16, vm::opargs::StackLocal64, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sext_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+
+// Zero Extension
+DEF_MICRO_INSTR(zext_l16_l8, vm::opargs::StackLocal16, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(zext_l32_l8, vm::opargs::StackLocal32, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(zext_l64_l8, vm::opargs::StackLocal64, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(zext_l32_l16, vm::opargs::StackLocal32, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(zext_l64_l16, vm::opargs::StackLocal64, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(zext_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+
+// Truncation
+DEF_MICRO_INSTR(trunc_l8_l16, vm::opargs::StackLocal8, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(trunc_l8_l32, vm::opargs::StackLocal8, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(trunc_l8_l64, vm::opargs::StackLocal8, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(trunc_l16_l32, vm::opargs::StackLocal16, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(trunc_l16_l64, vm::opargs::StackLocal16, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(trunc_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+
+// Int to Float
+DEF_MICRO_INSTR(sitofp_l32_l8, vm::opargs::StackLocal32, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(uitofp_l32_l8, vm::opargs::StackLocal32, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sitofp_l32_l16, vm::opargs::StackLocal32, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(uitofp_l32_l16, vm::opargs::StackLocal32, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sitofp_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(uitofp_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(sitofp_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(uitofp_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+
+DEF_MICRO_INSTR(sitofp_l64_l8, vm::opargs::StackLocal64, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(uitofp_l64_l8, vm::opargs::StackLocal64, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sitofp_l64_l16, vm::opargs::StackLocal64, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(uitofp_l64_l16, vm::opargs::StackLocal64, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sitofp_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(uitofp_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(sitofp_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(uitofp_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+
+// Float to Int (Saturating)
+DEF_MICRO_INSTR(fptosi_l8_l32, vm::opargs::StackLocal8, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptoui_l8_l32, vm::opargs::StackLocal8, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptosi_l16_l32, vm::opargs::StackLocal16, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptoui_l16_l32, vm::opargs::StackLocal16, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptosi_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptoui_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptosi_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptoui_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+
+DEF_MICRO_INSTR(fptosi_l8_l64, vm::opargs::StackLocal8, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptoui_l8_l64, vm::opargs::StackLocal8, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptosi_l16_l64, vm::opargs::StackLocal16, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptoui_l16_l64, vm::opargs::StackLocal16, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptosi_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptoui_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptosi_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptoui_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+
+DEF_MICRO_INSTR(fptrunc_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fpext_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding instruction
@@ -603,6 +681,7 @@ DEF_MICRO_INSTR(ext_type, vm::opargs::Type)
 DEF_MICRO_INSTR(ext_field, vm::opargs::Field)
 DEF_MICRO_INSTR(ext_type_field, vm::opargs::Type, vm::opargs::Field)
 DEF_MICRO_INSTR(ext_type_l64, vm::opargs::Type, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(ext_type_type, vm::opargs::Type, vm::opargs::Type)
 
 // ========= MISC ========
 

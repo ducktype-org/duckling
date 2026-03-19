@@ -56,23 +56,11 @@ namespace {
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				return std::visit(
-					[&](auto&& val) -> DVMImmediate {
-						using T      = std::decay_t<decltype(val)>;
-						u64 arg_bits = 0;
-
-						if constexpr (std::is_integral_v<T>) {
-							arg_bits = static_cast<u64>(val);
-						} else if (std::is_floating_point_v<T>) {
-							f64 val_as_64 = static_cast<f64>(val);
-							arg_bits      = std::bit_cast<u64>(val_as_64);
-						} else {
-							CORE_PANIC("Unsupported NumericValue type for a VM constant operand");
-						}
-						return DVMImmediate{ arg_bits };
-					},
+					[&](auto&& val) -> DVMImmediate { return DVMImmediate{ val }; },
 					numeric.getStorage()
 				);
 			}
+			variant_case(char, value) { return DVMImmediate{ value }; }
 			variant_case(bool, value) { return DVMImmediate{ value }; }
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				// @TODO: #1728 remove this evil bit_cast
@@ -154,35 +142,20 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInstruction(
 vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::finish() && {
 	vm::code::Function function;
 	function.name = function_name;
-
-	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
-	// should be removed.
-	if (function_name == "main") {
-		function.signature.parameters.emplace_back(base::StrID("i64"));
-		function.signature.parameters.emplace_back(base::StrID("ptr_argv"));
-		function.signature.result_type = vm::code::Identifier(base::StrID("i64"));
-	} else {
-		for (const auto& param_type: function_parameter_types)
-			function.signature.parameters.emplace_back(vm::code::typeName(param_type));
-		function.signature.result_type
-			= vm::code::Identifier(vm::code::typeName(function_return_type));
-	}
-	function.body = std::move(function_body);
+	for (const auto& param_type: function_parameter_types)
+		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
+	function.signature.result_type = vm::code::Identifier(vm::code::typeName(function_return_type));
+	function.body                  = std::move(function_body);
 	return function;
 }
 
 DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
-	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
-	// should be removed.
 	if (function_name == "main") {
-		if (function_return_type
-		    != vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), 8) }) {
-			CORE_PANIC("Main function must have i64 return type");
-		}
-		// return DVMLocal{
-		// 	.name = base::StrID("ret_val"),
-		// 	.type = vm::code::PrimitiveType(base::StrID("i64"), 8),
-		// };
+		CORE_ASSERT(
+			function_return_type
+				== vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), 8) },
+			"Main function must have i64 return type"
+		);
 	}
 	return DVMLocal{
 		.name = base::StrID("ret_val"),

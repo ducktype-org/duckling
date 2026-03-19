@@ -9,7 +9,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
 #include <ranges>
@@ -66,11 +66,11 @@ namespace compiler::mir {
 			return lowerExpr(expr, continuation, function, expr_scope);
 		}
 
-		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
+		void visitLiteralUnitExpr(const hc::LiteralUnitExpr&) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
 
-		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
+		void visitLiteralNumericExpr(const hc::LiteralNumericExpr& value) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ value.value } });
 		}
 
@@ -78,8 +78,12 @@ namespace compiler::mir {
 			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
-		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
-			throw base::NotYetImplemented("string literal");
+		void visitLiteralCharExpr(const hc::LiteralCharExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
+		}
+
+		void visitLiteralStringExpr(const hc::LiteralStringExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {
@@ -100,6 +104,29 @@ namespace compiler::mir {
 			}
 		}
 
+		void visitReusableExpr(const helios::code::ReusableExpr& expr) override {
+			// If this is the subsequent use of the expression,
+			// simply return the temporary value assigned to it.
+			auto target_location = function.getTmpForReusableExpr(expr, expr_scope);
+			if (not expr.first_use) {
+				valueOutput(continuation, target_location);
+				return;
+			}
+
+			// Otherwise, compute the value of the expression.
+			auto assign_hole   = continuation->addHole();
+			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			lowered_inner.storeResultInGivenPlace(
+				MIRPlace(target_location),
+				assign_hole,
+				{ flagConstruct(target_location) },
+				expr_scope,
+				{}
+			);
+
+			valueOutput(lowered_inner.begin, target_location);
+		}
+
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
 			auto target_construction_hole = continuation->addHole();
@@ -110,27 +137,15 @@ namespace compiler::mir {
 			const auto res_left      = lowered_left.getResult(function);
 
 			// Fill the hole with the binary operation.
-			// Assume (for now?) that the arguments are of the same type,
-			// and the result is of the same type as the arguments.
-			const auto argument_type       = typeOfMIRValue(res_right, function.getContext());
-			const auto other_argument_type = typeOfMIRValue(res_left, function.getContext());
-			CORE_ASSERT(
-				argument_type.getType() == other_argument_type.getType(),
-				base::strConcat(
-					"Binary operator with different argument types. Left side is: '",
-					argument_type.toString(),
-					"' Right side is: '",
-					other_argument_type.toString(),
-					"'"
-				)
-			);
 			const auto      result_type = expr.expression_type.getSymbolType();
 			const Operation operation   = builtinBinaryToOperation(expr.operation);
 
 			noValueOutput(
 				lowered_left.begin,
 				target_construction_hole,
-				Instruction(operation, {}, { res_left, res_right }, {}, expr_scope),
+				Instruction(
+					operation, {}, { res_left, res_right }, {}, expr_scope, {}, { expr.getPosition() }
+				),
 				result_type
 			);
 		}
@@ -148,7 +163,9 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered.begin,
 				target_construction_hole,
-				Instruction(operation, {}, { res_lowered }, {}, expr_scope),
+				Instruction(
+					operation, {}, { res_lowered }, {}, expr_scope, {}, { expr.getPosition() }
+				),
 				result_type
 			);
 		}
@@ -172,7 +189,8 @@ namespace compiler::mir {
 					MIRPlace(target_location),
 					assign_hole,
 					{ flagConstruct(target_location) },
-					expr_scope
+					expr_scope,
+					{}
 				);
 
 
@@ -193,6 +211,8 @@ namespace compiler::mir {
 				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
 				{},
 				expr_scope,
+				{},
+				{ ternary_expr.getPosition() },
 			});
 
 			// Return (always value).
@@ -230,7 +250,15 @@ namespace compiler::mir {
 			noValueOutput(
 				current,
 				hole,
-				Instruction(Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope),
+				Instruction(
+					Operation::MetaCreateVariant,
+					{},
+					subtype_values,
+					{},
+					expr_scope,
+					{},
+					{ expr.getPosition() }
+				),
 				result_type
 			);
 			return;
@@ -252,31 +280,39 @@ namespace compiler::mir {
 			}
 		}
 
+		void visitIndexExpr(const hc::IndexExpr& expr) override {
+			if (expr.base->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta) {
+				// @TODO: #1918 Implement that.
+				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
+			} else {
+				auto lowered_index = lowerSubExpr(*expr.index, continuation);
+				auto index_val     = lowered_index.getResult(function);
+
+				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+				auto base_val     = lowered_base.getResult(function);
+
+				variant_match(std::move(base_val.getVariant())) {
+					variant_case(MIRPlace, place) {
+						valueOutput(lowered_base.begin, place.withIndex(index_val));
+					}
+					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
+				}
+			}
+		}
+
 		void visitSequenceExpr(const hc::SequenceExpr&) override {
 			throw base::NotYetImplemented("sequence expr lowering");
 		}
 
 		void visitChainComparisonExpr(const hc::ChainComparisonExpr& chain_expr) override {
-			CORE_ASSERT(!chain_expr.expressions.empty(), "Empty chain comparison");
-			CORE_ASSERT(chain_expr.expressions.size() != 1, "Single element chain comparison");
-			CORE_ASSERT(
-				chain_expr.operators.size() == chain_expr.expressions.size() - 1,
-				"Operands: " + std::to_string(chain_expr.operators.size())
-					+ " expressions: " + std::to_string(chain_expr.expressions.size())
-					+ ", but expected one less operator then expression."
-			);
-
 			auto lower_subexpr_with_result
 				= [this](CRef<hc::Expr> expression, BlockBuilderRef next_block) {
 					  auto lowered = lowerSubExpr(*expression, next_block);
 					  return std::pair{ lowered.begin, lowered.getResult(function) };
 				  };
 
-			using namespace std::views;
-
 			// Place for a comparison instruction
 			auto last_comparison_block = function.newBlock();
-			auto prev_cmp_hole         = last_comparison_block->addHole();
 
 			// After the last comparison, continue regardless of the result.
 			last_comparison_block->setTerminator(Instruction{
@@ -286,57 +322,56 @@ namespace compiler::mir {
 			auto boolean_output
 				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
 
-			// The left-over value. We maintain that this has to partake in only one comparison,
-			// which will be placed in prev_cmp_hole.boolean
-			auto [prev_block, prev_value] = lower_subexpr_with_result(
-				chain_expr.expressions.back().ref(), last_comparison_block
-			);
+			// Now, build the proper comparisons in reverse order.
+			auto  next_block = continuation;
+			usize comps_left = chain_expr.comparisons.size();
+			for (auto& comp: chain_expr.comparisons | std::views::reverse) {
+				comps_left--;
+				// First, prepare the block.
+				// If the comparison is the last one (next_block == continuation), we jump to the
+				// continuation regardless of the result. Otherwise, we branch to the next comparison
+				// if the result is true, and to the continuation if the results is false.
+				auto comparison_block = function.newBlock();
+				if (next_block->getID() == continuation->getID()) {
+					comparison_block->setTerminator(Instruction{
+						Operation::Jump,
+						{},
+						{ continuation->getID() },
+						{},
+						expr_scope,
+					});
+				} else {
+					comparison_block->setTerminator(Instruction{
+						Operation::Branch,
+						{},
+						{ boolean_output, next_block->getID(), continuation->getID() },
+						{},
+						expr_scope,
+					});
+				}
+				auto comparison_hole = comparison_block->addHole();
 
-			auto mir_operators = chain_expr.operators | transform(builtinBinaryToOperation);
+				// Now, lower the comparison
+				auto [comp_cont, comp_res]
+					= lower_subexpr_with_result(comp.ref(), comparison_block);
 
-			// First and last expressions require special handling. We build them in reverse, as usual.
-			auto expressions = chain_expr.expressions | drop(1) | reverse | drop(1);
-			auto comparisons = mir_operators | drop(1) | reverse;
-
-			for (const auto& [expr, comp]: zip(expressions, comparisons)) {
-				// Place for the next comparison.
-				BlockBuilderRef new_comparison_block = function.newBlock();
-				auto            new_cmp_hole         = new_comparison_block->addHole();
-				new_comparison_block->setTerminator(Instruction{
-					Operation::Branch,
+				// Finally, fill in the comparison instruction.
+				// Remember to set construction flag for boolean_output only for the first comparison.
+				comparison_hole.fill(Instruction{
+					Operation::Assign,
+					{ boolean_output },
+					{ comp_res },
+					comps_left == 0 ? std::vector{ flagConstruct(boolean_output) }
+									: std::vector<OperationFlag>{},
+					expr_scope,
 					{},
-					{ boolean_output, prev_block->getID(), continuation->getID() },
-					{},
-					expr_scope });  // We evaluate prev_value only after this comparison is true, as
-				                    // prev_cmp will be the first comparison it is a part of.
-
-				// Next expression (completes the prev_cmp).
-				auto [new_block, new_value]
-					= lower_subexpr_with_result(expr.ref(), new_comparison_block);
-
-				// We create the prev_cmp, as we only now have both expressions.
-				prev_cmp_hole.fill(Instruction{
-					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
-
-				prev_block    = new_block;
-				prev_cmp_hole = new_cmp_hole;
-
-				// expr_result participated in the previous comparison fulfilling the invariant.
-				prev_value = new_value;
+					{ comp->getPosition() },
+				});
+				next_block = comp_cont;
 			}
 
-			// The first expression to be evaluated.
-			auto [first_block, first_value]
-				= lower_subexpr_with_result(chain_expr.expressions.front().ref(), prev_block);
-
-			// The first comparison to be performed.
-			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
-			                                { boolean_output },
-			                                { first_value, prev_value },
-			                                { flagConstruct(boolean_output) },
-			                                expr_scope });
-
-			valueOutput(first_block, boolean_output);
+			// Now next_block is the starting block of the first comparison.
+			valueOutput(next_block, boolean_output);
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
@@ -366,13 +401,7 @@ namespace compiler::mir {
 			return noValueOutput(
 				sub_continuation,
 				call,
-				Instruction{
-					Operation::Call,
-					{},
-					args,
-					{},
-					expr_scope,
-				},
+				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -392,7 +421,84 @@ namespace compiler::mir {
 			                 expr_scope,
 			                 CastParameters{ .source_type
 			                                 = expr.source_expr->expression_type.getSymbolType(),
-			                                 .target_type = expr.target_type } },
+			                                 .target_type = expr.target_type },
+			                 { expr.getPosition() } },
+				expr.expression_type.getSymbolType()
+			);
+		}
+
+		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
+			const auto& inner_type = expr.inner->expression_type.getSymbolType();
+
+			if (inner_type.getRefKind() == tsh::ReferenceKind::Direct) {
+				auto       hole          = continuation->addHole();
+				auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
+				const auto res_inner     = lowered_inner.getResult(function);
+				const auto result_type   = expr.expression_type.getSymbolType();
+
+				noValueOutput(
+					lowered_inner.begin,
+					hole,
+					Instruction(
+						Operation::AddressOf,
+						{},
+						{ res_inner },
+						{},
+						expr_scope,
+						{},
+						{ expr.getPosition() }
+					),
+					result_type
+				);
+			} else {
+				// If a reference of box or ref is taken, no `AddressOf` instruction is inserted.
+				output(lowerSubExpr(*expr.inner, continuation));
+			}
+		}
+
+		void visitBoxOfExpr(const hc::BoxOfExpr& expr) override {
+			CORE_ASSERT(
+				expr.inner->expression_type.getSymbolType().getRefKind()
+					== tsh::ReferenceKind::Direct,
+				"BoxOfExpr on a non direct type"
+			);
+
+			auto       hole          = continuation->addHole();
+			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			const auto res_inner     = lowered_inner.getResult(function);
+			const auto result_type   = expr.expression_type.getSymbolType();
+
+			noValueOutput(
+				lowered_inner.begin,
+				hole,
+				Instruction(
+					Operation::BoxAlloc, {}, { res_inner }, {}, expr_scope, {}, { expr.getPosition() }
+				),
+				result_type
+			);
+		}
+
+		void visitDerefExpr(const hc::DerefExpr& expr) override {
+			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			auto value         = lowered_inner.getResult(function);
+
+			variant_match(std::move(value.getVariant())) {
+				variant_case(MIRPlace, place) {
+					valueOutput(lowered_inner.begin, place.withDeref());
+				}
+				variant_default {
+					// Deref base is not a place.
+					CORE_UNREACHABLE();
+				}
+			}
+		}
+
+		void visitDefaultValueExpr(const hc::DefaultValueExpr& expr) override {
+			auto hole = continuation->addHole();
+			noValueOutput(
+				continuation,
+				hole,
+				Instruction(Operation::ZeroInitialize, {}, {}, {}, expr_scope),
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -400,6 +506,36 @@ namespace compiler::mir {
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
 			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));
+		}
+
+		void visitListPushExpr(const hc::ListPushExpr& expr) override {
+			auto hole         = continuation->addHole();
+			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
+			auto elem_val     = lowered_elem.getResult(function);
+			auto lowered_list = lowerSubExpr(*expr.list, continuation);
+			auto list_val     = lowered_list.getResult(function);
+
+			noValueOutput(
+				lowered_list.begin,
+				hole,
+				Instruction(Operation::ListPush, {}, { list_val, elem_val }, {}, expr_scope),
+				expr.expression_type.getSymbolType()
+			);
+		}
+
+		void visitListPopExpr(const hc::ListPopExpr& expr) override {
+			auto hole          = continuation->addHole();
+			auto lowered_count = lowerSubExpr(*expr.count, continuation);
+			auto count_val     = lowered_count.getResult(function);
+			auto lowered_list  = lowerSubExpr(*expr.list, continuation);
+			auto list_val      = lowered_list.getResult(function);
+
+			noValueOutput(
+				lowered_list.begin,
+				hole,
+				Instruction(Operation::ListPop, {}, { list_val, count_val }, {}, expr_scope),
+				expr.expression_type.getSymbolType()
+			);
 		}
 
 
@@ -414,7 +550,7 @@ namespace compiler::mir {
 		) {
 			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
 				tsh::SymbolType<> unit_sym_type{
-					function.getContext().query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -433,9 +569,11 @@ namespace compiler::mir {
 				}
 				std::ranges::reverse(element_types);
 
-				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
-					                           tsh::ReferenceKind::Direct,
-					                           tsh::Mutability::Mutable };
+				tsh::SymbolType<> result_type{
+					tsh::getMetaType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
 
 				return ExprLowerRes(
 					current,
@@ -445,8 +583,12 @@ namespace compiler::mir {
 						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
 						.type = result_type }
 				);
-			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
+			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
+			} else if (const auto* reusable_expr
+			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
+				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
+			}
 
 			return lowerSubExpr(expr, continuation);
 		}
@@ -539,6 +681,8 @@ namespace compiler::mir {
 				return Operation::MetaCreateRef;
 			case Const:
 				return Operation::MetaCreateConst;
+			case Len:
+				return Operation::ListLen;
 			default:
 				CORE_UNREACHABLE();
 			}
@@ -615,17 +759,13 @@ namespace compiler::mir {
 		const MIRPlace&                   target,
 		BlockBuilder::InstructionHole&    hole,
 		const std::vector<OperationFlag>& flags,
-		ScopeRef                          scope
+		ScopeRef                          scope,
+		InstructionMetadata               metadata
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
 				hole.fill(Instruction{
-					Operation::Assign,
-					target,
-					{ val },
-					flags,
-					scope,
-				});
+					Operation::Assign, target, { val }, flags, scope, {}, metadata });
 			}
 			variant_case(Finalizer, res_data) {
 				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
@@ -633,6 +773,7 @@ namespace compiler::mir {
 				hole.fillNop(scope);
 				res_data.instr.output.emplace(target);
 				res_data.instr.flags.insert(res_data.instr.flags.end(), flags.begin(), flags.end());
+				res_data.instr.metadata = metadata;
 				res_data.hole.fill(res_data.instr);
 				value = target;
 			}

@@ -1,13 +1,12 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, env::home_dir, path::PathBuf};
 
-use rustvil::{config_files::home, fs::PathExt};
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
 use crate::{
-    DuckCtx, QpCtx,
-    quackpack::core::{BranchOrTag, Source, Version},
-    static_str_id,
+    DuckCtx, QpCtx, StrId,
+    quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version},
+    util_common::path_ops_ext::PathOpsExt,
 };
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -15,6 +14,7 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let manifest = dir.path().join("x");
     manifest.touch().unwrap();
     manifest.write(contents).unwrap();
+    dir.path().try_fsync_dir().unwrap();
     (dir, manifest)
 }
 
@@ -38,8 +38,7 @@ metadata:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.root_description().name(), "xd");
     assert!(summary.dependencies().all_dependencies().is_empty());
@@ -61,14 +60,13 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
-    assert!(summary.dependencies().has_dependency(static_str_id!("a")));
+    assert!(summary.dependencies().has_dependency(StrId::new("a")));
     let a = summary
         .dependencies()
-        .get_dependency(static_str_id!("a"))
+        .get_dependency(StrId::new("a"))
         .unwrap();
     assert_eq!(a.desc().versions().len(), 1);
     assert_eq!(a.desc().versions()[0].to_string(), "0.1.0");
@@ -92,14 +90,13 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
-    assert!(summary.dependencies().has_dependency(static_str_id!("a")));
+    assert!(summary.dependencies().has_dependency(StrId::new("a")));
     let a = summary
         .dependencies()
-        .get_dependency(static_str_id!("a"))
+        .get_dependency(StrId::new("a"))
         .unwrap();
     assert_eq!(a.desc().versions().len(), 1);
     assert_eq!(a.desc().versions()[0].to_string(), "1.0.0");
@@ -123,7 +120,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let err = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap_err();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message(
@@ -147,13 +144,13 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
     let a = summary
         .dependencies()
-        .get_dependency(static_str_id!("a"))
+        .get_dependency(StrId::new("a"))
         .unwrap();
     assert_eq!(a.desc().versions().len(), 2);
     assert_eq!(a.desc().versions()[0].to_string(), "0.1.0");
@@ -180,13 +177,12 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
     let a = summary
         .dependencies()
-        .get_dependency(static_str_id!("a"))
+        .get_dependency(StrId::new("a"))
         .unwrap();
     assert_eq!(a.desc().versions().len(), 2);
     assert_eq!(a.desc().versions()[0].to_string(), "0.1.0");
@@ -215,7 +211,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, &QpCtx::new(&ctx));
+    let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
@@ -245,7 +241,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, &QpCtx::new(&ctx));
+    let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
@@ -276,7 +272,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, &QpCtx::new(&ctx));
+    let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
@@ -302,7 +298,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, &QpCtx::new(&ctx));
+    let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
@@ -325,7 +321,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, &QpCtx::new(&ctx));
+    let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
@@ -348,7 +344,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, &QpCtx::new(&ctx));
+    let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
@@ -397,14 +393,13 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 8);
 
     let a = summary
         .dependencies()
-        .get_dependency(static_str_id!("a"))
+        .get_dependency(StrId::new("a"))
         .unwrap();
     assert!(a.desc().source().is_local());
     if let Source::Local(local_source) = a.desc().source().as_ref() {
@@ -425,7 +420,7 @@ dependencies:
 
     let a1 = summary
         .dependencies()
-        .get_dependency(static_str_id!("a1"))
+        .get_dependency(StrId::new("a1"))
         .unwrap();
     assert!(a1.desc().source().is_local());
     if let Source::Local(local_source) = a1.desc().source().as_ref() {
@@ -446,11 +441,11 @@ dependencies:
 
     let a2 = summary
         .dependencies()
-        .get_dependency(static_str_id!("a2"))
+        .get_dependency(StrId::new("a2"))
         .unwrap();
     assert!(a2.desc().source().is_local());
     if let Source::Local(local_source) = a2.desc().source().as_ref() {
-        let home_dir = home().unwrap();
+        let home_dir = home_dir().unwrap();
         assert_eq!(local_source.absolute(), home_dir.join("xd"));
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "~/xd");
@@ -458,7 +453,7 @@ dependencies:
 
     let a3 = summary
         .dependencies()
-        .get_dependency(static_str_id!("a3"))
+        .get_dependency(StrId::new("a3"))
         .unwrap();
     assert!(a3.desc().source().is_local());
     if let Source::Local(local_source) = a3.desc().source().as_ref() {
@@ -469,11 +464,11 @@ dependencies:
 
     let b = summary
         .dependencies()
-        .get_dependency(static_str_id!("b"))
+        .get_dependency(StrId::new("b"))
         .unwrap();
     assert!(b.desc().source().is_registry());
     if let Source::Registry(registry_source) = b.desc().source().as_ref() {
-        let default_registry = QpCtx::new(&ctx).registry_url().unwrap();
+        let default_registry = ctx.registry_url().unwrap();
         assert_eq!(*registry_source.url(), default_registry);
     }
     assert_eq!(b.desc().versions().len(), 1);
@@ -482,7 +477,7 @@ dependencies:
 
     let c = summary
         .dependencies()
-        .get_dependency(static_str_id!("c"))
+        .get_dependency(StrId::new("c"))
         .unwrap();
     assert!(c.desc().source().is_registry());
     assert_eq!(c.desc().versions().len(), 1);
@@ -492,7 +487,7 @@ dependencies:
 
     let d = summary
         .dependencies()
-        .get_dependency(static_str_id!("d"))
+        .get_dependency(StrId::new("d"))
         .unwrap();
     assert!(d.desc().source().is_registry());
     if let Source::Registry(registry_source) = d.desc().source().as_ref() {
@@ -504,16 +499,16 @@ dependencies:
 
     let e = summary
         .dependencies()
-        .get_dependency(static_str_id!("e"))
+        .get_dependency(StrId::new("e"))
         .unwrap();
     assert!(e.desc().source().is_git());
     if let Source::Git(git_source) = e.desc().source().as_ref() {
         assert_eq!(git_source.url().as_str(), "https://google.com/");
         assert_eq!(
             git_source.branch_or_tag(),
-            BranchOrTag::Branch(static_str_id!("branch"))
+            BranchOrTag::Branch(StrId::new("branch"))
         );
-        assert_eq!(git_source.rev(), Some(static_str_id!("commit")));
+        assert_eq!(git_source.rev(), Some(StrId::new("commit")));
     }
     assert!(e.desc().versions().is_empty());
     assert_eq!(e.real_name(), e.desc().manifest_name());
@@ -537,7 +532,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, &QpCtx::new(&ctx));
+    let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
@@ -565,8 +560,7 @@ features:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.features().all_features().len(), 1);
     let a_feature = summary
@@ -594,8 +588,7 @@ features:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.features().all_features().len(), 4);
 
@@ -660,12 +653,11 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     let dep = summary
         .dependencies()
-        .get_dependency(static_str_id!("a"))
+        .get_dependency(StrId::new("a"))
         .unwrap();
 
     assert_eq!(dep.features().len(), 2);
@@ -702,12 +694,11 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     let dep = summary
         .dependencies()
-        .get_dependency(static_str_id!("a"))
+        .get_dependency(StrId::new("a"))
         .unwrap();
 
     assert_eq!(dep.features().len(), 3);
@@ -722,7 +713,7 @@ dependencies:
 
     let enabled_features = dep.enabled_features(vec![]);
 
-    assert!(enabled_features.contains(&static_str_id!("a")));
+    assert!(enabled_features.contains(&StrId::new("a")));
 }
 
 #[test]
@@ -741,7 +732,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, &QpCtx::new(&ctx));
+    let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
@@ -776,8 +767,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message(
@@ -802,8 +792,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message(
@@ -832,8 +821,8 @@ dependencies:
         root_dir.path().display()
     ));
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message(
@@ -868,8 +857,8 @@ dependencies:
         root_dir.path().display()
     ));
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    assert!(parse_manifest(&manifest_path, &qpctx).is_ok());
+
+    assert!(parse_manifest(&manifest_path, &ctx).is_ok());
 }
 
 #[test]
@@ -888,8 +877,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
     assert_eq!(
@@ -927,9 +915,7 @@ dependencies:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
-
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message(
@@ -951,8 +937,82 @@ metadata:
 "#,
     );
     let ctx = DuckCtx::default();
-    let qpctx = QpCtx::new(&ctx);
-    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
+}
+
+#[test]
+fn profiles_parse() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.10
+
+profiles:
+  prof1:
+    opt_level: s
+    dvm_bytecode: true
+  prof2:
+    inherits: prof1
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+    let profiles = summary.profiles();
+    assert!(
+        *profiles.get_profiles()
+            == HashMap::from([
+                (
+                    "prof1".into(),
+                    Profile {
+                        opt_level: Some(OptLevel::S),
+                        dvm_bytecode: Some(true),
+                        incremental: None,
+                        c_std: None,
+                        inherits: None
+                    }
+                ),
+                (
+                    "prof2".into(),
+                    Profile {
+                        opt_level: None,
+                        dvm_bytecode: None,
+                        incremental: None,
+                        c_std: None,
+                        inherits: Some("prof1".into())
+                    }
+                )
+            ])
+    )
+}
+
+#[test]
+fn unknown_opt_level() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.10
+
+profiles:
+  prof1:
+    opt_level: x
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `profiles`",
+                "when parsing the field `profiles.prof1`",
+                "Unknown optimization level `x`. Optimization levels are 0, 1, 2, 3, s (or S), z (or Z)."
+            ]
+        )
+    );
 }

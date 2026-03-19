@@ -1,0 +1,88 @@
+//! Ducknest registry communication.
+use std::path::Path;
+
+use tracing::debug;
+use url::Url;
+
+use crate::{DuckCtx, StrId, qp_bail_internal};
+use crate::{QuackResult, quackpack::core::fetcher::types};
+
+use super::http::HttpClient;
+use crate::quackpack::schemas::registry;
+use endpoints::UrlExt;
+
+mod endpoints;
+
+#[cfg(test)]
+mod tests;
+
+#[derive(Debug, Clone)]
+/// General client communicating with a registry instance over HTTP.
+pub struct DucknestClient<'duck> {
+    client: HttpClient<'duck>,
+}
+
+impl<'duck> DucknestClient<'duck> {
+    /// Construct a new [`DucknestClient`].
+    pub fn new(ctx: &'duck DuckCtx) -> Self {
+        Self {
+            client: HttpClient::new(ctx),
+        }
+    }
+
+    /// Retrieve metadata for a specific package from a Ducknest instance.
+    pub fn get_exact_metadata(
+        &self,
+        package: &types::PackageWithUrl,
+    ) -> QuackResult<registry::Manifest> {
+        debug!("fetching {package:?}");
+        let url = package.url.for_exact_metadata(&package.into())?;
+
+        let response = self.client.get(&url)?;
+        response.deserialize_json()
+    }
+
+    /// Retrieve all metadata for a specific package from a Ducknest instance.
+    pub fn get_multi_metadata(
+        &self,
+        url: &Url,
+        package: StrId,
+    ) -> QuackResult<types::MultiMetadata> {
+        debug!("fetching all metadata of `{package}` from `{url}`");
+        let req_url = url.for_multi_metadata(package)?;
+
+        let response = self.client.get(&req_url)?;
+        response.deserialize_json()
+    }
+
+    /// Publish a package to a Ducknest instance.
+    pub fn publish_package(
+        &self,
+        url: &Url,
+        schema: &registry::Manifest,
+        path: &Path,
+    ) -> QuackResult<()> {
+        debug!(
+            "publishing package `{}` version `{}` to `{url}`",
+            schema.metadata.name,
+            path.display()
+        );
+        qp_bail_internal!("publishing is not yet implemented")
+    }
+
+    /// Download a package blob from a Ducknest instance and save it to a file.
+    pub fn fetch_blob(&self, package: &types::PackageWithUrl, target: &Path) -> QuackResult<()> {
+        debug!("fetching a blob of `{package:?}` to `{}`", target.display());
+        let url = package.url.for_blob(&package.into())?;
+        self.client.get_to_file(&url, target)
+    }
+
+    /// Search the Ducknest instance for all packages that match the provided query.
+    pub fn search(&self, url: &Url, query: &str) -> QuackResult<types::SearchResult> {
+        debug!("searching `{query}` on `{url}`");
+        let req_url = url.for_search(query)?;
+
+        let response = self.client.get(&req_url)?;
+        response.deserialize_json()
+    }
+}

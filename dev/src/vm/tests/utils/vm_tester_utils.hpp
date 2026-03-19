@@ -79,6 +79,32 @@ protected:
 		const std::vector<std::string>&    args            = {}
 	);
 
+	/**
+	 * @brief Runs a function synchronously and checks its exit code, output and input.
+	 * This is an alternative to `runTestOnVm` which allows to run a specific function instead of
+	 * the main function and pass arguments to it.
+	 * @param pid Process ID of the process to run the function on.
+	 * @param func_name Name of the function to run
+	 * @param args Arguments to pass to the function
+	 * @param optional_input If provided, the function will send this string as input to the process
+	 * @param optional_output If provided, the function will check if the process output is equal to
+	 * this string
+	 * @param expected_exit_code If provided, the function will check if the process exit code is
+	 * equal to this value. If not provided, it will check if the exit code is of type void.
+	 */
+	void runFunctionSynchronouslyAsTest(
+		vm::PID                            pid,
+		const std::string&                 func_name          = {},
+		const vm::FunctionRunArguments&    args               = {},
+		const base::Optional<std::string>& optional_input     = {},
+		const base::Optional<std::string>& optional_output    = {},
+		const base::Optional<i64>          expected_exit_code = {}
+	);
+
+	TestResult runFunctionExpectPanic(
+		vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
+	);
+
 	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece);
 
 	/**

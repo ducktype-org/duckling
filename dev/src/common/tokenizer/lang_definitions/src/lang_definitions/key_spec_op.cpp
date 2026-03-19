@@ -20,7 +20,6 @@ namespace lang_def {
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
-	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
 	constexpr auto LANG_KEYWORDS_ARRAY
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			// These are Keywords that should always indicate a start of a statement.
@@ -71,6 +70,7 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Extern, "extern", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Debug, "debug", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Static, "static", KeywordFlagsOptions::IsSpecifier },
 
 			// If doesn't always indicate statement start.
 			{ Keyword::If, "if", KeywordFlags() },
@@ -79,6 +79,7 @@ namespace lang_def {
 
 			// This is the list of keywords that are general prefix operators
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Len, "len", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
@@ -94,6 +95,7 @@ namespace lang_def {
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
 			{ Keyword::As, "as", KeywordFlags() },
+			{ Keyword::Hides, "hides", KeywordFlags() },
 			{ Keyword::In, "in", KeywordFlags() },
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
 
@@ -130,10 +132,10 @@ namespace lang_def {
 			{ Keyword::Str, "str", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
 
-			{ Keyword::Vec, "vec", KeywordFlags() },
-			{ Keyword::Set, "set", KeywordFlags() },
-			{ Keyword::Dict, "dict", KeywordFlags() },
-			{ Keyword::Array, "array", KeywordFlags() },
+			{ Keyword::List, "List", KeywordFlags() },
+			{ Keyword::Set, "Set", KeywordFlags() },
+			{ Keyword::Dict, "Dict", KeywordFlags() },
+			{ Keyword::Array, "Array", KeywordFlags() },
 
 			{ Keyword::None, "none", KeywordFlags() },
 			{ Keyword::True, "true", KeywordFlags() },
@@ -143,8 +145,7 @@ namespace lang_def {
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
-			{ Keyword::Static, "static", KeywordFlags() },
-			{ Keyword::This, "this", KeywordFlags() },
+			{ Keyword::Self, "self", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY
@@ -194,6 +195,7 @@ namespace lang_def {
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 
 		{ NamedOperator::Period, "." },
+		{ NamedOperator::Range, ".." },
 		{ NamedOperator::PeriodQuestion, ".?" },
 		{ NamedOperator::PeriodStar, ".*" },
 		{ NamedOperator::Colon, ":" },
@@ -204,7 +206,7 @@ namespace lang_def {
 		{ NamedOperator::DoubleArrow, "=>" },
 
 		{ NamedOperator::Pipe, "|" },
-		{ NamedOperator::BitAnd, "&" },
+		{ NamedOperator::Ampersand, "&" },
 		{ NamedOperator::BitXor, "^" },
 
 		{ NamedOperator::LeftShift, "<<" },

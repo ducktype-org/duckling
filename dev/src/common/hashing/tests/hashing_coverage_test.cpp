@@ -4,9 +4,6 @@
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/type_code.hpp>
-#include <hashing/type_hash_code.hpp>
-#include <hashing/type_unique_code.hpp>
 #include <tester/tester.hpp>
 
 #include <map>
@@ -70,10 +67,12 @@ public:
 };
 
 namespace my_map {
+	using Hasher = decltype([](auto&& x) { return Hash<>{}(x).data.at(0); });
+
 	template<
 		class Key,
 		class T,
-		class Hash  = Hash<>,
+		class Hash  = Hasher,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
 
@@ -81,7 +80,7 @@ namespace my_map {
 }
 
 template<typename T>
-concept check_hashRangeAsBytes = requires(T t) { internal::hashRangeAsBytes(Fnv1a_32{}, t); };
+concept check_hashRangeAsBytes = requires(T t) { internal::hashRangeAsBytes(SHA256{}, t); };
 
 struct Check_1 {
 	void updateHash(void*, usize) {}
@@ -151,7 +150,6 @@ class HashingTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(typeCodeDefTest);
 		TESTER_ADD_TEST(hashAlgorithmUtilsTest);
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(addToHashTest);
@@ -159,26 +157,9 @@ public:
 	}
 
 private:
-	void typeCodeDefTest() {
-		static_assert(std::integral<u32>, "u32 should be integral");
-		static_assert(std::integral<u64>, "u64 should be integral");
-		static_assert(std::integral<TypeCode<>::value_type>, "value_type should be integral");
-		TypeCode<u64> thcb1;
-		TypeCode<u64> thcb2;
-		assertTrue(
-			std::is_same_v<TypeCode<u64>::value_type, u64>, "TypeCode should have value_type"
-		);
-		[[maybe_unused]] auto _ = static_cast<TypeCode<u64>::value_type>(thcb1);
-		assertTrue(thcb1 <= thcb2, "TypeCode should be comparable");
-	}
-
 	void hashAlgorithmUtilsTest() {
-		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
-		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
 		static_assert(hash_algorithm<algo>, "algo should be a hashing algorithm");
-		std::array<Fnv1a_32, 3> fnv_arr;
-		assertFalse(hash_algorithm<decltype(fnv_arr)>, "array is not a hashing algorithm");
 		assertFalse(
 			hash_algorithm<my_map::unordered_map<int, int>>,
 			"unordered_map is not a hashing algorithm"
@@ -233,34 +214,28 @@ private:
 		assertFalse(internal::can_hashDecompose<S>, "S should not be hashDecomposable");
 
 		static_assert(
-			internal::invocable_with_byte_span<Fnv1a_32>,
-			"Fnv1a_32 should be invocable with a span of bytes"
+			internal::invocable_with_byte_span<SHA256>,
+			"SHA256 should be invocable with a span of bytes"
 		);
 
-		Fnv1a_64 h1;
+		SHA256 h1;
 		internal::hashAsBytes(h1, 42.0f);
 		internal::hashAsBytes(h1, std::array{ 1, 2, 3 });
 
 		std::string s = "hello_long_string";
 		assertTrue(
-			internal::can_hash_range_as_bytes<Fnv1a_32, std::array<int, 3>>,
-			"Fnv1a_32 should be able to hash as chars std::array<int, 3>"
+			internal::can_hash_range_as_bytes<SHA256, std::array<int, 3>>,
+			"SHA256 should be able to hash as chars std::array<int, 3>"
 		);
+
 		assertTrue(
-			internal::can_hash_range_as_bytes<Fnv1a_64, std::string>,
-			"Fnv1a_64 should be able to hash as chars std::string"
+			internal::can_hash_range_as_bytes<SHA256, std::vector<int>>,
+			"SHA256 should be able to hash as chars std::vector<int>"
 		);
-		assertTrue(
-			internal::can_hash_range_as_bytes<Fnv1a_32, std::vector<int>>,
-			"Fnv1a_32 should be able to hash as chars std::vector<int>"
-		);
+
 		assertFalse(
-			internal::can_hash_range_as_bytes<Fnv1a_64, std::map<int, int>>,
-			"Fnv1a_64 should not be able to hash as chars std::map<int, int>"
-		);
-		assertFalse(
-			internal::can_hash_range_as_bytes<Fnv1a_32, std::array<std::string, 3>>,
-			"Fnv1a_32 should not be able to hash as chars std::array<std::string, 3>"
+			internal::can_hash_range_as_bytes<SHA256, std::array<std::string, 3>>,
+			"SHA256 should not be able to hash as chars std::array<std::string, 3>"
 		);
 
 		internal::hashRangeAsBytes(h1, std::array{ 1, 2, 3 });
@@ -277,14 +252,11 @@ private:
 	}
 
 	void hashingAlgorithmsTest() {
-		Fnv1a_32                  h2;
-		[[maybe_unused]] Fnv1a_64 qwe{ 123 };
-		constexpr std::span       sp = "hello";
+		SHA256              h2;
+		constexpr std::span SP = "hello";
 		assertTrue(
-			std::is_same_v<Fnv1a_32::result_type, u32>, "Fnv1a_32::result_type should be u32"
-		);
-		assertTrue(
-			std::is_same_v<Fnv1a_64::result_type, u64>, "Fnv1a_64::result_type should be u64"
+			std::is_same_v<SHA256::result_type, base::Bit256>,
+			"SHA256::result_type should be base::Bit256"
 		);
 		assertTrue(
 			std::is_same_v<DebugHash::result_type, std::string>,
@@ -292,53 +264,43 @@ private:
 		);
 		std::string s = "qwertyuiopasdfghjk";
 		h2(std::span{ reinterpret_cast<std::byte*>(s.data()), s.size() });
-		h2(std::as_bytes(sp));
-		constexpr auto arr = std::array<char, 123>{};
-		h2(std::as_bytes(std::span{ arr }));
-		Fnv1a_64              h3, h4{ 14'695'981'039'346'656'037ull };
-		[[maybe_unused]] auto discard = h3.finalize();
+		h2(std::as_bytes(SP));
+		constexpr auto ARR = std::array<char, 123>{};
+		h2(std::as_bytes(std::span{ ARR }));
+		SHA256 h4;
 		assertTrue(
 			h4.finalize() == h4.finalize(),
-			"h3 and h4 should have been initialized with the same value"
+			"SHA256 should give the same values for .finalize() on the same state"
 		);
-		h4(std::as_bytes(sp));
+		h4(std::as_bytes(SP));
 		const auto& r = { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
 		h4(std::as_bytes(std::span{ r }));
 		auto h5 = h4;
 		assertTrue(h5.finalize() == h4.finalize(), "casted h5 should be equal to casted h4");
 		h4(std::as_bytes(std::span{ s.data(), s.size() }));
 		h5(std::as_bytes(std::span{ s.data(), s.size() }));
-		h4(std::as_bytes(sp));
-		h5(std::as_bytes(sp));
+		h4(std::as_bytes(SP));
+		h5(std::as_bytes(SP));
 		assertTrue(h4.finalize() == h5.finalize(), "casted h4 should be equal to casted h5");
 
 		DebugHash dh;
 		dh(std::as_bytes(std::span{ s.data(), s.size() }));
-		dh(std::as_bytes(sp));
+		dh(std::as_bytes(SP));
 		std::array<char, 16> array{};
 		dh(std::as_bytes(std::span{ array }));
 		Hash<DebugHash>{}(std::array<char, 16>{});
-		dh(std::as_bytes(std::span{ sp.data(), sp.size() }));
-		constexpr std::string_view sv2      = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
-		constexpr auto             str_size = [&] {
+		dh(std::as_bytes(std::span{ SP.data(), SP.size() }));
+		constexpr std::string_view SV2      = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
+		constexpr auto             STR_SIZE = [&] {
             DebugHash d;
-            internal::hashRangeAsBytes(d, sv2);
+            internal::hashRangeAsBytes(d, SV2);
             return d.finalize().size();
 		}();
-		assertTrue(str_size == 187, "string should have 660 characters");
-
-		assertTrue(
-			hash_algorithm<default_hash_algorithm_for<u32>>,
-			"default_hash_algorithm_for<u32> should be a hashing algorithm"
-		);
-		assertTrue(
-			hash_algorithm<default_hash_algorithm_for<u64>>,
-			"default_hash_algorithm_for<u64> should be a hashing algorithm"
-		);
+		assertTrue(STR_SIZE == 187, "string should have 660 characters");
 	}
 
 	void addToHashTest() {
-		Fnv1a_32 h;
+		SHA256 h;
 		addToHash(h, Z{});
 		addToHash(h, 42);
 		addToHash(h, 42.0f);
@@ -368,7 +330,7 @@ private:
 	}
 
 	void hashTest() {
-		Fnv1a_32 h2;
+		SHA256 h2;
 		addToHash(h2, S{});                       // S has addToHash overload
 		assertTrue(internal::can_hashDecompose<Z>, "Z should be hashDecomposable");
 		addToHash(h2, Z{});                       // Z has hashDecompose overload
@@ -391,14 +353,9 @@ private:
 		);
 		addToHash(h2, vec_y);  // hashing contiguous range
 		my_map::unordered_map<int, int> m;
-		m[1] = 2;
-		m[3] = 4;
-		m[5] = 6;
-		assertTrue(
-			internal::can_hash_range_with_unspecified_order<decltype(h2), decltype(m)>,
-			"h2 should be able to hash range with unspecified order"
-		);
-		// addToHash(h2, m); // hashing range with unspecified order // @future
+		m[1]                                    = 2;
+		m[3]                                    = 4;
+		m[5]                                    = 6;
 		std::variant<int, float, std::string> v = 42;
 		assertTrue(internal::can_stdhash<decltype(v)>, "v should be hashable with std::hash");
 		// addToHash(h2, v); // hashing std::variant // @future

@@ -6,17 +6,29 @@ from .helpers import (
     cc_compiler,
 )
 from ..impl.helpers import (
+    PromptForCoverageIfBuildNotOptimised,
     default_compiler_from_ctx,
     default_linker_from_ctx,
     default_gcov_from_ctx,
 )
-from click import Choice, option, command
+from click import Choice, option, command, prompt
 
 
 @command()
 @build_dir(help="The name of the directory.")
 @build_system(
     help="Build system to use",
+)
+@option(
+    "-t",
+    "--type",
+    prompt="build type",
+    help="The build type.",
+    default="Debug",
+    type=Choice(
+        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
+        case_sensitive=False,
+    ),
 )
 # @TODO check if it is necessary to get compiler path from context
 @cxx_compiler(
@@ -46,6 +58,8 @@ from click import Choice, option, command
     type=bool,
     default=False,
     is_flag=True,
+    # this skips the prompt if the build is optimised
+    cls=PromptForCoverageIfBuildNotOptimised,
 )
 @option(
     "-d",
@@ -68,17 +82,6 @@ from click import Choice, option, command
     cls=default_linker_from_ctx(),
 )
 @option(
-    "-t",
-    "--type",
-    prompt="build type",
-    help="The build type.",
-    default="Debug",
-    type=Choice(
-        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
-        case_sensitive=False,
-    ),
-)
-@option(
     "--shared_libs",
     help="Whether to use shared or static libraries.",
     type=bool,
@@ -86,6 +89,7 @@ from click import Choice, option, command
     is_flag=True,
 )
 @option(
+    "-i",
     "--strip-symbol-information",
     help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
     type=bool,
@@ -111,6 +115,52 @@ from click import Choice, option, command
     help="Path to a custom Clang compiler for generating builtins. If not specified, auto-detected based on LLVM version.",
     default=None,
 )
+@option(
+    "--sanitizer",
+    help="Enable a sanitizer. Choices: asan (AddressSanitizer), tsan (ThreadSanitizer), ubsan (UndefinedBehaviorSanitizer).",
+    type=Choice(["asan", "tsan", "ubsan"], case_sensitive=False),
+    default=None,
+)
+@option(
+    "--use-replxx/--no-use-replxx",
+    help="Whether to use replxx library for REPL frontend.",
+    type=bool,
+    default=True,
+    is_flag=True,
+)
+@option(
+    "--enable-jit",
+    prompt="Enable JIT",
+    help="Whether or not to enable JIT compilation.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
-    setup_build_impl(*args, **kwargs)
+
+    enable_jit = kwargs.pop("enable_jit")
+
+    if enable_jit:
+        llvm_linker = prompt(
+            "Path to LLVM linker, llvm-link",
+        )
+        opt_path = prompt(
+            "Path to LLVM optimizer, opt",
+        )
+    else:
+        llvm_linker = None
+        opt_path = None
+
+    kwargs.update(
+        {
+            "enable_jit": enable_jit,
+            "llvm_linker": llvm_linker,
+            "opt_path": opt_path,
+        }
+    )
+
+    setup_build_impl(
+        *args,
+        **kwargs,
+    )

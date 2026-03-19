@@ -180,7 +180,7 @@
 													"sourceStart": 56,
 													"sourceEnd": 56
 												},
-												"Value Expr": {
+												"Numeric Value Expr": {
 													"number": "0"
 												}
 											}
@@ -290,7 +290,7 @@
 													"sourceStart": 90,
 													"sourceEnd": 91
 												},
-												"Value Expr": {
+												"Numeric Value Expr": {
 													"number": "42"
 												}
 											}

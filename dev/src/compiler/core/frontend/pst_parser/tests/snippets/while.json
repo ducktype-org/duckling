@@ -71,7 +71,7 @@
 														"sourceStart": 14,
 														"sourceEnd": 14
 													},
-													"Value Expr": {
+													"Numeric Value Expr": {
 														"number": "4"
 													}
 												},
@@ -81,7 +81,7 @@
 														"sourceStart": 18,
 														"sourceEnd": 20
 													},
-													"Value Expr": {
+													"Numeric Value Expr": {
 														"number": "0.8"
 													}
 												}

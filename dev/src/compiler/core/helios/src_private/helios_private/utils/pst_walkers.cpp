@@ -1,11 +1,13 @@
 #include "pst_walkers.hpp"
 
-#include <frontend/pst_parser/elements/hierarchy/class_elements/access_block.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/class_specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 
 #include <base/except/exceptions.hpp>
+
+#include <query_framework/query_errors.hpp>
 
 namespace compiler::helios {
 
@@ -17,7 +19,7 @@ namespace compiler::helios {
 			StmtList<pst::ClassStmt>&         out,
 			pst::AccessLocked<pst::ClassStmt> stmt
 		) {
-			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
+			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::ClassSpecifierBlock>()) {
 				auto access_block = access_block_opt.value();
 				for (auto e: *access_block->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
 			} else
@@ -49,7 +51,14 @@ namespace compiler::helios {
 	StmtList<> getStmtsFromStmtAggregate(
 		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
 	) {
-		auto elem = locked.unlock(ctx);
+		auto elem_optional = locked.unlockOpt(ctx);
+		if (!elem_optional.has_value()) {
+			// @TODO: #1753 this throw may be suboptimal
+			query::throwFailed();
+		}
+
+		auto elem = elem_optional.value();
+
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
 			StmtList<> out;
@@ -58,7 +67,12 @@ namespace compiler::helios {
 		}
 		if (auto code_block_or_stmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
 			StmtList<> out;
-			for (auto&& e: *code_block_or_stmt.value()) out.emplace_back(e);
+			auto       code_block_or_stmt_val = code_block_or_stmt.value();
+			if (code_block_or_stmt_val->getType() == pst::CodeBlockOrStmt::Type::CodeBlock)
+				for (auto&& e: *code_block_or_stmt_val->getCodeBlock().unlock(ctx))
+					out.emplace_back(e);
+			else
+				out.emplace_back(code_block_or_stmt_val->getStmt());
 			return out;
 		}
 		if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {

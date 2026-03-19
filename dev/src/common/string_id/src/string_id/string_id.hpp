@@ -70,6 +70,10 @@ namespace base {
 		STRONG_TYPEDEF_ID(StrInnerID);
 	}
 
+	/**
+	 * @brief String-ID utility used widely as keys (artifacts, module names, symbols, etc.).
+	 * @note It is thread-safe.
+	 */
 	class StrID final {
 	public:
 		using InnerID = internal::StrInnerID;
@@ -88,6 +92,7 @@ namespace base {
 		// Makes copy
 		explicit StrID(const RawView& data);
 		explicit StrID(const char* data);
+		explicit StrID(const std::string& data);
 
 		StrID& operator=(const StrID& oth) = default;
 

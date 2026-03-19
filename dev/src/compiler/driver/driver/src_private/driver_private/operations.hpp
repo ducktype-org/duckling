@@ -5,9 +5,35 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout_fd.hpp>
 
+#include <functional>
+
 namespace compiler::driver {
+
+	struct CompileHOUTUnitToLIRModuleDataKey final {
+		CRef<helios::HOUTUnit> hout_unit;
+		base::StrID            module_name;
+
+		auto operator<=>(const CompileHOUTUnitToLIRModuleDataKey&) const = default;
+
+		[[nodiscard]] u64 queryUnstablePerfectHash() const {
+			return std::hash<base::StrID>{}(module_name);
+		}
+	};
+
+	/**
+	 * @brief Query that converts HOUTUnit to LIRModuleData.
+	 */
+	DECLARE_QUERY(
+		CompileHOUTUnitToLIRModuleData,
+		CompileHOUTUnitToLIRModuleDataKey,
+		CRef<query::QResult<LIRModuleData>>,
+		({})
+	)
+
 	/**
 	 * @brief Query that produces LIRModuleData for given Duckling module.
 	 */
-	DECLARE_QUERY(CompileToLIRModuleData, frontend::ModuleID, query::QResult<LIRModuleData>, ({}))
+	DECLARE_QUERY(
+		CompileToLIRModuleData, frontend::ModuleID, CRef<query::QResult<LIRModuleData>>, ({})
+	)
 }

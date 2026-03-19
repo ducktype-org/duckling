@@ -7,12 +7,11 @@ namespace pst {
 	bool DottedName::getStar() const { return star; }
 
 	MBox<DottedName> DottedName::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<DottedName>(position);
+		auto out = makeBox<DottedName>(state);
 		do {
 			bool            is_id = state[0].isIdentifier();
 			tpc::Identifier next;
-			state.parse(out).one(&next, true);
+			PARSE().one(&next);
 			if (is_id) out->names.push_back(next);
 			// If not special meaning, assume wrong type
 			else if (!state[0].is(lang_def::NamedOperator::Period)
@@ -21,11 +20,11 @@ namespace pst {
 				state.tokens().next();
 			}
 		}
-		PST_WHILE(state.parse(out).tryEat(lang_def::NamedOperator::Period));
+		PST_WHILE(PARSE().tryEat(lang_def::NamedOperator::Period));
 
-		if (state.parse(out).tryEat(lang_def::NamedOperator::PeriodStar)) out->star = true;
+		if (PARSE().tryEat(lang_def::NamedOperator::PeriodStar)) out->star = true;
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void DottedName::dprint(std::ostream& out) const {
@@ -46,7 +45,7 @@ namespace pst {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& DottedName::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& DottedName::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, names);
 		addToHash(partial_hash, star);
 		return partial_hash;

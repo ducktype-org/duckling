@@ -3,6 +3,7 @@
 #include "access.hpp"
 #include "elements/includes/basic.hpp"
 #include "lang_parser_state.hpp"
+#include "stable_position.hpp"
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -89,13 +90,15 @@ namespace pst {
 	}
 
 	void LangElement::calcHash() {
+		auto partial_hash = calcStableHash();
+		addToHash(partial_hash, context_hash);
 		hash = calcStableHash().finalize();
-		pst_hash_map.emplace(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+		pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
 	}
 
-	LangElement::HashAlg LangElement::calcStableHash() const {
+	HashAlg LangElement::calcStableHash() const {
 		HashAlg partial_hash = getElementPathHash().partial;
 		addToHash(partial_hash, elementType());
 		addGenericDataToHash(partial_hash);
@@ -103,9 +106,36 @@ namespace pst {
 		return partial_hash;
 	}
 
-	LangElement::HashAlg& LangElement::addGenericDataToHash(LangElement::HashAlg& partial_hash
-	) const {
-		return partial_hash;
+	HashAlg& LangElement::addGenericDataToHash(HashAlg& partial_hash) const { return partial_hash; }
+
+	void LangElement::calcSignature(HashAlg& partial_hash) const {
+		addToHash(partial_hash, hash->data);
+		for (auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) { addToHash(partial_hash, el->getHash().data); }
+				variant_case(InternalNamedChild, el) {
+					addToHash(partial_hash, el.element->getHash().data);
+				}
+				variant_case(SubToken, el) {}
+				variant_default { CORE_PANIC("Unhandled variant case"); }
+			}
+		}
+		addToHash(partial_hash, "hash_end");
+	}
+
+	void LangElement::signGenerated(HashType& signature) {
+		HashAlg new_hash;
+		addToHash(new_hash, hash->data);
+		addToHash(new_hash, signature.data);
+		hash = new_hash.finalize();
+		for (auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) { el->signGenerated(signature); }
+				variant_case(InternalNamedChild, el) { el.element->signGenerated(signature); }
+				variant_case(SubToken, el) {}
+				variant_default { CORE_PANIC("Unhandled variant case"); }
+			}
+		}
 	}
 
 	void LangElement::addToken(CRef<tpc::Token> t) {
@@ -147,10 +177,13 @@ namespace pst {
 		CORE_PANIC("PstVisitor not supported for " + elementType());
 	}
 
-	base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> LangElement::pst_hash_map{};
+	concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>>
+		LangElement::pst_hash_map{};
 
 	AccessLocked<LangElement> LangElement::getByStableHash(query::QueryStableHash stable_hash) {
 		CORE_ASSERT(pst_hash_map.contains(stable_hash), "Invalid stable hash");
-		return pst_hash_map.at(stable_hash);
+		return *pst_hash_map.at(stable_hash);
 	}
+
+	StablePosition LangElement::getStablePosition() const { return { getHash(), {} }; }
 }

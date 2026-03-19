@@ -1,20 +1,24 @@
+//! Implementation of traversing TOML documents, and getting/setting values at dotted keys.
 use std::{
     fmt::Display,
     io::ErrorKind,
     path::{Path, PathBuf},
 };
 
-use rustvil::fs::PathExt;
 use toml::{Table, Value, from_str};
 use tracing::debug;
 
 use super::DescriptionWithAnArticle;
 
-use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
+use crate::{
+    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
+    util_common::path_ops_ext::PathOpsExt,
+};
 use paste::item;
 use toml::value::{Array, Datetime};
 
 #[derive(Default, Debug)]
+/// TOML config manager.
 pub struct TomlConfig {
     content: Table,
     source: Option<PathBuf>,
@@ -42,6 +46,7 @@ macro_rules! delegate_getter {
     ) => {
         item! {
             $(
+                #[doc = concat!("Get [`", stringify!($value), "`] at the dotted key.")]
                 pub fn [<get_ $name>](&self, key: &str) -> QuackResult<Option<$ret>> {
                     let value = self.get(key)?;
                     let Some(value) = value else {
@@ -67,6 +72,7 @@ macro_rules! delegate_setter {
     ) => {
         item! {
             $(
+                #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
                 pub fn [<set_ $name>](&mut self, key: &str, value: $value) -> QuackResult<()> {
                     let value = Value::$toml_value_enum(value);
                     self.set(key, value)
@@ -77,11 +83,12 @@ macro_rules! delegate_setter {
 }
 
 impl TomlConfig {
+    /// Create a new [`TomlConfig`] from the TOML file at `path`.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
         debug!("parsing TOML config at `{}`", path.display());
         let content = match path.as_path().read_to_string() {
             Ok(string) => string,
-            Err(e) if matches!(e.kind(), ErrorKind::NotFound) => {
+            Err(e) if matches!(e.source().kind(), ErrorKind::NotFound) => {
                 debug!(
                     "there is no config at `{}`, falling back to defaults...",
                     path.display()
@@ -107,6 +114,7 @@ impl TomlConfig {
         })
     }
 
+    /// Create an error message.
     pub fn make_location_error(&self) -> String {
         match self.source {
             Some(ref path) => format!("when parsing the configuration at `{}`", path.display()),
@@ -118,6 +126,7 @@ impl TomlConfig {
     }
 
     #[track_caller]
+    /// Get the value from the dotted key.
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
         debug!(
             "getting the key `{key}` from config at `{}`",
@@ -159,11 +168,13 @@ impl TomlConfig {
         Ok(current.get(last))
     }
 
+    /// Convenient wrapper around [`_get`](Self::_get).
     fn get(&self, key: &str) -> QuackResult<Option<&Value>> {
         self._get(key).with_context(|| self.make_location_error())
     }
 
     #[track_caller]
+    /// Set the value at the dotted key.
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         if key.is_empty() {
             qp_bail_internal!("empty key")
@@ -196,11 +207,13 @@ impl TomlConfig {
         Ok(())
     }
 
+    /// Convenient wrapper around [`_set`](Self::_set).
     fn set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         self._set(key, value)
             .with_context(|| self.make_location_error())
     }
 
+    /// Make an error message, if i-th part of the key is empty (there are two consecutive dots).
     fn make_empty_key_fragment_error(mut i: usize, key: &str) -> QuackError {
         i += 1;
         let last_two = i % 100;
@@ -235,15 +248,18 @@ impl TomlConfig {
         bool => Boolean -> bool,
     }
 
+    /// Get the root [`Table`] for this config.
     pub fn get_root_table(&self) -> &Table {
         &self.content
     }
 
+    /// Get [`Path`] for the dotted key.
     pub fn get_path(&self, key: &str) -> QuackResult<Option<&Path>> {
         let path = self.get_str(key)?;
         Ok(path.map(Path::new))
     }
 
+    /// Set [`Path`] at the dotted key.
     pub fn set_path(&mut self, key: &str, value: &Path) -> QuackResult<()> {
         self.set_str(key, value.display().to_string())
     }

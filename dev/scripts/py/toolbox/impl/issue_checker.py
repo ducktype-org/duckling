@@ -31,9 +31,9 @@ def issue_checker_impl(
         if not issues:
             return True
 
-    valid_issue_numbers = []
+    valid_issue_numbers: list[str] = []
     for num in issues:
-        num_str = str(num).strip()
+        num_str: str = str(num).strip()
         if not num_str:
             continue
         if not num_str.isdigit() or int(num_str) <= 0:
@@ -166,7 +166,11 @@ def get_issues_from_github() -> list[str]:
             .get("closingIssuesReferences", {})
             .get("nodes", [])
         )
-        return [str(node["number"]) for node in nodes if "number" in node]
+        return [
+            str(node["number"])
+            for node in nodes
+            if node is not None and "number" in node
+        ]
     except BashCommandError as e:
         log_warning(f"Error while fetching issue numbers via gh api: {e}")
         return []

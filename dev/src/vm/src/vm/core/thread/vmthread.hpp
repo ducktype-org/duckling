@@ -14,6 +14,11 @@
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
+#ifdef ENABLE_JIT
+	#include <vm/core/jit/jit_compiler.hpp>
+#endif
+
+
 #include <atomic>
 #include <condition_variable>
 #include <expected>
@@ -99,6 +104,11 @@ namespace vm {
 		std::condition_variable pause_cv;
 
 		/**
+		 * @brief True if a thread currently occupies GIL.
+		 */
+		bool has_gil = false;
+
+		/**
 		 * @brief Mutex responsible for setting the execution_request and execution_request_break
 		 * flags.
 		 *
@@ -131,6 +141,12 @@ namespace vm {
 		 * @todo rewrite this to C++ futures
 		 */
 		BlockingQueue<api::ProcStatus> execution_response_queue;
+
+		std::string thread_ctx = "";
+
+#ifdef ENABLE_JIT
+		jit::JitData jit_data;
+#endif
 
 		bool waitForBreakpointResponse();
 
@@ -178,6 +194,15 @@ namespace vm {
 
 		void handlePausedExecution(std::unique_lock<std::mutex>&);
 
+		/**
+		 * @brief Calls run within safe try-catch block, to catch any exceptions thrown by the
+		 * running code and respond to the process with the panicked status.
+		 */
+		void safeRun(
+			CRef<low::LowVMProgram> program,
+			const std::string&      func_name,
+			const RunArguments&     run_arguments
+		);
 
 	public:
 		VMThread(VMProcess& process);
@@ -199,6 +224,19 @@ namespace vm {
 		 * there is already a thread running.
 		 */
 		bool spawnThreadAndRun(
+			CRef<low::LowVMProgram> program,
+			const std::string&      func_name,
+			const RunArguments&     run_arguments
+		);
+
+
+		/**
+		 * @brief Runs a program and waits for it to finish.
+		 * Does not create a new thread, runs the program in the current execution thread.
+		 * @return The exit value of the program if it was ran successfully or an API error
+		 * otherwise.
+		 */
+		void runNoSpawn(
 			CRef<low::LowVMProgram> program,
 			const std::string&      func_name,
 			const RunArguments&     run_arguments
@@ -269,5 +307,26 @@ namespace vm {
 		friend class VMProcess;
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
+
+		/**
+		 * @brief Called only on instruction execution.
+		 * Checks if thread has GIL and if not then acquires it.
+		 */
+		void keepOrAcquireGil();
+
+		/**
+		 * @brief Releases GIL.
+		 */
+		void releaseGil();
+
+		/**
+		 * @brief Sets name of the function that will be used in builtin spawn thread.
+		 */
+		void setThreadCtx(std::string);
+
+		/**
+		 * @brief Gets name of the function that will be used in builtin spawn thread.
+		 */
+		std::string getThreadCtx();
 	};
 }

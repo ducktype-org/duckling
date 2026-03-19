@@ -1,3 +1,8 @@
+/**
+ * @file generic_operations.cpp
+ * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
+ */
+
 #include "generic_operations.hpp"
 
 #include <driver/module_flags/module_flags.hpp>
@@ -10,18 +15,19 @@
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
-#include <query_framework/query_artifacts_macros.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/standard_query/query_artifacts_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -46,6 +52,9 @@ namespace compiler::driver {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
 
+		/** Helper variable for printing user logs, change freely if needed */
+		constinit static inline std::atomic<u64> total_module_count = 0;
+
 		/**
 		 * Helper function to get full module name for logging purposes.
 		 */
@@ -65,8 +74,27 @@ namespace compiler::driver {
 		 * Helper function to log module compilation info.
 		 */
 		static void moduleLog(const QKey& key, std::string_view info) {
+			/** Helper variables for printing user logs, change freely if needed */
+			static concurrent::ConHashMap<frontend::ModuleID, u64> module_number_cache;
+			static std::atomic<u64>                                next_module_number = 1;
+
+			u64 id = 0;
+			module_number_cache.maybePutAndUpdate(key.module_id, u64{ 0 }, [&](Ref<u64> number) {
+				if (*number == 0) {
+					// this is a new module
+					*number = next_module_number.fetch_add(1, std::memory_order_relaxed);
+				}
+				id = *number;
+			});
+
+			auto total = total_module_count.load(std::memory_order_relaxed);
 			CORE_USER_LOG(
-				"[?/?] Compiling ",
+				"[",
+				id,
+				"/",
+				total == 0 ? "?" : std::to_string(total),
+				"] ",
+				" Compiling ",
 				getModuleFullName(key.module_id),
 				" (",
 				backendTypeToStr(key.backend_type),
@@ -88,18 +116,21 @@ namespace compiler::driver {
 			}
 		}
 
+		static std::string getModuleOutputName(const QKey& key) {
+			return key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+		}
+
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			moduleLog(key, "Recompiling");
 
 			auto lir_data_result = ctx.query<CompileToLIRModuleData>(key.module_id);
-			if (lir_data_result.hasFailed()) {
+			if (lir_data_result->hasFailed()) {
 				moduleLog(key, "Compilation failed");
 				return query::Failed();
 			}
-			auto lir_data = std::move(lir_data_result).valueOrThrow();
+			CRef lir_data = &lir_data_result->valueOrThrow();
 
-			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name = getModuleOutputName(key);
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
@@ -113,18 +144,18 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
-						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
+						output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 
 				if (driver::llvm_dump_ir) {
 					base::StrID llvm_ir_path
-						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
+						= base::StrID(base::strConcat(lir_data->module_id.strView(), ".ll").c_str());
 					llvm_module.dumpLLVMToFile(llvm_ir_path);
 				}
 				if (driver::llvm_dump_asm) {
 					base::StrID assembly_path
-						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".s").c_str());
+						= base::StrID(base::strConcat(lir_data->module_id.strView(), ".s").c_str());
 					llvm_module.compile(
 						assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly
 					);
@@ -132,8 +163,8 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data);
-				std::ofstream dvm_file(output.FILE.getFilePath().getPath(), std::ios::binary);
+				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
+				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
 				dvm_file.close();
@@ -151,8 +182,7 @@ namespace compiler::driver {
 		 * Returns Optional empty if the underlying file does not exist anymore.
 		 */
 		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
-			auto output_name
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name = getModuleOutputName(key);
 
 			auto collection   = getQueryArtifactsCollection();
 			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
@@ -167,9 +197,32 @@ namespace compiler::driver {
 			moduleLog(key, "Cached, loading artifact from disk");
 			return output;
 		}
+
+		static auto deleteFromDisc(const QKey& key) -> bool {
+			auto output_name = getModuleOutputName(key);
+
+			auto collection = getQueryArtifactsCollection();
+			moduleLog(key, "Deleting artifact from disk");
+			return collection->deleteFileArtifact(base::StrID(output_name.c_str()));
+		}
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
+
+	base::OkBad compileScript(
+		[[maybe_unused]] const CompilerModeOfOperationAndOptions::ScriptMode& mode,
+		[[maybe_unused]] BackendType                                          backend_type,
+		[[maybe_unused]] const linker::LinkingOptions&                        linking_options
+	) {
+		// Steps:
+		// 1. Read mode.script_file content
+		// 2. Call repl::splitInputIntoStatements() to split into individual statement strings
+		// 3. For each statement: create a chained REPL module (ReplData with parent link)
+		// 4. For each module: compile and collect .dbc/.o artifacts
+		// 5. DVM:  merge CodeCollections and serialize to mode.output_path as .dbc
+		//    LLVM: compile entry-point module + link all .o files somehow (not yet sure how)
+		throw base::NotYetImplemented("compileScript");
+	}
 
 	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,
@@ -181,7 +234,18 @@ namespace compiler::driver {
 
 		std::vector<artifacts::FileArtifact> objects;
 
-		// this is std::function, so it can be recursive
+		std::vector<frontend::ModuleID> modules_to_compile;
+
+		std::function<void(frontend::ModuleID)> collect_modules
+			= [&](frontend::ModuleID module_id) -> void {
+			modules_to_compile.push_back(module_id);
+			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
+			for (const auto& [id, sub_module]: *sub_modules) collect_modules(sub_module);
+		};
+		collect_modules(root);
+
+		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
+
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
 			auto module_result = query::entryPoint<CompileModule>({ module_id, backend });
@@ -189,10 +253,8 @@ namespace compiler::driver {
 				objects.emplace_back(module_result.valueOrPanic());
 			else
 				result = base::BAD;
-			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
-			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
 		};
-		handle_module(root);
+		for (const auto& module_id: modules_to_compile) handle_module(module_id);
 
 		if (result.isBad()) return result;
 
@@ -204,7 +266,12 @@ namespace compiler::driver {
 
 			objects.push_back(emitBuiltinLLVMObjectFile());
 
-			linker::link(output_file, objects, linking_options);
+			auto linking_result = linker::link(output_file, objects, linking_options);
+
+			if (linking_result.isBad()) {
+				CORE_USER_LOG("Linking failed!\n");
+				return base::BAD;
+			}
 		}
 
 		return result;
@@ -213,8 +280,8 @@ namespace compiler::driver {
 	std::expected<RunOutput, std::string> runModuleOnDVM(
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
-		auto lir_data            = ctx.query<CompileToLIRModuleData>(module_id).valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
+		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
+		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
 
 		vm::PID pid{};
 

@@ -1,39 +1,21 @@
-import { Diagnostic, Connection } from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
+import { Diagnostic, Connection, DocumentUri } from "vscode-languageserver";
 import { getDocumentSettings } from "./server";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 
 export async function validateDuckling(
-	textDocument: TextDocument, 
+	uri: DocumentUri, 
 	connection: Connection, 
 	compilerDaemonClient: CompilerDaemonClient
 ): Promise<void> {
-	const settings = await getDocumentSettings(textDocument.uri);
-	let problems = 0;
-	const diagnostics: Diagnostic[] = [];
+	const settings = await getDocumentSettings(uri);
 
 	// Get the errors from the compiler daemon
-	let errors = await compilerDaemonClient.getErrors(textDocument.uri, connection);
+	let errorsMap = await compilerDaemonClient.getErrors(uri, connection);
 
-	// Parse the errors and add them to the diagnostics
-	for (const error of errors) {
-		problems++;
-		const diagnostic: Diagnostic = {
-			severity: error.severity,
-			range: {
-				start: { line: error.line - 1, character: error.column - 1 },
-				end: { line: error.line - 1, character: error.column }
-			},
-			message: error.message,
-			source: "Duckling " + error.type
-		};
-		diagnostics.push(diagnostic);
+	for (const [uri, diagnostics] of Object.entries(errorsMap)) {
+		const filteredDiagnostics = diagnostics.slice(0, settings.maxNumberOfProblems);
 
-		if (problems > settings.maxNumberOfProblems) {
-			break;
-		}
+		// Send the computed diagnostics to the client
+		connection.sendDiagnostics({ uri: uri, diagnostics: filteredDiagnostics });
 	}
-
-	// Send the computed diagnostics to the client
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }

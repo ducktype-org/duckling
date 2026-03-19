@@ -4,7 +4,7 @@ include(CMakePrintHelpers)
 # enabled, it will run out of stack space.
 function(duck_disable_tc_when_not_opt test_name test_set)
         if (test_set STREQUAL "vm_tc")
-                if(NOT CMAKE_BUILD_TYPE MATCHES ".*Opt.*")
+                if(NOT BUILD_TYPE_IS_OPTIMISED)
                         set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED TRUE)
                 endif()
         endif()
@@ -77,6 +77,9 @@ function(duck_add_vm_tests suffix)
 
         duck_add_test_custom(vm ${test_set}_extern_c_func_test extern_c/vm_extern_c_func_test.cpp
                 USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_threads_test threads/thread_tests.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_disable_tc_when_not_opt("threads_test" ${test_set})
 endfunction()
 
 duck_add_vm_tests("tc")

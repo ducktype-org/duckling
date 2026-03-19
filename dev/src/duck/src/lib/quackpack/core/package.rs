@@ -1,6 +1,7 @@
-use crate::{
-    DuckCtx,
-    quackpack::{core::Manifest, schemas::manifest::Manifest as ManifestSchema},
+//! A general package abstraction.
+use crate::quackpack::{
+    core::{Manifest, storage::freeze::FreezeDep},
+    schemas::manifest::Manifest as ManifestSchema,
 };
 use std::{
     path::{Path, PathBuf},
@@ -14,21 +15,25 @@ pub struct Package {
 }
 
 impl Package {
-    /// Create a new package.
+    /// Create a new [`Package`].
     pub fn new(
         original_content: String,
         original_schema: ManifestSchema,
         manifest: Manifest,
         root: PathBuf,
-        warnings: Vec<String>,
+        manifest_path: PathBuf,
     ) -> Self {
+        let artifacts_dir = root.join(".duck_build");
+        let source_directory = root.join("src");
         Self {
             inner: Arc::new(PackageInner {
                 original_content,
                 original_schema,
                 manifest,
                 root,
-                warnings,
+                manifest_path,
+                artifacts_dir,
+                source_dir: source_directory,
             }),
         }
     }
@@ -48,15 +53,32 @@ impl Package {
         &self.inner.manifest
     }
 
-    /// Get the root directory of the Package.
+    /// Get the root directory of the package.
     pub fn root_directory(&self) -> &Path {
         &self.inner.root
     }
 
-    pub fn emit_warnings(&self, ctx: &DuckCtx) {
-        for warning in self.inner.warnings.iter() {
-            ctx.error_console().warning(warning);
-        }
+    /// Get the path to the source directory.
+    pub fn source_directory(&self) -> &Path {
+        &self.inner.source_dir
+    }
+
+    /// Get the path to the manifest file.
+    pub fn manifest_path(&self) -> &Path {
+        &self.inner.manifest_path
+    }
+
+    /// Get the path to the artifacts directory.
+    pub fn artifacts_directory(&self) -> &Path {
+        &self.inner.artifacts_dir
+    }
+
+    /// Convert this package to a [`FreezeDep`].
+    pub fn as_freeze_dep(&self) -> FreezeDep {
+        FreezeDep::new(
+            self.manifest().root_description().name(),
+            self.manifest().root_description().version(),
+        )
     }
 }
 
@@ -66,7 +88,9 @@ struct PackageInner {
     original_schema: ManifestSchema,
     manifest: Manifest,
     root: PathBuf,
-    warnings: Vec<String>,
+    manifest_path: PathBuf,
+    artifacts_dir: PathBuf,
+    source_dir: PathBuf,
 }
 
 #[cfg(test)]

@@ -5,13 +5,13 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 #include <memory>
 #include <sstream>
@@ -27,7 +27,7 @@ namespace compiler::helios {
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {
-			out += func.debugPrint();
+			out += func->debugPrint();
 			out += "\n";
 		}
 
@@ -35,15 +35,20 @@ namespace compiler::helios {
 	}
 
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
-		const SymID symbol, const tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
+		const SymID                  symbol,
+		const tsh::SymbolType<>      ret_type,
+		std::vector<code::Parameter> parameters,
+		code::ElementOrigin          origin
 	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
-		  parameters(std::move(parameters)) {
+		  parameters(std::move(parameters)),
+		  origin(origin) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
-			"Symbol is not a function or function declaration"
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
+				or kind(symbol) == SymbolKind::Method,
+			"Symbol is not a function, function declaration nor method"
 		);
 	}
 
@@ -85,8 +90,12 @@ namespace compiler::helios {
 	}
 
 	HOUTFunction::HOUTFunction(
-		const CRef<HOUTFunctionDeclaration> other, const std::shared_ptr<const code::CodeBlock>& body
+
+		code::ElementOrigin                           origin,
+		const CRef<HOUTFunctionDeclaration>           other,
+		const std::shared_ptr<const code::CodeBlock>& body
 	):
+		  origin(origin),
 		  declaration(other),
 		  body(body) {}
 
@@ -110,29 +119,33 @@ namespace compiler::helios {
 	}
 
 	HOUTGlobalData::HOUTGlobalData(
-		const SymID symbol, query::Context& ctx, const HOUTGlobalDataType data_type
+		query::Context& ctx, const SymID symbol, const HOUTGlobalDataType data_type
 	):
 		  helios_symbol(symbol),
+		  origin(code::pstOrigin(stmt(ctx, symbol).value())),
 		  original_name(name(symbol)),
 		  data_type(data_type),
 		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
 			  switch (data_type) {
 			  case HOUTGlobalDataType::Variable: {
+				  auto var_decl = stmt(ctx, symbol)->dynamicCast<pst::Variable>().value();
+
 				  // Get the initial value and type of the variable.
-				  const auto initial_value_pst = stmt(ctx, symbol)
-			                                         ->dynamicCast<pst::Variable>()
-			                                         .value()
-			                                         ->getValue()
-			                                         .value()
-			                                         .unlock(ctx)
-			                                         ->getExpr();
 				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-				  auto       initial_value_hout_coerced
-					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
-			                .valueOrThrow();
+				  auto       initial_value = [&]() -> Box<code::Expr> {
+                      if (auto maybe_initial_pst = var_decl->getValue()) {
+                          auto initial_value_pst = maybe_initial_pst.value().unlock(ctx)->getExpr();
+                          return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
+                              .valueOrThrow();
+                      } else {
+                          return makeBox<code::DefaultValueExpr>(
+                              ctx, code::generatedOrigin(), variable_type
+                          );
+                      }
+				  }();
 
 				  return HOUTGlobalVariable{
-					  std::make_shared<Box<code::Expr>>(std::move(initial_value_hout_coerced))
+					  std::make_shared<Box<code::Expr>>(std::move(initial_value))
 				  };
 			  }
 			  case HOUTGlobalDataType::Constant:

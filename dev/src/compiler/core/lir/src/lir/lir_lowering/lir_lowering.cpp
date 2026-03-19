@@ -16,10 +16,11 @@
 #include "../lir_structure/lir_structure.hpp"
 
 #include <ctv/numeric_value.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
@@ -28,7 +29,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <type_traits>
 #include <utility>
@@ -45,79 +46,33 @@ namespace compiler::lir {
 		return function->queryUnstablePerfectHash();
 	}
 
-	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id);
+	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
+		tsh::FunctionAbstractType type
+			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
+		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
+		          .getType();
 
-	/**
-	 * @brief Creates LIR local data from MIR local data.
-	 * @todo change argument to MIR local reference.
-	 * @important remember that LIRLocal should only be stored in a LIR function.
-	 *
-	 * @param ctx
-	 * @param mir_local
-	 * @return LIRLocal
-	 */
-	LIRLocal LIRLocal::fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
+		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
+			"Handling errors in MIR is not supported yet"
+		);
+		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 
-		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
+		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
+		std::vector<CRef<tsl::TypeLayout>> parameter_types;
+		parameter_types.reserve(type.getParameterTypes().size());
+		for (const auto& param: type.getParameterTypes())
+			// Discard information-less parameters from LIR function parameter lists.
+			if (param.getType().carriesInformation(ctx))
+				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+
+		return FunctionLiteral{
+			.mangled_name = mangled_name,
+			.abi          = symbol_abi,
+			.parameter_layouts
+			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
+			.return_type_layout = return_type,
+		};
 	}
-
-	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
-		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
-		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
-
-		return LIRLocal{ bool_layout };
-	}
-
-	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
-
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
-
-		return LIRGlobal{ mir_global.helios_id, type_layout, mangled_name };
-	}
-
-	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
-
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
-
-		variant_match(hout_global.value) {
-			variant_case(helios::HOUTGlobalConst, name) {
-				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name,
-					LIRGlobalType::Constant,   name.value,
-				};
-			}
-			variant_case(helios::HOUTGlobalVariable, name) {
-				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name, LIRGlobalType::Variable
-				};
-			}
-			variant_default {
-				CORE_PANIC(
-					"Unhandled HOUTGlobalData type in LIRGlobal::fromHOUT: ",
-					hout_global.original_name.strView()
-				);
-			}
-		}
-
-		CORE_UNREACHABLE();
-	}
-
-	LIRPlace::LIRPlace(
-		query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
-	):
-		  base(base),
-		  access_chain(std::move(access_chain)),
-		  layout(
-			  this->access_chain.size() == 0
-				  ? getBaseLayout()
-				  : ctx.query<tsl::QuerySymbolTypeLayout>(
-						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())
-							->valueOrThrow()
-					)
-		  ) {}
 
 	/**
 	 * @brief Maps MIR operation to LIR operation for those
@@ -132,6 +87,18 @@ namespace compiler::lir {
 		// Variable Assignment
 		case mir::Operation::Assign:
 			return Operation::Assign;
+		case mir::Operation::AddressOf:
+			return Operation::AddressOf;
+		case mir::Operation::BoxAlloc:
+			return Operation::BoxAlloc;
+		case mir::Operation::ListPush:
+			return Operation::ListPush;
+		case mir::Operation::ListPop:
+			return Operation::ListPop;
+		case mir::Operation::ListLen:
+			return Operation::ListLen;
+		case mir::Operation::ZeroInitialize:
+			return Operation::ZeroInitialize;
 
 		// Control Flow
 		case mir::Operation::ReturnValue:
@@ -275,13 +242,41 @@ namespace compiler::lir {
 			}
 
 			[[nodiscard]]
-			LIRPlace getPlace(mir::MIRPlace mir_place) const {
+			LIRPlace getPlace(const mir::MIRPlace& mir_place) const {
+				std::vector<LIRPlace::Projection> lir_projection_chain;
+				lir_projection_chain.reserve(mir_place.projection_chain.size());
+
+				// Map all MIR projections to LIR projections.
+				for (const auto& proj: mir_place.projection_chain) {
+					variant_match(proj.storage) {
+						variant_case(mir::MIRPlace::FieldProjection, field) {
+							lir_projection_chain.push_back(
+								LIRPlace::Projection::field(field.field_id)
+							);
+						}
+						variant_case(mir::MIRPlace::IndexProjection, index) {
+							auto maybe_lir_index = getLocation(*index.index);
+							CORE_ASSERT(
+								maybe_lir_index.has_value(),
+								"Array index must carry information (cannot be Unit/Void)"
+							);
+
+							lir_projection_chain.push_back(
+								LIRPlace::Projection::index(maybe_lir_index.value())
+							);
+						}
+						variant_case_novalue(mir::MIRPlace::DerefProjection) {
+							lir_projection_chain.push_back(LIRPlace::Projection::deref());
+						}
+					}
+				}
+
 				variant_match(mir_place.base) {
 					variant_case(mir::MIRLocalRef, local) {
-						return { ctx, getLocal(local), mir_place.access_chain };
+						return { getLocal(local), std::move(lir_projection_chain) };
 					}
 					variant_case(mir::MIRGlobal, global) {
-						return { ctx, getGlobal(global), mir_place.access_chain };
+						return { getGlobal(global), std::move(lir_projection_chain) };
 					}
 				}
 				CORE_UNREACHABLE();
@@ -306,7 +301,7 @@ namespace compiler::lir {
 			 * @param loc The MIR location.
 			 * @return The optional LIR location, possibly discarded.
 			 */
-			base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) {
+			[[nodiscard]] base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) const {
 				// Discard information-less location.
 				if (!loc.carriesInformation(ctx)) return {};
 
@@ -394,7 +389,8 @@ namespace compiler::lir {
 			 * @param locs The MIR location.
 			 * @return The LIR locations, possibly with some discarded.
 			 */
-			std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs) {
+			[[nodiscard]] std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs
+			) const {
 				std::vector<LIRValue> result;
 				result.reserve(locs.size());
 				for (const auto& loc: locs)
@@ -508,11 +504,51 @@ namespace compiler::lir {
 					if (lir_arg.has_value()) {
 						auto output = getOutput(mir_instruction.output);
 						curr_block->instructions.emplace_back(
-							Operation::Assign, output, std::vector{ lir_arg.value() }
+							Operation::Assign,
+							output,
+							std::vector{ lir_arg.value() },
+							mir_instruction.metadata
 						);
 					}
 					return curr_block;
 				}
+				case mir::Operation::ZeroInitialize: {
+					auto output = getOutput(mir_instruction.output);
+
+					if (output.has_value()) {
+						curr_block->instructions.emplace_back(
+							Operation::ZeroInitialize,
+							output,
+							std::vector<LIRValue>{},
+							mir_instruction.metadata
+						);
+					}
+					return curr_block;
+				}
+				case mir::Operation::ListPush:
+				case mir::Operation::ListPop: {
+					auto output = getOutput(mir_instruction.output);
+					auto args   = getLocations(mir_instruction.arguments);
+
+					const auto& list_place = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
+
+					auto dynamic_array_type
+						= list_place.type.getType().as<tsh::DynamicArrayAbstractType>();
+					auto element_layout
+						= ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType());
+
+					curr_block->instructions.emplace_back(
+						mir2lirOperation(mir_instruction.operation, false),
+						output,
+						std::move(args),
+						InstructionMetadata{},
+						ListOperationParameters{ .element_layout = element_layout }
+					);
+					return curr_block;
+				}
+				case mir::Operation::AddressOf:
+				case mir::Operation::ListLen:
+				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -564,19 +600,68 @@ namespace compiler::lir {
 					curr_block->instructions.emplace_back(
 						mir2lirOperation(mir_instruction.operation, use_signed_version),
 						output,
-						std::move(args)
+						std::move(args),
+						mir_instruction.metadata
 					);
 					return curr_block;
 				}
-				case mir::Operation::DestructIf:
-					// @TODO implement it, once we know how to call destructors
-					CORE_DEV_LOG(Compiler, "DestructIf not implemented in LIR, skipping", "\n");
+				case mir::Operation::DestructIf: {
+					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
+					const auto& type        = to_destruct.type;
+
+					// @TODO: #929 The whole DestructIf implementation is a stub. Implement it once
+					// we know how to call destructors.
+
+					if (type.getRefKind() == tsh::ReferenceKind::Direct
+					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto lir_place = getLocation(to_destruct);
+
+						if (lir_place.has_value()) {
+							curr_block->instructions.emplace_back(
+								Operation::ListFree,
+								base::Optional<LIRPlace>{},
+								std::vector{ lir_place.value() },
+								InstructionMetadata{}
+							);
+							return curr_block;
+						}
+					}
+
+					// @TODO: #1894 This is a stub just to test the overall box free'ing logic.
+					// Currently this approach generates a free on every DestructIf if it operates
+					// on a box type (even if the box was moved). This will cause double free's if
+					// the box was moved around between other box variables. In the future we should
+					// insert a proper destructor call here before the FreeBox.
+					if (type.getRefKind() == tsh::ReferenceKind::Box) {
+						auto lir_place = getLocation(to_destruct);
+
+						// FreeBox is discarded if it operates on no information (ex. Unit).
+						if (lir_place.has_value()) {
+							curr_block->instructions.emplace_back(
+								Operation::BoxFree,
+								base::Optional<LIRPlace>{},
+								std::vector{ lir_place.value() },
+								mir_instruction.metadata
+							);
+							return curr_block;
+						}
+					}
+
+					CORE_DEV_LOG(
+						Compiler,
+						"DestructIf not implemented for types with non-trivial "
+						"destructors, skipping",
+						"\n"
+					);
 
 					return curr_block;
+				}
 				case mir::Operation::Call: {
 					auto output = getOutput(mir_instruction.output);
 					auto args   = getLocations(mir_instruction.arguments);
-					curr_block->instructions.emplace_back(Operation::Call, output, std::move(args));
+					curr_block->instructions.emplace_back(
+						Operation::Call, output, std::move(args), mir_instruction.metadata
+					);
 					return curr_block;
 				}
 				case mir::Operation::Cast: {
@@ -590,6 +675,7 @@ namespace compiler::lir {
 						Operation::Cast,
 						output,
 						std::move(args),
+						mir_instruction.metadata,
 						CastParameters{
 							.source_type = cast_parameters->source_type,
 							.target_type = cast_parameters->target_type,
@@ -629,19 +715,23 @@ namespace compiler::lir {
 				case mir::Operation::ReturnValue: {
 					// The returned value may have been discarded due to being information-less.
 					if (auto args = getLocations(mir_terminator.arguments); args.size() == 0)
-						curr_block->terminator = Instruction{ Operation::ReturnVoid, {}, {} };
-					else
 						curr_block->terminator
-							= Instruction{ Operation::ReturnValue, {}, std::move(args) };
+							= Instruction{ Operation::ReturnVoid, {}, {}, mir_terminator.metadata };
+					else
+						curr_block->terminator = Instruction{
+							Operation::ReturnValue, {}, std::move(args), mir_terminator.metadata
+						};
 					break;
 				}
 				case mir::Operation::ReturnVoid:
 				case mir::Operation::Jump:
 				case mir::Operation::Branch: {
-					auto args              = getLocations(mir_terminator.arguments);
-					curr_block->terminator = Instruction{
-						mir2lirOperation(mir_terminator.operation, false), {}, std::move(args)
-					};
+					auto args = getLocations(mir_terminator.arguments);
+					curr_block->terminator
+						= Instruction{ mir2lirOperation(mir_terminator.operation, false),
+						               {},
+						               std::move(args),
+						               mir_terminator.metadata };
 					break;
 				}
 				case mir::Operation::FunctionEnd: {
@@ -696,15 +786,23 @@ namespace compiler::lir {
 					CORE_UNREACHABLE();
 				}();
 
-				return Function{
-					.mangled_name       = mangled_name,
-					.abi                = abi,
-					.parameter_layouts  = std::move(parameter_types),
-					.return_type_layout = return_type,
-					.blocks             = std::move(blocks),
-					.local_list         = std::move(locals),
-					.block_order        = std::move(block_order),
-				};
+				FunctionMetadata metadata;
+				auto&            mir_func = key.function;
+				if (auto func_id = std::get_if<mir::FunctionSymID>(&mir_func->helios_id)) {
+					if (auto pst_elem = helios::symbolPst(func_id->id)) {
+						metadata.position         = (*pst_elem).unlock(ctx)->getStablePosition();
+						metadata.source_code_name = helios::name(func_id->id);
+					}
+				}
+
+				return Function{ .mangled_name       = mangled_name,
+					             .abi                = abi,
+					             .parameter_layouts  = std::move(parameter_types),
+					             .return_type_layout = return_type,
+					             .blocks             = std::move(blocks),
+					             .local_list         = std::move(locals),
+					             .block_order        = std::move(block_order),
+					             .metadata           = metadata };
 			}
 		};
 
@@ -751,7 +849,7 @@ namespace compiler::lir {
 		auto function_type = ctx.query<tsh::QueryFunctionType>({
 			{},
 			tsh::SymbolType{
-				ctx.query<tsh::QueryUnitType>({}),
+				tsh::getUnitType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable,
 			},
@@ -760,16 +858,11 @@ namespace compiler::lir {
 		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType());
 
 		Block entry_block;
-		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
+		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {}, {} };
 
 		for (const auto& function: functions) {
 			entry_block.instructions.push_back(Instruction{
-				Operation::Call,
-				{},
-				{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
-
-				,
-			});
+				Operation::Call, {}, { LIRValue{ FunctionLiteral::fromFunction(*function) } }, {} });
 		}
 
 		base::StableVector<Block> blocks;
@@ -777,42 +870,14 @@ namespace compiler::lir {
 
 		BlockRef entry_block_ref = blocks.last();
 
-		return Function{
-			.mangled_name       = mangled_name,
-			.abi                = helios::DefaultAbi{},
-			.parameter_layouts  = {},
-			.return_type_layout = return_type,
-			.blocks             = std::move(blocks),
-			.local_list         = {},
-			.block_order        = { entry_block_ref },
-		};
+		return Function{ .mangled_name       = mangled_name,
+			             .abi                = helios::DefaultAbi{},
+			             .parameter_layouts  = {},
+			             .return_type_layout = return_type,
+			             .blocks             = std::move(blocks),
+			             .local_list         = {},
+			             .block_order        = { entry_block_ref },
+			             .metadata           = { .position = {}, .source_code_name = {} } };
 	}
 
-	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
-		tsh::FunctionAbstractType type
-			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
-		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
-		          .getType();
-
-		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
-			"Handling errors in MIR is not supported yet"
-		);
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
-
-		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
-		std::vector<CRef<tsl::TypeLayout>> parameter_types;
-		parameter_types.reserve(type.getParameterTypes().size());
-		for (const auto& param: type.getParameterTypes())
-			// Discard information-less parameters from LIR function parameter lists.
-			if (param.getType().carriesInformation(ctx))
-				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
-
-		return FunctionLiteral{
-			.mangled_name = mangled_name,
-			.abi          = symbol_abi,
-			.parameter_layouts
-			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
-			.return_type_layout = return_type,
-		};
-	}
 }

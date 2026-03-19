@@ -213,7 +213,7 @@ namespace vm {
 				frame->block_stack.size(), frame->local_stack_head
 			);
 			frame->block_stack.push_back(block);
-			frame->local_stack_head += type->getSize();
+			frame->local_stack_head += type->getSize().asInt();
 		}
 
 		static
@@ -231,20 +231,7 @@ namespace vm {
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
-			frame->local_stack_head -= type->getSize();
-		}
-
-		static TypeCRef getVariantTypeFromPointer(VMThread& thread, Pointer variant_pointer) {
-			// We may be pointing to a table with structs, that contain variants somewhere inside.
-			// This functions is very tricky, but in case of variants we can locate them using the
-			// method below. Thanks to type_tag and
-			// @TODO: #1369 Remove this function
-			auto block_type = thread.process_memory.getBlockType(variant_pointer.getBlock());
-			if (block_type->getKind() == Type::Kind::Variant)
-				return block_type;
-			else
-				return block_type->getNonCompoundTypeAtOffsetRecursive(variant_pointer.getOffset())
-				    .value();
+			frame->local_stack_head -= type->getSize().asInt();
 		}
 
 		static
@@ -252,11 +239,16 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			void
-			setVariantType(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id) {
+			setVariantType(
+				VMThread& thread,
+				Pointer   variant_pointer,
+				TypeID    wanted_type_id,
+				TypeID    variant_type_id
+			) {
 
-			auto wanted_type = thread.executing_program->getTypes().at(wanted_type_id);
+			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
+			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
 
-			auto variant_type          = getVariantTypeFromPointer(thread, variant_pointer);
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block
@@ -275,10 +267,10 @@ namespace vm {
 				= thread.process_memory.getBlockViewUnsafe(variant_pointer.getBlock());
 			auto variant_data_view = base::ModRawView(
 				variant_block_data_view.getBegin() + variant_pointer.getOffset(),
-				variant_type->getSize()
+				variant_type->getSize().asInt()
 			);
 
-			switch (variant_type_tag_size) {
+			switch (variant_type_tag_size.asInt()) {
 			case 1:
 				// byte, using uint8_t below since byte is not std::integral
 				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
@@ -293,7 +285,7 @@ namespace vm {
 				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
 				break;
 			default:
-				CORE_PANIC("Invalid variant size: ", variant_type_tag_size);
+				CORE_PANIC("Invalid variant size: ", variant_type_tag_size.asInt());
 			}
 		}
 
@@ -302,8 +294,13 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			Pointer
-			getVariantPtr(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id) {
-			auto variant_type = getVariantTypeFromPointer(thread, variant_pointer);
+			getVariantPtr(
+				VMThread& thread,
+				Pointer   variant_pointer,
+				TypeID    wanted_type_id,
+				TypeID    variant_type_id
+			) {
+			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
 			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(

@@ -31,13 +31,13 @@ namespace compiler::backend_vm::internal {
 		DVMImmediate(i64 value);
 		DVMImmediate(i32 value);
 		DVMImmediate(u32 value);
+		DVMImmediate(char value);
 		DVMImmediate(bool value);
 		DVMImmediate(float value);
 		DVMImmediate(double value);
 
 		// All values are represented as u64, so e.g. a float is bit-casted to u64.
-		u64 value{};
-
+		u64  value{};
 		bool operator==(const DVMImmediate& other) const = default;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
@@ -86,5 +86,10 @@ namespace compiler::backend_vm::internal {
 
 		operator vm::opargs::OpCodeArg() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
+
+		template<class T>
+		[[nodiscard]] bool is() const {
+			return std::holds_alternative<T>(stored_value);
+		}
 	};
 }

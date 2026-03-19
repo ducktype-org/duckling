@@ -17,7 +17,9 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
+		explicit For(const LangParserState& state): CodeDecl(state) {
+			element_kind = ElementKind::For;
+		}
 
 		static MBox<For> parse(LangParserState& state);
 		void             dprint(std::ostream& out) const final;

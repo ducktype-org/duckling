@@ -186,29 +186,32 @@ namespace base {
 
 	/**
 	 * @brief Returns the name of the passed type `T`.
+	 * @note The type name may not be pretty, and may depend on the compiler and the library
+	 * implementation.
 	 *
+	 * @tparam T The type to get the name of
 	 * @note From https://stackoverflow.com/a/56766138
 	 */
-	template<class T, bool pretty = true>
+	template<class T>
 	constexpr auto typeName() {
 		std::string_view name, prefix, suffix;
+
 #ifdef __clang__
 		name   = __PRETTY_FUNCTION__;
 		prefix = "auto base::typeName() [T = ";
-		suffix = ", pretty = true]";
+		suffix = "]";
 #elif defined(__GNUC__)
 		name   = __PRETTY_FUNCTION__;
 		prefix = "constexpr auto base::typeName() [with T = ";
-		suffix = "; bool pretty = true]";
+		suffix = "]";
 #elif defined(_MSC_VER)
 		name   = __FUNCSIG__;
 		prefix = "auto __cdecl base::type_name<";
-		suffix = ",true>(void)";
+		suffix = ">(void)";
 #endif
-		if constexpr (pretty) {
-			name.remove_prefix(prefix.size());
-			name.remove_suffix(suffix.size());
-		}
+
+		name.remove_prefix(prefix.size());
+		name.remove_suffix(suffix.size());
 		return name;
 	}
 

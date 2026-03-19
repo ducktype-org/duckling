@@ -1,6 +1,7 @@
+//! Various (for us mostly unneeded) metadata of the root package.
 use crate::StrId;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Various package metadata.
 /// This is mostly useless information for us, but it may be useful for a user.
 pub struct PackageMetadata {
@@ -10,6 +11,7 @@ pub struct PackageMetadata {
 }
 
 impl PackageMetadata {
+    /// Create a new [`PackageMetadata`].
     pub fn new(authors: Vec<StrId>, license: Option<StrId>, description: Option<StrId>) -> Self {
         Self {
             authors,

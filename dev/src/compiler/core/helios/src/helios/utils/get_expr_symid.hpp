@@ -1,8 +1,7 @@
 #pragma once
 
-#include "../scope_symbol_id.hpp"
-
 #include <helios/hout/elements/expr.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
 

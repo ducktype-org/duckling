@@ -87,7 +87,9 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) }).has_value());
+	auto res = vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) });
+	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
+	ASSERT_TRUE(res.has_value());
 }
 
 #define EXPECT_VOID(action)                          \
@@ -106,10 +108,10 @@ auto VmTestSuite::runTestOnVmGetResult(
 
 	EXPECT_VOID(vm::api::join(pid));
 
-	if_opt_some(optional_output, output) {
+	if_opt_some(optional_output, wanted_output) {
 		auto program_output = vm::api::output(pid);
 		EXPECT_VOID(program_output);
-		ASSERT_EQUAL_PRINT(output, program_output->output);
+		ASSERT_EQUAL_PRINT(wanted_output, program_output->output);
 	}
 	const auto exit_value = vm::api::getExitValue(pid).transform([&](Ref<vm::VmValue> value) {
 		ASSERT_TRUE(value->type->getName().str() == "i64");
@@ -153,4 +155,43 @@ void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code)
 	const auto validation_result = vm::api::deinitAndValidate(test_result.pid);
 	ASSERT_TRUE(validation_result.has_value());
 	ASSERT_TRUE(validation_result.value());
+}
+
+void VmTestSuite::runFunctionSynchronouslyAsTest(
+	vm::PID                            pid,
+	const std::string&                 func_name,
+	const vm::FunctionRunArguments&    args,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const base::Optional<i64>          expected_exit_code
+) {
+	const auto run_result = vm::api::runFunctionAwait(pid, func_name, args);
+	ASSERT_TRUE(run_result.has_value());
+	ASSERT_TRUE(!vm::api::join(pid).has_value());
+
+	if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
+
+	if_opt_some(optional_output, output) {
+		auto output_response = vm::api::output(pid);
+		ASSERT_TRUE(output_response.has_value());
+		ASSERT_EQUAL(output, output_response->output);
+	}
+
+	auto exit_value = run_result.value();
+	if (expected_exit_code.has_value())
+		ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value->readBytes<i64>());
+	else
+		// @note: If expected_exit_code is an empty optional, it's expected that a called
+		// function is void.
+		ASSERT_TRUE(exit_value->type->getName() == base::StrID("void"));
+}
+
+auto VmTestSuite::runFunctionExpectPanic(
+	vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
+) -> TestResult {
+	auto run_result = vm::api::runFunction(pid, func_name, args);
+	if (!run_result.has_value())
+		return { .pid = pid, .run_result = std::unexpected(run_result.error()) };
+	auto join_result = vm::api::join(pid);
+	return { .pid = pid, .run_result = std::unexpected(join_result.error()) };
 }

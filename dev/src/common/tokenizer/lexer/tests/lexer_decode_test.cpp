@@ -18,8 +18,6 @@ class DecodeTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
-
 		TESTER_ADD_TEST(badContinuations);
 		TESTER_ADD_TEST(invalidFirstBytes);
 		TESTER_ADD_TEST(nonContinuation);
@@ -30,6 +28,9 @@ public:
 	}
 
 	~DecodeTest() override = default;
+
+protected:
+	void beforeAll() override { lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource); }
 
 private:
 	template<fs::Encoding encoding = fs::Encoding::UTF8>

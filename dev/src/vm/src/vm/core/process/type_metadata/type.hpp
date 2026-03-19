@@ -3,6 +3,7 @@
 #include "kinds.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -15,13 +16,9 @@
 namespace vm {
 	class TypeMetadata;
 
-	/// Size of type in bytes
-	// @TODO: change to strongly typed int
-	using TypeSize = u64;
-
 	class Type final {
 	public:
-		constexpr static TypeSize POINTER_SIZE = sizeof(Pointer);
+		constexpr static TypeSize POINTER_SIZE = Bytes(sizeof(Pointer));
 
 		enum class Kind {
 			None,
@@ -91,7 +88,7 @@ namespace vm {
 			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
 			base::Optional<InheritanceMetadata>                 inheritance_metadata
 		);
-		void defineVariant(const std::vector<TypeRef>& variants_definitions);
+		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
 		void defineOpaque(TypeSize size);
 
@@ -137,17 +134,6 @@ namespace vm {
 		 */
 		base::Optional<TypeCRef> getInnerType() const;
 
-		/**
-		 * @brief Find what type is located at offset.
-		 * Useful when we have a pointer and we want to know what type it points to.
-		 * @note It cannot be used to locate certain types, e.g. fixed_size_table, dynamic_table,
-		 * data types, as it always steps into those types recursively.
-		 * @note Offset has to precisely match the nested type's position at the end of the
-		 * recursion.
-		 * @TODO: #1369 Remove this method
-		 */
-		base::Optional<TypeCRef> getNonCompoundTypeAtOffsetRecursive(Offset offset) const;
-
 		bool isTriviallyCopyable() const;
 
 		// data
@@ -157,7 +143,7 @@ namespace vm {
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 
 		// variant
-		base::Optional<usize>                 getTypeTagSizeBytes() const;
+		base::Optional<Bytes>                 getTypeTagSizeBytes() const;
 		base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
 
 
@@ -175,7 +161,7 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<u64> getParameterCount() const;
 		[[nodiscard]]
-		base::Optional<u64> getParametersSize() const;
+		base::Optional<Bytes> getParametersSize() const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
 		[[nodiscard]]

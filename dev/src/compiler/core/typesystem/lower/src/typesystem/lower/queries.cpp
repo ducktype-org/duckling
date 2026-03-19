@@ -1,6 +1,6 @@
 #include "queries.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsl {
 	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, TypeLayout) {
@@ -31,6 +31,8 @@ namespace compiler::tsl {
 				return FunctionalTypeLayout(key);
 			case DynamicArray:
 				return DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
+			case StaticArray:
+				return StaticArrayTypeLayout(tsh::StaticArrayAbstractType(key), ctx);
 			case Variant:
 				return VariantTypeLayout(key, ctx);
 			case Tuple:

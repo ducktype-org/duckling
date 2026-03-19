@@ -28,7 +28,15 @@ namespace pst {
 		AccessLocked<T> element;
 
 		[[nodiscard]]
-		base::Bit256 queryStablePerfectHash() const {
+		base::Bit256 queryUnstablePerfectHash() const {
+			// Note: this hash is also stable if someone needs it.
+			if (element.illegalAccess().empty()) {
+				// nullptr element, i.e. element that failed to parse.
+				// We can return any constant here,
+				// hash will still be collision resistant, and we don't provide any
+				// bits of input by this key.
+				return base::Bit256{ 0 };
+			}
 			return element.illegalAccess().value()->getHash();
 		}
 	};

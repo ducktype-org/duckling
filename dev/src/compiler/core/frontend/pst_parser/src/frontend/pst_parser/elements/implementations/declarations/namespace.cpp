@@ -5,16 +5,16 @@
 
 namespace pst {
 	MBox<Namespace> Namespace::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Namespace>(position);
+		auto out = makeBox<Namespace>(state);
 
 		if (!assertStmtChoice<Namespace>(state, state[0].is(Keyword::Namespace))) return nullptr;
 
-		state.parse(out)
-			.all(Keyword::Namespace, &out->name)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Unordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Unordered);
+			PARSE().all(Keyword::Namespace, &out->name, &out->body);
+		})
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Namespace::dprint(std::ostream& out) const {
@@ -30,7 +30,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Namespace::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Namespace::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		return partial_hash;
 	}

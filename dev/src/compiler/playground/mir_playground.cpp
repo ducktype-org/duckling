@@ -1,16 +1,18 @@
 #include <frontend/module_tree/module_tree.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 
 void printContextErrors() {
-	if (query::Context::logger.messageCount() > 0) {
+	auto logger = query::Context::dumpToOneLoggerAndClear();
+	if (logger->messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::logger.dumpLog(true, std::cerr);
+		logger->dumpLog(true, std::cerr);
 	}
 }
 
@@ -44,7 +46,7 @@ int notMain(int argc, const char* const* argv) {
 
 	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
-	auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root).valueOrPanic();
+	const auto& top_level = query::entryPoint<helios::QueryModuleHOUT>(root)->valueOrPanic();
 
 	for (auto& glob_data: top_level.glob_data) {
 		if (std::holds_alternative<helios::HOUTGlobalConst>(glob_data.value)) continue;

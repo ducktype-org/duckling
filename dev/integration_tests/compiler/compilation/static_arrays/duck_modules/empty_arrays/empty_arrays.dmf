@@ -1,0 +1,28 @@
+fun accept_unit_array(arr: ()[10]) -> () = {
+    let x = arr[2];
+    builtin_output_i64(111);
+}
+
+fun accept_empty_array(arr: i32[0]) -> () = {
+    builtin_output_i64(222);
+}
+
+
+fun return_empty_array() -> i32[0] = {
+    var tmp: i32[0];
+    return tmp;
+}
+
+fun main() -> i64 = {
+    var units: ()[10];
+    units[0] = ();
+    units[9] = units[0];
+    accept_unit_array(units);
+
+    var empty: i32[0];
+    var empty2 = return_empty_array();
+    accept_empty_array(empty);
+    builtin_output_i64(333);
+
+    return 0;
+}

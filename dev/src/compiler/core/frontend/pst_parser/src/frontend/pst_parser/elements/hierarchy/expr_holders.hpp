@@ -13,6 +13,8 @@
 namespace pst {
 	/**
 	 * @brief Class that keeps an expression with information whether it's a top-level expression.
+	 *
+	 * It's intended to be the only holder that is visible to further stages of compilation.
 	 */
 	class ExprHolder: public NotStmt {
 	protected:
@@ -22,7 +24,7 @@ namespace pst {
 		);
 
 	public:
-		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
+		explicit ExprHolder(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::ExprHolder;
 		}
 
@@ -78,8 +80,7 @@ namespace pst {
 		using ExprHolder::ExprHolder;
 
 		static MBox<Self> parse(LangParserState& state) {
-			auto position = internal::getPosition(state);
-			auto out      = makeBox<Self>(position);
+			auto out = makeBox<Self>(state);
 
 			auto length = internal::getTokenStream(state).countUntil<until>();
 			internal::parseExprIntoHolder(state, out.refMut(), parseFun, length);

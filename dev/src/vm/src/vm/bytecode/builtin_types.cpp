@@ -43,14 +43,15 @@ namespace vm::code {
 			  TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))) },
 			{ base::StrID("opaque_ptr"), TypeOfData(OpaqueType(base::StrID("opaque_ptr"), 8)) },
 			{ base::StrID("VTablePtr"), SpecialTypes::get().vtable_ptr },
+			{ base::StrID("mutex"), TypeOfData(OpaqueType(base::StrID("mutex"), 8)) },
 		};
 		return types;
 	}
 
-	TypeContext getBuiltinTypes() {
-		TypeContext type_context;
-		for (const auto& tp: rawBuiltins() | std::views::values) type_context.insertType(tp);
-		return type_context;
+	const std::vector<TypeOfData>& getBuiltinTypes() {
+		static const std::vector<TypeOfData> types
+			= [] { return rawBuiltins() | std::views::values | std::ranges::to<std::vector>(); }();
+		return types;
 	}
 
 	base::Optional<TypeOfData> getBuiltinTypeByName(base::StrID type_name) {

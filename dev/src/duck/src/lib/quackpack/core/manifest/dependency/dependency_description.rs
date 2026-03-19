@@ -1,10 +1,11 @@
+//! Essential data for identifying a dependency.
 use crate::QuackResult;
 use crate::StrId;
 use crate::qp_bail;
 use crate::quackpack::core::InternedSource;
 use crate::quackpack::core::Version;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Description of a crucial elements of a dependency.
 /// Note, that since we allow aliases, `manifest_name` may be an alias specified in the manifest.
 /// Real (unaliased) name is in `dependency.real_name`.
@@ -15,7 +16,7 @@ pub struct DependencyDescription {
 }
 
 impl DependencyDescription {
-    /// Create a new `DependencyDescription`.
+    /// Create a new [`DependencyDescription`].
     pub fn new(
         manifest_name: StrId,
         versions: Vec<Version>,
@@ -46,7 +47,7 @@ impl DependencyDescription {
         self.source
     }
 
-    /// Destroy this description into inner parts
+    /// Destroy this description into inner parts.
     pub fn decompose(self) -> (StrId, Vec<Version>, InternedSource) {
         let Self {
             manifest_name,

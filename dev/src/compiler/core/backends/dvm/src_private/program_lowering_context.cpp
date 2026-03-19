@@ -3,6 +3,7 @@
 #include "function_lowering_context.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
+#include <typesystem/lower/type_layout.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -160,8 +161,34 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 		variant_case_novalue(tsl::MetaTypeLayout) {
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
 		}
+		variant_case_novalue(tsl::PointerTypeLayout) {
+			CORE_ASSERT(
+				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
+			);
+			query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				base::strConcat(
+					"DVM backend does not yet support pointer types. Offending type "
+					"layout: ",
+					layout->toStringDefinition(*query_ctx_for_errors.value()),
+					". This usually means you used a pointer in compile time."
+				),
+				base::Optional<dia::SourcePosition>()
+			));
+			query::throwFailed();
+		}
 		variant_default {
-			CORE_PANIC(base::strConcat("Type not handled yet: ", layout->toStringIdentification()));
+			CORE_ASSERT(
+				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
+			);
+			query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				base::strConcat(
+					"During TypeLayout lowering in DVM code generation - type not handled "
+					"yet: ",
+					layout->toStringDefinition(*query_ctx_for_errors.value())
+				),
+				base::Optional<dia::SourcePosition>()
+			));
+			query::throwFailed();
 		}
 	}
 	CORE_UNREACHABLE();

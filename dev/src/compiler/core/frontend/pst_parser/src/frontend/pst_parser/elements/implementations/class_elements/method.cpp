@@ -1,25 +1,23 @@
 #include "../../hierarchy/class_elements/method.hpp"
 
-#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Method> Method::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Method>(position, ctx);
-
-		out->parseSpecifiers(state);
+	MBox<Method> Method::parse(LangParserState& state) {
+		auto out = makeBox<Method>(state);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
-		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
-		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
+		PARSE().all(Keyword::Fun, &out->name, &out->params);
+		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 
-		state.parse(out)
-			.one(NamedOperator::Assign)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().all(NamedOperator::Assign, &out->body);
+		})
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Method::dprint(std::ostream& out) const {
@@ -38,7 +36,11 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Method::addElementDataToStableHash(HashAlg& partial_hash) const {
+	base::Optional<AccessLocked<ExprHolder>> Method::getRet() const {
+		return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
+	}
+
+	HashAlg& Method::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, ret.has_value());
 		return partial_hash;

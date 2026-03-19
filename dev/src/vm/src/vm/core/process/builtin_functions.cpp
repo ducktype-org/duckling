@@ -4,6 +4,7 @@
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 
+#include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -22,7 +23,9 @@ namespace vm::builtins {
 				return {};
 			} else {
 				auto value = function(thread, args[Is]->template readBytes<FunArgs>()...);
-				CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
+				CORE_ASSERT(
+					sizeof(value) == vm_return_type->getSize().asInt(), "Type sizes do not match"
+				);
 
 				auto vm_value = process.createOwnedVmValue(vm_return_type);
 
@@ -99,6 +102,37 @@ namespace vm::builtins {
 		return std::stoll(str_data);
 	}
 
+	i64 FunctionHandlers::builtinStartThread(VMThread& thread) {
+		return i64{ vm::api::runFunction(thread.process.getPID(), thread.getThreadCtx()).value() };
+	}
+
+	void FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
+		thread.releaseGil();
+		vm::api::join(thread.process.getPID(), api::ThreadID{ thread_id });
+		thread.keepOrAcquireGil();
+	}
+
+	u64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
+		usize mutex_id = thread.process.getSynchronizationPrimitives().addMutex();
+		return mutex_id;
+	}
+
+	void FunctionHandlers::builtinLockMutex(VMThread& thread, u64 mutex_id) {
+		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
+		thread.releaseGil();
+		mutex->lock();
+		thread.keepOrAcquireGil();
+	}
+
+	void FunctionHandlers::builtinUnlockMutex(VMThread& thread, u64 mutex_id) {
+		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
+		mutex->unlock();
+	}
+
+	void FunctionHandlers::builtinDestroyMutex(VMThread& thread, u64 mutex_id) {
+		thread.process.getSynchronizationPrimitives().removeMutex(mutex_id);
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
@@ -114,7 +148,20 @@ namespace vm::builtins {
 		);                                                                              \
 	}
 
-			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi)
+			FOR_EACH(
+				CASE_FUNC,
+				InputI64,
+				OutputI64,
+				OutputString,
+				Stoi,
+				StartThread,
+				JoinThread,
+				CreateMutex,
+				LockMutex,
+				UnlockMutex,
+				DestroyMutex
+			)
+
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
@@ -137,7 +184,7 @@ namespace vm::builtins {
 			     {
 					 BuiltinFunctionID::OutputString,
 					 { base::StrID("builtin_strOutput_lptr"),
-			           code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }) },
+			           code::FuncSignature(base::StrID("void"), { base::StrID("ptr_string") }) },
 				 },
 			     {
 					 BuiltinFunctionID::Stoi,
@@ -145,7 +192,30 @@ namespace vm::builtins {
 						 base::StrID("builtin_stoi_lptr"),
 						 code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }),
 					 },
-				 } };
+				 },
+			     {
+					 BuiltinFunctionID::StartThread,
+					 { base::StrID("builtin_start_thread"),
+			           code::FuncSignature(base::StrID("i64"), {}) },
+				 },
+			     {
+					 BuiltinFunctionID::JoinThread,
+					 { base::StrID("builtin_join_thread"),
+			           code::FuncSignature(base::StrID("void"), { base::StrID("i64") }) },
+				 },
+			     { BuiltinFunctionID::CreateMutex,
+			       { base::StrID("builtin_create_mutex"),
+			         code::FuncSignature(base::StrID("mutex"), {}) } },
+			     { BuiltinFunctionID::LockMutex,
+			       { base::StrID("builtin_lock_mutex"),
+			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } },
+			     { BuiltinFunctionID::UnlockMutex,
+			       { base::StrID("builtin_unlock_mutex"),
+			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } },
+			     { BuiltinFunctionID::DestroyMutex,
+			       { base::StrID("builtin_destroy_mutex"),
+			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } } };
+
 
 		return &map;
 	}

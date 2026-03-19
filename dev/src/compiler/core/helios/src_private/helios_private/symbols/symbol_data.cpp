@@ -1,8 +1,13 @@
 #include "symbol_data.hpp"
 
+#include <helios/scope_id.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include <base/except/exceptions.hpp>
 
 namespace compiler::helios {
 	namespace houtgen {
@@ -10,21 +15,44 @@ namespace compiler::helios {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
+			return { operator_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::Parameter::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), parameter_index };
+		}
+
+		base::Bit256 GeneratedSymbolData::SelfParameter::queryUnstablePerfectHash() const {
+			return { method_symbol.queryUnstablePerfectHash(), scope.queryUnstablePerfectHash() };
 		}
 
 		base::Bit256 GeneratedSymbolData::Variable::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
 		}
 
-		GeneratedSymbolData::GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, Variable>& data
-		):
+		// @TODO: #1807 Refactor the code so that it's impossible to create
+		// two symbols with the same counter but different return types.
+		base::Bit256 GeneratedSymbolData::ReplExpressionWrapper::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(return_type, counter);
+		}
+
+		base::Bit256 GeneratedSymbolData::ReplInstructionWrapper::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(counter);
+		}
+
+		GeneratedSymbolData::GeneratedSymbolData(const std::variant<
+												 ImplicitConstructor,
+												 BuiltinOperator,
+												 Parameter,
+												 SelfParameter,
+												 Variable,
+												 ReplExpressionWrapper,
+												 ReplInstructionWrapper>& data):
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256, void>(
+			return hashing::justHash<hashing::SHA256>(
 				data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
 			);
 		}
@@ -60,19 +88,101 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(BuiltinOperator, op) {
+					return tsh::SymbolType<>{
+						op.operator_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 				variant_case(Parameter, param) {
 					const auto function_type
 						= ctx.query<QueryTypeOfSymbol>({ param.function_symbol })
 					          ->valueOrThrow()
 					          .getType()
 					          .as<tsh::FunctionAbstractType>();
-					return tsh::SymbolType{
-						function_type.getParameterTypes().at(param.parameter_index).getType(),
+					auto param_symbol_type
+						= function_type.getParameterTypes().at(param.parameter_index);
+					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
+				}
+				variant_case(SelfParameter, param) {
+					const auto class_type
+						= ctx.query<QueryClassOfMember>(param.method_symbol)->valueOrThrow();
+					auto param_symbol_type = tsh::SymbolType{
+						class_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+					return param_symbol_type;
+				}
+				variant_case(Variable, var) { return var.type; }
+				variant_case(ReplExpressionWrapper, repl) {
+					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						{},
+						repl.return_type,
+					});
+					return tsh::SymbolType<>{
+						function_abstract_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(Variable, var) { return var.type; }
+				variant_case(ReplInstructionWrapper, repl) {
+					// Unit (not Void) is the correct return type for procedures.
+					// Per the language spec: "void ... cannot be returned from a function".
+					const auto void_type = tsh::SymbolType<>{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+					const auto function_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ {}, void_type });
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		ScopeID GeneratedSymbolData::getScope() const {
+			variant_match(data) {
+				variant_case(ImplicitConstructor, ctor) {
+					CORE_PANIC("Can't get scope of implicit constructor yet.");
+				}
+				variant_case(BuiltinOperator, op) {
+					CORE_PANIC("Can't get scope of builtin operator yet.");
+				}
+				variant_case(Parameter, param) {
+					CORE_PANIC("Can't get scope of generated parameter yet.");
+				}
+				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(Variable, var) {
+					CORE_PANIC("Can't get scope of generated variable yet.");
+				}
+				variant_case(ReplExpressionWrapper, repl) {
+					CORE_PANIC("Can't get scope of repl expr wrapper yet.");
+				}
+				variant_case(ReplInstructionWrapper, repl) {
+					CORE_PANIC("Can't get scope of repl instruction wrapper yet.");
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		[[nodiscard]]
+		base::Optional<ScopeID> GeneratedSymbolData::maybeScope() const {
+			variant_match(data) {
+				variant_case(ImplicitConstructor, ctor) { return {}; }
+				variant_case(BuiltinOperator, op) { return {}; }
+				variant_case(Parameter, param) { return {}; }
+				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(Variable, var) { return {}; }
+				variant_case(ReplExpressionWrapper, repl) { return {}; }
+				variant_case(ReplInstructionWrapper, repl) { return {}; }
+				variant_default { CORE_PANIC("Unhandled symbol kind"); }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -107,11 +217,23 @@ namespace compiler::helios {
 			variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
 				kind = SymbolKind::Function;
 			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+				kind = SymbolKind::Function;
+			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Parameter) {
+				kind = SymbolKind::Parameter;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::SelfParameter) {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
 				kind = SymbolKind::Variable;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper) {
+				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::ReplInstructionWrapper) {
+				kind = SymbolKind::Function;
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

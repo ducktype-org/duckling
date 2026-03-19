@@ -1,16 +1,17 @@
+//! Managing all dependencies of the root package.
 use std::collections::HashMap;
 
 use crate::QuackError;
 use crate::quackpack::schemas::registry;
 use crate::{StrId, quackpack::core::Dependency};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Map of all of the dependencies.
 /// Note that it has invariant, that `self.get(name).source().manifest_name() == name`
 pub struct Dependencies(HashMap<StrId, Dependency>);
 
 impl Dependencies {
-    /// Create a new dependencies map.
+    /// Create a new [`Dependencies`].
     pub fn new(dependencies: HashMap<StrId, Dependency>) -> Self {
         Self(dependencies)
     }
@@ -28,6 +29,11 @@ impl Dependencies {
     /// Get an iterator over all dependencies.
     pub fn all_dependencies(&self) -> &HashMap<StrId, Dependency> {
         &self.0
+    }
+
+    /// Get a mutable iterator over all dependencies.
+    pub fn all_dependencies_mut(&mut self) -> &mut HashMap<StrId, Dependency> {
+        &mut self.0
     }
 }
 

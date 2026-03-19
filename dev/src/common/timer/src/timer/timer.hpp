@@ -2,6 +2,7 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <atomic>
 #include <chrono>
 
 namespace timer {
@@ -25,9 +26,42 @@ namespace timer {
 		static Duration zero() { return Duration{}; }
 
 		[[nodiscard]]
+		i64 toNanoseconds() const;
+
+		[[nodiscard]]
 		constexpr auto count() const {
 			return value.count();
 		}
+	};
+
+	/**
+	 * Atomic variant of Duration, for use in concurrent scenarios.
+	 *
+	 * All operations on AtomicDuration are thread-safe.
+	 * They use relaxed memory order, as we don't require strong ordering guarantees for time
+	 * statistics collection.
+	 */
+	class AtomicDuration final {
+		std::atomic<i64> nanoseconds{ 0 };
+
+	public:
+		AtomicDuration() = default;
+
+		/**
+		 * Construct AtomicDuration from a Duration.
+		 */
+		AtomicDuration(const Duration& duration);
+
+		/**
+		 * Convert AtomicDuration to a Duration.
+		 */
+		[[nodiscard]]
+		Duration toDuration() const;
+
+		/**
+		 * Add a Duration to this AtomicDuration.
+		 */
+		void add(const Duration& duration);
 	};
 
 	enum class TimeUnit { Nanoseconds, Microseconds, Milliseconds, Seconds };
@@ -65,6 +99,25 @@ namespace timer {
 		 * Pointer to the duration to which the time will be added.
 		 */
 		Ref<Duration> to_add;
+
+		TimeStamp start;
+	};
+
+	/**
+	 * RAII-like object to add time to a given AtomicDuration variable.
+	 * Measures time from construction to destruction and adds it to the given AtomicDuration
+	 * reference.
+	 */
+	struct AddToTimeAtomic final {
+		AddToTimeAtomic(Ref<AtomicDuration> to_add): to_add(to_add), start(timer::now()) {}
+
+		~AddToTimeAtomic() { to_add->add(timer::duration(start, timer::now())); }
+
+	private:
+		/**
+		 * Pointer to the duration to which the time will be added.
+		 */
+		Ref<AtomicDuration> to_add;
 
 		TimeStamp start;
 	};

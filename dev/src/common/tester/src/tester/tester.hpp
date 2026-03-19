@@ -28,22 +28,22 @@
 		)                                                                                 \
 	)
 
-#define ASSERT_EQUAL_PRINT(expected, actual)   \
-	assertEqual(                               \
-		expected,                              \
-		actual,                                \
-		base::strConcat(                       \
-			"Values not equal:\n\t\tIn line ", \
-			__LINE__,                          \
-			":\n\t\t\t",                       \
-			#expected,                         \
-			" != ",                            \
-			#actual,                           \
-			"\n\t\t\t",                        \
-			expected,                          \
-			" != ",                            \
-			actual                             \
-		)                                      \
+#define ASSERT_EQUAL_PRINT(expected, actual)               \
+	assertEqual(                                           \
+		expected,                                          \
+		actual,                                            \
+		base::strConcat(                                   \
+			"Values not equal:\n\t\tIn line ",             \
+			__LINE__,                                      \
+			":\n\t\t\t",                                   \
+			#expected,                                     \
+			" != ",                                        \
+			#actual,                                       \
+			"\n\t\t\t",                                    \
+			base::escapeString(base::strConcat(expected)), \
+			" != ",                                        \
+			base::escapeString(base::strConcat(actual))    \
+		)                                                  \
 	)
 
 
@@ -68,9 +68,21 @@ namespace tester {
 	protected:
 		using TestType = void (TestSuite::*)();
 
+		/**
+		 * Method called once just before running the first test in a suite.
+		 */
+		virtual void beforeAll() {}
+
+		/**
+		 * Method called once just after running the last test in a suite.
+		 */
+		virtual void afterAll() {}
+
 	private:
 		class CritTestError final: public std::exception {
 		public:
+			CritTestError(std::string_view message = "Critical test failure.");
+
 			[[nodiscard]]
 			const char* what() const noexcept final;
 		};
@@ -128,10 +140,10 @@ namespace tester {
 		TestSuite(TestConfig&& config, std::string_view name);
 		void addTest(TestType test, std::string_view test_name, bool should_fail);
 
-		void assertTrue(bool v, std::string_view err, bool critical = true);
-		void assertFalse(bool v, std::string_view err, bool critical = true);
-		void fail(std::string_view err);
-		void message(std::string_view mess);
+		void         assertTrue(bool v, std::string_view err, bool critical = true);
+		void         assertFalse(bool v, std::string_view err, bool critical = true);
+		virtual void fail(std::string_view err, bool critical = true);
+		void         message(std::string_view mess);
 
 		template<typename Exception, typename FuncType>
 		void assertThrows(const FuncType& func, std::string_view error) {

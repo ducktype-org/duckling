@@ -7,7 +7,8 @@ namespace pst {
 		return ListParsingTemplate::parseList<
 			UniversalExprHolder,
 			AtrArgList,
-			false,
+			false,  // empty list allowed
+			true,   // trailing separator allowed
 			lexer::Token::BracketType::Round,
 			internal::Conditions::isComma,
 			internal::Conditions::isSentinel,

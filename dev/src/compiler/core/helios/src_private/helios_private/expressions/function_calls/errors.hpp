@@ -7,10 +7,10 @@
 
 #include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
-#include <helios/scope_symbol_id.hpp>
+#include <helios/hout/origin.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 
 namespace compiler::helios::code {
@@ -97,29 +97,19 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Creates a call error message based on the provided failure reason.
 	 * @param ctx The query context.
-	 * @param call_expr The PST call expression.
+	 * @param whole_call_origin The ElementOrigin of the entire call expression.
+	 * @param arguments_origin The ElementOrigins of all arguments of the call expression.
 	 * @param failure_reason The reason for the call failure.
 	 * @param is_for_candidate_function Whether the message is for a candidate function
 	 * (used in ambiguous matches) or for the main call error.
 	 * @return A detailed error message describing the call failure.
 	 */
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&              ctx,
-		pst::Access<pst::expr::Call> call_expr,
-		const CallFailure&           failure_reason,
-		bool                         is_for_candidate_function
-	);
-
-	pst::Access<pst::ParamList> getFunctionParamList(
-		query::Context& ctx, pst::Access<pst::LangElement> function_decl
-	);
-
-	pst::Access<pst::LangElement> getNthCallArgument(
-		query::Context& ctx, pst::Access<pst::expr::Call> call_expr, usize argument_index
-	);
-
-	pst::Access<pst::LangElement> getNthDeclarationParameter(
-		query::Context& ctx, pst::Access<pst::LangElement> function_decl, usize parameter_index
+		query::Context&            ctx,
+		ElementOrigin              whole_call_origin,
+		std::vector<ElementOrigin> arguments_origin,
+		const CallFailure&         failure_reason,
+		bool                       is_for_candidate_function
 	);
 
 	class CoercibleCandidateCoercionPointerMessage final: public dia_int::MessageBase {
@@ -176,6 +166,19 @@ namespace compiler::helios::code {
 
 	public:
 		FailedCandidateNote(dia::SourcePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class NoCandidatesFoundError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "no_candidates_found" };
+		}
+
+	public:
+		NoCandidatesFoundError(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

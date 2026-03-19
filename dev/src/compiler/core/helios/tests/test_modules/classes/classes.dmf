@@ -24,8 +24,8 @@ class FirstClassEver {
 
 class SecondClass extends FirstClassEver {}
 
-let a: FirstClassEver = FirstClassEver(1, f32(2.0));
-let b = a;
+let first_class_ever: FirstClassEver = FirstClassEver(1, f32(2.0));
+let first_class_ever_copy = first_class_ever;
 
 class ClassWithMember {
     member: FirstClassEver = FirstClassEver(3, 4.0);

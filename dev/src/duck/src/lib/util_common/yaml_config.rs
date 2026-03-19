@@ -1,8 +1,8 @@
+//! Implementation of traversing YAML documents, and getting/setting values at dotted keys.
 // We have to add it, because saphyr (YAML library) exposes this type explicitly,
 // so we have to pull it in order to use it.
 use ordered_float::OrderedFloat;
 use paste::item;
-use rustvil::fs::PathExt;
 use saphyr::{
     LoadableYamlNode, Mapping, MappingOwned, Scalar, ScalarOwned, SequenceOwned, Yaml, YamlEmitter,
     YamlOwned,
@@ -16,6 +16,7 @@ use tracing::debug;
 
 use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
+    util_common::path_ops_ext::PathOpsExt,
 };
 
 use super::DescriptionWithAnArticle;
@@ -43,8 +44,9 @@ impl DescriptionWithAnArticle for YamlOwned {
         Yaml::from(self).desc_with_article()
     }
 }
-
+/// Helper trait for creating [`YamlOwned`] from different types.
 trait ToYamlOwned {
+    /// Convert `self` into an instance of [`YamlOwned`].
     fn to_owned_yaml(&self) -> YamlOwned;
 }
 
@@ -62,6 +64,7 @@ macro_rules! delegate_getter {
     ) => {
         item! {
             $(
+                #[doc = concat!("Get [`", stringify!($ret), "`] at the dotted key.")]
                 pub fn [<get_ $name>](&self, key: &str) -> QuackResult<Option<$ret>> {
                     let value = self.get(key)?;
                     let Some(value) = value else {
@@ -87,6 +90,7 @@ macro_rules! delegate_setter {
     ) => {
         item! {
             $(
+                #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
                 pub fn [<set_ $name>](&mut self, key: &str, value: $value) -> QuackResult<()> {
                     let value = YamlOwned::$yaml_value_enum(value);
                     self.set(key, value)
@@ -104,6 +108,7 @@ macro_rules! delegate_scalar_setter {
     ) => {
         item! {
             $(
+                #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
                 pub fn [<set_ $name>](&mut self, key: &str, value: $value) -> QuackResult<()> {
                     let value = YamlOwned::Value(ScalarOwned::$yaml_value_enum(value));
                     self.set(key, value)
@@ -114,17 +119,19 @@ macro_rules! delegate_scalar_setter {
 }
 
 #[derive(Default, Debug)]
+/// YAML config manager.
 pub struct YamlConfig {
     content: MappingOwned,
     source: Option<PathBuf>,
 }
 
 impl YamlConfig {
+    /// Create a new [`YamlConfig`] from the TOML file at `path`.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
         debug!("parsing YAML config at `{}`", path.display());
         let content = match path.as_path().read_to_string() {
             Ok(string) => string,
-            Err(e) if matches!(e.kind(), ErrorKind::NotFound) => {
+            Err(e) if matches!(e.source().kind(), ErrorKind::NotFound) => {
                 debug!(
                     "there is no config at `{}`, falling back to defaults...",
                     path.display()
@@ -178,6 +185,7 @@ impl YamlConfig {
     }
 
     #[track_caller]
+    /// Get the value from the dotted key.
     fn _get(&self, key: &str) -> QuackResult<Option<&YamlOwned>> {
         debug!(
             "getting the key `{key}` from config at `{}`",
@@ -219,11 +227,13 @@ impl YamlConfig {
         Ok(current.get(&last.to_owned_yaml()))
     }
 
+    /// Convenient wrapper around [`_get`](Self::_get).
     fn get(&self, key: &str) -> QuackResult<Option<&YamlOwned>> {
         self._get(key).with_context(|| self.make_location_error())
     }
 
     #[track_caller]
+    /// Set the value at the dotted key.
     fn _set(&mut self, key: &str, value: YamlOwned) -> QuackResult<()> {
         if key.is_empty() {
             qp_bail_internal!("empty key")
@@ -258,11 +268,13 @@ impl YamlConfig {
         Ok(())
     }
 
+    /// Convenient wrapper around [`_set`](Self::_set).
     fn set(&mut self, key: &str, value: YamlOwned) -> QuackResult<()> {
         self._set(key, value)
             .with_context(|| self.make_location_error())
     }
 
+    /// Make an error message, if i-th part of the key is empty (there are two consecutive dots).
     fn make_empty_key_fragment_error(mut i: usize, key: &str) -> QuackError {
         i += 1;
         let last_two = i % 100;
@@ -298,20 +310,24 @@ impl YamlConfig {
     }
 
     // We set this one manually, because YAML API is awful.
+    /// Get [`f64`] at the dotted key
     pub fn set_float(&mut self, key: &str, value: f64) -> QuackResult<()> {
         let value = YamlOwned::Value(ScalarOwned::FloatingPoint(OrderedFloat(value)));
         self.set(key, value)
     }
 
+    /// Get the root [`MappingOwned`] for this config.
     pub fn get_root_table(&self) -> &MappingOwned {
         &self.content
     }
 
+    /// Get [`Path`] for the dotted key.
     pub fn get_path(&self, key: &str) -> QuackResult<Option<&Path>> {
         let path = self.get_str(key)?;
         Ok(path.map(Path::new))
     }
 
+    /// Set [`Path`] at the dotted key.
     pub fn set_path(&mut self, key: &str, value: &Path) -> QuackResult<()> {
         self.set_str(key, value.display().to_string())
     }

@@ -1,7 +1,7 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -9,8 +9,8 @@
 
 #include <base/str/str_utils.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -46,7 +46,7 @@ private:
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			backend_vm::Module m(moduleName(module));
+			backend_vm::DVMCodeBuilder m(ctx);
 
 			for (auto& hout_glob: top_level.glob_data) {
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);

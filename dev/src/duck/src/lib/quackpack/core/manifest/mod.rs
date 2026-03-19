@@ -4,26 +4,26 @@
 //! [`DependencyDescription`] and [`RootDescription`].
 //!
 //! Parsing is implemented in the [`parse`] module.
-mod compiler_options;
 mod dependency;
 mod features;
 mod metadata;
 mod parse;
+mod profiles;
 mod root_description;
 mod source;
 
 pub use parse::*;
 
-pub use compiler_options::*;
 pub use dependency::*;
 pub use features::*;
 pub use metadata::*;
+pub use profiles::*;
 pub use root_description::*;
 pub use source::*;
 
 use crate::{QuackError, quackpack::schemas::registry};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
 pub struct Manifest {
     root_description: RootDescription,
@@ -35,7 +35,7 @@ pub struct Manifest {
 }
 
 impl Manifest {
-    /// Create a new manifest.
+    /// Create a new [`Manifest`].
     pub fn new(
         root_description: RootDescription,
         features: Features,
@@ -72,6 +72,11 @@ impl Manifest {
     /// Get the dependencies.
     pub fn dependencies(&self) -> &Dependencies {
         &self.dependencies
+    }
+
+    /// Get mutable access to the dependencies.
+    pub fn dependencies_mut(&mut self) -> &mut Dependencies {
+        &mut self.dependencies
     }
 
     /// Get the development dependencies.

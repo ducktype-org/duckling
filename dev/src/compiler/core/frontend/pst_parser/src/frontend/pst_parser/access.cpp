@@ -4,8 +4,8 @@
 
 #include <diagnostic_interactive/placeholder.hpp>
 
+#include <query_framework/input_query/query_input_impl.hpp>
 #include <query_framework/query_errors.hpp>
-#include <query_framework/query_input_impl.hpp>
 
 namespace pst::internal {
 
@@ -19,7 +19,7 @@ namespace pst::internal {
 		ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
 			"PST Accessed a nullptr LangElement.",
 			"To check the location of the bad access, enable "
-			" query dev logs."
+			"query dev logs."
 		));
 		query::throwFailed();
 	}

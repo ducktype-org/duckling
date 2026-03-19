@@ -2,21 +2,20 @@
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
-#include <frontend/pst_parser/element_kind.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios::code {
 	using namespace dia_int;
@@ -105,19 +104,15 @@ namespace compiler::helios::code {
 
 	public:
 		CallMissingArgumentError(
-			dia::SourcePosition         call_source_position,
-			dia::SourcePosition         declaration_source_position,
-			base::Optional<std::string> function_name
+			dia::SourcePosition                 call_position,
+			base::Optional<dia::SourcePosition> missing_arg_position_opt
 		):
-			  MessageWithCodeFragmentAndCause(declaration_source_position) {
-			addArgument<CodeArgument>("call_code", call_source_position);
-			addArgument<CodeLocationArgument>("call_code_location", call_source_position);
-			addPointerMessage({ "call_cause", call_source_position });
-
-			if (function_name.has_value())
-				addArgument<dia_int::TextArgument>(
-					"function_name", std::move(function_name.value())
-				);
+			  MessageWithCodeFragmentAndCause(call_position) {
+			if_opt_some(missing_arg_position_opt, missing_arg_position) {
+				addArgument<CodeArgument>("missing_arg_code", missing_arg_position);
+				addArgument<CodeLocationArgument>("missing_arg_code_location", missing_arg_position);
+				addPointerMessage({ "missing_arg", missing_arg_position });
+			}
 		}
 	};
 
@@ -164,66 +159,20 @@ namespace compiler::helios::code {
 		}
 	};
 
-	// all the other classes
-
-	// all other notes
-
-	pst::Access<pst::ParamList> getFunctionParamList(
-		query::Context& ctx, pst::Access<pst::LangElement> function_decl
-	) {
-		switch (function_decl->getElementKind()) {
-		case pst::ElementKind::Fun: {
-			auto fun = function_decl.dynamicCast<pst::Fun>().value();
-			return fun->getParams().unlock(ctx);
-		}
-		case pst::ElementKind::FunDecl: {
-			auto fun_decl = function_decl.dynamicCast<pst::FunDecl>().value();
-			return fun_decl->getParams().unlock(ctx);
-		}
-		case pst::ElementKind::ClassMethod: {
-			CORE_PANIC("Class methods not supported yet");
-		}
-		default:
-			CORE_PANIC("Expected function or method declaration");
-		}
-	}
-
-	pst::Access<pst::LangElement> getNthCallArgument(
-		query::Context& ctx, pst::Access<pst::expr::Call> call_expr, usize argument_index
-	) {
-		usize current_index = 0;
-		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			if (current_index == argument_index) return arg.unlock(ctx);
-			current_index++;
-		}
-		CORE_PANIC("Argument index out of bounds");
-	}
-
-	pst::Access<pst::LangElement> getNthDeclarationParameter(
-		query::Context& ctx, pst::Access<pst::LangElement> function_decl, usize parameter_index
-	) {
-		usize current_index = 0;
-		for (auto&& param: *getFunctionParamList(ctx, function_decl)) {
-			if (current_index == parameter_index) return param.unlock(ctx);
-			current_index++;
-		}
-		CORE_PANIC("Parameter index out of bounds");
-	}
-
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&              ctx,
-		pst::Access<pst::expr::Call> call_expr,
-		const CallFailure&           failure_reason,
-		bool                         is_for_candidate_function
+		query::Context&            ctx,
+		ElementOrigin              whole_call_origin,
+		std::vector<ElementOrigin> arguments_origin,
+		const CallFailure&         failure_reason,
+		bool                       is_for_candidate_function
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
-				auto arg_expr = getNthCallArgument(ctx, call_expr, data.argument_index);
-				return makeBox<PositionalAfterNamedArgumentError>(arg_expr->getSourcePosition());
+				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
+				return makeBox<PositionalAfterNamedArgumentError>(source_pos);
 			}
 			variant_case(RepeatedNamedArgument, data) {
-				auto source_pos
-					= getNthCallArgument(ctx, call_expr, data.argument_index)->getSourcePosition();
+				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
 				return makeBox<RepeatedNamedArgumentError>(source_pos);
 			}
 			variant_case(FunctionMatchFailure, data) {
@@ -237,19 +186,18 @@ namespace compiler::helios::code {
 				variant_match(data) {
 					variant_case(TooManyCallArguments, data) {
 						auto first_arg_pos
-							= getNthCallArgument(ctx, call_expr, data.valid_arguments)
-						          ->getSourcePosition();
+							= arguments_origin[data.valid_arguments].getSourcePosition().value();
 						auto last_arg_pos
-							= getNthCallArgument(ctx, call_expr, data.total_arguments - 1)
-						          ->getSourcePosition();
+							= arguments_origin[data.total_arguments - 1].getSourcePosition().value();
+
 						base::Optional<Box<InteractiveFunction>> function
 							= get_interactive_function(data.function);
 						auto pos = dia::SourcePosition::merge(first_arg_pos, last_arg_pos);
 						return makeBox<TooManyCallArgumentsError>(pos, std::move(function));
 					}
 					variant_case(UnknownNamedArgument, data) {
-						auto arg_pos = getNthCallArgument(ctx, call_expr, data.argument_index)
-						                   ->getSourcePosition();
+						auto arg_pos
+							= arguments_origin[data.argument_index].getSourcePosition().value();
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<UnknownNamedArgumentError>(
@@ -257,37 +205,47 @@ namespace compiler::helios::code {
 						);
 					}
 					variant_case(TypeMismatch, data) {
-						auto arg_expr = getNthCallArgument(ctx, call_expr, data.argument_index);
+						dia::SourcePosition pos = [&] {
+							if_opt_some(
+								arguments_origin[data.argument_index].getSourcePosition(), pos
+							) {
+								return pos;
+							}
+							return whole_call_origin.getSourcePosition().value();
+						}();
+
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<ArgumentIncompatibleTypeError>(
-							arg_expr->getSourcePosition(),
+							pos,
 							makeBox<InteractiveType>(ctx, data.expected_type),
 							makeBox<InteractiveType>(ctx, data.given_type),
 							std::move(function_name)
 						);
 					}
 					variant_case(MissingCallArgument, data) {
-						auto decl = getSymRef(data.function)->getPSTData()->pst_element.unlock(ctx);
-						auto param_decl
-							= getNthDeclarationParameter(ctx, decl, data.parameter_index);
+						auto& decl = ctx.query<QueryDeclOfFun>(data.function)->valueOrThrow();
 
-						base::Optional<std::string> function_name_str{};
-						if (is_for_candidate_function)
-							function_name_str.emplace(name(data.function).str());
+						if_opt_some(
+							decl.parameters[data.parameter_index].origin.getSourcePosition(),
+							param_pos
+						) {
+							return makeBox<CallMissingArgumentError>(
+								whole_call_origin.getSourcePosition().value(), param_pos
+							);
+						}
 
 						return makeBox<CallMissingArgumentError>(
-							call_expr->getSourcePosition(),
-							param_decl->getSourcePosition(),
-							std::move(function_name_str)
+							whole_call_origin.getSourcePosition().value(), std::nullopt
 						);
 					}
 					variant_case(NamedArgumentProvidedByPositional, data) {
-						auto arg_expr = getNthCallArgument(ctx, call_expr, data.argument_index);
+						auto arg_pos
+							= arguments_origin[data.argument_index].getSourcePosition().value();
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<NamedArgumentProvidedByPositionalError>(
-							arg_expr->getSourcePosition(), std::move(function_name)
+							arg_pos, std::move(function_name)
 						);
 					}
 				}

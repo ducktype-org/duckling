@@ -8,7 +8,7 @@
 
 #include <ctv/ctv.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 
 #include <base/types/bit256.hpp>
@@ -29,13 +29,10 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query symbol associated with given element in PST
+	 *
+	 * \query_thread_safe_if_cache_and_struct
 	 */
-	DECLARE_QUERY(
-		QuerySymbolOfSTMT,
-		pst::GenericPSTQueryKey<>,
-		SymID,
-		({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult = false })
-	);
+	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
 
 	struct KeyOf_LookupInSymbol {
 		/**
@@ -60,15 +57,19 @@ namespace compiler::helios {
 	/**
 	 * @brief Query result of lookup of single name within the symbol.
 	 * It essentially implements "symbol.name" operation.
+	 *
+	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
-		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({ .uses_qresult = false })
+		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	using QueryDealias_Result = query::QResult<SymbolList>;
 
 	/**
 	 * A query that returns dealiased symbol list of a given alias symbol.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>, ({}));
 
@@ -76,6 +77,8 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, QueryConstValueOf_Result, ({}));
 
@@ -91,6 +94,8 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query stmt specifiers associated with given symbol in HELIOS
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QuerySpecifiersOfSymbol,
@@ -113,6 +118,8 @@ namespace compiler::helios {
 		 *
 		 * @note This query also acts as a cache of SymIDs for generated symbols, so that the same
 		 * SymIDs are returned for the same parameters.
+		 *
+		 * \query_thread_safe_if_cache_and_struct
 		 */
 		DECLARE_QUERY(
 			QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID, ({ .uses_qresult = false })
@@ -123,10 +130,10 @@ namespace compiler::helios {
 	 * @brief Query all function dependencies of a function (e.g. for a given function SymID, return
 	 * all SymID-s of functions called directly by this one.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 *
+	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QueryDirectFunctionCalls, SymID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
-	);
+	DECLARE_QUERY(QueryDirectFunctionCalls, SymID, CRef<query::QResult<std::vector<SymID>>>, ({}));
 
 	/**
 	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
@@ -134,8 +141,10 @@ namespace compiler::helios {
 	 * @note This query is used to determine all other functions that have to be compiled when
 	 * compile time evaluating a function.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryTransitiveFunctionCalls, SymID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
+		QueryTransitiveFunctionCalls, SymID, CRef<query::QResult<std::vector<SymID>>>, ({})
 	);
 }

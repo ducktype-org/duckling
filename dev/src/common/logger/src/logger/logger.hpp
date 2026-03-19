@@ -20,6 +20,8 @@ namespace logger {
 		Artifacts,         ///< Logs related to artifacts.
 		Query,             ///< Logs related to query framework.
 		QueryStacktraces,  ///< Logs related to query framework stacktraces.
+		NYIStacktraces,    ///< Logs related to stacktraces appended to not yet implemented
+						   ///< errors/diagnostics.
 		Command,           ///< Logs related to system commands.
 		Diagnostics,       ///< Logs related to the diagnostic messages.
 
@@ -30,8 +32,13 @@ namespace logger {
 		Linker,    ///< Logs related to the linker component.
 
 		// DVM:
-		DVM,         ///< Logs related to the DVM component.
-		DVMDetails,  ///< Logs related to detailed logs of the DVM component.
+		DVM,          ///< Logs related to the DVM component.
+		DVMDetails,   ///< Logs related to detailed logs of the DVM component.
+
+		Incremental,  ///< Logs related to incremental compilation.
+
+		// REPL:
+		REPL,  ///< Logs related to the REPL component.
 	};
 
 	/**
@@ -80,7 +87,7 @@ namespace logger {
  * Usage: CORE_DEV_LOG(category, message)
  * Example: CORE_DEV_LOG(Lexer, "This is a dev log message.");
  *
- * @note Category should be one of the enumerators of logger::LogCategories enum.
+ * @note Category should be one of the enumerators of logger::DevLogCategories enum.
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */

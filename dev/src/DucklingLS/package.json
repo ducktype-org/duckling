@@ -3,7 +3,8 @@
     "displayName": "DucklingLS",
     "description": "Duckling Language Server",
     "version": "0.0.1",
-    "author": "zpp-2.1",
+    "icon": "images/icon.png",
+    "author": "Ducktype",
     "categories": [
         "Programming Languages"
     ],
@@ -15,6 +16,12 @@
         "onLanguage:duckling"
     ],
     "contributes": {
+        "commands": [
+            {
+                "command": "duckling.restartServer",
+                "title": "DucklingLS: Restart language server"
+            }
+        ],
         "languages": [
             {
                 "id": "duckling",
@@ -23,9 +30,9 @@
                     "duckling"
                 ],
                 "extensions": [
-                    ".rift",
                     ".dl",
-                    ".duckling",
+                    ".duck",
+                    ".🦆",
                     ".dmf"
                 ],
                 "configuration": "./language-configuration.json"
@@ -48,6 +55,12 @@
                     "default": 100,
                     "description": "Controls the maximum number of problems produced by the server."
                 },
+                "DucklingLanguageServer.executablePath": {
+                    "scope": "machine",
+                    "type": "string",
+                    "default": "~/.local/bin/duck_ls",
+                    "markdownDescription": "Path to the `duck_ls` binary. Supports `~` for the home directory. Defaults to `~/.local/bin/duck_ls`. Run `comp-copy.py` to install the binary there, or set this to a custom path if you installed it elsewhere."
+                },
                 "DucklingLanguageServer.trace.server": {
                     "scope": "window",
                     "type": "string",
@@ -56,7 +69,7 @@
                         "messages",
                         "verbose"
                     ],
-                    "default": "off",
+                    "default": "messages",
                     "description": "Traces the communication between VS Code and the Duckling language server."
                 }
             }

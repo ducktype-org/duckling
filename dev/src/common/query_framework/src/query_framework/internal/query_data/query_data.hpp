@@ -1,5 +1,7 @@
 #pragma once
 
+#include <query_framework/utils/query_hash.hpp>
+
 #include <string_view>
 
 namespace query {
@@ -44,11 +46,18 @@ namespace query {
 			UsedHashes used_hashes = UsedHashes::UnstableHash;
 
 			/**
-			 * Whether query is cached on disk and can be loaded from there in incremental
+			 * Whether query result is cached on disk and can be loaded from there in incremental
 			 * compilation. Queries cached on disk must use stable hashing and provide loadFromDisc
 			 * function.
 			 */
 			bool can_be_loaded_from_disk = false;
+
+			/**
+			 * Whether the query node should be preserved in the graph and on disk after computation.
+			 * This does not imply that the query result can be loaded from disk.
+			 * Nodes with this tag will not be removed during incremental graph optimizations.
+			 */
+			bool preserve_in_graph = false;
 
 			/**
 			 * Whether query uses the failable QResult type as the result type.
@@ -61,6 +70,19 @@ namespace query {
 			 * Relevant only if `uses_qresult` is true, otherwise the tag is ignored.
 			 */
 			bool catch_exceptions_if_using_qresult = true;
+		};
+
+		/**
+		 * @brief Struct holding all the data related to query caching, like erase function pointer.
+		 */
+		struct QueryCacheData final {
+			using InternalEraseFunctionType = bool (*)(QueryStableHash);
+
+			/**
+			 * Pointer to the function that can erase the query result from its cache based on the
+			 * key hash.
+			 */
+			InternalEraseFunctionType erase_function;
 		};
 
 		/**
@@ -82,11 +104,15 @@ namespace query {
 			QueryKind        kind;
 			std::string_view name;
 			QueryTags        tags;
+			QueryCacheData   cache_data;
 
-			constexpr QueryData(QueryKind kind, std::string_view name, QueryTags tags):
+			constexpr QueryData(
+				QueryKind kind, std::string_view name, QueryTags tags, QueryCacheData cache_data
+			):
 				  kind(kind),
 				  name(name),
-				  tags(tags) {}
+				  tags(tags),
+				  cache_data(cache_data) {}
 
 			constexpr QueryData(const QueryData&) = default;
 
@@ -115,10 +141,14 @@ namespace query {
 				if (tags.can_be_loaded_from_disk) {
 					// queries that are cached on disk must use stable hashing:
 					if (tags.used_hashes != UsedHashes::StableHash) return false;
+					// queries that can be loaded from disk must have preserve_in_graph true:
+					if (!tags.preserve_in_graph) return false;
 				}
 				if (isInputQuery()) {
 					// input queries must use stable hashing:
 					if (tags.used_hashes != UsedHashes::StableHash) return false;
+					// inputs must be preserved on disk:
+					if (!tags.preserve_in_graph) return false;
 				}
 
 				return true;

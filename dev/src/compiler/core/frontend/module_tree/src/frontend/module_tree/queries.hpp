@@ -8,9 +8,12 @@
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/types/bit256.hpp>
 
-#include <query_framework/query_input.hpp>
+#include <query_framework/input_query/query_input.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_metadata/declare_metadata.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::frontend {
 
@@ -20,16 +23,22 @@ namespace compiler::frontend {
 	/**
 	 * @brief Query parent of a module.
 	 * @return parent module, none for root-module.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryParentModule, ModuleID, base::Optional<ModuleID>, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query main source file of a module.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query sources files of a module (without main source file).
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>, ({ .uses_qresult = false }))
 
@@ -38,26 +47,70 @@ namespace compiler::frontend {
 	/**
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QuerySubmodules, ModuleID, QuerySubmodules_Result, ({ .uses_qresult = false }))
 
+	/**
+	 * @brief Side input controlling dependency on number of source files in a module.
+	 * Key includes module path hash and source file count.
+	 * This is needed to properly invalidate queries that depend on the number of source files
+	 * in the module when some query will need access to source files list (eg. getSourceFiles).
+	 * @note This is not needed for getMainSourceFile, because main source file is accessed via
+	 * separate query.
+	 */
+	DECLARE_QUERY_SIDE_INPUT(QuerySourceFileCountSideInput, KeyOf_SourceFileCountSideInput)
 
 	/**
-	 * @brief Query PST of given file.
+	 * @brief Side input controlling dependency on number of submodules in a module.
+	 * Key includes module path hash and submodule count.
+	 * This is needed to properly invalidate queries that depend on the number of submodules
+	 * when some query will need access to submodules list (eg. getSubmodules).
 	 */
-	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>, ({ .uses_qresult = false }))
+	DECLARE_QUERY_SIDE_INPUT(QuerySubmoduleCountSideInput, KeyOf_SubmoduleCountSideInput)
+
 
 	/**
 	 * @brief Side input query for module dependency.
 	 * Key is ModuleID.
+	 * It registers a dependency on the module when some query needs to access it.
 	 */
 	DECLARE_QUERY_SIDE_INPUT(QueryModuleSideInput, KeyOf_ModuleSideInput)
 
 	/**
 	 * @brief Side input query for file dependency.
 	 * Key is FileID.
+	 * It registers a dependency on the file when some query needs to access it.
 	 */
 	DECLARE_QUERY_SIDE_INPUT(QueryFileSideInput, KeyOf_FileSideInput)
+
+	/**
+	 * @brief Side input identifying parent->child edge for a submodule lookup by name.
+	 * Key includes parent module hash, child name and whether the child was found.
+	 * This is needed to properly register the dependency when looking up a submodule by name.
+	 * This registers dependencies that queries rely on to determine whether a module has or doesn't
+	 * have a child with a given name.
+	 */
+	DECLARE_QUERY_SIDE_INPUT(QueryModuleChildSideInput, KeyOf_ModuleChildSideInput)
+
+	/**
+	 * @brief Module Lookup metadata
+	 * The whole KeyOf_ModuleChildSideInput is stored as metadata
+	 * And serialized/deserialized accordingly
+	 * This is needed to recreate the side input during driver initialization.
+	 * In particular it stores the string of the child name and whether the child was found.
+	 * Thanks to that the driver can check if there is a submodule with given name or not, and add
+	 * the dependency accordingly. For more info see driver initialization
+	 * @note This metadata is added during the provide call of QueryModuleChildSideInput query
+	 */
+	DECLARE_METADATA(ModuleLookup, KeyOf_ModuleChildSideInput);
+
+	/**
+	 * @brief Returns the parse tree of a source file.
+	 * \parallel reads file content and creates PST; PST creation must be thread-safe;
+	 */
+	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id);
 
 	/**
 	 * @brief Returns ModuleID

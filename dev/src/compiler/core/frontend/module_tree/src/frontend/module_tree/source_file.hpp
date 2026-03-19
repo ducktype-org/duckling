@@ -1,10 +1,12 @@
 #pragma once
 
 
+#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 #include <frontend/module_tree/access.hpp>
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/misc/shared_view.hpp>
@@ -23,11 +25,19 @@ namespace compiler::frontend {
 	 * @brief Represents a source file in the Duckling compiler.
 	 */
 	class SourceFile final {
-		fs::File                   file;
-		base::StrID                lang_file_name;
-		ModuleID                   linked_module;
-		base::Optional<pst::PST<>> parse_tree;
-		base::Optional<usize>      storage_handle;  //< Key to support removal from static storage
+		/**
+		 * @brief Synchronizes access to state of SourceFile. Since multiple workers may try to
+		 * parse the same SourceFile simultaneously.
+		 * @note: It's possible that there are two SourceFiles pointing to the same physical file in
+		 * the file system. In this case, two threads may parse the same physical file at once, but
+		 * since this operation is read-only, it's thread-safe.
+		 */
+		mutable base::Box<concurrent::AtomicFlagSpinlock> state_lock;
+		fs::File                                          file;
+		base::StrID                                       lang_file_name;
+		ModuleID                                          linked_module;
+		base::Optional<pst::PST<>>                        parse_tree;
+		base::Optional<usize> storage_handle;  //< Key to support removal from static storage
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
 		mutable base::Optional<hashing::ComponentHash>
@@ -59,7 +69,6 @@ namespace compiler::frontend {
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
 		friend struct GetFileID_Functor;
-		friend struct ImplementationOf_QueryFilePST;
 		friend struct FileID;
 
 		/**
@@ -97,7 +106,7 @@ namespace compiler::frontend {
 		 * @return Vector of references to SourceFile instances for the given file.
 		 *         If no SourceFiles exist for the file, an empty vector is returned.
 		 */
-		static std::vector<base::Ref<SourceFile>> getSourceFilesfromFile(const fs::File& file);
+		static std::vector<base::Ref<SourceFile>> getSourceFilesFromFile(const fs::File& file);
 
 		/**
 		 * @brief Returns the FileID associated with this SourceFile.
@@ -136,7 +145,7 @@ namespace compiler::frontend {
 		 * @return Cached base::SharedView for this SourceFile.
 		 * @throws Panics if the content is not found in the cache.
 		 */
-		[[nodiscard]] base::SharedView getCachedContentIllegalAcess();
+		[[nodiscard]] base::SharedView getCachedContentIllegalAccess();
 
 		[[nodiscard]] const hashing::ComponentHash& getComponentHash() const;
 
@@ -151,4 +160,9 @@ namespace compiler::frontend {
 		SourceFile& operator=(const SourceFile&) = delete;
 		SourceFile(SourceFile&&) noexcept        = default;
 	};
+
+	/**
+	 * @brief Returns FileID for a parsed PST root element if known.
+	 */
+	base::Optional<FileID> getFileIDOfPSTRoot(pst::PstID root_element_id);
 }

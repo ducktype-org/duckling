@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../access.hpp"
+#include "../ordering.hpp"    // IWYU pragma: export
 #include "../pst_state_forward.hpp"
 #include "../utility.hpp"     // IWYU pragma: export
 #include "elements_list.hpp"  // IWYU pragma: export
@@ -8,6 +9,10 @@
 #include <base/types/ints.hpp>
 
 #define PST_WHILE(condition) while (!state.isSkipping() && (condition))
+
+#define PST_RETURN                          \
+	if (state.isSkipping()) return nullptr; \
+	return
 
 namespace pst {
 	using lang_def::Keyword;
@@ -64,6 +69,8 @@ namespace pst::internal {
 		NameGetters() = delete;
 
 		static std::string parameterList() { return "function parameter"; }
+
+		static std::string nestedImportList() { return "nested import"; }
 
 		static std::string flowPatternList() { return "flow pattern"; }
 

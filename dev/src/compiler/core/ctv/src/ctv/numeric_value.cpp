@@ -6,6 +6,7 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <cstdint>
 #include <type_traits>
 
 namespace compiler::numeric_value {
@@ -13,6 +14,17 @@ namespace compiler::numeric_value {
 
 	[[nodiscard]] std::string NumericValue::toString() const {
 		return std::visit([&](auto&& value) { return base::toString(value); }, value);
+	}
+
+	bool NumericValue::isIntegral() const {
+		return std::visit(
+			[&](auto&& val) -> bool {
+				using T = std::decay_t<decltype(val)>;
+				if constexpr (std::is_integral_v<T>) return true;
+				return false;
+			},
+			value
+		);
 	}
 
 	tsh::SymbolType<> NumericValue::getTypeOfStoredValue(query::Context& ctx) const {
@@ -25,25 +37,23 @@ namespace compiler::numeric_value {
 
 				if constexpr (IS_INTEGRAL && IS_SIGNED) {
 					return SymbolType{
-						ctx.query<QueryIntegralType>({
-							sizeof(T) * 8,
-							IntegralAbstractType::Signedness::Signed,
-						}),
+						getIntegralType(
+							ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Signed
+						),
 						ReferenceKind::Direct,
 						Mutability::Mutable,
 					};
 				} else if constexpr (IS_INTEGRAL && !IS_SIGNED) {
 					return SymbolType{
-						ctx.query<QueryIntegralType>({
-							sizeof(T) * 8,
-							IntegralAbstractType::Signedness::Unsigned,
-						}),
+						getIntegralType(
+							ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Unsigned
+						),
 						ReferenceKind::Direct,
 						Mutability::Mutable,
 					};
 				} else {  // Floating point.
 					return SymbolType{
-						ctx.query<QueryFloatType>({ sizeof(T) * 8 }),
+						getFloatType(ctx, sizeof(T) * 8),
 						ReferenceKind::Direct,
 						Mutability::Mutable,
 					};
@@ -71,6 +81,8 @@ namespace compiler::numeric_value {
 
 			if (int_type.getSignedness() == IntegralAbstractType::Signedness::Signed) {
 				switch (width) {
+				case 8:
+					return cast.template operator()<std::int8_t>();
 				case 16:
 					return cast.template operator()<i16>();
 				case 32:
@@ -82,6 +94,8 @@ namespace compiler::numeric_value {
 				}
 			} else {
 				switch (width) {
+				case 8:
+					return cast.template operator()<std::uint8_t>();
 				case 16:
 					return cast.template operator()<u16>();
 				case 32:

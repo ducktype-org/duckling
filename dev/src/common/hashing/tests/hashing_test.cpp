@@ -4,9 +4,6 @@
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/type_code.hpp>
-#include <hashing/type_hash_code.hpp>
-#include <hashing/type_unique_code.hpp>
 #include <tester/tester.hpp>
 
 #include <unordered_map>
@@ -65,18 +62,17 @@ public:
 };
 
 namespace my_map {
+	using Hasher = decltype([](auto&& x) { return Hash<>{}(x).data.at(0); });
+
 	template<
 		class Key,
 		class T,
-		class Hash  = Hash<>,
+		class Hash  = Hasher,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
 
 	using unordered_map = std::unordered_map<Key, T, Hash, Pred, Alloc>;
 }
-
-template<typename T>
-concept check_hashRangeAsBytes = requires(T t) { internal::hashRangeAsBytes(Fnv1a_32{}, t); };
 
 struct Check_1 {
 	void updateHash(void*, usize) {}
@@ -144,64 +140,45 @@ class HashingTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(hashCodeTest);
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
-		TESTER_ADD_TEST(hashTest<Fnv1a_32>);
-		TESTER_ADD_TEST(hashTest<Fnv1a_64>);
 		TESTER_ADD_TEST(hashTest<SHA256>);
-		TESTER_ADD_TEST(constexprTest);
-		TESTER_ADD_TEST(defaultsTest<Fnv1a_32>);
-		TESTER_ADD_TEST(defaultsTest<Fnv1a_64>);
 		TESTER_ADD_TEST(defaultsTest<SHA256>);
-		TESTER_ADD_TEST(uniqueCodeTest);
 		TESTER_ADD_TEST(sha256Test);
 	}
 
 private:
-	void hashCodeTest() {
-		assertTrue(TYPE_HASH_CODE<int> != TYPE_HASH_CODE<float>, "hash-codes should differ");
-		assertTrue(TYPE_HASH_CODE<double> != TYPE_HASH_CODE<char>, "hash-codes should differ");
-		assertTrue(TYPE_HASH_CODE<std::string> != TYPE_HASH_CODE<S>, "hash-codes should differ");
-		assertTrue(TYPE_HASH_CODE<X> == TYPE_HASH_CODE<X>, "hash-code should be the same");
-		assertTrue(
-			is_explicitly_convertible_to<decltype(TYPE_HASH_CODE<Y>), u32>,
-			"hash-code should be convertible to u32"
-		);
-	}
-
 	void hashingAlgorithmsTest() {
-		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
-		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
-		constexpr auto res1 = Hash<Fnv1a_32, TypeCode<u32, false>>{}(4);
-		constexpr auto arr  = std::array{ 1, 2, 3 };
-		constexpr auto res2 = Hash<Fnv1a_64, TypeCode<u64, false>>{}(std::span{ arr });
-		auto           res3 = [] {
-            DebugHash dh;
-            dh(std::as_bytes(std::span{ "hello" }));
-            return dh.finalize().size();
+		assertTrue(hash_algorithm<SHA256>, "SHA256 should be a hashing algorithm");
+
+		constexpr auto ARR = std::array{ 1, 2, 3 };
+		SHA256         h;
+		h(std::as_bytes(std::span{ ARR }));
+
+		auto res3 = [] {
+			DebugHash dh;
+			dh(std::as_bytes(std::span{ "hello" }));
+			return dh.finalize().size();
 		}();
-		assertTrue(
-			std::is_same_v<decltype(res1), const u32>, "Fnv1a_32's finalize() should return u32"
-		);
-		assertTrue(
-			std::is_same_v<decltype(res2), const u64>, "Fnv1a_64's finalize() should return u64"
-		);
+
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
+
 		DebugHash dh;
 		dh(std::as_bytes(std::span{ "hello 1234567890" }));
 
-		Hash<DebugHash, TypeCode<>>{}(type3{});
 		Hash<DebugHash>{}(type4{});
 	}
 
 	template<typename Alg>
 	void hashTest() {
-		Hash<Alg, TypeCode<u32, false>> hasher;
+		Hash<Alg> hasher;
+
 		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
-		constexpr auto res1 = hasher(X{});
-		constexpr auto res2 = hasher(S{});
-		assertTrue(res1 != res2, "hashes should differ");
+
+		const auto res_1 = hasher(X{});
+		const auto res_2 = hasher(S{});
+		assertTrue(res_1 != res_2, "hashes should differ");
+
 		my_map::unordered_map<std::string, int> m;
 		m["hello"] = 42;
 		m["world"] = 7;
@@ -209,45 +186,29 @@ private:
 		assertTrue(m["world"] == 7, "world should be 7");
 	}
 
-	[[nodiscard]]
-	static constexpr u64 constexprTestHelper() {
-		constexpr auto r1 = Hash<Fnv1a_32, TypeCode<u32, false>>{}(876'543);
-		constexpr auto r2 = Hash<Fnv1a_32, TypeCode<u32, false>>{}(std::string_view{ "hello" });
-		constexpr auto r3 = TYPE_HASH_CODE<int>;
-		constexpr auto r4 = TypeCode{ 23 };
-		constexpr auto r5 = TypeCode<u16>{ 234 };
-		constexpr auto r6 = Hash<Fnv1a_64, TypeCode<u32, false>>{}(S{});
-		StatefulHash<Fnv1a_64, TypeCode<u32, false>> h;
-		h(123, 345.f, std::string_view{ "hello" }, S{});
-
-		return r1 + r2 + r3 + r4 + r5 + r6 + h.finalize();
-	}
-
-	void constexprTest() { [[maybe_unused]] constexpr auto res = constexprTestHelper(); }
-
 	template<typename T>
 	void defaultsTest() {
-		StatefulHash<T, TypeCode<u16>> h;
+		StatefulHash<T> h;
 		h(123, 345.f, "hello", S{});
-		static_assert(requires { typename decltype(h)::TypeCode_value_type; });
-		Hash<T, void> h2;
+
+		Hash<T> h2;
 		h2(123);
 		h2(std::string_view{ "hello" });
-		static_assert(not requires { typename decltype(h2)::TypeCode_value_type; });
-	}
-
-	void uniqueCodeTest() {
-		auto id1 = TYPE_UNIQUE_CODE<int>;
-		auto id2 = TYPE_UNIQUE_CODE<int>;
-		assertTrue(id1 == id2, "unique codes should be the same");
-		auto id3 = TYPE_UNIQUE_CODE<float>;
-		assertTrue(id1 != id3, "unique codes should differ");
-		auto id4 = TYPE_UNIQUE_CODE<S>;
-		assertTrue(id1 != id4, "unique codes should differ");
 	}
 
 	void sha256Test() {
-		constexpr auto hash_value = hashing::StatefulHash<hashing::SHA256, TypeCode<u32, false>>{}(
+		constexpr auto HASH_VALUE_SIMPLE
+			= hashing::StatefulHash<hashing::SHA256>{}(std::byte{ 0x42 }).finalize();
+		std::cerr << HASH_VALUE_SIMPLE << '\n' << HASH_VALUE_SIMPLE.toStringHex() << '\n';
+		assertEqual(
+			HASH_VALUE_SIMPLE.toStringHex(),
+			"df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+			"SHA256 hash of a byte 0x42 does not match expected value:\nExpected:\n"
+			"df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c\nComputed:\n"
+				+ HASH_VALUE_SIMPLE.toStringHex()
+		);
+
+		constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::SHA256>{}(
 										7,
 										type2{},
 										7,
@@ -268,10 +229,9 @@ private:
 		)
 		                                .finalize();
 
-
 		const std::string expected_hash
-			= "b2288f243a2cf2ce6c04b098b2f5ea7d140e961fc234cf55d08a42599847ad89";
-		const std::string computed_hash = hash_value.toStringHex();
+			= "cc29a5e32052f1e78ce5933758b457e9829c84322bfa1e8e2794ae1456a274a0";
+		const std::string computed_hash = HASH_VALUE.toStringHex();
 
 		assertTrue(
 			computed_hash == expected_hash,

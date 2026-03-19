@@ -103,6 +103,8 @@ namespace pst {
 		 * @tparam ListElements - Kept Elements, has to have precise length parse like Expr
 		 * @tparam Self - Inheriting class type for construction purposes
 		 * @tparam NON_EMPTY - Should empty list be an error.
+		 * @tparam ALLOW_TRAILING_SEPARATOR - Should trailing separator be allowed, for example (a,
+		 * b,).
 		 * @tparam BRACKETS - expected brackets or None if not expected
 		 * @tparam isSeparator - Separator should always be skip-able with one skip.
 		 * @tparam isEnding - Check for successful ending.
@@ -113,15 +115,14 @@ namespace pst {
 			class ListElements,
 			typename Self,
 			bool                      NON_EMPTY,
+			bool                      ALLOW_TRAILING_SEPARATOR,
 			lexer::Token::BracketType BRACKETS,
 			TokenStreamCondition      isSeparator,
 			TokenStreamCondition      isEnding,
 			GetName                   getName,
 			class ParsingClass = ListElements>
 		static auto parseList(LangParserState& state) -> MBox<Self> {
-			auto position = state.getPosition();
-
-			Box<Self> out = makeBox<Self>(position);
+			Box<Self> out = makeBox<Self>(state);
 
 			// Handle opening brackets:
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
@@ -131,7 +132,7 @@ namespace pst {
 					));
 					return nullptr;
 				}
-				state.parse(out).goDown();
+				PARSE().goDown();
 			}
 
 			usize expr_length{};
@@ -149,7 +150,7 @@ namespace pst {
 						expr_length++;
 					}
 
-					state.setFallback(expr_length);
+					PARSE().fallbackLen(expr_length);
 
 					if (expr_length == 0) {
 						// Handle empty field errors with sensible ranges
@@ -167,27 +168,27 @@ namespace pst {
 					}
 
 					MBox<ListElements> box;
-					state.parse(out).template with<ListElements>(&box, ParsingClass::parse);
+					PARSE().template with<ListElements>(&box, ParsingClass::parse);
 					if (box.toOpt()) {
 						out->elements.emplace_back(nullptr);
-						state.parse(out).assign(&out->elements.back(), std::move(box));
+						PARSE().assign(&out->elements.back(), std::move(box));
 					}
 
-					state.exitFallback();
+					PARSE().exitFallback();
 
 					if (isEnding(state.ctokens(), 0)) break;
-					if (isSeparator(state.ctokens(), 0))
-						state.parse(out).eatOne();
-					else
+					if (isSeparator(state.ctokens(), 0)) {
+						PARSE().eatOne();
+						if (isEnding(state.ctokens(), 0) && ALLOW_TRAILING_SEPARATOR) break;
+					} else
 						state.logInt(makeBox<NoSeparatorError<getName>>(state.getPosition()));
 				}
 			}
 
 			// Handle closing brackets
-			if constexpr (BRACKETS != lexer::Token::BracketType::None)
-				state.parse(out).goUpAndSkip();
+			if constexpr (BRACKETS != lexer::Token::BracketType::None) PARSE().goUpAndSkip();
 
-			return out;
+			PST_RETURN out;
 		}
 	};
 }

@@ -35,6 +35,7 @@ namespace lang_def {
 		Class,
 		Namespace,
 		Import,
+		Hides,
 		As,
 		Using,
 		Alias,
@@ -114,7 +115,7 @@ namespace lang_def {
 		Type,  // ...
 
 		// @TODO: do we need all of them?
-		Vec,
+		List,
 		Set,
 		Dict,
 		Array,
@@ -134,6 +135,8 @@ namespace lang_def {
 		Xor,
 
 		// General text prefix operators (Not doesn't count)
+		Len,  // @TODO: #1970 This being an operator may be temporary. This should probably be
+		      // removed one we can use builtin methods/fields.
 		Ref,
 		Box,
 		Copy,
@@ -145,7 +148,7 @@ namespace lang_def {
 		Private,
 		Protected,
 		Static,
-		This,
+		Self,
 		Extends,
 		Implements,
 
@@ -199,6 +202,7 @@ namespace lang_def {
 		NotAnOperator,
 
 		Period,
+		Range,
 		PeriodQuestion,
 		PeriodStar,
 		Colon,
@@ -208,8 +212,8 @@ namespace lang_def {
 		SingleArrow,
 		DoubleArrow,
 
-		Pipe,  // | for variants and bitwise or.
-		BitAnd,
+		Pipe,       // | for variants and bitwise or.
+		Ampersand,  // & for references and bitwise and.
 		BitXor,
 
 		LeftShift,

@@ -7,12 +7,12 @@
 
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/go_to_definition.hpp>
 
 #include <base/collections/optional.hpp>
 
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <token_source/source.hpp>
 
 #include <format>
@@ -60,9 +60,9 @@ namespace lsp {
 
 	Definition::Definition(const pst::LangElement* element) {
 		auto source_position = element->getSourcePosition();
-		this->uri            = source_position.getSource()->getFile().getFilePath().uri();
-		this->start          = source_position.getStartLineColumn();
-		this->end            = source_position.getEndLineColumn();
+		this->uri   = source_position.getSource()->getFile().getFilePath().toPhysicalPath().uri();
+		this->start = source_position.getStartLineColumn();
+		this->end   = source_position.getEndLineColumn();
 	}
 
 	pst::AccessLocked<pst::LangElement> findElement(

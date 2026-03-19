@@ -7,7 +7,7 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 #include <sstream>
 
@@ -161,6 +161,32 @@ namespace compiler::tsl {
 			ss << getIndent(indent + 1) << element_layout->toStringIdentification() << "\n";
 
 		// Display the total size
+		ss << getIndent(indent) << "} : " << base::toString(getSize());
+		return ss.str();
+	}
+
+	StaticArrayTypeLayout::StaticArrayTypeLayout(
+		const tsh::StaticArrayAbstractType static_array_type, query::Context& ctx
+	):
+		  TypeLayoutABC(
+			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getSize()
+				  * static_array_type.getSize(),
+			  static_array_type
+		  ),
+		  element_layout(ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())),
+		  element_count(static_array_type.getSize()) {}
+
+	std::string StaticArrayTypeLayout::toStringDefinition(
+		query::Context& ctx, const bool recursive, const u32 indent
+	) const {
+		std::stringstream ss{};
+		ss << getIndent(indent) << "static_array [" << getElementCount() << "] {\n";
+
+		if (recursive)
+			ss << element_layout->toStringDefinition(ctx, recursive, indent + 1) << "\n";
+		else
+			ss << getIndent(indent + 1) << element_layout->toStringIdentification() << "\n";
+
 		ss << getIndent(indent) << "} : " << base::toString(getSize());
 		return ss.str();
 	}

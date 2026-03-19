@@ -13,7 +13,7 @@ namespace pst {
 		else
 			out = parseVariableTemplate<Variable, Keyword::Let>(state);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Variable::dprint(std::ostream& out) const {
@@ -38,7 +38,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Variable::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Variable::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, type.has_value());
 		addToHash(partial_hash, value.has_value());

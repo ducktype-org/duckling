@@ -21,7 +21,7 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
-#include <helios/scope_symbol_id.hpp>
+#include <helios/scope_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 
 #include <base/types/bit256.hpp>
@@ -61,6 +61,8 @@ namespace compiler::helios {
 	 * This should be somehow refactored when multi-file modules will be introduced.
 	 * @todo: Currently root scopes are somewhat problematic.
 	 * See description of "root_element_file_back_map" for details.
+	 *
+	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID, ({ .uses_qresult = false }));
 
@@ -77,13 +79,14 @@ namespace compiler::helios {
 	 * The reason for this is that handling scope structure without direct link to PST was highly
 	 * bug prone and led to potential errors or lack of consistency between different fragments of
 	 * code.
+	 *
+	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
 		QueryPrimaryCodeScopeFor,
 		pst::GenericPSTQueryKey<>,
 		ScopeID,
 		({
-			.used_hashes  = query::UsedHashes::StableHash,
 			.uses_qresult = false,
 		})
 	);
@@ -107,37 +110,61 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Performs lookup of single name inside given scope.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>, ({ .uses_qresult = false })
-	);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({}));
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryLookupInScopeAndParents,
-		KeyOf_LookupInScope,
-		CRef<LookupResult>,
-		({ .uses_qresult = false })
+		QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
 	 * Also: dictates what symbols are contained in what scopes.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
 	);
 
 	/**
+	 * @brief Value type for the QueryScopesInModule query.
+	 * See the QueryScopesInModule query for details.
+	 */
+	struct QueryScopesInModuleValue final {
+		struct Success final {
+			std::vector<ScopeID> scopes;
+		};
+
+		struct Failure final {
+			std::vector<ScopeID> partial_scopes;
+		};
+
+		std::variant<Success, Failure> value;
+	};
+
+	/**
 	 * @brief Query all scopes defined in a given module.
-	 * Note: Not implemented yet.
+	 * @note This query returns QueryScopesInModuleValue which contains all scopes in the module or
+	 * a partial list of scopes that where possible to obtain despite some other failures. The
+	 * semantics of this failed state are the same as of a failed QResult (i.e. errors were already
+	 * reported), but we still want to return the scopes that we managed to obtain. This is because
+	 * this query is used by the QueryModuleHOUT and if we just failed here, then almost all of the
+	 * compilation process would be halted and practically no HELIOS diagnostics would appear.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryScopesInModule,
 		frontend::ModuleID,
-		CRef<std::vector<ScopeID>>,
+		CRef<QueryScopesInModuleValue>,
 		({ .uses_qresult = false })
 	);
 
@@ -152,13 +179,15 @@ namespace compiler::helios {
 	 *
 	 * @note This will have some issues for now. The potential errors from parsed subexpression
 	 * aren't available for now. There needs to be a small rework of errors and position first.
+	 *
+	 * \parallel owns its cache; creates PST via \ref pst::fromExpand (PST creation thread-safe)
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryMacroExpansion,
 		pst::GenericPSTQueryKey<pst::Expand>,
 		ExpansionResult<pst::Stmt>,
 		({
-			.used_hashes  = query::UsedHashes::StableHash,
 			.uses_qresult = false,
 		})
 	)

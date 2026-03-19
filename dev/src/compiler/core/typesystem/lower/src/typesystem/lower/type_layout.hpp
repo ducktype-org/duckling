@@ -10,7 +10,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
 
 #include <variant>
@@ -85,7 +85,7 @@ namespace compiler::tsl {
 		 */
 		[[nodiscard]]
 		virtual std::string toStringIdentification() const {
-			return "Layout of " + source_type.toString() + " : " + base::toString(getSize());
+			return source_type.toString() + ":" + base::toString(getSize());
 		}
 
 		virtual ~TypeLayoutABC() = default;
@@ -216,6 +216,15 @@ namespace compiler::tsl {
 		}
 
 		/**
+		 * @return The offset of the pointer to the data
+		 */
+		[[nodiscard]]
+		Bytes getDataPointerPosition() const {
+			(void) this;
+			return Bytes(0);
+		}
+
+		/**
 		 * @return The offset of the end of data offset
 		 */
 		[[nodiscard]]
@@ -300,6 +309,36 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		CRef<TypeLayout> getElementLayout() const {
 			return element_layout;
+		}
+	};
+
+	class StaticArrayTypeLayout final: public TypeLayoutABC {
+		CRef<TypeLayout> element_layout;
+		usize            element_count;
+
+		StaticArrayTypeLayout(tsh::StaticArrayAbstractType static_array_type, query::Context& ctx);
+
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
+
+		/**
+		 * @return The layout of each element of the static array.
+		 */
+		[[nodiscard]]
+		CRef<TypeLayout> getElementLayout() const {
+			return element_layout;
+		}
+
+		/**
+		 * @return The number of elements in the static array.
+		 */
+		[[nodiscard]]
+		usize getElementCount() const {
+			return element_count;
 		}
 	};
 
@@ -654,6 +693,7 @@ namespace compiler::tsl {
 		TupleTypeLayout,
 		StringTypeLayout,
 		DynamicArrayTypeLayout,
+		StaticArrayTypeLayout,
 		ClassTypeLayout,
 		FunctionalTypeLayout,
 		PointerTypeLayout>;
@@ -669,9 +709,9 @@ namespace compiler::tsl {
 
 		friend struct ImplementationOf_QuerySymbolTypeLayout;
 
-	public:
 		TypeLayoutDirectVariant variant;
 
+	public:
 		// Move constructor needed for caching in QueryAbstract/SymbolTypeLayout.
 		TypeLayout(TypeLayout&& other) noexcept = default;
 
@@ -690,6 +730,12 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		const TypeLayoutDirectVariant& getVariant() const {
 			return variant;
+		}
+
+		template<typename T>
+		[[nodiscard]]
+		bool is() const {
+			return std::holds_alternative<T>(variant);
 		}
 
 		/**

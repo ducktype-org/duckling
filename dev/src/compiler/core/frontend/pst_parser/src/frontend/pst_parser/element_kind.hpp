@@ -14,6 +14,11 @@ namespace pst {
 		TopLevel,
 		Import,
 
+		// Import Chains
+		ImportIdentifierAs,
+		ImportStarHides,
+		ImportNested,
+
 		StmtSpecifier,
 
 		CodeBlock,
@@ -29,6 +34,7 @@ namespace pst {
 		FunDecl,
 		Pattern,
 		Block,
+		SpecifierBlock,
 
 		Using,
 		Alias,
@@ -65,7 +71,7 @@ namespace pst {
 		// classes:
 		ClassField,
 		ClassMethod,
-		AccessBlock,
+		ClassSpecifierBlock,
 		NonClassStmt,
 		ClassSpecial,
 
@@ -73,14 +79,13 @@ namespace pst {
 		ClassConstructor,
 		ClassDestructor,
 
-		// note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
-
 		// others:
 		Param,
 		ParamList,
 		FlowPatternList,
 		DottedName,
 		CallArgument,
+		NestedImportList,
 
 		// patterns:
 		FlowPattern,

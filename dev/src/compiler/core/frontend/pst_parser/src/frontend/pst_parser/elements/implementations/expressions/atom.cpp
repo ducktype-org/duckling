@@ -4,37 +4,37 @@
 #include "../../hierarchy/expressions/char_value.hpp"
 #include "../../hierarchy/expressions/identifier_literal.hpp"
 #include "../../hierarchy/expressions/keyword_literal.hpp"
-#include "../../hierarchy/expressions/match_expr.hpp"
+#include "../../hierarchy/expressions/numeric_value.hpp"
 #include "../../hierarchy/expressions/round_expr.hpp"
 #include "../../hierarchy/expressions/string_value.hpp"
-#include "../../hierarchy/expressions/value.hpp"
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {
 
-	MBox<ExprElement> Atom::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> Atom::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
 		if (state[0].isKeyword()) {
-			return KeywordLiteral::parse(state, length);
+			return KeywordLiteral::parse(state);
 		} else if (state[0].isIdentifier()) {
-			return IdentifierLiteral::parse(state, length);
+			return IdentifierLiteral::parse(state);
 		} else if (state[0].isNumLiteralGroup()) {
-			return ExprValue::parse(state, length);
+			return ExprNumericValue::parse(state);
 		} else if (state[0].isString()) {
-			return ExprStrValue::parse(state, length);
+			return ExprStrValue::parse(state);
 		} else if (state[0].isChar()) {
-			return ExprCharValue::parse(state, length);
+			return ExprCharValue::parse(state);
 		} else if (state[0].isBracketGroup(lexer::Token::Round)) {
-			return RoundExpr::parse(state, length);
+			return RoundExpr::parse(state);
 		} else if (state[0].isBracketGroup(lexer::Token::Curly)) {
-			return BlockExpr::parse(state, length);
+			return BlockExpr::parse(state);
 		} else {
+			i64 length = base::safeIntConv<i64>(state.ctokens().size());
+
 			state.logInt(makeBox<NoAtomError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
-			fastForward(state, length);
 			return nullptr;
 		}
 	}

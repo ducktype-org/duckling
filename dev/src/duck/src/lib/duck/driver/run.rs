@@ -5,19 +5,22 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{DuckCtx, QuackResult, QuackResultContext, qp_bail};
+use crate::{
+    DuckCtx, QuackResult, QuackResultContext, qp_bail,
+    util_common::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
+};
 use clap::ArgMatches;
-use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
 
 use crate::duck::driver::{
     cli,
     cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
     cli_no_err,
-    global_cli_options::GlobalCliOptions,
+    global_options::GlobalOptions,
     subcommands::exec_for,
 };
 
+/// Run the duck with the given [`DuckCtx`].
 pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
     debug!(
@@ -49,16 +52,21 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     run_subcmd(ctx, args, &external)
 }
 
-fn get_global_options() -> Option<GlobalCliOptions> {
+/// Get [`GlobalOptions`] from the CLI arguments.
+fn get_global_options() -> Option<GlobalOptions> {
     // We get matches without worrying about errors, only to retrieve GlobalCliOptions.
     // Later matching is done again on the real command, so any errors will be taken care of there.
     if let Ok(matches) = cli_no_err().try_get_matches() {
-        GlobalCliOptions::from_matches(&matches).ok()
+        GlobalOptions::from_matches(&matches).ok()
     } else {
         None
     }
 }
 
+/// Gather all known external subcommands.
+///
+/// In the returned map, keys are stripped from prefixes and suffixes; in other words, keys are
+/// valid duck subcommands names.
 fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
     use std::env;
     const PREFIX: &str = "duck-";
@@ -91,6 +99,7 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
     commands
 }
 
+/// Execute fully fixed, parsed, and expanded subcommand.
 fn run_subcmd(
     ctx: &mut DuckCtx,
     args: ArgMatches,
@@ -120,6 +129,7 @@ fn run_subcmd(
     }
 }
 
+/// Get all arguments passed to the external subcommand.
 fn external_cli_args(sub_args: &ArgMatches) -> Vec<OsString> {
     sub_args
         .get_many::<OsString>("")
@@ -128,6 +138,7 @@ fn external_cli_args(sub_args: &ArgMatches) -> Vec<OsString> {
         .collect::<Vec<_>>()
 }
 
+/// Execute the external subcommand.
 fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackResult<()> {
     debug!(
         "executing the external command `{}`, arguments are `{cli_args:?}`",
@@ -135,5 +146,5 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
     );
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);
-    command.exec_replace().map(|_| ()).map_err(|x| x.into())
+    command.exec_replace().map(|_| ())
 }

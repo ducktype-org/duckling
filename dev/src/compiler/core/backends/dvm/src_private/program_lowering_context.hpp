@@ -5,14 +5,62 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include <query_framework/context/context_fd.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext {
+		/**
+		 * @brief Context used purely for throwing NotYetImplemented errors.
+		 * @note This context should not be used for anything other than throwing NotYetImplemented
+		 * errors.
+		 * Remove this field when applicable.
+		 */
+		base::Optional<Ref<query::Context>> query_ctx_for_errors;
+
 	public:
-		ProgramLoweringContext() = default;
+		/**
+		 * @brief Construct with no initial context.
+		 *
+		 * Context can be set later via setContext() when a query context is active.
+		 */
+		ProgramLoweringContext(): query_ctx_for_errors(std::nullopt) {}
+
+		/**
+		 * @brief Construct with an initial query context (backward compatible).
+		 *
+		 * This constructor is provided for backward compatibility with existing call sites.
+		 * The context reference should remain valid for the lifetime of this object.
+		 */
+		explicit ProgramLoweringContext(query::Context& query_ctx):
+			  query_ctx_for_errors(&query_ctx) {}
+
+		/**
+		 * @brief Set the query context for error reporting during compilation.
+		 *
+		 * Should be called when entering a query scope with active context.
+		 * Must be paired with invalidateContext() when exiting the scope.
+		 */
+		void setContext(query::Context& query_ctx) { query_ctx_for_errors = &query_ctx; }
+
+		/**
+		 * @brief Clear the query context after compilation.
+		 *
+		 * Should be called when exiting the query scope to prevent dangling references.
+		 */
+		void invalidateContext() { query_ctx_for_errors = std::nullopt; }
+
+		/**
+		 * @brief Get the currently set query context.
+		 *
+		 * @return Optional reference to the active query context.
+		 */
+		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const {
+			return query_ctx_for_errors;
+		}
 
 		/**
 		 * @brief Lowers a LIR function into DVM bytecode function.

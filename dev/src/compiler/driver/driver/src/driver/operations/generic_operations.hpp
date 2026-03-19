@@ -7,6 +7,7 @@
 #pragma once
 
 #include "../backend_type.hpp"
+#include "../options.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
@@ -22,6 +23,10 @@ namespace compiler::driver {
 	 * Temporary interface for compiling the entire package into a single binary.
 	 * It compiler every module into the .o/.dbc files (via queries),
 	 * and also for LLVM backend it links them into a single binary.
+	 *
+	 * @brief The final link step for creating the package executable.
+	 * \parallel Must be serialized or guarded to avoid overwriting/colliding outputs when packaging
+	 * concurrently.
 	 */
 	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,
@@ -40,6 +45,25 @@ namespace compiler::driver {
 		query::Context& ctx, frontend::ModuleID module_id
 	);
 
+	/**
+	 * @brief Compile a Duckling script (.ds file) into a single artifact.
+	 *
+	 * Reads the script source, splits it into individual statements, creates a chain of
+	 * REPL-style modules (each with a parent link to the previous), compiles each one,
+	 * and combines the results into a single output file:
+	 *   - DVM backend  -> .dbc bytecode file
+	 *   - LLVM backend -> native executable (linked with linking_options)
+	 *
+	 * @param mode             All script compilation options (file, backend, output path).
+	 * @param backend_type     Whether to use DVM or LLVM backend.
+	 * @param linking_options  Linker configuration (ignored for DVM backend).
+	 */
+	base::OkBad compileScript(
+		const CompilerModeOfOperationAndOptions::ScriptMode& mode,
+		BackendType                                          backend_type,
+		const linker::LinkingOptions&                        linking_options
+	);
+
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;
 		BackendType        backend_type;
@@ -53,11 +77,23 @@ namespace compiler::driver {
 
 	/**
 	 * Query that produces .dbc/.o file for given Duckling module.
+	 *
+	 * \parallel
+	 * - Writes artifacts (\ref artifact::ArtifactCollection)
+	 * - Produces processed files (artifact outputs, LLVM/DVM intermediates)
+	 * - Updates backend compilation timer (\ref timer::AddToTime)
+	 * - Uses \ref compiler::frontend::ModuleTree::getPathComponentHash (lazy \ref
+	 * compiler::frontend::ModuleTree mutation)
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(
 		CompileModule,
 		KeyOf_CompileModule,
 		query::QResult<artifacts::FileArtifact>,
-		({ .used_hashes = query::UsedHashes::StableHash, .can_be_loaded_from_disk = true })
+		({
+			.used_hashes             = query::UsedHashes::StableHash,
+			.can_be_loaded_from_disk = true,
+			.preserve_in_graph       = true,
+		})
 	);
 }

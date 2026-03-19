@@ -6,6 +6,7 @@ either in the scheme or it's implementation, they should be reflected here.
 ```rust
 
 <mangled-symbol-name> ::= <language-prefix> <scheme-version> <encoding> <opt-metadata>
+                        | <no-mangling>                     // C linkage (builtins, extern C, special e.g. main)
 
 // note: global identifiers starting with underscore and a capital letter are reserved in C
 // Q seems to be free and stands for both query and quack
@@ -15,6 +16,14 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <encoding> ::= <path>                                       // variables and constants
              | <path> <function-type>                       // functions
+             | <repl-expression-wrapper>                    // REPL expressions
+
+// REPL expression wrappers use simplified mangling for now. @TODO: #1768 decide
+// if it's correct.
+<repl-expression-wrapper> ::= "__repl_expr_wrapper_" <base-10-number>
+
+// Same with REPL instruction wrappers.
+<repl-instruction-wrapper> ::= "__repl_instr_wrapper_" <base-10-number>
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>
@@ -90,9 +99,13 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <class-type> ::= "C" <path>                                 // class-like types (class, enum, etc.)
 
-<function-type> ::= "F" <function-qualifier>* <return-type> <type>* "E"
+<function-type> ::= "F" <function-qualifier>* <return-type> <function-argument>* "E"
 
 <return-type> ::= <type>
+
+<function-argument> := <type> <function-argument-name>
+
+<function-argument-name> := <identifier>
 
 // additional qualifiers for functions including member functions
 // more qualifiers should be added in the future
@@ -121,17 +134,10 @@ either in the scheme or it's implementation, they should be reflected here.
               | <back-reference>
 
 <unscoped-name> ::= <identifier>                            // actual name of a (typical) symbol
-                  | <special-member-name>                   // ctors, dtors, etc.
                   | <unnamed-type-name>                     // unnamed type or closure
                   | <operator-name>
                   | <special-symbol-encoding>               // special symbols that are created by the compiler
                   | <back-reference>
-
-// more special methods could be added in the future
-<special-member-name> ::= "C" <type>* "E"                   // constructor
-                        | "C" <identifier> <type>* "E"      // named constructor
-                        | "D" <type>* "E"                   // destructor
-                        | "M"                               // move constructor
 
 <operator-name> ::= <chain-operator>
                   | <unary-operator-name>                   // inside class, no need for argument type

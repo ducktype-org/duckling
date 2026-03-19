@@ -1,14 +1,13 @@
 use std::{
-    env::current_dir,
+    env::{current_dir, home_dir},
     path::{Path, PathBuf},
 };
-
-use rustvil::{config_files::home, os::env::Env};
 
 use crate::{
     QuackResult, QuackResultContext,
     duck::util::{duck_cfg::DuckCfg, duck_home::DuckHome, terminal::Terminal},
     quackpack::util::paths::duck_home_path,
+    util_common::env::Env,
 };
 
 #[derive(Debug)]
@@ -20,6 +19,7 @@ pub struct DuckCtx {
     user_home: PathBuf,
     duck_home: DuckHome,
     env: Env,
+    offline: bool,
 }
 
 impl DuckCtx {
@@ -27,7 +27,7 @@ impl DuckCtx {
         let env = Env::default();
         let console = Terminal::stdout();
         let error_console = Terminal::stderr();
-        let user_home = home().context("while trying to get user home directory")?;
+        let user_home = home_dir().context("while trying to get user home directory")?;
         let duck_home = DuckHome::new(
             duck_home_path(&env, &user_home).context("while trying to get duck home directory")?,
             &env,
@@ -42,6 +42,7 @@ impl DuckCtx {
             user_home,
             duck_home,
             env,
+            offline: false,
         })
     }
 
@@ -92,13 +93,26 @@ impl DuckCtx {
     pub fn duck_home(&self) -> &DuckHome {
         &self.duck_home
     }
+
+    pub fn is_offline(&self) -> bool {
+        self.offline
+    }
+
+    pub fn set_offline(&mut self, offline: bool) {
+        self.offline = offline;
+    }
+
+    /// Get the path of the default packages' storage in [`DuckHome`].
+    pub fn default_storage_root(&self) -> &Path {
+        self.duck_home().storage_dir()
+    }
 }
 
 #[cfg(test)]
 impl Default for DuckCtx {
     fn default() -> Self {
         let env = Default::default();
-        let user_home = home().unwrap();
+        let user_home = home_dir().unwrap();
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home).unwrap(), &env);
         Self {
             console: Terminal::stdout(),
@@ -108,6 +122,20 @@ impl Default for DuckCtx {
             cwd: current_dir().unwrap(),
             duck_home,
             user_home,
+            offline: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn assert_send_sync_package() {
+        fn assert_send<T: Send>() {}
+        fn assert_sync<T: Sync>() {}
+        assert_send::<DuckCtx>();
+        assert_sync::<DuckCtx>();
     }
 }

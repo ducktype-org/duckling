@@ -2,7 +2,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <init/init.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <iostream>
 
@@ -30,13 +30,13 @@ int main() {
 		}
 
 		// Record QueryFileSideInput dependencies for every additional source file.
-		for (const auto& file_locked: module_tree->getSourceFiles()) {
+		for (const auto& file_locked: module_tree->getSourceFiles().unlock(ctx)) {
 			const auto file_access = file_locked.unlock(ctx);
 			other_sources.emplace_back(getFileRef(file_access.getID()));
 		}
 
 		// Each unlock(ctx) emits a QueryModuleSideInput edge so incremental rebuilds know what changed.
-		for (const auto& submodule_locked: module_tree->getSubmodules()) {
+		for (const auto& submodule_locked: module_tree->getSubmodules().unlock(ctx)) {
 			const auto submodule_access = submodule_locked.unlock(ctx);
 			submodules.emplace_back(getModuleRef(submodule_access.getID()));
 		}
@@ -52,5 +52,6 @@ int main() {
 
 	for (const auto& submodule_ref: submodules)
 		std::cout << submodule_ref->getName().strView() << " has "
-				  << submodule_ref->getSourceFiles().size() << " source file(s)" << '\n';
+				  << submodule_ref->getSourceFiles().illegalAccess().size() << " source file(s)"
+				  << '\n';
 }

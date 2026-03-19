@@ -1,8 +1,8 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -86,8 +86,15 @@ namespace vm::loader::compiler {
 			const code::Function& function;
 			/// Temporary label IDs used before label linking.
 			base::HashMap<base::StrID, usize> label_id_map;
-			/// A mapping from a local variable's name to its offset on the function's local stack.
-			base::HashMap<base::StrID, usize> local_offset_map{};
+
+			struct LocalEntry {
+				u64      offset;
+				TypeCRef type;
+			};
+
+			/// A mapping from a local variable's name to its offset on the function's local stack
+			/// and type.
+			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size = 0;
 		};

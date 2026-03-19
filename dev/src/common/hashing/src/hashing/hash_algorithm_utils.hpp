@@ -18,7 +18,8 @@ namespace hashing {
 	namespace internal {
 
 		/**
-		 * checks if the type is a span of const or non-const bytes
+		 * checks if the type is a span of const or non-const bytes.
+		 * @note Implementation is weird to handle the length argument of span correctly.
 		 */
 		template<typename T>
 		concept span_of_bytes
@@ -137,19 +138,19 @@ namespace hashing {
 			// the buffer is a memcopy of the range's data. This should allow for copy elision and
 			// no overhead.
 
-			constexpr std::size_t elem_size   = sizeof(std::ranges::range_value_t<R>);
+			constexpr std::size_t ELEM_SIZE   = sizeof(std::ranges::range_value_t<R>);
 			const std::size_t     r_size      = std::ranges::size(r);
-			const std::size_t     buffer_size = r_size * elem_size;
+			const std::size_t     buffer_size = r_size * ELEM_SIZE;
 			auto* const           buffer      = ::new std::byte[buffer_size];
 
-			for (u64 i = 0, j = 0; i < r_size; ++i, j += elem_size) {
+			for (u64 i = 0, j = 0; i < r_size; ++i, j += ELEM_SIZE) {
 				// Ranges may have both singed and unsigned index types and there is not good trait
 				// that can always tell which one the range expects. To suppress warnings we get the
 				// elements using std::next with range's difference_type
 				const auto& elem = *std::next(
 					std::ranges::begin(r), static_cast<std::ranges::range_difference_t<R>>(i)
 				);
-				const auto arr = std::bit_cast<std::array<const std::byte, elem_size>>(elem);
+				const auto arr = std::bit_cast<std::array<const std::byte, ELEM_SIZE>>(elem);
 				std::copy(arr.begin(), arr.end(), buffer + j);
 			}
 
@@ -157,19 +158,6 @@ namespace hashing {
 
 			delete[] buffer;
 		}
-
-		/**
-		 * Checks if a range that may have unspecified order of elements can be hashed
-		 */
-		template<typename HashAlgorithm, typename R>
-		concept can_hash_range_with_unspecified_order
-			= std::copy_constructible<HashAlgorithm> && std::ranges::input_range<R>
-		   && requires(HashAlgorithm::result_type res) {
-				  {
-					  res ^= res
-				  }
-				  -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
-			  };
 
 		/**
 		 * Checks if the type is tuple-like i.e. supports std::tuple_size and std::get

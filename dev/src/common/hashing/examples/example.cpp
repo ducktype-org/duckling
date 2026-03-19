@@ -4,8 +4,6 @@
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/type_hash_code.hpp>
-#include <hashing/type_unique_code.hpp>
 
 #include <iostream>
 #include <tuple>
@@ -16,10 +14,12 @@
 
 // we can use the Hash as a drop-in replacement for std::hash, for example in std::unordered_map
 namespace my_map {
+	using Hasher = decltype([](auto&& x) { return hashing::Hash<>{}(x).data.at(0); });
+
 	template<
 		class Key,
 		class T,
-		class Hash  = hashing::Hash<>,
+		class Hash  = Hasher,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
 	using unordered_map = std::unordered_map<Key, T, Hash, Pred, Alloc>;
@@ -85,16 +85,14 @@ int main() {
 	m[2] = 3;
 	std::cout << m[1] << ' ' << m[2] << '\n';  // 2 3
 
-	// by default fnva_64 algorithm is used
-	std::cout << Hash{}(type1{}) << '\n';  // some 64-bit number
+	// by default the DefaultHashAlgorithm is used
+	std::cout << Hash{}(type1{}) << '\n';
+
 	// but we can specify the algorithm explicitly as a template parameter
 	// it's also possible to get the hash value at compile time
-	constexpr auto h = Hash<Fnv1a_32, TypeCode<u32, false>>{}(type2{});
-	std::cout << h << '\n';  // some 32-bit number
+	constexpr auto H = Hash<SHA256>{}(type2{});
+	std::cout << H << '\n';  // some 256-bit number
 
-	// by default the type's hash-code is appended to the hashed bytes so it's possible to
-	// differentiate between hashes of pair<int, int>{1, 2} and array<int, 2>{1, 2}, but
-	// if we want to, this can be turned off
 	struct type3 {
 		int x{ 123 }, y{ 456 };
 	};
@@ -103,46 +101,27 @@ int main() {
 		std::array<int, 2> a{ 123, 456 };
 	};
 
-	std::cout << "different hashes:\n\t" << Hash{}(type3{}) << "\n\t" << Hash{}(type4{}) << '\n';
-	std::cout << "the same hashes:\n\t" << Hash<Fnv1a_64, void>{}(type3{}) << "\n\t"
-			  << Hash<Fnv1a_64, void>{}(type4{}) << '\n';
-
 	// we can also visualize the bytes that were hashed
-	std::cout << "notice 4 bytes starting from yellow ones, this is the type's hash-code:\n"
-			  << Hash<DebugHash>{}(type3{}) << '\n'
-			  << Hash<DebugHash>{}(type4{}) << '\n';
-
-	std::cout << "here the type's hash-code is not appended:\n"
-			  << hashing::Hash<hashing::DebugHash, void>{}(type3{}) << '\n'
-			  << hashing::Hash<hashing::DebugHash, void>{}(type4{}) << '\n';
-
+	std::cout << Hash<DebugHash>{}(type3{}) << '\n' << Hash<DebugHash>{}(type4{}) << '\n';
 	// there is also a stateful hash that can be used to Hash multiple objects together
 	hashing::StatefulHash<hashing::DebugHash> hasher2;
+
 	// we can add objects one by one
 	hasher2(7);
 	hasher2(type2{});
+
 	// or all at once
 	hasher2(7, std::string{ "hello" }, 42);
-	constexpr auto hash_value = hashing::StatefulHash<hashing::Fnv1a_64, TypeCode<u32, false>>{}(
-									7, type2{}, 7, std::string{ "hello" }, 42
-	)
-	                                .finalize();
-	std::cout << "stateful hash:\n"
-			  << hasher2.finalize() << "\n\t(constexpr) hash value: " << hash_value << '\n';
 
-	// module also provides unique ids for types in compile time
-	// note that those can change between compilations
-	std::cout << "constexpr hash codes:\t" << hashing::TYPE_HASH_CODE<int> << ' '
-			  << hashing::TYPE_HASH_CODE<type1> << '\n';
+	constexpr auto HASH_VALUE
+		= hashing::StatefulHash<hashing::SHA256>{}(7, type2{}, 7, std::string{ "hello" }, 42)
+	          .finalize();
+	std::cout << "stateful hash:\n"
+			  << hasher2.finalize() << "\n\t(constexpr) hash value: " << HASH_VALUE << '\n';
+
 
 	std::cout << "hash of type_with_bases: " << hashing::Hash{}(type_with_bases{}) << '\n';
 
-
-	// different hash code types
-	std::cout << "using different hash code types (none, 4 bytes, 8 bytes):\n"
-			  << hashing::Hash<hashing::DebugHash, void>{}(42) << '\n'
-			  << hashing::Hash<hashing::DebugHash, hashing::TypeCode<u32>>{}(42) << '\n'
-			  << hashing::Hash<hashing::DebugHash, hashing::TypeCode<u64>>{}(42) << '\n';
 
 	// debug hash with tuple
 	std::cout << "hashing tuple-like types:\n"
@@ -151,11 +130,4 @@ int main() {
 				 )
 					 .finalize()
 			  << '\n';
-
-	// unique codes
-	std::cout << "unique codes:\n"
-			  << "\tint:\t" << hashing::TYPE_UNIQUE_CODE<int> << '\n'
-			  << "\tt1:\t" << hashing::TYPE_UNIQUE_CODE<type1> << '\n'
-			  << "\tt2:\t" << hashing::TYPE_UNIQUE_CODE<type2> << '\n'
-			  << "\tint:\t" << hashing::TYPE_UNIQUE_CODE<int> << '\n';
 }

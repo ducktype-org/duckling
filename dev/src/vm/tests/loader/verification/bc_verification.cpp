@@ -1,7 +1,6 @@
 #include <vm_tester_utils.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/loader/errors.hpp>
 
 class BCVerificationTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -17,6 +16,7 @@ public:
 		// Function verification
 		TESTER_ADD_TEST(multipleFunctions);
 		TESTER_ADD_TEST(useArgumentAfterCall);
+		TESTER_ADD_TEST(mainVerification);
 
 		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
@@ -35,12 +35,13 @@ public:
 		TESTER_ADD_TEST(repeatedName);
 
 		// @note: Not implemented yet
-		// TESTER_ADD_TEST(derefAfterDeinit);
-		// TESTER_ADD_TEST(derefAfterDeinitAndInit);
 		TESTER_ADD_TEST(derefWrongType);
 		TESTER_ADD_TEST(refOnPrimitive);
 
 		// Type verification
+		TESTER_ADD_TEST(correctDefinitions);
+		TESTER_ADD_TEST(incorrectDefinitions);
+		TESTER_ADD_TEST(duplicatedVariantAlternatives);
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
@@ -68,7 +69,7 @@ private:
 		loadInvalidDbc(
 			"wrong/functions/multiple_functions.dbc",
 			{
-				vm::loader::DuplicatedFunctionError::ERR_MSG,
+				"Function with this name already exists.",
 			}
 		);
 	}
@@ -80,6 +81,15 @@ private:
 			{
 				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
+		);
+	}
+
+	void mainVerification() {
+		loadInvalidDbc(
+			"wrong/functions/invalid_main_ret_type.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"wrong/functions/invalid_main_ret_size.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
 		);
 	}
 
@@ -169,27 +179,6 @@ private:
 			}
 		);
 	}
-
-#if 0
-	// Pointer verification
-	void derefAfterDeinit() {
-		loadInvalidDbc(
-			"wrong/pointers/deref_after_deinit.dbc",
-			{
-				vm::loader::UseAfterDeinit::ERR_MSG,
-			}
-		);
-	}
-
-	void derefAfterDeinitAndInit() {
-		loadInvalidDbc(
-			"wrong/pointers/deref_after_deinit_and_init.dbc",
-			{
-				vm::loader::UseAfterDeinit::ERR_MSG,
-			}
-		);
-	}
-#endif
 
 	void derefWrongType() {
 		loadInvalidDbc(
@@ -297,6 +286,26 @@ private:
 			"wrong/types/inplace_cast_size_mismatch.dbc",
 			{
 				vm::code::CastSizeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void correctDefinitions() { loadValidDbc("right/correct_definitions.dbc"); }
+
+	void incorrectDefinitions() {
+		loadInvalidDbc(
+			"wrong/types/cyclic_dependency.dbc",
+			{
+				vm::code::CyclicDependencyError::ERR_MSG,
+			}
+		);
+	}
+
+	void duplicatedVariantAlternatives() {
+		loadInvalidDbc(
+			"wrong/types/duplicated_variant_alternative.dbc",
+			{
+				vm::code::DuplicatedVariantAlternativeError::ERR_MSG,
 			}
 		);
 	}

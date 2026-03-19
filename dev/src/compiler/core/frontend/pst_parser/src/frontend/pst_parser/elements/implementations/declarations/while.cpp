@@ -6,16 +6,16 @@
 
 namespace pst {
 	MBox<While> While::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<While>(position);
+		auto out = makeBox<While>(state);
 
 		if (!assertStmtChoice<While>(state, state[0].is(Keyword::While))) return nullptr;
 
-		state.parse(out)
-			.all(Keyword::While, &out->optional_name, &out->condition)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().all(Keyword::While, &out->optional_name, &out->condition, &out->body);
+		})
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void While::dprint(std::ostream& out) const {
@@ -28,7 +28,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& While::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& While::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, optional_name);
 		return partial_hash;
 	}

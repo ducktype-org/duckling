@@ -12,9 +12,7 @@
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 
-#include <helios/scope_symbol_id.hpp>
-
-#include <base/collections/optional.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -203,6 +201,8 @@ namespace compiler::tsh {
 		/**
 		 * @brief The collection of elements of the interface, grouped by name.
 		 * @note This is duplicated from `elements` for performance reasons.
+		 * \parallel Accessed when building and querying a \ref TypeInterface; should be safe if
+		 * \ref TypeInterface instances are shared across threads.
 		 */
 		base::Map<base::StrID, std::vector<InterfaceElement>> elements_by_name;
 

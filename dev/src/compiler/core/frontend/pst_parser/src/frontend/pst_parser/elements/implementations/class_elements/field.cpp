@@ -3,23 +3,21 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Field>(position, ctx);
+	MBox<Field> Field::parse(LangParserState& state) {
+		auto out = makeBox<Field>(state);
 
-		out->parseSpecifiers(state);
-
-		if (state.parse(out).tryEat(Keyword::Const)) {
+		if (state[0].is(Keyword::Let)) {
 			out->is_mutable = false;
-			state.parse(out).eatOne();
-		}
+			PARSE().one(Keyword::Let);
+		} else
+			PARSE().tryEat(Keyword::Var);
 
-		state.parse(out).all(&out->name, NamedOperator::Colon);
-		state.parse(out).one(&out->type);
+		PARSE().all(&out->name, NamedOperator::Colon);
+		PARSE().one(&out->type);
 
-		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->init);
+		if (PARSE().tryEat(NamedOperator::Assign)) PARSE().one(&out->init);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Field::dprint(std::ostream& out) const {
@@ -44,7 +42,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, is_mutable);
 		addToHash(partial_hash, name);
 		return partial_hash;

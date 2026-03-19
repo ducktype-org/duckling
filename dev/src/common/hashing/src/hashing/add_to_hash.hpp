@@ -11,30 +11,22 @@ namespace hashing {
 
 	/**
 	 * Options for the addToHash function template:
-	 * * allow_std_hash - if true, the function will try to use std::hash for hashing types that
+	 * allow_std_hash - if true, the function will try to use std::hash for hashing types that
 	 *     can't be hashed using the provided hashing algorithm
-	 * * allow_hashing_ranges_with_unspecified_order - if true, the function will hash ranges that
-	 *     may have unspecified order of elements, which circumvents the strict use of the hashing
-	 *     algorithm
 	 */
 	struct AddToHashOptions {
 		bool allow_std_hash;
-		bool allow_hashing_ranges_with_unspecified_order;
 	};
 
 	/**
 	 * Default (strict) options for the addToHash function template
 	 */
-	static constexpr AddToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{
-		.allow_std_hash = false, .allow_hashing_ranges_with_unspecified_order = false
-	};
+	static constexpr AddToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{ .allow_std_hash = false };
 
 	/**
 	 * Relaxed options for the addToHash function template
 	 */
-	static constexpr AddToHashOptions RELAXED_ADD_TO_HASH_OPTIONS{
-		.allow_std_hash = true, .allow_hashing_ranges_with_unspecified_order = true
-	};
+	static constexpr AddToHashOptions RELAXED_ADD_TO_HASH_OPTIONS{ .allow_std_hash = true };
 
 	/**
 	 * This is a template overload for the 'addToHash' function.
@@ -96,19 +88,6 @@ namespace hashing {
 		// Overload if range is contiguous
 		else if constexpr (std::ranges::contiguous_range<T>) {
 			for (const auto& elem: t) addToHash(hash_alg, elem);
-		}
-		// Some ranges will compare equal but keep their elements in unspecified order
-		else if constexpr (Options.allow_hashing_ranges_with_unspecified_order
-		                   && internal::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
-			typename HashAlgorithm::result_type combined_result{};
-			for (auto&& elem: t) {
-				// Note that this copy and hash finalization in cast may be expensive,
-				// if possible the type should get a dedicated addToHash overload
-				auto hash_copy = hash_alg;
-				addToHash(hash_copy, elem);
-				combined_result ^= static_cast<typename HashAlgorithm::result_type>(hash_copy);
-			}
-			addToHash(hash_alg, combined_result);
 		}
 		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
 		// its specialization should be provided above

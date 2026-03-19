@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lang_parser_context.hpp"
 #include "lang_parser_element.hpp"
 #include "pst_automatic.hpp"
 #include "pst_state_forward.hpp"  // IWYU pragma: keep
@@ -14,7 +15,6 @@
 #include <utility>
 
 namespace pst {
-
 	/**
 	 * @brief State used for parsing Duckling to PST
 	 */
@@ -29,15 +29,67 @@ namespace pst {
 
 		void checkAllParsed();
 
-	public:
-		LangParserState(
-			tpc::TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err
-		):
-			  tpc::ParserState(std::move(tokens), err, int_err) {}
+		void copyOwnContext();
+
+	private:
+		template<class T>
+		friend class pst::PSTAutomatic;
+		friend void fallbackLen(LangParserState& state, u64 length);
+		friend void exitFallback(LangParserState& state);
+		friend void setSoftFallback(LangParserState& state, TokenStreamCondition fun);
+		friend void exitSoftFallback(LangParserState& state);
+
+		/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
+		| These are methods that should only be used by automatic             |
+		\* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 		/**
-		 * @brief Informs whether new errors and some parsing should be skipped till fallback is
-		 * reached.
+		 * @brief deletes current stream and makes last stream the current stream. Resets error
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
+		 */
+		void goUp() override;
+		/**
+		 * @brief deletes current stream and makes last stream the current stream then skips one
+		 * token (the recursive token that was the source of the deleted stream). Resets error
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
+		 */
+		void goUpAndSkip() override;
+
+		/**
+		 * @brief Creates a new sub-stream of given length starting in the current token.
+		 */
+		void setFallback(u64 length);
+
+		/**
+		 * @brief Sets a soft fallback that tries to find a sensible end using the condition in case
+		 * of error.
+		 */
+		void setSoftFallback(std::function<TokenStreamCondition>);
+
+		/**
+		 * @brief Exits a soft fallback that tries to find a sensible end using the condition in
+		 * case of error.
+		 */
+		void exitSoftFallback();
+
+		/**
+		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
+		 */
+		void exitFallback();
+
+	public:
+		LangParserState(
+			tpc::TokenStream&& tokens, Box<LangParserContext>&& ctx, Ref<dia_int::Logger> int_err
+		):
+			  tpc::ParserState(std::move(tokens), std::move(ctx), int_err) {}
+
+		/**
+		 * @brief Informs whether new errors occurred and some parsing should be skipped till
+		 * fallback is reached.
 		 */
 		[[nodiscard]]
 		bool isSkipping() const;
@@ -65,35 +117,15 @@ namespace pst {
 		}
 
 		/**
-		 * @brief deletes current stream and makes last stream the current stream. Resets error
-		 * bit (additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
-		 */
-		void goUp() override;
-		/**
-		 * @brief deletes current stream and makes last stream the current stream then skips one
-		 * token (the recursive token that was the source of the deleted stream). Resets error
-		 * bit (additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
-		 */
-		void goUpAndSkip() override;
-
-		/**
-		 * @brief Creates a new sub-stream of given length starting in the current token.
-		 */
-		void setFallback(u64 length);
-
-		/**
-		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error
-		 * bit (additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
-		 */
-		void exitFallback();
-
-		/**
 		 * @brief Do final checks that everything is parsed.
 		 */
 		void finalize();
+
+		[[nodiscard]]
+		CRef<LangParserContext> getContext() const;
+
+		void setContextClassName(base::StrID);
+		void setContextBlockOrdering(BlockOrderType);
 
 		/**
 		 * @brief Adds to the balance of skipped_entries
@@ -123,18 +155,9 @@ namespace pst {
 			return skipped_entries_depth == 0;
 		}
 
-		void fail([[maybe_unused]] i64 rel_pos, [[maybe_unused]] const std::string& message)
-			override {
-			CORE_PANIC("old fail is unsupported for language parsing");
-		}
-
 		/**
-		 * @brief Logs an error relatively to the current token.
+		 * @brief Logs an error.
 		 */
-		void log(Box<dia::Message>) override {
-			CORE_PANIC("old logger is unsupported for language parsing");
-		}
-
 		void logInt(Box<dia_int::MessageBase> message) override {
 			if (isSkipping()) {
 				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
@@ -143,6 +166,20 @@ namespace pst {
 			if (message->isError()) {
 				skip_till_fallback    = true;
 				skipped_entries_depth = 1;
+			}
+			int_err->log(std::move(message));
+		}
+
+		/**
+		 * @brief Logs an error that doesn't require skipping to a fallback.
+		 *
+		 * @note This is for very specific usecases where behaviour is reliable.
+		 * Care needs to be taken so that each element has all the data needed for hashing.
+		 */
+		void logSafeError(Box<dia_int::MessageBase> message) {
+			if (isSkipping()) {
+				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
+				return;
 			}
 			int_err->log(std::move(message));
 		}

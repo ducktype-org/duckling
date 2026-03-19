@@ -73,13 +73,16 @@ public:
 		TESTER_ADD_TEST(testVisitor);
 		TESTER_ADD_TEST(testVisitorAlternative);
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
-		TESTER_ADD_TEST(testFunDecl);
+		TESTER_ADD_TEST(testFunDeclFFI);
+		TESTER_ADD_TEST(testSimpleExpand);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
 
 private:
-	pst::PST<> prepare(const std::string& filename) { return { fs::File(filename) }; }
+	pst::PST<> prepare(const std::string& filename) {
+		return { fs::File(filename), pst::PSTType::Program };
+	}
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
 		auto pst = prepare(path(filename));
@@ -124,13 +127,15 @@ private:
 		const std::string& duckling_file, const std::string& json_file, bool no_errors = true
 	) {
 		pst::PST<> pst = prepare(duckling_file);
-		assertTrue(
-			pst::checkUniqueComponentHashs(pst.getRootElement()).isOk(),
-			"Element paths are not unique"
-		);
-		assertTrue(
-			pst::checkUniqueHashes(pst.getRootElement()).isOk(), "Element paths are not unique"
-		);
+		if (not pst.hasErrors()) {
+			assertTrue(
+				pst::checkUniqueComponentHashs(pst.getRootElement()).isOk(),
+				"Element paths are not unique"
+			);
+			assertTrue(
+				pst::checkUniqueHashes(pst.getRootElement()).isOk(), "Element paths are not unique"
+			);
+		}
 		std::stringstream ss;
 		pst.dprint(ss);
 
@@ -181,7 +186,7 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
-	void testFunDecl() { testJsonRelativePath("ffi.duck", "ffi.json"); }
+	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testNumericLiteralParsing() {
 		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");
@@ -189,7 +194,7 @@ private:
 
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 4, "Expected 4 errors");
+		assertTrue(pst.getLogger()->errorCount() == 3, "Expected 3 errors");
 	}
 
 	void testUsingErrors() {
@@ -199,7 +204,7 @@ private:
 
 	void testParamListErrors() {
 		pst::PST<> pst = prepare(path("snippets/params_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 10, "Expected 10 errors");
+		assertTrue(pst.getLogger()->errorCount() == 7, "Expected 7 errors");
 	}
 
 	void testMissingSemiErr() {
@@ -246,6 +251,14 @@ private:
 			ASSERT_EQUAL(visitor.counter, 1);
 			i++;
 		}
+	}
+
+	void testSimpleExpand() {
+		auto pos      = dia::SourcePosition::fakePosition();
+		auto contents = "var a: T = 5;";
+		auto pst
+			= pst::PST<>::fromExpand(pos, contents, pst::LangParserContext::programBaseContext());
+		assertTrue(pst.getLogger()->messageCount() == 0, "Expected 0 errors");
 	}
 
 

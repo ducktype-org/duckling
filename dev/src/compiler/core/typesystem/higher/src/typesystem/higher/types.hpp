@@ -10,7 +10,7 @@
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/types/bits_and_bytes.hpp>
@@ -30,12 +30,14 @@ namespace compiler::tsh {
 	class TupleAbstractTypeImpl;
 	class FunctionAbstractTypeImpl;
 	class DynamicArrayAbstractTypeImpl;
+	class StaticArrayAbstractTypeImpl;
 	class VariantAbstractTypeImpl;
 	class ClassAbstractTypeImpl;
 	class NamespaceAbstractTypeImpl;
 	class ModuleAbstractTypeImpl;
 	class MetaAbstractTypeImpl;
 	class ImportAbstractTypeImpl;
+	class TypeTemplateAbstractTypeImpl;
 
 	/******************\
 	|    BASIC TYPES   |
@@ -277,7 +279,7 @@ namespace compiler::tsh {
 	 * or it can be a structure with captures and bindings.
 	 *
 	 * A function that is free is, in effect, a C-like function pointer, while a
-	 * non-free function can be thought of as a function object, lika a lambda with
+	 * non-free function can be thought of as a function object, like a lambda with
 	 * captures or a partially applied function.
 	 *
 	 * A non-free (bound? [to an object]) function can be represented as two pointers:
@@ -344,6 +346,29 @@ namespace compiler::tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(DynamicArrayAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(DynamicArrayAbstractType)
+	};
+
+	class StaticArrayAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(StaticArrayAbstractType, AbstractType)
+
+		/**
+		 * @brief Gets the type of the elements of the dynamic array.
+		 * @return The type of the elements of the dynamic array.
+		 */
+		[[nodiscard]]
+		SymbolType<> getElementType() const;
+
+		/**
+		 * @brief Gets the element count of the static array.
+		 * @return The number of elements in the static array.
+		 */
+		[[nodiscard]]
+		usize getSize() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(StaticArrayAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(StaticArrayAbstractType)
 	};
 
 	/**
@@ -485,5 +510,58 @@ namespace compiler::tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(ImportAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(ImportAbstractType)
+	};
+
+	/**
+	 * @brief The Type Template type.
+	 *
+	 * A Type Template represents an "incomplete" type.
+	 *
+	 * This is a compile-time concept used primarily to implement generics.
+	 * For instance, the bare keyword `List` is represented as a Type Template which cannot hold
+	 * values or exist in the final program's memory on its own, indexing it with a type (e.g.,
+	 * `List[i64]`) "saturates" the template, resulting in a concrete `DynamicArrayAbstractType`.
+	 *
+	 * The source of a template defines its behavior:
+	 * - **BuiltinKind**: Identifies primitive generic constructors recognized
+	 *   directly by the compiler (like the built-in dynamic list).
+	 * - **SymID**: A reference to a user-defined generic class.
+	 *
+	 * @TODO: #717 This may come in handy when implementing generics/templates. This implementation
+	 * may change then. This is just a stub needed for generic List implementation.
+	 */
+	class TypeTemplateAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(TypeTemplateAbstractType, AbstractType)
+
+		enum class BuiltinKind {
+			List  ///< The built-in dynamic array constructor.
+		};
+
+		/**
+		 * @brief The origin of the template/generic.
+		 */
+		using Source = std::variant<BuiltinKind, helios::SymID>;
+
+		/**
+		 * @brief Gets the source (built-in or user-defined) of this template.
+		 * @return The template source.
+		 */
+		[[nodiscard]] Source getSource() const;
+
+		/**
+		 * @brief Creates a concrete type from this type template instantiated with the
+		 * `element_type`.
+		 * @param element_type The type to instantiate the type template with.
+		 * @return The concrete type after instantiation.
+		 */
+		[[nodiscard]] AbstractType instantiate(
+			query::Context& ctx, const SymbolType<>& element_type
+		) const;
+
+
+		CONSTRUCT_WITH_CHECKED_CAST(TypeTemplateAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(TypeTemplateAbstractType)
 	};
 }

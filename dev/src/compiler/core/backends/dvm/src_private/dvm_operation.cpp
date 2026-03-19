@@ -1,5 +1,7 @@
 #include "dvm_operation.hpp"
 
+#include <lir/lir_structure/lir_structure.hpp>
+
 namespace {
 	using namespace compiler;
 
@@ -12,12 +14,21 @@ namespace {
 }
 
 namespace compiler::backend_vm::internal {
-	DVMOperation lirOpToDVMOperation(lir::Operation operation) {
+
+	DVMOperation lirInstrToDVMOperation(const lir::Instruction& instr) {
+		auto operation = instr.operation;
 		if (isMetaTypeOperation(operation)) return MetaOperation{ operation };
 
 		using enum lir::Operation;
 
 		switch (operation) {
+		/// Non-simple operations ///
+		case Cast: {
+			const auto cast_params = std::get_if<lir::CastParameters>(&instr.extra_params);
+			CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
+			return CastOperation{ *cast_params };
+		}
+
 		/// Integer operations ///
 		case IntegerAdd:
 			return SimpleOperation{ OpKind::add };
@@ -97,6 +108,8 @@ namespace compiler::backend_vm::internal {
 		/// Other ///
 		case Assign:
 			return SimpleOperation{ OpKind::mov };
+		case ZeroInitialize:
+			return NoOpOperation{};
 		case Call:
 			return SimpleOperation{ OpKind::call };
 

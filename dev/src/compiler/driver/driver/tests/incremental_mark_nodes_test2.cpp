@@ -1,15 +1,18 @@
+#include "incremental_metadata_test_common.hpp"
+
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
+#include <global_state/backend_options.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <filesystem>
@@ -34,17 +37,23 @@ private:
 			= fs::FilePath(std::filesystem::current_path() / k_artifacts_dir);
 
 		// Re-initialize compiler which will load the previous graph from artifacts
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
-                    .package_path = fs::FilePath(path("modules/functions_1")),
+                    .package_path = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
+            	.backend_options = {
+					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
+				},
 				.debug_options         = {},
-				.incremental           = { .enabled = true }
+				.incremental           = { .enabled = true },
+				.execution_options     = { .worker_count = 1 },
             }
         );
+
+		ASSERT_TRUE(init_result.status().isOk());
 
 		// After initialization the previous graph (if present) should be loaded
 		auto prev_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
@@ -52,13 +61,19 @@ private:
 		auto prev = prev_opt.value();
 
 		// Verify node colors: previously-leaf nodes are green and dependency count checks hold
+		// This also test that non-existing ChildSideInput that submodules depend on is marked green
 		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(!prev_colors->empty());
+		ASSERT_TRUE(
+			prev_colors->size() != 0
+		);  // If there are no nodes, there's nothing to mark green, so test is not valid
 
 		for (const auto& node: prev->getAllNodes()) {
 			if (prev_colors->contains(node)) {
 				ASSERT_TRUE(prev->getNodeDeps(node).size() == 1);
-				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Green);
+				ASSERT_TRUE(
+					*prev_colors->atMaybe(node).value()
+					== query::internal::QueryState::PrevColor::Green
+				);
 			} else {
 				ASSERT_TRUE(
 					!node.q_id.getData().usesStableHashing() || prev->getNodeDeps(node).size() > 1
@@ -71,7 +86,8 @@ private:
 
 		// Compile the module again to trigger loadFromDisc and use the previous graph
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_1")), "mark_nodes_test_package"
+			fs::File(path("modules/incremental/org_functions/functions_1")),
+			"mark_nodes_test_package"
 		);
 
 		// Build a NodeID for the CompileModule query with the exact key we used
@@ -89,14 +105,49 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+
+			// Trigger metadata merge by calling the same queries
+			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });
+			(void) ctx.query<MetadataPersistenceTestQuery>({ 100 });
 		});
+
+		// ========== Verify metadata persisted from previous compilation ==========
+		{
+			using namespace metadata_persistence_test;
+			const auto& state = *query::internal::ContextAccess::getState();
+
+			// Build NodeIDs for our test queries
+			auto node_42  = query::internal::makeNodeID<MetadataPersistenceTestQuery>({ 42 });
+			auto node_100 = query::internal::makeNodeID<MetadataPersistenceTestQuery>({ 100 });
+
+			// Verify TestCounter metadata
+			auto counter_42 = state.getMetadata<metadata_TestCounter>(node_42);
+			ASSERT_EQUAL(counter_42.size(), 1);
+			ASSERT_EQUAL(counter_42[0]->value, u64{ 420 });  // 42 * 10
+
+			auto counter_100 = state.getMetadata<metadata_TestCounter>(node_100);
+			ASSERT_EQUAL(counter_100.size(), 1);
+			ASSERT_EQUAL(counter_100[0]->value, u64{ 1'000 });  // 100 * 10
+
+			// Verify TestSourceFile (StrID) metadata
+			auto source_42 = state.getMetadata<metadata_TestSourceFile>(node_42);
+			ASSERT_EQUAL(source_42.size(), 1);
+			ASSERT_EQUAL(source_42[0]->value.strView(), std::string_view{ "test/source_42.duck" });
+
+			auto source_100 = state.getMetadata<metadata_TestSourceFile>(node_100);
+			ASSERT_EQUAL(source_100.size(), 1);
+			ASSERT_EQUAL(source_100[0]->value.strView(), std::string_view{ "test/source_100.duck" });
+		}
 
 		// Check if red-green sweep marks all direct dependencies of the root node as green
 		for (const auto& dep_node: root_deps) {
 			if (!prev_colors->contains(dep_node))
 				std::cout << "Node " << dep_node.q_id.getData().name << " missing in prev_colors\n";
 			ASSERT_TRUE(prev_colors->contains(dep_node));
-			ASSERT_TRUE(prev_colors->at(dep_node) == query::internal::QueryState::PrevColor::Green);
+			ASSERT_TRUE(
+				*prev_colors->atMaybe(dep_node).value()
+				== query::internal::QueryState::PrevColor::Green
+			);
 		}
 
 		// Verify that CompileModule artifact exists and is non-empty on disk
@@ -115,7 +166,7 @@ private:
 		ASSERT_TRUE(maybe_art.has_value());
 
 		const auto& art  = *maybe_art.value();
-		auto        path = art.FILE.getFilePath().getPath();
+		auto        path = art.file.getFilePath().getPath();
 		ASSERT_TRUE(std::filesystem::exists(path));
 		ASSERT_TRUE(std::filesystem::file_size(path) > 0);
 

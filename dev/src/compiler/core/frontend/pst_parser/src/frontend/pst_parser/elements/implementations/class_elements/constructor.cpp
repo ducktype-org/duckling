@@ -5,29 +5,28 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Constructor>(position, ctx);
+	MBox<Constructor> Constructor::parse(LangParserState& state) {
+		auto out = makeBox<Constructor>(state);
 
-		out->parseSpecifiers(state);
-
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		if (state[0].isBracketGroup(Token::Round))
 			out->kind = tpc::Identifier{ .value = base::StrID("create") };
 		else {
 			tpc::Identifier ident;
-			state.parse(out).all(NamedOperator::Period, &ident);
+			PARSE().all(NamedOperator::Period, &ident);
 			out->kind = ident;
 		}
 
-		state.parse(out).one(&out->params);
-		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out)
-			.all(NamedOperator::Assign)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+		PARSE().one(&out->params);
+		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->inits);
 
-		return out;
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().all(NamedOperator::Assign, &out->body);
+		})
+
+		PST_RETURN out;
 	}
 
 	void Constructor::dprint(std::ostream& out) const {

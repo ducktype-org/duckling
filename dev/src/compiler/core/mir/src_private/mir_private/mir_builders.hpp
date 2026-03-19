@@ -1,5 +1,6 @@
 #pragma once
 
+#include <helios/hout/elements/expr.hpp>
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
@@ -87,11 +88,12 @@ namespace compiler::mir {
 	 */
 	struct FunctionBuilder final {
 	private:
-		base::Optional<base::StrID>      name;
-		base::StableVector<BlockBuilder> blocks;
-		base::Optional<BlockBuilderRef>  entry_block;
-		base::StableVector<MIRLocal>     local_list;
-		tsh::FunctionAbstractType        function_type;
+		base::Optional<base::StrID>                                   name;
+		base::StableVector<BlockBuilder>                              blocks;
+		base::Optional<BlockBuilderRef>                               entry_block;
+		base::StableVector<MIRLocal>                                  local_list;
+		base::StableHashMap<helios::code::HOUTExprID, MIRLocalMutRef> reusable_expr_locals;
+		tsh::FunctionAbstractType                                     function_type;
 
 		LifetimeScopeTree lifetime_scope_tree;
 
@@ -137,26 +139,38 @@ namespace compiler::mir {
 		/**
 		 * Adds a local variable to MIR function, from helios_id representing it.
 		 */
-		MIRLocalMutRef addLocal(const helios::SymID helios_id);
+		MIRLocalMutRef addLocal(helios::SymID helios_id);
 
 		/**
 		 * Adds a local parameter variable to MIR function from helios_id representing it.
 		 */
-		MIRLocalMutRef addParameter(const helios::SymID helios_id, u64 parameter_index);
+		MIRLocalMutRef addParameter(helios::SymID helios_id, u64 parameter_index);
 
 		/**
-		 * Creates a temporary local value, and also sets its lifetime scope.
+		 * Creates a temporary local value, identified by the reusable HOUT expression it
+		 * represents. Also sets its lifetime scope.
+		 * @note: If the temporary value for the given expression already exists, it will be
+		 * returned instead of creating a new one.
 		 */
 		[[nodiscard]]
-		MIRLocalMutRef addTmp(const tsh::SymbolType<> type, ScopeRef scope);
+		MIRLocalMutRef getTmpForReusableExpr(
+			const helios::code::ReusableExpr& reusable_expr, ScopeRef scope
+		);
 
 		/**
-		 * Creates a temporary local value, i.e. local value
-		 * not arising from variable written directly in the Duckling source code.
-		 * Sets its lifetime scope to no_lifetime_scope.
+		 * Creates an anonymous temporary local value.
+		 * Also sets its lifetime scope.
 		 */
 		[[nodiscard]]
-		MIRLocalMutRef addNoLifetimeTmp(const tsh::SymbolType<> type);
+		MIRLocalMutRef addTmp(tsh::SymbolType<> type, ScopeRef scope);
+
+		/**
+		 * Creates an anonymous temporary local value.
+		 * Sets its lifetime scope to no_lifetime_scope. This may be useful in special
+		 * circumstances, such as values which are returned from a function.
+		 */
+		[[nodiscard]]
+		MIRLocalMutRef addNoLifetimeTmp(tsh::SymbolType<> type);
 
 		/**
 		 * Add a temporary local value of type bool.

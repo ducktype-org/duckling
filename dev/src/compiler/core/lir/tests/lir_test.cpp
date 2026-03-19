@@ -4,8 +4,9 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
-#include <helios/queries.hpp>
-#include <helios/symbols/simple.hpp>
+
+#include <helios/queries/queries.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -14,9 +15,9 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::tsh;
@@ -33,11 +34,15 @@ public:
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
+		TESTER_ADD_TEST(functionCallMetadataTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(testGlobals);
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(referencesTest);
+		TESTER_ADD_TEST(staticArrayTest);
+		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 	}
@@ -101,8 +106,8 @@ private:
 					base::strConcat("Could not validate LIR function ", lir_func->mangled_name)
 				);
 				result.funcs.put(
-					hout_func.declaration->original_name,
-					std::make_tuple(CRef(&hout_func), mir_func, lir_func)
+					hout_func->declaration->original_name,
+					std::make_tuple(hout_func, mir_func, lir_func)
 				);
 			}
 			for (const auto& hout_glob: unit.glob_data) {
@@ -143,16 +148,16 @@ private:
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
@@ -193,6 +198,78 @@ private:
 			foo_lir->debugPrint(ctx, std::cerr);
 			foo_mir->debugPrint(std::cerr);
 		});
+	}
+
+	/**
+	 * @brief Test if the stable positions in LIR metadata are correct.
+	 * We check if the positions from metadata of the instructions are correct.
+	 */
+	void functionCallMetadataTest() {
+		auto module  = getLIROfModule(path("modules/function_calls"));
+		auto foo_lir = module.lirFunc("foo");
+
+		// withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
+
+		auto print_stable_position
+			= [](const base::Optional<pst::StablePosition>& stable, std::string_view label) {
+				  if (!stable.has_value()) {
+					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
+					  return;
+				  }
+
+				  auto position                   = stable.value().getActiveSourcePosition();
+				  auto [start_line, start_column] = position.getStartLineColumn();
+				  auto [end_line, end_column]     = position.getEndLineColumn();
+				  auto source_start               = position.getStart();
+				  auto source_end                 = position.getEnd();
+
+				  std::cerr << "[LIR metadata] " << label << ": " << start_line << ":"
+							<< start_column << " -> " << end_line << ":" << end_column << " ["
+							<< source_start << ", " << source_end << "]\n";
+			  };
+
+		assertTrue(
+			foo_lir->metadata.position.has_value(), "Expected function metadata position in LIR foo"
+		);
+		print_stable_position(foo_lir->metadata.position, "foo.function");
+		ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));
+
+		assertTrue(!foo_lir->block_order.empty(), "Expected at least one LIR block");
+		const auto& block0 = *foo_lir->block_order[0];
+		assertTrue(block0.instructions.size() >= 4, "Expected at least 4 instructions in block 0");
+
+		const auto& first_instr  = block0.instructions[0];
+		const auto& second_instr = block0.instructions[1];
+		const auto& fourth_instr = block0.instructions[3];
+
+		print_stable_position(first_instr.metadata.position, "foo.block_0.instr_0");
+		print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
+		print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
+
+		auto first_pos  = first_instr.metadata.position.value().getActiveSourcePosition();
+		auto second_pos = second_instr.metadata.position.value().getActiveSourcePosition();
+		auto fourth_pos = fourth_instr.metadata.position.value().getActiveSourcePosition();
+
+		auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
+		auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
+		ASSERT_EQUAL(first_start_line, 5);
+		ASSERT_EQUAL(first_start_col, 5);
+		ASSERT_EQUAL(first_end_line, 5);
+		ASSERT_EQUAL(first_end_col, 21);
+
+		auto [second_start_line, second_start_col] = second_pos.getStartLineColumn();
+		auto [second_end_line, second_end_col]     = second_pos.getEndLineColumn();
+		ASSERT_EQUAL(second_start_line, 7);
+		ASSERT_EQUAL(second_start_col, 18);
+		ASSERT_EQUAL(second_end_line, 7);
+		ASSERT_EQUAL(second_end_col, 24);
+
+		auto [fourth_start_line, fourth_start_col] = fourth_pos.getStartLineColumn();
+		auto [fourth_end_line, fourth_end_col]     = fourth_pos.getEndLineColumn();
+		ASSERT_EQUAL(fourth_start_line, 7);
+		ASSERT_EQUAL(fourth_start_col, 5);
+		ASSERT_EQUAL(fourth_end_line, 7);
+		ASSERT_EQUAL(fourth_end_col, 30);
 	}
 
 	void functionParametersTest() {
@@ -267,8 +344,8 @@ private:
 					found_a = true;
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+						getIntegralType(
+							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
 					);
 				}
@@ -349,8 +426,8 @@ private:
 
 	void simpleConstant() {
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
-		auto hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
+		const auto& hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
 
@@ -376,11 +453,213 @@ private:
 		});
 	}
 
+	void referencesTest() {
+		auto module   = getLIROfModule(path("modules/references"));
+		auto lir_func = module.lirFunc("references");
+
+		bool found_simple_address_of     = false;
+		bool found_address_of_with_deref = false;
+		bool found_complex_assignment    = false;
+
+		using namespace compiler::lir;
+
+		for (const auto& block: lir_func->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation == Operation::AddressOf) {
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					auto& arg = instr.arguments[0].get<LIRPlace>();
+
+					if (arg.projection_chain.empty()) {
+						found_simple_address_of = true;
+					} else if (arg.projection_chain.size() == 2) {
+						bool pattern_ok = std::holds_alternative<LIRPlace::DerefProjection>(
+											  arg.projection_chain[0].storage
+										  )
+						               && std::holds_alternative<LIRPlace::FieldProjection>(
+											  arg.projection_chain[1].storage
+									   );
+
+						if (pattern_ok) {
+							auto field = std::get<LIRPlace::FieldProjection>(
+								arg.projection_chain[1].storage
+							);
+							if (helios::name(field.field_id) == base::StrID("x"))
+								found_address_of_with_deref = true;
+						}
+					}
+				}
+
+				if (instr.operation == Operation::Assign && instr.output.has_value()) {
+					auto& out_place = instr.output.value();
+
+					if (out_place.projection_chain.size() == 5) {
+						const auto& chain = out_place.projection_chain;
+
+						bool pattern_ok
+							= std::holds_alternative<LIRPlace::DerefProjection>(chain[0].storage)
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage)
+						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[2].storage)
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[3].storage)
+						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[4].storage);
+
+						if (pattern_ok) {
+							auto f_p = std::get<LIRPlace::FieldProjection>(chain[1].storage);
+							auto f_x = std::get<LIRPlace::FieldProjection>(chain[3].storage);
+
+							if (helios::name(f_p.field_id) == base::StrID("p")
+							    && helios::name(f_x.field_id) == base::StrID("x")) {
+								auto constant = instr.arguments[0].get<LIRConstant>();
+								auto num
+									= constant.value.get<compiler::numeric_value::NumericValue>();
+								if (num->get<i32>() == 999) found_complex_assignment = true;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		ASSERT_TRUE(found_simple_address_of);
+		ASSERT_TRUE(found_address_of_with_deref);
+		ASSERT_TRUE(found_complex_assignment);
+	}
+
+	void staticArrayTest() {
+		auto module   = getLIROfModule(path("modules/static_arrays"));
+		auto lir_func = module.lirFunc("static_array_test");
+
+		using namespace compiler::lir;
+
+		bool found_zero_init_a = false;
+		bool found_zero_init_b = false;
+		bool found_index_proj  = false;
+		bool found_nested_proj = false;
+
+		for (const auto& local: lir_func->local_list) {
+			if (!local.helios_id.has_value()) continue;
+			auto name = helios::name(local.helios_id.value());
+
+			variant_match(local.layout->getVariant()) {
+				variant_case(compiler::tsl::StaticArrayTypeLayout, layout) {
+					if (name == "a") {
+						// i32[10] -> 10 * 32 = 320
+						ASSERT_EQUAL(layout.getSize(), Bits(320));
+						ASSERT_EQUAL(layout.getElementCount(), 10);
+					}
+					if (name == "b") {
+						// Point[2] -> 2 * (32+32) = 128
+						ASSERT_EQUAL(layout.getSize(), Bits(128));
+					}
+				}
+				variant_default {}
+			}
+		}
+
+		for (const auto& block: lir_func->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation == Operation::ZeroInitialize) {
+					auto& out   = instr.output.value();
+					auto  local = out.getBase<LIRLocalRef>();
+					if (local->helios_id.has_value()) {
+						auto name = helios::name(local->helios_id.value());
+						if (name == "a") found_zero_init_a = true;
+						if (name == "b") found_zero_init_b = true;
+					}
+				}
+
+				if (instr.operation == Operation::Assign && instr.output.has_value()) {
+					auto& out   = instr.output.value();
+					auto  local = out.getBase<LIRLocalRef>();
+					if (!local->helios_id.has_value()) continue;
+					auto name = helios::name(local->helios_id.value());
+
+					// a[5] -> IndexProjection
+					if (name == "a" && out.projection_chain.size() == 1) {
+						if (std::holds_alternative<LIRPlace::IndexProjection>(
+								out.projection_chain[0].storage
+							))
+							found_index_proj = true;
+					}
+
+					// b[1].y -> Index, Field
+					if (name == "b" && out.projection_chain.size() == 2) {
+						const auto& chain = out.projection_chain;
+						bool        pattern_ok
+							= std::holds_alternative<LIRPlace::IndexProjection>(chain[0].storage)
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage);
+
+						if (pattern_ok) {
+							auto field = std::get<LIRPlace::FieldProjection>(chain[1].storage);
+							if (helios::name(field.field_id) == base::StrID("y"))
+								found_nested_proj = true;
+						}
+					}
+				}
+			}
+		}
+
+		ASSERT_TRUE(found_zero_init_a);
+		ASSERT_TRUE(found_zero_init_b);
+		ASSERT_TRUE(found_index_proj);
+		ASSERT_TRUE(found_nested_proj);
+	}
+
+	void dynamicArrayTest() {
+		auto module   = getLIROfModule(path("modules/dynamic_arrays"));
+		auto lir_func = module.lirFunc("dynamic_array_test");
+
+		using namespace compiler::lir;
+
+		bool found_zero_init        = false;
+		bool found_push_with_params = false;
+		bool found_pop_with_params  = false;
+		bool found_len              = false;
+		bool found_free             = false;
+
+		for (const auto& block: lir_func->block_order) {
+			for (const auto& instr: block->instructions) {
+				switch (instr.operation) {
+				case Operation::ZeroInitialize:
+					found_zero_init = true;
+					break;
+				case Operation::ListPush: {
+					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
+					auto& params = std::get<ListOperationParameters>(instr.extra_params);
+					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
+					found_push_with_params = true;
+					break;
+				}
+				case Operation::ListPop: {
+					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
+					auto& params = std::get<ListOperationParameters>(instr.extra_params);
+					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
+					found_pop_with_params = true;
+					break;
+				}
+				case Operation::ListLen:
+					found_len = true;
+					break;
+				case Operation::ListFree:
+					found_free = true;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+
+		ASSERT_TRUE(found_zero_init);
+		ASSERT_TRUE(found_push_with_params);
+		ASSERT_TRUE(found_pop_with_params);
+		ASSERT_TRUE(found_len);
+		ASSERT_TRUE(found_free);
+	}
+
 	void metaFunctionsTest() {
 		auto module = getLIROfModule(path("modules/meta_functions"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto                  meta_type_entity = ctx.query<tsh::QueryMetaType>({});
+			auto                  meta_type_entity = tsh::getMetaType();
 			CRef<tsl::TypeLayout> meta_layout
 				= ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity);
 
@@ -459,12 +738,11 @@ private:
 			bool found_result_f32 = false;
 			bool found_some_i16   = false;
 
-			auto bool_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryBoolType>({}));
-			auto f32_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryFloatType>({ 32 }));
-			auto i16_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryIntegralType>({ 16 }));
+			auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType());
+			auto f32_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32));
+			auto i16_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(
+                getIntegralType(ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+            );
 
 			for (const auto& local: proc_data_lir->local_list) {
 				if (!local.helios_id.has_value()) continue;

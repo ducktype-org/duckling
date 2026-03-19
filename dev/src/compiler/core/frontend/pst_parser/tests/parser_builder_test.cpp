@@ -1,4 +1,5 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
 
@@ -28,7 +29,7 @@ class PSTBuilderTest: public tester::TestSuite {
 		std::string code;
 
 		bool operator()() {
-			auto parsed = pst::PST<Element>::fromContents(code);
+			auto parsed = pst::PST<Element>::fromContents(code, pst::PSTType::Program);
 			return parsed.getLogger()->good() == good;
 		}
 
@@ -70,18 +71,18 @@ private:
 	pst::PST<Element> manualSteps(const std::string& filename) {
 		auto file = tokenizer::makeTokenSource(fs::File(filename));
 		file->tokenize();
-		return { std::move(file) };
+		return { std::move(file), pst::PSTType::Program };
 	}
 
 	template<typename Element>
 	pst::PST<Element> fromContents(const std::string& filename) {
 		std::string contents{ fs::File(filename).getContent().view().stringView() };
-		return pst::PST<Element>::fromContents(contents);
+		return pst::PST<Element>::fromContents(contents, pst::PSTType::Program);
 	}
 
 	template<typename Element>
 	pst::PST<Element> fromFilename(const std::string& filename) {
-		return { fs::File(filename) };
+		return { fs::File(filename), pst::PSTType::Program };
 	}
 
 	template<typename Element>

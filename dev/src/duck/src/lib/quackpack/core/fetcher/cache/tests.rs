@@ -4,9 +4,8 @@ use super::*;
 use tempfile::{TempDir, tempdir};
 
 use crate::{
-    quackpack::core::{Version, fetcher::types::Package},
+    quackpack::core::{Version, fetcher::types::PackageWithUrl},
     quackpack::schemas::registry,
-    static_str_id,
 };
 
 fn create_sample_metadata() -> registry::Manifest {
@@ -42,9 +41,9 @@ fn create_sample_metadata() -> registry::Manifest {
     serde_json::from_str(JSON).expect("statically known json")
 }
 
-fn create_example_package() -> Package {
-    Package {
-        id: static_str_id!("quackpack"),
+fn create_example_package() -> PackageWithUrl {
+    PackageWithUrl {
+        id: "quackpack".into(),
         version: Version::new(1, 2, 3),
         url: Url::parse("https://localhost:9001").unwrap(),
     }
@@ -71,24 +70,22 @@ fn make_test_db() -> ManifestCache {
     ManifestCache::new(CacheLocation::Memory).unwrap()
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn add_and_fetch_metadata() {
+#[test]
+fn add_and_fetch_metadata() {
     let cache = make_test_db();
     cache
         .add_or_replace_manifest(&create_example_package(), create_sample_metadata())
-        .await
         .unwrap();
     let metadata = cache
         .get_manifest(&create_example_package())
-        .await
         .unwrap()
         .unwrap();
     assert_eq!(metadata, create_sample_metadata());
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn not_found_metadata() {
+#[test]
+fn not_found_metadata() {
     let cache = make_test_db();
-    let metadata = cache.get_manifest(&create_example_package()).await.unwrap();
+    let metadata = cache.get_manifest(&create_example_package()).unwrap();
     assert_eq!(metadata, None);
 }

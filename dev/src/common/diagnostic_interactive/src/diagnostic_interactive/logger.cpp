@@ -22,7 +22,9 @@ namespace dia_int {
 		diagnostics.emplace_back(message->buildDiagnosticFile());
 
 		if_opt_some(immediate_print_stream, stream) {
-			evaluateToTerminalMessage(diagnostics.back().refMut(), stream);
+			std::stringstream ss;  // For multithreading safety.
+			evaluateToTerminalMessage(diagnostics.back().refMut(), ss);
+			stream << ss.str();
 		}
 	}
 
@@ -70,4 +72,10 @@ namespace dia_int {
 	}
 
 	bool Logger::bad() const { return has_error; }
+
+	void Logger::mergeWith(Logger&& other) {
+		std::ranges::move(other.diagnostics, std::back_inserter(diagnostics));
+		has_error = has_error || other.has_error;
+		auto _    = std::move(other);
+	}
 }

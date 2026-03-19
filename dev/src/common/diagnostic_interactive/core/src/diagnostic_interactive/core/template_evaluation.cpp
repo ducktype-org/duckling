@@ -417,7 +417,11 @@ namespace dia_int {
 		const dia_args::CodeLocationComponent& el
 	) {
 		res = base::makeBox<state::CodeLocationComponent>(state::CodeLocation{
-			.file = el.file, .line = el.line, .column = el.column });
+			.file       = el.file,
+			.line       = el.line,
+			.column     = el.column,
+			.end_line   = el.end_line,
+			.end_column = el.end_column });
 	}
 
 	void EvaluateDiagnosticFileVisitor::visitStartLineComponent(const dia_args::StartLineComponent& el

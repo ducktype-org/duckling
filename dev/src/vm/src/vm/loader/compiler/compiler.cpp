@@ -15,13 +15,12 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/bytecode/validator/type_builder.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/loader/compiler/type_builder.hpp>
 #include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -35,9 +34,9 @@ namespace vm::loader::compiler {
 			variant_case(vm::opargs::Immediate, imm) return imm.value;
 
 			// Every used local variable is guaranteed to exist by static verification.
-#define HANDLE_LOCAL(TYPE)                                                     \
-	variant_case(vm::opargs::TYPE, local_type) {                               \
-		return static_cast<u64>(ctx.local_offset_map.at(local_type.var_name)); \
+#define HANDLE_LOCAL(TYPE)                                                      \
+	variant_case(vm::opargs::TYPE, local_type) {                                \
+		return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset); \
 	}
 			FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
@@ -113,14 +112,14 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
-		base::HashMap<base::StrID, usize> offsets;
-		std::vector<usize>                type_size_stack;
-		usize                             curr_stack_size = 0;
-		usize                             max_stack_size  = 0;
+		decltype(ctx.locals_map) result;
+		std::vector<usize>       type_size_stack;
+		usize                    curr_stack_size = 0;
+		usize                    max_stack_size  = 0;
 
 		auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
-			if_opt_some(offsets.atMaybe(local.var_name), offset) {
-				if (*offset != curr_stack_size) {
+			if_opt_some(result.atMaybe(local.var_name), entry) {
+				if (entry->offset != curr_stack_size) {
 					CORE_PANIC(
 						"DuplicatedLocalNameError - used a variable again at a different offset "
 						"which wasn't detected by the function validator"
@@ -128,8 +127,9 @@ namespace vm::loader::compiler {
 				}
 			}
 
-			offsets.put(local.var_name, curr_stack_size);
-			auto type_size = low_program.types->at(type.type_name)->getSize();
+			auto type_ref = low_program.types->at(type.type_name);
+			result.put(local.var_name, { .offset = curr_stack_size, .type = type_ref });
+			auto type_size = type_ref->getSize().asInt();
 			type_size_stack.push_back(type_size);
 			if (type.type_name == "void") return;
 			curr_stack_size += type_size;
@@ -146,13 +146,13 @@ namespace vm::loader::compiler {
 			// @todo: https://github.com/ducktype-org/duckling/issues/962
 			auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
 				if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-					return (*inh_meta).virtual_methods.contains(method_name);
+					return (*inh_meta).available_methods.contains(method_name);
 				}
 				return false;
 			});
 			if (it != low_program.types->end()) {
 				auto inh_meta = it->getInheritanceMetadata().value();
-				return inh_meta->virtual_methods[method_name]->getParameterCount();
+				return inh_meta->available_methods[method_name]->getParameterCount();
 			}
 			CORE_UNREACHABLE();
 		};
@@ -254,7 +254,7 @@ namespace vm::loader::compiler {
 			}
 		}
 
-		ctx.local_offset_map = std::move(offsets);
+		ctx.locals_map       = std::move(result);
 		ctx.local_stack_size = max_stack_size;
 	}
 
@@ -276,7 +276,7 @@ namespace vm::loader::compiler {
 			for (const auto& param: signature.parameters) {
 				auto type = low_program.types->at(param.str);
 				parameters.emplace_back(type);
-				parameters_size += type->getSize();
+				parameters_size += type->getSize().asInt();
 			}
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
@@ -287,7 +287,7 @@ namespace vm::loader::compiler {
 			                      .local_stack_size = ctx.local_stack_size,
 			                      .arg_size         = parameters_size,
 			                      .ret_size
-			                      = low_program.types->at(signature.result_type)->getSize(),
+			                      = low_program.types->at(signature.result_type)->getSize().asInt(),
 			                      .parameters  = std::move(parameters),
 			                      .result_type = low_program.types->at(signature.result_type) },
 				function.name
@@ -315,12 +315,12 @@ namespace vm::loader::compiler {
 		auto new_types = ctx.getCurrentTypes() | std::views::drop(low_program.types->size());
 		if (std::ranges::empty(new_types)) return;
 
-		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx);
+		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx.getCurrentTypes());
 
 		// Update method ID to name maps, since new methods may have appeared after new types were
 		// added.
 		for (const auto& new_type: new_types) {
-			auto type_from_metadata = low_program.types->at(typeName(new_type));
+			auto type_from_metadata = low_program.types->at(new_type.getName());
 			if_opt_some(type_from_metadata->getInheritanceMetadata(), metadata) {
 				//@todo: https://github.com/ducktype-org/duckling/issues/962
 				for (auto& [name, impl]: metadata->vtable) {
@@ -344,7 +344,9 @@ namespace vm::loader::compiler {
 										   })
 			                             | std::ranges::to<std::vector<TypeCRef>>();
 			auto param_size_sum = std::ranges::fold_left(
-				params | std::views::transform([](const auto& param) { return param->getSize(); }),
+				params | std::views::transform([](const auto& param) {
+					return param->getSize().asInt();
+				}),
 				0,
 				std::plus()
 			);
