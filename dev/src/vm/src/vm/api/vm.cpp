@@ -175,31 +175,6 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::StackFrameData>);
 	}
 
-	std::expected<response::PointerData, ApiError> debuggerGetPointerData(
-		PID pid, Pointer pointer, u64 size
-	) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(
-				pid, request::DebuggerGetPointerData{ .pointer = pointer, .size = size }
-			))
-		    .and_then(mapOrWrongResponse<response::PointerData>);
-	}
-
-	std::expected<response::Pointer, ApiError> debuggerDereferencePointer(PID pid, Pointer pointer) {
-		return Supervisor::get()
-		    .doRequest(
-				SupervisorRequest(pid, request::DebuggerDereferencePointer{ .pointer = pointer })
-			)
-		    .and_then(mapOrWrongResponse<response::Pointer>);
-	}
-
-	std::expected<response::TypeInfo, ApiError> debuggerGetTypeInfo(PID pid, base::StrID type_name) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::DebuggerGetTypeInfo{ .type_name = type_name })
-		    )
-		    .and_then(mapOrWrongResponse<response::TypeInfo>);
-	}
-
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })

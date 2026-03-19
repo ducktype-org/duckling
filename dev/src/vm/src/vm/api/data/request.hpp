@@ -93,19 +93,6 @@ namespace vm::api {
 		struct DebuggerGetStackFrameData {
 			u64 frame_index;
 		};
-
-		struct DebuggerGetPointerData {
-			api::Pointer pointer;
-			u64          size;
-		};
-
-		struct DebuggerDereferencePointer {
-			api::Pointer pointer;
-		};
-
-		struct DebuggerGetTypeInfo {
-			base::StrID type_name;
-		};
 	}
 
 	using RequestVariant = std::variant<
@@ -126,9 +113,6 @@ namespace vm::api {
 		request::StatusRequest,
 		request::DebuggerGetNumberOfCurrentStackFrames,
 		request::DebuggerGetStackFrameData,
-		request::DebuggerGetPointerData,
-		request::DebuggerDereferencePointer,
-		request::DebuggerGetTypeInfo,
 		request::Input,
 		request::Output,
 		request::Attach,

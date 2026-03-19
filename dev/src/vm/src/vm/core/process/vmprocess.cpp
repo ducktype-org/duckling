@@ -13,6 +13,7 @@
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/thread/vmvalueref.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
@@ -336,61 +337,13 @@ namespace vm {
 							Ref<Block> block = frame.block_stack[block_idx];
 							frame_vars.push_back(api::response::StackFrameData::FrameVar{
 								.offset  = offset,
-								.pointer = api::Pointer(vm::Pointer(block, 0)),
-								.type    = memory.getBlockType(block)->getName() });
+								.value   = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
+							});
 						}
 
 						return api::Response(api::response::StackFrameData{
 							.function_name = frame.current_function->name,
 							.frame_vars    = frame_vars });
-					}
-				}
-			}
-
-			variant_case(api::request::DebuggerGetPointerData, request) {
-				std::shared_lock lock(rw_global);
-				match_optional(assertProcessCanRespond()) {
-					opt_some(error) { return std::unexpected(error); }
-					opt_none {
-						base::ModRawView view
-							= memory.getPointerData(request.pointer.pointer, request.size);
-						return api::Response(api::response::PointerData{ .data = view });
-					}
-				}
-			}
-
-			variant_case(api::request::DebuggerDereferencePointer, request) {
-				std::shared_lock lock(rw_global);
-				match_optional(assertProcessCanRespond()) {
-					opt_some(error) { return std::unexpected(error); }
-					opt_none {
-						if (request.pointer.pointer.isNull())
-							return std::unexpected(api::ApiError{
-								api::OtherError{ "Cannot dereference null pointer" } });
-						base::ModRawView view = memory.getPointerData(
-							request.pointer.pointer, Type::POINTER_SIZE.asInt()
-						);
-						auto pointer = safeReadPointerBytes<Pointer>(view.getBegin());
-						return api::Response(api::response::Pointer{ .pointer
-						                                             = api::Pointer(pointer) });
-					}
-				}
-			}
-
-			variant_case(api::request::DebuggerGetTypeInfo, request) {
-				std::shared_lock lock(rw_global);
-				match_optional(assertProcessCanRespond()) {
-					opt_some(error) { return std::unexpected(error); }
-					opt_none {
-						match_optional(loader.types().atMaybe(request.type_name)) {
-							opt_some(type) {
-								return api::Response(api::response::TypeInfo{ type });
-							}
-							opt_none {
-								return std::unexpected(api::ApiError{
-									api::OtherError{ "Type not found" } });
-							}
-						}
 					}
 				}
 			}

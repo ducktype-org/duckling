@@ -203,24 +203,4 @@ namespace vm::api {
 	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
 		PID pid, u64 stack_frame_number
 	);
-
-	/**
-	 * @brief Get the data pointed to by a given pointer.
-	 * @return The response containing raw view of the data pointed to by the pointer or an API error.
-	 */
-	std::expected<response::PointerData, ApiError> debuggerGetPointerData(
-		PID pid, Pointer pointer, u64 size
-	);
-
-	/**
-	 * @brief Dereference a pointer once and return the resulting pointer.
-	 * @return The response containing the resulting pointer or an API error.
-	 */
-	std::expected<response::Pointer, ApiError> debuggerDereferencePointer(PID pid, Pointer pointer);
-
-	/**
-	 * @brief Get the name, size and kind of a given type.
-	 * @return The response containing the type info or an API error.
-	 */
-	std::expected<response::TypeInfo, ApiError> debuggerGetTypeInfo(PID pid, base::StrID type_name);
 }

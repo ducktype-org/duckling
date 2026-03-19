@@ -5,8 +5,8 @@
 
 #include <base/pointers/box.hpp>
 
-#include <vm/api/pointer.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
+#include <vm/core/thread/vmvalueref.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
@@ -64,24 +64,11 @@ namespace vm::api {
 			struct FrameVar {
 				// @todo: #2264 should express name in CodeCollection instead of offset in LowVMProgram
 				u64          offset;
-				api::Pointer pointer;
-				base::StrID  type;
+				VMValueRef value;
 			};
 
 			base::StrID           function_name;
 			std::vector<FrameVar> frame_vars;
-		};
-
-		struct PointerData {
-			base::ModRawView data;
-		};
-
-		struct Pointer {
-			api::Pointer pointer;
-		};
-
-		struct TypeInfo {
-			base::CRef<vm::code::valid_type::ValidType> type;
 		};
 
 		using Boolean = bool;
@@ -98,8 +85,5 @@ namespace vm::api {
 		ThreadID,
 		response::NumberOfCurrentStackFrames,
 		response::StackFrameData,
-		response::PointerData,
-		response::Pointer,
-		response::TypeInfo,
 		ExitValue>;
 }

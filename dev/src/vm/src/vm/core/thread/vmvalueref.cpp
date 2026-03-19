@@ -123,6 +123,8 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() {
 
 		variant_default return std::nullopt;
 	}
+
+	CORE_UNREACHABLE();
 }
 
 
