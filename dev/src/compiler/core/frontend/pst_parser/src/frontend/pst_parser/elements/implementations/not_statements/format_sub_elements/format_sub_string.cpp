@@ -16,7 +16,9 @@ namespace pst {
 	}
 
 	void FormatSubString::dprint(std::ostream& out) const { 	
+		out << "{";
 		std::print(out, R"("string": "{}")", string.str());
+		out << "}";
 	}
 
 	HashAlg& FormatSubString::addElementDataToStableHash(HashAlg& partial_hash) const {

@@ -2,6 +2,8 @@
 
 #include "expr_common.hpp"
 
+#include "../not_statements/format_sub_elements/format_sub_element.hpp"
+
 namespace pst::expr {
 	/**
 	 * @brief Element representing a string value in an expression

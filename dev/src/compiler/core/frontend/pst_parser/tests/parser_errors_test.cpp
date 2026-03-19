@@ -5,6 +5,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/implementations/class_elements/class_elements_errors.hpp>
 #include <frontend/pst_parser/elements/implementations/declarations/declarations_errors.hpp>
 #include <frontend/pst_parser/elements/implementations/declarations/var_parse.hpp>
@@ -252,11 +253,11 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, false> empty_specifier{ "public;" };
 	Example<pst::Stmt, false> bad_extern_block{ "extern {class x{}};" };
 
-	Example<pst::expr::ExprFormatStrValue, true> format1{ R"(f"{x} + {y} = {x + y}")" };
-	Example<pst::expr::ExprFormatStrValue, true> format2{ R"(f"{x}{y}{z}")" };
-	Example<pst::expr::ExprFormatStrValue, true> format3{ R"(f"nothing")" };
-	Example<pst::expr::ExprFormatStrValue, true> format4{ R"(f"{x}{y} = z")" };
-	Example<pst::expr::ExprFormatStrValue, false> bad_format1{ R"(f"{;}")" };
+	Example<pst::UniversalExprHolder, true> format1{ R"(f"{x} + {y} = {x + y}")" };
+	Example<pst::UniversalExprHolder, true> format2{ R"(f"{x}{y}{z}")" };
+	Example<pst::UniversalExprHolder, true> format3{ R"(f"nothing")" };
+	Example<pst::UniversalExprHolder, true> format4{ R"(f"{x}{y} = z")" };
+	Example<pst::UniversalExprHolder, false> bad_format1{ R"(f"{;}")" };
 
 	Example<pst::Stmt, true> trailing_comma_attr_arg_list{
 		"@if_system(Windows,) print(\"windows\");"
