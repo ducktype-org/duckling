@@ -83,7 +83,9 @@ namespace compiler::helios {
 
 				for (auto sym: *symbols_in_scope) {
 					// Register default constructors for all symbols that need them.
-					register_ctor_if_needed(sym);
+					const auto sym_kind = kind(sym);
+					if (sym_kind == SymbolKind::Variable || sym_kind == SymbolKind::Const)
+						register_ctor_if_needed(sym);
 
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)

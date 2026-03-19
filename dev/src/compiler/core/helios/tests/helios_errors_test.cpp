@@ -450,6 +450,55 @@ private:
 			1
 		);
 
+		// ========================== Default initialization errors ==========================
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: ref i64;
+					return 0;
+				}
+			)",
+			{ "Type `ref i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: box i64;
+					return 0;
+				}
+			)",
+			{ "Type `box i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Inner { non_defaultable: ref i64; }
+				class Outer { inner: Inner; }
+
+				fun main() -> i64 = {
+					var o: Outer;
+					return 0;
+				}
+			)",
+			{ "Type `ref i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+				var arr: Inner[2];
+					return 0;
+				}
+			)",
+			{ "Type `ref i64` cannot be default initialized" },
+			1
+		);
 
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
@@ -492,25 +541,6 @@ private:
 			1
 		);
 
-		checkForErrorOnCompileModule(
-			R"(
-				fun main() -> i64 = {
-					var x: ref i64;
-				}
-			)",
-			{ "Type `ref i32` cannot be default initialized" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
-				fun main() -> i64 = {
-					var x: box i64;
-				}
-			)",
-			{ "Type `box i32` cannot be default initialized" },
-			1
-		);
 
 		checkForErrorOnCompileModule(
 			R"(
@@ -665,7 +695,7 @@ private:
 					l[0] = 123;
 				}
 			)",
-			{ "Index operator base must be indexable" },
+			{ "Type `List` cannot be default initialized" },
 			1
 		);
 
@@ -800,7 +830,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "compile time evaluation" },
+			{ "Feature not implemented", "at compile time", "generated class constructor" },
 			1
 		);
 

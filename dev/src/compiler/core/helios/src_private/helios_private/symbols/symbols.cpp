@@ -1061,7 +1061,7 @@ namespace compiler::helios {
 			variant_match(getSymRef(key)->other) {
 				variant_case_novalue(PstSymbolData) {
 					// Just a PST function.
-					collect_deps();
+					return collect_deps();
 				}
 				variant_case(builtin::BuiltinFunctionData, btd_data) {
 					// Builtin functions have no dependencies
@@ -1072,7 +1072,7 @@ namespace compiler::helios {
 						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
 						"QueryDirectFunction calls called on a non-function symbol"
 					);
-					collect_deps();
+					return collect_deps();
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}

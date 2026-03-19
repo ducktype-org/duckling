@@ -320,8 +320,7 @@ namespace compiler::helios::mangler {
 								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor
 							) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-								std::cout << "Path to class: " << path_to_class << '\n';
-								const auto ctor_suffix = "K" + funcType(ctx, symbol_id) + "E";
+								const auto ctor_suffix   = "K" + funcType(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(

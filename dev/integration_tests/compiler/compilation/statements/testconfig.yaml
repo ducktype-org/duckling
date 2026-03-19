@@ -22,19 +22,12 @@ Tests:
         # Output:
         #   String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
         ExitCode: 0
-  # TODOP: Add this
   default_initialization:
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
-        # @TODO: #1849 the global initial value is not working in VM
-        # Output:
-        #   String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
+          String: "=================\n0\n0\n0\n\0A0\n3\n+++++\n0\n0\n0\n\0A0\n3\n+++++\n1\n1\n1\nACkajak\n+++++\n=================\n999\n0\n999\n999\n=================\n0\n1\n0\n=================\n1\n1\n0\n=================\n999\n0\n999\n999\n"
         ExitCode: 0
   loops-performance: # while
     Cases:

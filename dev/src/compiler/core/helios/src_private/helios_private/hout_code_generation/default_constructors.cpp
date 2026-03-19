@@ -274,6 +274,7 @@ namespace compiler::helios::houtgen {
 					base::strConcat("Type `", sym_type.toString(), "` cannot be default initialized"),
 					dia::SourcePosition::fakePosition()
 				));
+				return query::Failed();
 			}
 
 
@@ -338,20 +339,17 @@ namespace compiler::helios::houtgen {
 					ctx, code::generatedOrigin(), tsh::getVoidType()
 				);
 			}
+			// These should not be default initialized.
 			case tsh::Kind::Variant:
 			case tsh::Kind::Function:
+			case tsh::Kind::TypeTemplate:
+			case tsh::Kind::Void:
 			case tsh::Kind::Reference: {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					base::strConcat("Type `", sym_type.toString(), "` cannot be default initialized"),
 					dia::SourcePosition::fakePosition()  // TODOP: Fix
 				));
 				return query::Failed();
-			}
-			// These should not be default initialized.
-			case tsh::Kind::TypeTemplate:
-			case tsh::Kind::Void: {
-				// TODOP: Change that to a proper error.
-				CORE_PANIC("Default initialization if a non-value type: ", type.toString());
 			}
 			default: {
 				CORE_UNREACHABLE();
