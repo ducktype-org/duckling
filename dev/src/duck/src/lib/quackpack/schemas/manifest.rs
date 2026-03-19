@@ -22,7 +22,7 @@ pub struct Manifest {
     /// `features:` root field
     pub features: Option<HashMap<String, Vec<String>>>,
     /// `profiles:` root field
-    pub profiles: Option<HashMap<String, CompilerOptions>>,
+    pub profiles: Option<HashMap<String, Profile>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -228,8 +228,31 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct CompilerOptions {
-    pub compiler_flags: Option<Vec<String>>,
+pub struct Profile {
+    pub opt_level: Option<OptLevel>,
+    pub dvm_bytecode: Option<bool>,
+    pub incremental: Option<bool>,
+    pub c_std: Option<bool>,
+    pub inherits: Option<String>,
+}
+
+#[derive(Debug)]
+pub enum OptLevel {
+    Number(u32),
+    String(String),
+}
+
+impl<'de> de::Deserialize<'de> for OptLevel {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("a non-negative number or a string")
+            .u32(|n| Ok(OptLevel::Number(n)))
+            .string(|s| Ok(OptLevel::String(s.to_string())))
+            .deserialize(deserializer)
+    }
 }
 
 #[cfg(test)]
