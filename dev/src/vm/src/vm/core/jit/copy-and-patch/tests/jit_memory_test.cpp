@@ -1,13 +1,15 @@
-#include "../memory/memory.hpp"
-#include "../stencils/import_stencils.hpp"
+#ifdef ENABLE_JIT  // @TODO: #2312 Remove
 
-#include <base/pointers/box.hpp>
-#include <base/preproc/diagnostics.hpp>
+	#include "../memory/memory.hpp"
+	#include "../stencils/import_stencils.hpp"
 
-#include <tester/tester.hpp>
+	#include <base/pointers/box.hpp>
+	#include <base/preproc/diagnostics.hpp>
 
-#include <cstring>
-#include <string>
+	#include <tester/tester.hpp>
+
+	#include <cstring>
+	#include <string>
 
 using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
@@ -17,20 +19,20 @@ PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 constexpr static char FULL_ELF[] = {
-#embed "mock_stencils-so"
+	#embed "mock_stencils-so"
 };
 POP_DIAGNOSTIC
 
 static auto stencils
 	= Stencils{ .binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
 	            .stencils_data = std::array {
-#include <mock_stencils-nm>
+	#include <mock_stencils-nm>
 					}
 				 }.load();
 
 class JitMemoryTest: public tester::TestSuite {
-#undef TESTER_CLASS
-#define TESTER_CLASS JitMemoryTest
+	#undef TESTER_CLASS
+	#define TESTER_CLASS JitMemoryTest
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -109,3 +111,5 @@ private:
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/jit/");
+
+#endif

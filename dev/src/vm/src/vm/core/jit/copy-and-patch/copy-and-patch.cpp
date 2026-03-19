@@ -1,8 +1,10 @@
-#include "memory/memory.hpp"
-#include "stencils/import_stencils.hpp"
+#ifdef ENABLE_JIT  // @TODO: #2312 Remove
 
-#include <vm/core/thread/low_program/instruction.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
+	#include "memory/memory.hpp"
+	#include "stencils/import_stencils.hpp"
+
+	#include <vm/core/thread/low_program/instruction.hpp>
+	#include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit::cnp {
 	using JitOpFun = void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::VMThread*);
@@ -12,13 +14,13 @@ namespace vm::jit::cnp {
 		ALLOW_EXTENSIONS
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		static constexpr char BIN[] = {
-#embed "wrapper-so"
+	#embed "wrapper-so"
 		};
 		POP_DIAGNOSTIC
 
 		// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		static constexpr StencilData DATA[] = {
-#include <wrapper-nm>
+	#include <wrapper-nm>
 		};
 
 		static constexpr auto STENCILS
@@ -43,3 +45,5 @@ namespace vm::jit::cnp {
 		return memory.intoFunc<JitOpFun>();
 	}
 }
+
+#endif
