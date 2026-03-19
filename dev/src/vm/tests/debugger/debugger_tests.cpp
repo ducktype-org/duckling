@@ -130,12 +130,6 @@ private:
 	void vmApiMemory() {
 		auto pid = loadProgram("breakpoint.dbc");
 
-		{
-			auto error_response
-				= vm::api::debuggerGetTypeInfo(pid, base::StrID("non_existent_type"));
-			assertFalse(error_response.has_value(), "Getting type info should have failed");
-		}
-
 		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
@@ -170,35 +164,27 @@ private:
 		assertEqual("main", stack_frame_data.function_name, "Function name is not correct");
 
 		for (const auto& var: stack_frame_data.frame_vars) {
-			auto var_type_info_reponse = vm::api::debuggerGetTypeInfo(pid, var.type);
-			assertTrue(var_type_info_reponse.has_value(), "Get type info failed");
-			auto var_type_info = var_type_info_reponse.value().type;
-
 			if (var.offset == 0) {
 				assertEqual(
-					var_type_info->getName(), base::StrID("i64"), "Variable type is not correct"
+					var.value.getType()->getName(),
+					base::StrID("i64"),
+					"Variable type is not correct"
 				);
 
-				auto pointer_data_response
-					= vm::api::debuggerGetPointerData(
-						  pid,
-						  var.pointer,
-						  var_type_info->getSize().assumePointerSize(vm::Type::POINTER_SIZE).asInt()
-					)
-				          .value();  // "Get pointer data failed"
-				auto value = vm::safeReadPointerBytes<i64>(pointer_data_response.data.getBegin());
+				auto data_opt = var.value.readData();
+				assertTrue(data_opt.has_value(), "Reading variable data failed");
+
+				auto value
+					= std::get<vm::interpreted_data_variant::Primitive>(data_opt.value()).value;
 				assertEqual(0, value, "Variable value is not correct");
 			}
-			if (var_type_info->getName().strView().starts_with("ptr")) {
-				auto response = vm::api::debuggerDereferencePointer(pid, var.pointer)
-				                    .value();  // "Dereference pointer failed"
-				assertTrue(response.pointer.isNull(), "Pointer should be null");
+			if (var.value.getType()->getName().strView().starts_with("ptr")) {
+				auto data_opt = var.value.readData();
+				assertTrue(data_opt.has_value(), "Reading pointer variable data failed");
 
-				auto dereference_response
-					= vm::api::debuggerDereferencePointer(pid, response.pointer);
-				assertFalse(
-					dereference_response.has_value(), "Getting null pointer data should have failed"
-				);
+				auto referenced
+					= std::get<vm::interpreted_data_variant::Pointer>(data_opt.value()).referenced;
+				assertTrue(referenced.empty(), "Pointer should be null");
 			}
 		}
 

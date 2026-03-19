@@ -9,7 +9,7 @@ vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
 	return vm::VMValueRef(*process.get(), type, pointer);
 }
 
-base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() {
+base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(vm::kind::Primitive) {
 			const auto type_name = my_type->getName();
@@ -36,10 +36,10 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() {
 			vm::Pointer pointer  = readBytes<vm::Pointer>();
 			TypeCRef    ptr_type = pointer_kind.inner_type;
 
-			if (!pointer) return std::nullopt;
+			if (!pointer) return vm::interpreted_data_variant::Pointer{ std::nullopt };
 
 			return vm::interpreted_data_variant::Pointer{
-				.referenced = VMValueRef(*my_process.get(), ptr_type, pointer),
+				VMValueRef(*my_process.get(), ptr_type, pointer),
 			};
 		}
 
@@ -157,3 +157,5 @@ vm::VMValueRef::VMValueRef(VMProcess& process, TypeCRef type, Pointer pointed_da
 	  memory(&process.getMemory()),
 	  my_type(type),
 	  pointed_data(pointed_data) {}
+
+vm::TypeCRef vm::VMValueRef::getType() const { return my_type; }
