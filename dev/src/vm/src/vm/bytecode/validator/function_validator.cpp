@@ -59,7 +59,7 @@ namespace {
 		);
 	}
 
-	template<class ErrorT = PointerTypeMismatchError, class... Args>
+	template<class ErrorT = FieldTypeMismatchError, class... Args>
 	void validateStructFieldType(
 		const valid_type::ValidType&            type,
 		const valid_type::finalized::Structure& as_struct,
@@ -450,15 +450,6 @@ class FunctionValidator {
 					if (!type->isKind<valid_type::finalized::Structure>())
 						throw InvalidArgumentTypeError(*local_struct);
 				}
-
-				variant_case(CRef<opargs::StackLocalTbl>, local_table) {
-					if (!current_stack.contains(local_table->var_name))
-						throw UnknownLocalNameError(*local_table);
-					CRef<valid_type::ValidType> type = current_stack.at(local_table->var_name);
-					if (!type->isKind<valid_type::finalized::FixedSizeTable>())
-						throw InvalidArgumentTypeError(*local_table);
-				}
-
 
 				// All possible opargs must be handled. Unhandled opargs panic.
 				variant_default {
@@ -1315,20 +1306,35 @@ class FunctionValidator {
 			}
 
 			instr_case(Op_structLea_lptr_lste_field, instr) {
-				throw base::NotYetImplemented("StructLea_lptr_lste_field is not implemented yet.");
-				// const auto& destination
-				// 	= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
-
-				// const auto& klass
-				// 	= std::get<ClassType>(*current_stack.at(instr.src_data_struct.var_name));
-
-				// validateStructFieldType(klass, instr.field, destination.inner, instr);
+				auto dst = current_stack.at(instr.dst_ptr.var_name)
+				               ->getKindAs<valid_type::finalized::Pointer>();
+				auto src        = current_stack.at(instr.src_data_struct.var_name);
+				auto src_struct = src->getKindAs<valid_type::finalized::Structure>();
+				validateStructFieldType(*src, *src_struct, instr.field, dst->inner, instr);
 			}
 			instr_case(Op_structLoad_lany_lste_field, instr) {
-				throw base::NotYetImplemented("StructLoad_lany_lste_field is not implemented yet.");
+				auto target_type
+					= types_ctx.at(current_stack.at(instr.dst.var_name)->getID());
+				auto source_type = types_ctx.at(current_stack.at(instr.src_data_struct.var_name)->getID());
+				validateStructFieldType(
+					*source_type,
+					*source_type->getKindAs<valid_type::finalized::Structure>(),
+					instr.field,
+					target_type->getID(),
+					instr
+				);
 			}
 			instr_case(Op_structStore_lste_lany_field, instr) {
-				throw base::NotYetImplemented("StructStore_lste_lany_field is not implemented yet.");
+				auto target_type
+					= types_ctx.at(current_stack.at(instr.dst_data_struct.var_name)->getID());
+				auto source_type = types_ctx.at(current_stack.at(instr.src.var_name)->getID());
+				validateStructFieldType(
+					*target_type,
+					*target_type->getKindAs<valid_type::finalized::Structure>(),
+					instr.field,
+					source_type->getID(),
+					instr
+				);
 			}
 
 			instr_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {

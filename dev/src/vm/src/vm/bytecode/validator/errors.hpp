@@ -383,6 +383,9 @@ namespace vm::code {
 		PointerTypeMismatchError, "Inner pointer type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
+		FieldTypeMismatchError, "Inner field type does not match expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
 		InvalidVirtualCallError, "Provided method does not exists for a given argument."
 	);
 	DEFINE_INSTRUCTION_ERROR(
