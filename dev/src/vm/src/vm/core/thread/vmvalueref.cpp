@@ -6,7 +6,7 @@
 
 vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
 	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(type->getSize()));
-	return {*process.get(), type, pointer};
+	return { *process.get(), type, pointer };
 }
 
 base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
@@ -33,8 +33,8 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		}
 
 		variant_case(vm::kind::Pointer, pointer_kind) {
-			auto pointer  = readBytes<vm::Pointer>();
-			TypeCRef    ptr_type = pointer_kind.inner_type;
+			auto     pointer  = readBytes<vm::Pointer>();
+			TypeCRef ptr_type = pointer_kind.inner_type;
 
 			if (!pointer) return vm::interpreted_data_variant::Pointer{ std::nullopt };
 
