@@ -25,6 +25,9 @@ namespace pst {
 	class StmtSpecifier;
 	class RoundGroupExpr;
 	class ExprElement;
+	class FormatSubElement;
+	class FormatSubExpression;
+	class FormatSubString;
 	// Patterns
 	class FlowPattern;
 	class AnalysisPattern;
@@ -85,6 +88,7 @@ namespace pst {
 		class ExprNumericValue;
 		class ExprStrValue;
 		class ExprCharValue;
+		class ExprFormatStrValue;
 		class Literal;
 		class TemplateSpecifier;
 		class IdentifierLiteral;
