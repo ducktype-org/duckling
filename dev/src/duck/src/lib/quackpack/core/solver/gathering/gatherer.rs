@@ -94,7 +94,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         if !errors.is_empty() {
             if mode.supress_foreign_manifests_errors {
                 for e in errors {
-                    self.fetcher.ctx().error_console().info(format!(
+                    self.fetcher.ctx().error_console().info_verbose(format!(
                         "Error\n{e}\nsuppressed due to the Merciful mode of the solver",
                     ));
                 }
