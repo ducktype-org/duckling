@@ -22,23 +22,22 @@ namespace vm {
 	}
 
 	using InterpretedDataVariant = std::variant<
-			interpreted_data_variant::Primitive,
-			interpreted_data_variant::Pointer,
-			interpreted_data_variant::Table,
-			interpreted_data_variant::Structure,
-			interpreted_data_variant::Variant,
-			interpreted_data_variant::Function,
-			interpreted_data_variant::Opaque
-	>;
+		interpreted_data_variant::Primitive,
+		interpreted_data_variant::Pointer,
+		interpreted_data_variant::Table,
+		interpreted_data_variant::Structure,
+		interpreted_data_variant::Variant,
+		interpreted_data_variant::Function,
+		interpreted_data_variant::Opaque>;
 
 	class VMValueRef {
 		friend class VMProcess;
 
 	private:
 		Ref<VMProcess> my_process;
-		Ref<Memory> memory;
-		TypeCRef my_type;
-		Pointer pointed_data;
+		Ref<Memory>    memory;
+		TypeCRef       my_type;
+		Pointer        pointed_data;
 
 	public:
 		VMValueRef(VMProcess& process, TypeCRef type, Pointer pointed_data);
@@ -48,9 +47,13 @@ namespace vm {
 		template<class T>
 		T readBytes(const usize offset = 0) const {
 			CORE_ASSERT(
-				my_type->getName() != base::StrID("void"), "Interpreting VmValueRef bytes of type void!"
+				my_type->getName() != base::StrID("void"),
+				"Interpreting VmValueRef bytes of type void!"
 			);
-			CORE_ASSERT(offset + sizeof(T) <= static_cast<usize>(my_type->getSize()), "VmValueRef: Out of bounds read");
+			CORE_ASSERT(
+				offset + sizeof(T) <= static_cast<usize>(my_type->getSize()),
+				"VmValueRef: Out of bounds read"
+			);
 
 			auto view = memory->getPointerData(pointed_data, offset + sizeof(T));
 			return vm::safeReadPointerBytes<T>(view.getBegin(), offset);
@@ -71,11 +74,12 @@ namespace vm {
 
 		private:
 			base::Ref<VMProcess> process;
-			vm::Pointer begin;
-			TypeCRef type;
+			vm::Pointer          begin;
+			TypeCRef             type;
+
 		public:
 			const usize size;
-			VMValueRef get(usize index);
+			VMValueRef  get(usize index);
 
 		private:
 			Table(base::Ref<VMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
@@ -83,16 +87,16 @@ namespace vm {
 
 		struct Structure {
 			struct FieldDesc {
-				Offset offset;
+				Offset     offset;
 				VMValueRef value;
 			};
 
-			std::vector<FieldDesc> fields;
+			std::vector<FieldDesc>            fields;
 			base::HashMap<base::StrID, usize> field_name_map;
 		};
 
 		struct Variant {
-			u64 type_tag;
+			u64        type_tag;
 			VMValueRef referenced;
 		};
 

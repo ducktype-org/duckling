@@ -336,8 +336,9 @@ namespace vm {
 						for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
 							Ref<Block> block = frame.block_stack[block_idx];
 							frame_vars.push_back(api::response::StackFrameData::FrameVar{
-								.offset  = offset,
-								.value   = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
+								.offset = offset,
+								.value
+								= VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
 							});
 						}
 
