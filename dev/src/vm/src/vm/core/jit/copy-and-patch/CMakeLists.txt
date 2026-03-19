@@ -63,6 +63,10 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         "${CMAKE_SOURCE_DIR}/src/vm"
     )
 
+    set(artifacts "stencil-artifacts-${binary_artifact_prefix}")
+
+    add_custom_target(${artifacts} DEPENDS "${nm_out}" "${linked_out}")
+
     # Include data generated from the binary
     set_property(
         SOURCE "${destination_file}"
@@ -86,7 +90,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         DIRECTORY ${destination_scopes}
         APPEND
         PROPERTY OBJECT_DEPENDS
-        "${nm_out}" "${linked_out}"
+        ${artifacts}
     )
 endfunction()
 
@@ -102,23 +106,15 @@ add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
 target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
 target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
-
-set(cp_stencils "${CMAKE_CURRENT_BINARY_DIR}/wrapper")
-
-process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "wrapper" $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> )
-set(wrapper_binary_artifacts
-    "${CMAKE_CURRENT_BINARY_DIR}/wrapper-nm"
-    "${CMAKE_CURRENT_BINARY_DIR}/wrapper-so"
-)
+process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "wrapper" $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
 add_files(
     memory/memory.cpp
-    copy-and-patch.cpp
+    stencils/dynamic_library.cpp
 )
-
-set(vm_common_sources ${vm_common_sources} ${files})
+set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
 
 add_files(
     copy-and-patch.cpp
 )
-set(jit_dependency ${jit_dependency} ${files} ${wrapper_binary_artifacts})
+set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)
