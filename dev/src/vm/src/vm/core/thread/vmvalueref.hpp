@@ -32,9 +32,20 @@ namespace vm {
 			Table(base::Ref<VMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
 		};
 
-		struct Structure {};
+		struct Structure {
+			struct FieldDesc {
+				Offset offset;
+				VMValueRef value;
+			};
 
-		struct Variant {};
+			std::vector<FieldDesc> fields;
+			base::HashMap<base::StrID, usize> field_name_map;
+		};
+
+		struct Variant {
+			u64 type_tag;
+			VMValueRef referenced;
+		};
 
 		struct Function {};
 
@@ -62,7 +73,6 @@ namespace vm {
 
 	public:
 		VMValueRef(VMProcess& process, TypeCRef type, Pointer pointed_data);
-		VMValueRef(VMProcess& process);
 
 		base::Optional<InterpretedDataVariant> readData();
 

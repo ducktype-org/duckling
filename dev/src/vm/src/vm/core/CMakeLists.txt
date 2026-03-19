@@ -18,6 +18,7 @@ add_files(
 	thread/low_program/instruction.cpp
 	thread/vmthread.cpp
     thread/vmvalue.cpp
+	thread/vmvalueref.cpp
 	jit/jit_compiler.cpp
 )
 
