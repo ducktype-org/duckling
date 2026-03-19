@@ -42,8 +42,8 @@ namespace vm {
 	public:
 		VMValueRef(VMProcess& process, TypeCRef type, Pointer pointed_data);
 
-		TypeCRef                               getType() const;
-		base::Optional<InterpretedDataVariant> readData() const;
+		[[nodiscard]] TypeCRef                               getType() const;
+		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const;
 
 		template<class T>
 		T readBytes(const usize offset = 0) const {

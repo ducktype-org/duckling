@@ -38,6 +38,7 @@ namespace vm {
 			offset = base::safeIntConv<u64>(base::safeIntConv<i64>(offset) + move_by);
 		}
 
+		[[nodiscard]]
 		Pointer movedPointer(i64 move_by) const {
 			Pointer cpy(*this);
 			cpy.movePointer(move_by);

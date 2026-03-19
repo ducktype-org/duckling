@@ -5,8 +5,8 @@
 #include <vm/core/process/vmprocess.hpp>
 
 vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
-	vm::Pointer pointer = begin.movedPointer(index * static_cast<i64>(type->getSize()));
-	return vm::VMValueRef(*process.get(), type, pointer);
+	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(type->getSize()));
+	return {*process.get(), type, pointer};
 }
 
 base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
@@ -33,7 +33,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		}
 
 		variant_case(vm::kind::Pointer, pointer_kind) {
-			vm::Pointer pointer  = readBytes<vm::Pointer>();
+			auto pointer  = readBytes<vm::Pointer>();
 			TypeCRef    ptr_type = pointer_kind.inner_type;
 
 			if (!pointer) return vm::interpreted_data_variant::Pointer{ std::nullopt };
@@ -44,7 +44,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		}
 
 		variant_case(vm::kind::DynamicTable, dyntable_kind) {
-			vm::Pointer tbl_pointer = readBytes<vm::Pointer>();
+			auto tbl_pointer = readBytes<vm::Pointer>();
 
 			auto block_id   = memory->requestBlockID(tbl_pointer.getBlock());
 			auto block_data = memory->requestBlockData(block_id);
@@ -56,7 +56,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		}
 
 		variant_case(vm::kind::FixedSizeTable, fixtable_kind) {
-			vm::Pointer tbl_pointer = readBytes<vm::Pointer>();
+			auto tbl_pointer = readBytes<vm::Pointer>();
 
 			auto block_id   = memory->requestBlockID(tbl_pointer.getBlock());
 			auto block_data = memory->requestBlockData(block_id);
@@ -70,13 +70,14 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		variant_case(vm::kind::Data, data_kind) {
 			std::vector<vm::interpreted_data_variant::Structure::FieldDesc> fields;
 
+			fields.reserve(data_kind.fields.size());
 			for (const auto& field_desc: data_kind.fields) {
 				fields.push_back(vm::interpreted_data_variant::Structure::FieldDesc{
 					.offset = field_desc.offset,
 					.value  = VMValueRef(
                         *my_process.get(),
                         field_desc.type,
-                        pointed_data.movedPointer(field_desc.offset.asInt())
+                        pointed_data.movedPointer(static_cast<i64>(field_desc.offset.asInt()))
                     ) });
 			}
 
