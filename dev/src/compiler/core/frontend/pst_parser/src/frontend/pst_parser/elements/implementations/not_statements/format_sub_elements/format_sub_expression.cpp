@@ -1,7 +1,7 @@
 
-#include "../preamble.hpp"
-
 #include "../../../hierarchy/not_statements/format_sub_elements/format_sub_expression.hpp"
+
+#include "../preamble.hpp"
 
 namespace pst {
 	MBox<FormatSubExpression> FormatSubExpression::parse(LangParserState& state) {

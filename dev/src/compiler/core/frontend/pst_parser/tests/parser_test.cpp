@@ -186,7 +186,9 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
-	void testFormatStrParsing() { testJsonRelativePath("format_strings.duck", "format_strings.json"); }
+	void testFormatStrParsing() {
+		testJsonRelativePath("format_strings.duck", "format_strings.json");
+	}
 
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 

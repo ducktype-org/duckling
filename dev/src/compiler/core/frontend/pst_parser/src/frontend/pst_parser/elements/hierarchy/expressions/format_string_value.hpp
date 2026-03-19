@@ -1,8 +1,7 @@
 #pragma once
 
-#include "expr_common.hpp"
-
 #include "../not_statements/format_sub_elements/format_sub_element.hpp"
+#include "expr_common.hpp"
 
 namespace pst::expr {
 	/**
@@ -12,8 +11,7 @@ namespace pst::expr {
 		std::vector<AccessInternalAnonymous<FormatSubElement>> sub_elements;
 
 	public:
-		explicit ExprFormatStrValue(const LangParserState& state):
-			  ExprElement(state, 0) {}
+		explicit ExprFormatStrValue(const LangParserState& state): ExprElement(state, 0) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 
@@ -21,7 +19,7 @@ namespace pst::expr {
 		void     dprint(std::ostream& out) const final;
 		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
-		void calcElementPathHashRecursive() override;
+		void     calcElementPathHashRecursive() override;
 
 		[[nodiscard]]
 		auto getSubElements() const {

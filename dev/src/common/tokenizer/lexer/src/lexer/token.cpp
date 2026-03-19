@@ -118,9 +118,7 @@ namespace lexer {
 		CORE_ASSERT(
 			this->sentinel_end->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
 		);
-		CORE_ASSERT(
-			type == Type::FormatString, "This constructor is only used with format strings"
-		);
+		CORE_ASSERT(type == Type::FormatString, "This constructor is only used with format strings");
 		str_id = base::StrID(base::RawView("f\"\""));
 	}
 
@@ -168,8 +166,17 @@ namespace lexer {
 		return { Type::TypeSpecifier, literal, position };
 	}
 
-	Token Token::makeFormatString(Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition position) {
-		return { Type::FormatString, std::move(tokens), std::move(sentinel_begin), std::move(sentinel_end), position };
+	Token Token::makeFormatString(
+		Tokens&&                  tokens,
+		Token&&                   sentinel_begin,
+		Token&&                   sentinel_end,
+		const dia::SourcePosition position
+	) {
+		return { Type::FormatString,
+			     std::move(tokens),
+			     std::move(sentinel_begin),
+			     std::move(sentinel_end),
+			     position };
 	}
 
 	Token Token::makeFormatStringSubString(base::RawView string, const dia::SourcePosition position) {

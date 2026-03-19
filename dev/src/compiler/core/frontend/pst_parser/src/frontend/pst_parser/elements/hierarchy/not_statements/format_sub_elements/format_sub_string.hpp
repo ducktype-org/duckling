@@ -2,7 +2,7 @@
 
 #include "format_sub_element.hpp"
 
-namespace pst{
+namespace pst {
 	/**
 	 * @brief Element representing a string value in an expression
 	 */
@@ -15,8 +15,7 @@ namespace pst{
 			return string;
 		}
 
-		explicit FormatSubString(const LangParserState& state):
-			  FormatSubElement(state) {
+		explicit FormatSubString(const LangParserState& state): FormatSubElement(state) {
 			this->element_kind = ElementKind::FormatSubString;
 		}
 

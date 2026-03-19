@@ -8,6 +8,6 @@ namespace pst {
 	 */
 	class FormatSubElement: public NotStmt {
 	protected:
-		explicit FormatSubElement(const LangParserState& state): NotStmt(state){}
+		explicit FormatSubElement(const LangParserState& state): NotStmt(state) {}
 	};
 }

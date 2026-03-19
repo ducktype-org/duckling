@@ -511,22 +511,20 @@ namespace lexer {
 		usize end{};
 		auto  source_start = currentPosition();
 
-		while (!peek().is('"') && !peek().is('{') && !isEOL() && !isEOF()) {
-			if (peek().is('\\')) {
+		while (!peek().is('"') && !peek().is('{') && !isEOL() && !isEOF())
+			if (peek().is('\\'))
 				skip(2);
-			} else {
+			else
 				next();
-			}
-		}
 
 		end = where - 1;
 
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "format_sub_string");
-		output.push_back(Token::makeFormatStringSubString(
-			file->getCharRange(begin, end + 1), source_position
-		));
+		output.push_back(
+			Token::makeFormatStringSubString(file->getCharRange(begin, end + 1), source_position)
+		);
 	}
 
 	void Lexer::formatStringHandler(Tokens& output) {
@@ -539,7 +537,7 @@ namespace lexer {
 
 		Tokens inner_tokens;
 
-		skip(2); // skip f"
+		skip(2);  // skip f"
 		while (!peek().is('"')) {
 			if (isEOL()) {
 				dia::SourcePosition err_pos(source_start, where - 1);
@@ -564,12 +562,19 @@ namespace lexer {
 
 		dia::SourcePosition source_position(source_start, end);
 
-		Token sentinel_begin = Token::makeSentinel(file->getCharRange(begin + 1, begin + 2), {source_start.getLocation(), begin, begin});
-		Token sentinel_end = Token::makeSentinel(file->getCharRange(end, end + 1), {source_start.getLocation(), end, end});
+		Token sentinel_begin = Token::makeSentinel(
+			file->getCharRange(begin + 1, begin + 2), { source_start.getLocation(), begin, begin }
+		);
+		Token sentinel_end = Token::makeSentinel(
+			file->getCharRange(end, end + 1), { source_start.getLocation(), end, end }
+		);
 
 		addTokenMsg(begin, end, "format_string");
 		output.push_back(Token::makeFormatString(
-			std::move(inner_tokens), std::move(sentinel_begin), std::move(sentinel_end),  source_position
+			std::move(inner_tokens),
+			std::move(sentinel_begin),
+			std::move(sentinel_end),
+			source_position
 		));
 	}
 

@@ -38,7 +38,7 @@ protected:
 private:
 	constexpr static std::array<std::string_view, 10> GROUP_NAMES
 		= { "",        "keyword",    "operator", "identifier", "special",
-		    "comment", "numLiteral", "string",   "char", "formatstring" };
+		    "comment", "numLiteral", "string",   "char",       "formatstring" };
 
 	void testBasicStructure() {
 		assertTrue(td->getTokenData().tokens.size() == 10, "Wrong amount of top-level token groups");
@@ -130,7 +130,9 @@ private:
 
 	void testGroup8() { testTokenGroup<8, lexer::Token::Type::Char, &lexer::Token::isChar>(); }
 
-	void testGroup9() { testTokenGroup<9, lexer::Token::Type::FormatString, &lexer::Token::isFormatString>(); }
+	void testGroup9() {
+		testTokenGroup<9, lexer::Token::Type::FormatString, &lexer::Token::isFormatString>();
+	}
 
 	void testSourcePosition() {
 		const auto& position = td->getTokenData().tokens[1].getRecursive().front().getPosition();
