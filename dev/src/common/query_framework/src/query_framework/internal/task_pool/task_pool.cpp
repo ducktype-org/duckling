@@ -6,7 +6,6 @@
 #include <base/str/str_utils.hpp>
 
 #include <atomic>
-#include <iostream>
 #include <mutex>
 
 namespace query::internal {
