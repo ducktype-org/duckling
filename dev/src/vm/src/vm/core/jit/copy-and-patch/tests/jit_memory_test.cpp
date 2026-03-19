@@ -23,7 +23,7 @@ POP_DIAGNOSTIC
 
 static auto stencils
 	= Stencils{ .binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
-	            .stencils = std::array {
+	            .stencils_data = std::array {
 #include <mock_stencils-nm>
 					}
 				 }.load();

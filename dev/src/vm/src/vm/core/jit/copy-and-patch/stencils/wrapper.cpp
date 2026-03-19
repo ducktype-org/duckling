@@ -1,5 +1,5 @@
 #define USE_SWITCH_CASE 1
-#undef USE_TAIL_CALL
+#undef USE_TAIL_CALLS
 
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
 
