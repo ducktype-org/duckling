@@ -30,36 +30,33 @@
 // except for the lack of Op_label and Comment, since they do not make sense as a runtime instructions.
 
 #ifndef HANDLE_MICRO_INSTR
-	#define DEFAULT_HANDLE_MICRO_INSTR
-	#define HANDLE_MICRO_INSTR(instr)
+#define DEFAULT_HANDLE_MICRO_INSTR
+#define HANDLE_MICRO_INSTR(instr)
 #endif
 
 #ifndef HANDLE_MICRO_INSTR_0ARGS
-	#define DEFAULT_HANDLE_MICRO_INSTR_0ARGS
-	#define HANDLE_MICRO_INSTR_0ARGS(instr) HANDLE_MICRO_INSTR(instr)
+#define DEFAULT_HANDLE_MICRO_INSTR_0ARGS
+#define HANDLE_MICRO_INSTR_0ARGS(instr) HANDLE_MICRO_INSTR(instr)
 #endif
 
 #ifndef HANDLE_MICRO_INSTR_1ARGS
-	#define DEFAULT_HANDLE_MICRO_INSTR_1ARGS
-	#define HANDLE_MICRO_INSTR_1ARGS(instr, arg0_type) HANDLE_MICRO_INSTR(instr)
+#define DEFAULT_HANDLE_MICRO_INSTR_1ARGS
+#define HANDLE_MICRO_INSTR_1ARGS(instr, arg0_type) HANDLE_MICRO_INSTR(instr)
 #endif
 
 #ifndef HANDLE_MICRO_INSTR_2ARGS
-	#define DEFAULT_HANDLE_MICRO_INSTR_2ARGS
-	#define HANDLE_MICRO_INSTR_2ARGS(instr, arg0_type, arg1_type) HANDLE_MICRO_INSTR(instr)
+#define DEFAULT_HANDLE_MICRO_INSTR_2ARGS
+#define HANDLE_MICRO_INSTR_2ARGS(instr, arg0_type, arg1_type) HANDLE_MICRO_INSTR(instr)
 #endif
 
 #ifndef DEF_MICRO_INSTR
-	#define DEFAULT_DEF_MICRO_INSTR
-	#define GET_MACRO(_instr, _1, _2, NAME, ...) NAME
-	#define DEF_MICRO_INSTR(...)      \
-		GET_MACRO(                    \
-			__VA_ARGS__,              \
-			HANDLE_MICRO_INSTR_2ARGS, \
-			HANDLE_MICRO_INSTR_1ARGS, \
-			HANDLE_MICRO_INSTR_0ARGS  \
-		)                             \
-		(__VA_ARGS__)
+#define DEFAULT_DEF_MICRO_INSTR
+#define GET_MACRO(_instr, _1, _2, NAME, ...) NAME
+#define DEF_MICRO_INSTR(...)                                                                      \
+	GET_MACRO(                                                                                    \
+		__VA_ARGS__, HANDLE_MICRO_INSTR_2ARGS, HANDLE_MICRO_INSTR_1ARGS, HANDLE_MICRO_INSTR_0ARGS \
+	)                                                                                             \
+	(__VA_ARGS__)
 #endif
 
 
@@ -702,27 +699,27 @@ DEF_MICRO_INSTR(breakpoint)
 DEF_MICRO_INSTR(initFromVmValue)
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR
-	#undef DEFAULT_HANDLE_MICRO_INSTR
-	#undef HANDLE_MICRO_INSTR
+#undef DEFAULT_HANDLE_MICRO_INSTR
+#undef HANDLE_MICRO_INSTR
 #endif
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR_0ARGS
-	#undef DEFAULT_HANDLE_MICRO_INSTR_0ARGS
-	#undef HANDLE_MICRO_INSTR_0ARGS
+#undef DEFAULT_HANDLE_MICRO_INSTR_0ARGS
+#undef HANDLE_MICRO_INSTR_0ARGS
 #endif
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR_1ARGS
-	#undef DEFAULT_HANDLE_MICRO_INSTR_1ARGS
-	#undef HANDLE_MICRO_INSTR_1ARGS
+#undef DEFAULT_HANDLE_MICRO_INSTR_1ARGS
+#undef HANDLE_MICRO_INSTR_1ARGS
 #endif
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR_2ARGS
-	#undef DEFAULT_HANDLE_MICRO_INSTR_2ARGS
-	#undef HANDLE_MICRO_INSTR_2ARGS
+#undef DEFAULT_HANDLE_MICRO_INSTR_2ARGS
+#undef HANDLE_MICRO_INSTR_2ARGS
 #endif
 
 #ifdef DEFAULT_DEF_MICRO_INSTR
-	#undef DEFAULT_DEF_MICRO_INSTR
-	#undef DEF_MICRO_INSTR
-	#undef GET_MACRO
+#undef DEFAULT_DEF_MICRO_INSTR
+#undef DEF_MICRO_INSTR
+#undef GET_MACRO
 #endif

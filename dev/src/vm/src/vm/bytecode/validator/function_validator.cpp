@@ -1313,9 +1313,9 @@ class FunctionValidator {
 				validateStructFieldType(*src, *src_struct, instr.field, dst->inner, instr);
 			}
 			instr_case(Op_structLoad_lany_lste_field, instr) {
-				auto target_type
-					= types_ctx.at(current_stack.at(instr.dst.var_name)->getID());
-				auto source_type = types_ctx.at(current_stack.at(instr.src_data_struct.var_name)->getID());
+				auto target_type = types_ctx.at(current_stack.at(instr.dst.var_name)->getID());
+				auto source_type
+					= types_ctx.at(current_stack.at(instr.src_data_struct.var_name)->getID());
 				validateStructFieldType(
 					*source_type,
 					*source_type->getKindAs<valid_type::finalized::Structure>(),
@@ -1446,9 +1446,8 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(
-		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
-	) const {
+	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
+		const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 

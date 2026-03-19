@@ -61,9 +61,8 @@ void valid_type::ValidType::defineData(
 			std::vector<defined::DefinedField> fields;
 			fields.reserve(fields_definitions.size());
 			for (const auto& field_def: fields_definitions)
-				fields.emplace_back(
-					defined::DefinedField{ .name = field_def.first, .type = field_def.second }
-				);
+				fields.emplace_back(defined::DefinedField{ .name = field_def.first,
+				                                           .type = field_def.second });
 			state = Defined{ .kind = defined::DefinedStructure{
 								 .field_definitions = fields, .forwarded_inheritance_data = {} } };
 		}
@@ -83,9 +82,8 @@ void valid_type::ValidType::defineClass(
 		variant_case_novalue(ValidType::Declared) {
 			auto structure = defined::DefinedStructure();
 			for (const auto& field_def: fields_definitions)
-				structure.field_definitions.emplace_back(
-					defined::DefinedField{ .name = field_def.first, .type = field_def.second }
-				);
+				structure.field_definitions.emplace_back(defined::DefinedField{
+					.name = field_def.first, .type = field_def.second });
 
 			base::HashMap<base::StrID, ValidTypeID> new_virtual_methods_map;
 			for (const auto& method: new_virtual_methods)

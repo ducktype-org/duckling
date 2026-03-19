@@ -78,8 +78,7 @@ namespace vm::opargs {
 	/**
 	 * @brief List of all argument types that target global data.
 	 */
-#define VM_OPARG_GLOBAL_TYPES \
-	Global64, Global32, Global16, Global8, GlobalPtr, GlobalOpq, GlobalSte
+#define VM_OPARG_GLOBAL_TYPES Global64, Global32, Global16, Global8, GlobalPtr, GlobalOpq, GlobalSte
 
 	/**
 	 * @brief Represents type name argument.

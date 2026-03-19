@@ -100,9 +100,8 @@ namespace {
 				variant_case(vm::code::valid_type::finalized::Pointer, data) {
 					// Note the interesting cast from valid_type::ValidTypeID to vm::TypeID.
 					// This is by convention, they have to be the same.
-					type_at_metadata->definePointer(
-						type_metadata->at(vm::TypeID(data.inner.asInt()))
-					);
+					type_at_metadata->definePointer(type_metadata->at(vm::TypeID(data.inner.asInt())
+					));
 				}
 				variant_case(vm::code::valid_type::finalized::FixedSizeTable, data) {
 					type_at_metadata->defineFixedSizeTable(
