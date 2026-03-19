@@ -20,6 +20,7 @@
 #include "logic_or.hpp"            // IWYU pragma: export
 #include "match_expr.hpp"          // IWYU pragma: export
 #include "numeric_value.hpp"       // IWYU pragma: export
+#include "format_string_value.hpp"       // IWYU pragma: export
 #include "prefix_operator.hpp"     // IWYU pragma: export
 #include "round_expr.hpp"          // IWYU pragma: export
 #include "string_value.hpp"        // IWYU pragma: export

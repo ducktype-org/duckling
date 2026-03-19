@@ -252,6 +252,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, false> empty_specifier{ "public;" };
 	Example<pst::Stmt, false> bad_extern_block{ "extern {class x{}};" };
 
+	Example<pst::expr::ExprFormatStrValue, true> format1{ R"(f"{x} + {y} = {x + y}")" };
+	Example<pst::expr::ExprFormatStrValue, true> format2{ R"(f"{x}{y}{z}")" };
+	Example<pst::expr::ExprFormatStrValue, true> format3{ R"(f"nothing")" };
+	Example<pst::expr::ExprFormatStrValue, true> format4{ R"(f"{x}{y} = z")" };
+	Example<pst::expr::ExprFormatStrValue, false> bad_format1{ R"(f"{;}")" };
+
 	Example<pst::Stmt, true> trailing_comma_attr_arg_list{
 		"@if_system(Windows,) print(\"windows\");"
 	};
