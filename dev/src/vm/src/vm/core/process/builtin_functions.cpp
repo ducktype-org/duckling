@@ -142,7 +142,25 @@ namespace vm::builtins {
 
 		thread.releaseGil();
 		// @TODO: #2304 Possible UB if the mutex is not actually locked by this thread.
-		cv->wait(*mutex);
+		try {
+ 			cv->wait(*mutex);
+ 		} catch (const vm::exceptions::VMRuntimeException&) {
+ 			// Ensure the GIL is held again before propagating VM runtime exceptions.
+ 			thread.keepOrAcquireGil();
+ 			throw;
+ 		} catch (const std::exception& e) {
+ 			// Reacquire GIL and wrap standard exceptions so the VM can report ExecutionPanicked.
+ 			thread.keepOrAcquireGil();
+ 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
+ 			msg += e.what();
+ 			throw vm::exceptions::VMRuntimeException(std::move(msg));
+ 		} catch (...) {
+ 			// Reacquire GIL and convert unknown exceptions into a VMRuntimeException.
+ 			thread.keepOrAcquireGil();
+ 			throw vm::exceptions::VMRuntimeException(
+ 				"builtinWaitCV failed during condition variable wait with an unknown exception"
+ 			);
+ 		}
 		thread.keepOrAcquireGil();
 	}
 
