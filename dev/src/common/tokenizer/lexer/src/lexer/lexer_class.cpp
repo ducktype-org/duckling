@@ -525,7 +525,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "format_sub_string");
 		output.push_back(Token::makeFormatStringSubString(
-			file->getCharRange(begin, end), source_position
+			file->getCharRange(begin, end + 1), source_position
 		));
 	}
 
@@ -564,9 +564,12 @@ namespace lexer {
 
 		dia::SourcePosition source_position(source_start, end);
 
+		Token sentinel_begin = Token::makeSentinel(file->getCharRange(begin + 1, begin + 2), {source_start.getLocation(), begin, begin});
+		Token sentinel_end = Token::makeSentinel(file->getCharRange(end, end + 1), {source_start.getLocation(), end, end});
+
 		addTokenMsg(begin, end, "format_string");
 		output.push_back(Token::makeFormatString(
-			file->getCharRange(begin + 1, end + 1 - usize(closed)), std::move(inner_tokens), source_position
+			std::move(inner_tokens), std::move(sentinel_begin), std::move(sentinel_end),  source_position
 		));
 	}
 

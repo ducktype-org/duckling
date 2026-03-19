@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../../meta.hpp"
 #include "format_sub_element.hpp"
 
 namespace pst {
@@ -8,11 +7,11 @@ namespace pst {
 	 * @brief Element representing an expression group inside of a format string
 	 */
 	class FormatSubExpression final: public FormatSubElement {
-		NAMED_CHILD(expr, ExprElement);
+		NAMED_CHILD(expr, UniversalAllowBlockExprHolder);
 
 	public:
 		[[nodiscard]]
-		AccessLocked<ExprElement> getExpr() const {
+		AccessLocked<UniversalAllowBlockExprHolder> getExpr() const {
 			return expr.give();
 		}
 

@@ -56,6 +56,7 @@ namespace tpc {
 		StringValue(const std::string& str): value(base::StrID(str.c_str())) {}
 
 		StringValue(const StringValue&) = default;
+		StringValue& operator=(const StringValue&) = default;
 
 		operator base::StrID() { return value; }
 

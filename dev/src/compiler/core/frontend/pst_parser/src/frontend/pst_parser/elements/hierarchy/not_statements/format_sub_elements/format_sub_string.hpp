@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../../meta.hpp"
 #include "format_sub_element.hpp"
 
 namespace pst{

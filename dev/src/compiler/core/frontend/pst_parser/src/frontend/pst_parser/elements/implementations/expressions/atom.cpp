@@ -7,6 +7,7 @@
 #include "../../hierarchy/expressions/numeric_value.hpp"
 #include "../../hierarchy/expressions/round_expr.hpp"
 #include "../../hierarchy/expressions/string_value.hpp"
+#include "../../hierarchy/expressions/format_string_value.hpp"
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
@@ -23,6 +24,8 @@ namespace pst::expr {
 			return ExprNumericValue::parse(state);
 		} else if (state[0].isString()) {
 			return ExprStrValue::parse(state);
+		} else if (state[0].isFormatString()) {
+			return ExprFormatStrValue::parse(state);
 		} else if (state[0].isChar()) {
 			return ExprCharValue::parse(state);
 		} else if (state[0].isBracketGroup(lexer::Token::Round)) {

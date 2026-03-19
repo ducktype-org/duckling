@@ -19,6 +19,7 @@ namespace pst::expr {
 		void     dprint(std::ostream& out) const final;
 		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+		void calcElementPathHashRecursive() override;
 
 		[[nodiscard]]
 		auto getSubElements() const {

@@ -120,6 +120,7 @@ namespace pst {
 	class UniversalAllowBlockExprHolder;
 	class UniversalExprHolderLowerLevel;
 	class CommaExprHolder;
+	class CommaAllowBlocksExprHolder;
 	class AssignmentExprHolder;
 	class ValuePatternExprHolder;
 	class ImplementsElementExprHolder;

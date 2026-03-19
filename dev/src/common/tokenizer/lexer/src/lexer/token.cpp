@@ -30,6 +30,8 @@ namespace lexer {
 			return "Char";
 		case Type::FormatString:
 			return "FormatString";
+		case Type::FormatStringSubString:
+			return "FormatStringSubString";
 		case Type::BracketGroup:
 			return "BracketGroup";
 		case Type::Operator:
@@ -97,6 +99,31 @@ namespace lexer {
 		str_id = base::StrID(base::RawView(s.data()));
 	}
 
+	Token::Token(
+		Token::Type                type,
+		Tokens&&                   recursive,
+		Token&&                    sentinel_begin,
+		Token&&                    sentinel_end,
+		const dia::SourcePosition& position
+	):
+		  type(type),
+		  recursive(std::move(recursive)),
+		  sentinel_begin(new Token(std::move(sentinel_begin))),
+		  sentinel_end(new Token(std::move(sentinel_end))),
+		  source_position(position) {
+		CORE_ASSERT(
+			this->sentinel_begin->getType() == Type::Sentinel,
+			"non-sentinel token passed as sentinel"
+		);
+		CORE_ASSERT(
+			this->sentinel_end->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
+		);
+		CORE_ASSERT(
+			type == Type::FormatString, "This constructor is only used with format strings"
+		);
+		str_id = base::StrID(base::RawView("f\"\""));
+	}
+
 	Token Token::makeSentinel(base::RawView view, const dia::SourcePosition& pos) {
 		return { Type::Sentinel, view, pos };
 	}
@@ -141,8 +168,8 @@ namespace lexer {
 		return { Type::TypeSpecifier, literal, position };
 	}
 
-	Token Token::makeFormatString(base::RawView full_view, Tokens&& tokens, const dia::SourcePosition position) {
-		return { Type::FormatString, full_view, std::move(tokens), position };
+	Token Token::makeFormatString(Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition position) {
+		return { Type::FormatString, std::move(tokens), std::move(sentinel_begin), std::move(sentinel_end), position };
 	}
 
 	Token Token::makeFormatStringSubString(base::RawView string, const dia::SourcePosition position) {

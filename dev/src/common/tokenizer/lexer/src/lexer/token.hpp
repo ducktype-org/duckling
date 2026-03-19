@@ -43,7 +43,6 @@ namespace lexer {
 			Char,
 			FormatString,  ///< group
 			FormatStringSubString,
-			FormatStringSubExpression,
 			BracketGroup,     ///< group storing opening bracket value in group_type
 			Operator,
 			Comment,
@@ -78,7 +77,7 @@ namespace lexer {
 		static Token makeNumber(const base::RawView number, dia::SourcePosition);
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
 		static Token makeChar(base::RawView string, const dia::SourcePosition&);
-		static Token makeFormatString(base::RawView full_view, Tokens&& tokens, const dia::SourcePosition);
+		static Token makeFormatString(Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition position);
 		static Token makeFormatStringSubString(base::RawView string, const dia::SourcePosition);
 		static Token
 			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition&);
@@ -113,6 +112,13 @@ namespace lexer {
 			Token&&                    sentinel_end,
 			const dia::SourcePosition& position,
 			BracketType                bracket
+		);
+		Token(
+			Type                       type,
+			Tokens&&                   recursive,
+			Token&&                    sentinel_begin,
+			Token&&                    sentinel_end,
+			const dia::SourcePosition& position
 		);
 		Token(
 			Type type, base::RawView value, Tokens&& recursive, const dia::SourcePosition& position
