@@ -64,8 +64,7 @@ clah::Clah getVmClah() {
 	                       .addPositional(clah::FileParser::make("file"))
 	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
 	                       .setHandler([](const clah::ParsingResult& options) {
-                               std::ofstream fs("log.txt", std::ios::out);
-                               logger::setDevLogOutputStream(&fs);
+                               logger::devLogOutputFile("log19_03_2026.txt");
 							   vm::Supervisor::get();
 							   auto                     file = options.getPositional<fs::File>(0);
 							   std::vector<std::string> args;

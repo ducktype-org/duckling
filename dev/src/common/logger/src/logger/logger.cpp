@@ -1,10 +1,11 @@
 #include "logger.hpp"
 
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <iostream>
+#include <fstream>
 #include <vector>
-#include <base/pointers/box.hpp>
 
 namespace logger {
 	namespace {
@@ -13,11 +14,9 @@ namespace logger {
 			return &enabled_categories;
 		}
 
-        Ref<std::ostream> current_stream = &std::cout;
+		Ref<std::ostream> current_stream = &std::cout;
 
-        Ref<std::ostream> getOutputStream(){
-            return current_stream;
-        }
+		Ref<std::ostream> getOutputStream() { return current_stream; }
 
 
 	}
@@ -41,9 +40,17 @@ namespace logger {
 		getEnabledCategories()->push_back(category);
 	}
 
-    void setDevLogOutputStream(Ref<std::ostream> str){
-        current_stream = str;
-    }
+	void setDevLogOutputStream(Ref<std::ostream> str) { current_stream = str; }
+
+	void devLogOutputFile(const std::string& path) {
+        // This introduces memory-leak.
+        // That is intentional, although not sure this is correct.
+        // Motivation is that ostream shouldn't be deleted until very very late in the program,
+        // such that anything that logs in the destructors can do that safely.
+        // OS should reclaim resources and close file descriptors anyway.
+		auto* fs = new std::ofstream(path, std::ios::out);
+        setDevLogOutputStream(fs);
+	}
 
 /**
  * This macro is made to ensure a compilation error when

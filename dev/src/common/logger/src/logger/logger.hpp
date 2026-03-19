@@ -71,6 +71,8 @@ namespace logger {
 	 * conditionally perform some logging-like action based on log category state.
 	 */
 	bool isCategoryEnabled(DevLogCategories category);
+
+	void devLogOutputFile(const std::string& path);
 }
 
 /**
