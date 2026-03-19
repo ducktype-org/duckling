@@ -3,7 +3,8 @@
     "displayName": "DucklingLS",
     "description": "Duckling Language Server",
     "version": "0.0.1",
-    "author": "zpp-2.1",
+    "icon": "images/icon.png",
+    "author": "Ducktype",
     "categories": [
         "Programming Languages"
     ],
@@ -29,9 +30,9 @@
                     "duckling"
                 ],
                 "extensions": [
-                    ".rift",
                     ".dl",
-                    ".duckling",
+                    ".duck",
+                    ".🦆",
                     ".dmf"
                 ],
                 "configuration": "./language-configuration.json"

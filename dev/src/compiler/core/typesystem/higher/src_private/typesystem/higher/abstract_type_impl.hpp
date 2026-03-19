@@ -10,6 +10,7 @@
 #include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -477,7 +478,7 @@ namespace compiler::tsh {
 		static constexpr Kind STATIC_KIND = Kind::DynamicArray;
 
 		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
-			representation = base::strConcat("dynamic_array(", element.toString(), ")");
+			representation = base::strConcat("List[", element.toString(), "]");
 		}
 
 		[[nodiscard]]
@@ -743,7 +744,10 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
 			// this should probably be changed/expanded in the future:
-			return getInterface(ctx)->getElements().size() != 0;
+			u64 fields_count = 0;
+			for (const auto& element: getInterface(ctx)->getElements())
+				if (element.isField()) fields_count++;
+			return fields_count != 0;
 		}
 	};
 
@@ -828,5 +832,47 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+	};
+
+	class TypeTemplateAbstractTypeImpl final: public AbstractTypeImpl {
+		using Source      = TypeTemplateAbstractType::Source;
+		using BuiltinKind = TypeTemplateAbstractType::BuiltinKind;
+
+		Source source;
+
+	public:
+		static constexpr Kind STATIC_KIND = Kind::TypeTemplate;
+
+		[[nodiscard]] Kind getKind() const override { return STATIC_KIND; }
+
+		TypeTemplateAbstractTypeImpl(Source source): source(source) {
+			variant_match(source) {
+				variant_case(BuiltinKind, builtin) {
+					switch (builtin) {
+					case BuiltinKind::List: {
+						representation = "List";
+						break;
+					}
+					default:
+						CORE_UNREACHABLE();
+					}
+				}
+				variant_case(helios::SymID, sym) {
+					representation = base::strConcat("Type template: ", name(sym).str());
+				}
+			}
+		}
+
+		[[nodiscard]] Source getSource() const { return source; }
+
+		[[nodiscard]] AbstractType instantiate(
+			query::Context& ctx, const SymbolType<>& element_type
+		) const;
+
+		[[nodiscard]] bool carriesInformation(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		CRef<TypeInterface> getInterface(query::Context&) const override;
 	};
 }

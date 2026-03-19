@@ -8,7 +8,6 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/worker/worker_manager.hpp>
-#include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
@@ -26,19 +25,6 @@
 #include <sstream>
 
 namespace {
-	/**
-	 * @brief Map storing FileID of each parsed PST (by root element ID)
-	 * @note: as of right now it is needed only for QueryPrimaryCodeScopeFor for acquiring
-	 * the root scope via extendQueryModuleIDOfPST.
-	 * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put
-	 * information from this map into PST nodes.
-	 *
-	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used
-	 * during PST construction/association; must be safe if PST is built concurrently.
-	 */
-	inline static concurrent::ConHashMap<pst::PstID, compiler::frontend::FileID>
-		root_element_file_back_map;
-
 	/**
 	 * StableHashMap that stores all ModuleTree instances.
 	 */
@@ -527,10 +513,6 @@ namespace compiler::frontend {
 		// Update module hash
 		module->updateModuleHash();
 
-		// Remove entry from root_element_file_back_map if exists
-		if (auto root_id = file->getPST()->getRootElement().illegalAccess(); root_id.has_value())
-			root_element_file_back_map.erase(root_id.value()->getID());
-
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(file);
 	}
@@ -599,7 +581,6 @@ namespace compiler::frontend {
 		// Update module hash for the parent module since the number of children changed
 		// Adding a submodule does not change the path component hash of the module so we do not
 		// need to invalidate hash For all SourceFiles and Submodules
-		// @TODO: #1253 every update and change to module should invalidate query caches
 		module->updateModuleHash();
 	}
 
@@ -624,8 +605,7 @@ namespace compiler::frontend {
 		);
 
 		module->m_other_files.at(ext_id).push_back(file);
-		//@TODO: do we need to update the module here? #1253
-		// module->update();
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
@@ -674,8 +654,7 @@ namespace compiler::frontend {
 		);
 
 		files.erase(it);
-		//@TODO: do we need to update the module here? #1253
-		// module->update();
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::setParent(
@@ -1002,28 +981,12 @@ namespace compiler::frontend {
 	/****************
 	 * getFilePST *
 	 ****************/
-	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id) {
+	CRef<pst::PST<>> getFilePST([[maybe_unused]] ::query::Context& ctx, FileID file_id) {
 		Ref<SourceFile> file
 			= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				file_id
 			);
-		auto pst           = file->getPST();
-		auto root_optional = pst->getRootElement().unlockOpt(ctx);
-
-		if (root_optional.has_value()) {
-			auto root_id = root_optional.value()->getID();
-
-			auto maybe_put_result = root_element_file_back_map.maybePut(root_id, file_id);
-			if (!maybe_put_result) {
-				// If the key already exists, assert that it maps to the same value
-				CORE_ASSERT(
-					root_element_file_back_map.getCopy(root_id) == file_id,
-					"Root element ID already exists in back map with a different file ID"
-				);
-			}
-		}
-
-		return pst;
+		return file->getPST();
 	}
 
 	ModuleID extendQueryModuleIDOfPST(
@@ -1034,7 +997,12 @@ namespace compiler::frontend {
 
 		// this access depends on the global state that might
 		// become a problem in incremental compilation:
-		auto file_id = root_element_file_back_map.getCopy(element.unlock(ctx)->getID());
+		auto maybe_file_id = getFileIDOfPSTRoot(element.unlock(ctx)->getID());
+		CORE_ASSERT(
+			maybe_file_id.has_value(),
+			"PST root element ID does not exist in root-element-to-file map"
+		);
+		auto file_id = maybe_file_id.value();
 		return getFileRef(file_id)->getModule().unlock(ctx).getID();
 	}
 }

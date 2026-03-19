@@ -96,7 +96,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     fn get_package_variable(
         &self,
         pkg: &ExpandedPackage,
-        feature: PresentFeature,
+        feature: PresentFeature<'_>,
     ) -> QuackResult<Rc<Variable>> {
         match feature {
             None => self.package_vars.get(pkg).cloned().context_internal(
@@ -223,7 +223,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn require_satisfying_dep_feature(
         &mut self,
         edge: &DependencyEdge,
-        parent_feature: PresentFeature,
+        parent_feature: PresentFeature<'_>,
         child_features: &HashSet<FeatureName>,
     ) -> QuackResult<()> {
         let parent_var = self.get_package_variable(&edge.parent, parent_feature)?;
@@ -259,7 +259,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn require_satisfying_dep_version(
         &mut self,
         edge: &DependencyEdge,
-        parent_feature: PresentFeature,
+        parent_feature: PresentFeature<'_>,
     ) -> QuackResult<()> {
         let parent_var = self.get_package_variable(&edge.parent, parent_feature)?;
         let version_vars = self

@@ -1,10 +1,11 @@
 #pragma once
 
-#include "lang_parser_element.hpp"
+#include <base/types/bit256.hpp>
 
 #include <diagnostic/source_position.hpp>
 
 namespace pst {
+	class LangElement;
 
 	/**
 	 * @brief Class that represents a position in the source code that
@@ -13,8 +14,12 @@ namespace pst {
 	 * the position can become invalid after re-parses.
 	 */
 	class StablePosition {
+	public:
+		using HashType = base::Bit256;
+
+	private:
 		/**
-		 * @brief Node hash that is defines one end of the position range.
+		 * @brief Node hash that defines one end of the position range.
 		 *
 		 * @note We don't know that this node comes before or after
 		 * the @p end_scope_node, but the resulting position is always defined
@@ -45,6 +50,12 @@ namespace pst {
 		 * @brief Inplace extend the position to include the position of another StablePosition.
 		 */
 		void extendWith(const StablePosition& other);
+
+		/**
+		 * @brief Create a new StablePosition that is the extension of this position and another
+		 * position.
+		 */
+		[[nodiscard]] StablePosition extendedWith(const StablePosition& other) const;
 	};
 
 }

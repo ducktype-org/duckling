@@ -8,6 +8,7 @@ use crate::duck::driver::cli_ext::{
 
 use crate::quackpack::subcommands::build::{BuildOptions, compile};
 
+/// Creates parser for the `build` subcommand.
 pub fn get_parser() -> Command {
     subcommand("build")
         .about("Build the current package")
@@ -42,6 +43,8 @@ pub fn get_parser() -> Command {
             "Halt computation after encountering errors in foreign manifests",
         ))
 }
+
+/// Logic for executing the `build` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let global = matches.get_flag("global");
     let package = if global {

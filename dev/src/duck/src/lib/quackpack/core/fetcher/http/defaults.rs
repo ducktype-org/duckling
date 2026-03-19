@@ -1,6 +1,8 @@
+//! Default values for [`HttpClient`](super::HttpClient).
 use std::time::Duration;
 
 // https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.user_agent
+/// Duck's user agent value.
 pub const DUCK_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 /// NOTE: From [docs](https://docs.rs/curl/latest/curl/easy/struct.Easy2.html#method.http_headers):
@@ -21,10 +23,12 @@ pub const EXPECT_HEADER_WITH_VALUE: &str = "Expect;";
 ///
 /// libcurl adds Pragma: no-cache by default; disable that too
 pub const PRAGMA_HEADER_WITH_VALUE: &str = "Pragma;";
-/// Arbitrary value.
+/// An arbitrary value.
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(60);
-/// Arbitrary value.
+/// An arbitrary value.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 
+/// Maximal allowed number of redirects.
 pub const MAX_REDIRECTS: usize = 5;
+/// `application/json` value for the Content-type header.
 pub const _APPLICATION_JSON: &str = "application/json";

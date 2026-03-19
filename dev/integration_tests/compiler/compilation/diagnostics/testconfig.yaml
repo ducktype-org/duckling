@@ -1,0 +1,18 @@
+# A subfolder for testing diagnostics produced by the compiler when compiling invalid code.
+
+# We do not run actual Duckling programs in this test.
+# Instead, we verify that the compiler produces the expected diagnostics for invalid code.
+
+PreCase: "@{clean_cmd} && mkdir build"
+
+Run: "
+  case @{backend} in
+    dvm)       @{compile_dvm_backend_cmd}                   ;;
+    llvm)      @{compile_llvm_backend_cmd}                  ;;
+    nobackend) echo \"Backend undefined\"; exit 1               ;;
+    *)         echo \"Unknown backend\";   exit 1                 ;;
+  esac;
+  "
+  
+SubDirs:
+  - initialization

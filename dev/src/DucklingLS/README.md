@@ -1,10 +1,6 @@
 # Duckling Language Server
 
-This Language Server works for ```.duckling``` files. It has the following language features:
-- Syntax Highlighting
-- Completions
-- Diagnostics
-- Folding
+This Language Server works for Duckling files.
 
 ## Structure
 

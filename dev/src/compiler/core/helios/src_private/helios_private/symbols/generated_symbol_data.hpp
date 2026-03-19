@@ -3,6 +3,7 @@
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
@@ -22,6 +23,14 @@ namespace compiler::helios::houtgen {
 		 */
 		struct ImplicitConstructor final {
 			SymID class_symbol;  // The symbol of the class this constructor belongs to.
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		struct BuiltinOperator final {
+			// The type of the builtin operator this symbol represents.
+			tsh::FunctionAbstractType operator_type;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -77,15 +86,36 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		std::variant<ImplicitConstructor, Parameter, SelfParameter, Variable, ReplExpressionWrapper>
+		/**
+		 * Represents a compiler-generated function wrapper for REPL instructions.
+		 * This is used to wrap a single REPL instruction (if/while/for/block) in a
+		 * synthetic void function so the DVM can execute it via runFunction.
+		 */
+		struct ReplInstructionWrapper final {
+			u64 counter;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		std::variant<
+			ImplicitConstructor,
+			BuiltinOperator,
+			Parameter,
+			SelfParameter,
+			Variable,
+			ReplExpressionWrapper,
+			ReplInstructionWrapper>
 			data;
 
 		explicit GeneratedSymbolData(const std::variant<
 									 ImplicitConstructor,
+									 BuiltinOperator,
 									 Parameter,
 									 SelfParameter,
 									 Variable,
-									 ReplExpressionWrapper>& data);
+									 ReplExpressionWrapper,
+									 ReplInstructionWrapper>& data);
 
 		[[nodiscard]]
 		base::Bit256                          queryUnstablePerfectHash() const;

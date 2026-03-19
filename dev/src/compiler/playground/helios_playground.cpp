@@ -1,7 +1,8 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 
 #include <base/extend_cpp/defer.hpp>
 

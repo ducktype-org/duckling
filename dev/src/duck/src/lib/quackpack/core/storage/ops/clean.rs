@@ -1,3 +1,4 @@
+//! Removing files from a storage.
 use tracing::debug;
 
 use crate::quackpack::core::storage;
@@ -15,8 +16,11 @@ use storage::paths::Storage;
 use storage::{locks, paths};
 
 #[derive(Debug)]
+/// An output of a [`clean_storage`].
 pub struct CleanOutput {
-    pub removed_venvs: Vec<StrId>,
+    /// Ids of removed venvs.
+    pub removed_venvs: Vec<VenvId>,
+    /// Paths to the removed packages.
     pub removed_packages: Vec<PathBuf>,
 }
 
@@ -108,6 +112,8 @@ pub fn clean_storage(ctx: &DuckCtx, storage_root: &Path) -> QuackResult<CleanOut
     })
 }
 
+/// Remove a single venv from a storage.
+/// A helper for [`clean_storage`].
 fn clean_venv_from_storage(
     dir: DirEntry,
     storage: &Storage,

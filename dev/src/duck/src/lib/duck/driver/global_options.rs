@@ -59,6 +59,7 @@ impl GlobalOptions {
 }
 
 #[derive(Debug, Clone, Copy)]
+/// Possible color output values.
 pub enum Color {
     Always,
     Never,
