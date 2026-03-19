@@ -17,5 +17,13 @@ function main { i64, ptr_argv } -> i64 {
     structLoad_lany_lste_field val2, s2, Foo.b;
     output_l64 val2;
 
+    init_lany_type foo_b_ptr, ptr_i64;
+    structLea_lptr_lste_field foo_b_ptr, s2, Foo.b;
+    mov_l64_imm val, 6;
+    store_lptr_lany foo_b_ptr, val;
+    structLoad_lany_lste_field val2, s2, Foo.b;
+    output_l64 val2;
+
+
     ret;
 }

@@ -146,7 +146,7 @@ private:
 		);
 	}
 
-	void structureOperations() { runTestOnVm("structure_operations.dbc", "", "50", {}); }
+	void structureOperations() { runTestOnVm("structure_operations.dbc", "", "506", {}); }
 
 	void testSyncRun() {
 		vm::PID pid = initProcess();
