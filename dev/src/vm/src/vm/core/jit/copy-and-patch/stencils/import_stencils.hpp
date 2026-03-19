@@ -36,7 +36,7 @@ namespace vm::jit::cnp {
 		using LoadedStencilsT = LoadedStencils<BinarySize, NumFunctions>;
 
 		std::array<byte, BinarySize>          binary;
-		std::array<StencilData, NumFunctions> stencils;
+		std::array<StencilData, NumFunctions> stencils_data;
 
 		/**
 		 * @brief Dynamically link the stored stencils, resolving their dependencies.
@@ -71,17 +71,18 @@ namespace vm::jit::cnp {
 			return std::span(begin, begin + stencil_data.size);
 		}
 
-		[[nodiscard]] auto& functions() const { return stencils.stencils; }
+		[[nodiscard]] auto& stencils_data() const { return stencils.stencils_data; }
 
 		/**
 		 * @brief Copy and patch a stencil into a given address.
 		 */
-		void relocate(const StencilData& stencil_data, byte* new_address) {
+		byte* relocate(const StencilData& stencil_data, byte* new_address) {
 			auto binary = stencilBinary(stencil_data);
 			std::ranges::copy(binary, new_address);
 
 			for (const StencilHole& hole: stencil_data.relocation)
 				hole.relocate(binary.data(), new_address);
+			return new_address + binary.size_bytes();
 		}
 
 	private:
