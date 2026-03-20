@@ -115,6 +115,13 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		bool hasNoOpDestructor() const;
 
+		// TODOP: Comments
+		bool isDefaultConstructible(query::Context& ctx) const;
+		bool isTriviallyZeroInitializable(query::Context& ctx) const;
+		bool isCopyable(query::Context& ctx) const;
+		bool isTriviallyCopyable(query::Context& ctx) const;
+
+
 		/**
 		 * @brief The default constructor is deleted.
 		 * This class must be instantiated only from meaningful pieces of data.

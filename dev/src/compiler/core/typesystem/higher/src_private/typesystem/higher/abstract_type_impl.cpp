@@ -5,6 +5,7 @@
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 
 #include <utility>
 
@@ -100,12 +101,6 @@ namespace compiler::tsh {
 	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
 		  components(std::move(components)) {
 		representation = "Tuple" + stringifyTypeVector(this->components);
-	}
-
-	bool TupleAbstractTypeImpl::hasNoOpDestructor() const {
-		for (const auto& component: components)
-			if (!component.hasNoOpDestructor()) return false;
-		return true;
 	}
 
 	FunctionAbstractTypeImpl::FunctionAbstractTypeImpl(
@@ -313,4 +308,55 @@ namespace compiler::tsh {
 		auto view = std::ranges::ref_view(implements) | std::views::transform(TRANSFORMER);
 		return { view.begin(), view.end() };
 	}
+
+	bool ClassAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
+		auto fields = getInterface(ctx)->getFieldsView();
+		for (const auto& field: fields) {
+			auto field_pst = helios::symbolPst(field.getSymbol())
+			                     .value()
+			                     .unlock(ctx)
+			                     .dynamicCast<pst::Field>()
+			                     .value();
+			// If the field has an initializing value, then it's always constructible.
+			if (field_pst->getInit().has_value()) continue;
+			// Otherwise it has to be default constructible.
+			if (!field.getType(ctx).isDefaultConstructible(ctx)) return false;
+		}
+		return true;
+	}
+
+	bool ClassAbstractTypeImpl::isTriviallyZeroInitializable(query::Context& ctx) const {
+		auto fields = getInterface(ctx)->getFieldsView();
+		for (const auto& field: fields) {
+			auto field_pst = helios::symbolPst(field.getSymbol())
+			                     .value()
+			                     .unlock(ctx)
+			                     .dynamicCast<pst::Field>()
+			                     .value();
+			// If any of the fields has an initial value than the class is not trivially zero
+			// initializable.
+			// TODOP: Maybe more proper logic if the field is initialized with a zero value.
+			if (field_pst->getInit().has_value()) return false;
+			// All fields have to be trivially zero initializable.
+			if (!field.getType(ctx).isTriviallyZeroInitializable(ctx)) return false;
+		}
+		return true;
+	}
+
+	bool ClassAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		auto fields = getInterface(ctx)->getFieldsView();
+		// All component types have to be copyable.
+		return std::ranges::all_of(fields, [&](const auto& field) {
+			return field.getType(ctx).isCopyable(ctx);
+		});
+	}
+
+	bool ClassAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		auto fields = getInterface(ctx)->getFieldsView();
+		// All component types have to be trivially copyable.
+		return std::ranges::all_of(fields, [&](const auto& field) {
+			return field.getType(ctx).isTriviallyCopyable(ctx);
+		});
+	}
+
 }

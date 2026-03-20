@@ -73,6 +73,20 @@ namespace compiler::tsh {
 		virtual bool hasNoOpDestructor() const
 			= 0;
 
+		// TODOP: Comments
+		[[nodiscard]]
+		virtual bool isDefaultConstructible(query::Context& ctx) const
+			= 0;
+		[[nodiscard]]
+		virtual bool isTriviallyZeroInitializable(query::Context& ctx) const
+			= 0;
+		[[nodiscard]]
+		virtual bool isCopyable(query::Context& ctx) const
+			= 0;
+		[[nodiscard]]
+		virtual bool isTriviallyCopyable(query::Context& ctx) const
+			= 0;
+
 		/**
 		 * @brief Get the text representation of this type.
 		 * @return The text representation of this type.
@@ -170,6 +184,16 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
 
 		[[nodiscard]]
@@ -191,6 +215,16 @@ namespace compiler::tsh {
 		VoidAbstractTypeImpl() { representation = "void"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
 
@@ -219,6 +253,16 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
@@ -245,6 +289,16 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
@@ -270,6 +324,16 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -322,6 +386,16 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
@@ -356,6 +430,16 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -394,6 +478,16 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -435,6 +529,16 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
@@ -458,6 +562,23 @@ namespace compiler::tsh {
 		 * free memory.
 		 */
 		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		/**
+		 * @brief Strings are trivially zero initializable and initialized with an empty string and
+		 * the data field equal to null. The data is allocated on the first insertion.
+		 */
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		/**
+		 * @brief Strings are not trivially copyable because the require a deep copy of memory.
+		 */
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -496,6 +617,24 @@ namespace compiler::tsh {
 		 * requires to free memory.
 		 */
 		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		/**
+		 * @brief Dynamic arrays are trivially zero initializable and initialized with an empty
+		 * array with a the data field equal to null. The memory is allocated on the first
+		 * insertion.
+		 */
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		/**
+		 * @brief Dynamic arrays are not trivially copyable because the require a deep copy of memory.
+		 */
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -551,7 +690,23 @@ namespace compiler::tsh {
 		 * @brief Static arrays have trivial destructors if the inner type has a noOpDestructor.
 		 */
 		[[nodiscard]] bool hasNoOpDestructor() const override {
-			return element_type.getType().hasNoOpDestructor();
+			return size == 0 || element_type.getType().hasNoOpDestructor();
+		}
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context& ctx) const override {
+			return size == 0 || element_type.isDefaultConstructible(ctx);
+		}
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context& ctx) const override {
+			return size == 0 || element_type.isTriviallyZeroInitializable(ctx);
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context& ctx) const override {
+			return size == 0 || element_type.isCopyable(ctx);
+		}
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context& ctx) const override {
+			return size == 0 || element_type.isTriviallyCopyable(ctx);
 		}
 
 		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
@@ -588,7 +743,35 @@ namespace compiler::tsh {
 
 		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
 
-		[[nodiscard]] bool hasNoOpDestructor() const override;
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			return std::ranges::all_of(components, [&](const auto& component) {
+				return component.hasNoOpDestructor();
+			});
+		}
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context& ctx) const override {
+			return std::ranges::all_of(components, [&](const auto& component) {
+				return component.isDefaultConstructible(ctx);
+			});
+		}
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context& ctx) const override {
+			return std::ranges::all_of(components, [&](const auto& component) {
+				return component.isTriviallyZeroInitializable(ctx);
+			});
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context& ctx) const override {
+			return std::ranges::all_of(components, [&](auto& component) {
+				return component.isCopyable(ctx);
+			});
+		}
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context& ctx) const override {
+			return std::ranges::all_of(components, [&](auto& component) {
+				return component.isTriviallyCopyable(ctx);
+			});
+		}
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -642,8 +825,29 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override {
 			// @TODO: #1273 this is a placeholder, implement proper logic
+			// TODOP
 			return false;
 		}
+
+		/**
+		 * @brief Function types are not default constructible, cause what even is a default function?
+		 */
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		/**
+		 * @brief Function types are copyable, as they require a pointer/closure copy.
+		 */
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		/**
+		 * @brief Function types are trivially copyable if they are not bound to any closure, this
+		 * is just a pointer copy then. Otherwise it's not trivially copyable.
+		 */
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return free; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -681,6 +885,34 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override;
+
+		/**
+		 * @brief Variant must be explicitly initialized with one of it's alternatives.
+		 */
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		/**
+		 * @brief Variant is copyable if all of it's underlying types are copyable.
+		 */
+		[[nodiscard]] bool isCopyable(query::Context& ctx) const override {
+			return std::ranges::all_of(underlying_types, [&](const auto& type) {
+				return type.isCopyable(ctx);
+			});
+		}
+
+		/**
+		 * @brief Variant is trivially copyable if all of it's underlying types are trivially
+		 * copyable.
+		 */
+		[[nodiscard]] bool isTriviallyCopyable(query::Context& ctx) const override {
+			return std::ranges::all_of(underlying_types, [&](const auto& type) {
+				return type.isTriviallyCopyable(ctx);
+			});
+		}
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -742,6 +974,11 @@ namespace compiler::tsh {
 			return false;
 		}
 
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override;
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override;
+		[[nodiscard]] bool isCopyable(query::Context&) const override;
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override;
+
 		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
 			// this should probably be changed/expanded in the future:
 			u64 fields_count = 0;
@@ -767,6 +1004,16 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
@@ -790,6 +1037,16 @@ namespace compiler::tsh {
 			return false;
 		}
 
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
@@ -810,6 +1067,19 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
+		/**
+		 * @brief Meta type is default constructible with a `void` type.
+		 */
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
@@ -829,6 +1099,16 @@ namespace compiler::tsh {
 		explicit ImportAbstractTypeImpl() = default;
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
@@ -872,6 +1152,16 @@ namespace compiler::tsh {
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		CRef<TypeInterface> getInterface(query::Context&) const override;
 	};
