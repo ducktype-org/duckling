@@ -56,6 +56,28 @@ namespace compiler::repl {
 			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_unique_name })
 		           ->valueOrPanic();
 
+		CORE_DEV_LOG(
+			REPL,
+			"LIR data contains ",
+			lir_data->functions.size(),
+			" functions and ",
+			lir_data->globals.size(),
+			" globals\n"
+		);
+		for (const auto& global: lir_data->globals) {
+			CORE_DEV_LOG(REPL, "Global: ", global.lir_global.mangled_name.strView());
+			if (global.global_ctor.has_value())
+				CORE_DEV_LOG(
+					REPL, "  Has ctor: ", global.global_ctor.value()->mangled_name.strView()
+				);
+			if (global.global_dtor.has_value())
+				CORE_DEV_LOG(
+					REPL, "  Has dtor: ", global.global_dtor.value()->mangled_name.strView()
+				);
+		}
+		for (const auto& func: lir_data->functions)
+			CORE_DEV_LOG(REPL, "Function: ", func->mangled_name.strView());
+
 		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
 		// This is strictly connected to the loading dvm context.
 		vm::code::CodeCollection new_code;
@@ -71,11 +93,23 @@ namespace compiler::repl {
 			// lowerAndKeepLirGlobal internally lowers the ctor/dtor into the persistent
 			// context, but we still need to explicitly add them to this batch for the DVM.
 			if (global.global_ctor.has_value()) {
+				CORE_DEV_LOG(
+					REPL,
+					"Lowering function ctor: ",
+					global.global_ctor.value()->mangled_name.strView(),
+					"\n"
+				);
 				const auto& ctor_func
 					= lowering_context.lowerAndKeepLirFunction(global.global_ctor.value());
 				new_code.functions.push_back(ctor_func);
 			}
 			if (global.global_dtor.has_value()) {
+				CORE_DEV_LOG(
+					REPL,
+					"Lowering function dtor: ",
+					global.global_dtor.value()->mangled_name.strView(),
+					"\n"
+				);
 				const auto& dtor_func
 					= lowering_context.lowerAndKeepLirFunction(global.global_dtor.value());
 				new_code.functions.push_back(dtor_func);
@@ -88,6 +122,26 @@ namespace compiler::repl {
 			const auto& dvm_func = lowering_context.lowerAndKeepLirFunction(lir_function);
 			new_code.functions.push_back(dvm_func);
 		}
+
+		// Debug: Print exactly what is inside new_code after all operations
+		CORE_DEV_LOG(REPL, "[DEBUG] new_code contents to be loaded into VM:\n");
+		CORE_DEV_LOG(REPL, "  Types (", new_code.types.size(), "):\n");
+		for (const auto& type: new_code.types)
+			CORE_DEV_LOG(REPL, "    Type: ", vm::code::typeName(type));
+		CORE_DEV_LOG(REPL, "  Globals (", new_code.global_data.size(), "):\n");
+		for (const auto& global: new_code.global_data) {
+			CORE_DEV_LOG(REPL, "    Global: ", global.name.str, "\n");
+			if (global.ctor_name.has_value())
+				CORE_DEV_LOG(REPL, "      Ctor: ", global.ctor_name->str, "\n");
+			if (global.dtor_name.has_value())
+				CORE_DEV_LOG(REPL, "      Dtor: ", global.dtor_name->str, "\n");
+		}
+		CORE_DEV_LOG(REPL, "  Functions (", new_code.functions.size(), "):\n");
+		for (const auto& func: new_code.functions)
+			CORE_DEV_LOG(REPL, "    Function: ", func.name.str, "\n");
+		CORE_DEV_LOG(REPL, "  External C Functions (", new_code.external_c_functions.size(), "):\n");
+		for (const auto& ext_func: new_code.external_c_functions)
+			CORE_DEV_LOG(REPL, "    ExtCFunction: ", ext_func.name.str, "\n");
 
 		return vm::api::loadCode(pid, new_code).transform_error(vm::api::errorToString);
 	}

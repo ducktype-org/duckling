@@ -739,6 +739,8 @@ namespace compiler::helios {
 				auto current_module_id = key.scope.ref->parent_module;
 				auto current_module    = frontend::GetModuleID_Functor::get(current_module_id);
 
+				static thread_local u32 repl_parent_depth = 0;
+
 				CORE_DEV_LOG(
 					REPL,
 					"At root scope, module #",
@@ -753,6 +755,8 @@ namespace compiler::helios {
 				if (current_module->isReplModule()) {
 					auto repl_parent_opt = current_module->getReplModuleParent();
 					if (repl_parent_opt.has_value()) {
+						++repl_parent_depth;
+
 						// Query the parent REPL module's TopLevel scope.
 						auto parent_module_id = repl_parent_opt.value();
 						auto parent_toplevel_scope
@@ -762,10 +766,11 @@ namespace compiler::helios {
 							REPL,
 							"Recursively searching parent module #",
 							parent_module_id.queryUnstablePerfectHash(),
-							" TopLevel scope\n"
+							" TopLevel scope, depth=",
+							repl_parent_depth,
+							"\n"
 						);
 
-						// Recursively lookup in parent REPL module's TopLevel scope.
 						UNPACK_QRESULT_CREF(
 							LookupResult parent_result =,
 							ctx.query<QueryLookupInScopeAndParents>(
@@ -774,6 +779,16 @@ namespace compiler::helios {
 						);
 
 						parent_result.merge(std::move(result));
+
+						CORE_DEV_LOG(
+							REPL,
+							"LookupInScopeAndParents: total REPL parent depth traversed = ",
+							repl_parent_depth,
+							"\n"
+						);
+
+						--repl_parent_depth;
+
 						return parent_result;
 					}
 				}
