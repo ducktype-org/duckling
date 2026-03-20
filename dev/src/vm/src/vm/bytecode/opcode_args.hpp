@@ -56,7 +56,7 @@ namespace vm::opargs {
 	DEFINE_STACK_LOCAL(Any, "lany");
 	DEFINE_STACK_LOCAL(Ptr, "lptr");
 	DEFINE_STACK_LOCAL(Opq, "lopq");
-	DEFINE_STACK_LOCAL(Ste, "lste");
+	DEFINE_STACK_LOCAL(Structure, "lste");
 
 	/**
 	 * @brief Represents local variant argument.
@@ -65,7 +65,7 @@ namespace vm::opargs {
 
 #define VM_OPARG_LOCAL_TYPES                                                             \
 	StackLocal8, StackLocal16, StackLocal32, StackLocal64, StackLocalAny, StackLocalPtr, \
-		StackLocalVnt, StackLocalOpq, StackLocalSte
+		StackLocalVnt, StackLocalOpq, StackLocalStructure
 
 	DEFINE_GLOBAL(8, "g8");
 	DEFINE_GLOBAL(16, "g16");
@@ -73,12 +73,13 @@ namespace vm::opargs {
 	DEFINE_GLOBAL(64, "g64");
 	DEFINE_GLOBAL(Ptr, "gptr");
 	DEFINE_GLOBAL(Opq, "gopq");
-	DEFINE_GLOBAL(Ste, "gste");
+	DEFINE_GLOBAL(Structure, "gste");
 
 	/**
 	 * @brief List of all argument types that target global data.
 	 */
-#define VM_OPARG_GLOBAL_TYPES Global64, Global32, Global16, Global8, GlobalPtr, GlobalOpq, GlobalSte
+#define VM_OPARG_GLOBAL_TYPES \
+	Global64, Global32, Global16, Global8, GlobalPtr, GlobalOpq, GlobalStructure
 
 	/**
 	 * @brief Represents type name argument.

@@ -50,7 +50,6 @@
 
 #include <cmath>
 #include <limits>
-#include <type_traits>
 
 
 #ifdef DEBUG_OPCODES

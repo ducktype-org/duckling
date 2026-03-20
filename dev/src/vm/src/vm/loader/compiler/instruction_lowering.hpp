@@ -368,9 +368,11 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_resetVTable_lptr, i) { addLow<Op_resetVTable_lptr>(i.object_ptr); }
 			instr_case(high::Op_upcast_lptr_lptr, i) { addLow<Op_upcast_lptr_lptr>(i.dst, i.src); }
-			instr_case(high::Op_downcast_lptr_lptr_type, i) {
+			instr_case(high::Op_downcast_lptr_lptr, i) {
 				addLow<Op_downcast_lptr_lptr>(i.dst, i.src);
-				addLow<Op_ext_type>(i.target_type);
+				opargs::Type variant_type
+					= ctx.locals_map.at(i.dst.var_name).type->getInnerType().value()->getName();
+				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_virtual_call_lptr_method, i) {
 				addLow<Op_virtual_call_lptr_method>(i.object_ptr, i.method);

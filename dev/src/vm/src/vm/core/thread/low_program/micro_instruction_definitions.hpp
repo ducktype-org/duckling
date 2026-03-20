@@ -102,10 +102,10 @@ DEF_MICRO_INSTR(mov_l16_g16, vm::opargs::StackLocal16, vm::opargs::Global16)
 DEF_MICRO_INSTR(mov_l8_g8, vm::opargs::StackLocal8, vm::opargs::Global8)
 DEF_MICRO_INSTR(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
 
-DEF_MICRO_INSTR(mov_lste_lste, vm::opargs::StackLocalSte, vm::opargs::StackLocalSte)
-DEF_MICRO_INSTR(mov_lste_gste, vm::opargs::StackLocalSte, vm::opargs::GlobalSte)
-DEF_MICRO_INSTR(mov_gste_lste, vm::opargs::GlobalSte, vm::opargs::StackLocalSte)
-DEF_MICRO_INSTR(mov_gste_gste, vm::opargs::GlobalSte, vm::opargs::GlobalSte)
+DEF_MICRO_INSTR(mov_lste_lste, vm::opargs::StackLocalStructure, vm::opargs::StackLocalStructure)
+DEF_MICRO_INSTR(mov_lste_gste, vm::opargs::StackLocalStructure, vm::opargs::GlobalStructure)
+DEF_MICRO_INSTR(mov_gste_lste, vm::opargs::GlobalStructure, vm::opargs::StackLocalStructure)
+DEF_MICRO_INSTR(mov_gste_gste, vm::opargs::GlobalStructure, vm::opargs::GlobalStructure)
 
 // does a shallow pointer copy
 DEF_MICRO_INSTR(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
@@ -504,7 +504,7 @@ DEF_MICRO_INSTR(
 DEF_MICRO_INSTR(
 	structLea_lptr_lste,
 	vm::opargs::StackLocalPtr /* destination */,
-	vm::opargs::StackLocalSte /* source,
+	vm::opargs::StackLocalStructure /* source,
     vm::opargs::Field 			 field */
 )
 
@@ -512,14 +512,14 @@ DEF_MICRO_INSTR(
 DEF_MICRO_INSTR(
 	structLoad_lany_lste,
 	vm::opargs::StackLocalAny /* destination */,
-	vm::opargs::StackLocalSte /* data_struct,
+	vm::opargs::StackLocalStructure /* data_struct,
     vm::opargs::Field 			 field */
 )
 
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
 	structStore_lste_lany,
-	vm::opargs::StackLocalSte /* data_struct */,
+	vm::opargs::StackLocalStructure /* data_struct */,
 	vm::opargs::StackLocalAny /* source ,
     vm::opargs::Field 			 field */
 )

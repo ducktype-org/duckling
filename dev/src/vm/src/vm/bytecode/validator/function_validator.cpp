@@ -2,6 +2,7 @@
 
 #include "errors.hpp"
 
+#include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -443,7 +444,7 @@ class FunctionValidator {
 					}
 				}
 
-				variant_case(CRef<opargs::StackLocalSte>, local_struct) {
+				variant_case(CRef<opargs::StackLocalStructure>, local_struct) {
 					if (!current_stack.contains(local_struct->var_name))
 						throw UnknownLocalNameError(*local_struct);
 					CRef<valid_type::ValidType> type = current_stack.at(local_struct->var_name);
@@ -514,7 +515,9 @@ class FunctionValidator {
 				if (types_ctx.at(pointer->inner)->getName() != instr.type.type_name)
 					throw PointerTypeMismatchError(instr);
 			}
-			instr_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
+			instr_case(Op_upcast_lptr_lptr, instr) {
+				validateClassCast<InvalidUpcastError>(instr, current_stack);
+			}
 			instr_case(Op_cast_l8_type, instr) {
 				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
@@ -1184,7 +1187,7 @@ class FunctionValidator {
 					variant_pointer, types_ctx, instr
 				);
 
-				if (!std::ranges::contains(variant_type->alternatives_ordered, wanted_type->getID()))
+				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
 				if (instr.expected_type != wanted_type->getName())
@@ -1233,7 +1236,9 @@ class FunctionValidator {
 				);
 				if (!structure->inheritance_metadata) throw NotAClassTypeError(instr);
 			}
-			instr_case_novalue(Op_downcast_lptr_lptr_type) {}
+			instr_case(Op_downcast_lptr_lptr, instr) {
+				validateClassCast<InvalidDowncastError>(instr, current_stack);
+			}
 			instr_case_novalue(Op_free_lptr) {}
 			instr_case(Op_store_lptr_lany, instr) {
 				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
@@ -1446,27 +1451,33 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
-		const {
-		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
-		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
+	template<class Error, class Instr>
+	requires(std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_lptr_lptr>> || std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_lptr_lptr>>)
+	void validateClassCast(const Instr& instruction, const LocalStack& current_stack) const {
+		auto higher_ptr_tod = current_stack.at(instruction.dst.var_name);
+		auto lower_ptr_tod  = current_stack.at(instruction.src.var_name);
+		if constexpr (std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_lptr_lptr>>)
+			std::swap(higher_ptr_tod, lower_ptr_tod);
 
-		auto dst_type
-			= types_ctx.at(dst_ptr_tod->getKindAs<valid_type::finalized::Pointer>()->inner);
-		auto src_type
-			= types_ctx.at(src_ptr_tod->getKindAs<valid_type::finalized::Pointer>()->inner);
+		// Higher or lower in terms of inheritance hierarchy tree, base/superclass is "higher".
+		auto higher_type = types_ctx.at(
+			higher_ptr_tod->template getKindAs<valid_type::finalized::Pointer>()->inner
+		);
+		auto lower_type = types_ctx.at(
+			lower_ptr_tod->template getKindAs<valid_type::finalized::Pointer>()->inner
+		);
 
 		const bool inherits
-			= src_type->maybeGetKindAs<valid_type::finalized::Structure>()
-		          .flatMap([](CRef<valid_type::finalized::Structure> src_struct) {
-					  return src_struct->inheritance_metadata;
+			= lower_type->template maybeGetKindAs<valid_type::finalized::Structure>()
+		          .flatMap([](CRef<valid_type::finalized::Structure> lower_struct) {
+					  return lower_struct->inheritance_metadata;
 				  })
-		          .map([dst_type](const valid_type::finalized::InheritanceMetadata& src_imd) {
-					  return src_imd.super_types.contains(dst_type->getID());
+		          .map([higher_type](const valid_type::finalized::InheritanceMetadata& lower_imd) {
+					  return lower_imd.super_types.contains(higher_type->getID());
 				  })
 		          .copyValueOr(false);
 
-		if (!inherits) throw InvalidUpcastError(instruction);
+		if (!inherits) throw Error(instruction);
 	}
 
 	void validatePrimitiveCast(
