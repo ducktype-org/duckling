@@ -107,7 +107,9 @@ fn run_subcmd(
 ) -> QuackResult<()> {
     let Some((sub_cmd, sub_args)) = args.subcommand() else {
         // No subcommand provided.
-        ctx.console().print_no_nl(cli().render_help().ansi());
+        ctx.console()
+            // clap adds a trailing newline.
+            .print(cli().render_help().ansi().to_string().trim_end());
         return Ok(());
     };
     match (exec_for(sub_cmd), external.get(sub_cmd)) {

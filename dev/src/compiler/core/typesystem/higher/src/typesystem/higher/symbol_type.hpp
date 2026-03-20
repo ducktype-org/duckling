@@ -186,6 +186,72 @@ namespace compiler::tsh {
 			return false;
 		}
 
+		/**
+		 * @brief Determines weather the symbol has a default constructor. This is true for
+		 * primitive types or classes/arrays that store default constructible types, but not true
+		 * for types like `void`, references and boxes;
+		 *
+		 * @return true if the symbol has a default constructor, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isDefaultConstructible(query::Context& ctx) const {
+			// References and boxes are not default constructible.
+			if (reference_kind != ReferenceKind::Direct) return false;
+			return abstract_type.isDefaultConstructible(ctx);
+		}
+
+		/**
+		 * @brief Determines weather the symbol has a trivial zero constructor, meaning it can be
+		 * safely zero initialized and doesn't need a specially generated default constructor.
+		 * This is true for primitive types, strings, lists and static arrays storing other
+		 * trivially zero initializable types, but also classes with all of their fields being zero
+		 * initializable and every one of them not having an initial value. For example:
+		 * - `class T { a: i64 = 1; }` - this is not trivially zero initializable
+		 * - `class U { b: i64; }` - this is trivially zero initializable
+		 * - `class V { t: T; }` - this is not trivially zero initializable cause it's field type
+		 * isn't. If field `t`  was of type `U` then `V` would be trivially zero initializable.
+		 *
+		 * @return true if the symbol can be default initialized by zeros, false otherwise
+		 */
+		[[nodiscard]]
+		bool isTriviallyZeroInitializable(query::Context& ctx) const {
+			// References and boxes are not default constructible.
+			if (reference_kind != ReferenceKind::Direct) return false;
+			return abstract_type.isTriviallyZeroInitializable(ctx);
+		}
+
+		/**
+		 * @brief Checks if a value of this symbol can be copied.
+		 *
+		 * - Direct values are copyable if their underlying abstract type is copyable.
+		 * - References are always copyable (the reference itself is copied).
+		 * - Boxes are copyable if their underlying abstract type is copyable (implies a deep copy).
+		 * @return True if the symbol is copyable, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isCopyable(query::Context& ctx) const {
+			// References are always copyable, just a pointer copy.
+			if (reference_kind == ReferenceKind::Ref) return true;
+			// Box is copyable if the inner abstract type is. Although it requires a deep copy.
+			return abstract_type.isCopyable(ctx);
+		}
+
+		/**
+		 * @brief Checks if a value of this symbol can be copied trivially by just copying the
+		 * values bytes.
+		 *
+		 * - Direct values are trivially copyable if their underlying abstract type is.
+		 * - References are trivially copyable.
+		 * - Boxes are never trivially copyable as they require heap allocation and a deep copy.
+		 * @return True if the symbol is trivially copyable, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isTriviallyCopyable(query::Context& ctx) const {
+			if (reference_kind == ReferenceKind::Ref) return true;
+			if (reference_kind == ReferenceKind::Box) return false;
+			return abstract_type.isTriviallyCopyable(ctx);
+		}
+
 		[[nodiscard]]
 		SymbolType withReferenceKind(const ReferenceKind new_reference_kind) const {
 			return SymbolType(abstract_type, new_reference_kind, mutability, leakage, uniqueness);

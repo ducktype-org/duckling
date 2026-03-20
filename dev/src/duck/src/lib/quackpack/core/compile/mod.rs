@@ -17,6 +17,7 @@ use crate::{
 pub mod compiler_dag;
 pub mod compiler_package;
 pub mod duckc;
+pub mod profiles;
 use compiler_dag::*;
 use duckc::*;
 

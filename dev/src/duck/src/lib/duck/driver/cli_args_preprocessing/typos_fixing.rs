@@ -141,7 +141,7 @@ fn update_closest_targets<'a>(
 fn make_levenshtein_nofix_msg(bad_cmd: &str, closest_targets: &[&str]) -> String {
     let suggestions = closest_targets
         .iter()
-        .map(|target| format!("  - `{target}`"))
+        .map(|target| format!("- `{target}`"))
         .join("\n");
     format!("No such command as `{bad_cmd}`. Did you mean:\n{suggestions}?")
 }
@@ -201,7 +201,7 @@ mod tests {
         );
         assert_eq!(
             result.to_string(),
-            "No such command as `inaa`. Did you mean:\n  - `info`\n  - `init`?"
+            "No such command as `inaa`. Did you mean:\n- `info`\n- `init`?"
         );
     }
 
@@ -258,7 +258,7 @@ mod tests {
         );
         assert_eq!(
             result.to_string(),
-            "No such command as `a`. Did you mean:\n  - `b`\n  - `r`?"
+            "No such command as `a`. Did you mean:\n- `b`\n- `r`?"
         );
     }
 }
