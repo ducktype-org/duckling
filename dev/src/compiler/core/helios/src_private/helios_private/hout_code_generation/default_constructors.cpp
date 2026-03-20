@@ -1,5 +1,7 @@
 #include "default_constructors.hpp"
 
+#include "helios/hout/elements/expr.hpp"
+
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -9,6 +11,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include "base/except/exceptions.hpp"
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -267,9 +271,7 @@ namespace compiler::helios::houtgen {
 	// -----------------------------------------------------------
 	struct IMPLEMENT_QUERY(QueryDefaultInitializerExpr, query::QResult<Box<code::Expr>>) {
 		static PResult provide(Context& ctx, const QKey sym_type) {
-			// References and boxes can't be default initialized.
-			// TODOP: How to get a position here?
-			if (sym_type.getRefKind() != tsh::ReferenceKind::Direct) {
+			if (!sym_type.isDefaultConstructible(ctx)) {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					base::strConcat("Type `", sym_type.toString(), "` cannot be default initialized"),
 					dia::SourcePosition::fakePosition()
@@ -277,27 +279,16 @@ namespace compiler::helios::houtgen {
 				return query::Failed();
 			}
 
+			// For types that are trivially zero initializable, we just insert a default value expr
+			// which will map to ZeroInitialize.
+			if (sym_type.isTriviallyZeroInitializable(ctx)) {
+				return makeBox<code::DefaultValueExpr>(
+					ctx, code::generatedOrigin(), sym_type.getType()
+				);
+			}
 
 			const auto& type = sym_type.getType();
-
-
 			switch (type.getKind()) {
-			// Primitives and simple types are zero-initialized.
-			case tsh::Kind::Byte:
-			case tsh::Kind::Bool:
-			case tsh::Kind::Char:
-			case tsh::Kind::Flag:
-			case tsh::Kind::Integral:
-			case tsh::Kind::Float:
-			case tsh::Kind::RawPointer:
-			case tsh::Kind::Pointer:
-			case tsh::Kind::Optional:
-			case tsh::Kind::Enum:
-			case tsh::Kind::DynamicArray:  // DynamicArray is default initialized by an empty list.
-			case tsh::Kind::String: {      // String is default initialized with an empty string.
-				return makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), type);
-			}
-			// The following require a more sophisticated constructor logic.
 			case tsh::Kind::StaticArray: {
 				auto array_type = type.as<tsh::StaticArrayAbstractType>();
 				auto ctor
@@ -324,8 +315,11 @@ namespace compiler::helios::houtgen {
 				);
 			}
 			case tsh::Kind::Tuple: {
+				// @TODO: #2319 Add them here.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Generating default constructors for tuple types.", std::nullopt
+					"Generating default constructors for not trivially zero-initializable "
+					"tuple types.",
+					std::nullopt
 				));
 				return query::Failed();
 			}
@@ -339,20 +333,11 @@ namespace compiler::helios::houtgen {
 					ctx, code::generatedOrigin(), tsh::getVoidType()
 				);
 			}
-			// These should not be default initialized.
-			case tsh::Kind::Variant:
-			case tsh::Kind::Function:
-			case tsh::Kind::TypeTemplate:
-			case tsh::Kind::Void:
-			case tsh::Kind::Reference: {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					base::strConcat("Type `", sym_type.toString(), "` cannot be default initialized"),
-					dia::SourcePosition::fakePosition()  // TODOP: Fix
-				));
-				return query::Failed();
-			}
 			default: {
-				CORE_UNREACHABLE();
+				CORE_PANIC(
+					"Inconsistency between isTriviallyZeroInitializable and "
+					"QueryDefaultInitializerExpr"
+				);
 			}
 			}
 		}

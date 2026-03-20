@@ -62,15 +62,22 @@ namespace compiler::helios {
 			std::set<SymID>                default_ctors;
 
 			auto register_ctor_if_needed = [&](SymID sym) {
-				const auto& type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
-				if (type.getType().getKind() == tsh::Kind::StaticArray) {
-					auto        arr_type = type.getType().as<tsh::StaticArrayAbstractType>();
+				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+
+				// Don't insert any constructors if a type is trivially zero-initializable or not
+				// default constructible.
+				if (symbol_type.isTriviallyZeroInitializable(ctx)) return;
+				if (!symbol_type.isDefaultConstructible(ctx)) return;
+
+				const auto& type = symbol_type.getType();
+				if (type.getKind() == tsh::Kind::StaticArray) {
+					auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
 					const auto& arr_ctor
 						= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
 					          ->valueOrThrow();
 					default_ctors.insert(arr_ctor.declaration->original_symbol);
-				} else if (type.getType().getKind() == tsh::Kind::Class) {
-					auto        class_type = type.getType().as<tsh::ClassAbstractType>();
+				} else if (type.getKind() == tsh::Kind::Class) {
+					auto        class_type = type.as<tsh::ClassAbstractType>();
 					const auto& class_ctor
 						= ctx.query<houtgen::QueryDefaultClassConstructor>(class_type)
 					          ->valueOrThrow();
@@ -138,7 +145,8 @@ namespace compiler::helios {
 		 *
 		 * @note Generation of default constructors may cause creation of more then one generated
 		 * function. For example default constructor of `i32[3][2]`, calls the default constructor
-		 * of `i32[2]` which doesn't have a symbol.
+		 * of `i32[2]` which doesn't have a symbol so it won't get inserted. For this reason we look
+		 * through every top level constructor and insert it dependencies into the module.
 		 */
 		static void appendDefaultConstructors(
 			std::vector<CRef<HOUTFunction>>& out_functions,
