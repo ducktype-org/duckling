@@ -72,7 +72,7 @@ namespace compiler::helios::houtgen {
 	 * - `code::CallExpr` - for classes/arrays/tuples. This is a call expression to the default
 	 * constructor of the given type.
 	 *
-	 * Logs an error if the type cannot be default initialized (e.g. is a ref/box/void).
+	 * Expects the given type to be default initializable.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
