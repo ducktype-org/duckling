@@ -91,7 +91,7 @@ fn parse_single_dependency(
     Dependency::new(
         name,
         versions,
-        source.into(),
+        source,
         features,
         pinned,
         conditions,
