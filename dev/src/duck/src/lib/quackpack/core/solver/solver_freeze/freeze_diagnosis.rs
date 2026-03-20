@@ -108,8 +108,8 @@ impl SolverFreeze {
                 continue;
             };
             let mut is_every_dep_satisfied = true;
-            for (name, dep) in manifest.dependencies().all_dependencies().iter() {
-                let Some(realization) = freeze.dependencies_realization.get(name) else {
+            for dep in manifest.dependencies().all_dependencies().iter() {
+                let Some(realization) = freeze.dependencies_realization.get(&dep.name()) else {
                     is_every_dep_satisfied = false;
                     break;
                 };
@@ -166,10 +166,7 @@ impl SolverFreeze {
         realization_freeze: &SolverPackageFreeze,
         dep: &Dependency,
     ) -> QuackResult<bool> {
-        let Some(realisation) = freeze
-            .dependencies_realization
-            .get(&dep.desc().manifest_name())
-        else {
+        let Some(realisation) = freeze.dependencies_realization.get(&dep.name()) else {
             // We do not have a realization of such dependency so the answer is negative.
             return Ok(false);
         };
@@ -234,7 +231,7 @@ impl SolverFreeze {
         // Check which main package dependencies are still satisfied.
         let mut still_satisfied_root_deps = HashSet::new();
         for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
-            if let Some(dependency) = main_manifest.dependencies().get_dependency(*alias)
+            if let Some(dependency) = main_manifest.dependencies().get_by_compilation_name(*alias)
                 && let Some(realization_freeze) = self.package_freezes.get(realization)
                 && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
             {
@@ -252,8 +249,12 @@ impl SolverFreeze {
         let all_main_pkg_deps_satisfied = main_manifest
             .dependencies()
             .all_dependencies()
-            .keys()
-            .all(|alias| main_pkg_freeze.dependencies_realization.contains_key(alias));
+            .iter()
+            .all(|dep| {
+                main_pkg_freeze
+                    .dependencies_realization
+                    .contains_key(&dep.name_for_compilation())
+            });
         // Change the previous main package to the new root package.
         let main_pkg_freeze = self
             .package_freezes

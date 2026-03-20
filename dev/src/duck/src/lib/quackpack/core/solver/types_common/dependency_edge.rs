@@ -31,7 +31,7 @@ impl DependencyEdge {
             .map(|child_loc| Self {
                 parent,
                 dependency_loc: *child_loc,
-                manifest_child_name: manifest_dependency.desc().manifest_name(),
+                manifest_child_name: manifest_dependency.name_for_compilation(),
             })
             .context_internal("Failed to expand a location")
     }

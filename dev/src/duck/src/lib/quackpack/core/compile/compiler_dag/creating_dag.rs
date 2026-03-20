@@ -198,7 +198,7 @@ impl CompilerDag {
                 .package()
                 .manifest()
                 .dependencies()
-                .has_dependency(dep.name())
+                .has_by_name(dep.name())
             {
                 PackageType::DirectDependency
             } else {

@@ -234,11 +234,17 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+/// A single compilation profile.
 pub struct Profile {
+    /// Optimization level.
     pub opt_level: Option<OptLevel>,
+    /// Whether should we emit DVM bytecode.
     pub dvm_bytecode: Option<bool>,
+    /// Whether to use incremental compilation.
     pub incremental: Option<bool>,
+    /// Whether to link C STD.
     pub c_std: Option<bool>,
+    /// Whether this profile inherits other profile.
     pub inherits: Option<String>,
 }
 

@@ -1,5 +1,8 @@
 //! Managing a single dependency abstraction.
-use crate::{QuackError, QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
+use crate::{
+    QuackError, QuackResult, StrId, qp_bail,
+    quackpack::core::{FeatureName, InternedSource, Source, Version},
+};
 
 mod conditions;
 mod dependency_description;
@@ -14,8 +17,6 @@ pub use dependency_feature::*;
 #[derive(Clone, Debug)]
 /// High level abstraction on a package's dependency.
 pub struct Dependency {
-    /// The dependency description.
-    desc: DependencyDescription,
     /// Features of this dependency.
     features: Vec<DependencyFeature>,
     /// Whether this dependency is pinned to a specific version.
@@ -23,7 +24,13 @@ pub struct Dependency {
     /// Optional conditions for this dependency to be enabled.
     conditions: Option<Conditions>,
     /// The real (unaliased) name of the dependency.
-    real_name: StrId,
+    name: StrId,
+    /// Explicit name specified in the manifest.
+    explicit_manifest_name: Option<StrId>,
+    /// All versions of this dependency.
+    versions: Vec<Version>,
+    /// Source of this dependency.
+    source: InternedSource,
 }
 
 impl Dependency {
@@ -33,35 +40,37 @@ impl Dependency {
     /// 1. `is_pinned` is true and `desc` doesn't have a [`Registry`](super::Registry) source.
     /// 2. `is_pinned` is true and `desc.versions()` doesn't have a length 1.
     pub fn new(
-        desc: DependencyDescription,
+        name: StrId,
+        versions: Vec<Version>,
+        source: Source,
         features: Vec<DependencyFeature>,
         is_pinned: bool,
         conditions: Option<Conditions>,
-        real_name: StrId,
+        explicit_manifest_name: Option<StrId>,
     ) -> QuackResult<Self> {
-        if is_pinned && !desc.source().is_registry() {
+        if source.is_registry() && versions.is_empty() {
+            qp_bail!("a registry dependency must provide at least one version")
+        }
+        if is_pinned && !source.is_registry() {
             qp_bail!("only registry sources can be pinned")
         }
-        if is_pinned && desc.versions().len() != 1 {
+        if is_pinned && versions.len() != 1 {
             qp_bail!("pinned dependencies must specify exactly one version")
         }
         Ok(Self {
-            desc,
             features,
             is_pinned,
             conditions,
-            real_name,
+            name,
+            explicit_manifest_name,
+            versions,
+            source: source.into(),
         })
     }
 
-    /// Get the dependency description.
-    pub fn desc(&self) -> &DependencyDescription {
-        &self.desc
-    }
-
     /// Get the real (unaliased) name of the dependency.
-    pub fn real_name(&self) -> StrId {
-        self.real_name
+    pub fn name(&self) -> StrId {
+        self.name
     }
 
     /// Get the list of dependency features.
@@ -94,7 +103,7 @@ impl Dependency {
 
     /// Whether this dependency was aliased in the manifest.
     pub fn is_aliased(&self) -> bool {
-        self.real_name() != self.desc().manifest_name()
+        self.explicit_manifest_name.is_some()
     }
 
     /// Get an iterator over features that are enabled for the given features.
@@ -115,15 +124,37 @@ impl Dependency {
             })
             .collect()
     }
+
+    /// Get the aliased name of this package.
+    /// If none, then this package has not been aliased.
+    pub fn explicit_manifest_name(&self) -> Option<StrId> {
+        self.explicit_manifest_name
+    }
+
+    /// Get versions of this package.
+    pub fn versions(&self) -> &[Version] {
+        &self.versions
+    }
+
+    /// Get the source of this package.
+    pub fn source(&self) -> InternedSource {
+        self.source
+    }
+
+    /// Get name used for compilation.
+    ///
+    /// Helper for `self.explicit_manifest_name().unwrap_or(self.name())`.
+    pub fn name_for_compilation(&self) -> StrId {
+        self.explicit_manifest_name.unwrap_or(self.name)
+    }
 }
 
-impl TryFrom<(&str, registry::Dependency)> for Dependency {
+impl TryFrom<registry::Dependency> for Dependency {
     type Error = QuackError;
 
-    fn try_from(value: (&str, registry::Dependency)) -> Result<Self, Self::Error> {
-        let (real_name, value) = value;
-        let real_name = real_name.into();
+    fn try_from(value: registry::Dependency) -> Result<Self, Self::Error> {
         let registry::Dependency {
+            name,
             version,
             source,
             features,
@@ -131,18 +162,19 @@ impl TryFrom<(&str, registry::Dependency)> for Dependency {
             conditions,
             is_alias_for,
         } = value;
-        let manifest_name = is_alias_for.map(Into::into).unwrap_or(real_name);
-        let desc = DependencyDescription::new(manifest_name, version, source.try_into()?)?;
+        let manifest_name = is_alias_for.map(Into::into);
         let features = features
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()?;
         Self::new(
-            desc,
+            name.into(),
+            version,
+            source.try_into()?,
             features,
             pinned,
             Some(conditions.try_into()?),
-            real_name,
+            manifest_name,
         )
     }
 }
@@ -152,18 +184,14 @@ impl TryFrom<Dependency> for registry::Dependency {
 
     fn try_from(value: Dependency) -> Result<Self, Self::Error> {
         let Dependency {
-            desc,
             features,
             is_pinned,
             conditions,
-            real_name,
+            name,
+            explicit_manifest_name,
+            versions,
+            source,
         } = value;
-        let is_alias_for = if real_name == desc.manifest_name() {
-            None
-        } else {
-            Some(real_name.into())
-        };
-        let (_, version, source) = desc.decompose();
         let features = features.into_iter().map(Into::into).collect();
         let conditions = match conditions {
             Some(conditions) => conditions.into(),
@@ -172,12 +200,13 @@ impl TryFrom<Dependency> for registry::Dependency {
             },
         };
         Ok(Self {
-            version,
+            version: versions,
             source: source.try_into()?,
             features,
             pinned: is_pinned,
             conditions,
-            is_alias_for,
+            is_alias_for: explicit_manifest_name.map(Into::into),
+            name: name.into(),
         })
     }
 }

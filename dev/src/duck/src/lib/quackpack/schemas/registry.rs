@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-pub type Dependencies = HashMap<String, Dependency>;
+pub type Dependencies = Vec<Dependency>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
@@ -45,6 +45,8 @@ pub struct Metadata {
 #[serde(rename_all = "kebab-case")]
 /// Single dependency of a package.
 pub struct Dependency {
+    /// Name of the dependency.
+    pub name: String,
     /// Possible versions of the dependency.
     pub version: Vec<Version>,
     /// Source of the dependency.
@@ -115,17 +117,24 @@ pub enum DependencyFeature {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(rename_all = "kebab-case")]
+/// A single compilation profile.
 pub struct Profile {
+    /// Optimization level.
     pub opt_level: Option<OptLevel>,
+    /// Whether should we emit DVM bytecode.
     pub dvm_bytecode: Option<bool>,
+    /// Whether to use incremental compilation.
     pub incremental: Option<bool>,
+    /// Whether to link C STD.
     pub c_std: Option<bool>,
+    /// Whether this profile inherits other profile.
     pub inherits: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(rename_all = "kebab-case", untagged)]
+/// Duckc optimization level.
 pub enum OptLevel {
     Zero,
     One,
