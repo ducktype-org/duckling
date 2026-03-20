@@ -143,8 +143,6 @@ private:
 			assert_flags(
 				complex_non_defaultable, false, false, true, true, "MoreComplexNonDefaultable"
 			);
-
-			// TODOP: NoOpDestructor
 		});
 	}
 

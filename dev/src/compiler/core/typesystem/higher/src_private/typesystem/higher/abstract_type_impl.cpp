@@ -339,7 +339,6 @@ namespace compiler::tsh {
 			                     .value();
 			// If any of the fields has an initial value than the class is not trivially zero
 			// initializable.
-			// TODOP: Maybe more proper logic if the field is initialized with a zero value.
 			if (field_pst->getInit().has_value()) return false;
 			// All fields have to be trivially zero initializable.
 			if (!field.getType(ctx).isTriviallyZeroInitializable(ctx)) return false;
