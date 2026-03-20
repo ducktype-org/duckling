@@ -124,6 +124,17 @@ impl ExpandedLocation {
     pub fn is_local(&self) -> bool {
         matches!(self, Self::Local { .. })
     }
+
+    /// Return a descriptive name of this location.
+    pub fn descriptive_name(&self) -> String {
+        match self {
+            Self::Registry { real_name, .. } => format!("`{}", real_name),
+            Self::Git { url, .. } => format!("cloned from `{url}`"),
+            Self::Local { absolute_path } => {
+                format!("at the directory `{}`", absolute_path.display())
+            }
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
