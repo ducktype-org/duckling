@@ -1,3 +1,4 @@
+#include <driver/debug_info/debug_info.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -420,7 +421,7 @@ private:
 			          .valueOrPanic();
 
 			ASSERT_TRUE(artifacts.object_art.file.exists());
-			ASSERT_TRUE(artifacts.debug_info_art.empty());
+			ASSERT_TRUE(artifacts.debug_info.empty());
 
 			fs::FileManager::deleteFile(artifacts.object_art.file);
 		});
@@ -438,10 +439,13 @@ private:
 			          .valueOrPanic();
 
 			ASSERT_TRUE(artifacts.object_art.file.exists());
-			ASSERT_TRUE(artifacts.debug_info_art.value().file.exists());
+			ASSERT_TRUE(artifacts.debug_info.has_value());
 
 			fs::FileManager::deleteFile(artifacts.object_art.file);
-			fs::FileManager::deleteFile(artifacts.debug_info_art.value().file);
+			fs::FileManager::deleteFile(
+				artifacts.object_art.file.getFilePath().parentPath()
+				/ artifacts.object_art.file.stem().append(driver::DEBUG_INFO_STABLE_EXTENSION)
+			);
 		});
 	}
 

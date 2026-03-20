@@ -8,8 +8,8 @@
 
 #include "../backend_type.hpp"
 #include "../options.hpp"
-#include "debug_info/debug_info.hpp"
 
+#include <debug_info/debug_info.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
