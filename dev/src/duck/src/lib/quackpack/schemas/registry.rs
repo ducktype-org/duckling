@@ -19,7 +19,7 @@ pub struct Manifest {
     /// Package's features.
     pub features: HashMap<String, Vec<String>>,
     /// Package's profiles.
-    pub profiles: HashMap<String, CompilerOptions>,
+    pub profiles: HashMap<String, Profile>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -108,8 +108,24 @@ pub enum DependencyFeature {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-pub struct CompilerOptions {
-    pub compiler_flags: Vec<String>,
+pub struct Profile {
+    pub opt_level: Option<OptLevel>,
+    pub dvm_bytecode: Option<bool>,
+    pub incremental: Option<bool>,
+    pub c_std: Option<bool>,
+    pub inherits: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(untagged)]
+pub enum OptLevel {
+    Zero,
+    One,
+    Two,
+    Three,
+    S,
+    Z,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

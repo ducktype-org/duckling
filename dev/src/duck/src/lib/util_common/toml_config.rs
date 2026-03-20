@@ -14,7 +14,6 @@ use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
     util_common::path_ops_ext::PathOpsExt,
 };
-use paste::item;
 use toml::value::{Array, Datetime};
 
 #[derive(Default, Debug)]
@@ -40,44 +39,39 @@ impl DescriptionWithAnArticle for Value {
 
 macro_rules! delegate_getter {
     (
-        $(
-            $name:ident => $toml_value_fn:ident -> $ret:ty: $human_type:literal $(,)?
-        ),*
+        FunctionName: $name:ident,
+        ReturnType: $ret:ty,
+        DocType: $doc:ty,
+        HumanType: $human_type:literal,
+        CastFunctionName: $toml_value_fn:ident $(,)?
     ) => {
-        item! {
-            $(
-                #[doc = concat!("Get [`", stringify!($value), "`] at the dotted key.")]
-                pub fn [<get_ $name>](&self, key: &str) -> QuackResult<Option<$ret>> {
-                    let value = self.get(key)?;
-                    let Some(value) = value else {
-                        return Ok(None);
-                    };
-                    match value.[<as_ $toml_value_fn>]() {
-                        Some(x) => Ok(Some(x)),
-                        None => Err(qp_err!("{}", self.make_location_error())).context(
-                            format!("the key `{key}` expects {}, not {}", $human_type, value.desc_with_article())
-                        )
-                    }
-                }
-            )*
+        #[doc = concat!("Get [`", stringify!($doc), "`] at the dotted key.")]
+        pub fn $name(&self, key: &str) -> QuackResult<Option<$ret>> {
+            let value = self.get(key)?;
+            let Some(value) = value else {
+                return Ok(None);
+            };
+            match value.$toml_value_fn() {
+                Some(x) => Ok(Some(x)),
+                None => Err(qp_err!("{}", self.make_location_error())).context(format!(
+                    "the key `{key}` expects {}, not {}",
+                    $human_type,
+                    value.desc_with_article()
+                )),
+            }
         }
     };
 }
 
 macro_rules! delegate_setter {
     (
-        $(
-            $name:ident => $toml_value_enum:ident -> $value:ty $(,)?
-        ),*
+        FunctionName: $name:ident,
+        InputType: $value:ty $(,)?
     ) => {
-        item! {
-            $(
-                #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
-                pub fn [<set_ $name>](&mut self, key: &str, value: $value) -> QuackResult<()> {
-                    let value = Value::$toml_value_enum(value);
-                    self.set(key, value)
-                }
-            )*
+        #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
+        pub fn $name(&mut self, key: &str, value: $value) -> QuackResult<()> {
+            let value: Value = value.into();
+            self.set(key, value)
         }
     };
 }
@@ -229,23 +223,94 @@ impl TomlConfig {
     }
 
     delegate_getter! {
-        str => str -> &str: "a string",
-        array => array -> &Array: "an array",
-        table => table -> &Table: "a table",
-        date => datetime -> &Datetime: "a datetime",
-        int => integer -> i64: "an integer",
-        float => float -> f64: "a float",
-        bool => bool -> bool: "a boolean",
+        FunctionName: get_str,
+        ReturnType: &str,
+        DocType: str,
+        HumanType: "a string",
+        CastFunctionName: as_str,
+    }
+
+    delegate_getter! {
+        FunctionName: get_array,
+        ReturnType: &Array,
+        DocType: Array,
+        HumanType: "an array",
+        CastFunctionName: as_array,
+    }
+
+    delegate_getter! {
+        FunctionName: get_table,
+        ReturnType: &Table,
+        DocType: Table,
+        HumanType: "a table",
+        CastFunctionName: as_table,
+    }
+
+    delegate_getter! {
+        FunctionName: get_int,
+        ReturnType: i64,
+        DocType: i64,
+        HumanType: "an integer",
+        CastFunctionName: as_integer,
+    }
+
+    delegate_getter! {
+        FunctionName: get_bool,
+        ReturnType: bool,
+        DocType: bool,
+        HumanType: "a boolean",
+        CastFunctionName: as_bool,
+    }
+
+    delegate_getter! {
+        FunctionName: get_float,
+        ReturnType: f64,
+        DocType: f64,
+        HumanType: "a float",
+        CastFunctionName: as_float,
+    }
+
+    delegate_getter! {
+        FunctionName: get_date,
+        ReturnType: &Datetime,
+        DocType: Datetime,
+        HumanType: "a date",
+        CastFunctionName: as_datetime,
     }
 
     delegate_setter! {
-        str => String -> String,
-        array => Array -> Array,
-        table => Table -> Table,
-        date => Datetime -> Datetime,
-        int => Integer -> i64,
-        float => Float -> f64,
-        bool => Boolean -> bool,
+        FunctionName: set_array,
+        InputType: Array,
+    }
+
+    delegate_setter! {
+        FunctionName: set_table,
+        InputType: Table,
+    }
+
+    delegate_setter! {
+        FunctionName: set_bool,
+        InputType: bool,
+    }
+
+    delegate_setter! {
+        FunctionName: set_int,
+        InputType: i64,
+    }
+
+    delegate_setter! {
+        FunctionName: set_str,
+        InputType: String,
+    }
+
+    delegate_setter! {
+        FunctionName: set_float,
+        InputType: f64,
+    }
+
+    delegate_setter! {
+        FunctionName: set_date,
+        InputType: Datetime,
     }
 
     /// Get the root [`Table`] for this config.

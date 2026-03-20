@@ -161,10 +161,14 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
 		}
 		variant_case_novalue(tsl::PointerTypeLayout) {
-			query_ctx_for_errors.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+			CORE_ASSERT(
+				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
+			);
+			query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 				base::strConcat(
-					"DVM backend does not yet support pointer types. Offending type layout: ",
-					layout->toStringDefinition(query_ctx_for_errors),
+					"DVM backend does not yet support pointer types. Offending type "
+					"layout: ",
+					layout->toStringDefinition(*query_ctx_for_errors.value()),
 					". This usually means you used a pointer in compile time."
 				),
 				base::Optional<dia::SourcePosition>()
@@ -172,11 +176,14 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			query::throwFailed();
 		}
 		variant_default {
-			query_ctx_for_errors.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+			CORE_ASSERT(
+				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
+			);
+			query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 				base::strConcat(
 					"During TypeLayout lowering in DVM code generation - type not handled "
 					"yet: ",
-					layout->toStringDefinition(query_ctx_for_errors)
+					layout->toStringDefinition(*query_ctx_for_errors.value())
 				),
 				base::Optional<dia::SourcePosition>()
 			));
