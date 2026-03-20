@@ -88,7 +88,7 @@ namespace vm {
 
 		struct Data {
 			struct FieldDesc {
-				Offset     offset;
+				Offset     offset = Offset(0);
 				VMValueRef value;
 			};
 
