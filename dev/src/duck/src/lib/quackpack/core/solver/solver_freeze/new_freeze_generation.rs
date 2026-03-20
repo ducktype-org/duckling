@@ -101,7 +101,7 @@ impl SolverFreeze {
             if !dependency.is_enabled_for(base_pkg_features.clone()) {
                 continue;
             }
-            let dep_name = dependency.name_for_compilation();
+            let dep_name = dependency.effective_name();
             let realization = self.get_realization(&base_pkg, dep_name)?;
             Self::add_realization(new_pkg_freezes, &base_pkg, dep_name, realization)?;
             let forced_features = dependency.enabled_features(base_pkg_features.clone());

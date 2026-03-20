@@ -187,7 +187,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             .retain(|dep| {
                 !root_freeze
                     .dependencies_realization
-                    .contains_key(&dep.name_for_compilation())
+                    .contains_key(&dep.effective_name())
             });
         Ok(root_manifest)
     }

@@ -37,13 +37,13 @@ impl Dependencies {
     }
 
     /// Check if a dependency exists by a compilatio name.
-    pub fn has_by_compilation_name(&self, name: StrId) -> bool {
-        self.get_by_compilation_name(name).is_some()
+    pub fn has_by_effective_name(&self, name: StrId) -> bool {
+        self.get_by_effective_name(name).is_some()
     }
 
     /// Get a dependency by a compilation name.
-    pub fn get_by_compilation_name(&self, name: StrId) -> Option<&Dependency> {
-        self.0.iter().find(|dep| dep.name_for_compilation() == name)
+    pub fn get_by_effective_name(&self, name: StrId) -> Option<&Dependency> {
+        self.0.iter().find(|dep| dep.effective_name() == name)
     }
 
     /// Get an iterator over all dependencies.

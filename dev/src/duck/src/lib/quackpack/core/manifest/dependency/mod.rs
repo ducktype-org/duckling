@@ -5,8 +5,6 @@ use crate::{
 };
 
 mod conditions;
-mod dependency_description;
-pub use dependency_description::*;
 mod dependencies;
 mod dependency_feature;
 use crate::quackpack::schemas::registry;
@@ -141,10 +139,10 @@ impl Dependency {
         self.source
     }
 
-    /// Get name used for compilation.
+    /// Get the effective name of this dependency.
     ///
     /// Helper for `self.explicit_manifest_name().unwrap_or(self.name())`.
-    pub fn name_for_compilation(&self) -> StrId {
+    pub fn effective_name(&self) -> StrId {
         self.explicit_manifest_name.unwrap_or(self.name)
     }
 }

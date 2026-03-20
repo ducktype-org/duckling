@@ -149,7 +149,7 @@ impl SolverFreeze {
             return None;
         }
         if let Some(pkg_version) = pkg.version {
-            if manifest.root_description().version() == pkg_version {
+            if manifest.version() == pkg_version {
                 Some(manifest)
             } else {
                 None
@@ -231,7 +231,7 @@ impl SolverFreeze {
         // Check which main package dependencies are still satisfied.
         let mut still_satisfied_root_deps = HashSet::new();
         for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
-            if let Some(dependency) = main_manifest.dependencies().get_by_compilation_name(*alias)
+            if let Some(dependency) = main_manifest.dependencies().get_by_effective_name(*alias)
                 && let Some(realization_freeze) = self.package_freezes.get(realization)
                 && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
             {
@@ -253,7 +253,7 @@ impl SolverFreeze {
             .all(|dep| {
                 main_pkg_freeze
                     .dependencies_realization
-                    .contains_key(&dep.name_for_compilation())
+                    .contains_key(&dep.effective_name())
             });
         // Change the previous main package to the new root package.
         let main_pkg_freeze = self

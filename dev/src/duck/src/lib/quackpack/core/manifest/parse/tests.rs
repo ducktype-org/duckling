@@ -40,7 +40,7 @@ metadata:
     let ctx = DuckCtx::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
-    assert_eq!(summary.root_description().name(), "xd");
+    assert_eq!(summary.name(), "xd");
     assert!(summary.dependencies().all_dependencies().is_empty());
     assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
@@ -401,7 +401,7 @@ dependencies:
         assert_eq!(local_source.entry_in_manifest(), "xd");
     }
     assert!(a.versions().is_empty());
-    assert_eq!(a.name(), a.name_for_compilation());
+    assert_eq!(a.name(), a.effective_name());
     assert!(a.explicit_manifest_name().is_none());
 
     let a1 = summary
@@ -459,7 +459,7 @@ dependencies:
     }
     assert_eq!(b.versions().len(), 1);
     assert_eq!(b.versions()[0].to_string(), "0.1.0");
-    assert_eq!(b.name(), b.name_for_compilation());
+    assert_eq!(b.name(), b.effective_name());
     assert!(b.explicit_manifest_name().is_none());
 
     let c = summary
@@ -470,7 +470,7 @@ dependencies:
     assert_eq!(c.versions().len(), 1);
     assert_eq!(c.name(), "alias");
     assert_eq!(c.explicit_manifest_name(), Some("c".into()));
-    assert_ne!(c.name(), c.name_for_compilation());
+    assert_ne!(c.name(), c.effective_name());
 
     let d = summary
         .dependencies()
@@ -483,7 +483,7 @@ dependencies:
     assert_eq!(d.versions().len(), 1);
     assert_eq!(d.name(), "alias2");
     assert_eq!(d.explicit_manifest_name(), Some("d".into()));
-    assert_ne!(d.name(), d.name_for_compilation());
+    assert_ne!(d.name(), d.effective_name());
 
     let e = summary.dependencies().get_by_name(StrId::new("e")).unwrap();
     assert!(e.source().is_git());
@@ -496,7 +496,7 @@ dependencies:
         assert_eq!(git_source.rev(), Some(StrId::new("commit")));
     }
     assert!(e.versions().is_empty());
-    assert_eq!(e.name(), e.name_for_compilation());
+    assert_eq!(e.name(), e.effective_name());
     assert!(b.explicit_manifest_name().is_none());
 }
 
@@ -859,7 +859,7 @@ dependencies:
     let ctx = DuckCtx::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
-    assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
+    assert_eq!(summary.version(), Version::new(0, 10, 0));
     assert_eq!(
         summary
             .dependencies()
@@ -917,7 +917,7 @@ metadata:
     let ctx = DuckCtx::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
-    assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
+    assert_eq!(summary.version(), Version::new(0, 10, 0));
 }
 
 #[test]
