@@ -97,7 +97,7 @@ namespace vm {
 		};
 
 		struct Variant {
-			u64        type_tag;
+			u64        type_tag = 0;
 			VMValueRef referenced;
 		};
 
