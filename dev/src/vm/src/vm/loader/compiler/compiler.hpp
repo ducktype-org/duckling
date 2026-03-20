@@ -5,6 +5,7 @@
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
+#include <vm/loader/compiler/local_stack_database.hpp>
 
 namespace vm::loader::compiler {
 	namespace detail {
@@ -87,14 +88,8 @@ namespace vm::loader::compiler {
 			/// Temporary label IDs used before label linking.
 			base::HashMap<base::StrID, usize> label_id_map;
 
-			struct LocalEntry {
-				u64      offset;
-				TypeCRef type;
-			};
-
-			/// A mapping from a local variable's name to its offset on the function's local stack
-			/// and type.
-			base::HashMap<base::StrID, LocalEntry> locals_map{};
+			LocalStackDatabase locals_map;
+			std::map<usize, usize> stack_changes;
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size = 0;
 		};
