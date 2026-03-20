@@ -84,12 +84,13 @@ namespace compiler::backend_vm::internal {
 		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
 
 		/**
-		 * @brief Builts the debug info for the module.
-		 * This should only be called if the class was constructed with build_debug_info=true,
-		 * otherwise it will panic.
-		 * @note It does consume the internal state, so it should only be called once.
+		 * @brief Builds the debug info for the module 
+		 * if the class was constructed with debug info building enabled, 
+		 * returns nullopt otherwise.
+		 * @note It leaves the internal debug info builder in an empty state, 
+		 * so subsequent calls to this method will return nullopt.
 		 */
-		[[nodiscard]] debug_info::DebugInfo buildDebugInfo();
+		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
 
 	private:
 		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);

@@ -1,4 +1,4 @@
-#include "debug_info_source_pos.hpp"
+#include "debug_info.hpp"
 
 #include <debug_info/debug_info_io.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>

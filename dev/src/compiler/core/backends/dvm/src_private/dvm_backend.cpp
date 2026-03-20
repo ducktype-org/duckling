@@ -19,13 +19,12 @@ namespace compiler::backend_vm {
 		CORE_UNREACHABLE();
 	}
 
-	debug_info::DebugInfo DVMCodeBuilder::buildDebugInfo() {
-		if (!build_debug_info) {
-			CORE_PANIC(
-				"Debug info was not built for this module. To build debug info, construct the "
-				"DVMCodeBuilder with build_debug_info=true."
-			);
-		}
+	base::Optional<debug_info::DebugInfo> DVMCodeBuilder::buildDebugInfo() {
+		CORE_ASSERT(
+			build_debug_info,
+			"Debug info was not built for this module. To build debug info, construct the "
+			"DVMCodeBuilder with build_debug_info=true."
+		);
 		return program_context->buildDebugInfo();
 	}
 

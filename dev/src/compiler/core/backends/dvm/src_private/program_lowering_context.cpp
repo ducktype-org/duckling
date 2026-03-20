@@ -228,8 +228,14 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	} catch (vm::code::ValidationError& e) { return std::unexpected(e.what()); }
 }
 
-debug_info::DebugInfo compiler::backend_vm::internal::ProgramLoweringContext::buildDebugInfo() {
-	return std::move(debug_info_builder).value().build();
+base::Optional<debug_info::DebugInfo> compiler::backend_vm::internal::ProgramLoweringContext::buildDebugInfo(
+) {
+	if_opt_some(debug_info_builder, builder) {
+		auto result        = std::move(builder).build();
+		debug_info_builder = {};
+		return result;
+	}
+	return {};
 }
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(compiler::backend_vm::internal::ProgramLoweringContext);

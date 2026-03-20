@@ -49,10 +49,10 @@ namespace compiler::backend_vm {
 		[[nodiscard]] vm::code::CodeCollection build() const;
 
 		/**
-		 * @brief Builts the debug info for the module. This should only be called if the class
-		 * was constructed with build_debug_info=true, otherwise it will panic.
+		 * @brief Builds the debug info for the module if the class
+		 * was constructed with build_debug_info=true. Returns nullopt otherwise.
 		 */
-		[[nodiscard]] debug_info::DebugInfo buildDebugInfo();
+		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
 
 	private:
 		// A Boxed pointer to allow forward declaration in order to hide implementation details.
