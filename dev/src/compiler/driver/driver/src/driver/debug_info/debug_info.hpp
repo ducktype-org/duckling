@@ -6,6 +6,8 @@
  */
 #pragma once
 
+#include <debug_info/debug_info.hpp>
+
 #include <artifacts/artifacts.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -16,7 +18,7 @@ namespace compiler::driver {
 	constexpr std::string_view DEBUG_INFO_STABLE_EXTENSION = ".stable.di.json";
 
 	struct KeyOf_DebugInfoCalculatePositions final {
-		artifacts::FileArtifact input_artifact;
+		debug_info::DebugInfo stable_debug_info;
 
 		[[nodiscard]]
 		base::Bit256 queryStablePerfectHash() const;

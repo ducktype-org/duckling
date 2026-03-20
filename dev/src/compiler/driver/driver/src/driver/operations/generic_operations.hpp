@@ -8,6 +8,7 @@
 
 #include "../backend_type.hpp"
 #include "../options.hpp"
+#include "debug_info/debug_info.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
@@ -76,9 +77,9 @@ namespace compiler::driver {
 		base::Bit256 queryStablePerfectHash() const;
 	};
 
-	struct CompileModuleArtifacts {
-		artifacts::FileArtifact                 object_art;
-		base::Optional<artifacts::FileArtifact> debug_info_art;
+	struct CompileModuleResult {
+		artifacts::FileArtifact               object_art;
+		base::Optional<debug_info::DebugInfo> debug_info;
 	};
 
 	/**
@@ -95,7 +96,7 @@ namespace compiler::driver {
 	DECLARE_QUERY(
 		CompileModule,
 		KeyOf_CompileModule,
-		query::QResult<CompileModuleArtifacts>,
+		query::QResult<CompileModuleResult>,
 		({
 			.used_hashes             = query::UsedHashes::StableHash,
 			.can_be_loaded_from_disk = true,

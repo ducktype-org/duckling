@@ -15,33 +15,24 @@
 
 namespace compiler::driver {
 
-	/**
-	 * @brief The source position side input query, that should invalidate
-	 * when the source code changes.
-	 *
-	 * But because we do not track when the source code changes,
-	 * this input will always be invalidated,
-	 * so the debug info positions will be recalculated on every compilation.
-	 */
-	struct KeyOf_SourcePositions {
+	struct ModuleSourceCodeHash {
 		[[nodiscard]]
 		query::QueryStableHash queryStablePerfectHash() const {
 			return { 0, 0, 0, 0 };
 		}
 	};
 
-	DECLARE_QUERY_SIDE_INPUT(SourcePositions, KeyOf_SourcePositions);
+	/**
+	 * @brief This is a placeholder for future input query,
+	 * that will track the hash of the source code of the module, so when the source code changes,
+	 * the debug info positions will be recalculated.
+	 *
+	 * @note It will always be invalidated, which is for now what we want.
+	 */
+	DECLARE_QUERY_SIDE_INPUT(SourcePositions, ModuleSourceCodeHash);
 	IMPLEMENT_QUERY_SIDE_INPUT(SourcePositions);
 
 	namespace {
-		base::Bit256 hashDebugInfoContent(const artifacts::FileArtifact& artifact) {
-			auto content_safe = artifact.file.getContentSafe();
-			if (content_safe.has_value())
-				return hashing::justHash<hashing::SHA256>(content_safe->view().stringView());
-
-			return hashing::justHash<hashing::SHA256>(artifact.file.getFilePath().string());
-		}
-
 		debug_info::FilePosition calculateSourcePosition(const debug_info::PstHashPostion& pos) {
 			auto source_position = pst::LangElement::getByStableHash(pos.postion_scope_begin)
 			                           .illegalAccess()
@@ -70,8 +61,9 @@ namespace compiler::driver {
 	}  // namespace
 
 	base::Bit256 KeyOf_DebugInfoCalculatePositions::queryStablePerfectHash() const {
-		// This is important that we cache the whole content of the artifact.
-		return hashDebugInfoContent(input_artifact);
+		std::stringstream ss;
+		debug_info::saveToStream(stable_debug_info, ss);
+		return hashing::justHash<hashing::SHA256>(ss.str());
 	}
 
 	struct IMPLEMENT_QUERY(DebugInfoCalculatePositions, query::QResult<artifacts::FileArtifact>) {
@@ -79,38 +71,20 @@ namespace compiler::driver {
 		QUERY_AUTO_CACHE_COPY
 
 		static std::string outputArtifactName(const QKey& key) {
-			auto stable_di_name = key.input_artifact.file.name();
-			auto base_name      = stable_di_name.substr(
-                0, stable_di_name.size() - DEBUG_INFO_STABLE_EXTENSION.size()
-            );
-			return base_name.append(DEBUG_INFO_FINAL_EXTENSION);
+			auto module_stem = fs::FilePath(key.stable_debug_info.module_path).stem();
+			return module_stem.append(DEBUG_INFO_FINAL_EXTENSION);
 		}
 
 		static auto provide([[maybe_unused]] query::Context& ctx, const QKey& key) -> PResult {
-			std::ifstream input_file(
-				key.input_artifact.file.getFilePath().getPath(), std::ios::binary
-			);
-			if (!input_file.is_open()) {
-				CORE_USER_LOG("Failed to open debug-info artifact for reading\n");
-				return query::Failed();
-			}
-
-			auto debug_info_or_error = debug_info::loadFromStream(input_file);
-			if (!debug_info_or_error.has_value()) {
-				CORE_USER_LOG(
-					"Failed to parse debug-info artifact: ", debug_info_or_error.error(), "\n"
-				);
-				return query::Failed();
-			}
-
-			auto debug_info = std::move(debug_info_or_error.value());
+			//  @TODO: #2323 this is an expensive copy, this issue would fix this.
+			auto debug_info = key.stable_debug_info;
 			debug_info.resolvePositions(calculateSourcePosition);
+
 			ctx.query<SourcePositions>({});  // We depend on source positions.
 
 			auto output = getQueryArtifactsCollection()->fileArtifactAtOrNew(
 				base::StrID(outputArtifactName(key).c_str())
 			);
-			debug_info.module_path = output.file.getFilePath().getPath().string();
 
 			std::ofstream output_file(output.file.getFilePath().getPath(), std::ios::binary);
 			if (!output_file.is_open()) {

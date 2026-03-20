@@ -53,7 +53,7 @@ namespace compiler::driver {
 		return partial.finalize();
 	}
 
-	struct IMPLEMENT_QUERY(CompileModule, query::QResult<CompileModuleArtifacts>) {
+	struct IMPLEMENT_QUERY(CompileModule, query::QResult<CompileModuleResult>) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
 
@@ -152,12 +152,8 @@ namespace compiler::driver {
                 base::StrID(output_names.object_file.c_str())
             );
 
-			base::Optional<artifacts::FileArtifact> debug_info_output;
-			if (key.build_debug_info && key.backend_type == BackendType::DVM) {
-				debug_info_output.emplace(getQueryArtifactsCollection()->fileArtifactAtOrNew(
-					base::StrID(output_names.debug_info_file->c_str())
-				));
-			}
+			base::Optional<debug_info::DebugInfo>   debug_info_output;
+			base::Optional<artifacts::FileArtifact> debug_info_artifact;
 
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
@@ -187,6 +183,12 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
+				if_opt_some(output_names.debug_info_file, di_file) {
+					debug_info_artifact.emplace(getQueryArtifactsCollection()->fileArtifactAtOrNew(
+						base::StrID(di_file.c_str())
+					));
+				}
+
 				auto serialize_to_artifact = [&](artifacts::FileArtifact& art,
 				                                 auto&                    source,
 				                                 auto                     serialize_fn) {
@@ -205,10 +207,12 @@ namespace compiler::driver {
 						= code_output.file.getFilePath().string();
 
 					serialize_to_artifact(
-						debug_info_output.value(),
+						debug_info_artifact.value(),
 						dvm_module_data.debug_info.value(),
 						debug_info::saveToStream
 					);
+
+					debug_info_output = std::move(dvm_module_data.debug_info);
 				}
 
 				break;
@@ -217,8 +221,8 @@ namespace compiler::driver {
 				CORE_PANIC("bad backend type");
 			}
 
-			return CompileModuleArtifacts{ .object_art     = std::move(code_output),
-				                           .debug_info_art = std::move(debug_info_output) };
+			return CompileModuleResult{ .object_art = std::move(code_output),
+				                        .debug_info = std::move(debug_info_output) };
 		}
 
 		/**
@@ -238,21 +242,37 @@ namespace compiler::driver {
 			}
 
 
-			CompileModuleArtifacts artifacts{ .object_art     = *output_maybe.value(),
-				                              .debug_info_art = {} };
+			CompileModuleResult result{ .object_art = *output_maybe.value(), .debug_info = {} };
 
 			if_opt_some(output_name.debug_info_file, di_file) {
 				auto debug_info_maybe
 					= collection->fileArtifactAtMaybe(base::StrID(di_file.c_str()));
+
 				if (!debug_info_maybe.has_value()) {
 					moduleLog(key, "debug info artifact not found in artifacts collection");
 					return {};
 				}
-				artifacts.debug_info_art.emplace(*debug_info_maybe.value());
+
+				std::ifstream input_file(
+					debug_info_maybe.value()->file.getFilePath().getPath(), std::ios::binary
+				);
+				if (!input_file.is_open()) {
+					moduleLog(key, "Failed to open debug info artifact file");
+					return {};
+				}
+
+				auto debug_info_or_error = debug_info::loadFromStream(input_file);
+				if (!debug_info_or_error.has_value()) {
+					CORE_USER_LOG(
+						"Failed to parse debug-info artifact: ", debug_info_or_error.error(), "\n"
+					);
+					return {};
+				}
+				result.debug_info.emplace(std::move(debug_info_or_error.value()));
 			}
 
 			moduleLog(key, "Cached, loading artifact from disk");
-			return artifacts;
+			return result;
 		}
 
 		static auto deleteFromDisc(const QKey& key) -> bool {
@@ -297,7 +317,7 @@ namespace compiler::driver {
 		base::OkBad result = base::OK;
 
 		std::vector<artifacts::FileArtifact> objects;
-		std::vector<artifacts::FileArtifact> debug_info_artifacts;
+		std::vector<debug_info::DebugInfo>   debug_infos;
 
 		std::vector<frontend::ModuleID> modules_to_compile;
 
@@ -316,9 +336,9 @@ namespace compiler::driver {
 			auto module_result = query::entryPoint<CompileModule>({ module_id, backend, true });
 			if (module_result.hasValue()) {
 				objects.emplace_back(module_result.valueOrPanic().object_art);
-				if (module_result.valueOrPanic().debug_info_art.has_value()) {
-					debug_info_artifacts.emplace_back(
-						module_result.valueOrPanic().debug_info_art.value()
+				if (module_result.valueOrPanic().debug_info.has_value()) {
+					debug_infos.emplace_back(
+						std::move(module_result.valueOrPanic().debug_info.value())
 					);
 				}
 			} else
@@ -331,9 +351,9 @@ namespace compiler::driver {
 		if (backend == BackendType::DVM) {
 			// For DVM when we have debug info, we need to change the DebugInfo format from
 			// PstHashPosition to FilePosition.
-			for (auto& di_art: debug_info_artifacts) {
+			for (auto& di: debug_infos) {
 				auto calculated_debug_info
-					= query::entryPoint<DebugInfoCalculatePositions>({ di_art });
+					= query::entryPoint<DebugInfoCalculatePositions>({ std::move(di) });
 				if (calculated_debug_info.hasFailed()) {
 					CORE_USER_LOG("Calculating debug info source positions failed!\n");
 					return base::BAD;
