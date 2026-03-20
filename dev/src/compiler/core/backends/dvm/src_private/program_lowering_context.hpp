@@ -37,7 +37,7 @@ namespace compiler::backend_vm::internal {
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
 		explicit ProgramLoweringContext(query::Context& query_ctx, bool build_debug_info):
-			 
+
 			  query_ctx_for_errors(&query_ctx),
 			  debug_info_builder(
 				  (build_debug_info
@@ -122,10 +122,10 @@ namespace compiler::backend_vm::internal {
 		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
 
 		/**
-		 * @brief Builds the debug info for the module 
-		 * if the class was constructed with debug info building enabled, 
+		 * @brief Builds the debug info for the module
+		 * if the class was constructed with debug info building enabled,
 		 * returns nullopt otherwise.
-		 * @note It leaves the internal debug info builder in an empty state, 
+		 * @note It leaves the internal debug info builder in an empty state,
 		 * so subsequent calls to this method will return nullopt.
 		 */
 		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();

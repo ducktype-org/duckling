@@ -5,9 +5,8 @@
 
 #include "generic_operations.hpp"
 
-#include <driver/debug_info/debug_info.hpp>
-
 #include <debug_info/debug_info_io.hpp>
+#include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
