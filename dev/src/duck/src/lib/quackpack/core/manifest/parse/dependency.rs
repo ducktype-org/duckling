@@ -48,8 +48,7 @@ pub(crate) fn parse(
         )?);
         scope.pop();
     }
-    Dependencies::new(dependencies)
-        .with_context(|| format!("when parsing the field `{}`", scope.format()))
+    Dependencies::new(dependencies).with_context(|| scope.make_context_string())
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
@@ -98,7 +97,7 @@ fn parse_single_dependency(
         conditions,
         explicit_name_in_manifest,
     )
-    .with_context(|| format!("when parsing the field `{}`", scope.format()))
+    .with_context(|| scope.make_context_string())
 }
 
 /// Parse dependency's features
@@ -143,7 +142,7 @@ fn parse_conditions(schema: &ConditionSchema, scope: &Scope) -> QuackResult<Cond
             .as_ref()
             .map(|vec| vec_string_to_vec_str_id(vec)),
     )
-    .with_context(|| format!("when parsing the field `{}`", scope.format()))
+    .with_context(|| scope.make_context_string())
 }
 
 /// Helper for transforming slice of `&T: Into<StrId>` into `Vec<StrId>`

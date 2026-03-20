@@ -39,13 +39,13 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: &DuckCtx) -> Quac
     scope.pop();
 
     scope.push("features".into());
-    let features = parse_features(schema.features.as_ref())
-        .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
+    let features =
+        parse_features(schema.features.as_ref()).with_context(|| scope.make_context_string())?;
     scope.pop();
 
     scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), &mut scope)
-        .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
+        .with_context(|| scope.make_context_string())?;
     scope.pop();
 
     let authors = metadata
@@ -96,7 +96,7 @@ fn parse_profiles(
             scope.push(k.into());
             let result = (parse_profile(v))
                 .map(|new_v| (k.into(), new_v))
-                .with_context(|| format!("when parsing the field `{}`", scope.format()));
+                .with_context(|| scope.make_context_string());
             scope.pop();
             result
         })
