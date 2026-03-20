@@ -67,16 +67,27 @@ namespace compiler::helios::houtgen {
 	 * This could either be:
 	 * - `code::DefaultValueExpr` - for primitives. This means zero-initialization of the variable
 	 * in LLVM.
+	 * - `code::LiteralUnitExpr` - for unit types.
+	 * - `code::LiteralTypeExpr` storing a void type - for meta types.
 	 * - `code::CallExpr` - for classes/arrays/tuples. This is a call expression to the default
 	 * constructor of the given type.
-	 * - `code::ListInitExpr` - for dynamic arrays. This maps to a call to the builtin ListInit
-	 * function in LLVM.
 	 *
-	 * Logs an error if the type cannot be default initialized (f.e. is a ref/box/unit).
+	 * Logs an error if the type cannot be default initialized (e.g. is a ref/box/void).
 	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryDefaultInitializerExpr, tsh::SymbolType<>, CRef<query::QResult<Box<code::Expr>>>, ({})
+	);
+
+
+	/**
+	 * @brief Get the hout expression which default initializes a variable of a given type and log
+	 * an error if the type can't be default initialized.
+	 * @return A HOUT Expression that initializes the given type, or an error if the type is not
+	 * default constructible.
+	 */
+	query::QResult<Box<code::Expr>> getDefaultInitializerExpr(
+		query::Context& ctx, const tsh::SymbolType<>& type, dia::SourcePosition pos
 	);
 }

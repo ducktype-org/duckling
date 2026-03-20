@@ -312,21 +312,20 @@ namespace compiler::helios::mangler {
 							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
 
-								const auto ctor_suffix = "C" + funcType(ctx, symbol_id) + "E";
+								const auto ctor_suffix = "Hic" + funcType(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor
 							) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "K" + funcType(ctx, symbol_id) + "E";
+								const auto ctor_suffix   = "Hdc" + funcType(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 							) {
-								// TODOP: Update mangling-scheme
-								return "Hda" + mangleType(ctor.array_type) + "E";
+								return "Hds" + mangleType(ctor.array_type) + "E";
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper

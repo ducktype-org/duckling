@@ -139,9 +139,12 @@ namespace compiler::helios {
                           return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
                               .valueOrThrow();
                       } else {
-                          return ctx.query<houtgen::QueryDefaultInitializerExpr>(variable_type)
-                              ->valueOrThrow()
-                              ->clone();
+                          return houtgen::getDefaultInitializerExpr(
+                                     ctx,
+                                     variable_type,
+                                     stmt(ctx, symbol).value()->getSourcePosition()
+                          )
+                              .valueOrThrow();
                       }
 				  }();
 

@@ -47,7 +47,7 @@ namespace compiler::helios::houtgen {
 		 * Represents a compiler-generated default constructor for a static array type.
 		 *
 		 * The default constructor is a function that doesn't takes any parameters and loops through
-		 * the static array initializing it's fields with a default value (which may mean a call to
+		 * the static array initializing its fields with a default value (which may mean a call to
 		 * another constructor). Returns the initialized static array value.
 		 */
 		struct DefaultStaticArrayConstructor final {

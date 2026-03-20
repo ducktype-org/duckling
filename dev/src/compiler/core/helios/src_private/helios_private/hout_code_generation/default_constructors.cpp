@@ -80,7 +80,6 @@ namespace compiler::helios::houtgen {
 				auto init_expr = [&]() -> Box<code::Expr> {
 					match_optional(field_init_expr_opt) {
 						opt_some(field_init) {
-							// TODOP: This could probably get comp-timed
 							// If the field has an initializer value we use it.
 							const auto field_type = field.getType(ctx);
 							auto       expr
@@ -174,25 +173,36 @@ namespace compiler::helios::houtgen {
 
 			// Generate the loop only if the static array is not empty.
 			if (size > 0) {
-				auto i64_abs_type
-					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-				auto i64_type = tsh::SymbolType<>{ i64_abs_type,
+				auto u64_abs_type
+					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
+				auto u64_type = tsh::SymbolType<>{ u64_abs_type,
 					                               tsh::ReferenceKind::Direct,
 					                               tsh::Mutability::Mutable };
 				// var i: i64 = 0;
 				const SymID i_sym = ctx.query<QueryGeneratedSymbol>(
 					{ .name = base::StrID("__i"),
 				      .generated_symbol_data
-				      = GeneratedSymbolData{ Variable{ ctor_symbol, 1, i64_type } } }
+				      = GeneratedSymbolData{ Variable{ ctor_symbol, 1, u64_type } } }
 				);
-				auto zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
-				                    .expect("i64 creation failed");
+				auto zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
+				                    .expect("u64 creation failed");
 				body.emplace_back(makeBox<code::VariableStmt>(
 					code::generatedOrigin(),
 					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-					i64_type,
+					u64_type,
 					i_sym
 				));
+
+				// i < size
+				auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
+				                    .expect("u64 creation failed");
+				auto condition = makeBox<code::BinaryOperatorExpr>(
+					ctx,
+					code::generatedOrigin(),
+					code::BuiltinBinary::IntegerLt,
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
+					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), size_val)
+				);
 
 				// while (i < size) { res[i] = default_init(T); i = i + 1; }
 				code::CodeBlock loop_body{};
@@ -212,8 +222,8 @@ namespace compiler::helios::houtgen {
 				));
 
 				// i = i + 1
-				auto one_val = numeric_value::NumericValue::createOfType(i64_type.getType(), 1)
-				                   .expect("i64 creation failed");
+				auto one_val = numeric_value::NumericValue::createOfType(u64_type.getType(), 1)
+				                   .expect("u64 creation failed");
 				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
 					code::generatedOrigin(),
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
@@ -225,17 +235,6 @@ namespace compiler::helios::houtgen {
 						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
 					)
 				));
-
-				// i < size
-				auto size_val = numeric_value::NumericValue::createOfType(i64_abs_type, size)
-				                    .expect("i64 creation failed");
-				auto condition = makeBox<code::BinaryOperatorExpr>(
-					ctx,
-					code::generatedOrigin(),
-					code::BuiltinBinary::IntegerLt,
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), size_val)
-				);
 
 				body.emplace_back(makeBox<code::WhileStmt>(
 					code::generatedOrigin(), std::move(condition), std::move(loop_body)
@@ -268,14 +267,10 @@ namespace compiler::helios::houtgen {
 	// -----------------------------------------------------------
 	struct IMPLEMENT_QUERY(QueryDefaultInitializerExpr, query::QResult<Box<code::Expr>>) {
 		static PResult provide(Context& ctx, const QKey sym_type) {
-			if (!sym_type.isDefaultConstructible(ctx)) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					base::strConcat("Type `", sym_type.toString(), "` cannot be default initialized"),
-					dia::SourcePosition::fakePosition()
-				));
-				return query::Failed();
-			}
-
+			CORE_ASSERT(
+				sym_type.isDefaultConstructible(ctx),
+				"QueryDefaultInitializerExpr called on non default constructible type"
+			);
 			// For types that are trivially zero initializable, we just insert a default value expr
 			// which will map to ZeroInitialize.
 			if (sym_type.isTriviallyZeroInitializable(ctx)) {
@@ -343,4 +338,21 @@ namespace compiler::helios::houtgen {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
+
+	query::QResult<Box<code::Expr>> getDefaultInitializerExpr(
+		query::Context& ctx, const tsh::SymbolType<>& type, dia::SourcePosition pos
+	) {
+		if (!type.isDefaultConstructible(ctx)) {
+			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
+			));
+			return query::Failed();
+		}
+
+		auto res = ctx.query<QueryDefaultInitializerExpr>(type);
+		if (res->hasFailed()) return query::Failed();
+		return res->valueOrThrow()->clone();
+	}
+
+
 }

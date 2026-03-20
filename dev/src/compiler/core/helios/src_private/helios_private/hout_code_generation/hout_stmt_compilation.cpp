@@ -300,11 +300,16 @@ namespace compiler::helios::houtgen {
 					return;
 				}
 
-				auto initial_value = ctx.query<houtgen::QueryDefaultInitializerExpr>(symbol_type)
-				                         ->valueOrThrow()
-				                         ->clone();
+				auto initial_value = houtgen::getDefaultInitializerExpr(
+					ctx, symbol_type, stmt->getSourcePosition()
+				);
+				if (initial_value.hasFailed()) {
+					is_failed = true;
+					return;
+				}
+
 				output(code::VariableStmt(
-					code::pstOrigin(stmt), std::move(initial_value), symbol_type, symbol
+					code::pstOrigin(stmt), std::move(initial_value.valueOrPanic()), symbol_type, symbol
 				));
 			} else {
 				auto initial_value_coerced

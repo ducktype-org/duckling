@@ -1,5 +1,3 @@
-#include "helios_private/hout_code_generation/default_constructors.hpp"
-
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -29,6 +27,7 @@
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/errors.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
+#include <helios_private/hout_code_generation/default_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
