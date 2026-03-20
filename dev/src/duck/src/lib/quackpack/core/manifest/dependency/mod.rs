@@ -46,6 +46,11 @@ impl Dependency {
         conditions: Option<Conditions>,
         explicit_manifest_name: Option<StrId>,
     ) -> QuackResult<Self> {
+        debug_assert_ne!(
+            Some(name),
+            explicit_manifest_name,
+            "explicit_manifest_name should be None, if it's the same as name"
+        );
         if source.is_registry() && versions.is_empty() {
             qp_bail!("a registry dependency must provide at least one version")
         }

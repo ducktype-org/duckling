@@ -994,3 +994,67 @@ profiles:
         )
     );
 }
+
+#[test]
+fn duplicated_names() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.10
+
+dependencies:
+  a:
+    version: '1'
+  b:
+    version: '1'
+    source:
+      name: a
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies`",
+                "multiple dependencies specify the same name `a`"
+            ]
+        )
+    );
+}
+
+#[test]
+fn duplicated_names_in_aliases() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.10
+
+dependencies:
+  a:
+    version: '1'
+    source:
+      name: c
+  b:
+    version: '1'
+    source:
+      name: c
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies`",
+                "multiple dependencies specify the same name `c`"
+            ]
+        )
+    );
+}

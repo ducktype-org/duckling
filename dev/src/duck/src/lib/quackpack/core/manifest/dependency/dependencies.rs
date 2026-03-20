@@ -1,6 +1,8 @@
 //! Managing all dependencies of the root package.
-use crate::QuackError;
+use std::collections::HashSet;
+
 use crate::quackpack::schemas::registry;
+use crate::{QuackError, QuackResult, qp_bail};
 use crate::{StrId, quackpack::core::Dependency};
 
 #[derive(Clone, Debug)]
@@ -10,8 +12,24 @@ pub struct Dependencies(Vec<Dependency>);
 
 impl Dependencies {
     /// Create a new [`Dependencies`].
-    pub fn new(dependencies: Vec<Dependency>) -> Self {
-        Self(dependencies)
+    pub fn new(dependencies: Vec<Dependency>) -> QuackResult<Self> {
+        Self::bail_if_has_duplicated_names(&dependencies)?;
+        Ok(Self(dependencies))
+    }
+
+    /// Bail, if some dependencies have the same name.
+    fn bail_if_has_duplicated_names(deps: &[Dependency]) -> QuackResult<()> {
+        let mut seen_names = HashSet::new();
+        for dep in deps {
+            let was_present = !seen_names.insert(dep.name());
+            if was_present {
+                qp_bail!(
+                    "multiple dependencies specify the same name `{}`",
+                    dep.name()
+                )
+            }
+        }
+        Ok(())
     }
 
     /// Check if a dependency exists by a name.
@@ -61,11 +79,11 @@ impl TryFrom<registry::Dependencies> for Dependencies {
     type Error = QuackError;
 
     fn try_from(value: registry::Dependencies) -> Result<Self, Self::Error> {
-        value
+        let deps = value
             .into_iter()
             .map(Dependency::try_from)
-            .collect::<Result<_, _>>()
-            .map(Self)
+            .collect::<Result<_, _>>()?;
+        Self::new(deps)
     }
 }
 

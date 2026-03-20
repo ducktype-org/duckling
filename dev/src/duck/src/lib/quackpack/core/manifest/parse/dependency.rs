@@ -31,7 +31,7 @@ pub(crate) fn parse(
     scope: &mut Scope,
 ) -> QuackResult<Dependencies> {
     let Some(schema) = schema else {
-        return Ok(Dependencies::new(Vec::new()));
+        return Dependencies::new(Vec::new());
     };
     let mut dependencies = Vec::new();
     for (name, dep_schema) in schema {
@@ -48,7 +48,8 @@ pub(crate) fn parse(
         )?);
         scope.pop();
     }
-    Ok(Dependencies::new(dependencies))
+    Dependencies::new(dependencies)
+        .with_context(|| format!("when parsing the field `{}`", scope.format()))
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
