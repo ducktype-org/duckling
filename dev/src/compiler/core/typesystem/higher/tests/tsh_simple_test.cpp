@@ -122,9 +122,9 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			const auto unit_st = st(unit_1);
 			assertTrue(unit_st.isDefaultConstructible(ctx), "Unit should be default constructible.");
-			assertTrue(
+			assertFalse(
 				unit_st.isTriviallyZeroInitializable(ctx),
-				"Unit should be trivially zero-initializable."
+				"Unit shouldn't be trivially zero-initializable."
 			);
 			assertTrue(unit_st.isCopyable(ctx), "Unit should be copyable.");
 			assertTrue(unit_st.isTriviallyCopyable(ctx), "Unit should be trivially copyable.");

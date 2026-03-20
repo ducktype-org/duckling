@@ -483,7 +483,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "Type `ref i64` cannot be default initialized" },
+			{ "Type `Class Outer` cannot be default initialized" },
 			1
 		);
 
@@ -496,7 +496,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "Type `ref i64` cannot be default initialized" },
+			{ "Type `Class Inner[2]` cannot be default initialized" },
 			1
 		);
 
@@ -848,13 +848,13 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"(
-				class A { a: i64; }
+				class A { a: i64 = 1; }
 				fun main() -> i64 = {
 					var a: (i32, A);
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "zero-sized classes" },
+			{ "Feature not implemented", "Generating default constructors for", "tuple types" },
 			1
 		);
 	}
