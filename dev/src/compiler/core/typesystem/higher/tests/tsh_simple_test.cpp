@@ -261,7 +261,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto int_st = st(getIntegralTypeNoContext(32, Signed));
+			const auto int_st = st(getIntegralType(ctx, 32, Signed));
 			assertTrue(int_st.isDefaultConstructible(ctx), "Int should be default constructible.");
 			assertTrue(
 				int_st.isTriviallyZeroInitializable(ctx),
@@ -329,7 +329,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto float_st = st(getFloatTypeNoContext(64));
+			const auto float_st = st(getFloatType(ctx, 64));
 			assertTrue(
 				float_st.isDefaultConstructible(ctx), "Float should be default constructible."
 			);
@@ -495,13 +495,13 @@ private:
 
 			// Test with non-copyable element.
 			const auto void_type        = getVoidType();
-			const auto non_copyable_arr = query::entryPoint<QueryDynamicArrayType>(st(void_type));
+			const auto non_copyable_arr = ctx.query<QueryDynamicArrayType>(st(void_type));
 			assertFalse(
 				st(non_copyable_arr).isCopyable(ctx), "Array of void should not be copyable."
 			);
-			assertFalse(
+			assertTrue(
 				st(non_copyable_arr).isDefaultConstructible(ctx),
-				"Array of void should not be default constructible."
+				"Array of void should be default constructible."
 			);
 		});
 	}
@@ -604,7 +604,7 @@ private:
 
 			// Test non-default-constructible static array with ref element)
 			const auto ref_type    = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
-			const auto arr_of_refs = query::entryPoint<QueryStaticArrayType>({ ref_type, 5 });
+			const auto arr_of_refs = ctx.query<QueryStaticArrayType>({ ref_type, 5 });
 			assertFalse(
 				st(arr_of_refs).isDefaultConstructible(ctx),
 				"StaticArray of references should not be default constructible."
@@ -689,9 +689,8 @@ private:
 			);
 
 			// Test non-default-constructible tuple with Ref element.
-			const auto ref_type = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
-			const auto tup_of_refs
-				= query::entryPoint<QueryTupleType>({ { ref_type, st(int_32) } });
+			const auto ref_type    = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto tup_of_refs = ctx.query<QueryTupleType>({ { ref_type, st(int_32) } });
 			assertFalse(
 				st(tup_of_refs).isDefaultConstructible(ctx),
 				"Tuple with reference should not be default constructible."

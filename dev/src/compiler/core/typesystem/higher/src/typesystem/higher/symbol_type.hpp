@@ -6,6 +6,8 @@
 #include <hashing/hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
 
+#include <iostream>
+
 namespace compiler::tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.

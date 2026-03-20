@@ -629,7 +629,12 @@ namespace compiler::tsh {
 			return true;
 		}
 
-		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+		/**
+		 * @brief Dynamic array is copyable if it's element_type is.
+		 */
+		[[nodiscard]] bool isCopyable(query::Context& ctx) const override {
+			return element_type.isCopyable(ctx);
+		}
 
 		/**
 		 * @brief Dynamic arrays are not trivially copyable because the require a deep copy of memory.
