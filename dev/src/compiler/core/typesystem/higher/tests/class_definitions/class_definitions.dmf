@@ -18,3 +18,27 @@ class MyClass {
         return a + x + i1 + i2;
     }
 }
+
+class TrivialClass {
+    x: i64;
+    y: bool;
+}
+
+class ComplexClass {
+    x: List[i32];
+    y: bool;
+}
+
+class NonDefaultConstructibleClass {
+    x: ref i64;
+}
+
+class MoreComplexComplexClass {
+    x: ComplexClass[2];
+    y: bool;
+}
+
+class MoreComplexNonDefaultable {
+    x: NonDefaultConstructibleClass[2];
+    y: bool;
+}
