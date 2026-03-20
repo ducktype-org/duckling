@@ -25,7 +25,7 @@ add_library(Driver
 
 add_dependencies(Driver builtins_embeds)
 
-make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker ModuleTree CompilerTimeStats)
+make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker ModuleTree CompilerTimeStats Repl)
 
 duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test1 tests/incremental_mark_nodes_test1.cpp USES Driver Artifacts)
