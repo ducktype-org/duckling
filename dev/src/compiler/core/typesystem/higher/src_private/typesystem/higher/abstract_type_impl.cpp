@@ -361,5 +361,4 @@ namespace compiler::tsh {
 			return field.getType(ctx).isTriviallyCopyable(ctx);
 		});
 	}
-
 }
