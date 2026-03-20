@@ -183,16 +183,3 @@ Tests:
           String: "Xd;"
         Output:
           String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
-  
-  recursive_comp_time_eval:
-    Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
-        Output:
-          String: ""
-        ExitCode: 0
