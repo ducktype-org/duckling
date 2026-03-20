@@ -15,7 +15,7 @@ namespace vm {
 		struct Primitive;
 		struct Pointer;
 		struct Table;
-		struct Structure;
+		struct Data;
 		struct Variant;
 		struct Function;
 		struct Opaque;
@@ -25,7 +25,7 @@ namespace vm {
 		interpreted_data_variant::Primitive,
 		interpreted_data_variant::Pointer,
 		interpreted_data_variant::Table,
-		interpreted_data_variant::Structure,
+		interpreted_data_variant::Data,
 		interpreted_data_variant::Variant,
 		interpreted_data_variant::Function,
 		interpreted_data_variant::Opaque>;
@@ -86,7 +86,7 @@ namespace vm {
 			Table(base::Ref<VMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
 		};
 
-		struct Structure {
+		struct Data {
 			struct FieldDesc {
 				Offset     offset;
 				VMValueRef value;

@@ -45,35 +45,31 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		}
 
 		variant_case(vm::kind::DynamicTable, dyntable_kind) {
-			auto tbl_pointer = readBytes<vm::Pointer>();
-
-			auto block_id   = memory->requestBlockID(tbl_pointer.getBlock());
+			auto block_id   = memory->requestBlockID(pointed_data.getBlock());
 			auto block_data = memory->requestBlockData(block_id);
 
 			TypeCRef tbl_type = dyntable_kind.inner_type;
 			usize    tbl_size = block_data.size() / static_cast<usize>(tbl_type->getSize());
 
-			return vm::interpreted_data_variant::Table(my_process, tbl_pointer, tbl_type, tbl_size);
+			return vm::interpreted_data_variant::Table(my_process, pointed_data, tbl_type, tbl_size);
 		}
 
 		variant_case(vm::kind::FixedSizeTable, fixtable_kind) {
-			auto tbl_pointer = readBytes<vm::Pointer>();
-
-			auto block_id   = memory->requestBlockID(tbl_pointer.getBlock());
+			auto block_id   = memory->requestBlockID(pointed_data.getBlock());
 			auto block_data = memory->requestBlockData(block_id);
 
 			TypeCRef tbl_type = fixtable_kind.inner_type;
 			usize    tbl_size = block_data.size() / static_cast<usize>(tbl_type->getSize());
 
-			return vm::interpreted_data_variant::Table(my_process, tbl_pointer, tbl_type, tbl_size);
+			return vm::interpreted_data_variant::Table(my_process, pointed_data, tbl_type, tbl_size);
 		}
 
 		variant_case(vm::kind::Data, data_kind) {
-			std::vector<vm::interpreted_data_variant::Structure::FieldDesc> fields;
+			std::vector<vm::interpreted_data_variant::Data::FieldDesc> fields;
 
 			fields.reserve(data_kind.fields.size());
 			for (const auto& field_desc: data_kind.fields) {
-				fields.push_back(vm::interpreted_data_variant::Structure::FieldDesc{
+				fields.push_back(vm::interpreted_data_variant::Data::FieldDesc{
 					.offset = field_desc.offset,
 					.value  = VMValueRef(
                         *my_process.get(),
@@ -82,7 +78,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
                     ) });
 			}
 
-			return vm::interpreted_data_variant::Structure{
+			return vm::interpreted_data_variant::Data{
 				.fields         = std::move(fields),
 				.field_name_map = data_kind.field_name_map,
 			};
@@ -139,8 +135,6 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		variant_case(vm::kind::Opaque, opaque_kind) {
 			return vm::interpreted_data_variant::Opaque{};
 		}
-
-		variant_default return std::nullopt;
 	}
 
 	CORE_UNREACHABLE();
