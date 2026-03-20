@@ -220,7 +220,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
-			return true;
+			return false;
 		}
 
 		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }

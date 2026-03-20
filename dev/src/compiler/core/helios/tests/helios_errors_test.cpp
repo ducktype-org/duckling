@@ -845,6 +845,18 @@ private:
 			{ "Feature not implemented", "zero-sized classes" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { a: i64; }
+				fun main() -> i64 = {
+					var a: (i32, A);
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "zero-sized classes" },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
