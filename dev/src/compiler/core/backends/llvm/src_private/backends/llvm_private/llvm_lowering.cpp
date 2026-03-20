@@ -336,6 +336,10 @@ namespace compiler::backend_llvm {
 				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
 					const CRef<tsl::TypeLayout> field_layout
 						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					// We filter out empty types here, as they don't have a valid LLVM
+					// representation. We don't do it earlier, because it is important for a class
+					// layout to be able to map the SymIDs of all of its fields.
+					if (field_layout->is<tsl::EmptyTypeLayout>()) continue;
 					member_types.push_back(typeFromLayout(module, field_layout));
 				}
 				// - Finally, set the body of the struct and return it.
@@ -347,13 +351,23 @@ namespace compiler::backend_llvm {
 				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
 
 				// - Then, check each field's offset.
+				// @TODO: This PR — we should not have to count this here.
+				u64 discarded = 0;
 				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+					const CRef<tsl::TypeLayout> field_layout
+						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					// Do not check empty fields, but count them to provide proper index to LLVM.
+					if (field_layout->is<tsl::EmptyTypeLayout>()) {
+						discarded++;
+						continue;
+					}
+
 					const Bytes expected_offset = class_layout.getOffsetOfFieldSymbol(
 						class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
 					);
-					const auto actual_offset = Bytes(
-						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
-					);
+					const auto actual_offset = Bytes(struct_layout.getElementOffset(
+						base::safeIntConv<unsigned>(layout_idx - discarded)
+					));
 					CORE_ASSERT(
 						expected_offset == actual_offset,
 						base::strConcat(

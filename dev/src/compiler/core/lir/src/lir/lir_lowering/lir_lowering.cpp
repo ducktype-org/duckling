@@ -335,11 +335,21 @@ namespace compiler::lir {
 			 * maps MIR locals to LIR local refs.
 			 */
 			void makeLocals() {
+				u64 discarded = 0;
 				for (const auto& mir_local: key.function->local_list) {
-					// Discard data-less variables.
-					if (!mir_local.carriesInformation(ctx)) continue;
+					// Discard data-less variables, but count how many were discarded.
+					if (!mir_local.carriesInformation(ctx)) {
+						discarded++;
+						continue;
+					}
 
 					auto lir_local = LIRLocal::fromMIR(ctx, &mir_local);
+					// Adjust parameter index to account for discarded parameters.
+					lir_local.parameter_index
+						= lir_local.parameter_index.map([discarded](const u64 idx) {
+							  return idx - discarded;
+						  });
+
 					locals.pushBack(lir_local);
 					auto local_index = locals.lastIndex();
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
@@ -828,6 +838,8 @@ namespace compiler::lir {
 			mir2lir.lowerBlocks();
 
 			auto fun = std::move(mir2lir).get();
+
+			if (key.function->name.str() == "UnitFieldClass") int breakpoint = 0;
 
 			// @opt: remove it in optimized, release builds
 			CORE_ASSERT(fun.validateBlockOrder().isOk(), "Invalid block order");
