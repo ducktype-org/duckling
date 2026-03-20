@@ -139,12 +139,10 @@ namespace compiler::helios {
                           return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
                               .valueOrThrow();
                       } else {
-                          return houtgen::getDefaultInitializerExpr(
-                                     ctx,
-                                     variable_type,
-                                     stmt(ctx, symbol).value()->getSourcePosition()
-                          )
-                              .valueOrThrow();
+                          auto res = houtgen::getDefaultInitializerExpr(
+                              ctx, variable_type, origin.getSourcePosition().value()
+                          );
+                          return std::move(res.valueOrThrow());
                       }
 				  }();
 
@@ -153,7 +151,6 @@ namespace compiler::helios {
 				  };
 			  }
 			  case HOUTGlobalDataType::Constant:
-				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).valueOrThrow() };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
