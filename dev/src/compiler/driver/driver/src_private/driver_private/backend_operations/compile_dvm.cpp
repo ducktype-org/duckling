@@ -24,7 +24,7 @@ namespace compiler::driver {
 		auto code_collection = module.build();
 
 		base::Optional<debug_info::DebugInfo> debug_info_opt;
-		if (build_debug_info) debug_info_opt.emplace(module.buildDebugInfo());
+		if (build_debug_info) debug_info_opt = module.buildDebugInfo();
 
 		return {
 			.code       = std::move(code_collection),
