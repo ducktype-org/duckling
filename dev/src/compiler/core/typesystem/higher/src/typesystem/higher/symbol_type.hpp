@@ -223,12 +223,12 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Checks if a value of this type can be copied.
+		 * @brief Checks if a value of this symbol can be copied.
 		 *
 		 * - Direct values are copyable if their underlying abstract type is copyable.
 		 * - References are always copyable (the reference itself is copied).
 		 * - Boxes are copyable if their underlying abstract type is copyable (implies a deep copy).
-		 * @return True if the type is copyable, false otherwise.
+		 * @return True if the symbol is copyable, false otherwise.
 		 */
 		[[nodiscard]]
 		bool isCopyable(query::Context& ctx) const {
@@ -239,13 +239,13 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Checks if a value of this type can be copied trivially by just copying the values
-		 * bytes.
+		 * @brief Checks if a value of this symbol can be copied trivially by just copying the
+		 * values bytes.
 		 *
 		 * - Direct values are trivially copyable if their underlying abstract type is.
 		 * - References are trivially copyable.
 		 * - Boxes are never trivially copyable as they require heap allocation and a deep copy.
-		 * @return True if the type is trivially copyable, false otherwise.
+		 * @return True if the symbol is trivially copyable, false otherwise.
 		 */
 		[[nodiscard]]
 		bool isTriviallyCopyable(query::Context& ctx) const {

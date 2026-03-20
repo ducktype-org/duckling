@@ -1,5 +1,3 @@
-#include "helios/symbols/symbol_id.hpp"
-
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <typesystem/higher/type_interface.hpp>
