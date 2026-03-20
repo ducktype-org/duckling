@@ -5,6 +5,7 @@
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
@@ -145,5 +146,17 @@ namespace compiler::helios::houtgen {
 		tsh::SymbolType<>                     getType(query::Context& ctx) const;
 		[[nodiscard]] ScopeID                 getScope() const;
 		[[nodiscard]] base::Optional<ScopeID> maybeScope() const;
+
+		/**
+		 * @brief Whether GeneratedSymbolData stores a generated default constructor.
+		 * @return True if the inner variant stores a default constructor, false otherwise.
+		 */
+		[[nodiscard]] bool isDefaultConstructor() const {
+			variant_match(data) {
+				variant_case_novalue(DefaultClassConstructor) { return true; }
+				variant_case_novalue(DefaultStaticArrayConstructor) { return true; }
+				variant_default { return false; }
+			}
+		}
 	};
 }

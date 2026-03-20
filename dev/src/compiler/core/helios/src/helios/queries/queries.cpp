@@ -159,7 +159,16 @@ namespace compiler::helios {
 			// duplicates.
 			for (SymID ctor_sym: ctors) {
 				auto transitive = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
-				for (SymID dependency: transitive) all_required_functions.insert(dependency);
+				for (SymID dependency: transitive) {
+					auto sym_ref = getSymRef(dependency);
+
+					// Skip all not generated symbols, although none should appear.
+					if (!std::holds_alternative<houtgen::GeneratedSymbolData>(sym_ref->other))
+						continue;
+					const auto gsd_data = std::get<houtgen::GeneratedSymbolData>(sym_ref->other);
+					// Insert only other default constructors.
+					if (gsd_data.isDefaultConstructor()) all_required_functions.insert(dependency);
+				}
 			}
 
 			// Now insert them into the module.
