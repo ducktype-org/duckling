@@ -35,7 +35,7 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: &DuckCtx) -> Quac
     let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, &mut scope)?;
     scope.pop();
 
-    scope.push("dev_dependencies".into());
+    scope.push("dev-dependencies".into());
     let dev_deps = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, &mut scope)?;
     scope.pop();
 

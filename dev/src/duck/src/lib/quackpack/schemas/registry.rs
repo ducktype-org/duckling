@@ -8,6 +8,7 @@ pub type Dependencies = HashMap<String, Dependency>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(rename_all = "kebab-case")]
 /// Registry manifest schema.
 pub struct Manifest {
     /// Package's metadata.
@@ -24,6 +25,7 @@ pub struct Manifest {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(rename_all = "kebab-case")]
 /// Registry metadata schema.
 pub struct Metadata {
     /// Version of the package.
@@ -40,6 +42,7 @@ pub struct Metadata {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(rename_all = "kebab-case")]
 /// Single dependency of a package.
 pub struct Dependency {
     /// Possible versions of the dependency.
@@ -58,6 +61,7 @@ pub struct Dependency {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(rename_all = "kebab-case")]
 /// Source of the dependency.
 pub struct DependencySource {
     /// Python-compatibility artefact.
@@ -66,16 +70,17 @@ pub struct DependencySource {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-#[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case", tag = "type")]
 /// Actual source of the dependency.
 pub enum SourceInner {
     /// A registry dependency...
+    #[serde(rename_all = "kebab-case")]
     Registry {
         /// ...from this url.
         registry_url: String,
     },
     /// A local dependency.
+    #[serde(rename_all = "kebab-case")]
     Local {
         /// Absolute path to the dependency.
         absolute_dir_root: String,
@@ -83,6 +88,7 @@ pub enum SourceInner {
         dir_entry_in_manifest: String,
     },
     /// A git dependency.
+    #[serde(rename_all = "kebab-case")]
     Git {
         /// Url to a git repository.
         git_url: String,
@@ -97,7 +103,7 @@ pub enum SourceInner {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-#[serde(untagged)]
+#[serde(untagged, rename_all = "kebab-case")]
 /// A dependency feature.
 pub enum DependencyFeature {
     /// Just a feature, without conditions.
@@ -108,6 +114,7 @@ pub enum DependencyFeature {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(rename_all = "kebab-case")]
 pub struct Profile {
     pub opt_level: Option<OptLevel>,
     pub dvm_bytecode: Option<bool>,
@@ -118,7 +125,7 @@ pub struct Profile {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-#[serde(untagged)]
+#[serde(rename_all = "kebab-case", untagged)]
 pub enum OptLevel {
     Zero,
     One,
@@ -130,6 +137,7 @@ pub enum OptLevel {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+#[serde(rename_all = "kebab-case")]
 /// Conditions of a dependency.
 pub struct DependencyCondition {
     /// Required root package features.

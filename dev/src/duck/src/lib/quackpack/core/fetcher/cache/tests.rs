@@ -23,17 +23,17 @@ fn create_sample_metadata() -> registry::Manifest {
             "source": {
                 "inner": {
                     "type": "registry",
-                    "registry_url": "xd"
+                    "registry-url": "xd"
                 }
             },
             "features": [],
             "pinned": false,
             "conditions": {
-                "package_features": []
+                "package-features": []
             }
         }
     },
-    "dev_dependencies": {},
+    "dev-dependencies": {},
     "features": {},
     "profiles": {}
 }

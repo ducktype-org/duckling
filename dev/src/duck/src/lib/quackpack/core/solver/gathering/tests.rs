@@ -387,7 +387,7 @@ metadata:
 dependencies:
   foo:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
 "#,
         &url
@@ -515,12 +515,12 @@ metadata:
 dependencies:
   xd:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
     pinned: true
   dx:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
     pinned: true
 "#,
@@ -579,15 +579,15 @@ metadata:
 dependencies:
   xd:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
     pinned: true
   dx:
     source:
-      registry_url: {}
+      registry-url: {}
     features:
     - root:
-        package_features: [my_feature] 
+        package-features: [my_feature] 
     version: '2'
     pinned: true
 
@@ -676,11 +676,11 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
 "#,
         &url, &url,

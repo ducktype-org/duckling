@@ -173,7 +173,7 @@ dependencies:
   a:
     version: 0.1 or 2
     source:
-      git_url: https://google.com
+      git-url: https://google.com
 "#,
     );
     let ctx = DuckCtx::default();
@@ -237,7 +237,7 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: https://google.com
+      registry-url: https://google.com
 "#,
     );
     let ctx = DuckCtx::default();
@@ -384,10 +384,10 @@ dependencies:
     version: '0.1'
     source:
       name: alias
-      registry_url: https://google.com
+      registry-url: https://google.com
   e:
     source:
-      git_url: https://google.com
+      git-url: https://google.com
       branch: branch
       commit: commit
 "#,
@@ -526,7 +526,7 @@ dependencies:
   a:
     version: '0.1'
     source:
-      git_url: git
+      git-url: git
       tag: tag
       branch: branch
 "#,
@@ -688,7 +688,7 @@ dependencies:
       - a
       -
         b:
-          package_features:
+          package-features:
             - a
       - c
 "#,
@@ -728,7 +728,7 @@ dependencies:
   a:
     version: '0.1'
     conditions:
-      package_features: []
+      package-features: []
 "#,
     );
     let ctx = DuckCtx::default();
@@ -741,7 +741,7 @@ dependencies:
             &dir,
             [
                 "when parsing the field `dependencies.a.conditions`",
-                "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
+                "the field `package-features` is present but empty, if you don't want to specify it, remove it from the manifest"
             ]
         )
     );
@@ -761,7 +761,7 @@ dependencies:
     features:
       -
         b:
-          package_features:
+          package-features:
             - a
         c:
 "#,
@@ -816,7 +816,7 @@ metadata:
 dependencies:
   a:
     source:
-      git_url: {}
+      git-url: {}
 "#,
         root_dir.path().display()
     ));
@@ -852,7 +852,7 @@ metadata:
 dependencies:
   a:
     source:
-      git_url: file://{}
+      git-url: file://{}
 "#,
         root_dir.path().display()
     ));
@@ -952,8 +952,8 @@ metadata:
 
 profiles:
   prof1:
-    opt_level: s
-    dvm_bytecode: true
+    opt-level: s
+    dvm-bytecode: true
   prof2:
     inherits: prof1
 "#,
@@ -999,7 +999,7 @@ metadata:
 
 profiles:
   prof1:
-    opt_level: x
+    opt-level: x
 "#,
     );
     let ctx = DuckCtx::default();
