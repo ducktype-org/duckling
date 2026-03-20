@@ -151,6 +151,7 @@ namespace compiler::helios {
 				  };
 			  }
 			  case HOUTGlobalDataType::Constant:
+				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).valueOrThrow() };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
