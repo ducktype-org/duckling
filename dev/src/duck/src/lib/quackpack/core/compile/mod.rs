@@ -10,6 +10,7 @@ use crate::{
     QuackResult, StrId,
     quackpack::core::{
         FeatureName, PackageCtx,
+        compile::profiles::Profile,
         storage::{freeze::VenvFreeze, paths::Storage},
     },
 };
@@ -24,11 +25,32 @@ use duckc::*;
 #[derive(Debug)]
 /// All informations required to compile a project.
 pub struct BuildContext<'duck, 'ctx> {
-    pub package: &'ctx PackageCtx<'duck>,
-    pub freeze: VenvFreeze,
-    pub storage: Storage,
-    pub used_features: Vec<FeatureName>,
-    pub profile: StrId,
+    package: &'ctx PackageCtx<'duck>,
+    freeze: VenvFreeze,
+    storage: Storage,
+    used_features: Vec<FeatureName>,
+    profile: Profile,
+}
+
+impl<'duck, 'ctx> BuildContext<'duck, 'ctx> {
+    pub fn new(
+        package: &'ctx PackageCtx<'duck>,
+        freeze: VenvFreeze,
+        storage: Storage,
+        used_features: Vec<FeatureName>,
+        profile_name: StrId,
+    ) -> QuackResult<Self> {
+        Ok(Self {
+            package,
+            freeze,
+            storage,
+            used_features,
+            profile: Profile::construct_profile(
+                profile_name,
+                package.package().manifest().profiles(),
+            )?,
+        })
+    }
 }
 
 /// Compile project inside the [`BuildContext`].
