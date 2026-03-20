@@ -233,8 +233,7 @@ namespace compiler::helios::mangler {
 		 * @TODO: #1568 Remove this. I really needed it.
 		 */
 		std::string mangleType(const tsh::SymbolType<>& type) {
-			auto        abs_type = type.getType();
-			std::string s        = abs_type.toString();
+			std::string s = type.toString();
 			std::ranges::replace(s, ' ', '_');
 			std::ranges::replace(s, '[', 'A');
 			std::ranges::replace(s, ']', 'E');
