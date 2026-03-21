@@ -347,7 +347,7 @@ namespace vm::loader::compiler {
 
 		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx.getCurrentTypes());
 
-		// Update method ID to name maps, since new methods may have appeared after new types where
+		// Update method ID to name maps, since new methods may have appeared after new types were
 		// added.
 		for (const auto& new_type: new_types) {
 			auto type_from_metadata = low_program.types->at(new_type.getName());
