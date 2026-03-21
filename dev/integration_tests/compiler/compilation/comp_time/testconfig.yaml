@@ -11,3 +11,4 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+        
