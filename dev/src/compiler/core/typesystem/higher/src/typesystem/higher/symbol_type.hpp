@@ -163,9 +163,9 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Determines weather the symbol has a trivial destructor.
-		 *
-		 * It is needed to determine if createing a lifetime flag is needed during LIR lowering.
+		 * @brief Determines weather the symbol has a trivial destructor i.e. destructor that does
+		 * not perform any operations. Importantly, It is used in LIR lowering to determine if
+		 * destructor calls and lifetime flag are needed.
 		 *
 		 * @return true if the symbol has a trivial destructor, false otherwise.
 		 */
@@ -201,7 +201,7 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Determines weather the symbol has a trivial zero constructor, meaning it can be
+		 * @brief Determines weather the type has a trivial zero constructor, meaning it can be
 		 * safely zero initialized and doesn't need a specially generated default constructor.
 		 * This is true for primitive types, strings, lists and static arrays storing other
 		 * trivially zero initializable types, but also classes with all of their fields being zero
@@ -209,9 +209,11 @@ namespace compiler::tsh {
 		 * - `class T { a: i64 = 1; }` - this is not trivially zero initializable
 		 * - `class U { b: i64; }` - this is trivially zero initializable
 		 * - `class V { t: T; }` - this is not trivially zero initializable cause it's field type
-		 * isn't. If field `t`  was of type `U` then `V` would be trivially zero initializable.
+		 * isn't.
+		 * - `class V { u: U; }` - this is trivially zero initializable cause `U.b` doesn't have an
+		 * initial value.
 		 *
-		 * @return true if the symbol can be default initialized by zeros, false otherwise
+		 * @return true if the type can be default initialized by zeros, false otherwise
 		 */
 		[[nodiscard]]
 		bool isTriviallyZeroInitializable(query::Context& ctx) const {

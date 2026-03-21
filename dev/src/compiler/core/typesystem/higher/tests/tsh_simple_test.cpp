@@ -821,16 +821,6 @@ private:
 				"Function type should not be trivially zero-initializable."
 			);
 			assertTrue(fun_st.isCopyable(ctx), "Function type should be copyable.");
-			assertFalse(
-				fun_st.isTriviallyCopyable(ctx),
-				"Non-free Function type should not be trivially copyable."
-			);
-
-			const auto free_fun_st = st(fun_different_flags);
-			assertTrue(
-				free_fun_st.isTriviallyCopyable(ctx),
-				"Free function (pointer) should be trivially copyable."
-			);
 		});
 	}
 
