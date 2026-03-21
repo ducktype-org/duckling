@@ -71,14 +71,8 @@ namespace compiler::tsh {
 			= 0;
 
 		/**
-<<<<<<< HEAD
-		 * @brief Determines weather the type has a default constructor. This is true for
-		 * primitive types or classes/arrays that store default constructible types, but not true
-		 * for types like `void'
-=======
 		 * @brief Determines weather the type has a default constructor.
 		 * For more details look in `symbol_type.hpp`.
->>>>>>> origin/main
 		 *
 		 * @return true if the type has a default constructor, false otherwise.
 		 */
@@ -87,20 +81,8 @@ namespace compiler::tsh {
 			= 0;
 
 		/**
-<<<<<<< HEAD
-		 * @brief Determines weather the type has a trivial zero constructor, meaning it can be
-		 * safely zero initialized and doesn't need a specially generated default constructor.
-		 * This is true for primitive types, strings, lists and static arrays storing other
-		 * trivially zero initializable types, but also classes with all of their fields being zero
-		 * initializable and every one of them not having an initial value. For example:
-		 * - `class T { a: i64 = 1; }` - this is not trivially zero initializable
-		 * - `class U { b: i64; }` - this is trivially zero initializable
-		 * - `class V { t: T; }` - this is not trivially zero initializable cause it's field type
-		 * isn't. If field `t`  was of type `U` then `V` would be trivially zero initializable.
-=======
 		 * @brief Determines weather the type has a trivial zero constructor.
 		 * For more details look in `symbol_type.hpp`.
->>>>>>> origin/main
 		 *
 		 * @return true if the type can be default initialized by zeros, false otherwise
 		 */
@@ -110,10 +92,7 @@ namespace compiler::tsh {
 
 		/**
 		 * @brief Checks if a value of this type can be copied.
-<<<<<<< HEAD
-=======
 		 * For more details look in `symbol_type.hpp`.
->>>>>>> origin/main
 		 *
 		 * @return True if the type is copyable, false otherwise.
 		 */
@@ -124,10 +103,7 @@ namespace compiler::tsh {
 		/**
 		 * @brief Checks if a value of this type can be copied trivially by just copying the values
 		 * bytes.
-<<<<<<< HEAD
-=======
 		 * For more details look in `symbol_type.hpp`.
->>>>>>> origin/main
 		 *
 		 * @return True if the symbol is trivially copyable, false otherwise.
 		 */
