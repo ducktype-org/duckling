@@ -12,14 +12,14 @@ class VmDebugTest: public tester::TestSuite {
 #define TESTER_CLASS VmDebugTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(LowVMProgramCopyReplaceOpcode); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(lowVMProgramCopyReplaceOpcode); }
 
 
 private:
 	/**
 	 * @brief Checks if editing opcodes works correctly.
 	 */
-	void LowVMProgramCopyReplaceOpcode() {
+	void lowVMProgramCopyReplaceOpcode() {
 		vm::loader::Loader          loader;
 		CRef<vm::low::LowVMProgram> program = loader.getProgram();
 		vm::low::LowVMProgramCopy   program_copy(program);

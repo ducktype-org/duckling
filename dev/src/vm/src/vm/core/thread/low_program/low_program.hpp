@@ -54,15 +54,27 @@ namespace vm::low {
 
 	class GeneralizedLowVMProgram {
 	public:
-		[[nodiscard]] virtual const TypeMetadata&                     getTypes() const     = 0;
-		[[nodiscard]] virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const = 0;
-		[[nodiscard]] virtual const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+		[[nodiscard]]
+		virtual const TypeMetadata& getTypes() const
 			= 0;
-		[[nodiscard]] virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const
-			= 0;
-		[[nodiscard]] virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const = 0;
 
-		virtual ~GeneralizedLowVMProgram() {}
+		[[nodiscard]]
+		virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const
+			= 0;
+
+		[[nodiscard]]
+		virtual const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+			= 0;
+
+		[[nodiscard]]
+		virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const
+			= 0;
+
+		[[nodiscard]]
+		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
+			= 0;
+
+		virtual ~GeneralizedLowVMProgram() = default;
 	};
 
 	/**
@@ -172,6 +184,7 @@ namespace vm::low {
 
 			auto&       instruction     = microbytecode[instruction_index];
 			MicroOpcode original_opcode = getInstructionOpcode(instruction);
+
 			instruction = makeLowInstruction(opcode, instruction.arg0, instruction.arg1);
 
 			return original_opcode;
