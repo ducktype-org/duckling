@@ -106,7 +106,7 @@ namespace vm::loader::compiler {
 		auto it = ctx.stack_changes.begin();
 		CORE_ASSERT(it != ctx.stack_changes.end(), "there should be change initializing stack");
 
-		usize state;
+		usize state = 0;
 		auto& func_body = ctx.function.body;
 
 		for (usize i = 0; i < func_body.size();) {
@@ -114,7 +114,7 @@ namespace vm::loader::compiler {
 			ctx.locals_map.changeState(state);
 
 			it++;
-			usize next_change;
+			usize next_change = 0;
 
 			if (it == ctx.stack_changes.end()) [[unlikely]]
 				next_change = func_body.size();
