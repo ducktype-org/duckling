@@ -12,7 +12,7 @@ using namespace vm::code::instructions;
 namespace vm::jit {
 
 std::vector<CfOccurrence> collectControlFlowOccurrences(const low::LowFuncData& function) {
-    std::vector<CfOccurrence> out;
+    std::vector<CfOccurrence> cf_occurrences;
 
     for (usize index = 0; index < function.bc.size(); ++index) {
         low::MicroOpcode opcode = getInstructionOpcode(function.bc[index]);
@@ -20,23 +20,23 @@ std::vector<CfOccurrence> collectControlFlowOccurrences(const low::LowFuncData& 
 
         switch(opcode) {
             case low::MicroOpcode::jmp_label: {
-                out.push_back(CfOccurrence{index, CfOccurrenceKind::Jump});
+                cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::Jump});
                 if (index + arg0 < function.bc.size()) {
-                    out.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
+                    cf_occurrences.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
                 }
                 break;
             }
             case low::MicroOpcode::jmpIf_label:
             case low::MicroOpcode::jmpIfNot_label: {
-                out.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
+                cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
                 if (index + arg0 < function.bc.size()) {
-                    out.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
+                    cf_occurrences.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
                 }
                 break;
             }
             case low::MicroOpcode::ret:
             case low::MicroOpcode::ret_tailcall_func: {
-                out.push_back(CfOccurrence{index, CfOccurrenceKind::Ret});
+                cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::Ret});
                 break;
             }
             default: {
@@ -46,10 +46,10 @@ std::vector<CfOccurrence> collectControlFlowOccurrences(const low::LowFuncData& 
     }
 
     // Remove duplicates (occur if there are many jumps to the same destination)
-    std::sort(out.begin(), out.end());
-    out.erase(std::unique(out.begin(), out.end()), out.end());
+    std::sort(cf_occurrences.begin(), cf_occurrences.end());
+    cf_occurrences.erase(std::unique(cf_occurrences.begin(), cf_occurrences.end()), cf_occurrences.end());
 
-    return out;
+    return cf_occurrences;
 }
 
 std::vector<usize> collectBasicBlockBeginnings(const low::LowFuncData& function) {
