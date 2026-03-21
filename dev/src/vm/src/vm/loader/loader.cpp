@@ -96,6 +96,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
+template<LoadMode load_mode>
 std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
 ) {
 	// Skip if no new code was added.
@@ -113,7 +114,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 
 		// @note: After successfully inserting code into `validated_high_program` we compile it to
 		// the low level representation. This step cannot fail since the code was already validated.
-		compiler.recompile(validated_high_program);
+		compiler.recompile<load_mode>(validated_high_program);
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
@@ -161,14 +162,55 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	return std::unexpected(std::move(log));
 }
 
+void Loader::addFileMapping(const code::CodeCollection& code) {
+	base::HashMap<fs::File, std::map<FileCoordinates, api::response::CodePosition> > file_mapping;
+
+	for (auto& func: code.functions) {
+		for (usize i = 0; i < func.body.size(); i++) {
+			auto& instruction = func.body[i];
+			auto position = instruction.visit([](auto&& instr) { return instr.bytecode_pos; });
+
+			if (!position) {
+				continue;
+			}
+
+			auto file = position->getLocation()->getSourceFile();
+			auto [line, column] = position->getStartLineColumn();
+			file_mapping.put(file, {});
+			file_mapping[file].emplace(FileCoordinates{line, column}, api::response::CodePosition{func.name, i, position});
+		}
+	}
+
+	for (auto& [file, mapping]: file_mapping) {
+		compiler.digestFileInfo(file, std::move(mapping));
+	}
+}
+
+template<LoadMode load_mode>
 std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
-	return std::unexpected(std::move(opt_code_collection).error());
+	
+	if (!opt_code_collection) {	
+		return std::unexpected(std::move(opt_code_collection).error());
+	}
+
+	if constexpr (load_mode == LoadMode::WithMapping) {
+		addFileMapping(*opt_code_collection);
+	}
+	return loadAndCompile<load_mode>(*opt_code_collection);
 }
 
 CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 	return compiler.getLowProgram();
 }
 
+CRef<compiler::FatMicroMapping> Loader::getMapping() const {
+	return compiler.getMapping();
+}
+
 vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
+
+template std::expected<void, LoaderLogger> Loader::loadAndCompile<
+	LoadMode::Normal>(const std::vector<fs::File>&);
+template std::expected<void, LoaderLogger> Loader::loadAndCompile<
+	LoadMode::WithMapping>(const std::vector<fs::File>&);

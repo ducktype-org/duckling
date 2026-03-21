@@ -4,6 +4,7 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/loader/compiler/instruction_mapping.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::loader::compiler {
@@ -42,6 +43,7 @@ namespace vm::loader::compiler {
 		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
 		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
 		 */
+		template<LoadMode = LoadMode::Normal>
 		void recompile(const code::ValidProgram& high_program);
 
 		/**
@@ -49,6 +51,10 @@ namespace vm::loader::compiler {
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
 		CRef<vm::low::LowVMProgram> getLowProgram() const;
+
+		CRef<FatMicroMapping> getMapping() const;
+
+		void digestFileInfo(fs::File, std::map<FileCoordinates, api::response::CodePosition>);
 
 	private:
 		/**
@@ -102,8 +108,10 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief The microbytecode program representation being built and managed by the compiler.
 		 */
-		vm::low::LowVMProgram     low_program;
-		ProgramCompilationContext program_ctx;
+		vm::low::LowVMProgram             low_program;
+		ProgramCompilationContext         program_ctx;
+		base::Optional<code::TypeContext> latest_type_ctx;
+		FatMicroMapping                   instruction_mapping;
 
 		/**
 		 * @brief Processes newly added types and adds them to the existing type_metadata.
@@ -132,6 +140,7 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
+		template<LoadMode = LoadMode::Normal>
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
@@ -167,6 +176,7 @@ namespace vm::loader::compiler {
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
+		template<LoadMode = LoadMode::Normal>
 		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
 
 		/**

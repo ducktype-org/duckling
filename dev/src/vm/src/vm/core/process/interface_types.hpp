@@ -5,4 +5,11 @@ namespace vm {
 	using ProgramRunArguments  = std::vector<std::string>;
 	using FunctionRunArguments = std::vector<Ref<vm::VmValue>>;
 	using RunArguments         = std::variant<ProgramRunArguments, FunctionRunArguments>;
+
+	struct FileCoordinates {
+		usize line;
+		usize column;
+
+		auto operator<=>(FileCoordinates const&) const = default;
+	};
 }

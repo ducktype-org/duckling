@@ -100,8 +100,24 @@ namespace vm::loader::compiler {
 		}
 	}
 
+	template<LoadMode load_mode>
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
+
+		if constexpr (load_mode == LoadMode::WithMapping) {
+			for (usize i = 0; i < ctx.function.body.size(); i++) {
+				const auto& instr = ctx.function.body[i];
+				builder.addWithDebugSymb(instr, i);
+			}
+
+			auto func_id = program_ctx.function_forward_declarations.idOf(ctx.function.name.str);
+			CORE_ASSERT(func_id.has_value(), "the currently built function has to be in the set of declared functions");
+
+			auto [micro_bytecode, label_map] = builder.buildWithDebug(instruction_mapping, *func_id);
+			linkLabelArguments(micro_bytecode, label_map);
+
+			return micro_bytecode;
+		}
 
 		for (const auto& instr: ctx.function.body) builder.add(instr);
 
@@ -258,6 +274,7 @@ namespace vm::loader::compiler {
 		ctx.local_stack_size = max_stack_size;
 	}
 
+	template<LoadMode load_mode>
 	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
 		// Forward declare all functions
 		for (const auto& function: new_functions)
@@ -279,7 +296,7 @@ namespace vm::loader::compiler {
 				parameters_size += type->getSize().asInt();
 			}
 
-			low::MicroBytecode bytecode = lowerInstructions(ctx);
+			low::MicroBytecode bytecode = lowerInstructions<load_mode>(ctx);
 
 			low_program.functions.insert(
 				low::LowFuncData{ .name             = function.name,
@@ -363,8 +380,15 @@ namespace vm::loader::compiler {
 		}
 	}
 
+	template<LoadMode load_mode>
 	void Compiler::recompile(const code::ValidProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
+
+		if constexpr (load_mode == LoadMode::WithMapping) {
+			latest_type_ctx = high_program.getTypeContext();
+		} else {
+			latest_type_ctx = std::nullopt;
+		}
 
 		auto new_c_functions = high_program.extCFunctions()
 		                     | std::views::drop(low_program.extern_c_functions.size())
@@ -379,9 +403,20 @@ namespace vm::loader::compiler {
 		auto new_functions = high_program.functions()
 		                   | std::views::drop(low_program.functions.size())
 		                   | std::ranges::to<std::vector<code::Function>>();
-		compileNewFunctions(new_functions);
+		compileNewFunctions<load_mode>(new_functions);
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
 
+	void Compiler::digestFileInfo(
+		fs::File file, std::map<FileCoordinates, api::response::CodePosition> mapping
+	) {
+		// @todo: make "copy" of CodePosition in non-api namespace
+		instruction_mapping.files.put(file, FatMicroMapping::FileCtx{ std::move(mapping) });
+	}
+
+	CRef<FatMicroMapping> Compiler::getMapping() const { return &instruction_mapping; }
+
+	template void Compiler::recompile<LoadMode::Normal>(const code::ValidProgram&);
+	template void Compiler::recompile<LoadMode::WithMapping>(const code::ValidProgram&);
 }

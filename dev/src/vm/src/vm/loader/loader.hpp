@@ -8,6 +8,7 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
+#include <vm/loader/compiler/instruction_mapping.hpp>
 
 #include <expected>
 
@@ -43,6 +44,8 @@ namespace vm::loader {
 			const std::vector<fs::File>& files
 		);
 
+		void addFileMapping(const code::CodeCollection& code);
+
 	public:
 		explicit Loader();
 
@@ -52,16 +55,22 @@ namespace vm::loader {
 		 * @note The reference will be valid as long as the Loader itself and it's value updates on
 		 * loads calls.
 		 */
+		[[nodiscard]]
 		CRef<vm::low::LowVMProgram> getProgram() const;
+
+		[[nodiscard]]
+		CRef<compiler::FatMicroMapping> getMapping() const;
 
 		/**
 		 * @brief Injects new code from given file paths to the current program state.
 		 */
+		template<LoadMode = LoadMode::Normal>
 		std::expected<void, LoaderLogger> loadAndCompile(const std::vector<fs::File>& file_path);
 
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
+		template<LoadMode = LoadMode::Normal>
 		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
 	};

@@ -86,6 +86,11 @@ namespace vm::api {
 		struct ExitCodeRequest {};
 
 		struct DeinitAndValidate {};
+
+		struct FileMappingQuery {
+			fs::File                file;
+			FileCoordinates coord;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -104,6 +109,7 @@ namespace vm::api {
 		request::TypeMetadata,
 		request::VmValue,
 		request::StatusRequest,
+		request::FileMappingQuery,
 		request::Input,
 		request::Output,
 		request::Attach,

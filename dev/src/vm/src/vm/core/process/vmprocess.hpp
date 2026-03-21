@@ -14,6 +14,7 @@
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/loader/compiler/instruction_mapping.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <condition_variable>
@@ -73,6 +74,8 @@ namespace vm {
 		 */
 		CRef<low::LowVMProgram> loaded_program;
 
+		CRef<loader::compiler::FatMicroMapping> mapping;
+
 		Memory memory;
 
 		/**
@@ -89,6 +92,7 @@ namespace vm {
 		 * @brief Loads the program from a given source into the current loader program state,
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
+		template<loader::LoadMode load_mode = loader::LoadMode::Normal>
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		);
@@ -201,6 +205,8 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
 
 		PID getPID() const;
+
+		CRef<loader::compiler::FatMicroMapping> getMapping() const;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess

@@ -30,14 +30,19 @@ namespace vm {
 		return status;
 	}
 
+	template<loader::LoadMode load_mode>
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
 		std::unique_lock                          lock(rw_global);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files); }
-				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code); }
+				variant_case(std::vector<fs::File>, files) {
+					return loader.loadAndCompile<load_mode>(files);
+				}
+				variant_case(code::CodeCollection, code) {
+					return loader.loadAndCompile<load_mode>(code);
+				}
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -302,6 +307,15 @@ namespace vm {
 				}
 			}
 
+			variant_case(api::request::FileMappingQuery, request) {
+				auto response = mapping->translateToFatPos(request.file, request.coord);
+				if (!response) {
+					return std::unexpected{api::ApiError{api::OtherError{.error = "Given file location is not mapped to any specific fat-position"}}};
+				}
+
+				return *response;
+			} 
+
 			variant_case(api::request::StatusRequest, status_request) {
 				return api::Response(getStatus());
 			}
@@ -341,7 +355,8 @@ namespace vm {
 	VMProcess::VMProcess(const PID my_pid):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
-		  loaded_program(loader.getProgram()) {
+		  loaded_program(loader.getProgram()),
+		  mapping(loader.getMapping()) {
 		vm_threads.emplace_back(*this);
 	}
 
@@ -427,6 +442,10 @@ namespace vm {
 			return false;
 		}
 		return memory.validateMemoryState();
+	}
+	
+	CRef<loader::compiler::FatMicroMapping> VMProcess::getMapping() const {
+		return mapping;
 	}
 
 	GIL& VMProcess::getGIL() { return gil; }
