@@ -12,9 +12,7 @@ class VmDebugTest: public tester::TestSuite {
 #define TESTER_CLASS VmDebugTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(LowVMProgramCopyReplaceOpcode);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(LowVMProgramCopyReplaceOpcode); }
 
 
 private:
@@ -22,18 +20,26 @@ private:
 	 * @brief Checks if editing opcodes works correctly.
 	 */
 	void LowVMProgramCopyReplaceOpcode() {
-		vm::loader::Loader loader;
+		vm::loader::Loader          loader;
 		CRef<vm::low::LowVMProgram> program = loader.getProgram();
-		vm::low::LowVMProgramCopy program_copy(program);
+		vm::low::LowVMProgramCopy   program_copy(program);
 
 		assertEqual(program_copy.getOriginalProgram(), program, "Wrong original program");
 
-		loader.loadAndCompile({{path("breakpoint.dbc")}});
+		loader.loadAndCompile({ { path("breakpoint.dbc") } });
 		assertTrue(program->getFunctions().size(), "No functions loaded");
 
-		assertEqual(program_copy.getFunctions().size(), 0, "Program copy works too well. Is actual before selfUpdate()");
+		assertEqual(
+			program_copy.getFunctions().size(),
+			0,
+			"Program copy works too well. Is actual before selfUpdate()"
+		);
 		program_copy.selfUpdate();
-		assertEqual(program_copy.getFunctions().size(), program->getFunctions().size(), "Programs function count mismach");
+		assertEqual(
+			program_copy.getFunctions().size(),
+			program->getFunctions().size(),
+			"Programs function count mismach"
+		);
 
 		u64 main_function_id = -1ull;
 		for (auto& [low_func_data, id, name]: program_copy.getFunctions().allData()) {
@@ -42,13 +48,18 @@ private:
 				break;
 			}
 		}
-		
+
 		assertFalse(main_function_id == -1ull, "Main function not found");
 
-		vm::low::MicroOpcode opcode;
-		auto maybe_opcode = program_copy.replaceOpcode(main_function_id, 0, opcode);
+		vm::low::MicroOpcode opcode       = vm::low::MicroOpcode::breakpoint;
+		auto                 maybe_opcode = program_copy.replaceOpcode(main_function_id, 0, opcode);
 
-		assertTrue(maybe_opcode.has_value(), "Main does not seem to have any instructions...");
+		assertTrue(maybe_opcode.has_value(), "Main does not seem to have any instructions");
+		assertEqual(
+			maybe_opcode.value(),
+			vm::low::MicroOpcode::init_lany_type,
+			"Main first istruction was not `init_lany_type`"
+		);
 	}
 };
 
