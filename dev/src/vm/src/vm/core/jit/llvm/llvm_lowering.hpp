@@ -174,9 +174,8 @@ namespace vm::jit {
 		}
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
-			cf::ControlFlowAnalyzer cf_analyzer(function_to_compile);
-			// Get basic block boundaries
-			cfg = cf_analyzer.controlFlowGraph();
+			cf::ControlFlowAnalyzer cf_analyzer{};
+			cfg = cf_analyzer.controlFlowGraph(function_to_compile);
 
 			// Create LLVM basic blocks for each VM block
 			for (usize block_idx = 0; block_idx < cfg.size(); ++block_idx) {

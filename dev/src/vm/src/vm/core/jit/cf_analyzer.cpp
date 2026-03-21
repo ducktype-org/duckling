@@ -9,10 +9,9 @@
 using namespace vm::code::instructions;
 
 namespace vm::jit::cf {
-    std::vector<CfOccurrence> ControlFlowAnalyzer::controlFlowOccurrences() {
+    std::vector<CfOccurrence> ControlFlowAnalyzer::controlFlowOccurrences(const low::LowFuncData& function) {
         std::vector<CfOccurrence> cf_occurrences;
 
-        const low::LowFuncData& function = this->function.get();
         for (usize index = 0; index < function.bc.size(); ++index) {
             low::MicroOpcode opcode = getInstructionOpcode(function.bc[index]);
             i64 arg0 = function.bc[index].arg0;
@@ -53,8 +52,8 @@ namespace vm::jit::cf {
         return cf_occurrences;
     }
 
-    std::vector<usize> ControlFlowAnalyzer::basicBlockBeginnings() {
-        std::vector<CfOccurrence> cf_occurrences = controlFlowOccurrences();
+    std::vector<usize> ControlFlowAnalyzer::basicBlockBeginnings(const low::LowFuncData& function) {
+        std::vector<CfOccurrence> cf_occurrences = controlFlowOccurrences(function);
         std::vector<usize> block_beginnings = {0}; // First block always starts at position 0
 
         for (const auto& occurrence : cf_occurrences) {

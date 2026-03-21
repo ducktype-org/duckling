@@ -24,18 +24,14 @@ namespace vm::jit::cf {
     };
 
     class ControlFlowAnalyzer {
-      private:
-        std::reference_wrapper<const low::LowFuncData> function;
-
       public:
-        ControlFlowAnalyzer(const low::LowFuncData& function) : function(std::cref(function)) {};
-        ControlFlowAnalyzer() = delete;
+        ControlFlowAnalyzer() = default;
 
-        std::vector<CfOccurrence> controlFlowOccurrences();
-        std::vector<usize> basicBlockBeginnings();
+        std::vector<CfOccurrence> controlFlowOccurrences(const low::LowFuncData& function);
+        std::vector<usize> basicBlockBeginnings(const low::LowFuncData& function);
 
-        ControlFlowGraph controlFlowGraph() {
-            return ControlFlowGraph(this->function.get(), basicBlockBeginnings());
+        ControlFlowGraph controlFlowGraph(const low::LowFuncData& function) {
+            return ControlFlowGraph(function, basicBlockBeginnings(function));
         }
     };
 } // namespace vm::jit::cf
