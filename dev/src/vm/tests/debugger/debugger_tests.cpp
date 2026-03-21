@@ -22,7 +22,7 @@ public:
 
 private:
 	vm::PID loadProgram(std::string_view path_name) {
-		auto process_pid_response = vm::api::spawn(true);  // codeCopyMode = true
+		auto process_pid_response = vm::api::spawn(true);  // code_copy_mode = true
 		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 

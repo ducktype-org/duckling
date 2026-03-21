@@ -235,7 +235,7 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type);
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
-		VMProcess(PID my_pid, bool codeCopyMode = false);
+		VMProcess(PID my_pid, bool code_copy_mode = false);
 
 		GIL&                       getGIL();
 		SynchronizationPrimitives& getSynchronizationPrimitives();

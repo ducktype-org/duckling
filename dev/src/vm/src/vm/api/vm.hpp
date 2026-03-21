@@ -14,11 +14,11 @@
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
-	 * @param codeCopyMode Allows created process to edit loaded code. Defaults to `false`.
+	 * @param code_copy_mode Allows created process to edit loaded code. Defaults to `false`.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
-	std::expected<ProcessInfo, ApiError> spawn(bool codeCopyMode = false);
+	std::expected<ProcessInfo, ApiError> spawn(bool code_copy_mode = false);
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.

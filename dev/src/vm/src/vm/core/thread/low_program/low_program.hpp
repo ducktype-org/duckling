@@ -54,11 +54,15 @@ namespace vm::low {
 
 	class GeneralizedLowVMProgram {
 	public:
-		virtual const TypeMetadata&                              getTypes() const            = 0;
-		virtual const ObjIdNameMap<LowFuncData, usize>&          getFunctions() const        = 0;
-		virtual const ObjIdNameMap<LowExternCFunction>&          getExternCFunctions() const = 0;
-		virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const          = 0;
-		virtual const base::HashMap<u64, base::StrID>&           getMethodNamePool() const   = 0;
+		[[nodiscard]] virtual const TypeMetadata&                     getTypes() const     = 0;
+		[[nodiscard]] virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const = 0;
+		[[nodiscard]] virtual const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+			= 0;
+		[[nodiscard]] virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const
+			= 0;
+		[[nodiscard]] virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const = 0;
+
+		virtual ~GeneralizedLowVMProgram() {}
 	};
 
 	/**
@@ -143,8 +147,9 @@ namespace vm::low {
 		 * @brief Updates itself to reflect original `LowVMProgram` state
 		 */
 		LowVMProgramCopy& selfUpdate() {
-			auto to_add
-				= std::views::drop(original_program->getFunctions().allData(), functions.size());
+			auto to_add = std::views::drop(
+				original_program->getFunctions().allData(), static_cast<ssize_t>(functions.size())
+			);
 
 			for (auto& [low_func_data, oid, sid]: to_add)
 				functions.insert(*low_func_data.get(), sid);

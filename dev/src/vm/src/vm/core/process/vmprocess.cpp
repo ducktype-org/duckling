@@ -343,13 +343,13 @@ namespace vm {
 
 	PID VMProcess::getPID() const { return my_pid; }
 
-	VMProcess::VMProcess(const PID my_pid, bool codeCopyMode):
+	VMProcess::VMProcess(const PID my_pid, bool code_copy_mode):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
 		  loaded_program(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
 
-		setCodeCopyMode(codeCopyMode);
+		setCodeCopyMode(code_copy_mode);
 	}
 
 	void VMProcess::setCodeCopyMode(bool enable) {

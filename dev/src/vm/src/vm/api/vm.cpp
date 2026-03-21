@@ -62,8 +62,8 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<ProcessInfo, ApiError> spawn(bool codeCopyMode) {
-		return Supervisor::get().newProcess(codeCopyMode).transform([](const auto& x) {
+	std::expected<ProcessInfo, ApiError> spawn(bool code_copy_mode) {
+		return Supervisor::get().newProcess(code_copy_mode).transform([](const auto& x) {
 			return ProcessInfo{ x };
 		});
 	}
