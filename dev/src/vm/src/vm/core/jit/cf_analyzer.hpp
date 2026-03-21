@@ -22,7 +22,7 @@ namespace vm::jit {
         auto operator<=>(const CfOccurrence&) const = default;
     };
 
-    class CfAnalyzer {
+    class ControlFlowAnalyzer {
       private:
         std::reference_wrapper<const low::LowFuncData> function;
         std::vector<CfOccurrence>                      cf_occurrences;
@@ -46,8 +46,8 @@ namespace vm::jit {
         }
 
       public:
-        CfAnalyzer(const low::LowFuncData& function) : function(std::cref(function)) {};
-        CfAnalyzer() = delete;
+        ControlFlowAnalyzer(const low::LowFuncData& function) : function(std::cref(function)) {};
+        ControlFlowAnalyzer() = delete;
 
         std::vector<CfOccurrence> collectControlFlowOccurrences() {
             return getCfOccurrences();

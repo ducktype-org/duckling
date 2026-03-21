@@ -10,7 +10,7 @@
 using namespace vm::code::instructions;
 
 namespace vm::jit {
-    void CfAnalyzer::calcControlFlowOccurrences() { 
+    void ControlFlowAnalyzer::calcControlFlowOccurrences() { 
         this->cf_occurrences.clear();
 
         const low::LowFuncData& function = this->function.get();
@@ -53,7 +53,7 @@ namespace vm::jit {
         );
     }
 
-    void CfAnalyzer::calcBasicBlockBeginnings() {
+    void ControlFlowAnalyzer::calcBasicBlockBeginnings() {
         std::vector<CfOccurrence> cf_occurrences = getCfOccurrences();
         this->block_beginnings = {0}; // First block always starts at position 0
 
