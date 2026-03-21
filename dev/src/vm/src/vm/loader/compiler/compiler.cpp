@@ -108,7 +108,7 @@ namespace vm::loader::compiler {
 
 		usize state;
 		auto& func_body = ctx.function.body;
-		
+
 		for (usize i = 0; i < func_body.size();) {
 			state = it->second;
 			ctx.locals_map.changeState(state);
@@ -116,13 +116,10 @@ namespace vm::loader::compiler {
 			it++;
 			usize next_change = it->first;
 
-			if (it == ctx.stack_changes.end())  [[unlikely]] {
+			if (it == ctx.stack_changes.end()) [[unlikely]]
 				next_change = func_body.size();
-			}
 
-			for (; i < next_change; i++) {
-				builder.add(func_body[i]);
-			}
+			for (; i < next_change; i++) builder.add(func_body[i]);
 		}
 
 		CORE_ASSERT(it == ctx.stack_changes.end(), "we should have passed all stack changes");
@@ -134,7 +131,7 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
-		usize                           stack_top = 0;
+		usize stack_top = 0;
 
 		code::FuncSignature         func_signature = ctx.function.signature;
 		detail::LocalStackDbBuilder result(
@@ -146,9 +143,7 @@ namespace vm::loader::compiler {
 			stack_top     = result.push(local.var_name, type_ref);
 		};
 
-		auto pop = [&]() {
-			stack_top = result.pop();
-		};
+		auto pop = [&]() { stack_top = result.pop(); };
 
 		auto seek_method_param_count = [&](const base::StrID& method_name) -> base::Optional<u64> {
 			// @todo: https://github.com/ducktype-org/duckling/issues/962
@@ -184,9 +179,9 @@ namespace vm::loader::compiler {
 		std::vector<std::tuple<usize, usize>> dfs_stack{
 			{ ctx.function.body.size(), 0 }  // sentinel
 		};
-		std::vector<bool> visited_instructions(ctx.function.body.size());
+		std::vector<bool>  visited_instructions(ctx.function.body.size());
 		std::vector<usize> stack_state(ctx.function.body.size());
-		usize             index = 0;
+		usize              index = 0;
 
 		while (index != ctx.function.body.size()) {
 			if (visited_instructions[index]) {
@@ -220,13 +215,13 @@ namespace vm::loader::compiler {
 					dfs_stack.emplace_back(label_positions[instr.label.label_name], stack_top);
 				}
 				instr_case(Op_ret, instr) {
-					stack_state[index] = stack_top;
+					stack_state[index]         = stack_top;
 					std::tie(index, stack_top) = dfs_stack.back();
 					result.changeState(stack_top);
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
-					stack_state[index] = stack_top;
+					stack_state[index]     = stack_top;
 					usize number_of_params = program_ctx.function_forward_declarations
 					                             .at(instr.function.function_name)
 					                             ->signature.parameters.size();
@@ -261,7 +256,7 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
-					stack_state[index] = stack_top;
+					stack_state[index]         = stack_top;
 					std::tie(index, stack_top) = dfs_stack.back();
 					result.changeState(stack_top);
 					dfs_stack.pop_back();
@@ -274,9 +269,8 @@ namespace vm::loader::compiler {
 		}
 
 		// sanity check
-		for (auto vis : visited_instructions) {
+		for (auto vis: visited_instructions)
 			CORE_ASSERT(vis, "All instructions should have been visited");
-		}
 
 		std::map<usize, usize> stack_changes{};
 
@@ -285,13 +279,13 @@ namespace vm::loader::compiler {
 
 		for (size_t i = 0; i < stack_state.size(); i++) {
 			if (stack_state[i] != stack_val) {
-				stack_val = stack_state[i]; 
+				stack_val = stack_state[i];
 				stack_changes.emplace(i, stack_val);
 			}
 		}
 
-		ctx.stack_changes = std::move(stack_changes);
-		ctx.locals_map    = result.finishBuilding();
+		ctx.stack_changes    = std::move(stack_changes);
+		ctx.locals_map       = result.finishBuilding();
 		ctx.local_stack_size = ctx.locals_map.maxSize();
 	}
 

@@ -313,12 +313,14 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_cmpNull_lptr, i) { addLow<Op_cmpNull_lptr>(i.ptr); }
 			instr_case(high::Op_variantSetInner_lvnt_type, i) {
 				addLow<Op_variantSetInner_lvnt_type>(i.variant, i.inner_type);
-				opargs::Type variant_type = ctx.locals_map.atMaybe(i.variant.var_name)->type->getName();
+				opargs::Type variant_type
+					= ctx.locals_map.atMaybe(i.variant.var_name)->type->getName();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_lptr_lvnt_type, i) {
 				addLow<Op_variantGetInner_lptr_lvnt>(i.dst_ptr, i.variant);
-				opargs::Type variant_type = ctx.locals_map.atMaybe(i.variant.var_name)->type->getName();
+				opargs::Type variant_type
+					= ctx.locals_map.atMaybe(i.variant.var_name)->type->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_variantSetInner_lptr_type, i) {

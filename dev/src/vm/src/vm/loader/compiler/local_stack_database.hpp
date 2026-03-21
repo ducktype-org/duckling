@@ -48,13 +48,11 @@ namespace vm::loader::compiler {
 			  name_lifetime_bind(std::move(lifetimes)),
 			  database(std::move(db)),
 			  max_size(max_size) {}
-		
+
 	public:
 		LocalStackDatabase() = default;
 
-		void changeState(usize new_state) {
-			stack_state = new_state;
-		}
+		void changeState(usize new_state) { stack_state = new_state; }
 
 		std::vector<Entry> getFullStack() const {
 			if (!database.contains(stack_state)) return {};
@@ -163,26 +161,22 @@ namespace vm::loader::compiler::detail {
 			base::HashMap<usize, Prod::Lifetime> lifetime;
 			states[0].entry.offset = offset;
 
-			if (states[0].entry.type->getName() != "void") {
+			if (states[0].entry.type->getName() != "void")
 				offset += states[0].entry.type->getSize().asInt();
-			}
 
-			usize order = 0;
+			usize order    = 0;
 			usize max_size = offset;
-			auto  dfs   = [&](auto&& self, usize node, usize curr_offset) -> void {
+			auto  dfs      = [&](auto&& self, usize node, usize curr_offset) -> void {
                 lifetime.put(node, Prod::Lifetime{});
                 lifetime[node].init_idx = order;
                 order++;
                 max_size = std::max(max_size, offset);
 
-				auto& neighs = states[node].next;
-				for (auto& [_, val]: neighs) {
-                    states[val].entry.offset = curr_offset;
-                }
-				
-                for (auto& [key, val]: neighs) {
+                auto& neighs = states[node].next;
+                for (auto& [_, val]: neighs) states[val].entry.offset = curr_offset;
+
+                for (auto& [key, val]: neighs)
                     self(self, val, curr_offset + key.second->getSize().asInt());
-                }
 
                 lifetime[node].deinit_idx = order++;
 			};
