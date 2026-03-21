@@ -71,7 +71,9 @@ namespace vm {
 		 * @brief The program being executed by this process.
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module.
 		 */
-		CRef<low::LowVMProgram> loaded_program;
+		CRef<low::GeneralizedLowVMProgram> loaded_program;
+
+		base::Optional<low::LowVMProgramCopy> loaded_program_copy;
 
 		Memory memory;
 
@@ -228,6 +230,8 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
+
+		void VMProcess::setCodeCopyMode(bool enable);
 
 		GIL&                       getGIL();
 		SynchronizationPrimitives& getSynchronizationPrimitives();

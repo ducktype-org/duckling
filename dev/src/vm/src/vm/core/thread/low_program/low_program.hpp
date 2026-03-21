@@ -53,6 +53,7 @@ namespace vm::low {
 	};
 
 	class GeneralizedLowVMProgram {
+	public:
 		virtual const TypeMetadata&                              getTypes() const            = 0;
 		virtual const ObjIdNameMap<LowFuncData, usize>&          getFunctions() const        = 0;
 		virtual const ObjIdNameMap<LowExternCFunction>&          getExternCFunctions() const = 0;
@@ -74,7 +75,7 @@ namespace vm::low {
 	 * (used internally in `ObjIdNameMap`). Similar holds for `ObjIdNameMap<LowGlobalData,
 	 * GlobalDataID>` - global data.
 	 */
-	class LowVMProgram final: GeneralizedLowVMProgram {
+	class LowVMProgram final: public GeneralizedLowVMProgram {
 	public:
 		friend class vm::loader::compiler::Compiler;
 
@@ -113,13 +114,11 @@ namespace vm::low {
 	 *
 	 * @note Lookup in `getMethodNamePool()` may give false-positive if program is not updated.
 	 */
-	class LowVMProgramCopy final: GeneralizedLowVMProgram {
+	class LowVMProgramCopy final: public GeneralizedLowVMProgram {
 		CRef<LowVMProgram>               original_program;
 		ObjIdNameMap<LowFuncData, usize> functions{};
 
 	public:
-		friend class vm::loader::compiler::Compiler;
-
 		const TypeMetadata& getTypes() const override { return original_program->getTypes(); }
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
@@ -135,6 +134,10 @@ namespace vm::low {
 		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
 			return original_program->getMethodNamePool();
 		}
+
+		CRef<LowVMProgram> getOriginalProgram() const { return original_program; }
+
+		LowVMProgramCopy(CRef<LowVMProgram> original_program) : original_program(original_program) {}
 
 		/**
 		 * @brief Updates itself to reflect original `LowVMProgram` state

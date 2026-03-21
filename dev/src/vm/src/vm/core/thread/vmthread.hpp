@@ -128,7 +128,7 @@ namespace vm {
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
 		 * nullptr if no code was loaded.
 		 */
-		MCRef<low::LowVMProgram> executing_program = nullptr;
+		MCRef<low::GeneralizedLowVMProgram> executing_program = nullptr;
 
 		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
@@ -199,7 +199,7 @@ namespace vm {
 		 * running code and respond to the process with the panicked status.
 		 */
 		void safeRun(
-			CRef<low::LowVMProgram> program,
+			CRef<low::GeneralizedLowVMProgram> program,
 			const std::string&      func_name,
 			const RunArguments&     run_arguments
 		);
@@ -224,7 +224,7 @@ namespace vm {
 		 * there is already a thread running.
 		 */
 		bool spawnThreadAndRun(
-			CRef<low::LowVMProgram> program,
+			CRef<low::GeneralizedLowVMProgram> program,
 			const std::string&      func_name,
 			const RunArguments&     run_arguments
 		);
@@ -237,7 +237,7 @@ namespace vm {
 		 * otherwise.
 		 */
 		void runNoSpawn(
-			CRef<low::LowVMProgram> program,
+			CRef<low::GeneralizedLowVMProgram> program,
 			const std::string&      func_name,
 			const RunArguments&     run_arguments
 		);
@@ -278,7 +278,7 @@ namespace vm {
 		 * @brief Run a single function with given parameters.
 		 */
 		void run(
-			CRef<low::LowVMProgram> program,
+			CRef<low::GeneralizedLowVMProgram> program,
 			const std::string&      func_name,
 			const RunArguments&     run_arguments
 		);
@@ -287,7 +287,7 @@ namespace vm {
 		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
 		 * destructor functions.
 		 */
-		void execGlobalDestructors(CRef<low::LowVMProgram> program);
+		void execGlobalDestructors(CRef<low::GeneralizedLowVMProgram> program);
 
 		std::expected<api::Response, api::ApiError> getCurrentPosition();
 
