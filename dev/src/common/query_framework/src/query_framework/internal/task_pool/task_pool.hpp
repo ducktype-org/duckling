@@ -86,12 +86,6 @@ namespace query::internal {
 		void addTask(Task&& tasks);
 
 		/**
-		 * @brief Wait for all tasks in the pool to complete.
-		 * Should be called after execute().
-		 */
-		void waitExecutionCompletion();
-
-		/**
 		 * @brief Query (execute) a task immediately.
 		 *
 		 * If the task is already being executed by another worker, this will
@@ -217,25 +211,22 @@ namespace query::internal {
 		usize num_workers;
 
 		/// Main mutex protecting pool queues (global_pool, worker_pools, pending_tasks).
-		mutable std::mutex pool_mutex;
+		mutable std::mutex global_pool_mutex;
 		/// Global task pool (shared among all workers).
 		std::deque<Task> global_pool;
 
 		/// Per-worker task pools.
-		base::HashMap<WRef, std::deque<Task>> worker_pools;
+		std::vector<std::deque<Task>> worker_pools;
+		std::vector<std::mutex> worker_pool_mutexes;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
 		/// @TODO: #1988 #2035 hash map per query id? Or even stronger, lock free data structure.
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
 
+		static constexpr int TASK_SHARDS = 113;
+		std::array<std::mutex, TASK_SHARDS> task_mutexes;
 		/// Condition variable for signaling task completion.
-		std::condition_variable task_completed_cv;
-
-		/// Counter for completed tasks (used in execute()).
-		std::atomic<usize> completed_tasks{ 0 };
-
-		/// Total number of tasks (used in execute()).
-		std::atomic<usize> added_tasks{ 0 };
+		std::array<std::condition_variable, TASK_SHARDS> task_completed_cv;
 
 		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
 		base::StableHashMap<WRef, std::atomic<bool>> is_worker_free_map;

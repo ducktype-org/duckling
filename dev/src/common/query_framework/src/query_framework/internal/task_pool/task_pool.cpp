@@ -10,12 +10,15 @@
 
 namespace query::internal {
 
+	namespace {
+		u64 nodeIDHash(NodeID id){
+			return id.hash.val;
+		}
+	}
+
 	TaskPool::TaskPool():
 		  worker_manager(concurrent::worker::WorkerManager::get()),
-		  num_workers(worker_manager.getAllWorkers().size()) {
-		// Initialize per-worker pools
-		for (auto worker: worker_manager.getAllWorkers())
-			worker_pools.emplace(worker, std::deque<Task>());
+		  num_workers(worker_manager.getAllWorkers().size()), worker_pools(num_workers), worker_pool_mutexes(num_workers) {
 
 		for (auto worker: worker_manager.getAllWorkers()) is_worker_free_map.put(worker, true);
 
@@ -24,7 +27,6 @@ namespace query::internal {
 	}
 
 	TaskPool::~TaskPool() {
-		waitExecutionCompletion();
 		flushWorkers();
 	}
 
@@ -61,17 +63,6 @@ namespace query::internal {
 		CORE_ASSERT(
 			val.value() == TaskStatus::Done, "Invalidating a task that is not done is not supported"
 		);
-	}
-
-	void TaskPool::waitExecutionCompletion() {
-		std::unique_lock lock(pool_mutex);
-		task_completed_cv.wait(lock, [this] {
-			CORE_ASSERT(
-				added_tasks.load() >= completed_tasks.load(),
-				"Completed tasks cannot exceed added tasks"
-			);
-			return added_tasks.load() == completed_tasks.load();
-		});
 	}
 
 	void TaskPool::query(const Task& task) {
