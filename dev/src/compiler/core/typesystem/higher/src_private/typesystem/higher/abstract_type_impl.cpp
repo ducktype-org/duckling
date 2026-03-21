@@ -316,6 +316,7 @@ namespace compiler::tsh {
 	bool ClassAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
 		auto fields = getInterface(ctx)->getFieldsView();
 		for (const auto& field: fields) {
+			// @TODO: #2331 Move this logic out of TSH.
 			auto field_pst = helios::symbolPst(field.getSymbol())
 			                     .value()
 			                     .unlock(ctx)
@@ -332,6 +333,7 @@ namespace compiler::tsh {
 	bool ClassAbstractTypeImpl::isTriviallyZeroInitializable(query::Context& ctx) const {
 		auto fields = getInterface(ctx)->getFieldsView();
 		for (const auto& field: fields) {
+			// @TODO: #2331 Move this logic out of TSH.
 			auto field_pst = helios::symbolPst(field.getSymbol())
 			                     .value()
 			                     .unlock(ctx)
