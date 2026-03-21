@@ -118,6 +118,28 @@ private:
 		const AbstractType     type_unit = unit_1;
 		const UnitAbstractType unit_3    = type_unit;
 		assertTrue(unit_3.getKind() == Unit, "Unit should survive casting.");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto unit_st = st(unit_1);
+			assertTrue(unit_st.isDefaultConstructible(ctx), "Unit should be default constructible.");
+			assertTrue(
+				unit_st.isTriviallyZeroInitializable(ctx),
+				"Unit should be trivially zero-initializable."
+			);
+			assertTrue(unit_st.isCopyable(ctx), "Unit should be copyable.");
+			assertTrue(unit_st.isTriviallyCopyable(ctx), "Unit should be trivially copyable.");
+
+			const auto void_st = st(void_1);
+			assertFalse(
+				void_st.isDefaultConstructible(ctx), "Void should be default constructible."
+			);
+			assertFalse(
+				void_st.isTriviallyZeroInitializable(ctx),
+				"Void should be trivially zero-initializable."
+			);
+			assertFalse(void_st.isCopyable(ctx), "Void should be copyable.");
+			assertFalse(void_st.isTriviallyCopyable(ctx), "void should be trivially copyable.");
+		});
 	}
 
 	/**
@@ -164,6 +186,35 @@ private:
 		const AbstractType     type_char = char_1;
 		const CharAbstractType char_3    = type_char;
 		assertTrue(char_3.getKind() == Char, "Byte should survive casting.");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto bool_st = st(bool_1);
+			assertTrue(bool_st.isDefaultConstructible(ctx), "Bool should be default constructible.");
+			assertTrue(
+				bool_st.isTriviallyZeroInitializable(ctx),
+				"Bool should be trivially zero-initializable."
+			);
+			assertTrue(bool_st.isCopyable(ctx), "Bool should be copyable.");
+			assertTrue(bool_st.isTriviallyCopyable(ctx), "Bool should be trivially copyable.");
+
+			const auto byte_st = st(byte_1);
+			assertTrue(byte_st.isDefaultConstructible(ctx), "Byte should be default constructible.");
+			assertTrue(
+				byte_st.isTriviallyZeroInitializable(ctx),
+				"Byte should be trivially zero-initializable."
+			);
+			assertTrue(byte_st.isCopyable(ctx), "Byte should be copyable.");
+			assertTrue(byte_st.isTriviallyCopyable(ctx), "Byte should be trivially copyable.");
+
+			const auto char_st = st(char_1);
+			assertTrue(char_st.isDefaultConstructible(ctx), "Char should be default constructible.");
+			assertTrue(
+				char_st.isTriviallyZeroInitializable(ctx),
+				"Char should be trivially zero-initializable."
+			);
+			assertTrue(char_st.isCopyable(ctx), "Char should be copyable.");
+			assertTrue(char_st.isTriviallyCopyable(ctx), "Char should be trivially copyable.");
+		});
 	}
 
 	/**
@@ -208,6 +259,45 @@ private:
 			getIntegralTypeNoContext(8, Signed) != getIntegralTypeNoContext(16, Signed),
 			"Ints of different sizes should be different."
 		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto int_st = st(getIntegralType(ctx, 32, Signed));
+			assertTrue(int_st.isDefaultConstructible(ctx), "Int should be default constructible.");
+			assertTrue(
+				int_st.isTriviallyZeroInitializable(ctx),
+				"Int should be trivially zero-initializable."
+			);
+			assertTrue(int_st.isCopyable(ctx), "Int should be copyable.");
+			assertTrue(int_st.isTriviallyCopyable(ctx), "Int should be trivially copyable.");
+
+			const auto int_ref_st = int_st.withReferenceKind(ReferenceKind::Ref);
+			assertFalse(
+				int_ref_st.isDefaultConstructible(ctx),
+				"Reference to Int should NOT be default constructible."
+			);
+			assertFalse(
+				int_ref_st.isTriviallyZeroInitializable(ctx),
+				"Reference to Int should NOT be trivially zero-initializable."
+			);
+			assertTrue(int_ref_st.isCopyable(ctx), "Reference to Int should be copyable.");
+			assertTrue(
+				int_ref_st.isTriviallyCopyable(ctx), "Reference to Int should be trivially copyable."
+			);
+
+			const auto int_box_st = int_st.withReferenceKind(ReferenceKind::Box);
+			assertFalse(
+				int_box_st.isDefaultConstructible(ctx),
+				"Box of Int should NOT be default constructible."
+			);
+			assertFalse(
+				int_box_st.isTriviallyZeroInitializable(ctx),
+				"Box of Int should NOT be trivially zero-initializable."
+			);
+			assertTrue(int_box_st.isCopyable(ctx), "Box of Int should be copyable.");
+			assertFalse(
+				int_box_st.isTriviallyCopyable(ctx), "Box of Int should not be trivially copyable."
+			);
+		});
 	}
 
 	/**
@@ -237,6 +327,19 @@ private:
 			getFloatTypeNoContext(32) != getFloatTypeNoContext(64),
 			"Floats of different sizes should be different."
 		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto float_st = st(getFloatType(ctx, 64));
+			assertTrue(
+				float_st.isDefaultConstructible(ctx), "Float should be default constructible."
+			);
+			assertTrue(
+				float_st.isTriviallyZeroInitializable(ctx),
+				"Float should be trivially zero-initializable."
+			);
+			assertTrue(float_st.isCopyable(ctx), "Float should be copyable.");
+			assertTrue(float_st.isTriviallyCopyable(ctx), "Float should be trivially copyable.");
+		});
 	}
 
 	using enum Mutability;
@@ -281,6 +384,29 @@ private:
 			ptr_5.getKind() == Pointer && ptr_5.getPointee() == ptr_4.getPointee(),
 			"Pointer should survive casting."
 		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto raw_st = st(raw_1);
+			assertTrue(
+				raw_st.isDefaultConstructible(ctx), "RawPointer should be default constructible."
+			);
+			assertTrue(
+				raw_st.isTriviallyZeroInitializable(ctx), "RawPointer should be zero initializable."
+			);
+			assertTrue(raw_st.isCopyable(ctx), "RawPointer should be copyable.");
+			assertTrue(raw_st.isTriviallyCopyable(ctx), "RawPointer should be trivially copyable.");
+
+			const auto pointer_st = st(ptr_1);
+			assertTrue(
+				pointer_st.isDefaultConstructible(ctx), "Pointer should be default constructible."
+			);
+			assertTrue(
+				pointer_st.isTriviallyZeroInitializable(ctx),
+				"Pointer should be trivially zero-initializable."
+			);
+			assertTrue(pointer_st.isCopyable(ctx), "Pointer should be copyable.");
+			assertTrue(pointer_st.isTriviallyCopyable(ctx), "Pointer should be trivially copyable.");
+		});
 	}
 
 	/**
@@ -299,6 +425,21 @@ private:
 		assertTrue(str_3.getKind() == String, "String should survive casting.");
 
 		assertFalse(str_1.hasNoOpDestructor(), "String should not have no op destructor.");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto string_st = st(str_1);
+			assertTrue(
+				string_st.isDefaultConstructible(ctx), "String should be default constructible."
+			);
+			assertTrue(
+				string_st.isTriviallyZeroInitializable(ctx),
+				"String should be trivially zero-initializable."
+			);
+			assertTrue(string_st.isCopyable(ctx), "String should be copyable.");
+			assertFalse(
+				string_st.isTriviallyCopyable(ctx), "String should not be trivially copyable."
+			);
+		});
 	}
 
 	/**
@@ -337,6 +478,32 @@ private:
 			arr_1.hasNoOpDestructor() && arr_4.hasNoOpDestructor(),
 			"DynamicArrays should not have no op destructors."
 		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto arr_st = st(arr_1);
+			assertTrue(
+				arr_st.isDefaultConstructible(ctx), "DynamicArray should be default constructible."
+			);
+			assertTrue(
+				arr_st.isTriviallyZeroInitializable(ctx),
+				"DynamicArray should be trivially zero-initializable."
+			);
+			assertTrue(arr_st.isCopyable(ctx), "DynamicArray should be copyable.");
+			assertFalse(
+				arr_st.isTriviallyCopyable(ctx), "DynamicArray should not be trivially copyable."
+			);
+
+			// Test with non-copyable element.
+			const auto void_type        = getVoidType();
+			const auto non_copyable_arr = ctx.query<QueryDynamicArrayType>(st(void_type));
+			assertFalse(
+				st(non_copyable_arr).isCopyable(ctx), "Array of void should not be copyable."
+			);
+			assertTrue(
+				st(non_copyable_arr).isDefaultConstructible(ctx),
+				"Array of void should be default constructible."
+			);
+		});
 	}
 
 	/**
@@ -404,6 +571,48 @@ private:
 			assertFalse(
 				empty_array.carriesInformation(ctx), "Empty array should not carry information"
 			);
+
+			const auto arr_st_trivial = st(arr_1);
+			assertTrue(
+				arr_st_trivial.isDefaultConstructible(ctx),
+				"StaticArray of Ints should be default constructible."
+			);
+			assertTrue(
+				arr_st_trivial.isTriviallyZeroInitializable(ctx),
+				"StaticArray of Ints should be trivially zero-initializable."
+			);
+			assertTrue(arr_st_trivial.isCopyable(ctx), "StaticArray of Ints should be copyable.");
+			assertTrue(
+				arr_st_trivial.isTriviallyCopyable(ctx),
+				"StaticArray of Ints should be trivially copyable."
+			);
+
+			const auto arr_st_complex = st(arr_str);
+			assertTrue(
+				arr_st_complex.isDefaultConstructible(ctx),
+				"StaticArray of Strings should be default constructible."
+			);
+			assertTrue(
+				arr_st_complex.isTriviallyZeroInitializable(ctx),
+				"StaticArray of Strings should be trivially zero-initializable."
+			);
+			assertTrue(arr_st_complex.isCopyable(ctx), "StaticArray of Strings should be copyable.");
+			assertFalse(
+				arr_st_complex.isTriviallyCopyable(ctx),
+				"StaticArray of Strings should not be trivially copyable."
+			);
+
+			// Test non-default-constructible static array with ref element)
+			const auto ref_type    = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto arr_of_refs = ctx.query<QueryStaticArrayType>({ ref_type, 5 });
+			assertFalse(
+				st(arr_of_refs).isDefaultConstructible(ctx),
+				"StaticArray of references should not be default constructible."
+			);
+			assertTrue(
+				st(arr_of_refs).isTriviallyCopyable(ctx),
+				"StaticArray of references should be trivially copyable."
+			);
 		});
 	}
 
@@ -447,6 +656,50 @@ private:
 		assertFalse(
 			tup_6.hasNoOpDestructor(), "Tuple with String should not have no op destructor."
 		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto tup_st_trivial = st(tup_1);
+			assertTrue(
+				tup_st_trivial.isDefaultConstructible(ctx),
+				"Tuple of Ints should be default constructible."
+			);
+			assertTrue(
+				tup_st_trivial.isTriviallyZeroInitializable(ctx),
+				"Tuple of Ints should be trivially zero-initializable."
+			);
+			assertTrue(tup_st_trivial.isCopyable(ctx), "Tuple of Ints should be copyable.");
+			assertTrue(
+				tup_st_trivial.isTriviallyCopyable(ctx),
+				"Tuple of Ints should be trivially copyable."
+			);
+
+			const auto tup_st_complex = st(tup_6);
+			assertTrue(
+				tup_st_complex.isDefaultConstructible(ctx),
+				"Tuple with String should be default constructible."
+			);
+			assertTrue(
+				tup_st_complex.isTriviallyZeroInitializable(ctx),
+				"Tuple with String should be trivially zero-initializable."
+			);
+			assertTrue(tup_st_complex.isCopyable(ctx), "Tuple with String should be copyable.");
+			assertFalse(
+				tup_st_complex.isTriviallyCopyable(ctx),
+				"Tuple with String should not be trivially copyable."
+			);
+
+			// Test non-default-constructible tuple with Ref element.
+			const auto ref_type    = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto tup_of_refs = ctx.query<QueryTupleType>({ { ref_type, st(int_32) } });
+			assertFalse(
+				st(tup_of_refs).isDefaultConstructible(ctx),
+				"Tuple with reference should not be default constructible."
+			);
+			assertTrue(
+				st(tup_of_refs).isTriviallyCopyable(ctx),
+				"Tuple with reference should not be trivially copyable."
+			);
+		});
 	}
 
 	/**
@@ -486,6 +739,23 @@ private:
 		assertFalse(
 			var_5.hasNoOpDestructor(), "Variant with String should not have no op destructor."
 		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto var_st = st(var_1);
+			assertFalse(
+				var_st.isDefaultConstructible(ctx),
+				"Variant of Ints should NOT be default constructible."
+			);
+			assertFalse(
+				var_st.isTriviallyZeroInitializable(ctx),
+				"Variant should not be trivially zero-initializable (variant tag)."
+			);
+			assertTrue(var_st.isCopyable(ctx), "Variant of Ints should be copyable.");
+			assertTrue(
+				var_st.isTriviallyCopyable(ctx),
+				"Variant of Ints should be trivially copyable (if all components are)."
+			);
+		});
 	}
 
 	/**
@@ -539,6 +809,19 @@ private:
 		assertTrue(
 			fun_different_flags == fun_different_flags_2, "Function flags should survive casting."
 		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto fun_st = st(fun_1);
+			assertFalse(
+				fun_st.isDefaultConstructible(ctx),
+				"Function type should not be default constructible."
+			);
+			assertFalse(
+				fun_st.isTriviallyZeroInitializable(ctx),
+				"Function type should not be trivially zero-initializable."
+			);
+			assertTrue(fun_st.isCopyable(ctx), "Function type should be copyable.");
+		});
 	}
 
 	void simpleLanguageElements() {
@@ -565,6 +848,19 @@ private:
 		const AbstractType       module_type = module;
 		const ModuleAbstractType module_3    = module_type;
 		assertTrue(module_3.getKind() == Module, "ModuleType should survive casting.");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
+			assertFalse(
+				st(nspace).isDefaultConstructible(ctx),
+				"Namespace should not be default constructible."
+			);
+
+			assertFalse(st(module).isCopyable(ctx), "Module should not be copyable.");
+			assertFalse(
+				st(module).isDefaultConstructible(ctx), "Module should not be default constructible."
+			);
+		});
 	}
 
 	void simpleMeta() {
@@ -579,6 +875,19 @@ private:
 		const AbstractType     meta_type = meta;
 		const MetaAbstractType met_3     = meta_type;
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertTrue(
+				st(meta).isDefaultConstructible(ctx),
+				"Meta type should be default constructible (e.g. to void)."
+			);
+			assertTrue(st(meta).isCopyable(ctx), "Meta type should be copyable.");
+			assertFalse(
+				st(meta).isTriviallyZeroInitializable(ctx),
+				"Meta type should not be trivially zero initializable."
+			);
+			assertTrue(st(meta).isTriviallyCopyable(ctx), "Meta type should be trivially copyable.");
+		});
 	}
 
 	void simpleTypeTemplate() {
@@ -599,6 +908,14 @@ private:
 			assertTrue(
 				list_template_type.hasNoOpDestructor(),
 				"Type templates should have a no-op destructor."
+			);
+
+			assertFalse(
+				st(list_template_type).isCopyable(ctx), "TypeTemplate should not be copyable."
+			);
+			assertFalse(
+				st(list_template_type).isDefaultConstructible(ctx),
+				"TypeTemplate should not be default constructible."
 			);
 
 			const auto list_template_type_2
