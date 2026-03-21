@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../block_detection.hpp"
+#include "../cf_analyzer.hpp"
 #include "../jit_compiler.hpp"
 #include "opcodes_bitcode_source.hpp"
 
