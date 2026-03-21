@@ -418,7 +418,7 @@ private:
 			// This method can fail on module verification
 			auto artifacts
 				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
-			          .valueOrPanic();
+			          ->valueOrPanic();
 
 			ASSERT_TRUE(artifacts.object_art.file.exists());
 			ASSERT_TRUE(artifacts.debug_info.empty());
@@ -436,7 +436,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto artifacts
 				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, true })
-			          .valueOrPanic();
+			          ->valueOrPanic();
 
 			ASSERT_TRUE(artifacts.object_art.file.exists());
 			ASSERT_TRUE(artifacts.debug_info.has_value());
@@ -461,8 +461,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto artifacts
-				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
+			ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 
 			auto module_name = base::StrID(
 				base::strConcat(
@@ -543,7 +542,7 @@ private:
 			// This method can fail on module verification
 			auto artifacts
 				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
-			          .valueOrPanic();
+			          ->valueOrPanic();
 
 			assertTrue(artifacts.object_art.file.exists(), "Object file does not exist");
 
@@ -554,7 +553,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto artifacts
 				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, false })
-			          .valueOrPanic();
+			          ->valueOrPanic();
 			assertTrue(artifacts.object_art.file.exists(), "Object file does not exist");
 
 			std::filesystem::remove(artifacts.object_art.file.getFilePath().getPath());

@@ -7,6 +7,8 @@
 #pragma once
 
 #include <debug_info/debug_info.hpp>
+#include <driver/backend_type.hpp>
+#include <frontend/module_tree/module_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <query_framework/query_int.hpp>
@@ -14,11 +16,14 @@
 
 namespace compiler::driver {
 
-	constexpr std::string_view DEBUG_INFO_FINAL_EXTENSION  = ".di.json";
 	constexpr std::string_view DEBUG_INFO_STABLE_EXTENSION = ".stable.di.json";
 
-	struct KeyOf_DebugInfoCalculatePositions final {
-		debug_info::DebugInfo stable_debug_info;
+	/**
+	 * The key for the DebugInfoForModule query.
+	 */
+	struct KeyOf_DebugInfoForModule final {
+		frontend::ModuleID module_id;
+		BackendType        backend_type;
 
 		[[nodiscard]]
 		base::Bit256 queryStablePerfectHash() const;
@@ -33,8 +38,8 @@ namespace compiler::driver {
 	 * can be cached on disk, but it should invalidate this query's result.
 	 */
 	DECLARE_QUERY(
-		DebugInfoCalculatePositions,
-		KeyOf_DebugInfoCalculatePositions,
+		DebugInfoForModule,
+		KeyOf_DebugInfoForModule,
 		query::QResult<artifacts::FileArtifact>,
 		({
 			.used_hashes             = query::UsedHashes::StableHash,

@@ -1,6 +1,8 @@
 #include "debug_info.hpp"
 
 #include <debug_info/debug_info_io.hpp>
+#include <driver/operations/generic_operations.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <global_state/artifacts_location.hpp>
 
@@ -14,11 +16,13 @@
 #include <fstream>
 
 namespace compiler::driver {
+	constexpr std::string_view DEBUG_INFO_FINAL_EXTENSION = ".di.json";
 
 	struct ModuleSourceCodeHash {
 		[[nodiscard]]
 		query::QueryStableHash queryStablePerfectHash() const {
-			return { 0, 0, 0, 0 };
+			// 4 random numbers
+			return { 62'680'354, 72'959'470, 8'833'575, 82'097'363 };
 		}
 	};
 
@@ -26,6 +30,7 @@ namespace compiler::driver {
 	 * @brief This is a placeholder for future input query,
 	 * that will track the hash of the source code of the module, so when the source code changes,
 	 * the debug info positions will be recalculated.
+	 * @TODO: #2329 Change this.
 	 *
 	 * @note It will always be invalidated, which is for now what we want.
 	 */
@@ -33,17 +38,16 @@ namespace compiler::driver {
 	IMPLEMENT_QUERY_SIDE_INPUT(SourcePositions);
 
 	namespace {
-		debug_info::FilePosition calculateSourcePosition(const debug_info::PstHashPostion& pos) {
+		debug_info::FilePosition calculateSourcePosition(
+			query::Context& ctx, const debug_info::PstHashPostion& pos
+		) {
 			auto source_position = pst::LangElement::getByStableHash(pos.postion_scope_begin)
-			                           .illegalAccess()
-			                           .value()
+			                           .unlock(ctx)
 			                           ->getSourcePosition();
 
 			if_opt_some(pos.postion_scope_end, end_hash) {
-				auto end_position = pst::LangElement::getByStableHash(end_hash)
-				                        .illegalAccess()
-				                        .value()
-				                        ->getSourcePosition();
+				auto end_position
+					= pst::LangElement::getByStableHash(end_hash).unlock(ctx)->getSourcePosition();
 				source_position = dia::SourcePosition::merge(source_position, end_position);
 			}
 
@@ -60,25 +64,41 @@ namespace compiler::driver {
 		}
 	}  // namespace
 
-	base::Bit256 KeyOf_DebugInfoCalculatePositions::queryStablePerfectHash() const {
-		std::stringstream ss;
-		debug_info::saveToStream(stable_debug_info, ss);
-		return hashing::justHash<hashing::SHA256>(ss.str());
+	base::Bit256 KeyOf_DebugInfoForModule::queryStablePerfectHash() const {
+		auto component_hash = compiler::frontend::ModuleTree::getPathComponentHash(module_id);
+		hashing::addToHash(component_hash.partial, std::to_underlying(backend_type));
+		return component_hash.partial.finalize();
 	}
 
-	struct IMPLEMENT_QUERY(DebugInfoCalculatePositions, query::QResult<artifacts::FileArtifact>) {
+	struct IMPLEMENT_QUERY(DebugInfoForModule, query::QResult<artifacts::FileArtifact>) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
 
 		static std::string outputArtifactName(const QKey& key) {
-			auto module_stem = fs::FilePath(key.stable_debug_info.module_path).stem();
-			return module_stem.append(DEBUG_INFO_FINAL_EXTENSION);
+			return key.queryStablePerfectHash().toStringHex().append(DEBUG_INFO_FINAL_EXTENSION);
 		}
 
 		static auto provide([[maybe_unused]] query::Context& ctx, const QKey& key) -> PResult {
+			UNPACK_QRESULT_CREF(
+				auto compile_module_result =,
+				ctx.query<CompileModule>(
+					{ key.module_id, key.backend_type, /*build_debug_info=*/true }
+				)
+			);
+			if (compile_module_result.debug_info.empty()) {
+				CORE_USER_LOG(
+					"Invalid query call, debug info was not produced by CompileModule query.\n"
+				);
+				return query::Failed();
+			}
+
 			//  @TODO: #2323 this is an expensive copy, this issue would fix this.
-			auto debug_info = key.stable_debug_info;
-			debug_info.resolvePositions(calculateSourcePosition);
+			auto debug_info = compile_module_result.debug_info.value();
+			debug_info.resolvePositions(
+				[&](const debug_info::PstHashPostion& pos) -> debug_info::FilePosition {
+					return calculateSourcePosition(ctx, pos);
+				}
+			);
 
 			ctx.query<SourcePositions>({});  // We depend on source positions.
 
@@ -114,5 +134,5 @@ namespace compiler::driver {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(DebugInfoCalculatePositions);
+	QUERY_IMPLEMENTATION_BOILERPLATE(DebugInfoForModule);
 }

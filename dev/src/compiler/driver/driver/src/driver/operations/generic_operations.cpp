@@ -55,7 +55,7 @@ namespace compiler::driver {
 
 	struct IMPLEMENT_QUERY(CompileModule, query::QResult<CompileModuleResult>) {
 		QUERY_ARTIFACTS_MACROS
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CREF
 
 		/** Helper variable for printing user logs, change freely if needed */
 		constinit static inline std::atomic<u64> total_module_count = 0;
@@ -317,7 +317,6 @@ namespace compiler::driver {
 		base::OkBad result = base::OK;
 
 		std::vector<artifacts::FileArtifact> objects;
-		std::vector<debug_info::DebugInfo>   debug_infos;
 
 		std::vector<frontend::ModuleID> modules_to_compile;
 
@@ -331,35 +330,22 @@ namespace compiler::driver {
 
 		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
 
+		// This is temporary.
+		const bool build_debug_info = backend == BackendType::DVM;
+
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
-			auto module_result = query::entryPoint<CompileModule>({ module_id, backend, true });
-			if (module_result.hasValue()) {
-				objects.emplace_back(module_result.valueOrPanic().object_art);
-				if (module_result.valueOrPanic().debug_info.has_value()) {
-					debug_infos.emplace_back(
-						std::move(module_result.valueOrPanic().debug_info.value())
-					);
-				}
+			auto module_result
+				= query::entryPoint<CompileModule>({ module_id, backend, build_debug_info });
+			if (module_result->hasValue()) {
+				objects.emplace_back(module_result->valueOrPanic().object_art);
+				if (build_debug_info) query::entryPoint<DebugInfoForModule>({ module_id, backend });
 			} else
 				result = base::BAD;
 		};
 		for (const auto& module_id: modules_to_compile) handle_module(module_id);
 
 		if (result.isBad()) return result;
-
-		if (backend == BackendType::DVM) {
-			// For DVM when we have debug info, we need to change the DebugInfo format from
-			// PstHashPosition to FilePosition.
-			for (auto& di: debug_infos) {
-				auto calculated_debug_info
-					= query::entryPoint<DebugInfoCalculatePositions>({ std::move(di) });
-				if (calculated_debug_info.hasFailed()) {
-					CORE_USER_LOG("Calculating debug info source positions failed!\n");
-					return base::BAD;
-				}
-			}
-		}
 
 		if (backend == BackendType::LLVM) {
 			// Link all outputs into a single binary.

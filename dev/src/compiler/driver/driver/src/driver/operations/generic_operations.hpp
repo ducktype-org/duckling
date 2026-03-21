@@ -96,7 +96,7 @@ namespace compiler::driver {
 	DECLARE_QUERY(
 		CompileModule,
 		KeyOf_CompileModule,
-		query::QResult<CompileModuleResult>,
+		CRef<query::QResult<CompileModuleResult>>,
 		({
 			.used_hashes             = query::UsedHashes::StableHash,
 			.can_be_loaded_from_disk = true,
