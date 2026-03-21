@@ -1,6 +1,5 @@
 #pragma once
 
-#include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 
 #include <string_id/string_id.hpp>

@@ -200,7 +200,7 @@ namespace vm::loader::compiler {
 					stack_state[index] = stack_top;
 					index++;
 				}
-				instr_case(Op_deinit, instr) { 
+				instr_case(Op_deinit, instr) {
 					stack_state[index] = stack_top;
 					pop();
 					index++;

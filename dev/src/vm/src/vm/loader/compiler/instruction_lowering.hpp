@@ -373,7 +373,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_downcast_lptr_lptr, i) {
 				addLow<Op_downcast_lptr_lptr>(i.dst, i.src);
 				opargs::Type variant_type
-					= ctx.locals_map.at(i.dst.var_name).type->getInnerType().value()->getName();
+					= ctx.locals_map.atMaybe(i.dst.var_name)->type->getInnerType().value()->getName();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_virtual_call_lptr_method, i) {
