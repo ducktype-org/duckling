@@ -1,5 +1,6 @@
 #pragma once
 
+#include "frontend/pst_parser/stable_position.hpp"
 #include "lookup_result.hpp"
 
 #include <helios/scope_id.hpp>
@@ -136,7 +137,7 @@ namespace compiler::helios {
 		 * that we might one day change to custom code for better compilation errors or logic.
 		 */
 		query::QResult<SymbolList> lookupExpectUnique(
-			dia::SourcePosition error_position,
+			pst::StablePosition error_position,
 			query::Context&     ctx,
 			base::StrID         name,
 			AdditionalLookupParameters = {}

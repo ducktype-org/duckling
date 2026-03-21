@@ -346,7 +346,7 @@ namespace compiler::helios::code {
 			}
 			case lexer::Token::Square: {
 				const auto lookup_result = h_interface.lookupExpectUnique(
-					ident->getSourcePosition().unlock(query_ctx), query_ctx, ident->getName().value
+					ident->getStablePosition(), query_ctx, ident->getName().value
 				);
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
@@ -457,7 +457,7 @@ namespace compiler::helios::code {
 			// identifier it will return ChainContext with namespace or expr.
 			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				ident->getName().position, query_ctx, ident->getName().value
+				ident->getStablePosition(), query_ctx, ident->getName().value
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
@@ -623,12 +623,11 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
-			const auto& lookup_result = HInterface::ofSymbol(namespace_like_symbol)
-			                                .lookupExpectUnique(
-												expr_access->getSourcePosition().unlock(query_ctx),
-												query_ctx,
-												expr_access->getName().value
-											);
+			const auto& lookup_result
+				= HInterface::ofSymbol(namespace_like_symbol)
+			          .lookupExpectUnique(
+						  expr_access->getStablePosition(), query_ctx, expr_access->getName().value
+					  );
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto whole_expr_origin
@@ -722,7 +721,7 @@ namespace compiler::helios::code {
 			case lexer::Token::Square: {
 				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 				                         .lookupExpectUnique(
-											 expr_access->getSourcePosition().unlock(query_ctx),
+											 expr_access->getStablePosition(),
 											 query_ctx,
 											 expr_access->getName().value
 										 );
@@ -816,7 +815,7 @@ namespace compiler::helios::code {
 			// @TODO: #2135 handle ambiguity in class scopes
 			auto scope           = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
 			auto sym_list_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				pst_elem->getSourcePosition().unlock(query_ctx), ctx, base::StrID("self")
+				pst_elem->getStablePosition(), ctx, base::StrID("self")
 			);
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
 

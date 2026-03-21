@@ -451,7 +451,7 @@ namespace compiler::helios::code {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-						stmt->getSourcePosition().unlock(ctx), ctx, base::StrID("self")
+						stmt->getStablePosition(), ctx, base::StrID("self")
 					);
 
 					node = makeBox<IdentifierExpr>(

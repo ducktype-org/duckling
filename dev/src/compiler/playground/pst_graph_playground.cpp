@@ -80,7 +80,7 @@ Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 	// el->elementType() + "\n\""
 	// + el->getComponentHash().str() + "\"";
 	std::string name
-		= stringPosition(el->getSourcePosition().unlock(ctx)) + "\n" + el->elementType();
+		= stringPosition(el->getSourcePosition().illegalAccess()) + "\n" + el->elementType();
 	auto self = hdl.addNode(name);
 
 	for (auto sub: el->viewSubElements()) {
