@@ -1,5 +1,7 @@
 #include "cf_analyzer.hpp"
 
+#include <algorithm>
+
 #include <vm/bytecode/instructions.hpp>
 
 #include <vm/core/thread/low_program/instruction.hpp>
@@ -8,13 +10,10 @@
 using namespace vm::code::instructions;
 
 namespace vm::jit {
-    std::vector<CfOccurrence> CfAnalyzer::collectControlFlowOccurrences() {
-        if (!this->cf_occurrences.empty()) {
-            // If occurrences have already been collected, return them
-            return this->cf_occurrences;
-        }
+    void CfAnalyzer::calcControlFlowOccurrences() { 
+        this->cf_occurrences.clear();
 
-        auto function = this->function.get();
+        const low::LowFuncData& function = this->function.get();
         for (usize index = 0; index < function.bc.size(); ++index) {
             low::MicroOpcode opcode = getInstructionOpcode(function.bc[index]);
             i64 arg0 = function.bc[index].arg0;
@@ -52,21 +51,13 @@ namespace vm::jit {
             std::unique(this->cf_occurrences.begin(), this->cf_occurrences.end()),
             this->cf_occurrences.end()
         );
-
-        return cf_occurrences;
     }
 
-    std::vector<usize> CfAnalyzer::collectBasicBlockBeginnings() {
-        if (!this->block_beginnings.empty()) {
-            return this->block_beginnings;
-        }
-
-        if (this->cf_occurrences.empty()) {
-            this->collectControlFlowOccurrences();
-        }
+    void CfAnalyzer::calcBasicBlockBeginnings() {
+        std::vector<CfOccurrence> cf_occurrences = getCfOccurrences();
         this->block_beginnings = {0}; // First block always starts at position 0
 
-        for (const auto& occurrence : this->cf_occurrences) {
+        for (const auto& occurrence : cf_occurrences) {
             if (occurrence.kind == CfOccurrenceKind::JumpDestination) {
                 // Jump destinations signify the beginning of a block
                 if (this->block_beginnings.back() != occurrence.position) {
@@ -79,7 +70,5 @@ namespace vm::jit {
                 this->block_beginnings.push_back(occurrence.position + 1);
             }
         }
-
-        return this->block_beginnings;
     }
 } // namespace vm::jit
