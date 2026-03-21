@@ -190,6 +190,12 @@ namespace vm {
 		 */
 		VMThread& getEmptyThread();
 
+		/**
+		 * @brief Creates or deletes own LowVMProgram copy if needed.
+		 * @note Affects only subsequent runs.
+		 */
+		void setCodeCopyMode(bool enable);
+
 	public:
 		void setStatus(const api::ProcStatus& new_status) noexcept;
 
@@ -229,9 +235,7 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type);
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
-		VMProcess(PID my_pid);
-
-		void VMProcess::setCodeCopyMode(bool enable);
+		VMProcess(PID my_pid, bool codeCopyMode = false);
 
 		GIL&                       getGIL();
 		SynchronizationPrimitives& getSynchronizationPrimitives();

@@ -56,11 +56,10 @@ namespace vm {
 	) {
 		std::unique_lock lock(rw_global);
 
-		if (loaded_program_copy.has_value())
-			loaded_program_copy->selfUpdate();
+		if (loaded_program_copy.has_value()) loaded_program_copy->selfUpdate();
 
-		VMThread&        thread = getEmptyThread();
-		bool response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
+		VMThread& thread   = getEmptyThread();
+		bool      response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
 		// Setting thread ctx necessary for now, until function pointers implemented
 		thread.setThreadCtx("");
 
@@ -75,8 +74,7 @@ namespace vm {
 	) {
 		std::unique_lock lock(rw_global);
 
-		if (loaded_program_copy.has_value())
-			loaded_program_copy->selfUpdate();
+		if (loaded_program_copy.has_value()) loaded_program_copy->selfUpdate();
 
 		getMainVMThread().runNoSpawn(loaded_program, func_name, run_arguments);
 		variant_match(getStatus()) {
@@ -345,23 +343,24 @@ namespace vm {
 
 	PID VMProcess::getPID() const { return my_pid; }
 
-	VMProcess::VMProcess(const PID my_pid):
+	VMProcess::VMProcess(const PID my_pid, bool codeCopyMode):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
 		  loaded_program(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
 
-		setCodeCopyMode(true);
+		setCodeCopyMode(codeCopyMode);
 	}
 
 	void VMProcess::setCodeCopyMode(bool enable) {
 		if (enable && loaded_program_copy.empty()) {
 			loaded_program_copy = low::LowVMProgramCopy(loader.getProgram());
-			loaded_program = dynamic_cast<low::GeneralizedLowVMProgram*>(&loaded_program_copy.value());
+			loaded_program
+				= dynamic_cast<low::GeneralizedLowVMProgram*>(&loaded_program_copy.value());
 		}
 
 		if (!enable && loaded_program_copy.has_value()) {
-			loaded_program = loader.getProgram();
+			loaded_program      = loader.getProgram();
 			loaded_program_copy = std::nullopt;
 		}
 	}

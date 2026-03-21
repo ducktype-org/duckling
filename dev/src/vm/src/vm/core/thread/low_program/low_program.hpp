@@ -137,7 +137,7 @@ namespace vm::low {
 
 		CRef<LowVMProgram> getOriginalProgram() const { return original_program; }
 
-		LowVMProgramCopy(CRef<LowVMProgram> original_program) : original_program(original_program) {}
+		LowVMProgramCopy(CRef<LowVMProgram> original_program): original_program(original_program) {}
 
 		/**
 		 * @brief Updates itself to reflect original `LowVMProgram` state
@@ -148,7 +148,7 @@ namespace vm::low {
 
 			for (auto& [low_func_data, oid, sid]: to_add)
 				functions.insert(*low_func_data.get(), sid);
-			
+
 			return *this;
 		}
 

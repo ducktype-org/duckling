@@ -200,8 +200,8 @@ namespace vm {
 		 */
 		void safeRun(
 			CRef<low::GeneralizedLowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			const std::string&                 func_name,
+			const RunArguments&                run_arguments
 		);
 
 	public:
@@ -225,8 +225,8 @@ namespace vm {
 		 */
 		bool spawnThreadAndRun(
 			CRef<low::GeneralizedLowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			const std::string&                 func_name,
+			const RunArguments&                run_arguments
 		);
 
 
@@ -238,8 +238,8 @@ namespace vm {
 		 */
 		void runNoSpawn(
 			CRef<low::GeneralizedLowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			const std::string&                 func_name,
+			const RunArguments&                run_arguments
 		);
 
 		/**
@@ -279,8 +279,8 @@ namespace vm {
 		 */
 		void run(
 			CRef<low::GeneralizedLowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			const std::string&                 func_name,
+			const RunArguments&                run_arguments
 		);
 
 		/**

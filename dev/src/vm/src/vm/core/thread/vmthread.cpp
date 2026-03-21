@@ -511,8 +511,8 @@ namespace vm {
 	 */
 	void VMThread::run(
 		CRef<low::GeneralizedLowVMProgram> program,
-		const std::string&      func_name,
-		const RunArguments&     run_arguments
+		const std::string&                 func_name,
+		const RunArguments&                run_arguments
 	) {
 		respondExecutionRequest(api::Running{});
 
@@ -671,8 +671,8 @@ namespace vm {
 
 	void VMThread::safeRun(
 		CRef<low::GeneralizedLowVMProgram> program,
-		const std::string&      func_name,
-		const RunArguments&     run_arguments
+		const std::string&                 func_name,
+		const RunArguments&                run_arguments
 	) {
 		try {
 			run(program, func_name, run_arguments);
@@ -684,8 +684,8 @@ namespace vm {
 
 	void VMThread::runNoSpawn(
 		CRef<low::GeneralizedLowVMProgram> program,
-		const std::string&      func_name,
-		const RunArguments&     run_arguments
+		const std::string&                 func_name,
+		const RunArguments&                run_arguments
 	) {
 		// @TODO: #2040 Make this function check if anyone else is executing anything,
 		// or simplify the state checking, perhaps remove state from thread and move all the state
@@ -696,8 +696,8 @@ namespace vm {
 
 	bool VMThread::spawnThreadAndRun(
 		CRef<low::GeneralizedLowVMProgram> program,
-		const std::string&      func_name,
-		const RunArguments&     run_arguments
+		const std::string&                 func_name,
+		const RunArguments&                run_arguments
 	) {
 		if (exec_thread)  // There is already a thread running.
 			return false;
