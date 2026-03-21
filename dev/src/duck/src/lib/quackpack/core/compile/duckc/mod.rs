@@ -79,6 +79,7 @@ impl Duckc {
             .ctx()
             .console()
             .info_verbose(format!("Running `{}`", builder));
+        builder.update_with_profile(&bcx.profile);
         builder.execute(this.as_freeze_dep())?;
         Ok(())
     }

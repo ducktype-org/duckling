@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::{collections::HashMap, fmt::Display, sync::LazyLock};
 
 use crate::{QuackResult, QuackResultContext, StrId, qp_err, quackpack::core::manifest};
 
@@ -192,5 +192,18 @@ impl Profile {
             incremental: determine_incremental(profile_name, manifest_profiles)?,
             c_std: determine_c_std(profile_name, manifest_profiles)?,
         })
+    }
+}
+
+impl Display for OptLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OptLevel::Zero => write!(f, "0"),
+            OptLevel::One => write!(f, "1"),
+            OptLevel::Two => write!(f, "2"),
+            OptLevel::Three => write!(f, "3"),
+            OptLevel::S => write!(f, "s"),
+            OptLevel::Z => write!(f, "z"),
+        }
     }
 }
