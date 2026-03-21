@@ -89,7 +89,8 @@ namespace compiler::helios {
 			}
 		} else {
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getSourcePosition().unlock(ctx)
+				"Unsupported ABI specified in extern()",
+				extern_args.unlock(ctx)->getSourcePosition().unlock(ctx)
 			));
 			return query::Failed();
 		}

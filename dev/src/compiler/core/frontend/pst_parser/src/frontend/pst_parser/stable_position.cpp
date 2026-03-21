@@ -37,8 +37,8 @@ namespace pst {
 
 		// This code assumes that after the recompilation the order of the nodes does not change.
 		// But as a additional safety measure, we check the position of the elements before
-		// keeping the min and max hashes, so if the user of the function accidentally gives the hashes in the wrong order, 
-		// we will still keep the correct position.
+		// keeping the min and max hashes, so if the user of the function accidentally gives the
+		// hashes in the wrong order, we will still keep the correct position.
 		auto min_start_pos = [](HashType hash1, HashType hash2) {
 			auto pos1 = LangElement::getByStableHash(hash1)
 			                .illegalAccess()

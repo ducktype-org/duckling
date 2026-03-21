@@ -26,10 +26,8 @@ namespace pst {
 
 	dia::SourcePosition SourcePositionLocked::unlock(query::Context& ctx) const {
 		ctx.query<FileSourcePositions>(FileSourceCode{});
-        return source_position;
+		return source_position;
 	}
 
-	dia::SourcePosition SourcePositionLocked::illegalAccess() const {
-        return source_position;
-    }
+	dia::SourcePosition SourcePositionLocked::illegalAccess() const { return source_position; }
 }

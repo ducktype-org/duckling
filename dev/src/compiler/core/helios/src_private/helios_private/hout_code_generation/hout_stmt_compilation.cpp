@@ -126,7 +126,8 @@ namespace compiler::helios::houtgen {
 			auto location_mutability = location_type.getMutability();
 			if (location_mutability == tsh::Mutability::Immutable) {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Left side of assignment can't be immutable.", assignment->getSourcePosition().unlock(ctx)
+					"Left side of assignment can't be immutable.",
+					assignment->getSourcePosition().unlock(ctx)
 				));
 				query::throwFailed();
 				return;
@@ -294,7 +295,9 @@ namespace compiler::helios::houtgen {
 				// no initial value case
 
 				if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
-					ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getSourcePosition().unlock(ctx)));
+					ctx.logInt(
+						makeBox<ImmutableVariableNoInitError>(stmt->getSourcePosition().unlock(ctx))
+					);
 					is_failed = true;
 					return;
 				}

@@ -362,7 +362,8 @@ namespace compiler::helios::code {
 					return ChainState::ofExpr(std::move(expr));
 				}
 				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"This symbol cannot be indexed.", call_expr->getSourcePosition().unlock(query_ctx)
+					"This symbol cannot be indexed.",
+					call_expr->getSourcePosition().unlock(query_ctx)
 				));
 				return query::Failed();
 			}
@@ -421,7 +422,8 @@ namespace compiler::helios::code {
 				}
 
 				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Unsupported keyword literal in call expression.", call_expr->getSourcePosition().unlock(query_ctx)
+					"Unsupported keyword literal in call expression.",
+					call_expr->getSourcePosition().unlock(query_ctx)
 				));
 				break;
 			}
@@ -525,7 +527,8 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState> {
 			(void) namespace_like_symbol;
 			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				base::strConcat("Namespace is not callable"), call_expr->getSourcePosition().unlock(query_ctx)
+				base::strConcat("Namespace is not callable"),
+				call_expr->getSourcePosition().unlock(query_ctx)
 			));
 			return query::Failed();
 		}
@@ -620,11 +623,12 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
-			const auto& lookup_result
-				= HInterface::ofSymbol(namespace_like_symbol)
-			          .lookupExpectUnique(
-						  expr_access->getSourcePosition().unlock(query_ctx), query_ctx, expr_access->getName().value
-					  );
+			const auto& lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+			                                .lookupExpectUnique(
+												expr_access->getSourcePosition().unlock(query_ctx),
+												query_ctx,
+												expr_access->getName().value
+											);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto whole_expr_origin

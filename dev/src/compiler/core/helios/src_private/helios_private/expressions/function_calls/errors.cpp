@@ -168,11 +168,13 @@ namespace compiler::helios::code {
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
-				auto source_pos = arguments_origin[data.argument_index].getSourcePosition(ctx).value();
+				auto source_pos
+					= arguments_origin[data.argument_index].getSourcePosition(ctx).value();
 				return makeBox<PositionalAfterNamedArgumentError>(source_pos);
 			}
 			variant_case(RepeatedNamedArgument, data) {
-				auto source_pos = arguments_origin[data.argument_index].getSourcePosition(ctx).value();
+				auto source_pos
+					= arguments_origin[data.argument_index].getSourcePosition(ctx).value();
 				return makeBox<RepeatedNamedArgumentError>(source_pos);
 			}
 			variant_case(FunctionMatchFailure, data) {
@@ -187,8 +189,9 @@ namespace compiler::helios::code {
 					variant_case(TooManyCallArguments, data) {
 						auto first_arg_pos
 							= arguments_origin[data.valid_arguments].getSourcePosition(ctx).value();
-						auto last_arg_pos
-							= arguments_origin[data.total_arguments - 1].getSourcePosition(ctx).value();
+						auto last_arg_pos = arguments_origin[data.total_arguments - 1]
+						                        .getSourcePosition(ctx)
+						                        .value();
 
 						base::Optional<Box<InteractiveFunction>> function
 							= get_interactive_function(data.function);

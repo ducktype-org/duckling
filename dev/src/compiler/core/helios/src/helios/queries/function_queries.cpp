@@ -208,7 +208,7 @@ namespace compiler::helios {
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
-					                                     ret.value().unlock(ctx) });
+					                                            ret.value().unlock(ctx) });
 				}
 				// Deduce return type if not provided.
 				else {
@@ -527,7 +527,9 @@ namespace compiler::helios {
 				));
 				return block;
 			} else {
-				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition().unlock(ctx)));
+				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(
+					stmt->getSourcePosition().unlock(ctx)
+				));
 				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
 			}
 		}

@@ -10,13 +10,13 @@ namespace pst {
 
 	/**
 	 * @brief Class that represents a position in the source code that
-	 * that is stable across re-parses, if the order of the elements 
+	 * that is stable across re-parses, if the order of the elements
 	 * that are inside the StablePosition does not change.
 	 *
 	 * This is different from the normal SourcePosition where
 	 * the position can become invalid after re-parses.
 	 *
-	 * @warning If used to contain a range from one element to another, 
+	 * @warning If used to contain a range from one element to another,
 	 * the position will become invalid if the order of the elements changes.
 	 * So it is safe to have elements like `<AccessExpr>, <CallExpr> in .a(x)`,
 	 * but not safe to have like range from one `<FunDecl>` to another in the same file `<FunDecl>`.
@@ -52,14 +52,16 @@ namespace pst {
 
 		/**
 		 * @brief Inplace extend the position to include the position of another StablePosition.
-		 * @warning This method assumes that the order of the nodes will never change after recompilation.
+		 * @warning This method assumes that the order of the nodes will never change after
+		 * recompilation.
 		 */
 		void extendWithSubsequentPos(const StablePosition& other);
 
 		/**
 		 * @brief Create a new StablePosition that is the extension of this position and another
 		 * position.
-		 * @warning This method assumes that the order of the nodes will never change after recompilation.
+		 * @warning This method assumes that the order of the nodes will never change after
+		 * recompilation.
 		 */
 		[[nodiscard]] StablePosition extendedWithSubsequentPos(const StablePosition& other) const;
 	};

@@ -82,7 +82,8 @@ namespace compiler::helios {
 			void visitAccessExpr(const code::AccessExpr& expr) final {
 				// @TODO: #1922 Implement that.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Evaluating access expressions at compile time.", expr.origin.getSourcePosition(ctx)
+					"Evaluating access expressions at compile time.",
+					expr.origin.getSourcePosition(ctx)
 				));
 				result = query::Failed();
 			}

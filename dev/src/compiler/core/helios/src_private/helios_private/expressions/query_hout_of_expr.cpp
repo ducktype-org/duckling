@@ -161,9 +161,9 @@ namespace compiler::helios::code {
 							node
 								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
 						} else {
-							ctx.logInt(
-								makeBox<InvalidCharacterLiteralError>(stmt->getSourcePosition().unlock(ctx))
-							);
+							ctx.logInt(makeBox<InvalidCharacterLiteralError>(
+								stmt->getSourcePosition().unlock(ctx)
+							));
 						}
 					}
 					opt_err(error) {

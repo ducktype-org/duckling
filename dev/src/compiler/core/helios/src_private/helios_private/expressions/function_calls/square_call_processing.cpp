@@ -124,7 +124,8 @@ namespace compiler::helios::code {
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Array index/size must be exactly one expression.", call_expr->getSourcePosition().unlock(ctx)
+				"Array index/size must be exactly one expression.",
+				call_expr->getSourcePosition().unlock(ctx)
 			));
 			return query::Failed();
 		}

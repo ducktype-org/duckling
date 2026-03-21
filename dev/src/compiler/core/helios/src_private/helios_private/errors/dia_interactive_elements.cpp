@@ -76,32 +76,33 @@ namespace compiler::helios {
 		if (lookup_qresult->hasFailed()) return;
 		CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
 
-		std::function<void(const LookupResult&, const std::string&)> emit_alias_note
-			= [&](const LookupResult& current, const std::string& alias_name) {
-				  if (current.children.size() != 1) return;
+		std::function<void(const LookupResult&, const std::string&)> emit_alias_note =
+			[&](const LookupResult& current, const std::string& alias_name) {
+				if (current.children.size() != 1) return;
 
-				  auto nested = current.children[0];
-				  if (kind(nested.node) == SymbolKind::Alias) {
-					  auto alias_stmt = getSymRef(nested.node)
-				                            ->getPSTData()
-				                            ->getElement()
-				                            .unlock(ctx)
-				                            .dynamicCast<pst::Alias>()
-				                            .value();
-					  auto underlying_chain
-						  = getStr(alias_stmt->getPointed().unlock(ctx)->getSourcePosition().unlock(ctx));
+				auto nested = current.children[0];
+				if (kind(nested.node) == SymbolKind::Alias) {
+					auto alias_stmt = getSymRef(nested.node)
+				                          ->getPSTData()
+				                          ->getElement()
+				                          .unlock(ctx)
+				                          .dynamicCast<pst::Alias>()
+				                          .value();
+					auto underlying_chain = getStr(
+						alias_stmt->getPointed().unlock(ctx)->getSourcePosition().unlock(ctx)
+					);
 
-					  auto id = MessageBase::getUniqueID();
-					  linked_messages.put(
-						  id,
-						  makeBox<IsAliasCodeNote>(
-							  alias_stmt->getSourcePosition().unlock(ctx), alias_name, underlying_chain
-						  )
-					  );
+					auto id = MessageBase::getUniqueID();
+					linked_messages.put(
+						id,
+						makeBox<IsAliasCodeNote>(
+							alias_stmt->getSourcePosition().unlock(ctx), alias_name, underlying_chain
+						)
+					);
 
-					  emit_alias_note(nested.inner, underlying_chain);
-				  };
-			  };
+					emit_alias_note(nested.inner, underlying_chain);
+				};
+			};
 
 		emit_alias_note(*lookup_result, ident->getName().value.str());
 	}
@@ -163,7 +164,8 @@ namespace compiler::helios {
 		case pst::ElementKind::Fun: {
 			auto fun = function_like.dynamicCast<pst::Fun>().value();
 			return dia::SourcePosition::merge(
-				fun->getNameIdentifier().position, fun->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
+				fun->getNameIdentifier().position,
+				fun->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
 			);
 		}
 		case pst::ElementKind::FunDecl: {
