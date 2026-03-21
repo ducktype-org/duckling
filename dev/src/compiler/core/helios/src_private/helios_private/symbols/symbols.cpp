@@ -9,7 +9,8 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -129,8 +130,16 @@ namespace compiler::helios {
 		return getSymRef(id)->stmtCast(ctx);
 	}
 
-	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
-		return getSymRef(id)->getPSTData()->getElement();
+	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID id) {
+		return getSymRef(id)->getPSTDataOpt().map([](auto pst_data) {
+			return pst_data->getElement();
+		});
+	}
+
+	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
+		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstSymbolData> data) {
+			return data->getElement();
+		});
 	}
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {

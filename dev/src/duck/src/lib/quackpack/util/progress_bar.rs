@@ -32,7 +32,8 @@ enum PrefixChars {
 }
 
 impl PrefixChars {
-    fn as_str(&self) -> &'static str {
+    /// Get [`indicatif`] friendly string for displaying a progress.
+    fn as_indicatif_progress_chars(&self) -> &'static str {
         // These should match https://docs.rs/indicatif/latest/indicatif/style/struct.ProgressStyle.html#method.progress_chars.
         match self {
             PrefixChars::Blocks => "## ",
@@ -165,7 +166,7 @@ impl DownloadingPackagesProgressBar {
             "{prefix:>12.cyan.bold} [{bar:57}] {pos}/{len}"
         })
         .expect("We set this statically, it should never fail")
-        .progress_chars(PrefixChars::Pacman.as_str())
+        .progress_chars(PrefixChars::Pacman.as_indicatif_progress_chars())
     }
 }
 

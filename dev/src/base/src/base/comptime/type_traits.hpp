@@ -132,6 +132,12 @@ namespace base {
 	inline constexpr bool IS_VARIANT_MEMBER_V = is_variant_member<T, VariantT>::value;
 
 	/**
+	 * @brief Concept that checks if a type `T` is present in a variant `Var`.
+	 */
+	template<typename T, typename Var>
+	concept IsVariantMember = IS_VARIANT_MEMBER_V<T, Var>;
+
+	/**
 	 * @brief Type trait to check if a type `T` is present in a tuple `Tup`.
 	 * @tparam T The type to check for.
 	 * @tparam Tup The tuple type.

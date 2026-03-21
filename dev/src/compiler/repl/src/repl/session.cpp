@@ -1,14 +1,15 @@
 #include "session.hpp"
 
-#include <driver/operations/generic_operations.hpp>
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
 // @TODO: #1824 Move platform dependent includes to a separate file.
 #include <sys/ioctl.h>
@@ -16,6 +17,7 @@
 #include <unistd.h>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -45,9 +47,10 @@ namespace compiler::repl {
 
 	ReplSession::ReplSession():
 		  m_should_exit(false),
-		  m_inputs_counter(0),
+		  m_line_counter(0),
 		  m_dvm_pid(0),
-		  m_frontend() {
+		  m_frontend(),
+		  m_lowering_context() {
 		initDVM();
 	}
 
@@ -55,13 +58,24 @@ namespace compiler::repl {
 		return !line.empty() && line[0] == '/';
 	}
 
+	frontend::ModuleID ReplSession::getCurrentModuleID() const {
+		CORE_ASSERT(!m_history.empty(), "No current REPL module available");
+		return m_history.back().module_id;
+	}
+
 	ReplResult ReplSession::executeSingleStatement(frontend::ModuleID module_id) {
 		base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
+		base::Optional<pst::AccessLocked<pst::Stmt>>     instr_stmt_opt;
+		base::Optional<pst::AccessLocked<pst::Stmt>>     top_level_stmt_opt;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
 			auto pst       = getFilePST(ctx, main_file);
 			auto root      = pst->getRootElement();
 			expr_stmt_opt  = pst::extractSingleExpression(ctx, root);
+			if (!expr_stmt_opt.has_value())
+				instr_stmt_opt = pst::extractSingleInstruction(ctx, root);
+			if (!expr_stmt_opt.has_value() && !instr_stmt_opt.has_value())
+				top_level_stmt_opt = pst::extractSingleTopLevelStatement(ctx, root);
 		});
 
 		if (expr_stmt_opt.has_value()) {
@@ -69,8 +83,14 @@ namespace compiler::repl {
 			return handleExpression(expr_stmt_opt.value());
 		}
 
+		if (instr_stmt_opt.has_value()) {
+			CORE_DEV_LOG(REPL, "Processing statement as instruction\n");
+			return handleInstruction(instr_stmt_opt.value());
+		}
+
 		CORE_DEV_LOG(REPL, "Processing statement as definition\n");
-		return handleDefinition(module_id);
+		CORE_ASSERT(top_level_stmt_opt.has_value(), "Expected a single top-level statement");
+		return handleDefinition(top_level_stmt_opt.value());
 	}
 
 	bool ReplSession::handleCommand(std::string_view line) {
@@ -103,7 +123,7 @@ namespace compiler::repl {
 	void ReplSession::clearHistory() {
 		m_frontend.clearHistory();
 		m_history.clear();
-		m_inputs_counter = 0;
+		m_line_counter = 0;
 	}
 
 	ReplResult ReplSession::processLine(std::string_view line) {
@@ -127,61 +147,95 @@ namespace compiler::repl {
 		CORE_DEV_LOG(REPL, "Starting handleExpression\n");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			CORE_DEV_LOG(REPL, "Querying QueryReplExpressionWrapper\n");
-			expr_wrapper = ctx.query<QueryReplExpressionWrapper>({ .expr_stmt = expr_stmt,
-			                                                       .counter   = m_inputs_counter });
+			try {
+				CORE_DEV_LOG(REPL, "Querying QueryReplExpressionWrapper\n");
+				expr_wrapper = ctx.query<QueryReplExpressionWrapper>({
+					.expr_stmt = expr_stmt,
+					.counter   = m_line_counter,
+				});
 
-			CORE_DEV_LOG(REPL, "Getting mangled name\n");
-			auto mangled_name = helios::mangler::getSimpleMangledName(
-				ctx, expr_wrapper->declaration->original_symbol
-			);
-			wrapper_func_name = mangled_name.strView();
-			CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
+				CORE_DEV_LOG(REPL, "Getting mangled name\n");
+				auto mangled_name = helios::mangler::getSimpleMangledName(
+					ctx, expr_wrapper->declaration->original_symbol
+				);
+				wrapper_func_name = mangled_name.strView();
+				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
+			} catch (const base::Panic& e) {
+				error_message = "Expression evaluation failed: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
+			} catch (const std::exception& e) {
+				error_message
+					= "Unexpected error during expression evaluation: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
+			}
 		});
+
+		if (had_error) return ReplResult::error(error_message);
 
 		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
 		helios::HOUTUnit hout_unit;
 		hout_unit.functions.emplace_back(&expr_wrapper.value());
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+			// Initialize context on first use or update it for this scope
+			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+			m_lowering_context->setContext(ctx);  // Update context for this scope
 
-			CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
-			// Use the last module ID for expression evaluation context
-			// Expressions are always evaluated in the context of a module, so history should not be
-			// empty
-			CORE_ASSERT(!m_history.empty(), "Expression evaluated with no module context");
-			auto eval_module_id = m_history.back().module_id;
-			auto module_name    = base::StrID(
-                base::strConcat(
-                    "repl_module_",
-                    frontend::ModuleTree::getPathComponentHash(eval_module_id).hash.toStringHex()
-                )
-                    .c_str()
-            );
-			auto load_result = compileAndLoad(ctx, hout_unit, module_name.strView(), m_dvm_pid);
-			if (!load_result.has_value()) {
-				error_message = "DVM load error: " + load_result.error();
+			// Defer: invalidate when exiting this scope, even on early return
+			defer(m_lowering_context->invalidateContext());
+
+			try {
+				CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+
+				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
+				// Use the last module ID for expression evaluation context
+				// Expressions are always evaluated in the context of a module, so history should
+				// not be empty
+				CORE_ASSERT(!m_history.empty(), "Expression evaluated with no module context");
+				auto eval_module_id = m_history.back().module_id;
+				auto module_name    = base::StrID(
+                    base::strConcat(
+                        "repl_module_",
+                        frontend::ModuleTree::getPathComponentHash(eval_module_id).hash.toStringHex()
+                    )
+                        .c_str()
+                );
+				auto load_result = compileAndLoad(
+					ctx, hout_unit, module_name.strView(), m_dvm_pid, m_lowering_context.value()
+				);
+				if (!load_result.has_value()) {
+					error_message = "DVM load error: " + load_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+
+				CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
+
+				auto return_type = hout_unit.functions[0]->declaration->return_type;
+				auto run_result
+					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
+				if (run_result.has_value()) {
+					if (return_type.toString() == "void")
+						std::cout << "Function executed.\n";
+					else
+						std::cout << "=> " << run_result.value() << "\n";
+				} else {
+					error_message = "Runtime error: " + run_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+			} catch (const base::Panic& e) {
+				error_message = "Compilation/execution error: " + std::string(e.what());
 				std::cerr << error_message << "\n";
 				had_error = true;
-				return;
-			}
-
-			CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
-
-			auto return_type = hout_unit.functions[0]->declaration->return_type;
-			auto run_result
-				= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
-			if (run_result.has_value()) {
-				if (return_type.toString() == "void")
-					std::cout << "Function executed.\n";
-				else
-					std::cout << "=> " << run_result.value() << "\n";
-			} else {
-				error_message = "Runtime error: " + run_result.error();
+			} catch (const std::exception& e) {
+				error_message = "Unexpected error: " + std::string(e.what());
 				std::cerr << error_message << "\n";
 				had_error = true;
-				return;
 			}
 		});
 
@@ -190,33 +244,160 @@ namespace compiler::repl {
 		return ReplResult::success(output_message);
 	}
 
-	ReplResult ReplSession::handleDefinition(frontend::ModuleID module_id) {
+	ReplResult ReplSession::handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt) {
 		std::string output_message;
 		std::string error_message;
 		bool        had_error = false;
+
+		base::Optional<helios::HOUTFunction> instr_wrapper;
+		std::string                          wrapper_func_name;
+
+		CORE_DEV_LOG(REPL, "Starting handleInstruction\n");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			try {
+				CORE_DEV_LOG(REPL, "Querying QueryReplInstructionWrapper\n");
+				instr_wrapper = ctx.query<QueryReplInstructionWrapper>({
+					.stmt    = stmt,
+					.counter = m_line_counter,
+				});
+
+				CORE_DEV_LOG(REPL, "Getting mangled name\n");
+				auto mangled_name = helios::mangler::getSimpleMangledName(
+					ctx, instr_wrapper->declaration->original_symbol
+				);
+				wrapper_func_name = mangled_name.strView();
+				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
+			} catch (const base::Panic& e) {
+				error_message = "Instruction evaluation failed: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
+			} catch (const std::exception& e) {
+				error_message
+					= "Unexpected error during instruction evaluation: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
+			}
+		});
+
+		if (had_error) return ReplResult::error(error_message);
+
+		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
+		helios::HOUTUnit hout_unit;
+		hout_unit.functions.emplace_back(&instr_wrapper.value());
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			// Initialize context on first use or update it for this scope
+			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+			m_lowering_context->setContext(ctx);  // Update context for this scope
+
+			// Defer: invalidate when exiting this scope, even on early return
+			defer(m_lowering_context->invalidateContext());
+
+			try {
+				CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+
+				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
+				auto eval_module_id = getCurrentModuleID();
+				auto module_name    = base::StrID(
+                    base::strConcat(
+                        "repl_module_",
+                        frontend::ModuleTree::getPathComponentHash(eval_module_id).hash.toStringHex()
+                    )
+                        .c_str()
+                );
+				auto load_result = compileAndLoad(
+					ctx, hout_unit, module_name.strView(), m_dvm_pid, m_lowering_context.value()
+				);
+				if (!load_result.has_value()) {
+					error_message = "DVM load error: " + load_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+
+				CORE_DEV_LOG(REPL, "Instruction compiled and loaded to DVM\n");
+
+				// Instructions always return unit — run and join without reading an exit value.
+				auto run_result = vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
+				                      .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
+				                      .transform_error(vm::api::errorToString);
+				if (run_result.has_value()) {
+					std::cout << "Instruction executed.\n";
+				} else {
+					error_message = "Runtime error: " + run_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+			} catch (const base::Panic& e) {
+				error_message = "Compilation/execution error: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
+			} catch (const std::exception& e) {
+				error_message = "Unexpected error: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
+			}
+		});
+
+		if (had_error) return ReplResult::error(error_message);
+
+		return ReplResult::success(output_message);
+	}
+
+	ReplResult ReplSession::handleDefinition(const pst::AccessLocked<pst::Stmt>& stmt) {
+		std::string output_message;
+		std::string error_message;
+		bool        had_error = false;
+		auto        module_id = getCurrentModuleID();
 
 		const auto& hout_unit
 			= query::entryPoint<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+			// Initialize context on first use or update it for this scope
+			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+			m_lowering_context->setContext(ctx);  // Update context for this scope
 
-			auto module_name = base::StrID(
-				base::strConcat(
-					"repl_module_",
-					frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
-				)
-					.c_str()
-			);
-			auto load_result = compileAndLoad(ctx, hout_unit, module_name.strView(), m_dvm_pid);
-			if (!load_result.has_value()) {
-				error_message = "DVM load error: " + load_result.error();
+			// Defer: invalidate when exiting this scope, even on early return
+			defer(m_lowering_context->invalidateContext());
+
+			try {
+				// The stmt parameter is used only here, for logging. It's not needed for the actual
+				// query since QueryModuleHOUT already compiles the entire module containing the
+				// statement.
+				auto stmt_kind = stmt.unlock(ctx)->getElementKind();
+				CORE_DEV_LOG(REPL, "Definition statement kind: ", static_cast<u32>(stmt_kind), "\n");
+				CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+
+				auto module_name = base::StrID(
+					base::strConcat(
+						"repl_module_",
+						frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
+					)
+						.c_str()
+				);
+				auto load_result = compileAndLoad(
+					ctx, hout_unit, module_name.strView(), m_dvm_pid, m_lowering_context.value()
+				);
+				if (!load_result.has_value()) {
+					error_message = "DVM load error: " + load_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+
+				CORE_DEV_LOG(REPL, "Definitions loaded.\n");
+			} catch (const base::Panic& e) {
+				error_message = "Definition compilation error: " + std::string(e.what());
 				std::cerr << error_message << "\n";
 				had_error = true;
-				return;
+			} catch (const std::exception& e) {
+				error_message = "Unexpected error: " + std::string(e.what());
+				std::cerr << error_message << "\n";
+				had_error = true;
 			}
-
-			std::cout << "Definitions loaded.\n";
 		});
 
 		if (had_error) return ReplResult::error(error_message);
@@ -291,9 +472,8 @@ namespace compiler::repl {
 					ReplResult last_result = ReplResult::success();
 					for (const auto& stmt_source: statement_sources) {
 						CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
-						auto module_ref
-							= createReplModule(stmt_source, m_history, m_inputs_counter);
-						auto module_id = module_ref->getModuleID();
+						auto module_ref = createReplModule(stmt_source, m_history, m_line_counter);
+						auto module_id  = module_ref->getModuleID();
 
 						CORE_DEV_LOG(REPL, "Creating module\n");
 						CORE_DEV_LOG(
@@ -307,7 +487,7 @@ namespace compiler::repl {
 							"\n"
 						);
 						m_history.emplace_back(stmt_source, module_id);
-						++m_inputs_counter;
+						++m_line_counter;
 						last_result = executeSingleStatement(module_id);
 						if (last_result.status == ReplResult::Status::Error) return last_result;
 					}

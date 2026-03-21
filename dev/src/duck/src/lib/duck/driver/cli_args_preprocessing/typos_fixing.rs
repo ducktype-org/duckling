@@ -1,3 +1,4 @@
+//! Try to (wisely) fix user typos.
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
 use crate::{DuckCtx, QuackResult, qp_bail};
@@ -14,6 +15,9 @@ use crate::duck::driver::{
     subcommands::subcommands,
 };
 
+/// Try to fix user typos.
+///
+/// We're using [levenshtein distance](levenshtein::distance) for checking what is a typo.
 pub fn fix_typos(
     args: ArgMatches,
     ctx: &DuckCtx,
@@ -47,6 +51,13 @@ pub fn fix_typos(
     }
 }
 
+/// Check, if command `name` is a valid duck subcommand.
+///
+/// Valid subcommands are:
+/// - builtin subcommands,
+/// - builtin aliases,
+/// - user-defined aliases,
+/// - external subcommands.
 fn is_valid_subcmd(
     ctx: &DuckCtx,
     name: &str,
@@ -58,6 +69,9 @@ fn is_valid_subcmd(
         || external_cmds.contains_key(name))
 }
 
+/// Get all known and valid subcommands.
+///
+/// This is a list containing all values for which [`is_valid_subcmd`] returns true.
 fn possible_targets(
     ctx: &DuckCtx,
     external_cmds: &HashMap<String, PathBuf>,
@@ -74,6 +88,8 @@ fn possible_targets(
     Ok(targets)
 }
 
+/// Get all closest targets to the `bad_cmd`, which are no further than `max_fix_dist` (in terms of
+/// the Levenshtein distance).
 fn find_closest_targets<'a>(
     bad_cmd: &str,
     targets: &'a [String],
@@ -89,6 +105,10 @@ fn find_closest_targets<'a>(
         .collect()
 }
 
+/// Update closest targets given the actual stack, target, and `max_fix_dist`.
+///
+/// This function will __only__ keep those values, which are (currently) closest to the target,
+/// and all have exactly the same distance.
 fn update_closest_targets<'a>(
     mut acc: Vec<(&'a str, u32)>,
     target: &'a str,
@@ -117,20 +137,25 @@ fn update_closest_targets<'a>(
     acc
 }
 
+/// Helper for creating a common message if we didn't fix a typo.
 fn make_levenshtein_nofix_msg(bad_cmd: &str, closest_targets: &[&str]) -> String {
     let suggestions = closest_targets
         .iter()
-        .map(|target| format!("  - `{target}`"))
+        .map(|target| format!("- `{target}`"))
         .join("\n");
     format!("No such command as `{bad_cmd}`. Did you mean:\n{suggestions}?")
 }
 
+/// We'd guessed that `bad_cmd` can be replaced by `new_subcmd`.
+///
+/// Replace it and re-parse the arguments.
 fn fix(bad_cmd: &str, new_subcmd: &str, subcmd_args: &ArgMatches) -> QuackResult<ArgMatches> {
     debug!("changing `{bad_cmd}` to `{new_subcmd}`");
     let new_cli_args = make_cli_args(new_subcmd, subcmd_args);
     parse_fixed_args(new_cli_args)
 }
 
+/// Create new CLI arguments for a fixed subcommand.
 fn make_cli_args(fixed_cmd: &str, subcmd_args: &ArgMatches) -> Vec<OsString> {
     let mut result = vec![OsString::from(fixed_cmd)];
     result.extend(
@@ -142,6 +167,7 @@ fn make_cli_args(fixed_cmd: &str, subcmd_args: &ArgMatches) -> Vec<OsString> {
     result
 }
 
+/// Re-parse fixed arguments.
 fn parse_fixed_args(new_cli_args: Vec<OsString>) -> QuackResult<ArgMatches> {
     Ok(cli()
         .no_binary_name(true)
@@ -175,7 +201,7 @@ mod tests {
         );
         assert_eq!(
             result.to_string(),
-            "No such command as `inaa`. Did you mean:\n  - `info`\n  - `init`?"
+            "No such command as `inaa`. Did you mean:\n- `info`\n- `init`?"
         );
     }
 
@@ -232,7 +258,7 @@ mod tests {
         );
         assert_eq!(
             result.to_string(),
-            "No such command as `a`. Did you mean:\n  - `b`\n  - `r`?"
+            "No such command as `a`. Did you mean:\n- `b`\n- `r`?"
         );
     }
 }
