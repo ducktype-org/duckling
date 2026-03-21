@@ -4,6 +4,7 @@
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
 #include "elements/lang_state_unmethods.hpp"
+#include "source_position_locked.hpp"
 #include "pst_config.hpp"
 #include "pst_id.hpp"
 
@@ -77,7 +78,7 @@ namespace pst {
 		 * @brief Position covering the whole element.
 		 */
 		[[nodiscard]]
-		const dia::SourcePosition& getSourcePosition() const;
+		SourcePositionLocked getSourcePosition() const;
 
 		/**
 		 * @brief The stable position of an element.

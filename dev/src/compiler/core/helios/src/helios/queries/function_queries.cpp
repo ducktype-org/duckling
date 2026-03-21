@@ -168,7 +168,7 @@ namespace compiler::helios {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
-					fun->getSourcePosition()
+					fun->getSourcePosition().unlock(ctx)
 				));
 				return query::Failed();
 			}
@@ -207,7 +207,7 @@ namespace compiler::helios {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOrigin({ param_list.unlock(ctx),
+					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
 					                                     ret.value().unlock(ctx) });
 				}
 				// Deduce return type if not provided.
@@ -527,7 +527,7 @@ namespace compiler::helios {
 				));
 				return block;
 			} else {
-				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition()));
+				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition().unlock(ctx)));
 				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
 			}
 		}

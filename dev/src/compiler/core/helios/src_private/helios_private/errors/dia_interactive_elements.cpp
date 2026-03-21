@@ -89,13 +89,13 @@ namespace compiler::helios {
 				                            .dynamicCast<pst::Alias>()
 				                            .value();
 					  auto underlying_chain
-						  = getStr(alias_stmt->getPointed().unlock(ctx)->getSourcePosition());
+						  = getStr(alias_stmt->getPointed().unlock(ctx)->getSourcePosition().unlock(ctx));
 
 					  auto id = MessageBase::getUniqueID();
 					  linked_messages.put(
 						  id,
 						  makeBox<IsAliasCodeNote>(
-							  alias_stmt->getSourcePosition(), alias_name, underlying_chain
+							  alias_stmt->getSourcePosition().unlock(ctx), alias_name, underlying_chain
 						  )
 					  );
 
@@ -114,7 +114,7 @@ namespace compiler::helios {
 		  symbol_type(symbol_type),
 		  pst_expr(std::move(pst_expr)) {
 		if (pst_expr.has_value()) {
-			this->displayed_name = getStr(pst_expr.value()->getSourcePosition());
+			this->displayed_name = getStr(pst_expr.value()->getSourcePosition().unlock(ctx));
 			checkForAliases(ctx, this->linked_messages, pst_expr.value());
 		} else
 			this->displayed_name = symbol_type.toString();
@@ -163,21 +163,21 @@ namespace compiler::helios {
 		case pst::ElementKind::Fun: {
 			auto fun = function_like.dynamicCast<pst::Fun>().value();
 			return dia::SourcePosition::merge(
-				fun->getNameIdentifier().position, fun->getParams().unlock(ctx)->getSourcePosition()
+				fun->getNameIdentifier().position, fun->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
 			);
 		}
 		case pst::ElementKind::FunDecl: {
 			auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
 			return dia::SourcePosition::merge(
 				fun_decl->getNameIdentifier().position,
-				fun_decl->getParams().unlock(ctx)->getSourcePosition()
+				fun_decl->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
 			);
 		}
 		case pst::ElementKind::ClassMethod: {
 			auto class_method = function_like.dynamicCast<pst::Method>().value();
 			return dia::SourcePosition::merge(
 				class_method->getNameIdentifier().position,
-				class_method->getParams().unlock(ctx)->getSourcePosition()
+				class_method->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
 			);
 		}
 		default:

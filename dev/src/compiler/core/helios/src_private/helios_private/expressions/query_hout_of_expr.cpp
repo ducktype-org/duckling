@@ -162,13 +162,13 @@ namespace compiler::helios::code {
 								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
 						} else {
 							ctx.logInt(
-								makeBox<InvalidCharacterLiteralError>(stmt->getSourcePosition())
+								makeBox<InvalidCharacterLiteralError>(stmt->getSourcePosition().unlock(ctx))
 							);
 						}
 					}
 					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getSourcePosition(), error.value
+							stmt->getSourcePosition().unlock(ctx), error.value
 						));
 					}
 				}
@@ -185,7 +185,7 @@ namespace compiler::helios::code {
 					}
 					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getSourcePosition(), error.value
+							stmt->getSourcePosition().unlock(ctx), error.value
 						));
 					}
 				}
@@ -252,7 +252,7 @@ namespace compiler::helios::code {
 				    && isNumericOperator(op)) {
 					auto numeric_builtin_opt
 						= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
-					auto new_origin = elementOrigin(lhs->origin, rhs->origin);
+					auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
 						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
@@ -451,7 +451,7 @@ namespace compiler::helios::code {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-						stmt->getSourcePosition(), ctx, base::StrID("self")
+						stmt->getSourcePosition().unlock(ctx), ctx, base::StrID("self")
 					);
 
 					node = makeBox<IdentifierExpr>(
@@ -461,7 +461,7 @@ namespace compiler::helios::code {
 				}
 				default:
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Keyword not yet handled.", stmt->getSourcePosition()
+						"Keyword not yet handled.", stmt->getSourcePosition().unlock(ctx)
 					));
 					return;  // failed
 				}
@@ -485,7 +485,7 @@ namespace compiler::helios::code {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Suffix operators are not implemented yet in HOUT, since they don't exist "
 					"yet.",
-					stmt->getSourcePosition()
+					stmt->getSourcePosition().unlock(ctx)
 				));
 				return;  // failed
 			}
@@ -513,7 +513,7 @@ namespace compiler::helios::code {
 						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
 							"supported yet.",
-							stmt->getSourcePosition()
+							stmt->getSourcePosition().unlock(ctx)
 						));
 						return;  // failed
 					}
@@ -524,7 +524,7 @@ namespace compiler::helios::code {
 					if (primary_category == tsh::PrimaryCategory::Literal
 					    || primary_category == tsh::PrimaryCategory::Temporary) {
 						ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-							"Tried to reference a temporary", stmt->getSourcePosition()
+							"Tried to reference a temporary", stmt->getSourcePosition().unlock(ctx)
 						));
 						return;
 					}
@@ -538,7 +538,7 @@ namespace compiler::helios::code {
 					return;
 				} else {
 					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
-						stmt->getSourcePosition(),
+						stmt->getSourcePosition().unlock(ctx),
 						stmt->getOperator().str(),
 						makeBox<InteractiveType>(ctx, inner_type)
 					));
@@ -664,7 +664,7 @@ namespace compiler::helios {
 					(*log_error)(ctx);
 				} else {
 					ctx.logInt(makeBox<IncompatibleTypesError>(
-						pst_expr.element.unlock(ctx)->getSourcePosition(),
+						pst_expr.element.unlock(ctx)->getSourcePosition().unlock(ctx),
 						makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
 						makeBox<InteractiveType>(ctx, expected_type)
 					));

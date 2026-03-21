@@ -208,68 +208,71 @@ private:
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
 
-		// withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
+		withContextDo([&](query::Context& ctx) {
+			auto print_stable_position
+				= [&](const base::Optional<pst::StablePosition>& stable, std::string_view label) {
+					  if (!stable.has_value()) {
+						  std::cerr << "[LIR metadata] " << label << ": <none>\n";
+						  return;
+					  }
 
-		auto print_stable_position
-			= [](const base::Optional<pst::StablePosition>& stable, std::string_view label) {
-				  if (!stable.has_value()) {
-					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
-					  return;
-				  }
+					  auto position                   = stable.value().getActiveSourcePosition(ctx);
+					  auto [start_line, start_column] = position.getStartLineColumn();
+					  auto [end_line, end_column]     = position.getEndLineColumn();
+					  auto source_start               = position.getStart();
+					  auto source_end                 = position.getEnd();
 
-				  auto position                   = stable.value().getActiveSourcePosition();
-				  auto [start_line, start_column] = position.getStartLineColumn();
-				  auto [end_line, end_column]     = position.getEndLineColumn();
-				  auto source_start               = position.getStart();
-				  auto source_end                 = position.getEnd();
+					  std::cerr << "[LIR metadata] " << label << ": " << start_line << ":"
+								<< start_column << " -> " << end_line << ":" << end_column << " ["
+								<< source_start << ", " << source_end << "]\n";
+				  };
 
-				  std::cerr << "[LIR metadata] " << label << ": " << start_line << ":"
-							<< start_column << " -> " << end_line << ":" << end_column << " ["
-							<< source_start << ", " << source_end << "]\n";
-			  };
+			assertTrue(
+				foo_lir->metadata.position.has_value(),
+				"Expected function metadata position in LIR foo"
+			);
+			print_stable_position(foo_lir->metadata.position, "foo.function");
+			ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));
 
-		assertTrue(
-			foo_lir->metadata.position.has_value(), "Expected function metadata position in LIR foo"
-		);
-		print_stable_position(foo_lir->metadata.position, "foo.function");
-		ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));
+			assertTrue(!foo_lir->block_order.empty(), "Expected at least one LIR block");
+			const auto& block0 = *foo_lir->block_order[0];
+			assertTrue(
+				block0.instructions.size() >= 4, "Expected at least 4 instructions in block 0"
+			);
 
-		assertTrue(!foo_lir->block_order.empty(), "Expected at least one LIR block");
-		const auto& block0 = *foo_lir->block_order[0];
-		assertTrue(block0.instructions.size() >= 4, "Expected at least 4 instructions in block 0");
+			const auto& first_instr  = block0.instructions[0];
+			const auto& second_instr = block0.instructions[1];
+			const auto& fourth_instr = block0.instructions[3];
 
-		const auto& first_instr  = block0.instructions[0];
-		const auto& second_instr = block0.instructions[1];
-		const auto& fourth_instr = block0.instructions[3];
+			print_stable_position(first_instr.metadata.position, "foo.block_0.instr_0");
+			print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
+			print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
 
-		print_stable_position(first_instr.metadata.position, "foo.block_0.instr_0");
-		print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
-		print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
+			auto first_pos  = first_instr.metadata.position.value().getActiveSourcePosition(ctx);
+			auto second_pos = second_instr.metadata.position.value().getActiveSourcePosition(ctx);
+			auto fourth_pos = fourth_instr.metadata.position.value().getActiveSourcePosition(ctx);
 
-		auto first_pos  = first_instr.metadata.position.value().getActiveSourcePosition();
-		auto second_pos = second_instr.metadata.position.value().getActiveSourcePosition();
-		auto fourth_pos = fourth_instr.metadata.position.value().getActiveSourcePosition();
+			auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
+			auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
+			ASSERT_EQUAL(first_start_line, 5);
+			ASSERT_EQUAL(first_start_col, 5);
+			ASSERT_EQUAL(first_end_line, 5);
+			ASSERT_EQUAL(first_end_col, 21);
 
-		auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
-		auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
-		ASSERT_EQUAL(first_start_line, 5);
-		ASSERT_EQUAL(first_start_col, 5);
-		ASSERT_EQUAL(first_end_line, 5);
-		ASSERT_EQUAL(first_end_col, 21);
+			auto [second_start_line, second_start_col] = second_pos.getStartLineColumn();
+			auto [second_end_line, second_end_col]     = second_pos.getEndLineColumn();
+			ASSERT_EQUAL(second_start_line, 7);
+			ASSERT_EQUAL(second_start_col, 18);
+			ASSERT_EQUAL(second_end_line, 7);
+			ASSERT_EQUAL(second_end_col, 24);
 
-		auto [second_start_line, second_start_col] = second_pos.getStartLineColumn();
-		auto [second_end_line, second_end_col]     = second_pos.getEndLineColumn();
-		ASSERT_EQUAL(second_start_line, 7);
-		ASSERT_EQUAL(second_start_col, 18);
-		ASSERT_EQUAL(second_end_line, 7);
-		ASSERT_EQUAL(second_end_col, 24);
-
-		auto [fourth_start_line, fourth_start_col] = fourth_pos.getStartLineColumn();
-		auto [fourth_end_line, fourth_end_col]     = fourth_pos.getEndLineColumn();
-		ASSERT_EQUAL(fourth_start_line, 7);
-		ASSERT_EQUAL(fourth_start_col, 5);
-		ASSERT_EQUAL(fourth_end_line, 7);
-		ASSERT_EQUAL(fourth_end_col, 30);
+			auto [fourth_start_line, fourth_start_col] = fourth_pos.getStartLineColumn();
+			auto [fourth_end_line, fourth_end_col]     = fourth_pos.getEndLineColumn();
+			ASSERT_EQUAL(fourth_start_line, 7);
+			ASSERT_EQUAL(fourth_start_col, 5);
+			ASSERT_EQUAL(fourth_end_line, 7);
+			ASSERT_EQUAL(fourth_end_col, 30);
+		});
 	}
 
 	void functionParametersTest() {

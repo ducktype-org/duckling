@@ -22,7 +22,7 @@ namespace compiler::repl {
 		std::vector<std::string> sources;
 		for (auto stmt_locked: root->getStatements()) {
 			auto stmt = stmt_locked.unlock(ctx);
-			auto pos  = stmt->getSourcePosition();
+			auto pos  = stmt->getSourcePosition().unlock(ctx);
 			sources.emplace_back(
 				pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString()
 			);

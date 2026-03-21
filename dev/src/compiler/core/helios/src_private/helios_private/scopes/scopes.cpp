@@ -675,7 +675,7 @@ namespace compiler::helios {
 			auto value = value_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 			if (value.has_value()) {
 				return pst::PST<pst::Stmt>::fromExpand(
-					expand->getSourcePosition(),
+					expand->getSourcePosition().unlock(ctx),
 					value.value()->getValue().str(),
 					makeBox<pst::LangParserContext>(expand->getContext())
 				);

@@ -122,7 +122,7 @@ namespace compiler::helios::code {
 		auto type_specifier_strid
 			= literal_expr->getValue().type_specifier.copyValueOr(base::StrID(""));
 		auto type_specifier = lang_def::strAsNumericLiteralTypeSpecifier(type_specifier_strid);
-		auto position       = literal_expr->getSourcePosition();
+		auto position       = literal_expr->getSourcePosition().unlock(ctx);
 
 		int base = 10;
 		if (value.starts_with("0b") || value.starts_with("0B")) {

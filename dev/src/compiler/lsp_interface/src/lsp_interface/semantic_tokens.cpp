@@ -273,7 +273,7 @@ namespace lsp {
 			hout_expr->acceptVisitor(visitor);
 			result.default_identifier_type.emplace(StandardTokenType::Namespace);
 
-			if_opt_some(hout_expr->origin.getSourcePosition(), whole_expr_pos) {
+			if_opt_some(hout_expr->origin.getSourcePosition(ctx), whole_expr_pos) {
 				// Filter the results.pre-calculated to only keep the tokens that are inside the
 				// expression position. This is needed because things like "default parameter value"
 				// are in the HOUT in the call, but their source position is in the function declaration.
@@ -304,7 +304,7 @@ namespace lsp {
 		}
 
 		void visitIdentifierExpr(const code::IdentifierExpr& elem) override {
-			auto maybe_position = elem.origin.getSourcePosition();
+			auto maybe_position = elem.origin.getSourcePosition(ctx);
 			if_opt_none(maybe_position) return;
 			auto position = maybe_position.value();
 
@@ -391,7 +391,7 @@ namespace lsp {
 		void visitAccessExpr(const code::AccessExpr& elem) override {
 			elem.base->acceptVisitor(*this);
 
-			auto maybe_position = elem.origin.getSourcePosition();
+			auto maybe_position = elem.origin.getSourcePosition(ctx);
 			if_opt_none(maybe_position) return;
 			out(maybe_position.value(), StandardTokenType::Property);
 		}
