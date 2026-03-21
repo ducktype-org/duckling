@@ -202,7 +202,7 @@ namespace vm::jit {
 		}
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
-			ControlFlowAnalyzer cf_analyzer(function_to_compile);
+			cf::ControlFlowAnalyzer cf_analyzer(function_to_compile);
 			// Get basic block boundaries
 			block_beginnings = cf_analyzer.collectBasicBlockBeginnings();
 

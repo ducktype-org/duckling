@@ -6,7 +6,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
-namespace vm::jit {
+namespace vm::jit::cf {
     enum class CfOccurrenceKind {
         JumpDestination,
         Jump,
@@ -56,4 +56,4 @@ namespace vm::jit {
             return getBlockBeginnings();
         }
     };
-} // namespace vm::jit
+} // namespace vm::jit::cf

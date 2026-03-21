@@ -9,7 +9,7 @@
 
 using namespace vm::code::instructions;
 
-namespace vm::jit {
+namespace vm::jit::cf {
     void ControlFlowAnalyzer::calcControlFlowOccurrences() { 
         this->cf_occurrences.clear();
 
