@@ -202,8 +202,9 @@ namespace vm::jit {
 		}
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
+			CfAnalyzer cf_analyzer(function_to_compile);
 			// Get basic block boundaries
-			block_beginnings = collectBasicBlockBeginnings(function_to_compile);
+			block_beginnings = cf_analyzer.collectBasicBlockBeginnings();
 
 			// Create LLVM basic blocks for each VM block
 			for (usize block_idx = 0; block_idx < block_beginnings.size(); ++block_idx) {
