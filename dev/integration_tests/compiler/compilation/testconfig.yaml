@@ -57,6 +57,7 @@ Tests:
 
 SubDirs:
   - expressions
+  - comp_time
   - builtins
   - samples
   - statements
