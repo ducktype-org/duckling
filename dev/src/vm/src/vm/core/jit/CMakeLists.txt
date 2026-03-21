@@ -1,12 +1,8 @@
-add_files(
-	jit_compiler.cpp
-	block_detection.cpp
-)
+add_subdirectory(llvm/)
 
+add_files(
+    block_detection.cpp
+)
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
-
-add_files(
-	opcodes_bitcode_source.cpp
-)
-
-set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)
+set(vm_common_sources ${vm_common_sources} PARENT_SCOPE)
+set(jit_dependency ${jit_dependency} PARENT_SCOPE)

@@ -7,7 +7,7 @@
 
 	#include "opcodes_bitcode_source.hpp"
 
-	#include "jit_init.hpp"
+	#include "llvm_init.hpp"
 
 	#include <llvm_helpers/llvm_helpers.hpp>
 

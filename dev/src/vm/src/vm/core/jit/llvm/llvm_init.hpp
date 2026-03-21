@@ -1,5 +1,5 @@
 /**
- * @file jit_init.hpp
+ * @file llvm_init.hpp
  * @brief The JIT compiler API for initializing. (?)
  */
 #pragma once
