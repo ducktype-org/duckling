@@ -38,7 +38,7 @@ namespace vm::loader::compiler {
 
 		base::HashMap<base::StrID, std::map<Lifetime, usize>> name_lifetime_bind;
 		base::HashMap<usize, DatabaseEntry>                   database;
-		usize                                                 max_size = 0;
+		usize                                                 max_size    = 0;
 		usize                                                 stack_state = 0;
 
 		LocalStackDatabase(

@@ -106,7 +106,7 @@ namespace vm::loader::compiler {
 		auto it = ctx.stack_changes.begin();
 		CORE_ASSERT(it != ctx.stack_changes.end(), "there should be change initializing stack");
 
-		usize state = 0;
+		usize state     = 0;
 		auto& func_body = ctx.function.body;
 
 		for (usize i = 0; i < func_body.size();) {
