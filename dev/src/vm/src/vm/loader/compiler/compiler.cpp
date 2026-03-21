@@ -114,10 +114,12 @@ namespace vm::loader::compiler {
 			ctx.locals_map.changeState(state);
 
 			it++;
-			usize next_change = it->first;
+			usize next_change;
 
 			if (it == ctx.stack_changes.end()) [[unlikely]]
 				next_change = func_body.size();
+			else
+				next_change = it->first;
 
 			for (; i < next_change; i++) builder.add(func_body[i]);
 		}
@@ -198,12 +200,15 @@ namespace vm::loader::compiler {
 					stack_state[index] = stack_top;
 					index++;
 				}
-				instr_case(Op_deinit, instr) {
+				instr_case(Op_deinit, instr) { 
 					stack_state[index] = stack_top;
 					pop();
 					index++;
 				}
-				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
+				instr_case(Op_jmp_label, instr) {
+					stack_state[index] = stack_top;
+					index              = label_positions[instr.label.label_name];
+				}
 				instr_case(Op_jmpIf_label, instr) {
 					stack_state[index] = stack_top;
 					index++;
@@ -214,7 +219,7 @@ namespace vm::loader::compiler {
 					index++;
 					dfs_stack.emplace_back(label_positions[instr.label.label_name], stack_top);
 				}
-				instr_case(Op_ret, instr) {
+				instr_case_novalue(Op_ret, Op_ret_tailcall_func) {
 					stack_state[index]         = stack_top;
 					std::tie(index, stack_top) = dfs_stack.back();
 					result.changeState(stack_top);
@@ -254,12 +259,6 @@ namespace vm::loader::compiler {
 					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
 						pop();
 					index++;
-				}
-				instr_case(Op_ret_tailcall_func, instr) {
-					stack_state[index]         = stack_top;
-					std::tie(index, stack_top) = dfs_stack.back();
-					result.changeState(stack_top);
-					dfs_stack.pop_back();
 				}
 				instr_default {
 					stack_state[index] = stack_top;

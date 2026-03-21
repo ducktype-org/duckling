@@ -322,9 +322,14 @@ namespace vm::code {
 	case (type::OPCODE):             \
 		if ([[maybe_unused]] auto&& name = internal_value.get<type>(); true) POP_DIAGNOSTIC
 
-#define instr_case_novalue(type) \
-	break;                       \
-	case (type::OPCODE):         \
+#define extra_instr_case_novalue(type) \
+	[[fallthrough]];                   \
+	case (type::OPCODE):
+
+#define instr_case_novalue(type, ...)                   \
+	break;                                              \
+	case (type::OPCODE):                                \
+		FOR_EACH(extra_instr_case_novalue, __VA_ARGS__) \
 		if (true)
 
 #define instr_default \
