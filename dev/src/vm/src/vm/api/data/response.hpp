@@ -48,11 +48,9 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
-			// @todo: #2264 should express position in CodeCollection instead of LowVMProgram
-			u64         function_id;
-			u64         instr_number;
-			base::StrID function_name;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id, function_name);
+			u64 function_id;
+			u64 instr_number;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
 		};
 
 		struct NumberOfCurrentStackFrames {
