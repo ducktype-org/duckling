@@ -363,4 +363,98 @@ namespace compiler::tsh {
 			return field.getType(ctx).isTriviallyCopyable(ctx);
 		});
 	}
+
+	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType target, query::Context&)
+		const {
+		// Static arrays are implicitly coercible to dynamic arrays storing the same type.
+		if (target.getKind() == Kind::DynamicArray) {
+			auto dynamic_array_type = DynamicArrayAbstractType(target);
+			return dynamic_array_type.getElementType() == element_type;
+		}
+
+		return false;
+	}
+
+	bool StaticArrayAbstractTypeImpl::hasNoOpDestructor() const {
+		// Static arrays have trivial destructors if the inner type has a noOpDestructor or they
+		// are zero sized.
+		return size == 0 || element_type.getType().hasNoOpDestructor();
+	}
+
+	bool StaticArrayAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
+		return size == 0 || element_type.isDefaultConstructible(ctx);
+	}
+
+	bool StaticArrayAbstractTypeImpl::isTriviallyZeroInitializable(query::Context& ctx) const {
+		return size == 0 || element_type.isTriviallyZeroInitializable(ctx);
+	}
+
+	bool StaticArrayAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		return size == 0 || element_type.isCopyable(ctx);
+	}
+
+	bool StaticArrayAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		return size == 0 || element_type.isTriviallyCopyable(ctx);
+	}
+
+	bool StaticArrayAbstractTypeImpl::carriesInformation(query::Context& ctx) const {
+		// Static Arrays don't carry information if they don't contain any elements or contain
+		// types that don't carry information.
+		return element_type.getType().carriesInformation(ctx) && size > 0;
+	}
+
+	bool TupleAbstractTypeImpl::hasNoOpDestructor() const {
+		return std::ranges::all_of(components, [&](const auto& component) {
+			return component.hasNoOpDestructor();
+		});
+	}
+
+	bool TupleAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
+		return std::ranges::all_of(components, [&](const auto& component) {
+			return component.isDefaultConstructible(ctx);
+		});
+	}
+
+	bool TupleAbstractTypeImpl::isTriviallyZeroInitializable(query::Context& ctx) const {
+		return std::ranges::all_of(components, [&](const auto& component) {
+			return component.isTriviallyZeroInitializable(ctx);
+		});
+	}
+
+	bool TupleAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		return std::ranges::all_of(components, [&](auto& component) {
+			return component.isCopyable(ctx);
+		});
+	}
+
+	bool TupleAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		return std::ranges::all_of(components, [&](auto& component) {
+			return component.isTriviallyCopyable(ctx);
+		});
+	}
+
+	bool VariantAbstractTypeImpl::isDefaultConstructible(query::Context&) const {
+		// Variant must be explicitly initialized with one of it's alternatives.
+		return false;
+	}
+
+	bool VariantAbstractTypeImpl::isTriviallyZeroInitializable(query::Context&) const {
+		return false;
+	}
+
+	bool VariantAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		// Variant is copyable if all of it's underlying types are copyable.
+		return std::ranges::all_of(underlying_types, [&](const auto& type) {
+			return type.isCopyable(ctx);
+		});
+	}
+
+	bool VariantAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		// Variant is trivially copyable if all of it's underlying types are trivially copyable.
+		return std::ranges::all_of(underlying_types, [&](const auto& type) {
+			return type.isTriviallyCopyable(ctx);
+		});
+	}
+
+
 }
