@@ -118,6 +118,8 @@ namespace vm::jit::cf {
         std::vector<BasicBlock> blocks;
 
       public:
+        ControlFlowGraph() = default;
+
         ControlFlowGraph(const low::LowFuncData& function, std::vector<usize> block_beginnings) {
             blocks.reserve(block_beginnings.size());
 

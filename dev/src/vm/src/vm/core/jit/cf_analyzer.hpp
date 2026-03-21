@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vector>
 #include <functional>
+#include <vector>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/jit/cf_graph.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit::cf {
@@ -25,8 +26,11 @@ namespace vm::jit::cf {
     class ControlFlowAnalyzer {
       private:
         std::reference_wrapper<const low::LowFuncData> function;
-        std::vector<CfOccurrence>                      cf_occurrences;
-        std::vector<usize>                             block_beginnings;
+
+        // cached results
+        std::vector<CfOccurrence> cf_occurrences;
+        std::vector<usize>        block_beginnings;
+        ControlFlowGraph          cfg;
 
         void calcControlFlowOccurrences();
         void calcBasicBlockBeginnings();
@@ -45,15 +49,25 @@ namespace vm::jit::cf {
             return block_beginnings;
         }
 
+        const ControlFlowGraph& getCFG() {
+            if (this->cfg.size() == 0) {
+                this->cfg = ControlFlowGraph(this->function.get(), getBlockBeginnings());
+            }
+            return cfg;
+        }
+
       public:
         ControlFlowAnalyzer(const low::LowFuncData& function) : function(std::cref(function)) {};
         ControlFlowAnalyzer() = delete;
 
-        std::vector<CfOccurrence> collectControlFlowOccurrences() {
+        std::vector<CfOccurrence> controlFlowOccurrences() {
             return getCfOccurrences();
         }
-        std::vector<usize> collectBasicBlockBeginnings() {
+        std::vector<usize> basicBlockBeginnings() {
             return getBlockBeginnings();
+        }
+        ControlFlowGraph controlFlowGraph() {
+            return getCFG();
         }
     };
 } // namespace vm::jit::cf

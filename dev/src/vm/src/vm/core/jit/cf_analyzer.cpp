@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include <vm/bytecode/instructions.hpp>
-
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 
