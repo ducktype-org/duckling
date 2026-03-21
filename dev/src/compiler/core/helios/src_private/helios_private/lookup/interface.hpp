@@ -1,8 +1,8 @@
 #pragma once
 
-#include "frontend/pst_parser/stable_position.hpp"
 #include "lookup_result.hpp"
 
+#include <frontend/pst_parser/stable_position.hpp>
 #include <helios/scope_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 

@@ -1,11 +1,10 @@
 
 #include "lookup_chain.hpp"
 
-#include "helios_private/symbols/symbols.hpp"
-
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
-#include "base/extend_cpp/variant_match.hpp"
+#include <base/extend_cpp/variant_match.hpp>
 
 namespace compiler::helios {
 

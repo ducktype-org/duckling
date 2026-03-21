@@ -1,10 +1,10 @@
 #include "numeric_literals.hpp"
 
 #include "errors.hpp"
-#include "frontend/pst_parser/stable_position.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <frontend/pst_parser/stable_position.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
