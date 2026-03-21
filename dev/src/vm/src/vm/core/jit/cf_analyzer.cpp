@@ -9,8 +9,8 @@
 using namespace vm::code::instructions;
 
 namespace vm::jit::cf {
-    void ControlFlowAnalyzer::calcControlFlowOccurrences() { 
-        this->cf_occurrences.clear();
+    std::vector<CfOccurrence> ControlFlowAnalyzer::controlFlowOccurrences() {
+        std::vector<CfOccurrence> cf_occurrences;
 
         const low::LowFuncData& function = this->function.get();
         for (usize index = 0; index < function.bc.size(); ++index) {
@@ -19,23 +19,23 @@ namespace vm::jit::cf {
 
             switch(opcode) {
                 case low::MicroOpcode::jmp_label: {
-                    this->cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::Jump});
+                    cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::Jump});
                     if (index + arg0 < function.bc.size()) {
-                        this->cf_occurrences.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
+                        cf_occurrences.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
                     }
                     break;
                 }
                 case low::MicroOpcode::jmpIf_label:
                 case low::MicroOpcode::jmpIfNot_label: {
-                    this->cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
+                    cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
                     if (index + arg0 < function.bc.size()) {
-                        this->cf_occurrences.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
+                        cf_occurrences.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
                     }
                     break;
                 }
                 case low::MicroOpcode::ret:
                 case low::MicroOpcode::ret_tailcall_func: {
-                    this->cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::Ret});
+                    cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::Ret});
                     break;
                 }
                 default: {
@@ -45,29 +45,31 @@ namespace vm::jit::cf {
         }
 
         // Remove duplicates (occur if there are many jumps to the same destination)
-        std::sort(this->cf_occurrences.begin(), this->cf_occurrences.end());
-        this->cf_occurrences.erase(
-            std::unique(this->cf_occurrences.begin(), this->cf_occurrences.end()),
-            this->cf_occurrences.end()
+        std::sort(cf_occurrences.begin(), cf_occurrences.end());
+        cf_occurrences.erase(
+            std::unique(cf_occurrences.begin(), cf_occurrences.end()),
+            cf_occurrences.end()
         );
+        return cf_occurrences;
     }
 
-    void ControlFlowAnalyzer::calcBasicBlockBeginnings() {
-        std::vector<CfOccurrence> cf_occurrences = getCfOccurrences();
-        this->block_beginnings = {0}; // First block always starts at position 0
+    std::vector<usize> ControlFlowAnalyzer::basicBlockBeginnings() {
+        std::vector<CfOccurrence> cf_occurrences = controlFlowOccurrences();
+        std::vector<usize> block_beginnings = {0}; // First block always starts at position 0
 
         for (const auto& occurrence : cf_occurrences) {
             if (occurrence.kind == CfOccurrenceKind::JumpDestination) {
                 // Jump destinations signify the beginning of a block
-                if (this->block_beginnings.back() != occurrence.position) {
+                if (block_beginnings.back() != occurrence.position) {
                     // Avoid adding duplicate block beginning if previous block ends in jump
                     // or it is at the start of the function
-                    this->block_beginnings.push_back(occurrence.position);
+                    block_beginnings.push_back(occurrence.position);
                 }
             } else {
                 // Other instruction types signify the end of a block
-                this->block_beginnings.push_back(occurrence.position + 1);
+                block_beginnings.push_back(occurrence.position + 1);
             }
         }
+        return block_beginnings;
     }
 } // namespace vm::jit

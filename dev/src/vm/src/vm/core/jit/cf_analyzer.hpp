@@ -27,47 +27,15 @@ namespace vm::jit::cf {
       private:
         std::reference_wrapper<const low::LowFuncData> function;
 
-        // cached results
-        std::vector<CfOccurrence> cf_occurrences;
-        std::vector<usize>        block_beginnings;
-        ControlFlowGraph          cfg;
-
-        void calcControlFlowOccurrences();
-        void calcBasicBlockBeginnings();
-
-        const std::vector<CfOccurrence>& getCfOccurrences() {
-            if (this->cf_occurrences.empty()) {
-                this->calcControlFlowOccurrences();
-            }
-            return cf_occurrences;
-        }
-
-        const std::vector<usize>& getBlockBeginnings() {
-            if (this->block_beginnings.empty()) {
-                this->calcBasicBlockBeginnings();
-            }
-            return block_beginnings;
-        }
-
-        const ControlFlowGraph& getCFG() {
-            if (this->cfg.size() == 0) {
-                this->cfg = ControlFlowGraph(this->function.get(), getBlockBeginnings());
-            }
-            return cfg;
-        }
-
       public:
         ControlFlowAnalyzer(const low::LowFuncData& function) : function(std::cref(function)) {};
         ControlFlowAnalyzer() = delete;
 
-        std::vector<CfOccurrence> controlFlowOccurrences() {
-            return getCfOccurrences();
-        }
-        std::vector<usize> basicBlockBeginnings() {
-            return getBlockBeginnings();
-        }
+        std::vector<CfOccurrence> controlFlowOccurrences();
+        std::vector<usize> basicBlockBeginnings();
+
         ControlFlowGraph controlFlowGraph() {
-            return getCFG();
+            return ControlFlowGraph(this->function.get(), basicBlockBeginnings());
         }
     };
 } // namespace vm::jit::cf
