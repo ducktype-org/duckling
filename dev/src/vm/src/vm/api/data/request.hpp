@@ -88,7 +88,7 @@ namespace vm::api {
 		struct DeinitAndValidate {};
 
 		struct FileMappingQuery {
-			fs::File                file;
+			fs::File        file;
 			FileCoordinates coord;
 		};
 	}

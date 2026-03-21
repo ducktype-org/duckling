@@ -310,11 +310,13 @@ namespace vm {
 			variant_case(api::request::FileMappingQuery, request) {
 				auto response = mapping->translateToFatPos(request.file, request.coord);
 				if (!response) {
-					return std::unexpected{api::ApiError{api::OtherError{.error = "Given file location is not mapped to any specific fat-position"}}};
+					return std::unexpected{ api::ApiError{ api::OtherError{
+						.error
+						= "Given file location is not mapped to any specific fat-position" } } };
 				}
 
 				return *response;
-			} 
+			}
 
 			variant_case(api::request::StatusRequest, status_request) {
 				return api::Response(getStatus());
@@ -443,10 +445,8 @@ namespace vm {
 		}
 		return memory.validateMemoryState();
 	}
-	
-	CRef<loader::compiler::FatMicroMapping> VMProcess::getMapping() const {
-		return mapping;
-	}
+
+	CRef<loader::compiler::FatMicroMapping> VMProcess::getMapping() const { return mapping; }
 
 	GIL& VMProcess::getGIL() { return gil; }
 

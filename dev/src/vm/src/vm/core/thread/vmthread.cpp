@@ -635,12 +635,12 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				auto& mapping = *process.getMapping();
+				auto&                   mapping = *process.getMapping();
 				const low::LowFuncData* ptr     = nullptr;
 
 				if (frame->current_function) {
 					const auto& func = *frame->current_function;
-					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) 
+					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size())
 						ptr = &func;
 				}
 
@@ -651,15 +651,12 @@ namespace vm {
 							break;
 						}
 
-				if (!ptr) 
-					return std::unexpected(
-						api::ApiError{ api::OtherError{
-							"couldn't find function with current instruction" } }
-					);
+				if (!ptr)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "couldn't find function with current instruction" } });
 
-				auto& func = *ptr;
-				auto func_id
-					= mapping.funcname_to_id.atMaybeCopy(func.name);
+				auto& func    = *ptr;
+				auto  func_id = mapping.funcname_to_id.atMaybeCopy(func.name);
 
 				u64 instr_low_idx = static_cast<u64>(instr - func.bc.data());
 
@@ -669,11 +666,10 @@ namespace vm {
 
 				return api::Response(api::response::CodePosition{
 					.function_name = func.name,
-					.instr_number = high_position ? high_position->fat_pos : instr_low_idx,
-					.source = high_position ? high_position->src_pos : std::nullopt,
+					.instr_number  = high_position ? high_position->fat_pos : instr_low_idx,
+					.source        = high_position ? high_position->src_pos : std::nullopt,
 				});
-
-			}	
+			}
 			variant_default {
 				return std::unexpected(api::ApiError{
 					api::OtherError{ "wrong execution status while reading current position" } });

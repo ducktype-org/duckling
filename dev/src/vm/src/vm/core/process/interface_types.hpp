@@ -10,6 +10,6 @@ namespace vm {
 		usize line;
 		usize column;
 
-		auto operator<=>(FileCoordinates const&) const = default;
+		auto operator<=>(const FileCoordinates&) const = default;
 	};
 }

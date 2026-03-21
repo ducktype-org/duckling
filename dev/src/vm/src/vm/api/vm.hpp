@@ -192,5 +192,7 @@ namespace vm::api {
 	 * @brief Get the code position corresponding to the given file and line/column coordinates.
 	 * @return The response containing code position or an API error.
 	 */
-	std::expected<response::CodePosition, ApiError> fileNavigation(PID pid, fs::File file, usize line, usize column);
+	std::expected<response::CodePosition, ApiError> fileNavigation(
+		PID pid, fs::File file, usize line, usize column
+	);
 }

@@ -4,6 +4,7 @@
 #include "thread_id.hpp"
 
 #include <base/pointers/box.hpp>
+
 #include <diagnostic/source_position.hpp>
 
 #include <vm/core/process/type_metadata/type.hpp>
@@ -49,8 +50,8 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
-			base::StrID function_name;
-			u64 instr_number;
+			base::StrID                         function_name;
+			u64                                 instr_number;
 			base::Optional<dia::SourcePosition> source;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_name);
 		};

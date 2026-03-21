@@ -111,9 +111,13 @@ namespace vm::loader::compiler {
 			}
 
 			auto func_id = program_ctx.function_forward_declarations.idOf(ctx.function.name.str);
-			CORE_ASSERT(func_id.has_value(), "the currently built function has to be in the set of declared functions");
+			CORE_ASSERT(
+				func_id.has_value(),
+				"the currently built function has to be in the set of declared functions"
+			);
 
-			auto [micro_bytecode, label_map] = builder.buildWithDebug(instruction_mapping, *func_id);
+			auto [micro_bytecode, label_map]
+				= builder.buildWithDebug(instruction_mapping, *func_id);
 			linkLabelArguments(micro_bytecode, label_map);
 
 			return micro_bytecode;
@@ -384,11 +388,10 @@ namespace vm::loader::compiler {
 	void Compiler::recompile(const code::ValidProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
 
-		if constexpr (load_mode == LoadMode::WithMapping) {
+		if constexpr (load_mode == LoadMode::WithMapping)
 			latest_type_ctx = high_program.getTypeContext();
-		} else {
+		else
 			latest_type_ctx = std::nullopt;
-		}
 
 		auto new_c_functions = high_program.extCFunctions()
 		                     | std::views::drop(low_program.extern_c_functions.size())

@@ -62,18 +62,16 @@ namespace vm::loader::compiler::detail {
 			for (auto& [name, id]: labels_copy) id = label_id_to_offset[id];
 
 			base::HashMap<base::StrID, usize> local_offset_map;
-			for (auto& [var_name, entry]: ctx.locals_map) {
+			for (auto& [var_name, entry]: ctx.locals_map)
 				local_offset_map.put(var_name, entry.offset);
-			}
 
 			mapping_info.funcname_to_id.put(ctx.function.name.str, function_id);
 			mapping_info.functions_ctx.put(
 				function_id,
-				FatMicroMapping::FunctionCtx{
-					.label_to_code_offset       = std::move(labels_copy),
-					.varname_to_stack_offset    = std::move(local_offset_map),
-					.high_to_low = std::move(high_to_low),
-					.low_to_high = std::move(low_to_high)}
+				FatMicroMapping::FunctionCtx{ .label_to_code_offset = std::move(labels_copy),
+			                                  .varname_to_stack_offset = std::move(local_offset_map),
+			                                  .high_to_low = std::move(high_to_low),
+			                                  .low_to_high = std::move(low_to_high) }
 			);
 
 			return { std::move(result), std::move(label_id_to_offset) };
@@ -535,19 +533,18 @@ namespace vm::loader::compiler::detail {
 		}
 		POP_DIAGNOSTIC
 	}
-	
+
 	void MicroBytecodeBuilder::addWithDebugSymb(
 		const code::Instruction& instruction, usize high_instr_idx
 	) {
 		high_to_low.put(high_instr_idx, next_instruction_index);
 
-		if (instruction.opcode() != high::Op_label::OPCODE) { // exclude all the opcodes which won't change the `next_instruction_index`
+		if (instruction.opcode()
+		    != high::Op_label::OPCODE) {  // exclude all the opcodes which won't change the
+			                              // `next_instruction_index`
 			low_to_high.put(
 				next_instruction_index,
-				Entry{
-					high_instr_idx,
-					instruction.visit([](auto&& i) { return i.bytecode_pos; })
-				}
+				Entry{ high_instr_idx, instruction.visit([](auto&& i) { return i.bytecode_pos; }) }
 			);
 		}
 

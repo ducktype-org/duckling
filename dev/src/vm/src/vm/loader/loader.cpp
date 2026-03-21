@@ -163,40 +163,35 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 }
 
 void Loader::addFileMapping(const code::CodeCollection& code) {
-	base::HashMap<fs::File, std::map<FileCoordinates, api::response::CodePosition> > file_mapping;
+	base::HashMap<fs::File, std::map<FileCoordinates, api::response::CodePosition>> file_mapping;
 
 	for (auto& func: code.functions) {
 		for (usize i = 0; i < func.body.size(); i++) {
 			auto& instruction = func.body[i];
-			auto position = instruction.visit([](auto&& instr) { return instr.bytecode_pos; });
+			auto  position    = instruction.visit([](auto&& instr) { return instr.bytecode_pos; });
 
-			if (!position) {
-				continue;
-			}
+			if (!position) continue;
 
-			auto file = position->getLocation()->getSourceFile();
+			auto file           = position->getLocation()->getSourceFile();
 			auto [line, column] = position->getStartLineColumn();
 			file_mapping.put(file, {});
-			file_mapping[file].emplace(FileCoordinates{line, column}, api::response::CodePosition{func.name, i, position});
+			file_mapping[file].emplace(
+				FileCoordinates{ line, column },
+				api::response::CodePosition{ func.name, i, position }
+			);
 		}
 	}
 
-	for (auto& [file, mapping]: file_mapping) {
-		compiler.digestFileInfo(file, std::move(mapping));
-	}
+	for (auto& [file, mapping]: file_mapping) compiler.digestFileInfo(file, std::move(mapping));
 }
 
 template<LoadMode load_mode>
 std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
 	auto opt_code_collection = parseFiles(file_paths);
-	
-	if (!opt_code_collection) {	
-		return std::unexpected(std::move(opt_code_collection).error());
-	}
 
-	if constexpr (load_mode == LoadMode::WithMapping) {
-		addFileMapping(*opt_code_collection);
-	}
+	if (!opt_code_collection) return std::unexpected(std::move(opt_code_collection).error());
+
+	if constexpr (load_mode == LoadMode::WithMapping) addFileMapping(*opt_code_collection);
 	return loadAndCompile<load_mode>(*opt_code_collection);
 }
 
@@ -204,9 +199,7 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 	return compiler.getLowProgram();
 }
 
-CRef<compiler::FatMicroMapping> Loader::getMapping() const {
-	return compiler.getMapping();
-}
+CRef<compiler::FatMicroMapping> Loader::getMapping() const { return compiler.getMapping(); }
 
 vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
 
