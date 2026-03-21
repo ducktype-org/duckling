@@ -190,5 +190,4 @@ namespace vm::low {
 			return original_opcode;
 		}
 	};
-
 }
