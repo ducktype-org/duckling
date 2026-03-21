@@ -172,7 +172,3 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 }
 
 vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
-
-const vm::code::valid_type::ValidTypeMap& vm::loader::Loader::types() const {
-	return validated_high_program.types();
-}

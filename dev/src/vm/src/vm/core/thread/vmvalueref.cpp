@@ -17,9 +17,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 
 			i64 val = 0;
 
-			if (type_name == base::StrID("void"))
-				val = 0;
-			else if (type_name == base::StrID("i64"))
+			if (type_name == base::StrID("i64"))
 				val = readBytes<i64>();
 			else if (type_name == base::StrID("i32"))
 				val = readBytes<i32>();
@@ -27,8 +25,6 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 				val = readBytes<i16>();
 			else if (type_name == base::StrID("byte"))
 				val = readBytes<char>();
-			else
-				throw "I have no idea...";
 
 			return vm::interpreted_data_variant::Primitive{ val };
 		}

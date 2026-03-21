@@ -5,7 +5,6 @@
 
 #include <base/pointers/box.hpp>
 
-#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/thread/vmvalueref.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
