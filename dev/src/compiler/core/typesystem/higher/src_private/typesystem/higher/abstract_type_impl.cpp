@@ -455,6 +455,4 @@ namespace compiler::tsh {
 			return type.isTriviallyCopyable(ctx);
 		});
 	}
-
-
 }
