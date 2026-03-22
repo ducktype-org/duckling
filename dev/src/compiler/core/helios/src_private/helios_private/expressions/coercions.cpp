@@ -130,19 +130,22 @@ namespace compiler::helios {
 		const bool coercible = ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to });
 		if (!coercible) return InvalidCoercion{};
 
-		// Copying from reference/box to value or box requires copying.
+		// Coercion from reference/box to value requires a copy.
 		// For now we only support trivial copyability.
 		// @TODO: #2000 Remove this check.
-		bool requires_copy_coercion
-			= ((from.getRefKind() == tsh::ReferenceKind::Direct
-		        && to.getRefKind() == tsh::ReferenceKind::Box)
-		       || (from.getRefKind() == tsh::ReferenceKind::Ref
-		           && (to.getRefKind() == tsh::ReferenceKind::Direct
-		               || to.getRefKind() == tsh::ReferenceKind::Box))
-		       || (from.getRefKind() == tsh::ReferenceKind::Box
-		           && to.getRefKind() == tsh::ReferenceKind::Direct)
-		       || (from.getRefKind() == tsh::ReferenceKind::Direct
-		           && to.getRefKind() == tsh::ReferenceKind::Direct));
+		auto requires_copy_coercion = [](tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind) {
+			switch (from_kind) {
+			case tsh::ReferenceKind::Direct:
+				return to_kind == tsh::ReferenceKind::Box || to_kind == tsh::ReferenceKind::Direct;
+			case tsh::ReferenceKind::Ref:
+				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
+			case tsh::ReferenceKind::Box:
+				return to_kind == tsh::ReferenceKind::Direct;
+			default:
+				return false;
+			}
+		}(from.getRefKind(), to.getRefKind());
+
 
 		if (!bypass_trivial_copyability_check && requires_copy_coercion
 		    && !from.getType().isTriviallyCopyable(ctx))
