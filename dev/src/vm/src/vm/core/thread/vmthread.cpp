@@ -742,13 +742,13 @@ namespace vm {
 	}
 
 	void VMThread::releaseGil() {
-		if(!has_gil) return;
+		if (!has_gil) return;
 		has_gil = false;
 		process.getGIL().release();
 	}
 
 	void VMThread::acquireGil() {
-		if(has_gil) return;
+		if (has_gil) return;
 		process.getGIL().acquire();
 		has_gil = true;
 	}
