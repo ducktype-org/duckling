@@ -167,8 +167,8 @@ namespace compiler::helios {
 					// Skip all not generated symbols, to prevent double insertion of HOUTFunctions.
 					// For example in cases like: `class T { a: i32 = foo(); }`, the SymID of
 					// `foo()` will get returned as a result of `QueryTransitiveFunctionCalls` since
-					// its called by the default constructor of `T`. This function was already added
-					// when looping through the symbols in scope thus we skip it here.
+					// it's called by the default constructor of `T`. This function was already
+					// added when looping through the symbols in scope thus we skip it here.
 					if (!std::holds_alternative<houtgen::GeneratedSymbolData>(sym_ref->other))
 						continue;
 					const auto gsd_data = std::get<houtgen::GeneratedSymbolData>(sym_ref->other);
