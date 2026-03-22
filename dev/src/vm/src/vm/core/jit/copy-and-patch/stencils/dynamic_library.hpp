@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
 #include <span>
@@ -22,8 +23,9 @@ namespace vm::jit::cnp {
 		DynamicLibrary(DynamicLibrary&&)            = default;
 		DynamicLibrary& operator=(DynamicLibrary&&) = default;
 
-		std::byte*            findSymbol(const char* name) const;
-		static DynamicLibrary load(std::span<const byte> binary);
+		std::byte*                 findSymbol(const char* name) const;
+		base::Optional<std::byte*> maybeFindSymbol(const char* name) const;
+		static DynamicLibrary      load(std::span<const byte> binary);
 
 	private:
 		DynamicLibrary(int in_lib_fd, void* in_lib_handle):

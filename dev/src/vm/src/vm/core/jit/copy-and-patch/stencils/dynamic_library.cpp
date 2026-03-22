@@ -43,6 +43,14 @@ namespace vm::jit::cnp {
 		CORE_ASSERT_STRONG(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 		return reinterpret_cast<std::byte*>(sym_loc);
 	}
+
+	base::Optional<std::byte*> DynamicLibrary::maybeFindSymbol(const char* name) const {
+		void* sym_loc = dlsym(lib_handle, name);
+		if (sym_loc)
+			return reinterpret_cast<std::byte*>(sym_loc);
+		else
+			return std::nullopt;
+	}
 }
 
 #else
