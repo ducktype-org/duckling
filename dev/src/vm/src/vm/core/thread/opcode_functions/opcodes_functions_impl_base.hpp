@@ -40,8 +40,8 @@
 
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
-#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/ivmprocess.hpp>
+#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>

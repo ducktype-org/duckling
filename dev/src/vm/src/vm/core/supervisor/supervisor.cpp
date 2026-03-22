@@ -28,9 +28,9 @@ namespace vm {
 	) {
 		variant_match(request.request) {
 			variant_case_novalue(api::request::DeinitAndValidate) {
-				auto             res = getProcess(request.pid).and_then([](Ref<IVMProcess> process) {
-                    return process->doRequest(api::request::DeinitAndValidate{});
-                });
+				auto res = getProcess(request.pid).and_then([](Ref<IVMProcess> process) {
+					return process->doRequest(api::request::DeinitAndValidate{});
+				});
 				std::unique_lock lock(rw_process_table);
 				process_table.erase(request.pid);
 				return res;

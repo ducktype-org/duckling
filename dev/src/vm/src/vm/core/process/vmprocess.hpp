@@ -43,7 +43,7 @@ namespace vm {
 	 * Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class VMProcess final : public IVMProcess {
+	class VMProcess final: public IVMProcess {
 		friend class VmValue;
 
 	private:
@@ -199,7 +199,8 @@ namespace vm {
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
-		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request) override;
+		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request
+		) override;
 
 		PID getPID() const override;
 

@@ -7,10 +7,10 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/builtin_functions.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/process/concurrency/synchronization_primitives.hpp>
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/process/proc_io.hpp>
-#include <vm/core/process/concurrency/synchronization_primitives.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
@@ -57,7 +57,7 @@ namespace vm::builtins {
 		base::Optional<Box<VmValue>> callUnpackArgs(
 			Ret (*function)(VMThread&, FunArgs...),
 			TypeCRef                         vm_return_type,
-			IVMProcess&                       process,
+			IVMProcess&                      process,
 			VMThread&                        thread,
 			const std::vector<Box<VmValue>>& args
 		) {
@@ -138,7 +138,7 @@ namespace vm::builtins {
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
-		IVMProcess&                       process,
+		IVMProcess&                      process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
 	) {
