@@ -5,8 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -40,7 +38,6 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
-#include "query_framework/query_errors.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -831,6 +828,7 @@ namespace compiler::helios::code {
 				));
 				return query::Failed();
 			}
+
 
 			return makeBox<AccessExpr>(
 				ctx,

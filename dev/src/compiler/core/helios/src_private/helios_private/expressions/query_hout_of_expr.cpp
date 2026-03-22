@@ -4,7 +4,6 @@
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
 #include "numeric_literals.hpp"
-#include "typesystem/higher/symbol_type.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
@@ -20,12 +19,10 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include "base/str/str_utils.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include "query_framework/query_errors.hpp"
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -695,7 +692,7 @@ namespace compiler::helios {
 				} else {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						base::strConcat(
-							"1 Copy constructor for non-trivially-copyable type `",
+							"Copy constructor for non-trivially-copyable type `",
 							expr_hout->expression_type.getSymbolType().toString(),
 							"`."
 						),

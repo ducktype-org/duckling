@@ -116,7 +116,6 @@ private:
 			1
 		);
 
-
 		checkForErrorOnCompileModule(
 			R"(
 				fundecl a(x: i32) -> i32;
@@ -898,7 +897,7 @@ private:
 		      "This was caused by the need" },
 			1
 		);
-		
+
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {

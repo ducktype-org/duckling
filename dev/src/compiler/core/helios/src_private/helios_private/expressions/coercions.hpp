@@ -5,13 +5,8 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/variant_match.hpp"
-
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
-
-#include <variant>
 
 namespace compiler::helios {
 
@@ -38,7 +33,7 @@ namespace compiler::helios {
 	struct InvalidCoercion final {};
 
 	/**
-	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
+	 * @brief Type used to indicate a copy of a non-trivially-copyable type.
 	 */
 	struct TypeNotTriviallyCopyable final {};
 
@@ -76,7 +71,10 @@ namespace compiler::helios {
 		}
 
 		friend CoercionQResult canCoerce(
-			query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
+			query::Context&   ctx,
+			tsh::SymbolType<> from,
+			tsh::SymbolType<> to,
+			bool              bypass_trivial_copyability_check
 		);
 
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
@@ -155,7 +153,12 @@ namespace compiler::helios {
 	 * @brief Checks if a coercion from `from` to `to` is possible and returns
 	 * a function performing the coercion if it is.
 	 */
-	CoercionQResult canCoerce(query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to);
+	CoercionQResult canCoerce(
+		query::Context&   ctx,
+		tsh::SymbolType<> from,
+		tsh::SymbolType<> to,
+		bool              bypass_trivial_copyability_check = false
+	);
 
 	/**
 	 * @brief Checks if a coercion from `from` to the meta type is possible and returns

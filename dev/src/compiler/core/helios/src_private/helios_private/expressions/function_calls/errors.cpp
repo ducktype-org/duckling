@@ -1,8 +1,5 @@
 #include "errors.hpp"
 
-#include "diagnostic_interactive/placeholder.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
@@ -183,7 +180,7 @@ namespace compiler::helios::code {
 					= arguments_origin[data.parameter_index].getSourcePosition().value();
 				return makeBox<dia_int::NotYetImplementedCodeError>(
 					base::strConcat(
-						"2 Copy constructor for non-trivially-copyable type `",
+						"Copy constructor for non-trivially-copyable type `",
 						data.given_type.toString(),
 						"`."
 					),

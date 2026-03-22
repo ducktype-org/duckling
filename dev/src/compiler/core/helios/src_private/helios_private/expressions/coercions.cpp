@@ -1,7 +1,5 @@
 #include "coercions.hpp"
 
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
@@ -123,7 +121,10 @@ namespace compiler::helios {
 	}
 
 	CoercionQResult canCoerce(
-		query::Context& ctx, const tsh::SymbolType<> from, const tsh::SymbolType<> to
+		query::Context&         ctx,
+		const tsh::SymbolType<> from,
+		const tsh::SymbolType<> to,
+		bool                    bypass_trivial_copyability_check
 	) {
 		// First check that the type is even coercible to provide a invalid coercion error first.
 		const bool coercible = ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to });
@@ -143,7 +144,8 @@ namespace compiler::helios {
 		       || (from.getRefKind() == tsh::ReferenceKind::Direct
 		           && to.getRefKind() == tsh::ReferenceKind::Direct));
 
-		if (requires_copy_coercion && !from.getType().isTriviallyCopyable(ctx))
+		if (!bypass_trivial_copyability_check && requires_copy_coercion
+		    && !from.getType().isTriviallyCopyable(ctx))
 			return TypeNotTriviallyCopyable{};
 
 		// If we got here, then the type is coercible and trivially copyable.

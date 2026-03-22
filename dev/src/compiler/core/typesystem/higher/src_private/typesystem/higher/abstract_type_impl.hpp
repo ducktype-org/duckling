@@ -602,7 +602,13 @@ namespace compiler::tsh {
 		/**
 		 * @brief Strings are not trivially copyable because the require a deep copy of memory.
 		 */
-		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override {
+			// @TODO: #2000 Strings are of course not trivially copyble, but we assume they are
+			// since they effectively can't be modified and destructor calls aren't emmitted for
+			// them so it won't cause any disasters. This is mocked up since we want strings to be
+			// usable in release.
+			return true;
+		}
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
