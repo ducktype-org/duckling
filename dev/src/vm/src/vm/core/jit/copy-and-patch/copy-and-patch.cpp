@@ -1,4 +1,4 @@
-#ifdef ENABLE_JIT  // @TODO: #2312 Remove
+#ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
 
 	#include "memory/memory.hpp"
 	#include "stencils/import_stencils.hpp"
