@@ -2,7 +2,7 @@
 
 ## Stencils
 
-Stencils are binary code of micro opfunctions, that will be stitched together to create the compiled user code.
+Stencils are binary code of micro opfunctions, that can be stitched together to create the compiled user code.
 
 
 ## Patches
