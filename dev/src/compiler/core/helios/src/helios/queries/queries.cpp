@@ -143,7 +143,7 @@ namespace compiler::helios {
 		 * @param ctors Symbol IDs of the top level default constructors.
 		 * @param ctx The query context.
 		 *
-		 * @note Generation of default constructors may cause creation of more then one generated
+		 * @note Generation of default constructors may cause creation of more than one generated
 		 * function. For example default constructor of `i32[3][2]`, calls the default constructor
 		 * of `i32[2]` which doesn't have a symbol so it won't get inserted. For this reason we look
 		 * through every top level constructor and insert it dependencies into the module.

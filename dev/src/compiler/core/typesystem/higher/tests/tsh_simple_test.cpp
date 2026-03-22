@@ -436,9 +436,10 @@ private:
 				"String should be trivially zero-initializable."
 			);
 			assertTrue(string_st.isCopyable(ctx), "String should be copyable.");
-			assertFalse(
-				string_st.isTriviallyCopyable(ctx), "String should not be trivially copyable."
-			);
+			// @TODO: #2000 Make this check come back after unmocking copy constructors.
+			// assertFalse(
+			// 	string_st.isTriviallyCopyable(ctx), "String should not be trivially copyable."
+			// );
 		});
 	}
 
@@ -587,19 +588,21 @@ private:
 				"StaticArray of Ints should be trivially copyable."
 			);
 
-			const auto arr_st_complex = st(arr_str);
+			const auto list_type = ctx.query<QueryDynamicArrayType>({ st(str_type) });
+			const auto arr_st_complex
+				= ctx.query<QueryStaticArrayType>({ .element_type = st(list_type), .size = 2 });
 			assertTrue(
 				arr_st_complex.isDefaultConstructible(ctx),
-				"StaticArray of Strings should be default constructible."
+				"StaticArray of Lists should be default constructible."
 			);
 			assertTrue(
 				arr_st_complex.isTriviallyZeroInitializable(ctx),
-				"StaticArray of Strings should be trivially zero-initializable."
+				"StaticArray of Lists should be trivially zero-initializable."
 			);
-			assertTrue(arr_st_complex.isCopyable(ctx), "StaticArray of Strings should be copyable.");
+			assertTrue(arr_st_complex.isCopyable(ctx), "StaticArray of Lists should be copyable.");
 			assertFalse(
 				arr_st_complex.isTriviallyCopyable(ctx),
-				"StaticArray of Strings should not be trivially copyable."
+				"StaticArray of Lists should not be trivially copyable."
 			);
 
 			// Test non-default-constructible static array with ref element)
@@ -673,19 +676,20 @@ private:
 				"Tuple of Ints should be trivially copyable."
 			);
 
-			const auto tup_st_complex = st(tup_6);
+			const auto list_type      = ctx.query<QueryDynamicArrayType>({ st(int_32) });
+			const auto tup_st_complex = ctx.query<QueryTupleType>({ { st(list_type) } });
 			assertTrue(
 				tup_st_complex.isDefaultConstructible(ctx),
-				"Tuple with String should be default constructible."
+				"Tuple with List should be default constructible."
 			);
 			assertTrue(
 				tup_st_complex.isTriviallyZeroInitializable(ctx),
-				"Tuple with String should be trivially zero-initializable."
+				"Tuple with List should be trivially zero-initializable."
 			);
-			assertTrue(tup_st_complex.isCopyable(ctx), "Tuple with String should be copyable.");
+			assertTrue(tup_st_complex.isCopyable(ctx), "Tuple with List should be copyable.");
 			assertFalse(
 				tup_st_complex.isTriviallyCopyable(ctx),
-				"Tuple with String should not be trivially copyable."
+				"Tuple with List should not be trivially copyable."
 			);
 
 			// Test non-default-constructible tuple with Ref element.

@@ -137,7 +137,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
-	 * this function or all functions called by the called functions). A function is considered it's
+	 * this function or all functions called by the called functions). A function is considered its
 	 * own dependency, meaning calling this query with a function which doesn't call any other
 	 * functions will return a vector containing the SymID provided in the key.
 	 * @note This query is used to determine all other functions that have to be compiled when
