@@ -1,3 +1,5 @@
+import sub as sub;
+
 # ==================================== UTILS ====================================
 fun printSeparator() -> () = {
     builtin_output_string("=================\n");
@@ -144,6 +146,13 @@ fun testFunctionField() = {
     builtin_output_i64(f.a);    # 1
 }
 
+# ==================================== DIFFERENT MODULE ====================================
+fun testDifferentModule() = {
+    var sub_t: sub.T;
+    builtin_output_i64(sub_t.x);    # 1
+    builtin_output_i64(sub_t.y.x);  # 123
+}
+
 
 fun main() -> i64 = {
     printSeparator();
@@ -160,6 +169,9 @@ fun main() -> i64 = {
 
     printSeparator();
     testFunctionField();
+
+    printSeparator();
+    testDifferentModule();
 
     return 0;
 }

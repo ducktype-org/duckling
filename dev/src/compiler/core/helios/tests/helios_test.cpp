@@ -1,3 +1,5 @@
+#include "helios/hout/elements/expr.hpp"
+
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -2715,19 +2717,14 @@ private:
 				ASSERT_EQUAL_PRINT(3, deps.size());
 			}
 
-			// `DeepStackTrivial` ctor should not call any other default constructors, since it stores
-			// a static array of trivially zero-initializable types which can be zero initialized.
+			// `DeepStackTrivial` ctor should not call any default constructors, since it stores
+			// a static array of trivially zero-initializable types which can be zero initialized,
+			// thus its zero-initializable.
 			{
 				auto        deep_trivial_st = get_class_type(deep_trivial_sym);
 				const auto& expr
 					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_st)->valueOrThrow();
-
-				auto call     = dynamic_cast<const CallExpr*>(expr.get());
-				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
-
-				// Ctor(DeepStackTrivial)
-				ASSERT_EQUAL_PRINT(1, deps.size());
+				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
 			}
 		});
 	}
