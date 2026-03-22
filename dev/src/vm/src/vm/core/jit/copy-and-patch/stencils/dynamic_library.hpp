@@ -20,8 +20,9 @@ namespace vm::jit::cnp {
 		DynamicLibrary(const DynamicLibrary&)            = delete;
 		DynamicLibrary& operator=(const DynamicLibrary&) = delete;
 
-		DynamicLibrary(DynamicLibrary&&)            = default;
-		DynamicLibrary& operator=(DynamicLibrary&&) = default;
+		DynamicLibrary(DynamicLibrary&&);
+		DynamicLibrary& operator=(DynamicLibrary&&);
+		~DynamicLibrary();
 
 		std::byte*                 findSymbol(const char* name) const;
 		base::Optional<std::byte*> maybeFindSymbol(const char* name) const;

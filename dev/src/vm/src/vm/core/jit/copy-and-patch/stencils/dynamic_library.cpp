@@ -38,6 +38,28 @@ namespace vm::jit::cnp {
 		return DynamicLibrary{ fd, handle };
 	}
 
+	DynamicLibrary::DynamicLibrary(DynamicLibrary&& dynlib) {
+		lib_fd     = dynlib.lib_fd;
+		lib_handle = dynlib.lib_handle;
+
+		dynlib.lib_fd     = -1;
+		dynlib.lib_handle = nullptr;
+	}
+
+	DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& dynlib) {
+		lib_fd     = dynlib.lib_fd;
+		lib_handle = dynlib.lib_handle;
+
+		dynlib.lib_fd     = -1;
+		dynlib.lib_handle = nullptr;
+		return *this;
+	}
+
+	DynamicLibrary::~DynamicLibrary() {
+		if (lib_handle) dlclose(lib_handle);
+		if (lib_fd != -1) close(lib_fd);
+	}
+
 	std::byte* DynamicLibrary::findSymbol(const char* name) const {
 		void* sym_loc = dlsym(lib_handle, name);
 		CORE_ASSERT_STRONG(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
