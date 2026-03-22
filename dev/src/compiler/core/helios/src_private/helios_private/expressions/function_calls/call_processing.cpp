@@ -131,12 +131,28 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl.parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.valueOrThrow().isInvalid())
-				return NoMatch{ .function = fun,
-					            .reason   = TypeMismatch{ .given_type     = provided_type,
-					                                      .expected_type  = expected_type,
-					                                      .argument_index = i,
-					                                      .function       = fun } };
+			if (coercion.valueOrThrow().isInvalid()) {
+				variant_match(coercion.valueOrThrow().getVariant()) {
+					variant_case_novalue(InvalidCoercion) {
+						return NoMatch{ .function = fun,
+							            .reason   = TypeMismatch{
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .argument_index = i,
+											  .function       = fun,
+                                        } };
+					}
+					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
+						return NoMatch{ .function = fun,
+							            .reason   = code::TypeNotTriviallyCopyable{
+											  .argument_index = i,
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .function       = fun,
+                                        } };
+					}
+				}
+			}
 
 			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
@@ -179,13 +195,27 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.valueOrThrow().isInvalid())
-				return NoMatch{ .function = fun,
-					            .reason
-					            = TypeMismatch{ .given_type     = provided_type,
-					                            .expected_type  = expected_type,
-					                            .argument_index = positional_arguments.size() + i,
-					                            .function       = fun } };
+			if (coercion.valueOrThrow().isInvalid()) {
+				variant_match(coercion.valueOrThrow().getVariant()) {
+					variant_case_novalue(InvalidCoercion) {
+						return NoMatch{ .function = fun,
+							            .reason   = TypeMismatch{ .given_type    = provided_type,
+							                                      .expected_type = expected_type,
+							                                      .argument_index
+                                                                = positional_arguments.size() + i,
+							                                      .function = fun } };
+					}
+					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
+						return NoMatch{ .function = fun,
+							            .reason   = code::TypeNotTriviallyCopyable{
+											  .argument_index = positional_arguments.size() + i,
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .function       = fun,
+                                        } };
+					}
+				}
+			}
 
 			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
@@ -332,7 +362,7 @@ namespace compiler::helios::code {
 		bool                           as_a_link = false
 	) {
 		if (exact_matches.empty()) return;
-		// We have to differentiate between first candidate beacuse all the other candidates will
+		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
 		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
 		for (const auto& match: exact_matches) {
