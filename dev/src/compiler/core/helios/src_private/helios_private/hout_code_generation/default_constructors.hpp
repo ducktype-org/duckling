@@ -55,7 +55,7 @@ namespace compiler::helios::houtgen {
 	 * aggregate types storing zero-initializable types. This then maps to `ZeroInitialize` in LLVM.
 	 * - `code::LiteralUnitExpr` - for unit types.
 	 * - `code::LiteralTypeExpr` storing a void type - for meta types.
-	 * - `code::CallExpr` - for non trivially-zero-initializable classes/arrays/tuples. This is a
+	 * - `code::CallExpr` - for non-trivially-zero-initializable classes/arrays/tuples. This is a
 	 * call expression to the default constructor of the given type.
 	 *
 	 * Expects the given type to be default initializable.
