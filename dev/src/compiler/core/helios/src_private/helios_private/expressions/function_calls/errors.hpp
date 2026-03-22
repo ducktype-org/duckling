@@ -60,7 +60,7 @@ namespace compiler::helios::code {
 	};
 
 	struct TypeNotTriviallyCopyable final {
-		usize             parameter_index;
+		usize             argument_index;
 		tsh::SymbolType<> given_type;
 		tsh::SymbolType<> expected_type;
 		SymID             function;
@@ -74,11 +74,12 @@ namespace compiler::helios::code {
 		MissingCallArgument,
 		TypeNotTriviallyCopyable>;
 
-	using CallFailure = std::variant<
-		PositionalAfterNamedArgument,
-		RepeatedNamedArgument,
-		FunctionMatchFailure,
-		TypeNotTriviallyCopyable>;
+	/**
+	 * @brief This variant stores errors that do not depend on the function declaration. All
+	 * failures depending on the declaration should be stored in `FunctionMatchFailure`.
+	 */
+	using CallFailure
+		= std::variant<PositionalAfterNamedArgument, RepeatedNamedArgument, FunctionMatchFailure>;
 
 	class AmbiguousMatchesError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {

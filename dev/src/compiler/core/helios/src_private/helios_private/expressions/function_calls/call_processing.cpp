@@ -145,10 +145,10 @@ namespace compiler::helios::code {
 					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
 						return NoMatch{ .function = fun,
 							            .reason   = code::TypeNotTriviallyCopyable{
-											  .parameter_index = i,
-											  .given_type      = provided_type,
-											  .expected_type   = expected_type,
-											  .function        = fun,
+											  .argument_index = i,
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .function       = fun,
                                         } };
 					}
 				}
@@ -208,10 +208,10 @@ namespace compiler::helios::code {
 					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
 						return NoMatch{ .function = fun,
 							            .reason   = code::TypeNotTriviallyCopyable{
-											  .parameter_index = positional_arguments.size() + i,
-											  .given_type      = provided_type,
-											  .expected_type   = expected_type,
-											  .function        = fun,
+											  .argument_index = positional_arguments.size() + i,
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .function       = fun,
                                         } };
 					}
 				}

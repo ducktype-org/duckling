@@ -175,18 +175,6 @@ namespace compiler::helios::code {
 				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
 				return makeBox<RepeatedNamedArgumentError>(source_pos);
 			}
-			variant_case(TypeNotTriviallyCopyable, data) {
-				auto source_pos
-					= arguments_origin[data.parameter_index].getSourcePosition().value();
-				return makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat(
-						"Copy constructor for non-trivially-copyable type `",
-						data.given_type.toString(),
-						"`."
-					),
-					source_pos
-				);
-			}
 			variant_case(FunctionMatchFailure, data) {
 				auto get_interactive_function
 					= [&](SymID function_symbol) -> base::Optional<Box<InteractiveFunction>> {
@@ -262,7 +250,7 @@ namespace compiler::helios::code {
 					}
 					variant_case(TypeNotTriviallyCopyable, data) {
 						auto source_pos
-							= arguments_origin[data.parameter_index].getSourcePosition().value();
+							= arguments_origin[data.argument_index].getSourcePosition().value();
 						if (data.given_type.getRefKind() != tsh::ReferenceKind::Direct
 						    && data.expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
 							return makeBox<dia_int::NotYetImplementedCodeError>(
