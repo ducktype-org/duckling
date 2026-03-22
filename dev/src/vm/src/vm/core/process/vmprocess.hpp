@@ -44,8 +44,6 @@ namespace vm {
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class VMProcess final: public IVMProcess {
-		friend class VmValue;
-
 	private:
 		PID my_pid;
 

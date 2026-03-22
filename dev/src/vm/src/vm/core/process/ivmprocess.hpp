@@ -45,6 +45,9 @@ namespace vm {
 			const api::RequestVariant& request
 		) = 0;
 
+		/**
+		 * @brief Get the PID of the process.
+		 */
 		[[nodiscard]] virtual PID getPID() const = 0;
 
 		/**
