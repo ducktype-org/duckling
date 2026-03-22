@@ -19,14 +19,22 @@ PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 constexpr static char FULL_ELF[] = {
-	#embed "mock_stencils-so"
+	#if __has_embed("wrapper-so")
+		#embed "mock_stencils-so"
+	#else
+	0
+	#endif
 };
 POP_DIAGNOSTIC
 
 static auto stencils
 	= Stencils{ .stencils_binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
 	            .stencils_data = std::array {
-	#include <mock_stencils-nm>
+	#if __has_include(<mock_stencils-nm>)
+		#include <mock_stencils-nm>
+	#else
+			StencilData{}
+	#endif
 					}
 				 }.load();
 

@@ -16,13 +16,12 @@ namespace vm::jit::cnp {
 	 * @details It is a wrapper over a system linker.
 	 */
 	struct DynamicLibrary {
-		DynamicLibrary()                                 = delete;
 		DynamicLibrary(const DynamicLibrary&)            = delete;
 		DynamicLibrary& operator=(const DynamicLibrary&) = delete;
 
-		DynamicLibrary(DynamicLibrary&&);
-		DynamicLibrary& operator=(DynamicLibrary&&);
-		~DynamicLibrary();
+		DynamicLibrary(DynamicLibrary&&) noexcept;
+		DynamicLibrary& operator=(DynamicLibrary&&) noexcept;
+		~DynamicLibrary() noexcept;
 
 		std::byte*                 findSymbol(const char* name) const;
 		base::Optional<std::byte*> maybeFindSymbol(const char* name) const;
@@ -32,6 +31,8 @@ namespace vm::jit::cnp {
 		DynamicLibrary(int in_lib_fd, void* in_lib_handle):
 			  lib_fd{ in_lib_fd },
 			  lib_handle{ in_lib_handle } {}
+
+		DynamicLibrary(): DynamicLibrary(-1, nullptr) {}
 
 		int   lib_fd;
 		void* lib_handle;

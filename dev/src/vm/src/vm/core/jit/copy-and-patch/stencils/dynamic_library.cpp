@@ -38,15 +38,14 @@ namespace vm::jit::cnp {
 		return DynamicLibrary{ fd, handle };
 	}
 
-	DynamicLibrary::DynamicLibrary(DynamicLibrary&& dynlib) {
-		lib_fd     = dynlib.lib_fd;
-		lib_handle = dynlib.lib_handle;
-
+	DynamicLibrary::DynamicLibrary(DynamicLibrary&& dynlib) noexcept:
+		  lib_fd{ dynlib.lib_fd },
+		  lib_handle{ dynlib.lib_handle } {
 		dynlib.lib_fd     = -1;
 		dynlib.lib_handle = nullptr;
 	}
 
-	DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& dynlib) {
+	DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& dynlib) noexcept {
 		lib_fd     = dynlib.lib_fd;
 		lib_handle = dynlib.lib_handle;
 
@@ -55,7 +54,7 @@ namespace vm::jit::cnp {
 		return *this;
 	}
 
-	DynamicLibrary::~DynamicLibrary() {
+	DynamicLibrary::~DynamicLibrary() noexcept {
 		if (lib_handle) dlclose(lib_handle);
 		if (lib_fd != -1) close(lib_fd);
 	}
