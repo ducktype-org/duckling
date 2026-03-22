@@ -174,7 +174,7 @@ void Loader::addFileMapping(const code::CodeCollection& code) {
 			if (!position) continue;
 
 			auto file           = position->getLocation()->getSourceFile();
-			auto [line, column] = position->getStartLineColumn();
+			auto [line, column] = position->getEndLineColumn();
 			file_mapping.put(file, {});
 			file_mapping[file].emplace(
 				FileCoordinates{ line, column },

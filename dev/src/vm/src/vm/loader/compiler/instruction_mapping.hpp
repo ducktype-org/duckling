@@ -77,8 +77,16 @@ namespace vm::loader::compiler {
 		) const {
 			if (!files.contains(file)) return std::nullopt;
 
-			// @todo: check if the coordinates are actually in the range
-			return files[file].coord_to_fat.lower_bound(coord)->second;
+			auto ret = files[file].coord_to_fat.lower_bound(coord);
+			if (ret == files[file].coord_to_fat.end()) return std::nullopt;
+
+			if (ret->second.source.has_value()) {
+				auto src_pos = ret->second.source.value();
+				if (src_pos.getStartLineColumn() > std::pair{ coord.line, coord.column })
+					return std::nullopt;
+			}
+
+			return ret->second;
 		}
 	};
 }
