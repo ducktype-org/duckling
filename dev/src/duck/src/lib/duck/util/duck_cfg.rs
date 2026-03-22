@@ -23,7 +23,7 @@ impl DuckCfg {
         Ok(Self { inner })
     }
 
-    /// Whether we should autofix bad subcommands.
+    /// Whether we should autofix unknown subcommands.
     pub fn fixes_enabled(&self) -> QuackResult<bool> {
         Ok(self
             .inner
@@ -32,7 +32,7 @@ impl DuckCfg {
             .unwrap_or(false))
     }
 
-    /// Maximal distance for autofixing bad subcommands.
+    /// Maximal distance for autofixing unknown subcommands.
     pub fn max_fix_dist(&self) -> QuackResult<u32> {
         self.inner
             .get_int("security.typos.max_distance")
