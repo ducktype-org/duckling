@@ -24,7 +24,7 @@ constexpr static char FULL_ELF[] = {
 POP_DIAGNOSTIC
 
 static auto stencils
-	= Stencils{ .binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
+	= Stencils{ .stencils_binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
 	            .stencils_data = std::array {
 	#include <mock_stencils-nm>
 					}

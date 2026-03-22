@@ -19,8 +19,8 @@ namespace vm::jit::cnp {
 	struct StencilData {
 		const char*              name;
 		const char*              type;
-		usize                      place;
-		usize                      size;
+		usize                    place;
+		usize                    size;
 		std::vector<StencilHole> to_patch   = {};
 		std::vector<StencilHole> relocation = {};
 	};
@@ -41,7 +41,7 @@ namespace vm::jit::cnp {
 		/**
 		 * @brief Dynamically link the stored stencils, resolving their dependencies.
 		 */
-		[[nodiscard]] LoadedStencilsT load() const;
+		[[nodiscard]] LoadedStencilsT load() &&;
 	};
 
 	template<usize BinarySize, usize NumFunctions>
@@ -59,8 +59,9 @@ namespace vm::jit::cnp {
 		/**
 		 * @brief Dynamically link the stored stencils, resolving their dependencies.
 		 */
-		[[nodiscard]] static LoadedStencils load(StencilsT stencils) {
-			return LoadedStencils{ std::move(stencils), DynamicLibrary::load(stencils.binary) };
+		[[nodiscard]] static LoadedStencils load(StencilsT&& stencils) {
+			auto loaded_library = DynamicLibrary::load(stencils.stencils_binary);
+			return LoadedStencils{ std::move(stencils), std::move(loaded_library) };
 		}
 
 		/**
@@ -89,13 +90,13 @@ namespace vm::jit::cnp {
 		StencilsT      stencils;
 		DynamicLibrary dynlib;
 
-		LoadedStencils(StencilsT in_stencils, DynamicLibrary in_dynlib):
+		LoadedStencils(StencilsT&& in_stencils, DynamicLibrary&& in_dynlib):
 			  stencils{ std::move(in_stencils) },
 			  dynlib{ std::move(in_dynlib) } {}
 	};
 
 	template<usize BinarySize, usize NumFunctions>
-	inline LoadedStencils<BinarySize, NumFunctions> Stencils<BinarySize, NumFunctions>::load() const {
-		return LoadedStencilsT::load(*this);
+	inline LoadedStencils<BinarySize, NumFunctions> Stencils<BinarySize, NumFunctions>::load() && {
+		return LoadedStencilsT::load(std::move(*this));
 	}
 }

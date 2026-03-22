@@ -23,10 +23,10 @@ namespace vm::jit::cnp {
 	#include <wrapper-nm>
 		};
 
-		static constexpr auto STENCILS
-			= Stencils{ .binary        = std::bit_cast<std::array<byte, sizeof(BIN)>>(BIN),
-			            .stencils_data = std::to_array(DATA) };
-		auto loaded_stencils = STENCILS.load();
+		static constinit auto STENCILS
+			= Stencils{ .stencils_binary = std::bit_cast<std::array<byte, sizeof(BIN)>>(BIN),
+			            .stencils_data   = std::to_array(DATA) };
+		auto loaded_stencils = std::move(STENCILS).load();
 
 		auto opcodes         = func_data.bc | std::views::transform(getInstructionOpcode);
 		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
