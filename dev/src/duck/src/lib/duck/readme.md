@@ -11,7 +11,7 @@ It's responsible only for four things: setting up debug loggers, creating the gl
 
 All of the parsing is done in [`driver/run.rs`](driver/run.rs).
 Before actually passing command-line arguments to the parser, we:
-- [try to fix an possible user typos in subcommand names](driver/cli_args_preprocessing/typos_fixing.rs),
+- [try to fix possible user typos in subcommand names](driver/cli_args_preprocessing/typos_fixing.rs),
 - [expand user aliases](driver/cli_args_preprocessing/aliases_expansion.rs).
 
 ## Subcommand execution
