@@ -8,26 +8,10 @@
 #include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit::cf {
-    enum class CfOccurrenceKind {
-        JumpDestination,
-        Jump,
-        ConditionalJump,
-        Ret,
-    };
-
-    struct CfOccurrence {
-        usize            position;
-        CfOccurrenceKind kind;
-
-        CfOccurrence(usize position, CfOccurrenceKind kind): position(position), kind(kind) {}
-        auto operator<=>(const CfOccurrence&) const = default;
-    };
-
     class ControlFlowAnalyzer {
       public:
         ControlFlowAnalyzer() = default;
 
-        std::vector<CfOccurrence> controlFlowOccurrences(const low::LowFuncData& function);
         std::vector<usize> basicBlockBeginnings(const low::LowFuncData& function);
 
         ControlFlowGraph controlFlowGraph(const low::LowFuncData& function) {

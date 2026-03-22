@@ -9,8 +9,8 @@
 using namespace vm::code::instructions;
 
 namespace vm::jit::cf {
-    std::vector<CfOccurrence> ControlFlowAnalyzer::controlFlowOccurrences(const low::LowFuncData& function) {
-        std::vector<CfOccurrence> cf_occurrences;
+    std::vector<usize> ControlFlowAnalyzer::basicBlockBeginnings(const low::LowFuncData& function) {
+        std::vector<usize> block_beginnings = {0}; // First block always starts at position 0
 
         for (usize index = 0; index < function.bc.size(); ++index) {
             low::MicroOpcode opcode = getInstructionOpcode(function.bc[index]);
@@ -18,23 +18,23 @@ namespace vm::jit::cf {
 
             switch(opcode) {
                 case low::MicroOpcode::jmp_label: {
-                    cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::Jump});
+                    block_beginnings.push_back(index + 1); // Next block starts after jump
                     if (index + arg0 < function.bc.size()) {
-                        cf_occurrences.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
+                        block_beginnings.push_back(index + arg0 + 1); // Jump destination starts a new block
                     }
                     break;
                 }
                 case low::MicroOpcode::jmpIf_label:
                 case low::MicroOpcode::jmpIfNot_label: {
-                    cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::ConditionalJump});
+                    block_beginnings.push_back(index + 1); // Next block starts after jump
                     if (index + arg0 < function.bc.size()) {
-                        cf_occurrences.push_back(CfOccurrence{index + arg0 + 1, CfOccurrenceKind::JumpDestination});
+                        block_beginnings.push_back(index + arg0 + 1); // Jump destination starts a new block
                     }
                     break;
                 }
                 case low::MicroOpcode::ret:
                 case low::MicroOpcode::ret_tailcall_func: {
-                    cf_occurrences.push_back(CfOccurrence{index, CfOccurrenceKind::Ret});
+                    block_beginnings.push_back(index + 1); // Next block starts after ret 
                     break;
                 }
                 default: {
@@ -44,31 +44,11 @@ namespace vm::jit::cf {
         }
 
         // Remove duplicates (occur if there are many jumps to the same destination)
-        std::sort(cf_occurrences.begin(), cf_occurrences.end());
-        cf_occurrences.erase(
-            std::unique(cf_occurrences.begin(), cf_occurrences.end()),
-            cf_occurrences.end()
+        std::sort(block_beginnings.begin(), block_beginnings.end());
+        block_beginnings.erase(
+            std::unique(block_beginnings.begin(), block_beginnings.end()),
+            block_beginnings.end()
         );
-        return cf_occurrences;
-    }
-
-    std::vector<usize> ControlFlowAnalyzer::basicBlockBeginnings(const low::LowFuncData& function) {
-        std::vector<CfOccurrence> cf_occurrences = controlFlowOccurrences(function);
-        std::vector<usize> block_beginnings = {0}; // First block always starts at position 0
-
-        for (const auto& occurrence : cf_occurrences) {
-            if (occurrence.kind == CfOccurrenceKind::JumpDestination) {
-                // Jump destinations signify the beginning of a block
-                if (block_beginnings.back() != occurrence.position) {
-                    // Avoid adding duplicate block beginning if previous block ends in jump
-                    // or it is at the start of the function
-                    block_beginnings.push_back(occurrence.position);
-                }
-            } else {
-                // Other instruction types signify the end of a block
-                block_beginnings.push_back(occurrence.position + 1);
-            }
-        }
         return block_beginnings;
     }
 } // namespace vm::jit
