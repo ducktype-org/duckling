@@ -139,9 +139,11 @@ namespace compiler::helios {
                           return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
                               .valueOrThrow();
                       } else {
-                          auto org = origin.getSourcePosition().value();
-                          auto res = houtgen::getDefaultInitializerExpr(ctx, variable_type, org);
-                          return std::move(res.valueOrThrow());
+                          // clang-format off
+						  return houtgen::getDefaultInitializerExpr(
+									 ctx, variable_type, origin.getSourcePosition().value()
+						  ).valueOrThrow();
+                          // clang-format on
                       }
 				  }();
 
