@@ -107,13 +107,45 @@ namespace compiler::tsh {
 
 		/**
 		 * @brief Determines weather the type has a trivial destructor.
-		 *
-		 * Used to determine if creating a lifetime flag is needed during LIR lowering.
+		 * For more information look in `symbol_type.hpp`
 		 *
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
 		bool hasNoOpDestructor() const;
+
+		/**
+		 * @brief Determines weather the type has a default constructor.
+		 * For more information look in `symbol_type.hpp`
+		 *
+		 * @return true if the type has a default constructor, false otherwise.
+		 */
+		bool isDefaultConstructible(query::Context& ctx) const;
+
+		/**
+		 * @brief Determines weather the type has a trivial zero constructor.
+		 * For more details look in `symbol_type.hpp`.
+		 * @return true if the type can be default initialized by zeros, false otherwise
+		 */
+		bool isTriviallyZeroInitializable(query::Context& ctx) const;
+
+		/**
+		 * @brief Checks if a value of this type can be copied.
+		 * For more information look in `symbol_type.hpp`
+		 *
+		 * @return True if the type is copyable, false otherwise.
+		 */
+		bool isCopyable(query::Context& ctx) const;
+
+		/**
+		 * @brief Checks if a value of this type can be copied trivially by just copying the values
+		 * bytes. This is not true for types like Lists, Strings or aggregate types storing them.
+		 * For more information look in `symbol_type.hpp`
+		 *
+		 * @return True if the symbol is trivially copyable, false otherwise.
+		 */
+		bool isTriviallyCopyable(query::Context& ctx) const;
+
 
 		/**
 		 * @brief The default constructor is deleted.

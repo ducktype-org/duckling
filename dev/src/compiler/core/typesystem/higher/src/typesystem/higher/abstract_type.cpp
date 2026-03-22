@@ -24,6 +24,26 @@ namespace compiler::tsh {
 	}
 
 	[[nodiscard]]
+	bool AbstractType::isDefaultConstructible(query::Context& ctx) const {
+		return pimpl->isDefaultConstructible(ctx);
+	}
+
+	[[nodiscard]]
+	bool AbstractType::isTriviallyZeroInitializable(query::Context& ctx) const {
+		return pimpl->isTriviallyZeroInitializable(ctx);
+	}
+
+	[[nodiscard]]
+	bool AbstractType::isCopyable(query::Context& ctx) const {
+		return pimpl->isCopyable(ctx);
+	}
+
+	[[nodiscard]]
+	bool AbstractType::isTriviallyCopyable(query::Context& ctx) const {
+		return pimpl->isTriviallyCopyable(ctx);
+	}
+
+	[[nodiscard]]
 	bool AbstractType::isImplicitlyCoercible(const AbstractType target, query::Context& ctx) const {
 		return pimpl->isImplicitlyCoercible(target, ctx);
 	}
