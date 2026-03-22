@@ -30,6 +30,13 @@ namespace vm {
 		interpreted_data_variant::Function,
 		interpreted_data_variant::Opaque>;
 
+	/**
+	 * @brief Reference for a value. It is meant to give access to the value from outside a VM.
+	 * It is NOT meant to be used by the internal memory module.
+	 * @note Passed data is NOT copied - only referenced.
+	 * @note `VmValueRef`s can only be used within the same process where they were initialized.
+	 * They cannot be transferred to different processes.
+	 */
 	class VMValueRef {
 		friend class VMProcess;
 
