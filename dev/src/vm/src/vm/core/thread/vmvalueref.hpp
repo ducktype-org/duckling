@@ -53,6 +53,7 @@ namespace vm {
 		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const;
 
 		template<class T>
+		requires std::is_trivially_copy_constructible_v<T>
 		T readBytes(const usize offset = 0) const {
 			CORE_ASSERT(
 				my_type->getName() != base::StrID("void"),
