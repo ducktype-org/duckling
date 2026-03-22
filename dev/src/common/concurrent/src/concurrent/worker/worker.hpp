@@ -89,6 +89,12 @@ namespace concurrent::worker {
 		 */
 		static WRef getCurrentWorker();
 
+		/**
+		 * @brief Gets the unique u64 ID of the worker.
+		 */
+		[[nodiscard]]
+		u64 getID() const;
+
 	private:
 		Worker(usize seed);
 
@@ -125,6 +131,9 @@ namespace concurrent::worker {
 			task_cv;             /// Condition variable to notify the worker thread about new tasks.
 
 		std::jthread real_thread;
+
+		inline static constinit u64 next_id = 0;
+		u64 id = next_id++;  /// Unique u64 ID for the worker
 	};
 }
 
