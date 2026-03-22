@@ -203,7 +203,11 @@ namespace vm {
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalViewUnsafe(
 			GlobalDataID id
 		) -> base::ModRawView {
-			return global_data.atMaybe(id).expect("Id not stored!")->modView();
+			// @TODO: PR Add nice message that global not found, and maybe even the name of the
+			// global if it's possible to get it here.
+			// @TODO: #1431 remove custom exception
+			return global_data.atMaybe(id).expect<exceptions::VMGlobalNotFoundException>()->modView(
+			);
 		}
 
 		/**

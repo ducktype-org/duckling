@@ -320,6 +320,11 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --duckc-worker-count 1
 
+      - name: Integration Tests Concurrent Determinism
+        id: integration-tests-concurrent
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py itest -C -b ${{ env.BUILD_DIR }}
+
       - name: Integration Tests Multithreaded (Only Compiler)
         id: integration-tests-multithreaded-only-compiler
         working-directory: ${{ env.WORKSPACE }}

@@ -6,7 +6,8 @@
 #include <vm/core/process/type_metadata/type.hpp>
 
 namespace vm::code {
-	using BuiltinTypesMap = base::HashMap<base::StrID, TypeOfData>;
+	// This Map is not a hashmap to keep the compiler deterministic in mutli-thread scenario
+	using BuiltinTypesMap = base::Map<base::StrID, TypeOfData>;
 
 	const SpecialTypes& SpecialTypes::get() {
 		static_assert(
