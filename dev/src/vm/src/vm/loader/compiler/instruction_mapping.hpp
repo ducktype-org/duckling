@@ -39,18 +39,21 @@ namespace vm::loader::compiler {
 			base::HashMap<base::StrID, usize>     varname_to_stack_offset{};
 			base::HashMap<usize, usize>           high_to_low{};
 			base::HashMap<usize, EntryMicroToFat> low_to_high{};
-
-			/// @todo: Consider adding mapping from offset to variable name
 		};
 
-		struct FileCtx {
-			std::map<FileCoordinates, api::response::CodePosition> coord_to_fat;
-			/// @todo: check what other things in debugger are file-related
+		struct OriginCtx {
+			struct FatPosition {
+				base::StrID                         function_name;
+				u64                                 instr_number;
+				base::Optional<dia::SourcePosition> source;
+			};
+
+			std::map<FileCoordinates, FatPosition> coord_to_fat;
 		};
 
-		base::HashMap<fs::File, FileCtx> files;
-		base::HashMap<u64, FunctionCtx>  functions_ctx;
-		base::HashMap<base::StrID, u64>  funcname_to_id;
+		base::HashMap<fs::File, OriginCtx> files;
+		base::HashMap<u64, FunctionCtx>    functions_ctx;
+		base::HashMap<base::StrID, u64>    funcname_to_id;
 
 		base::Optional<MicroBytecodePosition> translateToMicroPos(
 			const base::StrID& func_name, u64 instr_position
@@ -69,7 +72,7 @@ namespace vm::loader::compiler {
 			return MicroBytecodePosition{ .function_id = id, .instruction_number = *instr_no };
 		}
 
-		base::Optional<api::response::CodePosition> translateToFatPos(
+		base::Optional<OriginCtx::FatPosition> translateToFatPos(
 			const fs::File& file, const FileCoordinates& coord
 		) const {
 			if (!files.contains(file)) return std::nullopt;

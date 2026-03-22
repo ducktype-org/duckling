@@ -667,7 +667,6 @@ namespace vm {
 				return api::Response(api::response::CodePosition{
 					.function_name = func.name,
 					.instr_number  = high_position ? high_position->fat_pos : instr_low_idx,
-					.source        = high_position ? high_position->src_pos : std::nullopt,
 				});
 			}
 			variant_default {

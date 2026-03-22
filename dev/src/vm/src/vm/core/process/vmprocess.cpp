@@ -308,14 +308,20 @@ namespace vm {
 			}
 
 			variant_case(api::request::FileMappingQuery, request) {
-				auto response = mapping->translateToFatPos(request.file, request.coord);
+				auto response
+					= mapping->translateToFatPos(request.file, { request.line, request.column });
 				if (!response) {
 					return std::unexpected{ api::ApiError{ api::OtherError{
 						.error
 						= "Given file location is not mapped to any specific fat-position" } } };
 				}
 
-				return *response;
+				if (!response->source) {
+					return std::unexpected{ api::ApiError{
+						api::OtherError{ .error = "Given file location is mapped to fat-position, "
+						                          "but source information is not available" } } };
+				}
+				return api::response::Source{ response->source.value() };
 			}
 
 			variant_case(api::request::StatusRequest, status_request) {

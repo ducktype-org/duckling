@@ -50,10 +50,13 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
-			base::StrID                         function_name;
-			u64                                 instr_number;
-			base::Optional<dia::SourcePosition> source;
+			base::StrID function_name;
+			u64         instr_number;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_name);
+		};
+
+		struct Source {
+			dia::SourcePosition source;
 		};
 
 		using Boolean = bool;
@@ -65,6 +68,7 @@ namespace vm::api {
 		response::Type,
 		response::Empty,
 		response::CodePosition,
+		response::Source,
 		response::VmValue,
 		response::Boolean,
 		ThreadID,

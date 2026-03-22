@@ -162,9 +162,7 @@ namespace vm::api {
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
-				pid,
-				request::FileMappingQuery{
-					.file = file, .coord = FileCoordinates{ .line = line, .column = column } }
+				pid, request::FileMappingQuery{ .file = file, .line = line, .column = column }
 			))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}

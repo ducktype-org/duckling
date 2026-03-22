@@ -412,10 +412,9 @@ namespace vm::loader::compiler {
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
 
 	void Compiler::digestFileInfo(
-		fs::File file, std::map<FileCoordinates, api::response::CodePosition> mapping
+		fs::File file, std::map<FileCoordinates, FatMicroMapping::OriginCtx::FatPosition> mapping
 	) {
-		// @todo: make "copy" of CodePosition in non-api namespace
-		instruction_mapping.files.put(file, FatMicroMapping::FileCtx{ std::move(mapping) });
+		instruction_mapping.files.put(file, FatMicroMapping::OriginCtx{ std::move(mapping) });
 	}
 
 	CRef<FatMicroMapping> Compiler::getMapping() const { return &instruction_mapping; }

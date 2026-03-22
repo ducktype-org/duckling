@@ -163,7 +163,8 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 }
 
 void Loader::addFileMapping(const code::CodeCollection& code) {
-	base::HashMap<fs::File, std::map<FileCoordinates, api::response::CodePosition>> file_mapping;
+	base::HashMap<fs::File, std::map<FileCoordinates, compiler::FatMicroMapping::OriginCtx::FatPosition>>
+		file_mapping;
 
 	for (auto& func: code.functions) {
 		for (usize i = 0; i < func.body.size(); i++) {
@@ -177,7 +178,7 @@ void Loader::addFileMapping(const code::CodeCollection& code) {
 			file_mapping.put(file, {});
 			file_mapping[file].emplace(
 				FileCoordinates{ line, column },
-				api::response::CodePosition{ func.name, i, position }
+				compiler::FatMicroMapping::OriginCtx::FatPosition{ func.name, i, position }
 			);
 		}
 	}

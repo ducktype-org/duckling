@@ -54,7 +54,7 @@ namespace vm::loader::compiler {
 
 		CRef<FatMicroMapping> getMapping() const;
 
-		void digestFileInfo(fs::File, std::map<FileCoordinates, api::response::CodePosition>);
+		void digestFileInfo(fs::File, std::map<FileCoordinates, FatMicroMapping::OriginCtx::FatPosition>);
 
 	private:
 		/**
