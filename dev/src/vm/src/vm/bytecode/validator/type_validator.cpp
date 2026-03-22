@@ -195,7 +195,7 @@ namespace {
 		const FuncSignature&   impl_signature,
 		base::StrID            impl_type_name
 	) {
-		if (vmethod_type.result != impl_signature.result_type.str)
+		if (vmethod_type.result != impl_signature.result_type[0].str)
 			throw MethodTypeError(inh, impl_type_name);
 		if (vmethod_type.parameters.size() != impl_signature.parameters.size())
 			throw MethodTypeError(inh, impl_type_name);

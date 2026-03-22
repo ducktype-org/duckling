@@ -165,7 +165,7 @@ namespace vm::detail {
 				-= tp_result->type->getSize(); /* undo what we've done to the sum */                    \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_PLACE_VALIDATION, __VA_ARGS__);                        \
 			vm::code::FuncSignature signature;                                                          \
-			signature.result_type = VM_EXT_C_VM_TYPE_NAME(ResVmType);                                   \
+			signature.result_type = {VM_EXT_C_VM_TYPE_NAME(ResVmType)};                                 \
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \

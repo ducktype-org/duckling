@@ -421,7 +421,7 @@ namespace vm {
 
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id,
-				thread.executing_program->getTypes().at(function_signature->result_type),
+				thread.executing_program->getTypes().at(function_signature->result_type[0]),
 				thread.process,
 				thread,
 				args

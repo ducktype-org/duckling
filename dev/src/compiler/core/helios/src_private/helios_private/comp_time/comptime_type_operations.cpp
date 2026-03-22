@@ -217,8 +217,8 @@ namespace compiler::helios::comptime_ops {
 		vm::code::Function init_global_context;
 		init_global_context.name = base::StrID("comptime_set_ctx");
 		init_global_context.body = { mov_gopq_lopq, ret };
-		init_global_context.signature
-			= { .result_type = base::StrID("void"), .parameters = { base::StrID("opaque_ptr") } };
+		init_global_context.signature = { .result_type = { base::StrID("void") },
+			                              .parameters  = { base::StrID("opaque_ptr") } };
 
 		return {
 			.functions            = { init_global_context },

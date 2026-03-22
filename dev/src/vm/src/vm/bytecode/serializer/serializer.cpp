@@ -113,7 +113,7 @@ namespace vm::code {
 				out << param.str.strView();
 				first = false;
 			}
-			out << " } -> " << function.signature.result_type.str.strView() << " {\n";
+			out << " } -> " << function.signature.result_type[0].str.strView() << " {\n";
 
 			indentUp();
 			displayCode();

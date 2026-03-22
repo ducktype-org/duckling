@@ -170,7 +170,7 @@ namespace vm::loader::compiler {
 		}
 
 		code::FuncSignature func_signature = ctx.function.signature;
-		push(base::StrID("ret_val"), func_signature.result_type.str);
+		push(base::StrID("ret_val"), func_signature.result_type[0].str);
 		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
@@ -287,9 +287,9 @@ namespace vm::loader::compiler {
 			                      .local_stack_size = ctx.local_stack_size,
 			                      .arg_size         = parameters_size,
 			                      .ret_size
-			                      = low_program.types->at(signature.result_type)->getSize().asInt(),
+			                      = low_program.types->at(signature.result_type[0])->getSize().asInt(),
 			                      .parameters  = std::move(parameters),
-			                      .result_type = low_program.types->at(signature.result_type) },
+			                      .result_type = low_program.types->at(signature.result_type[0]) },
 				function.name
 
 			);
@@ -356,7 +356,7 @@ namespace vm::loader::compiler {
 					.function_pointer   = new_func.function_pointer,
 					.parameter_size_sum = param_size_sum,
 					.parameters         = std::move(params),
-					.result_type        = low_program.types->at(new_func.signature.result_type),
+					.result_type        = low_program.types->at(new_func.signature.result_type[0]),
 				},
 				new_func.name
 			);

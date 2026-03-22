@@ -107,7 +107,7 @@ public:
 
 	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
 		  types_ctx(&types_ctx) {
-		push(base::StrID("ret_val"), signature.result_type.str);
+		push(base::StrID("ret_val"), signature.result_type[0].str);
 		for (auto [idx, param]: std::views::enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
 	}
@@ -187,7 +187,7 @@ class FunctionValidator {
             return &signatures.at(instr.function.function_name);
 		}();
 
-		bool check_ret_val = signature->result_type.str != base::StrID("void");
+		bool check_ret_val = signature->result_type[0].str != base::StrID("void");
 
 		if (signature->parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
@@ -196,7 +196,7 @@ class FunctionValidator {
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && local_stack.back().type->getName() != signature->result_type.str)
+		if (check_ret_val && local_stack.back().type->getName() != signature->result_type[0].str)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -268,14 +268,14 @@ class FunctionValidator {
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
 		auto signature   = signatures.at(fun_name);
 
-		if (!(signature.result_type.str == current_signature.result_type.str
+		if (!(signature.result_type[0].str == current_signature.result_type[0].str
 		      && signature.parameters == current_signature.parameters))
 			throw InvalidTailcallSignatureError(generic_arg);
 
 		if (signature.parameters.size() + 1 != local_stack.size())
 			throw InvalidTailcallArgumentsError(generic_arg);
 
-		if (local_stack.front().type->getName() != signature.result_type.str)
+		if (local_stack.front().type->getName() != signature.result_type[0].str)
 			throw InvalidTailcallArgumentsError(generic_arg);
 		for (auto [param, stack_elem]: std::views::zip(
 				 signature.parameters, local_stack.getStackState() | std::views::drop(1)
@@ -534,24 +534,24 @@ class FunctionValidator {
 			instr_case_novalue(Comment) {}
 			instr_case(Op_mov_l8_imm, instr) {
 				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
+				    && function.signature.result_type[0].str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
 			instr_case(Op_mov_l8_l8, instr) {
 				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
+				    && function.signature.result_type[0].str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_cmov_l8_l8, instr) {
 				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
+				    && function.signature.result_type[0].str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_cmov_l8_imm, instr) {
 				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
+				    && function.signature.result_type[0].str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
 			instr_case_novalue(Op_mov_l16_imm) {}
@@ -1619,15 +1619,15 @@ class FunctionValidator {
 
 	void validateSignature() {
 		if (function.name.str == base::StrID("main")
-		    && function.signature.result_type.str != base::StrID("i64")) {
+		    && function.signature.result_type[0].str != base::StrID("i64")) {
 			throw InvalidMainReturnType(function.signature);
 		}
 		for (const auto& param_type: function.signature.parameters) {
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
 		}
-		if (!types_ctx.contains(function.signature.result_type.str))
-			throw UnknownTypeError(opargs::Type{ function.signature.result_type.str });
+		if (!types_ctx.contains(function.signature.result_type[0].str))
+			throw UnknownTypeError(opargs::Type{ function.signature.result_type[0].str });
 	}
 
 public:

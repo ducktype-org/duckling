@@ -94,11 +94,11 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 
 		// Validate arguments exist and are trivially copyable
 
-		if (auto tp = type_context.getCurrentTypes().atMaybe(new_func.signature.result_type)) {
+		if (auto tp = type_context.getCurrentTypes().atMaybe(new_func.signature.result_type[0])) {
 			if (!tp.value()->isTriviallyCopyable())
 				throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 		} else
-			throw UnknownTypeError(opargs::Type(new_func.signature.result_type));
+			throw UnknownTypeError(opargs::Type(new_func.signature.result_type[0]));
 		for (const auto& type: new_func.signature.parameters)
 			if (auto tp = type_context.getCurrentTypes().atMaybe(type)) {
 				if (!tp.value()->isTriviallyCopyable())
