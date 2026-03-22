@@ -26,7 +26,7 @@ namespace vm::jit::cnp {
 
 		std::byte*                 findSymbol(const char* name) const;
 		base::Optional<std::byte*> maybeFindSymbol(const char* name) const;
-		static DynamicLibrary      load(std::span<const byte> binary);
+		static DynamicLibrary      fromMemory(std::span<const byte> library_bytes);
 
 	private:
 		DynamicLibrary(int in_lib_fd, void* in_lib_handle):

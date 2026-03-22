@@ -60,7 +60,7 @@ namespace vm::jit::cnp {
 		 * @brief Dynamically link the stored stencils, resolving their dependencies.
 		 */
 		[[nodiscard]] static LoadedStencils load(StencilsT&& stencils) {
-			auto loaded_library = DynamicLibrary::load(stencils.stencils_binary);
+			auto loaded_library = DynamicLibrary::fromMemory(stencils.stencils_binary);
 			return LoadedStencils{ std::move(stencils), std::move(loaded_library) };
 		}
 
