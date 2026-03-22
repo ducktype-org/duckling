@@ -145,4 +145,4 @@ namespace vm::jit::cf {
             return blocks[id];
         }
     };
-}
+} // vm::jit::cf
