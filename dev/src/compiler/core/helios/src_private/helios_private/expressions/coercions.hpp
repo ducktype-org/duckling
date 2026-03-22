@@ -5,8 +5,13 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
+#include "base/except/exceptions.hpp"
+#include "base/extend_cpp/variant_match.hpp"
+
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
+
+#include <variant>
 
 namespace compiler::helios {
 
@@ -31,6 +36,11 @@ namespace compiler::helios {
 	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
 	 */
 	struct InvalidCoercion final {};
+
+	/**
+	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
+	 */
+	struct TypeNotTriviallyCopyable final {};
 
 	class CoercionResult;
 	using CoercionQResult = query::QResult<CoercionResult>;
@@ -94,14 +104,21 @@ namespace compiler::helios {
 
 		CoercionResult(InvalidCoercion invalid): storage(invalid) {}
 
+		CoercionResult(TypeNotTriviallyCopyable invalid): storage(invalid) {}
+
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
 			return std::holds_alternative<Coercion>(storage);
 		}
 
 		[[nodiscard]]
-		constexpr bool isInvalid() const noexcept {
-			return std::holds_alternative<InvalidCoercion>(storage);
+		constexpr bool isInvalid() const {
+			variant_match(storage) {
+				variant_case_novalue(InvalidCoercion) return true;
+				variant_case_novalue(TypeNotTriviallyCopyable) return true;
+				variant_case_novalue(Coercion) return true;
+				variant_default CORE_UNREACHABLE();
+			}
 		}
 
 		[[nodiscard]]
@@ -125,13 +142,13 @@ namespace compiler::helios {
 		}
 
 		[[nodiscard]]
-		const std::variant<Coercion, InvalidCoercion>& getVariant() const {
+		const std::variant<Coercion, InvalidCoercion, TypeNotTriviallyCopyable>& getVariant() const {
 			return storage;
 		}
 
 
 	private:
-		std::variant<Coercion, InvalidCoercion> storage;
+		std::variant<Coercion, InvalidCoercion, TypeNotTriviallyCopyable> storage;
 	};
 
 	/**

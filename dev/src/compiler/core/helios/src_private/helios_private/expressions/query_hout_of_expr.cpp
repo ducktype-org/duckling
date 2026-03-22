@@ -4,6 +4,7 @@
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
 #include "numeric_literals.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
@@ -19,10 +20,12 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <typesystem/higher/queries.hpp>
 
+#include "base/str/str_utils.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include "query_framework/query_errors.hpp"
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -667,6 +670,36 @@ namespace compiler::helios {
 						pst_expr.element.unlock(ctx)->getSourcePosition(),
 						makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
 						makeBox<InteractiveType>(ctx, expected_type)
+					));
+				}
+				return query::Failed();
+			}
+			variant_case(TypeNotTriviallyCopyable, _) {
+				if (expr_hout->expression_type.getSymbolType().getRefKind()
+				        == tsh::ReferenceKind::Ref
+				    && expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Copy constructor for non-trivially-copyable type `",
+							expr_hout->expression_type.getSymbolType()
+								.withReferenceKind(tsh::ReferenceKind::Direct)
+								.toString(),
+							"`. This was caused by the need of dereferencing a value of type: "
+							"`",
+							expr_hout->expression_type.getSymbolType().toString(),
+							"`."
+						),
+						pst_expr.element.unlock(ctx)->getSourcePosition()
+					));
+
+				} else {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"1 Copy constructor for non-trivially-copyable type `",
+							expr_hout->expression_type.getSymbolType().toString(),
+							"`."
+						),
+						pst_expr.element.unlock(ctx)->getSourcePosition()
 					));
 				}
 				return query::Failed();

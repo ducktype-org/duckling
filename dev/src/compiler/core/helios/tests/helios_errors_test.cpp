@@ -116,6 +116,7 @@ private:
 			1
 		);
 
+
 		checkForErrorOnCompileModule(
 			R"(
 				fundecl a(x: i32) -> i32;
@@ -793,6 +794,108 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "zero-sized classes" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: List[i32];
+					var b = a;
+					return 0;
+				};
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U; }
+
+				fun main() -> i64 = {
+					var a: T;
+					var b = a;
+					return 0;
+				};
+			)",
+			{ "Copy constructor for non-trivially-copyable type `Class T`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() -> List[i32] = {
+				    var a: List[i32];
+				    return a;
+				}
+				fun main() -> i64 = {
+				    var list = foo();
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`", "return a", "foo()" },
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(list: List[i32]) -> i32 = {
+				    return 1;
+				}
+				fun main() -> i64 = {
+					var list: List[i32];
+				    foo(list);
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(list: ref List[i32]) -> i32 = {
+				    var list_copy: List[i32] = list;
+				    return list[0];
+				}
+				fun main() -> i64 = {
+				    var list: List[i32];
+				    foo(&list);
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U }
+				fun main() -> i64 = {
+					var a: T;
+				    var b = a.u.list; 
+					return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U }
+				fun main() -> i64 = {
+					var list: List[i32];
+					var a: T = T(U(&list));
+					return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`",
+		      "This was caused by the need" },
 			1
 		);
 	}

@@ -1,5 +1,7 @@
 #include "coercions.hpp"
 
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
@@ -123,9 +125,29 @@ namespace compiler::helios {
 	CoercionQResult canCoerce(
 		query::Context& ctx, const tsh::SymbolType<> from, const tsh::SymbolType<> to
 	) {
-		if (ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to }))
-			return Coercion(from, to);
-		return InvalidCoercion{};
+		// First check that the type is even coercible to provide a invalid coercion error first.
+		const bool coercible = ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to });
+		if (!coercible) return InvalidCoercion{};
+
+		// Copying from reference/box to value or box requires copying.
+		// For now we only support trivial copyability.
+		// @TODO: #2000 Remove this check.
+		bool requires_copy_coercion
+			= ((from.getRefKind() == tsh::ReferenceKind::Direct
+		        && to.getRefKind() == tsh::ReferenceKind::Box)
+		       || (from.getRefKind() == tsh::ReferenceKind::Ref
+		           && (to.getRefKind() == tsh::ReferenceKind::Direct
+		               || to.getRefKind() == tsh::ReferenceKind::Box))
+		       || (from.getRefKind() == tsh::ReferenceKind::Box
+		           && to.getRefKind() == tsh::ReferenceKind::Direct)
+		       || (from.getRefKind() == tsh::ReferenceKind::Direct
+		           && to.getRefKind() == tsh::ReferenceKind::Direct));
+
+		if (requires_copy_coercion && !from.getType().isTriviallyCopyable(ctx))
+			return TypeNotTriviallyCopyable{};
+
+		// If we got here, then the type is coercible and trivially copyable.
+		return Coercion(from, to);
 	}
 
 	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::SymbolType<> from) {

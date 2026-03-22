@@ -1,5 +1,8 @@
 #include "errors.hpp"
 
+#include "diagnostic_interactive/placeholder.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
@@ -175,6 +178,18 @@ namespace compiler::helios::code {
 				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
 				return makeBox<RepeatedNamedArgumentError>(source_pos);
 			}
+			variant_case(TypeNotTriviallyCopyable, data) {
+				auto source_pos
+					= arguments_origin[data.parameter_index].getSourcePosition().value();
+				return makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"2 Copy constructor for non-trivially-copyable type `",
+						data.given_type.toString(),
+						"`."
+					),
+					source_pos
+				);
+			}
 			variant_case(FunctionMatchFailure, data) {
 				auto get_interactive_function
 					= [&](SymID function_symbol) -> base::Optional<Box<InteractiveFunction>> {
@@ -247,6 +262,35 @@ namespace compiler::helios::code {
 						return makeBox<NamedArgumentProvidedByPositionalError>(
 							arg_pos, std::move(function_name)
 						);
+					}
+					variant_case(TypeNotTriviallyCopyable, data) {
+						auto source_pos
+							= arguments_origin[data.parameter_index].getSourcePosition().value();
+						if (data.given_type.getRefKind() != tsh::ReferenceKind::Direct
+						    && data.expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
+							return makeBox<dia_int::NotYetImplementedCodeError>(
+								base::strConcat(
+									"Copy constructor for non-trivially-copyable type `",
+									data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)
+										.toString(),
+									"`. This was caused by the need of dereferencing a value of "
+									"type: "
+									"`",
+									data.given_type.toString(),
+									"`."
+								),
+								source_pos
+							);
+						} else {
+							return makeBox<dia_int::NotYetImplementedCodeError>(
+								base::strConcat(
+									"Copy constructor for non-trivially-copyable type `",
+									data.given_type.toString(),
+									"`."
+								),
+								source_pos
+							);
+						}
 					}
 				}
 			}

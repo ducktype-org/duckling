@@ -59,15 +59,27 @@ namespace compiler::helios::code {
 		SymID function;
 	};
 
+	struct TypeNotTriviallyCopyable final {
+		/** Index of the parameter of the declaration thats not trivially copyable */
+		usize             parameter_index;
+		tsh::SymbolType<> given_type;
+		tsh::SymbolType<> expected_type;
+		SymID             function;
+	};
+
 	using FunctionMatchFailure = std::variant<
 		TooManyCallArguments,
 		NamedArgumentProvidedByPositional,
 		UnknownNamedArgument,
 		TypeMismatch,
-		MissingCallArgument>;
+		MissingCallArgument,
+		TypeNotTriviallyCopyable>;
 
-	using CallFailure
-		= std::variant<PositionalAfterNamedArgument, RepeatedNamedArgument, FunctionMatchFailure>;
+	using CallFailure = std::variant<
+		PositionalAfterNamedArgument,
+		RepeatedNamedArgument,
+		FunctionMatchFailure,
+		TypeNotTriviallyCopyable>;
 
 	class AmbiguousMatchesError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
