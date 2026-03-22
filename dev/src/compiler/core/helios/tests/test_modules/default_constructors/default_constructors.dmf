@@ -18,3 +18,7 @@ class ArrayHolder {
 class DeepStack {
     n: Nested;
 }
+
+class DeepStackTrivial {
+    n: Trivial[2];
+}

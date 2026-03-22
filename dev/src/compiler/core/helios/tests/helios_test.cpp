@@ -2593,11 +2593,12 @@ private:
 
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/default_constructors")));
 
-		auto trivial_sym   = getChain("Trivial", root_scope).back();
-		auto with_init_sym = getChain("WithInit", root_scope).back();
-		auto nested_sym    = getChain("Nested", root_scope).back();
-		auto holder_sym    = getChain("ArrayHolder", root_scope).back();
-		auto deep_sym      = getChain("DeepStack", root_scope).back();
+		auto trivial_sym      = getChain("Trivial", root_scope).back();
+		auto with_init_sym    = getChain("WithInit", root_scope).back();
+		auto nested_sym       = getChain("Nested", root_scope).back();
+		auto holder_sym       = getChain("ArrayHolder", root_scope).back();
+		auto deep_sym         = getChain("DeepStack", root_scope).back();
+		auto deep_trivial_sym = getChain("DeepStackTrivial", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
@@ -2655,6 +2656,7 @@ private:
 			}
 
 			// Class with a class field which is non zero-initializable should emit a ctor call.
+			// This ctor should call a ctor of the inner non zero-initializable field.
 			{
 				auto        nested_st = get_class_type(nested_sym);
 				const auto& expr
@@ -2664,7 +2666,8 @@ private:
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
 				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
 
-				// Exactly one function all to `WithInit` ctor should be performed.
+				// The top-level constructor should call one function which is a default ctor of
+				// `WithInit`.
 				ASSERT_EQUAL_PRINT(2, deps.size());
 
 				auto dep_gsd = std::get<GeneratedSymbolData>(getSymRef(deps[0])->other);
@@ -2673,7 +2676,8 @@ private:
 				));
 			}
 
-			// Ctor which calls ctor of static array, which calls a ctor of the inner element.
+			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
+			// inner element.
 			{
 				auto        holder_st = get_class_type(holder_sym);
 				const auto& expr
@@ -2696,6 +2700,9 @@ private:
 				}
 				ASSERT_TRUE(found_array_ctor);
 			}
+
+			// `DeepStack` ctor should call a ctor of the `Nested` field, which calls a ctor of
+			// `WithInit`
 			{
 				auto        deep_st = get_class_type(deep_sym);
 				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(deep_st)->valueOrThrow();
@@ -2704,8 +2711,23 @@ private:
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
 				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
 
-				// Ctor(Nested) -> Ctor(WithInit)
+				// Ctor(DeepStack) -> Ctor(Nested) -> Ctor(WithInit)
 				ASSERT_EQUAL_PRINT(3, deps.size());
+			}
+
+			// `DeepStackTrivial` ctor should not call any other default constructors, since it stores
+			// a static array of trivially zero-initializable types which can be zero initialized.
+			{
+				auto        deep_trivial_st = get_class_type(deep_trivial_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_st)->valueOrThrow();
+
+				auto call     = dynamic_cast<const CallExpr*>(expr.get());
+				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+
+				// Ctor(DeepStackTrivial)
+				ASSERT_EQUAL_PRINT(1, deps.size());
 			}
 		});
 	}

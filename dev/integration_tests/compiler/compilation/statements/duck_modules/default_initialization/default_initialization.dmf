@@ -135,6 +135,15 @@ fun testDeepNesting() = {
     builtin_output_i64(o.m[1].d[0].val);    # 999
 }
 
+# ==================================== FUNCTION FIELD ====================================
+fun foo() = 1;
+class FunField { a: i32 = foo(); }
+
+fun testFunctionField() = {
+    var f: FunField;
+    builtin_output_i64(f.a);    # 1
+}
+
 
 fun main() -> i64 = {
     printSeparator();
@@ -148,6 +157,9 @@ fun main() -> i64 = {
     
     printSeparator();
     testDeepNesting();
+
+    printSeparator();
+    testFunctionField();
 
     return 0;
 }

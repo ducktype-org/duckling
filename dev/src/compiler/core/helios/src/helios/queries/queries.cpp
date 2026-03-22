@@ -138,15 +138,13 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * Append the default constructors for symbols that need them.
-		 * @param out_functions The vector of functions to be modified.
-		 * @param ctors Symbol IDs of the top level default constructors.
-		 * @param ctx The query context.
+		 * @brief Appends the default constructors and all the default constructors they call to
+		 * the HOUT unit.
 		 *
-		 * @note Generation of default constructors may cause creation of more than one generated
-		 * function. For example default constructor of `i32[3][2]`, calls the default constructor
-		 * of `i32[2]` which doesn't have a symbol so it won't get inserted. For this reason we look
-		 * through every top level constructor and insert it dependencies into the module.
+		 * @param out_functions The vector of functions to be modified.
+		 * @param ctors Symbol IDs of the top level default constructors generated for the symbols
+		 * in scope.
+		 * @param ctx The query context.
 		 */
 		static void appendDefaultConstructors(
 			std::vector<CRef<HOUTFunction>>& out_functions,
@@ -156,17 +154,25 @@ namespace compiler::helios {
 			std::set<SymID> all_required_functions;
 
 			// Collect all dependencies - default ctors called by the default ctor, and eliminate
-			// duplicates.
+			// duplicates. This is needed to handle default constructors of types like `T[5][3]`,
+			// for which the top level default constructor recursively calls the default constructor
+			// of `T[3]`. The inner `T[3]` constructor isn't included in the `ctors` set since there
+			// are no symbols in scope of type `T[3]`, thus we retrieve it by checking transitive
+			// functions calls of the top-level default constructor.
 			for (SymID ctor_sym: ctors) {
 				auto transitive = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
 				for (SymID dependency: transitive) {
 					auto sym_ref = getSymRef(dependency);
 
-					// Skip all not generated symbols, although none should appear.
+					// Skip all not generated symbols, to prevent double insertion of HOUTFunctions.
+					// For example in cases like: `class T { a: i32 = foo(); }`, the SymID of
+					// `foo()` will get returned as a result of `QueryTransitiveFunctionCalls` since
+					// its called by the default constructor of `T`. This function was already added
+					// when looping through the symbols in scope thus we skip it here.
 					if (!std::holds_alternative<houtgen::GeneratedSymbolData>(sym_ref->other))
 						continue;
 					const auto gsd_data = std::get<houtgen::GeneratedSymbolData>(sym_ref->other);
-					// Insert only other default constructors.
+					// Insert only other default constructors to not insert implicit constructors twice.
 					if (gsd_data.isDefaultConstructor()) all_required_functions.insert(dependency);
 				}
 			}

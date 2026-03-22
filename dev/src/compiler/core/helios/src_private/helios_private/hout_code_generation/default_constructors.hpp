@@ -9,20 +9,6 @@
 
 namespace compiler::helios::houtgen {
 	/**
-	 * @brief Get the compiler-generated HOUT representation of the implicit constructor for a class.
-	 *
-	 * The implicit constructor is a function that takes parameters for each field of the class
-	 * and returns an instance of the class with those fields initialised accordingly.
-	 * @note This constructor is used in `var a: T = T(x, y, z)` cases and requires the uninitialized
-	 * class fields to be passed as parameters.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(
-		QueryClassConstructor, tsh::ClassAbstractType, CRef<query::QResult<HOUTFunction>>, ({})
-	);
-
-	/**
 	 * @brief Get the compiler-generated HOUT representation of the default constructor for a class.
 	 *
 	 * The default constructor is a function that doesn't take any parameters and initializes a
@@ -65,12 +51,12 @@ namespace compiler::helios::houtgen {
 	/**
 	 * @brief Get the hout expression which default initializes a variable of a given type.
 	 * This could either be:
-	 * - `code::DefaultValueExpr` - for primitives. This means zero-initialization of the variable
-	 * in LLVM.
+	 * - `code::DefaultValueExpr` - for trivially zero-initializable types like primitives or
+	 * aggregate types storing zero-initializable types. This then maps to `ZeroInitialize` in LLVM.
 	 * - `code::LiteralUnitExpr` - for unit types.
 	 * - `code::LiteralTypeExpr` storing a void type - for meta types.
-	 * - `code::CallExpr` - for classes/arrays/tuples. This is a call expression to the default
-	 * constructor of the given type.
+	 * - `code::CallExpr` - for non-trivially-zero-initializable classes/arrays/tuples. This is a
+	 * call expression to the default constructor of the given type.
 	 *
 	 * Expects the given type to be default initializable.
 	 *
