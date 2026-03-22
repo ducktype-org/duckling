@@ -898,6 +898,19 @@ private:
 		      "This was caused by the need" },
 			1
 		);
+		
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+    				var nested: List[List[i32]];
+    				var inner: List[i32];
+    				nested += inner;    
+    				return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
