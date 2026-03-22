@@ -10,68 +10,56 @@
 //! └── storage/ <root of the storage internal files>
 
 use crate::{QuackResult, util_common::env::Env};
-use paste::item;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
-macro_rules! getters {
+macro_rules! getter {
     (
-        $(
-            $name: ident, $desc: literal $(,)?
-        ),*
+        MemberName: $name:ident,
+        Description: $desc:literal,
+        EnsureFunction: $fn:ident $(,)?
     ) => {
-        $(
-            /// Get the path for the
-            #[doc = $desc]
-            ///
-            /// Note that it may not exist on the disk
-            pub fn $name(&self) -> &Path {
-                &self.$name
-            }
-        )*
+        /// Get the path for the
+        #[doc = $desc]
+        /// Note that it may not exist on the disk
+        pub fn $name(&self) -> &Path {
+            &self.$name
+        }
     };
 }
 
 macro_rules! ensure_file {
     (
-        $(
-            $name: ident, $desc:literal $(,)?
-        ),*
+        MemberName: $name:ident,
+        Description: $desc:literal,
+        EnsureFunction: $fn:ident $(,)?
     ) => {
-        item! {
-            $(
-                /// Ensure that the file
-                #[doc = $desc]
-                /// exists on a disk
-                pub fn [<ensure_ $name>](&self) -> QuackResult<&Path> {
-                    use $crate::util_common::path_ops_ext::PathOpsExt;
-                    let file = self.$name();
-                    let _ = file.touch()?;
-                    Ok(file)
-                }
-            )*
+        /// Ensure that the file
+        #[doc = $desc]
+        /// exists on the disk
+        pub fn $fn(&self) -> QuackResult<&Path> {
+            use $crate::util_common::path_ops_ext::PathOpsExt;
+            let file = self.$name();
+            let _ = file.touch()?;
+            Ok(file)
         }
     };
 }
 
 macro_rules! ensure_dir {
     (
-        $(
-            $name: ident, $desc:literal $(,)?
-        ),*
+        MemberName: $name:ident,
+        Description: $desc:literal,
+        EnsureFunction: $fn:ident $(,)?
     ) => {
-        item! {
-            $(
-                /// Ensure that the directory
-                #[doc = $desc]
-                /// exists on a disk
-                pub fn [<ensure_ $name>](&self) -> QuackResult<&Path> {
-                    use $crate::util_common::path_ops_ext::{PathOpsExt, MkdirOptions};
-                    let file = self.$name();
-                    let _ = file.mkdir(MkdirOptions::WithParents)?;
-                    Ok(file)
-                }
-            )*
+        /// Ensure that the directory
+        #[doc = $desc]
+        /// exists on the disk
+        pub fn $fn(&self) -> QuackResult<&Path> {
+            use $crate::util_common::path_ops_ext::{MkdirOptions, PathOpsExt};
+            let file = self.$name();
+            let _ = file.mkdir(MkdirOptions::WithParents)?;
+            Ok(file)
         }
     };
 }
@@ -79,16 +67,33 @@ macro_rules! ensure_dir {
 macro_rules! call_on_files {
     ($callback:ident) => {
         $callback! {
-            fetcher_lockfile, "fetcher lockfile",
-            metadata_db, "fetcher metadata database",
+            MemberName: fetcher_lockfile,
+            Description: "fetcher lockfile",
+            EnsureFunction: ensure_fetcher_lockfile,
+        }
+        $callback! {
+            MemberName: metadata_db,
+            Description: "fetcher metadata database",
+            EnsureFunction: ensure_metadata_db,
         }
     };
 
     ($callback:ident INCLUDE_USER_CONFIG) => {
         $callback! {
-            fetcher_lockfile, "fetcher lockfile",
-            metadata_db, "fetcher metadata database",
-            user_config, "user config",
+            MemberName: user_config,
+            Description: "user config",
+            EnsureFunction: ensure_user_config,
+        }
+
+        $callback! {
+            MemberName: fetcher_lockfile,
+            Description: "fetcher lockfile",
+            EnsureFunction: ensure_fetcher_lockfile,
+        }
+        $callback! {
+            MemberName: metadata_db,
+            Description: "fetcher metadata database",
+            EnsureFunction: ensure_metadata_db,
         }
     };
 }
@@ -96,12 +101,38 @@ macro_rules! call_on_files {
 macro_rules! call_on_dirs {
     ($callback:ident) => {
         $callback! {
-            root, "duck home root directory",
-            cache_dir, "cache directory",
-            downloads_dir, "fetcher downloads directory",
-            artifacts_dir, "fetcher artifacts directory",
-            storage_dir, "storage directory",
-            global_venv_dir, "global venv directory",
+            MemberName: root,
+            Description: "duck home root directory",
+            EnsureFunction: ensure_root,
+        }
+
+        $callback! {
+            MemberName: downloads_dir,
+            Description: "fetcher downloads directory",
+            EnsureFunction: ensure_downloads_dir,
+        }
+
+        $callback! {
+            MemberName: cache_dir,
+            Description: "cache directory",
+            EnsureFunction: ensure_cache_dir,
+        }
+
+        $callback! {
+            MemberName: artifacts_dir,
+            Description: "fetcher artifacts directory",
+            EnsureFunction: ensure_artifacts_dir,
+        }
+
+        $callback! {
+            MemberName: storage_dir,
+            Description: "storage directory",
+            EnsureFunction: ensure_storage_dir,
+        }
+        $callback! {
+            MemberName: global_venv_dir,
+            Description: "global venv directory",
+            EnsureFunction: ensure_global_dir,
         }
     };
 }
@@ -122,6 +153,7 @@ pub struct DuckHome {
 }
 
 impl DuckHome {
+    /// Create a new [`DuckHome`] rooted at `root`, and using environmental variables from [`Env`].
     pub fn new(root: PathBuf, env: &Env) -> Self {
         fn get_key_with_fallback(
             env: &Env,
@@ -172,11 +204,11 @@ impl DuckHome {
     }
 
     call_on_dirs! {
-        getters
+        getter
     }
 
     call_on_files! {
-        getters INCLUDE_USER_CONFIG
+        getter INCLUDE_USER_CONFIG
     }
 
     call_on_dirs! {
