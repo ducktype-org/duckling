@@ -201,14 +201,7 @@ namespace query::internal {
 
 	base::Optional<Task> TaskPool::tryStealFromWorker(WRef worker_ref, NodeID task_id) {
 		auto& worker_pool = worker_pools[worker_ref->getID()];
-		for (auto it = worker_pool.begin(); it != worker_pool.end(); ++it) {
-			if (it->id == task_id) {
-				Task task = std::move(*it);
-				worker_pool.erase(it);
-				return task;
-			}
-		}
-		return {};
+		return worker_pool.extractIf([&](base::CRef<Task> task) { return task->id == task_id; });
 	}
 
 	void TaskPool::addToGlobalPool(Task&& task) { global_pool.push(std::move(task)); }

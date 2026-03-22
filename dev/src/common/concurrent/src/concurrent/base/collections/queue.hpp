@@ -3,6 +3,7 @@
 #include <deque>
 #include <type_traits>
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 #include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 #include <concurrent/base/locks/with_lock.hpp>
@@ -32,6 +33,23 @@ namespace concurrent {
                 return data;
             }
             return {};
+        }
+
+        template <typename Predicate>
+        [[nodiscard]]
+        base::Optional<DATA_T> extractIf(Predicate pred) {
+            WithLock scoped_lock(&lock);
+            if (queue.empty()) return {};
+
+            auto it = std::find_if(queue.begin(), queue.end(), [&](const DATA_T& elem) {
+                return pred(base::CRef<DATA_T>(&elem));
+            });
+
+            if (it == queue.end()) return {};
+
+            DATA_T data = std::move(*it);
+            queue.erase(it);
+            return data;
         }
 
         void push(DATA_T data){
@@ -86,15 +104,20 @@ namespace concurrent {
                 return !(a == b);
             }
 
-            LockedIterator() = default;
+            LockedIterator() noexcept = default;
 
-            LockedIterator(std::shared_ptr<WithLock<AtomicFlagSpinlock>> lock_guard, internal_iterator_type iter) noexcept:
-                lock_guard(std::move(lock_guard)), internal_iterator(iter) {}
+            LockedIterator(
+                std::shared_ptr<WithLock<AtomicFlagSpinlock>> lock_guard,
+                internal_iterator_type iter,
+                const ConQueue* owner
+            ) noexcept:
+                lock_guard(std::move(lock_guard)), internal_iterator(iter), owner(owner) {}
 
             friend class ConQueue;
         private:
             std::shared_ptr<WithLock<AtomicFlagSpinlock>> lock_guard;
             internal_iterator_type internal_iterator;
+            const ConQueue* owner = nullptr;
         };
 
         using Iterator = LockedIterator<false>;
@@ -107,23 +130,26 @@ namespace concurrent {
 
         Iterator begin() {
             auto lock_guard = std::make_shared<WithLock<AtomicFlagSpinlock>>(&lock);
-            return Iterator(lock_guard, queue.begin());
+            return Iterator(lock_guard, queue.begin(), this);
         }
 
         ConstIterator begin() const {
             auto lock_guard = std::make_shared<WithLock<AtomicFlagSpinlock>>(&lock);
-            return ConstIterator(lock_guard, queue.cbegin());
+            return ConstIterator(lock_guard, queue.cbegin(), this);
         }
 
         Iterator end() {
-            return Iterator(nullptr, queue.end());
+            return Iterator(nullptr, queue.end(), this);
         }
 
         ConstIterator end() const {
-            return ConstIterator(nullptr, queue.cend());
+            return ConstIterator(nullptr, queue.cend(), this);
         }
 
         Iterator erase(Iterator it) {
+            CORE_ASSERT(it.owner == this, "Erasing with iterator from different queue");
+            CORE_ASSERT(it.lock_guard != nullptr, "Erasing requires a locked iterator");
+            CORE_ASSERT(it.internal_iterator != queue.end(), "Erasing end iterator is not allowed");
             auto internal_it = it.internal_iterator;
             internal_it = queue.erase(internal_it);
             it.internal_iterator = internal_it;
