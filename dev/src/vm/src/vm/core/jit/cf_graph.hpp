@@ -69,6 +69,10 @@ namespace vm::jit::cf {
             throw std::runtime_error("This block does not have conditional outgoing edges.");
         }
 
+        BlockID operator[](usize index) const {
+            return to[index];
+        }
+
       private:
         std::array<BlockID, 2> to;
         usize size_;
@@ -110,6 +114,10 @@ namespace vm::jit::cf {
 
         void setDefaultEdge(BlockID target) {
             succ.setDefault(target);
+        }
+
+        BlockID edge(usize index) const {
+            return succ[index];
         }
     };
 
