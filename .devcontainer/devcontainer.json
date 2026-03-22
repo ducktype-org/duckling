@@ -1,0 +1,11 @@
+{
+	"name": "Dockling Dev",
+	"image": "dockling-dev",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/duckling,type=bind,consistency=cached",
+	"workspaceFolder": "/duckling",
+	"runArgs": [ "--cap-add=SYS_PTRACE" ],
+	"mounts": [
+		"source=${localWorkspaceFolder}/dockling-dev/home_ubuntu/,target=/home/ubuntu/,type=bind",
+		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind"
+	]
+}
