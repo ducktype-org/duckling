@@ -35,7 +35,7 @@ namespace vm::jit::cnp {
 	struct Stencils {
 		using LoadedStencilsT = LoadedStencils<BinarySize, NumFunctions>;
 
-		std::array<byte, BinarySize>          binary;
+		std::array<byte, BinarySize>          stencils_binary;
 		std::array<StencilData, NumFunctions> stencils_data;
 
 		/**
