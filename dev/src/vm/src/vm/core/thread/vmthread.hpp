@@ -35,6 +35,7 @@ namespace vm {
 	}
 
 
+	class IVMProcess;
 	class VMProcess;
 
 	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
@@ -94,7 +95,7 @@ namespace vm {
 		/**
 		 * @brief Link to parent process.
 		 */
-		VMProcess& process;
+		IVMProcess& process;
 
 		/**
 		 * @brief Parent process'es memory.
@@ -205,7 +206,7 @@ namespace vm {
 		);
 
 	public:
-		VMThread(VMProcess& process);
+		VMThread(IVMProcess& process);
 
 		void breakActiveExecution();
 
@@ -305,6 +306,7 @@ namespace vm {
 		bool isTerminateRequested();
 
 		friend class VMProcess;
+		friend class IVMProcess;
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
 

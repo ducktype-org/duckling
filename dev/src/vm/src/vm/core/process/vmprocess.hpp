@@ -1,6 +1,7 @@
 #pragma once
 
 #include "interface_types.hpp"
+#include "ivmprocess.hpp"
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -42,7 +43,7 @@ namespace vm {
 	 * Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class VMProcess final {
+	class VMProcess final : public IVMProcess {
 		friend class VmValue;
 
 	private:
@@ -189,18 +190,18 @@ namespace vm {
 		VMThread& getEmptyThread();
 
 	public:
-		void setStatus(const api::ProcStatus& new_status) noexcept;
+		void setStatus(const api::ProcStatus& new_status) noexcept override;
 
-		Memory& getMemory();
+		Memory& getMemory() override;
 
-		ProcIO& getIO();
+		ProcIO& getIO() override;
 
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
-		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
+		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request) override;
 
-		PID getPID() const;
+		PID getPID() const override;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
@@ -212,8 +213,8 @@ namespace vm {
 		 * specified, created VmValue will be empty.
 		 * @return A non-owning, modifiable reference to the new VmValue.
 		 */
-		Ref<VmValue> createVmValue(TypeCRef type);
-		Ref<VmValue> createVmValue(TypeCRef type, Pointer src);
+		Ref<VmValue> createVmValue(TypeCRef type) override;
+		Ref<VmValue> createVmValue(TypeCRef type, Pointer src) override;
 
 		/**
 		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
@@ -224,12 +225,12 @@ namespace vm {
 		 * specified, created VmValue will be empty.
 		 * @return A Box referencing the newly created VmValue.
 		 */
-		Box<VmValue> createOwnedVmValue(TypeCRef type);
-		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
+		Box<VmValue> createOwnedVmValue(TypeCRef type) override;
+		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
 
 		VMProcess(PID my_pid);
 
-		GIL&                       getGIL();
-		SynchronizationPrimitives& getSynchronizationPrimitives();
+		GIL&                       getGIL() override;
+		SynchronizationPrimitives& getSynchronizationPrimitives() override;
 	};
 }
