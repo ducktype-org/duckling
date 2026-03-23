@@ -35,6 +35,7 @@ public:
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(testSyncRun);
+		TESTER_ADD_TEST(structureOperations);
 	}
 
 private:
@@ -144,6 +145,8 @@ private:
 			}
 		);
 	}
+
+	void structureOperations() { runTestOnVm("structure_operations.dbc", "", "506", {}); }
 
 	void testSyncRun() {
 		vm::PID pid = initProcess();

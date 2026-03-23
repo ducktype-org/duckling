@@ -141,6 +141,10 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_lopq_gopq>(i.dst, i.src); }
 			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_lopq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_gopq_lopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lste_lste, i) { addLow<Op_mov_lste_lste>(i.dst, i.src); }
+			instr_case(high::Op_mov_lste_gste, i) { addLow<Op_mov_lste_gste>(i.dst, i.src); }
+			instr_case(high::Op_mov_gste_lste, i) { addLow<Op_mov_gste_lste>(i.dst, i.src); }
+			instr_case(high::Op_mov_gste_gste, i) { addLow<Op_mov_gste_gste>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_l64, i) { addLow<Op_add_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_imm, i) { addLow<Op_add_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_l32_l32, i) { addLow<Op_add_l32_l32>(i.dst, i.src); }
@@ -392,9 +396,11 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_resetVTable_lptr, i) { addLow<Op_resetVTable_lptr>(i.object_ptr); }
 			instr_case(high::Op_upcast_lptr_lptr, i) { addLow<Op_upcast_lptr_lptr>(i.dst, i.src); }
-			instr_case(high::Op_downcast_lptr_lptr_type, i) {
+			instr_case(high::Op_downcast_lptr_lptr, i) {
 				addLow<Op_downcast_lptr_lptr>(i.dst, i.src);
-				addLow<Op_ext_type>(i.target_type);
+				opargs::Type variant_type
+					= ctx.locals_map.at(i.dst.var_name).type->getInnerType().value()->getName();
+				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_virtual_call_lptr_method, i) {
 				addLow<Op_virtual_call_lptr_method>(i.object_ptr, i.method);
@@ -416,6 +422,18 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_structStore_lptr_lany_field, i) {
 				addLow<Op_structStore_lptr_lany>(i.dst_data_ptr, i.src);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structLea_lptr_lste_field, i) {
+				addLow<Op_structLea_lptr_lste>(i.dst_ptr, i.src_data_struct);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structLoad_lany_lste_field, i) {
+				addLow<Op_structLoad_lany_lste>(i.dst, i.src_data_struct);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structStore_lste_lany_field, i) {
+				addLow<Op_structStore_lste_lany>(i.dst_data_struct, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_fixedSizeTableLea_lptr_lptr_l64, i) {
