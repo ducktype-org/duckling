@@ -77,12 +77,12 @@ namespace vm {
 		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
 		 */
 		template<class T>
-		T readBytes(const usize offset = 0) const {
+		T readBytes() const {
 			CORE_ASSERT(
 				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
 			);
-			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds read");
-			return vm::safeReadPointerBytes<T>(data.data(), offset);
+			CORE_ASSERT(sizeof(T) <= data.size(), "VmValue: Out of bounds read");
+			return vm::safeReadPointerBytes<T>(data.data());
 		}
 
 		/**

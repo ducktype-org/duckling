@@ -53,19 +53,14 @@ namespace vm {
 		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const;
 
 		template<class T>
-		requires std::is_trivially_copy_constructible_v<T>
-		T readBytes(const usize offset = 0) const {
+		requires std::is_trivially_copy_constructible_v<T> T readBytes() const {
+			CORE_ASSERT(my_type->getName() != "void", "Interpreting VmValueRef bytes of type void!");
 			CORE_ASSERT(
-				my_type->getName() != base::StrID("void"),
-				"Interpreting VmValueRef bytes of type void!"
-			);
-			CORE_ASSERT(
-				offset + sizeof(T) <= static_cast<usize>(my_type->getSize()),
-				"VmValueRef: Out of bounds read"
+				sizeof(T) <= static_cast<usize>(my_type->getSize()), "VmValueRef: Out of bounds read"
 			);
 
-			auto view = memory->getPointerData(pointed_data, offset + sizeof(T));
-			return vm::safeReadPointerBytes<T>(view.getBegin(), offset);
+			auto view = memory->getPointerData(pointed_data, sizeof(T));
+			return vm::safeReadPointerBytes<T>(view.getBegin());
 		}
 	};
 
