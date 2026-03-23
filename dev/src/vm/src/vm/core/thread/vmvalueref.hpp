@@ -37,7 +37,7 @@ namespace vm {
 	 * @note `VmValueRef`s can only be used within the same process where they were initialized.
 	 * They cannot be transferred to different processes.
 	 */
-	class VMValueRef {
+	class VMValueRef final {
 		friend class VMProcess;
 
 	private:
@@ -65,15 +65,15 @@ namespace vm {
 	};
 
 	namespace interpreted_data_variant {
-		struct Primitive {
-			const i64 value;
+		struct Primitive final {
+			const u64 value;
 		};
 
-		struct Pointer {
+		struct Pointer final {
 			base::Optional<VMValueRef> referenced;
 		};
 
-		struct Table {
+		struct Table final {
 			friend class vm::VMValueRef;
 
 		private:
@@ -89,7 +89,7 @@ namespace vm {
 			Table(base::Ref<VMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
 		};
 
-		struct Data {
+		struct Data final {
 			struct FieldDesc {
 				Offset     offset = Offset(0);
 				VMValueRef value;
@@ -99,13 +99,13 @@ namespace vm {
 			base::HashMap<base::StrID, usize> field_name_map;
 		};
 
-		struct Variant {
+		struct Variant final {
 			u64        type_tag = 0;
 			VMValueRef referenced;
 		};
 
-		struct Function {};
+		struct Function final {};
 
-		struct Opaque {};
+		struct Opaque final {};
 	}
 }
