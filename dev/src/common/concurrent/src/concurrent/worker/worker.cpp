@@ -99,4 +99,6 @@ namespace concurrent::worker {
 			CORE_PANIC("Accessing the thread-local current worker reference that is empty");
 		return current_worker.value();
 	}
+
+	u64 Worker::getID() const { return id; }
 }
