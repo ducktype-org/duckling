@@ -5,8 +5,11 @@
 #include <vm/core/process/vmprocess.hpp>
 
 vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
+	if (index >= size) throw std::out_of_range("Table index out of range");
+
 	vm::Pointer pointer
 		= begin.movedPointer(static_cast<i64>(index * static_cast<usize>(type->getSize())));
+
 	return { *process.get(), type, pointer };
 }
 
