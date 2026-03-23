@@ -74,7 +74,6 @@ namespace vm {
 		 */
 		std::vector<Box<VmValue>> owned_vm_values;
 
-		// @TODO: Improve this....
 		std::deque<VMThread> vm_threads;
 
 		/**
@@ -139,6 +138,7 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
+
 	public:
 		SafeVMProcess(PID my_pid);
 

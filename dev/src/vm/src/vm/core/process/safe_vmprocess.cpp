@@ -125,7 +125,7 @@ namespace vm {
 				api::IOError{ "Cannot read output from api when IO is being redirected" } });
 
 		if (isExecuting(status))
-			io.output_empty_cv.wait(lock, [&] { return io.outputStream().rdbuf()->in_avail() > 0; });
+			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
 
 		const std::string content = io.outputStream().str();
 		io.outputStream().str("");
@@ -244,8 +244,12 @@ namespace vm {
 				if (auto res = stop(); !res.has_value()) return res;
 		}
 		try {
+			// There might be numerous runtime exceptions during the deinitialization,
+			// any of those means there was an issue during the validation.
 			getMainVMThread().execGlobalDestructors(loaded_program);
+
 			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
+
 			memory.deinitGlobals();
 		} catch (exceptions::VMRuntimeException& e) {
 			std::cerr << " - VM has detected issues during program\'s deinitialization: "

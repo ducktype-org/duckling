@@ -122,7 +122,7 @@ namespace vm::builtins {
 
 	void FunctionHandlers::builtinLockMutex(VMThread& thread, u64 mutex_id) {
 		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
-		
+
 		if (!mutex->try_lock()) {
 			thread.releaseGil();
 			mutex->lock();

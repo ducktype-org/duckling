@@ -18,20 +18,6 @@ namespace vm {
 
 	PID VMProcess::getPID() const { return my_pid; }
 
-	std::expected<api::Response, api::ApiError> VMProcess::attach(
-		std::istream& istream, std::ostream& ostream
-	) {
-		if (io_redirecter) return std::unexpected(api::ApiError{ api::AttachDetachError{} });
-		io_redirecter.emplace(io.attach(istream, ostream));
-		return api::Response(api::response::Empty());
-	}
-
-	std::expected<api::Response, api::ApiError> VMProcess::detach() {
-		if (!io_redirecter) return std::unexpected(api::ApiError{ api::AttachDetachError{} });
-		io_redirecter.reset();
-		return api::Response(api::response::Empty());
-	}
-
 	std::expected<api::Response, api::ApiError> VMProcess::doRequest(
 		const api::RequestVariant& request
 	) {
@@ -113,7 +99,7 @@ namespace vm {
 			}
 
 			variant_case(api::request::VmValue, vmvalue_request) {
-				return getTypeMetadata(vmvalue_request.type_name);
+				return getVMValueForType(vmvalue_request.type_name);
 			}
 
 			variant_case(api::request::StatusRequest, status_request) {
@@ -128,5 +114,22 @@ namespace vm {
 		}
 
 		CORE_UNREACHABLE();
+	}
+
+	std::expected<api::Response, api::ApiError> VMProcess::attach(
+		std::istream& istream, std::ostream& ostream
+	) {
+		// @TODO: Flush the ostream from ProcIO to new ostream.
+		if (io_redirecter) return std::unexpected(api::ApiError{ api::AttachDetachError{} });
+
+		// So long this object lives, any IO is redirected.
+		io_redirecter.emplace(io.attach(istream, ostream));
+		return api::Response(api::response::Empty());
+	}
+
+	std::expected<api::Response, api::ApiError> VMProcess::detach() {
+		if (!io_redirecter) return std::unexpected(api::ApiError{ api::AttachDetachError{} });
+		io_redirecter.reset();
+		return api::Response(api::response::Empty());
 	}
 }
