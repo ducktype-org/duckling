@@ -98,7 +98,7 @@ namespace query::internal {
 
 		auto change_status_result = task_status_map.maybePut(task.id, TaskStatus::InProgress);
 
-		// this insert decided who get's to do the task
+		// This insert decides who gets to execute the task.
 		if (change_status_result.toOpt().has_value()) {
 			// The key was inserted by us, we can execute the task
 			auto wd = concurrent::worker::Worker::getCurrentWorker();

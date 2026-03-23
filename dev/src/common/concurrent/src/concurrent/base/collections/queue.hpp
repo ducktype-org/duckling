@@ -14,6 +14,10 @@ namespace concurrent {
 	template<typename DATA_T>
 	class ConQueue final {
 	public:
+		/**
+		 * @brief Tries to remove and return the front element.
+		 * @return Empty optional when the queue is empty.
+		 */
 		[[nodiscard]]
 		base::Optional<DATA_T> tryPop() {
 			WithLock scoped_lock(&lock);
@@ -23,6 +27,10 @@ namespace concurrent {
 			return data;
 		}
 
+		/**
+		 * @brief Tries to pop the front element if it matches @param pred.
+		 * @return Empty optional when the queue is empty or predicate fails.
+		 */
 		template<typename Predicate>
 		[[nodiscard]]
 		base::Optional<DATA_T> tryPopIf(Predicate pred) {
@@ -36,6 +44,10 @@ namespace concurrent {
 			return {};
 		}
 
+		/**
+		 * @brief Finds and removes the first element matching @param pred.
+		 * @return Extracted element when found, otherwise empty optional.
+		 */
 		template<typename Predicate>
 		[[nodiscard]]
 		base::Optional<DATA_T> extractIf(Predicate pred) {
@@ -53,17 +65,26 @@ namespace concurrent {
 			return data;
 		}
 
+		/**
+		 * @brief Pushes an element to the back of the queue.
+		 */
 		void push(DATA_T data) {
 			WithLock scoped_lock(&lock);
 			queue.push_back(std::move(data));
 		}
 
+		/**
+		 * @brief Checks whether the queue is empty.
+		 */
 		[[nodiscard]]
 		bool empty() const {
 			WithLock scoped_lock(&lock);
 			return queue.empty();
 		}
 
+		/**
+		 * @brief Returns the current number of elements.
+		 */
 		[[nodiscard]]
 		usize size() const {
 			WithLock scoped_lock(&lock);
@@ -135,20 +156,36 @@ namespace concurrent {
 			std::forward_iterator<ConstIterator>, "ConstIterator must be a forward iterator"
 		);
 
+		/**
+		 * @brief Returns an iterator range start holding the queue lock.
+		 * @note The lock is released when the iterator is destroyed.
+		 */
 		Iterator begin() {
 			auto lock_guard = std::make_shared<WithLock<AtomicFlagSpinlock>>(&lock);
 			return Iterator(lock_guard, queue.begin(), this);
 		}
 
+		/**
+		 * @brief Returns a const iterator range start holding the queue lock.
+		 */
 		ConstIterator begin() const {
 			auto lock_guard = std::make_shared<WithLock<AtomicFlagSpinlock>>(&lock);
 			return ConstIterator(lock_guard, queue.cbegin(), this);
 		}
 
+		/**
+		 * @brief Returns an iterator sentinel that does not own the lock.
+		 */
 		Iterator end() { return Iterator(nullptr, queue.end(), this); }
 
+		/**
+		 * @brief Returns a const iterator sentinel that does not own the lock.
+		 */
 		ConstIterator end() const { return ConstIterator(nullptr, queue.cend(), this); }
 
+		/**
+		 * @brief Erases the element pointed by @param it and returns next iterator.
+		 */
 		Iterator erase(Iterator it) {
 			CORE_ASSERT(it.owner == this, "Erasing with iterator from different queue");
 			CORE_ASSERT(it.lock_guard != nullptr, "Erasing requires a locked iterator");

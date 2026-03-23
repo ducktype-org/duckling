@@ -35,7 +35,7 @@ namespace query::internal {
 	struct Task final {
 		// @TODO: #2035 at least one layer of std::function should be removed here, as it adds
 		// unnecessary overhead. (the other one is inside the task pool implementation). See if
-		// std::any apparch/manual void* is sufficiently faster to be used instead of std::function.
+		// std::any approach/manual void* is sufficiently faster to be used instead of std::function.
 
 		NodeID                   id;
 		concurrent::worker::Task work;
@@ -132,7 +132,7 @@ namespace query::internal {
 
 		/**
 		 * @brief Callback invoked when a worker has no tasks.
-		 * Attempts to steal work from the pool and shedules it on the
+		 * Attempts to steal work from the pool and schedule it on the
 		 * current worker.
 		 */
 		void onWorkerNoTasks();
@@ -192,9 +192,9 @@ namespace query::internal {
 
 		/**
 		 * @brief Gets the reference of a free worker if available.
-		 * There is a similiar function in WorkerManager, but here we
-		 * set the availability of the worker under our mutex
-		 * avoiding the missed wake up problem (missed schedule problem in this case).
+		 * There is a similar function in WorkerManager, but here we
+		 * set the availability of the worker under our synchronization,
+		 * avoiding the missed wake-up problem (a missed schedule in this case).
 		 * @note This will set a worker as not free, so the caller should set it back to free if it
 		 * fails to schedule a task on it.
 		 * @return Optional reference to a free worker.
