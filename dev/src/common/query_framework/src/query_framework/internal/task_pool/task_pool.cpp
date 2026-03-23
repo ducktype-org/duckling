@@ -9,9 +9,7 @@
 
 #include <algorithm>
 #include <atomic>
-#include <iostream>
 #include <mutex>
-#include <vector>
 
 namespace query::internal {
 
@@ -19,10 +17,6 @@ namespace query::internal {
 		usize taskHash(const query::internal::NodeID& node) {
 			return std::hash<query::internal::NodeID>{}(node);
 		}
-		std::vector<std::atomic<u64>> call_numbers;
-		std::atomic<u64> number_of_fast_schedules{0};
-		std::atomic<u64> number_of_schedules{0};
-		std::atomic<u64> number_of_post_colision_schedules{0};
 	}
 
 	TaskPool::TaskPool():
@@ -35,21 +29,10 @@ namespace query::internal {
 		std::ranges::for_each(worker_manager.getAllWorkers(), [&worker_index](auto worker) {
 			CORE_ASSERT(worker_index++ == worker->getID(), "Worker IDs must be sequential starting from 0");
 		});
-		call_numbers = std::vector<std::atomic<u64>>(num_workers);
-		std::ranges::fill(call_numbers, 0);
 	}
 
 	TaskPool::~TaskPool() {
 		flushWorkers();
-		std::cerr << "TaskPool stats: \n";
-		std::cerr << "Number of workers: " << num_workers << "\n";
-		std::cerr << "Number of schedules: " << number_of_schedules.load(std::memory_order_relaxed) << "\n";
-		std::cerr << "Number of fast schedules: " << number_of_fast_schedules.load(std::memory_order_relaxed) << "\n";
-		std::cerr << "Number of post collision schedules: " << number_of_post_colision_schedules.load(std::memory_order_relaxed) << "\n";
-		std::cerr << "Call numbers per worker: \n";
-		for (usize i = 0; i < num_workers; i++) {
-			std::cerr << "Worker " << i << ": " << call_numbers[i].load(std::memory_order_relaxed) << "\n";
-		}
 	}
 
 	void TaskPool::addTask(Task&& task) {
@@ -123,7 +106,6 @@ namespace query::internal {
 		if (change_status_result.toOpt().has_value()) {
 			// The key was inserted by us, we can execute the task
 			auto wd = concurrent::worker::Worker::getCurrentWorker();
-			call_numbers[wd->getID()].fetch_add(1, std::memory_order_relaxed);
 
 			task.work(wd);
 
@@ -138,6 +120,7 @@ namespace query::internal {
 			}
 			return true;
 		}
+		
 		return false;
 	}
 
@@ -153,12 +136,10 @@ namespace query::internal {
 		// schedule a task on it. This would be unfortunate, but not a problem, as the worker
 		// manager will just queue the task for later execution.
 
-		number_of_schedules.fetch_add(1, std::memory_order_relaxed);
 		// Add to current worker's pool
 		addToWorkerPool(current_worker, std::move(task));
 		auto free_worker_opt = getFreeWorker();
 		if (free_worker_opt.has_value()) {
-			number_of_post_colision_schedules.fetch_add(1, std::memory_order_relaxed);
 			free_worker_opt.value()->scheduleTask([this, current_worker](WRef) {
 				if (auto task_opt = tryStealFromWorker(current_worker)) {
 					tryExecuteTask(task_opt.value());
