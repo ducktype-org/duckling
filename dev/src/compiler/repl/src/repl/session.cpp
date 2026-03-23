@@ -76,23 +76,21 @@ namespace compiler::repl {
 
 		if (!stmt_info.has_value()) return ReplResult::error(classify_error);
 
-		if (stmt_info->kind == StatementExecutionKind::Expression) {
-			CORE_ASSERT(stmt_info->expr_stmt.has_value(), "Missing expression statement payload");
+		if (std::holds_alternative<ExpressionSingleStatementInfo>(stmt_info.value())) {
+			auto expr_info = std::get<ExpressionSingleStatementInfo>(stmt_info.value());
 			CORE_DEV_LOG(REPL, "Processing statement as expression\n");
-			return handleExpression(stmt_info->expr_stmt.value());
+			return handleExpression(expr_info.expr_stmt);
 		}
 
-		if (stmt_info->kind == StatementExecutionKind::Instruction) {
-			CORE_ASSERT(
-				stmt_info->instruction_stmt.has_value(), "Missing instruction statement payload"
-			);
+		if (std::holds_alternative<InstructionSingleStatementInfo>(stmt_info.value())) {
+			auto instruction_info = std::get<InstructionSingleStatementInfo>(stmt_info.value());
 			CORE_DEV_LOG(REPL, "Processing statement as instruction\n");
-			return handleInstruction(stmt_info->instruction_stmt.value());
+			return handleInstruction(instruction_info.instruction_stmt);
 		}
 
 		CORE_DEV_LOG(REPL, "Processing statement as definition\n");
-		CORE_ASSERT(stmt_info->definition_stmt.has_value(), "Missing definition statement payload");
-		return handleDefinition(stmt_info->definition_stmt.value());
+		auto definition_info = std::get<DefinitionSingleStatementInfo>(stmt_info.value());
+		return handleDefinition(definition_info.definition_stmt);
 	}
 
 	bool ReplSession::handleCommand(std::string_view line) {
@@ -152,12 +150,7 @@ namespace compiler::repl {
 			try {
 				auto build_result = buildStatementWrapper(
 					ctx,
-					SingleStatementInfo{
-						.kind             = StatementExecutionKind::Expression,
-						.expr_stmt        = expr_stmt,
-						.instruction_stmt = {},
-						.definition_stmt  = {},
-					},
+					SingleStatementInfo{ ExpressionSingleStatementInfo{ .expr_stmt = expr_stmt } },
 					m_line_counter
 				);
 				if (!build_result.has_value()) {
@@ -257,11 +250,7 @@ namespace compiler::repl {
 				auto build_result = buildStatementWrapper(
 					ctx,
 					SingleStatementInfo{
-						.kind             = StatementExecutionKind::Instruction,
-						.expr_stmt        = {},
-						.instruction_stmt = stmt,
-						.definition_stmt  = {},
-					},
+						InstructionSingleStatementInfo{ .instruction_stmt = stmt } },
 					m_line_counter
 				);
 				if (!build_result.has_value()) {
@@ -431,7 +420,7 @@ namespace compiler::repl {
 							CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
 						}
 
-						auto module_ref = createChainedStatementModule(
+						auto module_ref = createEphemeralChainedStatementModule(
 							stmt_source, parent_module_id, m_line_counter, "repl_"
 						);
 						auto module_id = module_ref->getModuleID();

@@ -22,9 +22,8 @@ public:
 		TESTER_ADD_TEST(testBuildExpressionWrapper);
 		TESTER_ADD_TEST(testBuildInstructionWrapper);
 		TESTER_ADD_TEST(testBuildWrapperRejectsDefinition);
-		TESTER_ADD_TEST(testBuildWrapperRejectsMissingPayload);
 		TESTER_ADD_TEST(testMakeExecutableHOUTUnit);
-		TESTER_ADD_TEST(testCreateChainedStatementModule);
+		TESTER_ADD_TEST(testCreateEphemeralChainedStatementModule);
 		TESTER_ADD_TEST(testGetStatementModuleName);
 		TESTER_ADD_TEST(testGetDefinitionHOUTUnit);
 	}
@@ -40,10 +39,10 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
 			assertTrue(result.has_value(), "Expression classification should succeed");
-			ASSERT_EQUAL(result->kind, repl::StatementExecutionKind::Expression);
-			assertTrue(result->expr_stmt.has_value(), "Expression payload should be present");
-			assertTrue(!result->instruction_stmt.has_value(), "Instruction payload should be empty");
-			assertTrue(!result->definition_stmt.has_value(), "Definition payload should be empty");
+			assertTrue(
+				std::holds_alternative<repl::ExpressionSingleStatementInfo>(*result),
+				"Expected expression variant"
+			);
 		});
 	}
 
@@ -53,12 +52,10 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
 			assertTrue(result.has_value(), "Instruction classification should succeed");
-			ASSERT_EQUAL(result->kind, repl::StatementExecutionKind::Instruction);
 			assertTrue(
-				result->instruction_stmt.has_value(), "Instruction payload should be present"
+				std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
+				"Expected instruction variant"
 			);
-			assertTrue(!result->expr_stmt.has_value(), "Expression payload should be empty");
-			assertTrue(!result->definition_stmt.has_value(), "Definition payload should be empty");
 		});
 	}
 
@@ -68,10 +65,10 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto result = repl::classifySingleStatement(ctx, module_id);
 			assertTrue(result.has_value(), "Definition classification should succeed");
-			ASSERT_EQUAL(result->kind, repl::StatementExecutionKind::Definition);
-			assertTrue(result->definition_stmt.has_value(), "Definition payload should be present");
-			assertTrue(!result->expr_stmt.has_value(), "Expression payload should be empty");
-			assertTrue(!result->instruction_stmt.has_value(), "Instruction payload should be empty");
+			assertTrue(
+				std::holds_alternative<repl::DefinitionSingleStatementInfo>(*result),
+				"Expected definition variant"
+			);
 		});
 	}
 
@@ -137,44 +134,6 @@ private:
 		});
 	}
 
-	void testBuildWrapperRejectsMissingPayload() {
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto missing_expr = repl::buildStatementWrapper(
-				ctx,
-				repl::SingleStatementInfo{
-					.kind             = repl::StatementExecutionKind::Expression,
-					.expr_stmt        = {},
-					.instruction_stmt = {},
-					.definition_stmt  = {},
-				},
-				1
-			);
-			assertTrue(!missing_expr.has_value(), "Missing expression payload should fail");
-			assertTrue(
-				missing_expr.error().find("Missing expression statement payload")
-					!= std::string::npos,
-				"Expected missing-expression error"
-			);
-
-			auto missing_instr = repl::buildStatementWrapper(
-				ctx,
-				repl::SingleStatementInfo{
-					.kind             = repl::StatementExecutionKind::Instruction,
-					.expr_stmt        = {},
-					.instruction_stmt = {},
-					.definition_stmt  = {},
-				},
-				2
-			);
-			assertTrue(!missing_instr.has_value(), "Missing instruction payload should fail");
-			assertTrue(
-				missing_instr.error().find("Missing instruction statement payload")
-					!= std::string::npos,
-				"Expected missing-instruction error"
-			);
-		});
-	}
-
 	void testMakeExecutableHOUTUnit() {
 		auto module_id = createModule("1 + 2;");
 
@@ -194,8 +153,8 @@ private:
 		});
 	}
 
-	void testCreateChainedStatementModule() {
-		auto first_ref = repl::createChainedStatementModule("1 + 2;", {}, 7, "repl_");
+	void testCreateEphemeralChainedStatementModule() {
+		auto first_ref = repl::createEphemeralChainedStatementModule("1 + 2;", {}, 7, "repl_");
 		assertTrue(first_ref->isReplModule(), "Chained module should be marked as a REPL module");
 		ASSERT_EQUAL("repl_7", first_ref->getName().strView());
 		assertTrue(
@@ -204,8 +163,9 @@ private:
 		);
 		assertTrue(first_ref->hasMainSourceFile(), "Chained module should have main source file");
 
-		auto second_ref
-			= repl::createChainedStatementModule("3 + 4;", first_ref->getModuleID(), 8, "script_");
+		auto second_ref = repl::createEphemeralChainedStatementModule(
+			"3 + 4;", first_ref->getModuleID(), 8, "script_"
+		);
 		assertTrue(second_ref->isReplModule(), "Second module should be marked as a REPL module");
 		ASSERT_EQUAL("script_8", second_ref->getName().strView());
 		assertTrue(

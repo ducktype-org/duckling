@@ -13,7 +13,7 @@
 
 namespace compiler::repl {
 
-	base::Ref<frontend::ModuleTree> createChainedStatementModule(
+	base::Ref<frontend::ModuleTree> createEphemeralChainedStatementModule(
 		std::string_view                          input,
 		const base::Optional<frontend::ModuleID>& parent_module_id,
 		u64                                       line_counter,
@@ -60,34 +60,19 @@ namespace compiler::repl {
 		auto root      = pst->getRootElement();
 
 		auto expr_stmt_opt = pst::extractSingleExpression(ctx, root);
-		if (expr_stmt_opt.has_value()) {
-			return SingleStatementInfo{
-				.kind             = StatementExecutionKind::Expression,
-				.expr_stmt        = expr_stmt_opt,
-				.instruction_stmt = {},
-				.definition_stmt  = {},
-			};
-		}
+		if (expr_stmt_opt.has_value())
+			return ExpressionSingleStatementInfo{ .expr_stmt = expr_stmt_opt.value() };
 
 		auto instr_stmt_opt = pst::extractSingleInstruction(ctx, root);
 		if (instr_stmt_opt.has_value()) {
-			return SingleStatementInfo{
-				.kind             = StatementExecutionKind::Instruction,
-				.expr_stmt        = {},
-				.instruction_stmt = instr_stmt_opt,
-				.definition_stmt  = {},
+			return InstructionSingleStatementInfo{
+				.instruction_stmt = instr_stmt_opt.value(),
 			};
 		}
 
 		auto top_level_stmt_opt = pst::extractSingleTopLevelStatement(ctx, root);
-		if (top_level_stmt_opt.has_value()) {
-			return SingleStatementInfo{
-				.kind             = StatementExecutionKind::Definition,
-				.expr_stmt        = {},
-				.instruction_stmt = {},
-				.definition_stmt  = top_level_stmt_opt,
-			};
-		}
+		if (top_level_stmt_opt.has_value())
+			return DefinitionSingleStatementInfo{ .definition_stmt = top_level_stmt_opt.value() };
 
 		return std::unexpected("Expected exactly one top-level statement");
 	}
@@ -95,46 +80,41 @@ namespace compiler::repl {
 	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(
 		query::Context& ctx, const SingleStatementInfo& statement_info, u64 counter
 	) {
-		switch (statement_info.kind) {
-		case StatementExecutionKind::Expression:
-			if (!statement_info.expr_stmt.has_value())
-				return std::unexpected("Missing expression statement payload");
-			{
-				auto wrapper      = ctx.query<QueryReplExpressionWrapper>({
-						 .expr_stmt = statement_info.expr_stmt.value(),
-						 .counter   = counter,
-                });
-				auto mangled_name = helios::mangler::getSimpleMangledName(
-					ctx, wrapper.declaration->original_symbol
-				);
-				return StatementWrapperBuildResult{
-					.wrapper_function  = std::move(wrapper),
-					.wrapper_func_name = std::string(mangled_name.strView()),
-				};
-			}
-		case StatementExecutionKind::Instruction:
-			if (!statement_info.instruction_stmt.has_value())
-				return std::unexpected("Missing instruction statement payload");
-			{
-				auto wrapper      = ctx.query<QueryReplInstructionWrapper>({
-						 .stmt    = statement_info.instruction_stmt.value(),
-						 .counter = counter,
-                });
-				auto mangled_name = helios::mangler::getSimpleMangledName(
-					ctx, wrapper.declaration->original_symbol
-				);
-				return StatementWrapperBuildResult{
-					.wrapper_function  = std::move(wrapper),
-					.wrapper_func_name = std::string(mangled_name.strView()),
-				};
-			}
-		case StatementExecutionKind::Definition:
-			return std::unexpected("Definitions do not have executable wrappers");
-		default:
-			return std::unexpected("Unknown statement kind");
-		}
+		return std::visit(
+			[&](const auto& statement_payload
+		    ) -> std::expected<StatementWrapperBuildResult, std::string> {
+				using PayloadT = std::decay_t<decltype(statement_payload)>;
 
-		return std::unexpected("Unknown statement kind");
+				if constexpr (std::is_same_v<PayloadT, ExpressionSingleStatementInfo>) {
+					auto wrapper      = ctx.query<QueryReplExpressionWrapper>({
+							 .expr_stmt = statement_payload.expr_stmt,
+							 .counter   = counter,
+                    });
+					auto mangled_name = helios::mangler::getSimpleMangledName(
+						ctx, wrapper.declaration->original_symbol
+					);
+					return StatementWrapperBuildResult{
+						.wrapper_function  = std::move(wrapper),
+						.wrapper_func_name = std::string(mangled_name.strView()),
+					};
+				} else if constexpr (std::is_same_v<PayloadT, InstructionSingleStatementInfo>) {
+					auto wrapper      = ctx.query<QueryReplInstructionWrapper>({
+							 .stmt    = statement_payload.instruction_stmt,
+							 .counter = counter,
+                    });
+					auto mangled_name = helios::mangler::getSimpleMangledName(
+						ctx, wrapper.declaration->original_symbol
+					);
+					return StatementWrapperBuildResult{
+						.wrapper_function  = std::move(wrapper),
+						.wrapper_func_name = std::string(mangled_name.strView()),
+					};
+				} else {
+					return std::unexpected("Definitions do not have executable wrappers");
+				}
+			},
+			statement_info
+		);
 	}
 
 }  // namespace compiler::repl
