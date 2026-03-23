@@ -31,7 +31,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
-const std::variant<std::vector<fs::File>, code::CodeCollection>& source
+		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
 		std::unique_lock                          lock(rw_global);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
@@ -52,7 +52,7 @@ const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::runFunction(
-const std::string& func_name, const RunArguments& run_arguments
+		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
 		VMThread&        thread = getEmptyThread();
@@ -67,7 +67,7 @@ const std::string& func_name, const RunArguments& run_arguments
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::runFunctionAwait(
-const std::string& func_name, const RunArguments& run_arguments
+		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
 
@@ -75,7 +75,7 @@ const std::string& func_name, const RunArguments& run_arguments
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
 			variant_default return std::unexpected(api::StateError(
-executingStarted(getStatus()) ? "Execution did not complete"
+				executingStarted(getStatus()) ? "Execution did not complete"
 											  : "Execution did not start"
 			));
 		}
@@ -99,8 +99,8 @@ executingStarted(getStatus()) ? "Execution did not complete"
 			}
 			variant_case(api::ExecutionPanicked, panicked) {
 				return std::unexpected(api::ApiError(
-api::OtherError("Execution panicked with error: " + panicked.error_message)
-));
+					api::OtherError("Execution panicked with error: " + panicked.error_message)
+				));
 			}
 			variant_default {
 				return std::unexpected(api::ApiError(api::OtherError("Unexpected run status!")));
@@ -109,7 +109,9 @@ api::OtherError("Execution panicked with error: " + panicked.error_message)
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMProcess::input(const api::request::Input& request) {
+	std::expected<api::Response, api::ApiError> SafeVMProcess::input(
+		const api::request::Input& request
+	) {
 		auto lock = io.lock();
 		io.inputStream() << request.input;
 		getMainVMThread().notifyPaused();
@@ -120,7 +122,7 @@ api::OtherError("Execution panicked with error: " + panicked.error_message)
 		auto lock = io.lock();
 		if (io_redirecter)
 			return std::unexpected(api::ApiError{
-api::IOError{ "Cannot read output from api when IO is being redirected" } });
+				api::IOError{ "Cannot read output from api when IO is being redirected" } });
 
 		if (isExecuting(status))
 			io.output_empty_cv.wait(lock, [&] { return io.outputStream().rdbuf()->in_avail() > 0; });
@@ -228,7 +230,7 @@ api::IOError{ "Cannot read output from api when IO is being redirected" } });
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
 			variant_default return std::unexpected(api::StateError(
-executingStarted(getStatus()) ? "Execution did not complete"
+				executingStarted(getStatus()) ? "Execution did not complete"
 											  : "Execution did not start"
 			));
 		}
@@ -273,7 +275,9 @@ executingStarted(getStatus()) ? "Execution did not complete"
 		return {};
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(api::ThreadID thread_id) {
+	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(
+		api::ThreadID thread_id
+	) {
 		return getVMThreadByID(thread_id).getCurrentPosition();
 	}
 
@@ -284,24 +288,22 @@ executingStarted(getStatus()) ? "Execution did not complete"
 	void SafeVMProcess::waitForBreakpoint() {
 		std::shared_lock lock(rw_status);
 		status_cv.wait(lock, [&] {
-			return std::holds_alternative<api::Paused>(status)
-				|| api::isStatusTerminal(status);
+			return std::holds_alternative<api::Paused>(status) || api::isStatusTerminal(status);
 		});
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMProcess::getTypeMetadata(const std::string& type_name) {
+	std::expected<api::Response, api::ApiError> SafeVMProcess::getTypeMetadata(
+		const std::string& type_name
+	) {
 		std::shared_lock lock(rw_global);
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
-				auto res = loaded_program->getTypes().atMaybe(
-base::StrID(type_name.c_str())
-				);
+				auto res = loaded_program->getTypes().atMaybe(base::StrID(type_name.c_str()));
 				match_optional(res) {
 					opt_some(value) { return api::response::Type{ value }; }
 					opt_none {
-						return std::unexpected(api::ApiError{
-api::OtherError{ "Type not found" } });
+						return std::unexpected(api::ApiError{ api::OtherError{ "Type not found" } });
 					}
 				}
 			}

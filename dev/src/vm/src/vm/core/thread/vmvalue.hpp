@@ -41,9 +41,9 @@ namespace vm {
 		 */
 		VmValue(SafeVMProcess& process, TypeCRef type, Pointer src);
 
-		std::vector<byte> data;        /// data.size() == type.getSize()
-		Ref<SafeVMProcess>   my_process;  /// The process for which the VmValue exists.
-		Ref<Memory>       memory;
+		std::vector<byte>  data;        /// data.size() == type.getSize()
+		Ref<SafeVMProcess> my_process;  /// The process for which the VmValue exists.
+		Ref<Memory>        memory;
 
 	public:
 		VmValue(const VmValue&)            = delete;

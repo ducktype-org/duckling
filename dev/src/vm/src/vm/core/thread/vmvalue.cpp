@@ -4,7 +4,6 @@
 
 #include <vm/core/process/safe_vmprocess.hpp>
 
-
 #include <ostream>
 
 namespace {

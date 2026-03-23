@@ -1,12 +1,12 @@
 #include "vmprocess.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
+
 #include <vm/api/data/response.hpp>
 
 namespace vm {
 
-	VMProcess::VMProcess(const PID my_pid):
-		  my_pid(my_pid) {}
+	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid) {}
 
 	ProcIO& VMProcess::getIO() { return io; }
 
@@ -19,7 +19,7 @@ namespace vm {
 	PID VMProcess::getPID() const { return my_pid; }
 
 	std::expected<api::Response, api::ApiError> VMProcess::attach(
-std::istream& istream, std::ostream& ostream
+		std::istream& istream, std::ostream& ostream
 	) {
 		if (io_redirecter) return std::unexpected(api::ApiError{ api::AttachDetachError{} });
 		io_redirecter.emplace(io.attach(istream, ostream));
@@ -33,7 +33,7 @@ std::istream& istream, std::ostream& ostream
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::doRequest(
-const api::RequestVariant& request
+		const api::RequestVariant& request
 	) {
 		variant_match(request) {
 			variant_case(api::request::Run, run_request) {
@@ -48,8 +48,8 @@ const api::RequestVariant& request
 
 			variant_case(api::request::RunFunctionAwait, run_func_await_request) {
 				return runFunctionAwait(
-run_func_await_request.func_name, run_func_await_request.func_args
-);
+					run_func_await_request.func_name, run_func_await_request.func_args
+				);
 			}
 
 			variant_case(api::request::Pause, pause_request) {
@@ -72,13 +72,13 @@ run_func_await_request.func_name, run_func_await_request.func_args
 
 			variant_case(api::request::LoadFiles, load_request) {
 				return loadProgram(load_request.filenames).transform_error([](auto err) {
-return api::ApiError{ err };
+					return api::ApiError{ err };
 				});
 			}
 
 			variant_case(api::request::LoadCode, load_request) {
 				return loadProgram(load_request.code_collection).transform_error([](auto err) {
-return api::ApiError{ err };
+					return api::ApiError{ err };
 				});
 			}
 
@@ -93,7 +93,7 @@ return api::ApiError{ err };
 				api::ProcStatus stat = getStatus();
 				if (!std::holds_alternative<api::Paused>(stat))
 					return std::unexpected(api::ApiError{
-api::OtherError{ "unexpected status response" } });
+						api::OtherError{ "unexpected status response" } });
 
 				return getMainVMThreadCurrentPosition();
 			}

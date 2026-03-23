@@ -17,9 +17,8 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/concurrency/gil.hpp>
 #include <vm/core/process/exceptions.hpp>
-#include <vm/core/process/safe_vmprocess.hpp>
-
 #include <vm/core/process/memory/pointer.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>

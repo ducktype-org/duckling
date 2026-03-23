@@ -20,7 +20,7 @@ namespace vm {
 	std::expected<PID, api::ApiError> Supervisor::newProcess() {
 		std::unique_lock lock(rw_process_table);
 		PID              pid = next++;
-                process_table.emplace(pid, Box<VMProcess>::fromPointer(new SafeVMProcess(pid)));
+		process_table.emplace(pid, Box<VMProcess>::fromPointer(new SafeVMProcess(pid)));
 		return pid;
 	}
 
@@ -29,9 +29,9 @@ namespace vm {
 	) {
 		variant_match(request.request) {
 			variant_case_novalue(api::request::DeinitAndValidate) {
-				auto res = getProcess(request.pid).and_then([](Ref<VMProcess> process) {
-					return process->doRequest(api::request::DeinitAndValidate{});
-				});
+				auto             res = getProcess(request.pid).and_then([](Ref<VMProcess> process) {
+                    return process->doRequest(api::request::DeinitAndValidate{});
+                });
 				std::unique_lock lock(rw_process_table);
 				process_table.erase(request.pid);
 				return res;
