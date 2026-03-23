@@ -74,6 +74,7 @@ namespace vm {
 		 */
 		std::vector<Box<VmValue>> owned_vm_values;
 
+		// @TODO: #2342 Improve this....
 		std::deque<VMThread> vm_threads;
 
 		/**
