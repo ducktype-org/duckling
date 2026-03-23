@@ -111,7 +111,11 @@ macro_rules! determine_field {
         field_name: $name:ident,
         field_type: $ret:ty $(,)?
     ) => {
-        #[doc = concat!("Detemine the [`", stringify!($name), "`] field of the profile `profile_name`\nNote:\n-----\nField in [`manifest::Profile`] should implement [`Into::into`] for the appropriate [`Profile`] field type.")]
+        #[doc = concat!("Detemine the [`", stringify!($name), "`] field of the profile `profile_name`")]
+        ///
+        /// Note:
+        /// -----
+        /// Field in [`manifest::Profile`] should implement [`Into::into`] for the appropriate [`Profile`] field type.
         fn $fun_name(profile_name: StrId, profiles: &manifest::Profiles) -> QuackResult<$ret> {
             // The profile should be either defined in the manifest or predefined.
             // We always prioritize the manifest, since a predefined profile can be redefined in the manifest.
@@ -122,7 +126,8 @@ macro_rules! determine_field {
                     .ok_or_else(|| {
                         QuackError::hint(
                             "In order to use a profile you have to define it in the manifest first",
-                        ).context(format!("Unknown profile `{}`", profile_name))
+                        )
+                        .context(format!("Unknown profile `{}`", profile_name))
                     });
             };
             $fun_name_help(starting_profile, profiles)
@@ -162,28 +167,28 @@ macro_rules! determine_field {
 
 determine_field!(
     function_name: determine_dvm_bytecode,
-    helper_function_name: determine_dvm_bytecode_rec,
+    helper_function_name: get_dvm_bytecode_or_ask_parent,
     field_name: dvm_bytecode,
     field_type: bool,
 );
 
 determine_field!(
     function_name: determine_incremental,
-    helper_function_name: determine_incremental_rec,
+    helper_function_name: get_incremental_or_ask_parent,
     field_name: incremental,
     field_type: bool,
 );
 
 determine_field!(
     function_name: determine_opt_level,
-    helper_function_name: determine_opt_level_rec,
+    helper_function_name: get_opt_level_or_ask_parent,
     field_name: opt_level,
     field_type: OptLevel,
 );
 
 determine_field!(
     function_name: determine_c_std,
-    helper_function_name: determine_c_std_rec,
+    helper_function_name: get_c_std_or_ask_parent,
     field_name: c_std,
     field_type: bool,
 );
