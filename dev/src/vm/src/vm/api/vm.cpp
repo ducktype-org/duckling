@@ -62,8 +62,8 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<ProcessInfo, ApiError> spawn() {
-		return Supervisor::get().newProcess().transform([](const auto& x) {
+	std::expected<ProcessInfo, ApiError> spawn(bool with_mapping) {
+		return Supervisor::get().newProcess(with_mapping).transform([](const auto& x) {
 			return ProcessInfo{ x };
 		});
 	}
@@ -157,14 +157,14 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponseMove<response::VmValue>);
 	}
 
-	std::expected<response::CodePosition, ApiError> fileNavigation(
+	std::expected<response::Source, ApiError> fileNavigation(
 		PID pid, fs::File file, usize line, usize column
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
 				pid, request::FileMappingQuery{ .file = file, .line = line, .column = column }
 			))
-		    .and_then(mapOrWrongResponse<response::CodePosition>);
+		    .and_then(mapOrWrongResponse<response::Source>);
 	}
 
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {

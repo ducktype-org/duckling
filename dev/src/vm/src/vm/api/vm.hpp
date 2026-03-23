@@ -14,10 +14,12 @@
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
+	 * @param with_mapping Whether the debug symbols mapping between fat and micro bytecode should
+	 * be created for the loaded code.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
-	std::expected<ProcessInfo, ApiError> spawn();
+	std::expected<ProcessInfo, ApiError> spawn(bool with_mapping = false);
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.

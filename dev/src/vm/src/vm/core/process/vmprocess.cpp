@@ -224,15 +224,23 @@ namespace vm {
 			}
 
 			variant_case(api::request::LoadFiles, load_request) {
-				return loadProgram(load_request.filenames).transform_error([](auto err) {
-					return api::ApiError{ err };
-				});
+				if (mapping) {
+					return loadProgram<loader::LoadMode::WithMapping>(load_request.filenames)
+					    .transform_error([](auto err) { return api::ApiError{ err }; });
+				} else {
+					return loadProgram<loader::LoadMode::Normal>(load_request.filenames)
+					    .transform_error([](auto err) { return api::ApiError{ err }; });
+				}
 			}
 
 			variant_case(api::request::LoadCode, load_request) {
-				return loadProgram(load_request.code_collection).transform_error([](auto err) {
-					return api::ApiError{ err };
-				});
+				if (mapping) {
+					return loadProgram<loader::LoadMode::WithMapping>(load_request.code_collection)
+					    .transform_error([](auto err) { return api::ApiError{ err }; });
+				} else {
+					return loadProgram<loader::LoadMode::Normal>(load_request.code_collection)
+					    .transform_error([](auto err) { return api::ApiError{ err }; });
+				}
 			}
 
 			variant_case_novalue(api::request::Stop) { return stop(); }
@@ -360,12 +368,15 @@ namespace vm {
 
 	PID VMProcess::getPID() const { return my_pid; }
 
-	VMProcess::VMProcess(const PID my_pid):
+	VMProcess::VMProcess(const PID my_pid, const bool with_mapping):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
-		  loaded_program(loader.getProgram()),
-		  mapping(loader.getMapping()) {
+		  loaded_program(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
+		if (with_mapping)
+			mapping = loader.getMapping();
+		else
+			mapping = nullptr;
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }
@@ -452,7 +463,7 @@ namespace vm {
 		return memory.validateMemoryState();
 	}
 
-	CRef<loader::compiler::FatMicroMapping> VMProcess::getMapping() const { return mapping; }
+	MCRef<loader::compiler::FatMicroMapping> VMProcess::getMapping() const { return mapping; }
 
 	GIL& VMProcess::getGIL() { return gil; }
 

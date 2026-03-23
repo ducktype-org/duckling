@@ -74,7 +74,7 @@ namespace vm {
 		 */
 		CRef<low::LowVMProgram> loaded_program;
 
-		CRef<loader::compiler::FatMicroMapping> mapping;
+		MCRef<loader::compiler::FatMicroMapping> mapping;
 
 		Memory memory;
 
@@ -206,7 +206,7 @@ namespace vm {
 
 		PID getPID() const;
 
-		CRef<loader::compiler::FatMicroMapping> getMapping() const;
+		MCRef<loader::compiler::FatMicroMapping> getMapping() const;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
@@ -233,7 +233,7 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type);
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
-		VMProcess(PID my_pid);
+		VMProcess(PID my_pid, const bool with_mapping = false);
 
 		GIL&                       getGIL();
 		SynchronizationPrimitives& getSynchronizationPrimitives();

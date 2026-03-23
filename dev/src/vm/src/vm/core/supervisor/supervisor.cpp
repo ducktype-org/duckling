@@ -16,10 +16,10 @@ namespace vm {
 		return process_table.at(pid).refMut();
 	}
 
-	std::expected<PID, api::ApiError> Supervisor::newProcess() {
+	std::expected<PID, api::ApiError> Supervisor::newProcess(bool with_mapping) {
 		std::unique_lock lock(rw_process_table);
 		PID              pid = next++;
-		process_table.emplace(pid, makeBox<VMProcess>(pid));
+		process_table.emplace(pid, makeBox<VMProcess>(pid, with_mapping));
 		return pid;
 	}
 

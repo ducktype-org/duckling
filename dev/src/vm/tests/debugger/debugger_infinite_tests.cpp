@@ -25,7 +25,7 @@ public:
 
 private:
 	vm::PID loadProgram(std::string_view path_name) {
-		auto process_pid_response = vm::api::spawn();
+		auto process_pid_response = vm::api::spawn(true);
 		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
@@ -48,17 +48,17 @@ private:
 		// work correctly.
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(1, execution_position.instr_number, "Line number is not correct");
+		assertEqual(1, execution_position.instr_number, "Line number is not correct (0)");
 
 		vm::api::resume(pid).value();                 // "Resume failed (1)"
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
 		assertTrue(
-			3 <= position.instr_number && position.instr_number <= 4, "Line number is not correct"
+			4 <= position.instr_number && position.instr_number <= 5, "Line number is not correct (1)"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 3) return 4;
-			if (x == 4) return 3;
+			if (x == 4) return 5;
+			if (x == 5) return 4;
 			this->fail("Unexpected line number");
 			CORE_UNREACHABLE();
 		};
