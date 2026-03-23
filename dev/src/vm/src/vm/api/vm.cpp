@@ -157,16 +157,6 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponseMove<response::VmValue>);
 	}
 
-	std::expected<response::Source, ApiError> fileNavigation(
-		PID pid, fs::File file, usize line, usize column
-	) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(
-				pid, request::FileMappingQuery{ .file = file, .line = line, .column = column }
-			))
-		    .and_then(mapOrWrongResponse<response::Source>);
-	}
-
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })
