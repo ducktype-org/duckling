@@ -29,6 +29,8 @@ namespace compiler::frontend {
 		/**
 		 * @brief Synchronizes access to state of SourceFile. Since multiple workers may try to
 		 * parse the same SourceFile simultaneously.
+		 * @note Recursive mutex is required because getPST() can call getComponentHash(), and both
+		 * functions lock this mutex.
 		 * @note: It's possible that there are two SourceFiles pointing to the same physical file in
 		 * the file system. In this case, two threads may parse the same physical file at once, but
 		 * since this operation is read-only, it's thread-safe.

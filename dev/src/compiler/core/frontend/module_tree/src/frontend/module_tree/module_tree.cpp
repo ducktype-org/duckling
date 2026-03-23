@@ -97,7 +97,7 @@ namespace compiler::frontend {
 		return create(root, base::generateRandomString(32), file_reject, dir_reject);
 	}
 
-	ModuleTree::ModuleTree(): m_hash_mutex(base::makeBox<std::mutex>()) {}
+	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
 
 	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
 
@@ -208,11 +208,13 @@ namespace compiler::frontend {
 		// Get parent component hash if existsS
 		if (m_parent.has_value()) {
 			{
-				IF_BUILD_TYPE_DEV(std::scoped_lock parent_lock(*m_parent.value()->m_hash_mutex);
-				                  CORE_ASSERT(
-									  m_parent.value()->m_path_component_hash.has_value(),
-									  "Parent component hash should have value!"
-								  ););
+				IF_BUILD_TYPE_DEV(
+					std::scoped_lock parent_lock(*m_parent.value()->m_hash_recompute_mutex);
+					CORE_ASSERT(
+						m_parent.value()->m_path_component_hash.has_value(),
+						"Parent component hash should have value!"
+					);
+				);
 			}
 			m_path_component_hash.emplace(m_parent.value()->m_path_component_hash.value(), m_name);
 		} else {
@@ -246,7 +248,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTree::updateModuleHashFromRootToThis() {
-		std::scoped_lock lock(*m_hash_mutex);
+		std::scoped_lock lock(*m_hash_recompute_mutex);
 		if (!m_path_component_hash.has_value()) {
 			// iterate thru parents to find one with component hash set or reach root (go up)
 			if (m_parent.has_value()) m_parent.value()->updateModuleHashFromRootToThis();
@@ -486,7 +488,6 @@ namespace compiler::frontend {
 
 	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
-		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeSourceFileFromStorage(base::Ref<SourceFile> file) {
@@ -510,9 +511,6 @@ namespace compiler::frontend {
 		// Remove file from source_files
 		source_files.erase(it);
 
-		// Update module hash
-		module->updateModuleHash();
-
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(file);
 	}
@@ -523,7 +521,7 @@ namespace compiler::frontend {
 			"Main source file is already set, remove it first"
 		);
 		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
-		module->updateModuleHash();
+		module->invalidateHash();
 	}
 
 	void ModuleTreeModifier::addSubmodule(
@@ -600,7 +598,6 @@ namespace compiler::frontend {
 		);
 
 		module->m_other_files.at(ext_id).push_back(file);
-		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
@@ -616,7 +613,7 @@ namespace compiler::frontend {
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
 		module->m_main_source_file = {};
-		module->updateModuleHash();
+		module->invalidateHash();
 	}
 
 	void ModuleTreeModifier::removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -649,7 +646,6 @@ namespace compiler::frontend {
 		);
 
 		files.erase(it);
-		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::setParent(
@@ -686,9 +682,6 @@ namespace compiler::frontend {
 
 		// Invalidate component hash for the module and its children as the parent changed
 		module->invalidateHash();
-
-		// Update module hash for the parent module since the number of children changed
-		parent->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::changePackageID(
@@ -756,11 +749,6 @@ namespace compiler::frontend {
 			submodule->invalidateHash();  // invalidate hash as parent changed
 		}
 
-		if (parent.has_value()) {
-			// Update module hash for the parent module since the number of children changed
-			parent.value()->updateModuleHash();
-		}
-
 		// Remove all source files from storage this will invalidate the SourceFile instances!
 		for (auto& source_file: module->m_source_files)
 			SourceFile::removeSourceFileFromStorage(source_file);
@@ -796,7 +784,6 @@ namespace compiler::frontend {
 				)
 			);
 			submodules.erase(it);
-			parent.value()->updateModuleHash();
 		}
 
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
