@@ -26,6 +26,8 @@ public:
 		TESTER_ADD_TEST(testNotYetImplemented);
 		TESTER_ADD_TEST(testLogicError);
 		TESTER_ADD_TEST(testPanicStacktrace);
+		TESTER_ADD_TEST(testRuntimeError);
+		TESTER_ADD_TEST(testRuntimeErrorNotPanic);
 	}
 
 	void throwPanic1() { throw base::Panic("POSITION: throwPanic1", "panic test"); }
@@ -35,6 +37,32 @@ public:
 	void throwPanic3() { CORE_ASSERT(false, "panic test 3"); }
 
 	void throwPanic4() { CORE_UNREACHABLE(); }
+
+	void throwRuntimeError() { CORE_ASSERT_STRONG(false, "runtime error test"); }
+
+	void testRuntimeError() {
+		try {
+			throwRuntimeError();
+		} catch (base::RuntimeError& re) {
+			assertTrue(
+				containsCstr(re.what(), "    Check failed: `false`\n    runtime error test"),
+				"Bad RuntimeError reason"
+			);
+			return;
+		}
+		fail("RuntimeError was not caught");
+	}
+
+	void testRuntimeErrorNotPanic() {
+		try {
+			throwRuntimeError();
+		} catch (base::Panic&) {
+			fail("CORE_ASSERT_STRONG must not throw base::Panic");
+		} catch (base::RuntimeError&) {
+			return;
+		}
+		fail("RuntimeError was not caught");
+	}
 
 	void testPanic1() {
 		try {

@@ -138,4 +138,8 @@ namespace base {
 
 	const char* NotYetImplemented::what() const noexcept { return message.data(); }
 
+	RuntimeError::RuntimeError(std::string_view message): message(message) {}
+
+	const char* RuntimeError::what() const noexcept { return message.data(); }
+
 }

@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include <exception>
+#include <iostream>
 #include <string>
 #include <string_view>
 #include <utility>  // IWYU pragma: export
@@ -76,6 +77,21 @@ namespace base {
 		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
+
+	/**
+	 * @brief Exception for runtime errors in system/environment checks (e.g. syscall failures).
+	 * Should be used instead of Panic when the check represents a recoverable or expected
+	 * system-level failure, not a programming bug.
+	 */
+	class RuntimeError final: public Exception {
+		std::string message;
+
+	public:
+		RuntimeError(std::string_view message);
+
+		[[nodiscard]]
+		const char* what() const noexcept override;
+	};
 }
 
 /**
@@ -88,11 +104,26 @@ namespace base {
 	)
 
 /**
- * @brief Checks regardless of build-type, useful eg. in system function result checks.
+ * Base helper macro, don't use it directly.
  */
-#define CORE_ASSERT_STRONG(cond, what, ...)                                                     \
-	if (!(cond)) {                                                                              \
-		DETAIL_THROW_PANIC("    Check failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__); \
+#define DETAIL_THROW_RUNTIME_ERROR(check_title, ...)                            \
+	throw base::RuntimeError(                                                   \
+		base::strConcat(                                                        \
+			"Runtime error occurred:\n"                                         \
+			"    In " __FILE__ ":" STRINGIFY_2(__LINE__) ":\n",                 \
+			check_title,                                                        \
+			"    " __VA_OPT__(, ) __VA_ARGS__                                   \
+		)                                                                       \
+	)
+
+/**
+ * @brief Checks regardless of build-type and throws a RuntimeError (not Panic) on failure.
+ * Useful for system function result checks where failure is an environmental/runtime condition,
+ * not a programming bug.
+ */
+#define CORE_ASSERT_STRONG(cond, what, ...)                                                           \
+	if (!(cond)) {                                                                                    \
+		DETAIL_THROW_RUNTIME_ERROR("    Check failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__); \
 	}
 
 // NOLINTBEGIN(concurrency-mt-unsafe)
@@ -159,6 +190,18 @@ namespace base {
 		if (CONCAT_2(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); } \
 	}
 
+#define CORE_ASSERT_STRONG_NOEXCEPT_BASE(assert_type, cond, what, ...)                   \
+	{                                                                                     \
+		bool CONCAT_2(core_assert_strong_noexcept_was_error_, __LINE__) = false;          \
+		try {                                                                             \
+			assert_type(cond, what __VA_OPT__(, ) __VA_ARGS__);                           \
+		} catch (const base::RuntimeError& e) {                                           \
+			std::cerr << e.what() << '\n';                                                \
+			CONCAT_2(core_assert_strong_noexcept_was_error_, __LINE__) = true;            \
+		}                                                                                 \
+		if (CONCAT_2(core_assert_strong_noexcept_was_error_, __LINE__)) { std::terminate(); } \
+	}
+
 /**
  * Non throwing version of CORE_ASSERT.
  * Should be used only in places where noexcept is required.
@@ -175,7 +218,7 @@ namespace base {
  * @note If this assertion fails the program will be terminated.
  */
 #define CORE_ASSERT_STRONG_NOEXCEPT(cond, what, ...) \
-	CORE_ASSERT_NOEXCEPT_BASE(CORE_ASSERT_STRONG, cond, what __VA_OPT__(, ) __VA_ARGS__)
+	CORE_ASSERT_STRONG_NOEXCEPT_BASE(CORE_ASSERT_STRONG, cond, what __VA_OPT__(, ) __VA_ARGS__)
 
 /**
  * Non throwing version of CORE_ASSERT_SYSCALL.
@@ -184,4 +227,4 @@ namespace base {
  * @note If this assertion fails the program will be terminated.
  */
 #define CORE_ASSERT_SYSCALL_NOEXCEPT(cond, what, ...) \
-	CORE_ASSERT_NOEXCEPT_BASE(CORE_ASSERT_SYSCALL, cond, what __VA_OPT__(, ) __VA_ARGS__)
+	CORE_ASSERT_STRONG_NOEXCEPT_BASE(CORE_ASSERT_SYSCALL, cond, what __VA_OPT__(, ) __VA_ARGS__)
