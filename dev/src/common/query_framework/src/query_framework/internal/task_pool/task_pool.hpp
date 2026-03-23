@@ -15,9 +15,11 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <unordered_set>
 #include <vector>
 
 namespace query::internal {
+
 	class TaskPool;
 
 	/**
@@ -142,6 +144,13 @@ namespace query::internal {
 		 */
 		void waitForTask(NodeID id);
 
+		/**
+		 * @brief Invalidate a task, removing it from the pool.
+		 * @note this is not thread-safe as it is cleaning the thread-local cache of done tasks without synchronization
+		 * You may need to change that in the future, then add a static mutex inside this fuction
+		 * This should never be called when performing normal compilation at the same time
+		 * @param id The ID of the task to invalidate.
+		 */
 		void invalidateTask(NodeID id);
 
 	private:
@@ -224,8 +233,11 @@ namespace query::internal {
 		std::vector<concurrent::ConQueue<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
-		/// @TODO: #1988 #2035 hash map per query id? Or even stronger, lock free data structure.
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
+
+		/// Local cache of completed tasks for fast lookup without accessing the concurrent map.
+		/// @note This speed
+		std::vector<std::unordered_set<query::internal::NodeID>> tasks_done_local;
 
 		static constexpr usize TASK_SHARDS = 113;
 		std::array<std::mutex, TASK_SHARDS> task_completed_mutexes;

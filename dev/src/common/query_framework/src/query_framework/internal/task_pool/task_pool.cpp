@@ -21,7 +21,7 @@ namespace query::internal {
 
 	TaskPool::TaskPool():
 		  worker_manager(concurrent::worker::WorkerManager::get()),
-		  num_workers(worker_manager.getAllWorkers().size()), worker_pools(num_workers), is_worker_free(num_workers) {
+		  num_workers(worker_manager.getAllWorkers().size()), worker_pools(num_workers), tasks_done_local(num_workers), is_worker_free(num_workers) {
 
 		std::ranges::fill(is_worker_free, true);
 
@@ -70,6 +70,10 @@ namespace query::internal {
 		);
 
 		auto            val = task_status_map.extract(id);
+		// remove this task from the local cache of done tasks if it is present there
+		for (auto& local_done_set : tasks_done_local) {
+			local_done_set.erase(id);
+		}
 		CORE_ASSERT(val.has_value(), "Task must be present in the task pool");
 		CORE_ASSERT(
 			val.value() == TaskStatus::Done, "Invalidating a task that is not done is not supported"
@@ -77,19 +81,16 @@ namespace query::internal {
 	}
 
 	void TaskPool::query(const Task& task) {
-		// Fast path check without locking
-		if (auto task_status = task_status_map.atMaybeCopy(task.id)) {
-			if (task_status.value() == TaskStatus::Done) {
-				return;
-			}
-			else if (task_status.value() == TaskStatus::InProgress) {
-				waitForTask(task.id);
-				return;
-			}
+		// The fastest way to check if the task is done is to check the thread local set of done tasks
+		if(tasks_done_local[concurrent::worker::Worker::getCurrentWorker()->getID()].contains(task.id)) {
+			return;
 		}
 
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) {
+			// This task will be done before we will finish executing this function, 
+			// so we can add it to the local set of done tasks to speed up future checks
+			tasks_done_local[concurrent::worker::Worker::getCurrentWorker()->getID()].insert(task.id);
 			waitForTask(task.id);
 		}
 	}
@@ -110,6 +111,8 @@ namespace query::internal {
 			task.work(wd);
 
 			task_status_map.update(task.id, TaskStatus::Done);
+			// Add this task to the local cache of done tasks for fast future checks
+			tasks_done_local[wd->getID()].insert(task.id);
 			{
 				auto task_hash = taskHash(task.id);
 				auto& task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
@@ -129,12 +132,10 @@ namespace query::internal {
 		WRef       current_worker = concurrent::worker::Worker::getCurrentWorker();
 		const auto task_id        = task.id;
 
-		// This line is not needed, but it sometimes avoids scheduling duplicate tasks
-		if (task_status_map.contains(task_id)) return TaskHandle(*this, task_id);
-
-		// @note It is possible that the free (due to tasks from outside query execution) worker would not be free by the time we will
-		// schedule a task on it. This would be unfortunate, but not a problem, as the worker
-		// manager will just queue the task for later execution.
+		// This can sometimes avoid sheduling duplicated tasks
+		if(task_status_map.contains(task_id)) {
+			return TaskHandle(*this, task_id);
+		}
 
 		// Add to current worker's pool
 		addToWorkerPool(current_worker, std::move(task));
@@ -152,7 +153,7 @@ namespace query::internal {
 	}
 
 	void TaskPool::await(NodeID id) {
-		// Fast path check without locking
+		// Fast path - task was done by another worker
 		if (auto task_status = task_status_map.atMaybeCopy(id)) {
 			if (task_status.value() == TaskStatus::Done) {
 				return;

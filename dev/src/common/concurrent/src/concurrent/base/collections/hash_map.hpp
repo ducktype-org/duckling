@@ -199,12 +199,13 @@ namespace concurrent {
 		 * 2. Calls f with reference to the value associated with the key.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T, typename Func>
-		void maybePutAndUpdate(const K& key, D&& value, Func f) RELEASE_NOEXCEPT {
+		MRef<KeyValuePair> maybePutAndUpdate(const K& key, D&& value, Func f) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto inserted = shards[lock.shard_index].maybePut(key, std::forward<D>(value));
 			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
 			f(Ref<DATA_T>(&shards[lock.shard_index][key]));
+			return inserted;
 		}
 
 		/**
