@@ -147,7 +147,7 @@ namespace vm {
 
 			// @TODO: #1222 make two different "stop" functions, one that throws error if program
 			// was not stopped successfully and another that does nothing
-			// if (!response) return std::unexpected(api::ApiError{ api::StopError{} });
+			if (!response) return std::unexpected(api::OtherError{ "unexpected status response" });
 		}
 
 		return api::response::Empty{};

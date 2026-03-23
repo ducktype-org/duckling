@@ -96,6 +96,49 @@ namespace vm {
 
 		base::Optional<api::ApiError> assertProcessCanRespond();
 
+		std::expected<api::Response, api::LoadProgramError> loadProgram(
+			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
+		) override;
+
+		std::expected<api::Response, api::ApiError> runFunction(
+			const std::string& func_name, const RunArguments& run_arguments
+		) override;
+
+		std::expected<api::Response, api::ApiError> runFunctionAwait(
+			const std::string& func_name, const RunArguments& run_arguments
+		) override;
+
+		std::expected<api::Response, api::ApiError> join(api::ThreadID thread_id) override;
+
+		std::expected<api::Response, api::ApiError> stop() override;
+
+		std::expected<api::Response, api::ApiError> input(const api::request::Input& request
+		) override;
+
+		std::expected<api::Response, api::ApiError> output() override;
+
+		std::expected<api::Response, api::StateError> getExitCode() override;
+
+		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
+
+		base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
+
+		base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
+
+		base::Optional<api::ApiError> stepMainVMThread() override;
+
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		) override;
+
+		std::expected<api::Response, api::ApiError> getMainVMThreadCurrentPosition() override;
+
+		void waitForBreakpoint() override;
+
+		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
+		) override;
+
+		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
+		) override;
 	public:
 		SafeVMProcess(PID my_pid);
 
@@ -105,38 +148,11 @@ namespace vm {
 		Memory& getMemory();
 
 		Ref<VmValue> createVmValue(TypeCRef type) override;
+
 		Ref<VmValue> createVmValue(TypeCRef type, Pointer src) override;
 
 		Box<VmValue> createOwnedVmValue(TypeCRef type) override;
+
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
-
-		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
-		) override;
-		std::expected<api::Response, api::ApiError> runFunction(
-			const std::string& func_name, const RunArguments& run_arguments
-		) override;
-		std::expected<api::Response, api::ApiError> runFunctionAwait(
-			const std::string& func_name, const RunArguments& run_arguments
-		) override;
-		std::expected<api::Response, api::ApiError>   join(api::ThreadID thread_id) override;
-		std::expected<api::Response, api::ApiError>   stop() override;
-		std::expected<api::Response, api::ApiError>   input(const api::request::Input& request
-		  ) override;
-		std::expected<api::Response, api::ApiError>   output() override;
-		std::expected<api::Response, api::StateError> getExitCode() override;
-		std::expected<api::Response, api::ApiError>   deinitAndValidate() override;
-
-		base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) override;
-		base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
-		base::Optional<api::ApiError> stepMainVMThread() override;
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
-		) override;
-		std::expected<api::Response, api::ApiError> getMainVMThreadCurrentPosition() override;
-		void                                        waitForBreakpoint() override;
-		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
-		) override;
-		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
-		) override;
 	};
 }

@@ -146,8 +146,6 @@ namespace vm {
 	public:
 		VMProcess(PID my_pid);
 
-		virtual void setStatus(const api::ProcStatus& new_status) noexcept = 0;
-		
 		ProcIO& getIO();
 
 		/**
@@ -159,7 +157,16 @@ namespace vm {
 		 * @brief Get the PID of the process.
 		 */
 		[[nodiscard]] PID getPID() const;
+		/**
+		 * @brief Get the GIL of the process.
+		 */
+		GIL& getGIL();
+		/**
+		 * @brief Get the synchronization primitives of the process.
+		 */
+		SynchronizationPrimitives& getSynchronizationPrimitives();
 
+		virtual void setStatus(const api::ProcStatus& new_status) noexcept = 0;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
@@ -186,9 +193,6 @@ namespace vm {
 		 */
 		virtual Box<VmValue> createOwnedVmValue(TypeCRef type)              = 0;
 		virtual Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) = 0;
-
-		GIL&                       getGIL();
-		SynchronizationPrimitives& getSynchronizationPrimitives();
 
 		virtual ~VMProcess() = default;
 	};
