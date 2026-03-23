@@ -174,47 +174,47 @@ namespace vm::builtins {
 			map{ {
 					 BuiltinFunctionID::InputI64,
 					 { base::StrID("builtin_input_i64"),
-			           code::FuncSignature(base::StrID("i64"), {}) },
+			           code::FuncSignature({base::StrID("i64")}, {}) },
 				 },
 			     {
 					 BuiltinFunctionID::OutputI64,
 					 { base::StrID("builtin_output_i64"),
-			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
+			           code::FuncSignature({base::StrID("i64")}, { base::StrID("i64") }) },
 				 },
 			     {
 					 BuiltinFunctionID::OutputString,
 					 { base::StrID("builtin_strOutput_lptr"),
-			           code::FuncSignature(base::StrID("void"), { base::StrID("ptr_string") }) },
+			           code::FuncSignature({}, { base::StrID("ptr_string") }) },
 				 },
 			     {
 					 BuiltinFunctionID::Stoi,
 					 {
 						 base::StrID("builtin_stoi_lptr"),
-						 code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }),
+						 code::FuncSignature({base::StrID("i64")}, { base::StrID("ptr_string") }),
 					 },
 				 },
 			     {
 					 BuiltinFunctionID::StartThread,
 					 { base::StrID("builtin_start_thread"),
-			           code::FuncSignature(base::StrID("i64"), {}) },
+			           code::FuncSignature({base::StrID("i64")}, {}) },
 				 },
 			     {
 					 BuiltinFunctionID::JoinThread,
 					 { base::StrID("builtin_join_thread"),
-			           code::FuncSignature(base::StrID("void"), { base::StrID("i64") }) },
+			           code::FuncSignature({}, { base::StrID("i64") }) },
 				 },
 			     { BuiltinFunctionID::CreateMutex,
 			       { base::StrID("builtin_create_mutex"),
-			         code::FuncSignature(base::StrID("mutex"), {}) } },
+			         code::FuncSignature({base::StrID("mutex")}, {}) } },
 			     { BuiltinFunctionID::LockMutex,
 			       { base::StrID("builtin_lock_mutex"),
-			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } },
+			         code::FuncSignature({}, { base::StrID("mutex") }) } },
 			     { BuiltinFunctionID::UnlockMutex,
 			       { base::StrID("builtin_unlock_mutex"),
-			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } },
+			         code::FuncSignature({}, { base::StrID("mutex") }) } },
 			     { BuiltinFunctionID::DestroyMutex,
 			       { base::StrID("builtin_destroy_mutex"),
-			         code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) } } };
+			         code::FuncSignature({}, { base::StrID("mutex") }) } } };
 
 
 		return &map;
