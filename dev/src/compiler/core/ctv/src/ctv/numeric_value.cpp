@@ -63,9 +63,9 @@ namespace compiler::numeric_value {
 		);
 	}
 
-	base::Optional<NumericValue> NumericValue::castTo(const tsh::AbstractType& target_abstract_type
-	) const {
+	base::Optional<NumericValue> NumericValue::castTo(const tsh::SymbolType<>& target_type) const {
 		using namespace tsh;
+		const auto target_abstract_type = target_type.getType();
 
 		auto cast = [&]<typename TargetType>() -> base::Optional<NumericValue> {
 			if (auto maybe_casted = this->coerceTo<TargetType>())

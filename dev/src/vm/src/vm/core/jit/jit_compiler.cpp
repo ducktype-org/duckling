@@ -1,4 +1,4 @@
-#ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
+#ifdef ENABLE_JIT
 	#include "jit_compiler.hpp"
 
 	#include "opcodes_bitcode_source.hpp"

@@ -627,7 +627,7 @@ namespace compiler::helios {
 				const auto& numeric = ctv.get<NumericValue>();
 				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
 
-				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
+				auto maybe_new_numeric = numeric->castTo(cast.target_type);
 
 				if (!maybe_new_numeric.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -652,7 +652,7 @@ namespace compiler::helios {
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDefaultValueExpr(const code::DefaultValueExpr& expr) final {
-				switch (expr.type.getKind()) {
+				switch (expr.type.getType().getKind()) {
 				case tsh::Kind::Integral:
 				case tsh::Kind::Float: {
 					// Creates a 0 initialized numeric by default.

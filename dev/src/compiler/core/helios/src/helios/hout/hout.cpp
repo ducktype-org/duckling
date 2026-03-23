@@ -9,7 +9,6 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -133,19 +132,17 @@ namespace compiler::helios {
 
 				  // Get the initial value and type of the variable.
 				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-				  auto       get_initial_value = [&]() -> Box<code::Expr> {
+				  auto       initial_value = [&]() -> Box<code::Expr> {
                       if (auto maybe_initial_pst = var_decl->getValue()) {
                           auto initial_value_pst = maybe_initial_pst.value().unlock(ctx)->getExpr();
                           return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
                               .valueOrThrow();
                       } else {
-                          return houtgen::getDefaultInitializerExpr(
-                                     ctx, variable_type, origin.getSourcePosition().value()
-                          )
-                              .valueOrThrow();
+                          return makeBox<code::DefaultValueExpr>(
+                              ctx, code::generatedOrigin(), variable_type
+                          );
                       }
-				  };
-				  auto initial_value = get_initial_value();
+				  }();
 
 				  return HOUTGlobalVariable{
 					  std::make_shared<Box<code::Expr>>(std::move(initial_value))

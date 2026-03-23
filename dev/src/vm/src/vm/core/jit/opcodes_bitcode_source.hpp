@@ -5,7 +5,8 @@
  */
 #pragma once
 
-#ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
+#ifdef ENABLE_JIT
+
 	#include <llvm_helpers/llvm_helpers.hpp>
 
 	#include <vm/core/thread/low_program/opcodes.hpp>

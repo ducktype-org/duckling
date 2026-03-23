@@ -24,8 +24,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query code of a function.
-	 * @note Works for SymID-s that represent PST-functions (i.e. PST symbol) or generated functions
-	 * like default constructors.
+	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
 	 *
 	 * \query_thread_safe_if_cache
 	 */

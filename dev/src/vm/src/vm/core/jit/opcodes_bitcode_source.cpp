@@ -3,7 +3,8 @@
  * @note Tis file does not depend on execution style.
  */
 
-#ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
+#ifdef ENABLE_JIT
+
 	#include "opcodes_bitcode_source.hpp"
 
 	#include "jit_init.hpp"

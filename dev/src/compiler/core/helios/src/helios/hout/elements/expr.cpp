@@ -1024,22 +1024,14 @@ namespace compiler::helios::code {
 		return makeBox<DerefExpr>(expression_type, origin, inner->clone());
 	}
 
-	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::AbstractType type):
+	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::SymbolType<> type):
 		  Expr(
-			  tsh::ExpressionType<>(
-				  tsh::SymbolType<>{
-					  type,
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  ),
-			  origin
+			  tsh::ExpressionType<>(type, tsh::ValueCategory(tsh::PrimaryCategory::Literal)), origin
 		  ),
 		  type(type) {}
 
 	DefaultValueExpr::DefaultValueExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
 	):
 		  Expr(expression_type, origin),
 		  type(type) {}

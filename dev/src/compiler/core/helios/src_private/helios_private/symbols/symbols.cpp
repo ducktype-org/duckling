@@ -1048,31 +1048,37 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-
-			auto collect_deps = [&]() {
-				const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-				const auto& function_body   = fun_hout_result.body;
-
-				HoutFunctionCallCollector visitor;
-				for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
-				return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
-			};
-
 			variant_match(getSymRef(key)->other) {
 				variant_case_novalue(PstSymbolData) {
-					// Just a PST function.
-					return collect_deps();
+					// Just a pst function
+					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
+
+					const auto& function_body = fun_hout_result.body;
+
+					HoutFunctionCallCollector visitor;
+					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+					return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
 				}
+
 				variant_case(builtin::BuiltinFunctionData, btd_data) {
 					// Builtin functions have no dependencies
 					return {};
 				}
+
 				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
-					CORE_ASSERT(
-						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
-						"QueryDirectFunction calls called on a non-function symbol"
-					);
-					return collect_deps();
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"QueryDirectFunctionCalls is not implemented for generated symbols "
+							"yet. ",
+							"The symbol in question is: ",
+							getSymRef(key)->common.name,
+							". "
+							"This usually means that a class was used inside compile time "
+							"evaluation."
+						),
+						std::nullopt
+					));
+					return query::Failed();
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}
