@@ -172,11 +172,10 @@ namespace lexer {
 		Token&&                   sentinel_end,
 		const dia::SourcePosition position
 	) {
-		return { Type::FormatString,
-			     std::move(tokens),
-			     std::move(sentinel_begin),
-			     std::move(sentinel_end),
-			     position };
+		return {
+			Type::FormatString,      std::move(tokens), std::move(sentinel_begin),
+			std::move(sentinel_end), position,
+		};
 	}
 
 	Token Token::makeFormatStringSubString(base::RawView string, const dia::SourcePosition position) {

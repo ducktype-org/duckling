@@ -4,7 +4,7 @@
 
 namespace pst {
 	/**
-	 * @brief Dummy base element common to format sub elements
+	 * @brief Dummy base element common to format string sub elements
 	 */
 	class FormatSubElement: public NotStmt {
 	protected:

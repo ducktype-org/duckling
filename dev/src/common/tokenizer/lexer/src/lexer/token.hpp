@@ -62,7 +62,7 @@ namespace lexer {
 			None   = 0,
 			Round  = '(',
 			Square = '[',
-			Curly  = '{',  ///< Is also used in format string
+			Curly  = '{',  ///< Is also used for format string sub expressions
 			Angle  = 0x30'08,
 		};
 
