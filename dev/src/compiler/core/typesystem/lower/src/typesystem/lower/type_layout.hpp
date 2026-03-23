@@ -106,7 +106,7 @@ namespace compiler::tsl {
 		virtual ~TypeLayoutABC() = default;
 
 	protected:
-		TypeLayoutABC(const Bits size, const tsh::AbstractType source_type, query::Context& ctx);
+		TypeLayoutABC(const Bits size, const tsh::SymbolType<> source_type, query::Context& ctx);
 
 		[[nodiscard]]
 		static auto getIndent(const u32 indent) {
@@ -125,7 +125,7 @@ namespace compiler::tsl {
 	 */
 	class EmptyTypeLayout final: public TypeLayoutABC {
 		explicit EmptyTypeLayout(const tsh::UnitAbstractType unit_type, query::Context& ctx):
-			  TypeLayoutABC(Bits(0), unit_type, ctx) {}
+			  TypeLayoutABC(Bits(0), tsh::SymbolType<>::withDefaults(unit_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -146,7 +146,7 @@ namespace compiler::tsl {
 	 */
 	class MetaTypeLayout final: public TypeLayoutABC {
 		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type, query::Context& ctx):
-			  TypeLayoutABC(META_SIZE, meta_type, ctx) {}
+			  TypeLayoutABC(META_SIZE, tsh::SymbolType<>::withDefaults(meta_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -164,18 +164,20 @@ namespace compiler::tsl {
 	 */
 	class IntegralTypeLayout final: public TypeLayoutABC {
 		explicit IntegralTypeLayout(const tsh::ByteAbstractType byte_type, query::Context& ctx):
-			  TypeLayoutABC(BYTE_SIZE, byte_type, ctx) {}
+			  TypeLayoutABC(BYTE_SIZE, tsh::SymbolType<>::withDefaults(byte_type), ctx) {}
 
 		explicit IntegralTypeLayout(const tsh::BoolAbstractType bool_type, query::Context& ctx):
-			  TypeLayoutABC(BOOL_SIZE, bool_type, ctx) {}
+			  TypeLayoutABC(BOOL_SIZE, tsh::SymbolType<>::withDefaults(bool_type), ctx) {}
 
 		explicit IntegralTypeLayout(const tsh::CharAbstractType char_type, query::Context& ctx):
-			  TypeLayoutABC(CHAR_SIZE, char_type, ctx) {}
+			  TypeLayoutABC(CHAR_SIZE, tsh::SymbolType<>::withDefaults(char_type), ctx) {}
 
 		explicit IntegralTypeLayout(
 			const tsh::IntegralAbstractType integral_type, query::Context& ctx
 		):
-			  TypeLayoutABC(integral_type.getSize(), integral_type, ctx) {}
+			  TypeLayoutABC(
+				  integral_type.getSize(), tsh::SymbolType<>::withDefaults(integral_type), ctx
+			  ) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -192,7 +194,8 @@ namespace compiler::tsl {
 	 */
 	class FloatTypeLayout final: public TypeLayoutABC {
 		explicit FloatTypeLayout(const tsh::FloatAbstractType float_type, query::Context& ctx):
-			  TypeLayoutABC(float_type.getSize(), float_type, ctx) {}
+			  TypeLayoutABC(float_type.getSize(), tsh::SymbolType<>::withDefaults(float_type), ctx) {
+		}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -220,7 +223,11 @@ namespace compiler::tsl {
 		static constexpr auto METADATA_SIZE = Bytes(8);
 
 		explicit StringTypeLayout(const tsh::StringAbstractType string_type, query::Context& ctx):
-			  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(METADATA_SIZE) * 3, string_type, ctx) {}
+			  TypeLayoutABC(
+				  POINTER_SIZE + base::bytes2bits(METADATA_SIZE) * 3,
+				  tsh::SymbolType<>::withDefaults(string_type),
+				  ctx
+			  ) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -629,7 +636,7 @@ namespace compiler::tsl {
 		explicit FunctionalTypeLayout(
 			const tsh::FunctionAbstractType function_type, query::Context& ctx
 		):
-			  TypeLayoutABC(POINTER_SIZE, function_type, ctx) {}
+			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -656,7 +663,7 @@ namespace compiler::tsl {
 		explicit PointerTypeLayout(
 			const tsh::RawPointerAbstractType raw_pointer_type, query::Context& ctx
 		):
-			  TypeLayoutABC(POINTER_SIZE, raw_pointer_type, ctx) {}
+			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(raw_pointer_type), ctx) {}
 
 		/**
 		 * @brief Construct a PointerLayout from a typed Pointer.

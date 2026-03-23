@@ -51,21 +51,12 @@ namespace compiler::helios::mangler {
 	 */
 	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({ .uses_qresult = false }));
 
-	struct KeyOf_MangledType final {
-		using ManglingTypeKey = std::variant<tsh::SymbolType<>, tsh::AbstractType>;
-
-		ManglingTypeKey type_key;
-
-		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const;
-	};
-
 	/**
 	 * @brief Gets the mangled name of a type. The type can either be AbstractType or SymbolType.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryMangledType, KeyOf_MangledType, CRef<query::QResult<base::StrID>>, ({}));
+	DECLARE_QUERY(QueryMangledType, tsh::SymbolType<>, CRef<query::QResult<base::StrID>>, ({}));
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id);
 

@@ -62,22 +62,6 @@ namespace compiler::helios::mangler {
 		return result;
 	}
 
-	u64 KeyOf_MangledType::queryUnstablePerfectHash() const {
-		variant_match(type_key) {
-			variant_case(tsh::AbstractType, type) {
-				return std::hash<base::Bit256>()(
-					hashing::justHash(type_key.index(), type.queryUnstablePerfectHash())
-				);
-			}
-			variant_case(tsh::SymbolType<>, type) {
-				return std::hash<base::Bit256>()(
-					hashing::justHash(type_key.index(), type.queryUnstablePerfectHash())
-				);
-			}
-			variant_default { CORE_UNREACHABLE(); }
-		}
-	}
-
 	namespace internal {
 		/**
 		 * @brief Check if the symbol should be mangled in the first place.
@@ -317,7 +301,9 @@ namespace compiler::helios::mangler {
 								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 							) {
 								return "Hds"
-								     + ctx.query<QueryMangledType>({ ctor.array_type })
+								     + ctx.query<QueryMangledType>(
+											  tsh::SymbolType<>::withDefaults(ctor.array_type)
+									 )
 								           ->valueOrThrow()
 								           .str()
 								     + "E";
@@ -563,66 +549,61 @@ namespace compiler::helios::mangler {
 
 		static std::string mangle(query::Context&, tsh::MetaAbstractType) { return "t"; }
 
-		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			variant_match(key.type_key) {
-				variant_case(tsh::SymbolType<>, type) {
-					return base::StrID{ base::strConcat(
-						type.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
-						type.getLeakage() == tsh::Leakage::Leaking ? "L" : "",
-						type.getMutability() == tsh::Mutability::Mutable ? "" : "N",
-						type.getRefKind() == tsh::ReferenceKind::Direct ? ""
-						: type.getRefKind() == tsh::ReferenceKind::Box  ? "X"
-																		: "R",
-						ctx.query<QueryMangledType>({ type.getType() })->valueOrThrow()
-					) };
-				}
-				variant_case(tsh::AbstractType, type) {
-					using enum tsh::Kind;
-					switch (type.getKind()) {
-					case Unit:
-						return base::StrID{ mangle(ctx, type.as<tsh::UnitAbstractType>()) };
-					case Void:
-						return base::StrID{ mangle(ctx, type.as<tsh::VoidAbstractType>()) };
-					case Byte:
-						return base::StrID{ mangle(ctx, type.as<tsh::ByteAbstractType>()) };
-					case Bool:
-						return base::StrID{ mangle(ctx, type.as<tsh::BoolAbstractType>()) };
-					case Char:
-						return base::StrID{ mangle(ctx, type.as<tsh::CharAbstractType>()) };
-					case Integral:
-						return base::StrID{ mangle(ctx, type.as<tsh::IntegralAbstractType>()) };
-					case Float:
-						return base::StrID{ mangle(ctx, type.as<tsh::FloatAbstractType>()) };
-					case RawPointer:
-						return base::StrID{ mangle(ctx, type.as<tsh::RawPointerAbstractType>()) };
-					case Pointer:
-						return base::StrID{ mangle(ctx, type.as<tsh::PointerAbstractType>()) };
-					case String:
-						return base::StrID{ mangle(ctx, type.as<tsh::StringAbstractType>()) };
-					case Function:
-						return base::StrID{ mangle(ctx, type.as<tsh::FunctionAbstractType>()) };
-					case DynamicArray:
-						return base::StrID{ mangle(ctx, type.as<tsh::DynamicArrayAbstractType>()) };
-					case StaticArray:
-						return base::StrID{ mangle(ctx, type.as<tsh::StaticArrayAbstractType>()) };
-					case Tuple:
-						return base::StrID{ mangle(ctx, type.as<tsh::TupleAbstractType>()) };
-					case Variant:
-						return base::StrID{ mangle(ctx, type.as<tsh::VariantAbstractType>()) };
-					case Class:
-						return base::StrID{ mangle(ctx, type.as<tsh::ClassAbstractType>()) };
-					case Meta:
-						return base::StrID{ mangle(ctx, type.as<tsh::MetaAbstractType>()) };
-					default:
-						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-							base::strConcat("Cannot mangle type of kind: ", type.getKind()),
-							std::nullopt
-						));
-						return query::Failed();
-					}
-				}
-				variant_default { CORE_UNREACHABLE(); }
+		static query::QResult<std::string> mangle(query::Context& ctx, tsh::AbstractType type) {
+			using enum tsh::Kind;
+			switch (type.getKind()) {
+			case Unit:
+				return mangle(ctx, type.as<tsh::UnitAbstractType>());
+			case Void:
+				return mangle(ctx, type.as<tsh::VoidAbstractType>());
+			case Byte:
+				return mangle(ctx, type.as<tsh::ByteAbstractType>());
+			case Bool:
+				return mangle(ctx, type.as<tsh::BoolAbstractType>());
+			case Char:
+				return mangle(ctx, type.as<tsh::CharAbstractType>());
+			case Integral:
+				return mangle(ctx, type.as<tsh::IntegralAbstractType>());
+			case Float:
+				return mangle(ctx, type.as<tsh::FloatAbstractType>());
+			case RawPointer:
+				return mangle(ctx, type.as<tsh::RawPointerAbstractType>());
+			case Pointer:
+				return mangle(ctx, type.as<tsh::PointerAbstractType>());
+			case String:
+				return mangle(ctx, type.as<tsh::StringAbstractType>());
+			case Function:
+				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
+			case DynamicArray:
+				return mangle(ctx, type.as<tsh::DynamicArrayAbstractType>());
+			case StaticArray:
+				return mangle(ctx, type.as<tsh::StaticArrayAbstractType>());
+			case Tuple:
+				return mangle(ctx, type.as<tsh::TupleAbstractType>());
+			case Variant:
+				return mangle(ctx, type.as<tsh::VariantAbstractType>());
+			case Class:
+				return mangle(ctx, type.as<tsh::ClassAbstractType>());
+			case Meta:
+				return mangle(ctx, type.as<tsh::MetaAbstractType>());
+			default:
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
+				));
+				return query::Failed();
 			}
+		}
+
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return base::StrID{ base::strConcat(
+				key.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
+				key.getLeakage() == tsh::Leakage::Leaking ? "L" : "",
+				key.getMutability() == tsh::Mutability::Mutable ? "" : "N",
+				key.getRefKind() == tsh::ReferenceKind::Direct ? ""
+				: key.getRefKind() == tsh::ReferenceKind::Box  ? "X"
+															   : "R",
+				mangle(ctx, key.getType()).valueOrThrow()
+			) };
 		}
 
 		QUERY_AUTO_CACHE_CREF
