@@ -26,7 +26,6 @@
 
 #include <iostream>
 #include <mutex>
-#include <ranges>
 #include <string>
 #include <variant>
 #include <vector>
@@ -565,11 +564,7 @@ namespace vm {
 
 	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
 		executing_program = program;
-		auto globals      = executing_program->getGlobals().allData();
-		// Destructors should run in reverse order of construction so that any object depending on
-		// earlier-created resources is destroyed first, preventing use-after-destruction and
-		// keeping teardown safe and logically consistent.
-		for (auto [global, id, name]: std::ranges::reverse_view(globals)) {
+		for (const auto& [global, id, name]: executing_program->getGlobals().allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->getFunctions()

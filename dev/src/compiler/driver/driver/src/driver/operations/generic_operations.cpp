@@ -26,7 +26,6 @@
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
-#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
