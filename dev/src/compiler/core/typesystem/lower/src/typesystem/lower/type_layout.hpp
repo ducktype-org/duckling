@@ -791,5 +791,12 @@ namespace compiler::tsl {
 		 */
 		[[nodiscard]]
 		std::string toStringIdentification() const;
+
+		/**
+		 * @brief Get the mangled name of the source type of a layout.
+		 * @return The mangled name of the source type of a layout.
+		 */
+		[[nodiscard]]
+		base::StrID getMangledName() const;
 	};
 }

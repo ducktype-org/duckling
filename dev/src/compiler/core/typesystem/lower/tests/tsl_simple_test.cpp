@@ -26,6 +26,7 @@ public:
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(mutabilityTest);
+		TESTER_ADD_TEST(pointerLayoutManglingTest);
 	}
 
 private:
@@ -442,6 +443,35 @@ private:
 
 			testPrinting(int_layout, ctx);
 			testPrinting(const_int_layout, ctx);
+		});
+	}
+
+	void pointerLayoutManglingTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			auto i64 = SymbolType<>::withDefaults(
+				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+			);
+			auto ref_i64 = i64.withReferenceKind(ReferenceKind::Ref);
+			auto box_i64 = i64.withReferenceKind(ReferenceKind::Box);
+
+			auto i64_layout     = ctx.query<QuerySymbolTypeLayout>(i64);
+			auto ref_i64_layout = ctx.query<QuerySymbolTypeLayout>(ref_i64);
+			auto box_i64_layout = ctx.query<QuerySymbolTypeLayout>(box_i64);
+
+			auto i64_name     = i64_layout->getMangledName();
+			auto ref_i64_name = ref_i64_layout->getMangledName();
+			auto box_i64_name = box_i64_layout->getMangledName();
+
+			assertFalse(
+				i64_name == ref_i64_name, "`i64 and `ref i64` layout should be mangled diferently."
+			);
+			assertFalse(
+				ref_i64_name == box_i64_name,
+				"`ref i64 and `box i64` layout should be mangled diferently."
+			);
+			assertFalse(
+				box_i64_name == i64_name, "`box i64 and `i64` layout should be mangled diferently."
+			);
 		});
 	}
 

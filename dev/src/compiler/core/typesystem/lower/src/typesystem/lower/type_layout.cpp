@@ -490,4 +490,8 @@ namespace compiler::tsl {
 	std::string TypeLayout::toStringIdentification() const {
 		return VISIT(variant, l, return l.toStringIdentification());
 	}
+
+	base::StrID TypeLayout::getMangledName() const {
+		return VISIT(variant, l, return l.getMangledName());
+	}
 }
