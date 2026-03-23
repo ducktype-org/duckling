@@ -116,6 +116,7 @@ macro_rules! determine_field {
         /// Note:
         /// -----
         /// Field in [`manifest::Profile`] should implement [`Into::into`] for the appropriate [`Profile`] field type.
+        /// It should also implement [`std::marker::Copy`].
         fn $fun_name(profile_name: StrId, profiles: &manifest::Profiles) -> QuackResult<$ret> {
             // The profile should be either defined in the manifest or predefined.
             // We always prioritize the manifest, since a predefined profile can be redefined in the manifest.
@@ -130,11 +131,12 @@ macro_rules! determine_field {
                         .context(format!("Unknown profile `{}`", profile_name))
                     });
             };
-            $fun_name_help(starting_profile, profiles)
+            $fun_name_help(profile_name, starting_profile, profiles)
         }
 
         #[doc = concat!("Recursive helper for [`", stringify!($fun_name),"`]")]
         fn $fun_name_help(
+            cur_profile_name: StrId,
             cur_profile: &manifest::Profile,
             profiles: &manifest::Profiles,
         ) -> QuackResult<$ret> {
@@ -149,7 +151,7 @@ macro_rules! determine_field {
                 // We always prioritize the manifest, since a predefined profile can be redefined in the manifest.
                 if let Some(parent_profile) = profiles.get_profiles().get(&parent_name) {
                     // If it is defined in the manifest we recursively query the parent.
-                    $fun_name_help(parent_profile, profiles)
+                    $fun_name_help(parent_name, parent_profile, profiles)
                 } else {
                     // Else we get the predefined profile and the appropriate field.
                     PREDEFINED_PROFILES
@@ -158,8 +160,14 @@ macro_rules! determine_field {
                         .context_internal("Parent profile neither in profiles map nor predefined")
                 }
             } else {
-                // None of the inheritance ancestors specified the field, so the default value should be used.
-                Ok(Profile::default().$name)
+                // None of the inheritance ancestors specified the field.
+                // If the last ancestor overwrites some predefined profile, we inherit from it.
+                // Otherwise we use the default value.
+                if let Some(predefined) = PREDEFINED_PROFILES.get(&cur_profile_name) {
+                    Ok(predefined.$name)
+                } else {
+                    Ok(Profile::default().$name)
+                }
             }
         }
     };
@@ -260,15 +268,15 @@ mod test {
         )
         .unwrap();
         let profile = Profile::construct_profile("b".into(), &profiles).unwrap();
-        assert!(
-            profile
-                == Profile {
-                    name: "b".into(),
-                    opt_level: OptLevel::S,
-                    dvm_bytecode: false,
-                    incremental: false,
-                    c_std: false,
-                }
+        assert_eq!(
+            profile,
+            Profile {
+                name: "b".into(),
+                opt_level: OptLevel::S,
+                dvm_bytecode: false,
+                incremental: false,
+                c_std: false,
+            },
         )
     }
 
@@ -283,16 +291,39 @@ mod test {
         };
         let profiles = manifest::Profiles::new([("default".into(), profile)].into()).unwrap();
         let profile = Profile::construct_profile("default".into(), &profiles).unwrap();
-        assert!(profile == Profile::default());
+        assert_eq!(profile, Profile::default());
     }
 
     #[test]
     fn unknown_profile() {
         let profiles = manifest::Profiles::new([].into()).unwrap();
         let error = Profile::construct_profile("a".into(), &profiles).unwrap_err();
-        assert!(
-            error.to_string()
-                == "Unknown profile `a`\nIn order to use a profile you have to define it in the manifest first"
+        assert_eq!(
+            error.to_string(),
+            "Unknown profile `a`\nIn order to use a profile you have to define it in the manifest first",
         )
+    }
+
+    #[test]
+    fn overwriting_predefined() {
+        let profile = manifest::Profile {
+            opt_level: None,
+            dvm_bytecode: None,
+            incremental: Some(false),
+            c_std: None,
+            inherits: None,
+        };
+        let profiles = manifest::Profiles::new([("dev".into(), profile)].into()).unwrap();
+        let profile = Profile::construct_profile("dev".into(), &profiles).unwrap();
+        assert_eq!(
+            profile,
+            Profile {
+                name: "dev".into(),
+                opt_level: OptLevel::One,
+                dvm_bytecode: false,
+                incremental: false,
+                c_std: true,
+            }
+        );
     }
 }
