@@ -37,7 +37,13 @@ protected:
 	}
 
 private:
+	struct ReloadWorkerManagerOnExit final {
+		~ReloadWorkerManagerOnExit() { WorkerManager::testPrivateAccessReloadState(); }
+	};
+
 	void basicFunctionalityTest() {
+		ReloadWorkerManagerOnExit reload_on_exit;
+
 		std::atomic<usize> no_task_counter = 0;
 		auto               now             = std::chrono::steady_clock::now();
 
@@ -103,6 +109,8 @@ private:
 	}
 
 	void taskPoolFibonacciTest() {
+		ReloadWorkerManagerOnExit reload_on_exit;
+
 		constexpr u64 MOD = static_cast<u64>(1e9 + 7);
 
 		// A simple Fibonacci function. It is a "CPU-bound" task.
