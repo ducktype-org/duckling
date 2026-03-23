@@ -1,5 +1,6 @@
 #include "supervisor.hpp"
 
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/vmprocess.hpp>
 
 #include <mutex>
@@ -10,7 +11,7 @@ namespace vm {
 		return supervisor;
 	}
 
-	std::expected<Ref<IVMProcess>, api::ApiError> Supervisor::getProcess(PID pid) {
+	std::expected<Ref<VMProcess>, api::ApiError> Supervisor::getProcess(PID pid) {
 		std::shared_lock lock(rw_process_table);
 		if (!process_table.contains(pid)) return std::unexpected(api::ProcessNotFound{});
 		return process_table.at(pid).refMut();
@@ -19,7 +20,7 @@ namespace vm {
 	std::expected<PID, api::ApiError> Supervisor::newProcess() {
 		std::unique_lock lock(rw_process_table);
 		PID              pid = next++;
-		process_table.emplace(pid, Box<IVMProcess>::fromPointer(new VMProcess(pid)));
+                process_table.emplace(pid, Box<VMProcess>::fromPointer(new SafeVMProcess(pid)));
 		return pid;
 	}
 
@@ -28,7 +29,7 @@ namespace vm {
 	) {
 		variant_match(request.request) {
 			variant_case_novalue(api::request::DeinitAndValidate) {
-				auto res = getProcess(request.pid).and_then([](Ref<IVMProcess> process) {
+				auto res = getProcess(request.pid).and_then([](Ref<VMProcess> process) {
 					return process->doRequest(api::request::DeinitAndValidate{});
 				});
 				std::unique_lock lock(rw_process_table);
@@ -36,7 +37,7 @@ namespace vm {
 				return res;
 			}
 			variant_default {
-				return getProcess(request.pid).and_then([&request](Ref<IVMProcess> process) {
+				return getProcess(request.pid).and_then([&request](Ref<VMProcess> process) {
 					return process->doRequest(request.request).transform_error([](const auto& x) {
 						return api::ApiError{ x };
 					});

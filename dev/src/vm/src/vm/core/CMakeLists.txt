@@ -1,5 +1,6 @@
 add_files(
 		supervisor/supervisor.cpp
+		process/safe_vmprocess.cpp
 		process/vmprocess.cpp
 		process/proc_io.cpp
 		process/builtin_functions.cpp

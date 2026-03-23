@@ -8,7 +8,9 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/concurrency/synchronization_primitives.hpp>
-#include <vm/core/process/ivmprocess.hpp>
+#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
+
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/thread/vmthread.hpp>
@@ -19,7 +21,7 @@ namespace vm::builtins {
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, IVMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -57,7 +59,7 @@ namespace vm::builtins {
 		base::Optional<Box<VmValue>> callUnpackArgs(
 			Ret (*function)(VMThread&, FunArgs...),
 			TypeCRef                         vm_return_type,
-			IVMProcess&                      process,
+			VMProcess&                      process,
 			VMThread&                        thread,
 			const std::vector<Box<VmValue>>& args
 		) {
@@ -138,7 +140,7 @@ namespace vm::builtins {
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
-		IVMProcess&                      process,
+		VMProcess&                      process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
 	) {

@@ -2,7 +2,8 @@
 
 #include <logger/logger.hpp>
 
-#include <vm/core/process/ivmprocess.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
+
 
 #include <ostream>
 
@@ -29,7 +30,7 @@ namespace {
 	}
 }
 
-vm::VmValue::VmValue(IVMProcess& process, TypeCRef type):
+vm::VmValue::VmValue(SafeVMProcess& process, TypeCRef type):
 	  data(type->getSize()),
 	  my_process(&process),
 	  memory(&process.getMemory()),
@@ -38,7 +39,7 @@ vm::VmValue::VmValue(IVMProcess& process, TypeCRef type):
 	memory->increaseBlockRefcount(pointer.getBlock());
 }
 
-vm::VmValue::VmValue(IVMProcess& process, TypeCRef type, Pointer src): VmValue(process, type) {
+vm::VmValue::VmValue(SafeVMProcess& process, TypeCRef type, Pointer src): VmValue(process, type) {
 	importData(src);
 }
 
