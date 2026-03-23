@@ -425,7 +425,7 @@ namespace vm {
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
-		releaseGil();
+		process.getGIL().release();
 
 		return exit_value_storage.value();
 	}
@@ -737,25 +737,20 @@ namespace vm {
 			// If you can't hold it longer then
 			// 1. say
 			if (!process.getGIL().shouldRelease()) return;
+			has_gil = false;
 			// 2. release gil
-			releaseGil();
+			process.getGIL().release();
 			// 3. yield - to not reacquire instantly
 			std::this_thread::yield();
 		}
 		// Try to acquire GIL
-		acquireGil();
+		process.getGIL().acquire();
+		has_gil = true;
 	}
 
 	void VMThread::releaseGil() {
-		if (!has_gil) return;
 		has_gil = false;
 		process.getGIL().release();
-	}
-
-	void VMThread::acquireGil() {
-		if (has_gil) return;
-		process.getGIL().acquire();
-		has_gil = true;
 	}
 
 	void VMThread::setThreadCtx(std::string name) { thread_ctx = std::move(name); }
