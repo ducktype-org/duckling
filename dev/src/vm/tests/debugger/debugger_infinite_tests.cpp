@@ -53,7 +53,8 @@ private:
 		vm::api::resume(pid).value();                 // "Resume failed (1)"
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
 		assertTrue(
-			4 <= position.instr_number && position.instr_number <= 5, "Line number is not correct (1)"
+			4 <= position.instr_number && position.instr_number <= 5,
+			"Line number is not correct (1)"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {

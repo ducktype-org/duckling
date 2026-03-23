@@ -54,7 +54,7 @@ namespace vm::api {
 			u64         instr_number;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_name);
 		};
-		
+
 		using Boolean = bool;
 	}
 
