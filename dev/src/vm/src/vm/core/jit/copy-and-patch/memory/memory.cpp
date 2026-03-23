@@ -14,7 +14,7 @@ namespace vm::jit::cnp {
 	inline usize getPageSize() {
 		static usize page_size = std::invoke([]() {
 			long result = sysconf(_SC_PAGESIZE);
-			CORE_ASSERT_SYSCALL(result != -1, "couldn't get the page size");
+			CORE_SYSCALL_CHECK(result != -1, "couldn't get the page size");
 			return static_cast<usize>(result);
 		});
 
@@ -31,18 +31,18 @@ namespace vm::jit::cnp {
 		auto memory
 			= reinterpret_cast<byte*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, flags, -1, 0));
 
-		CORE_ASSERT_SYSCALL(memory != MAP_FAILED, "unable to allocate memory");
+		CORE_SYSCALL_CHECK(memory != MAP_FAILED, "unable to allocate memory");
 		return JitFuncMemory{ memory, size };
 	}
 
 	void JitFuncMemory::markExecutable() {
-		CORE_ASSERT_SYSCALL(
+		CORE_SYSCALL_CHECK(
 			mprotect(addr, size, PROT_READ | PROT_EXEC) == 0, "unable to mark memory as executable"
 		);
 	}
 
 	JitFuncMemory::~JitFuncMemory() noexcept {
-		CORE_ASSERT_SYSCALL_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
+		CORE_SYSCALL_CHECK_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
 	}
 }
 

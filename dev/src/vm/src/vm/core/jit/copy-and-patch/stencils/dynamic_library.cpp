@@ -14,14 +14,14 @@
 namespace vm::jit::cnp {
 	DynamicLibrary DynamicLibrary::fromMemory(std::span<const byte> library_bytes) {
 		int fd = memfd_create("lib", 0);
-		CORE_ASSERT_SYSCALL(fd != -1, "memfd_create failed:");
+		CORE_SYSCALL_CHECK(fd != -1, "memfd_create failed:");
 
 		auto write_n = [&]() {
 			usize to_write = library_bytes.size();
 			auto  ptr      = library_bytes.data();
 			while (to_write) {
 				ssize_t ret = write(fd, ptr, to_write);
-				CORE_ASSERT_SYSCALL(ret != -1, "write failed: ");
+			CORE_SYSCALL_CHECK(ret != -1, "write failed: ");
 				auto written = static_cast<usize>(ret);
 				to_write -= written;
 				ptr += written;
@@ -33,7 +33,7 @@ namespace vm::jit::cnp {
 
 		auto  path   = std::format("/proc/self/fd/{}", fd);
 		void* handle = dlopen(path.data(), RTLD_NOW);
-		CORE_ASSERT_STRONG(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+		CORE_SYSCALL_CHECK(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 
 		return DynamicLibrary{ fd, handle };
 	}
@@ -61,7 +61,7 @@ namespace vm::jit::cnp {
 
 	std::byte* DynamicLibrary::findSymbol(const char* name) const {
 		void* sym_loc = dlsym(lib_handle, name);
-		CORE_ASSERT_STRONG(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+		CORE_SYSCALL_CHECK(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 		return reinterpret_cast<std::byte*>(sym_loc);
 	}
 

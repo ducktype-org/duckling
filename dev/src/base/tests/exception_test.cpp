@@ -38,7 +38,7 @@ public:
 
 	void throwPanic4() { CORE_UNREACHABLE(); }
 
-	void throwRuntimeError() { CORE_ASSERT_STRONG(false, "runtime error test"); }
+	void throwRuntimeError() { CORE_SYSCALL_CHECK(false, "runtime error test"); }
 
 	void testRuntimeError() {
 		try {
