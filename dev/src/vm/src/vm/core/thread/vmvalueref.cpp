@@ -18,16 +18,16 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		variant_case_novalue(vm::kind::Primitive) {
 			const auto type_name = my_type->getName();
 
-			i64 val = 0;
+			u64 val = 0;
 
 			if (type_name == base::StrID("i64"))
-				val = readBytes<i64>();
+				val = readBytes<u64>();
 			else if (type_name == base::StrID("i32"))
-				val = readBytes<i32>();
+				val = readBytes<u32>();
 			else if (type_name == base::StrID("i16"))
-				val = readBytes<i16>();
-			else if (type_name == base::StrID("byte"))
-				val = readBytes<char>();
+				val = readBytes<u16>();
+			else if (type_name == base::StrID("byte") || type_name == base::StrID("i8"))
+				val = static_cast<u64>(readBytes<u8>());
 
 			return vm::interpreted_data_variant::Primitive{ val };
 		}
