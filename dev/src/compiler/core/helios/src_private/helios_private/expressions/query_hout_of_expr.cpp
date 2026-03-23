@@ -671,6 +671,36 @@ namespace compiler::helios {
 				}
 				return query::Failed();
 			}
+			variant_case(TypeNotTriviallyCopyable, _) {
+				if (expr_hout->expression_type.getSymbolType().getRefKind()
+				        == tsh::ReferenceKind::Ref
+				    && expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Copy constructor for non-trivially-copyable type `",
+							expr_hout->expression_type.getSymbolType()
+								.withReferenceKind(tsh::ReferenceKind::Direct)
+								.toString(),
+							"`. This was caused by the need of dereferencing a value of type: "
+							"`",
+							expr_hout->expression_type.getSymbolType().toString(),
+							"`."
+						),
+						pst_expr.element.unlock(ctx)->getSourcePosition()
+					));
+
+				} else {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Copy constructor for non-trivially-copyable type `",
+							expr_hout->expression_type.getSymbolType().toString(),
+							"`."
+						),
+						pst_expr.element.unlock(ctx)->getSourcePosition()
+					));
+				}
+				return query::Failed();
+			}
 			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
 		}
 		CORE_UNREACHABLE();

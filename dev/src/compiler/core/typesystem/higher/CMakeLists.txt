@@ -12,7 +12,8 @@ add_library(TypeSystemHigher STATIC
 )
 
 # @TODO: #1392 See if we can relax this dependency.
-make_module(TypeSystemHigher USES Base HELIOS QueryFramework)
+# @TODO: #2331 Relax PST dependency
+make_module(TypeSystemHigher USES Base PstParser HELIOS QueryFramework)
 
 duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES TypeSystemHigher)
 

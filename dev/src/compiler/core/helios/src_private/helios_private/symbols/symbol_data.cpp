@@ -15,6 +15,15 @@ namespace compiler::helios {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::DefaultClassConstructor::queryUnstablePerfectHash() const {
+			return { class_symbol.queryUnstablePerfectHash() };
+		}
+
+		base::Bit256 GeneratedSymbolData::DefaultStaticArrayConstructor::queryUnstablePerfectHash(
+		) const {
+			return { array_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
 			return { operator_type.queryUnstablePerfectHash() };
 		}
@@ -41,14 +50,7 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(counter);
 		}
 
-		GeneratedSymbolData::GeneratedSymbolData(const std::variant<
-												 ImplicitConstructor,
-												 BuiltinOperator,
-												 Parameter,
-												 SelfParameter,
-												 Variable,
-												 ReplExpressionWrapper,
-												 ReplInstructionWrapper>& data):
+		GeneratedSymbolData::GeneratedSymbolData(const GeneratedSymbolDataVariant& data):
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
@@ -79,6 +81,49 @@ namespace compiler::helios {
 
 					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
 						std::move(param_types),
+						return_type,
+					});
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(DefaultClassConstructor, ctor) {
+					const auto class_type
+						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
+					          ->valueOrThrow()
+					          .getType()
+					          .as<tsh::ClassAbstractType>();
+
+					// @TODO: #1328 Properly handle value categories in class constructors.
+					const tsh::SymbolType<> return_type{
+						class_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+
+					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						{},
+						return_type,
+					});
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(DefaultStaticArrayConstructor, ctor) {
+					const tsh::SymbolType<> return_type{
+						ctor.array_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+
+					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						{},
 						return_type,
 					});
 
@@ -152,6 +197,12 @@ namespace compiler::helios {
 				variant_case(ImplicitConstructor, ctor) {
 					CORE_PANIC("Can't get scope of implicit constructor yet.");
 				}
+				variant_case(DefaultClassConstructor, ctor) {
+					CORE_PANIC("Can't get scope of implicit constructor yet.");
+				}
+				variant_case(DefaultStaticArrayConstructor, ctor) {
+					CORE_PANIC("Can't get scope of implicit constructor yet.");
+				}
 				variant_case(BuiltinOperator, op) {
 					CORE_PANIC("Can't get scope of builtin operator yet.");
 				}
@@ -176,6 +227,8 @@ namespace compiler::helios {
 		base::Optional<ScopeID> GeneratedSymbolData::maybeScope() const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) { return {}; }
+				variant_case(DefaultClassConstructor, ctor) { return {}; }
+				variant_case(DefaultStaticArrayConstructor, ctor) { return {}; }
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
@@ -215,6 +268,12 @@ namespace compiler::helios {
 		SymbolKind kind{};
 		variant_match(generated_data.data) {
 			variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
+				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::DefaultClassConstructor) {
+				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor) {
 				kind = SymbolKind::Function;
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
