@@ -1,4 +1,5 @@
 //! Implementation of traversing YAML documents, and getting/setting values at dotted keys.
+use serde::Deserialize;
 use std::{
     fmt,
     io::ErrorKind,
@@ -14,6 +15,8 @@ use crate::{
 };
 
 use super::DescriptionWithAnArticle;
+
+mod de;
 
 impl DescriptionWithAnArticle for Value {
     fn desc_with_article(&self) -> &'static str {
@@ -343,6 +346,20 @@ impl YamlConfig {
     pub fn set_path(&mut self, key: &str, value: &Path) -> QuackResult<()> {
         self.set_str(key, value.display().to_string())
     }
+
+    /// Deserialize a value at the dotted key.
+    pub fn deserialize<'de, T: Deserialize<'de>>(&self, key: &str) -> QuackResult<T> {
+        let deserializer = de::YamlDeserializer { config: self, key };
+        T::deserialize(deserializer).with_context(|| self.make_location_error())
+    }
+
+    /// Deserialize an optional value at the dotted key.
+    pub fn deserialize_optional<'de, T: Deserialize<'de>>(
+        &self,
+        key: &str,
+    ) -> QuackResult<Option<T>> {
+        self.deserialize::<Option<T>>(key)
+    }
 }
 
 impl fmt::Display for YamlConfig {
@@ -520,5 +537,150 @@ deserializing from YAML containing more than one document is not supported",
                 file.path().display()
             )
         )
+    }
+
+    #[test]
+    fn deserializer_tests() {
+        use serde::de;
+
+        let file = prepare_file(
+            r#"
+
+a: 1
+b: 1.2
+c: xd
+d: dx
+foo:
+  bar: xd
+  xd: c
+  a:
+    a: 1
+"#,
+        );
+        let config = YamlConfig::new(file.as_ref().to_path_buf()).unwrap();
+        let a: i32 = config.deserialize("a").unwrap();
+        assert_eq!(a, 1);
+        let b: f64 = config.deserialize("b").unwrap();
+        assert_eq!(b, 1.2);
+        let empty = config
+            .deserialize_optional::<Vec<i32>>("nonexistentkey")
+            .unwrap();
+        assert!(empty.is_none());
+
+        #[derive(Deserialize, Eq, PartialEq, Debug)]
+        struct Foo {
+            bar: String,
+            xd: Option<String>,
+            nonexistent: Option<i32>,
+        }
+
+        #[derive(Deserialize, Eq, PartialEq, Debug)]
+        struct A {
+            a: i32,
+        }
+
+        #[derive(Deserialize, Eq, PartialEq, Debug)]
+        struct FooWithA {
+            bar: String,
+            xd: Option<String>,
+            nonexistent: Option<i32>,
+            a: A,
+        }
+
+        let foo: Foo = config.deserialize("foo").unwrap();
+        assert_eq!(
+            foo,
+            Foo {
+                bar: "xd".into(),
+                xd: Some("c".into()),
+                nonexistent: None
+            }
+        );
+
+        let a: A = config.deserialize("foo.a").unwrap();
+        assert_eq!(a, A { a: 1 });
+
+        let fooa: FooWithA = config.deserialize("foo").unwrap();
+        assert_eq!(
+            fooa,
+            FooWithA {
+                bar: "xd".into(),
+                xd: Some("c".into()),
+                nonexistent: None,
+                a: A { a: 1 },
+            }
+        );
+
+        let missing = config.deserialize::<i32>("nonexistentkey").unwrap_err();
+        assert_eq!(
+            missing.to_string(),
+            format!(
+                "\
+when parsing the configuration at `{}`
+missing key `nonexistentkey`",
+                file.path().display()
+            )
+        );
+
+        let maybefooa = config.deserialize_optional::<FooWithA>("foo").unwrap();
+        assert_eq!(maybefooa, Some(fooa));
+
+        let err = config.deserialize::<FooWithA>("a").unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "\
+when parsing the configuration at `{}`
+invalid type: integer `1`, expected struct FooWithA",
+                file.path().display()
+            )
+        );
+
+        #[derive(Eq, PartialEq, Debug)]
+        enum IntOrString {
+            Int(i32),
+            String(String),
+        }
+
+        impl<'de> de::Deserialize<'de> for IntOrString {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                serde_untagged::UntaggedEnumVisitor::new()
+                    .expecting("an int or a string")
+                    .i32(|x| Ok(Self::Int(x)))
+                    .string(|str| Ok(Self::String(str.into())))
+                    .deserialize(deserializer)
+            }
+        }
+
+        let a: IntOrString = config.deserialize("a").unwrap();
+        assert_eq!(a, IntOrString::Int(1));
+        let c: IntOrString = config.deserialize("c").unwrap();
+        assert_eq!(c, IntOrString::String("xd".into()));
+        let err = config.deserialize::<IntOrString>("foo").unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "\
+when parsing the configuration at `{}`
+invalid type: map, expected an int or a string",
+                file.path().display()
+            )
+        );
+
+        let err = config
+            .deserialize::<IntOrString>("nonexistentkey")
+            .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "\
+when parsing the configuration at `{}`
+invalid type: Option value, expected an int or a string",
+                file.path().display()
+            )
+        );
     }
 }
