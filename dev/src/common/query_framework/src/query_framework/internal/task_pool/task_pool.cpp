@@ -156,18 +156,6 @@ namespace query::internal {
 		// manager will just queue the task for later execution.
 
 		number_of_schedules.fetch_add(1, std::memory_order_relaxed);
-		if (free_worker_opt.has_value()) {
-			number_of_fast_schedules.fetch_add(1, std::memory_order_relaxed);
-			// Schedule on a free worker
-			free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](WRef) mutable {
-				tryExecuteTask(pt);
-				onWorkerNoTasks();
-			});
-			return TaskHandle(*this, task_id);
-
-			// We don't add it to the pool, as it is scheduled directly
-			// and in the pool are only unscheduled and unstarted tasks.
-		}
 		// Add to current worker's pool
 		addToWorkerPool(current_worker, std::move(task));
 		free_worker_opt = getFreeWorker();
