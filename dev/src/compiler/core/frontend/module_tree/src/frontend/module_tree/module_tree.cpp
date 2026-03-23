@@ -58,7 +58,7 @@ namespace {
 namespace compiler::frontend {
 
 	const hashing::ComponentHash& ModuleTree::getPathComponentHash(ModuleID module_id) {
-		Ref<ModuleTree>  module = module_id.ref;
+		Ref<ModuleTree> module = module_id.ref;
 		// Update the component hash from root to this module if not valid
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(
@@ -69,7 +69,7 @@ namespace compiler::frontend {
 	}
 
 	const hashing::ComponentHash::HashType& ModuleTree::getModuleHash(ModuleID module_id) {
-		Ref<ModuleTree>  module = module_id.ref;
+		Ref<ModuleTree> module = module_id.ref;
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(module->m_hash.has_value(), "Module hash should have value after update!");
 		return module->m_hash.value();
@@ -208,13 +208,11 @@ namespace compiler::frontend {
 		// Get parent component hash if existsS
 		if (m_parent.has_value()) {
 			{
-				IF_BUILD_TYPE_DEV(
-					std::scoped_lock parent_lock(*m_parent.value()->m_hash_mutex);
-					CORE_ASSERT(
-						m_parent.value()->m_path_component_hash.has_value(),
-						"Parent component hash should have value!"
-					);
-				);
+				IF_BUILD_TYPE_DEV(std::scoped_lock parent_lock(*m_parent.value()->m_hash_mutex);
+				                  CORE_ASSERT(
+									  m_parent.value()->m_path_component_hash.has_value(),
+									  "Parent component hash should have value!"
+								  ););
 			}
 			m_path_component_hash.emplace(m_parent.value()->m_path_component_hash.value(), m_name);
 		} else {

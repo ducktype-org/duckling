@@ -184,7 +184,8 @@ namespace compiler::frontend {
 		 *     /sub2
 		 * The component hash of sub2 will be ComponentHash({"root", "sub1", "sub2"})
 		 * @param module_id ModuleID of the module to get the component hash for.
-		 * @note This funtion is thread safe only if the module tree hash is not modified/deteled concurrently.
+		 * @note This funtion is thread safe only if the module tree hash is not modified/deteled
+		 * concurrently.
 		 */
 		[[nodiscard]]
 		static const hashing::ComponentHash& getPathComponentHash(ModuleID module_id);
@@ -215,7 +216,8 @@ namespace compiler::frontend {
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes
 		 * This also invalidates all children modules recursively
-		 * @note This is not thread-safe, this should be called in main thread only with no active workers 
+		 * @note This is not thread-safe, this should be called in main thread only with no active
+		 * workers
 		 */
 		void invalidateHash();
 
