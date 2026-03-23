@@ -8,6 +8,7 @@ use crate::quackpack::core::{
     compile::{
         BuildContext,
         compiler_dag::{CompilerDag, DependencyNode},
+        profiles::Profile,
     },
     storage::paths::Storage,
 };
@@ -16,14 +17,15 @@ use crate::quackpack::core::{
 fn creates_valid_initial_graph() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec![],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec![],
+        profile,
+    };
     let graph = CompilerDag::new_early(&bcx).unwrap();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
@@ -53,14 +55,15 @@ fn creates_valid_initial_graph() {
 fn expands_valid_features1() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec!["use_foo_with_baz".into()],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec!["use_foo_with_baz".into()],
+        profile,
+    };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
@@ -96,14 +99,15 @@ fn expands_valid_features1() {
 fn expands_valid_features2() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec!["use_bar_with_baz".into()],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec!["use_bar_with_baz".into()],
+        profile,
+    };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
@@ -139,14 +143,15 @@ fn expands_valid_features2() {
 fn expands_valid_features3() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec!["full".into()],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec!["full".into()],
+        profile,
+    };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
@@ -189,14 +194,15 @@ fn expands_valid_features3() {
 fn errors_with_nonexistent_features() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec!["nonexistent".into()],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec!["nonexistent".into()],
+        profile,
+    };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
@@ -210,14 +216,15 @@ there is no such feature as `nonexistent`"
 fn removes_inactive_deps1() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec![],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec![],
+        profile,
+    };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies().unwrap();
@@ -243,14 +250,15 @@ fn removes_inactive_deps1() {
 fn removes_inactive_deps2() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec!["use_foo_with_baz".into()],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec!["use_foo_with_baz".into()],
+        profile,
+    };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies().unwrap();
@@ -279,14 +287,15 @@ fn removes_inactive_deps2() {
 fn removes_inactive_deps3() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec!["use_bar_with_baz".into()],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec!["use_bar_with_baz".into()],
+        profile,
+    };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies().unwrap();
@@ -315,14 +324,15 @@ fn removes_inactive_deps3() {
 fn removes_inactive_deps4() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze(),
-        Storage::new(ctx.default_storage_root()),
-        vec!["full".into()],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec!["full".into()],
+        profile,
+    };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies().unwrap();
@@ -354,14 +364,15 @@ fn removes_inactive_deps4() {
 fn cycle_in_freeze() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze_with_cycle(),
-        Storage::new(ctx.default_storage_root()),
-        vec![],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze_with_cycle(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec![],
+        profile,
+    };
     let err = CompilerDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -373,14 +384,15 @@ fn cycle_in_freeze() {
 fn missing_direct_dep_in_freeze() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze_without_direct_dep(),
-        Storage::new(ctx.default_storage_root()),
-        vec![],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze_without_direct_dep(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec![],
+        profile,
+    };
     let err = CompilerDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -392,14 +404,15 @@ fn missing_direct_dep_in_freeze() {
 fn missing_transitive_dep_in_freeze() {
     let (ctx, root) = setup_mock_storage();
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let bcx = BuildContext::new(
-        &package,
-        freeze_without_transitive_dep(),
-        Storage::new(ctx.default_storage_root()),
-        vec![],
-        "dev".into(),
-    )
-    .unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let bcx = BuildContext {
+        package: &package,
+        freeze: freeze_without_transitive_dep(),
+        storage: Storage::new(ctx.default_storage_root()),
+        used_features: vec![],
+        profile,
+    };
     let err = CompilerDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),

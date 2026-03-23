@@ -7,6 +7,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
         (
             "dev".into(),
             Profile {
+                name: "dev".into(),
                 opt_level: OptLevel::One,
                 dvm_bytecode: false,
                 incremental: true,
@@ -16,6 +17,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
         (
             "release".into(),
             Profile {
+                name: "release".into(),
                 opt_level: OptLevel::Three,
                 dvm_bytecode: false,
                 incremental: false,
@@ -25,6 +27,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
         (
             "test".into(),
             Profile {
+                name: "test".into(),
                 opt_level: OptLevel::One,
                 dvm_bytecode: false,
                 incremental: true,
@@ -34,6 +37,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
         (
             "bench".into(),
             Profile {
+                name: "bench".into(),
                 opt_level: OptLevel::Three,
                 dvm_bytecode: false,
                 incremental: false,
@@ -49,6 +53,8 @@ pub static DEFAULT_PROFILE: LazyLock<Profile> = LazyLock::new(Profile::default);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// List of specific options which should be passed to the compiler.
 pub struct Profile {
+    /// Profile's name.
+    pub name: StrId,
     /// Set optimization level.
     /// Possible values are: 0, 1, 2, 3, s, z.
     /// See https://llvm.org/doxygen/classllvm_1_1OptimizationLevel.html
@@ -89,6 +95,7 @@ impl From<manifest::OptLevel> for OptLevel {
 impl Default for Profile {
     fn default() -> Self {
         Self {
+            name: "default".into(),
             opt_level: Default::default(),
             dvm_bytecode: false,
             incremental: true,
@@ -189,6 +196,7 @@ impl Profile {
         manifest_profiles: &manifest::Profiles,
     ) -> QuackResult<Self> {
         Ok(Self {
+            name: profile_name,
             opt_level: determine_opt_level(profile_name, manifest_profiles)?,
             dvm_bytecode: determine_dvm_bytecode(profile_name, manifest_profiles)?,
             incremental: determine_incremental(profile_name, manifest_profiles)?,
@@ -250,6 +258,7 @@ mod test {
         assert!(
             profile
                 == Profile {
+                    name: "b".into(),
                     opt_level: OptLevel::S,
                     dvm_bytecode: false,
                     incremental: false,
@@ -267,8 +276,8 @@ mod test {
             c_std: None,
             inherits: None,
         };
-        let profiles = manifest::Profiles::new([("p".into(), profile)].into()).unwrap();
-        let profile = Profile::construct_profile("p".into(), &profiles).unwrap();
+        let profiles = manifest::Profiles::new([("default".into(), profile)].into()).unwrap();
+        let profile = Profile::construct_profile("default".into(), &profiles).unwrap();
         assert!(profile == Profile::default());
     }
 

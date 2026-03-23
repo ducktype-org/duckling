@@ -4,7 +4,7 @@ use crate::{
     quackpack::{
         core::{
             FeatureName, PackageCtx,
-            compile::{self, BuildContext},
+            compile::{self, BuildContext, profiles::Profile},
             storage::{sync, venv_id::ToVenvId},
         },
         subcommands::sync::SyncOptions,
@@ -53,7 +53,14 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let _compile_lock = lock
         .to_compile_lock(&storage, package.to_venv_id())
         .context("failed to acquire a compile lock")?;
-    let bcx = BuildContext::new(&package, venv.into(), storage, used_features, profile)?;
+    let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
+    let bcx = BuildContext {
+        package: &package,
+        freeze: venv.into(),
+        storage,
+        used_features,
+        profile,
+    };
     compile::compile(bcx)?;
     Ok(())
 }
