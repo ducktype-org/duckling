@@ -1,3 +1,4 @@
+#pragma once
 #include <base/collections/maps.hpp>
 #include <base/collections/object_pool.hpp>
 #include <base/pointers/shared_box.hpp>

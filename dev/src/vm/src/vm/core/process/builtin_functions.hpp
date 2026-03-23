@@ -31,6 +31,7 @@
 
 namespace vm {
 	class VMThread;
+	class VMProcess;
 }
 
 namespace vm::builtins {
@@ -88,7 +89,7 @@ namespace vm::builtins {
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
-		SafeVMProcess&                   process,
+		VMProcess&                       process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
 	);

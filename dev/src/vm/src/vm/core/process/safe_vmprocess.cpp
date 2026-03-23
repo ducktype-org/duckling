@@ -308,5 +308,6 @@ namespace vm {
 				}
 			}
 		}
+		CORE_UNREACHABLE();
 	}
 }
