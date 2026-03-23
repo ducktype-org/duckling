@@ -306,8 +306,6 @@ private:
 		auto        llvm_module = getLLVMModuleFromPath("modules/dynamic_arrays");
 		std::string ir          = llvm_module.dumpLLVMToString();
 
-		std::cout << "\n======== IR ========\n" << ir << "\n====== END IR ======\n";
-
 		// Is List[i64] defined.
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(%Di64bE\s*=\s*type\s*\{)" }),
