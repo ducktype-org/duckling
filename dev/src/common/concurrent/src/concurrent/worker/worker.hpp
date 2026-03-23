@@ -133,7 +133,7 @@ namespace concurrent::worker {
 		std::jthread real_thread;
 
 		inline static constinit u64 next_id = 0;
-		u64 id = next_id++;  /// Unique u64 ID for the worker
+		u64                         id      = next_id++;  /// Unique u64 ID for the worker
 	};
 }
 

@@ -21,19 +21,20 @@ namespace query::internal {
 
 	TaskPool::TaskPool():
 		  worker_manager(concurrent::worker::WorkerManager::get()),
-		  num_workers(worker_manager.getAllWorkers().size()), worker_pools(num_workers), is_worker_free(num_workers) {
-
+		  num_workers(worker_manager.getAllWorkers().size()),
+		  worker_pools(num_workers),
+		  is_worker_free(num_workers) {
 		std::ranges::fill(is_worker_free, true);
 
 		u64 worker_index = 0;
 		std::ranges::for_each(worker_manager.getAllWorkers(), [&worker_index](auto worker) {
-			CORE_ASSERT(worker_index++ == worker->getID(), "Worker IDs must be sequential starting from 0");
+			CORE_ASSERT(
+				worker_index++ == worker->getID(), "Worker IDs must be sequential starting from 0"
+			);
 		});
 	}
 
-	TaskPool::~TaskPool() {
-		flushWorkers();
-	}
+	TaskPool::~TaskPool() { flushWorkers(); }
 
 	void TaskPool::addTask(Task&& task) {
 		auto free_worker_opt = getFreeWorker();
@@ -48,18 +49,16 @@ namespace query::internal {
 		free_worker_opt = getFreeWorker();
 		if (free_worker_opt.has_value()) {
 			free_worker_opt.value()->scheduleTask([this](WRef) {
-				if (auto task_opt = tryStealFromGlobal()){
-					tryExecuteTask(task_opt.value());
-				}
+				if (auto task_opt = tryStealFromGlobal()) tryExecuteTask(task_opt.value());
 				onWorkerNoTasks();
 			});
 		}
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
-		auto task_hash = taskHash(id);
-		auto& task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
-		auto& task_cv = task_completed_cv.at(task_hash % TASK_SHARDS);
+		auto             task_hash  = taskHash(id);
+		auto&            task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
+		auto&            task_cv    = task_completed_cv.at(task_hash % TASK_SHARDS);
 		std::unique_lock lock(task_mutex);
 		task_cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
@@ -69,7 +68,7 @@ namespace query::internal {
 			!id.q_id.getData().isInputQuery(), "Input query nodes are not present in the task pool."
 		);
 
-		auto            val = task_status_map.extract(id);
+		auto val = task_status_map.extract(id);
 		CORE_ASSERT(val.has_value(), "Task must be present in the task pool");
 		CORE_ASSERT(
 			val.value() == TaskStatus::Done, "Invalidating a task that is not done is not supported"
@@ -81,17 +80,14 @@ namespace query::internal {
 		if (auto task_status = task_status_map.atMaybeCopy(task.id)) {
 			if (task_status.value() == TaskStatus::Done) {
 				return;
-			}
-			else if (task_status.value() == TaskStatus::InProgress) {
+			} else if (task_status.value() == TaskStatus::InProgress) {
 				waitForTask(task.id);
 				return;
 			}
 		}
 
 		bool task_done = tryExecuteTask(task);
-		if (not task_done) {
-			waitForTask(task.id);
-		}
+		if (not task_done) waitForTask(task.id);
 	}
 
 	bool TaskPool::tryExecuteTask(const Task& task) {
@@ -111,16 +107,16 @@ namespace query::internal {
 
 			task_status_map.update(task.id, TaskStatus::Done);
 			{
-				auto task_hash = taskHash(task.id);
+				auto  task_hash  = taskHash(task.id);
 				auto& task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
-				auto& task_cv = task_completed_cv.at(task_hash % TASK_SHARDS);
+				auto& task_cv    = task_completed_cv.at(task_hash % TASK_SHARDS);
 
 				std::lock_guard lock(task_mutex);
 				task_cv.notify_all();
 			}
 			return true;
 		}
-		
+
 		return false;
 	}
 
@@ -137,9 +133,8 @@ namespace query::internal {
 		auto free_worker_opt = getFreeWorker();
 		if (free_worker_opt.has_value()) {
 			free_worker_opt.value()->scheduleTask([this, current_worker](WRef) {
-				if (auto task_opt = tryStealFromWorker(current_worker)) {
+				if (auto task_opt = tryStealFromWorker(current_worker))
 					tryExecuteTask(task_opt.value());
-				}
 				onWorkerNoTasks();
 			});
 		}
@@ -152,19 +147,16 @@ namespace query::internal {
 		if (auto task_status = task_status_map.atMaybeCopy(id)) {
 			if (task_status.value() == TaskStatus::Done) {
 				return;
-			}
-			else if (task_status.value() == TaskStatus::InProgress) {
+			} else if (task_status.value() == TaskStatus::InProgress) {
 				waitForTask(id);
 				return;
 			}
 		}
 
-		auto task_opt
-			= tryStealFromWorker(concurrent::worker::Worker::getCurrentWorker(), id);
+		auto task_opt = tryStealFromWorker(concurrent::worker::Worker::getCurrentWorker(), id);
 
 		if_opt_some(task_opt, task) {
-			if(tryExecuteTask(task))
-				return;
+			if (tryExecuteTask(task)) return;
 		}
 		waitForTask(id);
 	}
@@ -174,9 +166,7 @@ namespace query::internal {
 		return maybe_copy.has_value() && maybe_copy.value() == TaskStatus::Done;
 	}
 
-	base::Optional<Task> TaskPool::tryStealFromGlobal() {
-		return global_pool.tryPop();
-	}
+	base::Optional<Task> TaskPool::tryStealFromGlobal() { return global_pool.tryPop(); }
 
 	base::Optional<Task> TaskPool::tryStealFromWorker(WRef worker_ref) {
 		return worker_pools[worker_ref->getID()].tryPop();
@@ -207,44 +197,40 @@ namespace query::internal {
 		};
 
 		base::Optional<Task> task_opt;
-		bool was_free = true;
+		bool                 was_free = true;
 
 		// First try to steal from the worker's local pool
-		task_opt = worker_pools[current_worker->getID()].tryPopIf([&](base::CRef<Task>){
+		task_opt = worker_pools[current_worker->getID()].tryPopIf([&](base::CRef<Task>) {
 			was_free = set_worker_not_free();
 			return was_free;
 		});
 
-		if(!was_free) {
-			// We failed to set ourselves as not free, which means that another thread is scheduling a task on us,
-			// so we should not steal any tasks, as we will get a task scheduled on us soon.
+		if (!was_free) {
+			// We failed to set ourselves as not free, which means that another thread is scheduling
+			// a task on us, so we should not steal any tasks, as we will get a task scheduled on us
+			// soon.
 			return;
 		}
 
 		// If failed, try to steal from the global pool
-		if(task_opt.empty()){
-			task_opt = global_pool.tryPopIf([&](base::CRef<Task>){
+		if (task_opt.empty()) {
+			task_opt = global_pool.tryPopIf([&](base::CRef<Task>) {
 				was_free = set_worker_not_free();
 				return was_free;
 			});
 
-			if(!was_free) {
-				return;
-			}
+			if (!was_free) return;
 		}
 
 		// If failed, try to steal from other workers
 		if (task_opt.empty()) {
 			for (auto worker_ref: worker_manager.getAllWorkers()) {
-				task_opt = worker_pools[worker_ref->getID()].tryPopIf([&](base::CRef<Task>){
+				task_opt = worker_pools[worker_ref->getID()].tryPopIf([&](base::CRef<Task>) {
 					was_free = set_worker_not_free();
 					return was_free;
 				});
-				if(!was_free) {
-					return;
-				}
-				if (task_opt.has_value())
-					break;
+				if (!was_free) return;
+				if (task_opt.has_value()) break;
 			}
 		}
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/base/collections/queue.hpp>
 #include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
@@ -10,7 +11,6 @@
 #include <base/types/ints.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
-#include <concurrent/base/collections/queue.hpp>
 
 #include <atomic>
 #include <condition_variable>
@@ -145,9 +145,6 @@ namespace query::internal {
 		void invalidateTask(NodeID id);
 
 	private:
-
-
-
 		/**
 		 * @brief Try to steal a task from the global pool.
 		 * @return Optional Task if one was available.
@@ -198,7 +195,8 @@ namespace query::internal {
 		 * There is a similiar function in WorkerManager, but here we
 		 * set the availability of the worker under our mutex
 		 * avoiding the missed wake up problem (missed schedule problem in this case).
-		 * @note This will set a worker as not free, so the caller should set it back to free if it fails to schedule a task on it.
+		 * @note This will set a worker as not free, so the caller should set it back to free if it
+		 * fails to schedule a task on it.
 		 * @return Optional reference to a free worker.
 		 */
 		base::Optional<WRef> getFreeWorker();
@@ -227,7 +225,7 @@ namespace query::internal {
 		/// @TODO: #1988 #2035 hash map per query id? Or even stronger, lock free data structure.
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
 
-		static constexpr usize TASK_SHARDS = 113;
+		static constexpr usize              TASK_SHARDS = 113;
 		std::array<std::mutex, TASK_SHARDS> task_completed_mutexes;
 		/// Condition variable for signaling task completion.
 		std::array<std::condition_variable, TASK_SHARDS> task_completed_cv;
