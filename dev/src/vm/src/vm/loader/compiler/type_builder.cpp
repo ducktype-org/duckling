@@ -136,9 +136,12 @@ namespace {
 					parameters.reserve(data.parameters.size());
 					for (auto& param: data.parameters)
 						parameters.emplace_back(type_metadata->at(vm::TypeID(param.asInt())));
-					type_at_metadata->defineFunction(
-						parameters, type_metadata->at(vm::TypeID(data.result.asInt()))
-					);
+					std::vector<vm::TypeCRef> result_types;
+					result_types.reserve(data.result.size());
+					for (auto& res: data.result) {
+						result_types.emplace_back(type_metadata->at(vm::TypeID(res.asInt())));
+					}
+					type_at_metadata->defineFunction(parameters, result_types);
 				}
 				variant_case(vm::code::valid_type::finalized::Opaque, opaque) {
 					type_at_metadata->defineOpaque(opaque.size);

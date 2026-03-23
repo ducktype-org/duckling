@@ -187,7 +187,7 @@ class FunctionValidator {
             return &signatures.at(instr.function.function_name);
 		}();
 
-		bool check_ret_val = signature->result_type[0].str != base::StrID("void");
+		bool check_ret_val = signature->result_type.size() && signature->result_type[0].str != base::StrID("void");
 
 		if (signature->parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
@@ -229,7 +229,8 @@ class FunctionValidator {
 		}();
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.method };
-		bool check_ret_val = types_ctx.at(method_signature->result)->getName() != "void";
+		bool check_ret_val = method_signature->result.size() == 1
+		                  && types_ctx.at(method_signature->result[0])->getName() != "void";
 
 		// Too many parameters.
 		if (method_signature->parameters.size() > local_stack.size() + check_ret_val)
@@ -253,7 +254,7 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && local_stack.back().type->getID() != method_signature->result)
+		if (check_ret_val && local_stack.back().type->getID() != method_signature->result[0])
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 

@@ -134,13 +134,13 @@ namespace vm {
 		kind                  = variant;
 	}
 
-	void Type::defineFunction(std::vector<TypeCRef> parameters, TypeCRef result) {
+	void Type::defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
-		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
+		kind = kind::Function{ .parameters = std::move(parameters), .result = std::move(result) };
 	}
 
 	void Type::defineOpaque(TypeSize pass_size) {
@@ -281,9 +281,24 @@ namespace vm {
 		});
 	}
 
-	base::Optional<TypeCRef> Type::getResultType() const {
+	base::Optional<u64> Type::getResultTypeCount() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
-			return function->result;
+			return function->result.size();
+		});
+	}
+
+	base::Optional<Bytes> Type::getResultTypeSize() const {
+		return get<kind::Function>().map([](CRef<kind::Function> function) {
+			Bytes size(0);
+			for (const auto& reslt: function->result) size += reslt->getSize();
+			return size;
+		});
+	}
+
+	base::Optional<TypeCRef> Type::getNthResultType(u64 parameter_id) const {
+		return get<kind::Function>().flatMap([parameter_id](CRef<kind::Function> function) {
+			if (parameter_id >= function->result.size()) return base::Optional<TypeCRef>();
+			return base::Optional<TypeCRef>(function->result[parameter_id]);
 		});
 	}
 

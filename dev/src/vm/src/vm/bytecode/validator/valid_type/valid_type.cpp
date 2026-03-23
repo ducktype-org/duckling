@@ -151,7 +151,7 @@ void valid_type::ValidType::defineVariant(const std::vector<ValidTypeID>& varian
 }
 
 void valid_type::ValidType::defineFunction(
-	const std::vector<ValidTypeID>& parameters, ValidTypeID result
+	const std::vector<ValidTypeID>& parameters, const std::vector<ValidTypeID>& result
 ) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
@@ -370,9 +370,9 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
-			state                       = Finalized{ .kind
-                               = finalized::Function{ .parameters = std::move(function.parameters),
-				                                                            .result     = function.result } };
+			state                       = Finalized{
+				.kind = finalized::Function{ .parameters = std::move(function.parameters),
+					                         .result     = std::move(function.result) }  };
 		}
 		variant_case(defined::DefinedVariant, variant) {
 			CORE_ASSERT(

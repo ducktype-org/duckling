@@ -50,7 +50,11 @@ namespace {
 				parameter_types.reserve(function.parameters.size());
 				for (const auto& param: function.parameters)
 					parameter_types.push_back(types.at(param)->getID());
-				tp.defineFunction(parameter_types, types.at(function.result[0])->getID());
+				std::vector<vm::code::valid_type::ValidTypeID> return_types;
+				return_types.reserve(function.result.size());
+				for (const auto& reslt: function.result)
+					return_types.push_back(types.at(reslt)->getID());
+				tp.defineFunction(parameter_types, return_types);
 			}
 			variant_case(vm::code::OpaqueType, opaque) { tp.defineOpaque(Bytes(opaque.size)); }
 			variant_case(vm::code::ClassType, clazz) {

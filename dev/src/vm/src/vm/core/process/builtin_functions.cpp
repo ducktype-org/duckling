@@ -184,7 +184,7 @@ namespace vm::builtins {
 			     {
 					 BuiltinFunctionID::OutputString,
 					 { base::StrID("builtin_strOutput_lptr"),
-			           code::FuncSignature({}, { base::StrID("ptr_string") }) },
+			           code::FuncSignature({base::StrID("void")}, { base::StrID("ptr_string") }) },
 				 },
 			     {
 					 BuiltinFunctionID::Stoi,
@@ -201,20 +201,20 @@ namespace vm::builtins {
 			     {
 					 BuiltinFunctionID::JoinThread,
 					 { base::StrID("builtin_join_thread"),
-			           code::FuncSignature({}, { base::StrID("i64") }) },
+			           code::FuncSignature({base::StrID("void")}, { base::StrID("i64") }) },
 				 },
 			     { BuiltinFunctionID::CreateMutex,
 			       { base::StrID("builtin_create_mutex"),
 			         code::FuncSignature({base::StrID("mutex")}, {}) } },
 			     { BuiltinFunctionID::LockMutex,
 			       { base::StrID("builtin_lock_mutex"),
-			         code::FuncSignature({}, { base::StrID("mutex") }) } },
+			         code::FuncSignature({base::StrID("void")}, { base::StrID("mutex") }) } },
 			     { BuiltinFunctionID::UnlockMutex,
 			       { base::StrID("builtin_unlock_mutex"),
-			         code::FuncSignature({}, { base::StrID("mutex") }) } },
+			         code::FuncSignature({base::StrID("void")}, { base::StrID("mutex") }) } },
 			     { BuiltinFunctionID::DestroyMutex,
 			       { base::StrID("builtin_destroy_mutex"),
-			         code::FuncSignature({}, { base::StrID("mutex") }) } } };
+			         code::FuncSignature({base::StrID("void")}, { base::StrID("mutex") }) } } };
 
 
 		return &map;
