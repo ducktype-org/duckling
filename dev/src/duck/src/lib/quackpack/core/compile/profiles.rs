@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display, sync::LazyLock};
 
-use crate::{QuackResult, QuackResultContext, StrId, qp_err, quackpack::core::manifest};
+use crate::{QuackError, QuackResult, QuackResultContext, StrId, quackpack::core::manifest};
 
 pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::new(|| {
     [
@@ -46,7 +46,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
 
 pub static DEFAULT_PROFILE: LazyLock<Profile> = LazyLock::new(Profile::default);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// List of specific options which should be passed to the compiler.
 pub struct Profile {
     /// Set optimization level.
@@ -61,7 +61,7 @@ pub struct Profile {
     pub c_std: bool,
 }
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 /// Enum for different possible optimization levels in the compiler.
 pub enum OptLevel {
     Zero,
@@ -113,9 +113,9 @@ macro_rules! determine_field {
                     .get(&profile_name)
                     .map(|prof| prof.$name)
                     .ok_or_else(|| {
-                        qp_err!("Unknown profile `{}`", profile_name).add_hint(
+                        QuackError::hint(
                             "In order to use a profile you have to define it in the manifest first",
-                        )
+                        ).context(format!("Unknown profile `{}`", profile_name))
                     });
             };
             $fun_name_help(starting_profile, profiles)
@@ -207,5 +207,78 @@ impl Display for OptLevel {
             OptLevel::S => write!(f, "s"),
             OptLevel::Z => write!(f, "z"),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    /// Profile `b` inherits from `release_with_s`, which inherits from `release`.
+    /// Profile `b` should be equal to:
+    /// ```Profile {
+    ///     opt_level: OptLevel::S, // inherited from release_with_s
+    ///     dvm_bytecode: false, // inherited from release
+    ///     incremental: false, // inherited from release
+    ///     c_std: false, // defined in b
+    /// }```
+    #[test]
+    fn inherit_defined_predefined() {
+        let profile_release_with_s = manifest::Profile {
+            opt_level: Some(manifest::OptLevel::S),
+            dvm_bytecode: None,
+            incremental: None,
+            c_std: None,
+            inherits: Some("release".into()),
+        };
+        let profile_b = manifest::Profile {
+            opt_level: None,
+            dvm_bytecode: None,
+            incremental: None,
+            c_std: Some(false),
+            inherits: Some("release_with_s".into()),
+        };
+        let profiles = manifest::Profiles::new(
+            [
+                ("release_with_s".into(), profile_release_with_s),
+                ("b".into(), profile_b),
+            ]
+            .into(),
+        )
+        .unwrap();
+        let profile = Profile::construct_profile("b".into(), &profiles).unwrap();
+        assert!(
+            profile
+                == Profile {
+                    opt_level: OptLevel::S,
+                    dvm_bytecode: false,
+                    incremental: false,
+                    c_std: false,
+                }
+        )
+    }
+
+    #[test]
+    fn default_fields() {
+        let profile = manifest::Profile {
+            opt_level: None,
+            dvm_bytecode: None,
+            incremental: None,
+            c_std: None,
+            inherits: None,
+        };
+        let profiles = manifest::Profiles::new([("p".into(), profile)].into()).unwrap();
+        let profile = Profile::construct_profile("p".into(), &profiles).unwrap();
+        assert!(profile == Profile::default());
+    }
+
+    #[test]
+    fn unknown_profile() {
+        let profiles = manifest::Profiles::new([].into()).unwrap();
+        let error = Profile::construct_profile("a".into(), &profiles).unwrap_err();
+        assert!(
+            error.to_string()
+                == "Unknown profile `a`\nIn order to use a profile you have to define it in the manifest first"
+        )
     }
 }
