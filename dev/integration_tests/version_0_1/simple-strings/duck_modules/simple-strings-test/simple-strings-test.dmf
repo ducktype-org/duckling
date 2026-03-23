@@ -33,8 +33,11 @@ fun main() -> i64 = {
 
     # Test string mutability
     s[0] = 'W';
-    # I am not sure what is supposed to be printed here
-    # print(s);
+    print(s);
+
+    # Test .length method
+    builtin_output_i64(s.length());
+    builtin_output_i64((s+s).length());
 
 
     return 0;

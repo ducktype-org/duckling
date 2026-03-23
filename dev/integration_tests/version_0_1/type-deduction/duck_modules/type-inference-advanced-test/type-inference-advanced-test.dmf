@@ -2,13 +2,13 @@
 # Focus: complex expressions, function returns, literals in different bases
 
 class Point {
-    x: i64 = 0;
-    y: i64 = 0;
+    x = 0;
+    y = 0;
 }
 
-fun makePoint(x: i64, y: i64) -> Point = Point(x, y);
-fun computeValue() -> i64 = 99;
-fun isPositive(n: i64) -> bool = n > 0;
+fun makePoint(x: i64, y: i64) = Point(x, y);
+fun computeValue() = 99;
+fun isPositive(n: i64) = n > 0;
 
 fun main() -> i64 = {
     # Test type deduction with hex/binary/octal literals

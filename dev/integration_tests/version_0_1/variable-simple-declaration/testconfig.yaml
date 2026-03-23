@@ -22,3 +22,9 @@ Tests:
       llvm:
         backend: llvm
         ExitCode: 0
+  variable-assignment-test:
+    Description: Test variable assignment.
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 0

@@ -37,4 +37,4 @@ fun main() -> i64 = {
     return 0;
 }
 
-fun computeValue() -> i64 = 99;
+fun computeValue() = 99;

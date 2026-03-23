@@ -1,6 +1,11 @@
 # Test ternary expressions and chained else-if
 # Focus: "if cond then x else y" syntax and else-if chains
 
+fun printer_returner(x: i64) -> i64 = {
+    builtin_output_i64(67);
+    return x;
+}
+
 fun main() -> i64 = {
     # Test ternary with literal condition
     let ternary1 = if true then 100 else 200;
@@ -76,6 +81,11 @@ fun main() -> i64 = {
     } else {
         builtin_output_i64(45);
     }
+
+    # Test ternary lazy evaluation
+    builtin_output_i64(if true then printer_returner(46) else printer_returner(48));      # 67\n46\n
+    builtin_output_i64(if false then printer_returner(49) else printer_returner(50));     # 67\n50\n
+    # Only one printer action should happen, the one from active branch
 
     return 0;
 }

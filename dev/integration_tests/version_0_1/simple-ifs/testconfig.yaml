@@ -17,5 +17,5 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "100\n400\n50\n80\n20\n1\n20\n125\n11\n22\n33\n44\n"
+          String: "100\n400\n50\n80\n20\n1\n20\n125\n11\n22\n33\n44\n67\n46\n67\n50\n"
         ExitCode: 0

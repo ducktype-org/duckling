@@ -19,6 +19,6 @@ fun main() -> i64 = {
     while (a < b) {
         a = a + c;
     }
-    builtin_output_i64(a); # a = 1000001
+    builtin_output_i64(a); # a = 10000001
     return 0i64;
 }
