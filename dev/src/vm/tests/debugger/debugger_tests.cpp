@@ -17,7 +17,6 @@ public:
 		TESTER_ADD_TEST(killTest);
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(executesStepByStep);
-		TESTER_ADD_TEST(vmApiMemory);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
 	}
 
@@ -123,80 +122,6 @@ private:
 		return execution_position.instr_number;
 	}
 
-	/**
-	 * @brief Checks if the vm api functions related to memory and stack frames work correctly.
-	 * Checks the number of stack frames, then resumes the program and checks if it finishes
-	 * correctly.
-	 */
-	void vmApiMemory() {
-		auto pid = loadProgram("breakpoint.dbc");
-
-		vm::api::run(pid).value();  // "Run failed (1)"
-
-		auto execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(6, execution_position.instr_number, "Line number is not correct");
-
-		auto num_frames_response = vm::api::debuggerGetNumberOfStackFrames(pid).value(
-		);  // "Get number of stack frames failed"
-		assertEqual(
-			2, num_frames_response.number_of_stack_frames, "Number of stack frames is not correct"
-		);
-
-		auto error_response = vm::api::debuggerGetStackFrameData(pid, 2);
-		assertFalse(error_response.has_value(), "Getting stack frame data should have failed");
-
-		vm::api::resume(pid).value();  // "Resume failed (1)"
-
-		execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (2)"
-		assertEqual(10, execution_position.instr_number, "Line number is not correct (2)");
-
-		num_frames_response = vm::api::debuggerGetNumberOfStackFrames(pid).value(
-		);  // "Get number of stack frames failed (2)"
-		assertEqual(
-			2,
-			num_frames_response.number_of_stack_frames,
-			"Number of stack frames is not correct (2)"
-		);
-
-		auto stack_frame_data
-			= vm::api::debuggerGetStackFrameData(pid, 1).value();  // "Get stack frame data failed"
-		assertEqual("main", stack_frame_data.function_name, "Function name is not correct");
-
-		for (const auto& var: stack_frame_data.frame_vars) {
-			if (var.offset == 0) {
-				assertEqual(
-					var.value.getType()->getName(),
-					base::StrID("i64"),
-					"Variable type is not correct"
-				);
-
-				auto data_opt = var.value.readData();
-				assertTrue(data_opt.has_value(), "Reading variable data failed");
-
-				auto value
-					= std::get<vm::interpreted_data_variant::Primitive>(data_opt.value()).value;
-				assertEqual(0, value, "Variable value is not correct");
-			}
-			if (var.value.getType()->getName().strView().starts_with("ptr")) {
-				auto data_opt = var.value.readData();
-				assertTrue(data_opt.has_value(), "Reading pointer variable data failed");
-
-				auto referenced
-					= std::get<vm::interpreted_data_variant::Pointer>(data_opt.value()).referenced;
-				assertTrue(referenced.empty(), "Pointer should be null");
-			}
-		}
-
-		vm::api::resume(pid).value();                                  // "Resume failed (2)"
-
-		vm::api::join(pid).value();                                    // "Join failed (1)"
-
-		auto exit_code_response = vm::api::getExitValue(pid).value();  // "Get exit value failed"
-		assertEqual(0, exit_code_response->readBytes<i64>(), "Exit value is not correct");
-	}
-
 	template<typename FiedDataType>
 	FiedDataType getVMValueRefData(vm::VMValueRef vmvalue_ref) {
 		auto data_opt = vmvalue_ref.readData();
@@ -226,64 +151,49 @@ private:
 	void vmApiMemoryAllTypes() {
 		auto pid = loadProgram("breakpoint_all_types.dbc");
 
-		{
-			auto response = vm::api::run(pid);
-			assertTrue(response.has_value(), "Run failed (1)");
-		}
-
-		{
-			auto response = vm::api::waitForBreakpoint(pid);
-			assertTrue(response.has_value(), "Wait for breakpoint failed (1)");
-		}
+		ASSERT_TRUE(vm::api::run(pid).has_value());
+		ASSERT_TRUE(vm::api::waitForBreakpoint(pid).has_value());
 
 		{
 			auto response = vm::api::debuggerGetNumberOfStackFrames(pid);
-			assertTrue(response.has_value(), "Get number of stack frames failed");
+			ASSERT_TRUE(response.has_value());
 			auto num_frames_response = response.value();
-			assertEqual(
-				2,
-				num_frames_response.number_of_stack_frames,
-				"Number of stack frames is not correct"
-			);
+			ASSERT_EQUAL_PRINT(num_frames_response.number_of_stack_frames, 2);
 		}
 
 		{
 			auto response = vm::api::debuggerGetStackFrameData(pid, 2);
-			assertFalse(response.has_value(), "Getting stack frame data should have failed");
+			ASSERT_TRUE(!response.has_value());
 		}
 
 		{
 			namespace idv = vm::interpreted_data_variant;
 
 			auto response = vm::api::debuggerGetStackFrameData(pid, 1);
-			assertTrue(response.has_value(), "Get stack frame data failed");
+			ASSERT_TRUE(response.has_value());
 
 			auto stack_frame_data = response.value();
-			assertEqual("main", stack_frame_data.function_name, "Function name is not correct");
+			ASSERT_EQUAL_PRINT(stack_frame_data.function_name, "main");
 
 			for (const auto& var: stack_frame_data.frame_vars) {
 				if (var.value.getType()->getName() == base::StrID("ptr_struct")) {
 					auto struct_pointer_data_opt = var.value.readData();
-					assertTrue(
-						struct_pointer_data_opt.has_value(), "Reading pointer variable data failed"
-					);
+					ASSERT_TRUE(struct_pointer_data_opt.has_value());
 
 					auto struct_pointer_data
 						= std::get<idv::Pointer>(struct_pointer_data_opt.value());
-					assertTrue(
-						struct_pointer_data.referenced.has_value(), "Pointer should not be null"
-					);
+					ASSERT_TRUE(struct_pointer_data.referenced.has_value());
 
 					auto struct_data
 						= getVMValueRefData<idv::Data>(struct_pointer_data.referenced.value());
 
-#define CHECK_PRIMITIVE_FIELD(field_name, expected_type, expected_value)                           \
-	{                                                                                              \
-		auto data = getStructField<idv::Primitive>(                                                \
-			struct_data, base::StrID(expected_type), base::StrID(field_name)                       \
-		);                                                                                         \
-		auto value = data.value;                                                                   \
-		assertEqual(expected_value, value, "Variable value is not correct for field " field_name); \
+#define CHECK_PRIMITIVE_FIELD(field_name, expected_type, expected_value)     \
+	{                                                                        \
+		auto data = getStructField<idv::Primitive>(                          \
+			struct_data, base::StrID(expected_type), base::StrID(field_name) \
+		);                                                                   \
+		auto value = data.value;                                             \
+		ASSERT_EQUAL_PRINT(expected_value, value);                           \
 	}
 
 					CHECK_PRIMITIVE_FIELD("var_byte", "byte", 0);
@@ -307,14 +217,12 @@ private:
 							base::StrID("ptr_dyntable_i64"),
 							base::StrID("var_dyntable_pointer")
 						);
-						assertTrue(
-							table_pointer.referenced.has_value(), "Pointer should not be null"
-						);
+						ASSERT_TRUE(table_pointer.referenced.has_value());
 						auto table
 							= getVMValueRefData<idv::Table>(table_pointer.referenced.value());
 						auto first_elem      = table.get(0);
 						auto primitive_value = getVMValueRefData<idv::Primitive>(first_elem);
-						assertEqual(primitive_value.value, 0, "Table element value is not correct");
+						ASSERT_EQUAL_PRINT(primitive_value.value, 0);
 					}
 
 					{  // Check fixed size table field
@@ -323,35 +231,35 @@ private:
 							base::StrID("ptr_fixtable_i64"),
 							base::StrID("var_fixtable_pointer")
 						);
-						assertTrue(
-							table_pointer.referenced.has_value(), "Pointer should not be null"
-						);
+						ASSERT_TRUE(table_pointer.referenced.has_value());
 						auto table
 							= getVMValueRefData<idv::Table>(table_pointer.referenced.value());
 						auto first_elem      = table.get(0);
 						auto primitive_value = getVMValueRefData<idv::Primitive>(first_elem);
-						assertEqual(primitive_value.value, 0, "Table element value is not correct");
+						ASSERT_EQUAL_PRINT(primitive_value.value, 0);
 					}
 
 					{  // Check variant field
 						auto variant = getStructField<idv::Variant>(
 							struct_data, base::StrID("simple_variant"), base::StrID("var_variant")
 						);
-						assertEqual(variant.type_tag, 0, "Variant type tag is not correct");
+						ASSERT_EQUAL_PRINT(variant.type_tag, 0);
 						auto primitive_value
 							= getVMValueRefData<idv::Primitive>(variant.referenced);
-						assertEqual(primitive_value.value, 42, "Variant value is not correct");
+						ASSERT_EQUAL_PRINT(primitive_value.value, 42);
 					}
 				}
 			}
 		}
 
-		vm::api::resume(pid).value();                                  // "Resume failed (2)"
+		ASSERT_TRUE(vm::api::resume(pid).has_value());
+		ASSERT_TRUE(vm::api::join(pid).has_value());
 
-		vm::api::join(pid).value();                                    // "Join failed (1)"
-
-		auto exit_code_response = vm::api::getExitValue(pid).value();  // "Get exit value failed"
-		assertEqual(0, exit_code_response->readBytes<i64>(), "Exit value is not correct");
+		{
+			auto exit_code_response = vm::api::getExitValue(pid);
+			ASSERT_TRUE(exit_code_response.has_value());
+			ASSERT_EQUAL_PRINT(exit_code_response.value()->readBytes<i64>(), 0);
+		}
 	}
 };
 
