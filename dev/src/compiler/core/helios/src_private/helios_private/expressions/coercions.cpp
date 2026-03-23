@@ -100,9 +100,8 @@ namespace compiler::helios {
 				makeBox<code::LiteralNumericExpr>(
 					ctx,
 					code::generatedOrigin(),
-					numeric_value::NumericValue::createOfType(
-						current_expr->expression_type.getSymbolType()
-					)
+					numeric_value::NumericValue::createOfType(current_expr->expression_type.getType(
+															  ))
 						.expect("Failed to create a NumericLiteral with 0 value. This should never "
 			                    "happen.")
 				)
