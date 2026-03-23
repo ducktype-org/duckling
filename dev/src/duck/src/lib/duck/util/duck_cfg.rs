@@ -16,14 +16,12 @@ pub struct DuckCfg {
 const DEFAULT_STORAGE_LIFETIME: Duration = Duration::from_secs(24 * 60 * 60);
 
 impl DuckCfg {
-    /// Create a new [`DuckCfg`] using config file from the given [`DuckHome`].
     pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
         let inner = TomlConfig::new(home.user_config().to_path_buf())?;
         debug!("parsed the user config `{inner:?}`");
         Ok(Self { inner })
     }
 
-    /// Whether we should autofix unknown subcommands.
     pub fn fixes_enabled(&self) -> QuackResult<bool> {
         Ok(self
             .inner
@@ -32,7 +30,6 @@ impl DuckCfg {
             .unwrap_or(false))
     }
 
-    /// Maximal distance for autofixing unknown subcommands.
     pub fn max_fix_dist(&self) -> QuackResult<u32> {
         self.inner
             .get_int("security.typos.max_distance")
@@ -45,7 +42,6 @@ impl DuckCfg {
             .context("when trying to check the maximum typos fixing distance")
     }
 
-    /// Get all known aliases (keys).
     pub fn aliases(&self) -> QuackResult<Option<impl Iterator<Item = &String>>> {
         let Some(aliases) = self
             .inner
@@ -57,19 +53,16 @@ impl DuckCfg {
         Ok(Some(aliases.keys()))
     }
 
-    /// Get an alias for the given `key`.
     pub fn alias_for(&self, key: &str) -> QuackResult<Option<&str>> {
         self.inner
             .get_str(&format!("aliases.{key}"))
             .with_context(|| format!("when trying to get the alias expansions of `{key}`"))
     }
 
-    /// Get the underlying [`TomlConfig`].
     pub fn toml_config(&self) -> &TomlConfig {
         &self.inner
     }
 
-    /// Get the lifetime of temporary storage venvs.
     pub fn storage_tmp_lifetime(&self) -> QuackResult<Duration> {
         let config_seconds = self
             .inner

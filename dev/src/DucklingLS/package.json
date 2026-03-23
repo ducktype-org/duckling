@@ -1,5 +1,5 @@
 {
-    "name": "duckling-language-server",
+    "name": "duckling-support",
     "displayName": "DucklingLS",
     "description": "Duckling Language Server",
     "version": "0.0.1",
@@ -14,14 +14,6 @@
     "main": "./client/out/extension",
     "activationEvents": [
         "onLanguage:duckling"
-    ],
-    "files": [
-        "client/out/extension.js",
-        "server/out/server.js",
-        "images/",
-        "syntaxes/",
-        "language-configuration.json",
-        "README.md"
     ],
     "contributes": {
         "commands": [
@@ -89,12 +81,9 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run esbuild",
+        "vscode:prepublish": "npm run compile",
         "compile": "tsc -b",
         "watch": "tsc -b -w",
-        "esbuild": "npm-run-all -p esbuild:client esbuild:server",
-        "esbuild:client": "esbuild ./client/src/extension.ts --bundle --outfile=client/out/extension.js --external:vscode --format=cjs --platform=node",
-        "esbuild:server": "esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js --external:vscode --format=cjs --platform=node",
         "lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
         "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
         "test": "sh ./scripts/e2e.sh"
@@ -102,14 +91,11 @@
     "devDependencies": {
         "@types/mocha": "^9.1.0",
         "@types/node": "^16.18.34",
-        "@types/node-fetch": "^2.6.11",
         "@types/webpack-env": "^1.18.4",
         "@typescript-eslint/eslint-plugin": "^6.7.0",
         "@typescript-eslint/parser": "^6.7.0",
-        "esbuild": "^0.20.1",
         "eslint": "^8.35.0",
         "mocha": "^11.7.2",
-        "npm-run-all": "^4.1.5",
         "typescript": "^5.2.2"
     },
     "keywords": [
@@ -120,5 +106,7 @@
         "syntax highlighting"
     ],
     "dependencies": {
+        "@types/node-fetch": "^2.6.11",
+        "node-fetch": "^3.3.2"
     }
 }

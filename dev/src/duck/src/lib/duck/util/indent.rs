@@ -1,4 +1,3 @@
-/// Indent `text` with `indentation`.
 pub fn indent(text: &str, indentation: usize) -> String {
     let ends_in_nl = text.ends_with('\n');
     let mut indented = text

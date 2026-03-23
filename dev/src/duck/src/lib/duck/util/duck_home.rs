@@ -21,6 +21,7 @@ macro_rules! getter {
     ) => {
         /// Get the path for the
         #[doc = $desc]
+        ///
         /// Note that it may not exist on the disk
         pub fn $name(&self) -> &Path {
             &self.$name
@@ -153,7 +154,6 @@ pub struct DuckHome {
 }
 
 impl DuckHome {
-    /// Create a new [`DuckHome`] rooted at `root`, and using environmental variables from [`Env`].
     pub fn new(root: PathBuf, env: &Env) -> Self {
         fn get_key_with_fallback(
             env: &Env,
