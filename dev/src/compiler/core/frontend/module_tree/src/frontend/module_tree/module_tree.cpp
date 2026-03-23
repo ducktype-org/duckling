@@ -58,8 +58,8 @@ namespace {
 namespace compiler::frontend {
 
 	const hashing::ComponentHash& ModuleTree::getPathComponentHash(ModuleID module_id) {
-		Ref<ModuleTree>  module = module_id.ref;
-		std::scoped_lock lock(*module->m_hash_mutex);
+		Ref<ModuleTree> module = module_id.ref;
+		// Update the component hash from root to this module if not valid
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(
 			module->m_path_component_hash.has_value(),
@@ -69,8 +69,7 @@ namespace compiler::frontend {
 	}
 
 	const hashing::ComponentHash::HashType& ModuleTree::getModuleHash(ModuleID module_id) {
-		Ref<ModuleTree>  module = module_id.ref;
-		std::scoped_lock lock(*module->m_hash_mutex);
+		Ref<ModuleTree> module = module_id.ref;
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(module->m_hash.has_value(), "Module hash should have value after update!");
 		return module->m_hash.value();
@@ -98,7 +97,7 @@ namespace compiler::frontend {
 		return create(root, base::generateRandomString(32), file_reject, dir_reject);
 	}
 
-	ModuleTree::ModuleTree(): m_hash_mutex(base::makeBox<std::recursive_mutex>()) {}
+	ModuleTree::ModuleTree(): m_hash_mutex(base::makeBox<std::mutex>()) {}
 
 	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
 
@@ -205,15 +204,16 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTree::updateModuleHash() {
-		std::scoped_lock lock(*m_hash_mutex);
 		// Component hash part
 		// Get parent component hash if existsS
 		if (m_parent.has_value()) {
-			std::scoped_lock parent_lock(*m_parent.value()->m_hash_mutex);
-			CORE_ASSERT(
-				m_parent.value()->m_path_component_hash.has_value(),
-				"Parent component hash should have value!"
-			);
+			{
+				IF_BUILD_TYPE_DEV(std::scoped_lock parent_lock(*m_parent.value()->m_hash_mutex);
+				                  CORE_ASSERT(
+									  m_parent.value()->m_path_component_hash.has_value(),
+									  "Parent component hash should have value!"
+								  ););
+			}
 			m_path_component_hash.emplace(m_parent.value()->m_path_component_hash.value(), m_name);
 		} else {
 			// root module tree, use package id as base
@@ -577,11 +577,6 @@ namespace compiler::frontend {
 
 		// Invalidate component hash for the submodule and its children
 		submodule->invalidateHash();
-
-		// Update module hash for the parent module since the number of children changed
-		// Adding a submodule does not change the path component hash of the module so we do not
-		// need to invalidate hash For all SourceFiles and Submodules
-		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
