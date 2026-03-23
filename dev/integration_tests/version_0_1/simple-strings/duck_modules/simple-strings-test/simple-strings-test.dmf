@@ -36,8 +36,8 @@ fun main() -> i64 = {
     print(s);
 
     # Test .length method
-    builtin_output_i64(s.length());
-    builtin_output_i64((s+s).length());
+    builtin_output_i64(s.length());         # "6\n"
+    builtin_output_i64((s+s).length());     # "12\n"
 
 
     return 0;

@@ -1,5 +1,5 @@
 # Test boolean operators with explicit literals
-# Per docs: and, or, not, xor operators with short-circuit evaluation
+# Per docs: and, or, not, xor operators
 
 fun main() -> i64 = {
     # Testing AND operator (short-circuits if first operand is false)

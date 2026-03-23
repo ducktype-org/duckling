@@ -19,3 +19,4 @@ Tests:
         Output:
           String: "5\n7\n1\n6\n42\n100\n7\n"
         ExitCode: 0
+        
