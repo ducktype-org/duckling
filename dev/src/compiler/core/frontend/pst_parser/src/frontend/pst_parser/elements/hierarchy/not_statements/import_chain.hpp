@@ -17,6 +17,10 @@ namespace pst {
 			return "Import Chain";
 		}
 
+		[[nodiscard]]
+		virtual const std::vector<tpc::Identifier>& getNames() const
+			= 0;
+
 		static MBox<ImportChain> parse(LangParserState& state);
 	};
 }
