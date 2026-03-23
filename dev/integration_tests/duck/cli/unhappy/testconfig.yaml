@@ -8,8 +8,8 @@ Tests:
         Err:
           String: |
             Error: No such command as \`x\`. Did you mean:
-              - \`b\`
-              - \`r\`?
+                   - \`b\`
+                   - \`r\`?
 
       invalid-subcmd:
         test_cmd: not-a-subcmd

@@ -1,11 +1,7 @@
 //! Fetcher cache for a fetched manifest.
 use std::path::Path;
 
-use crate::quackpack::{
-    schemas::registry,
-    util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
-};
-use async_scoped::TokioScope;
+use crate::quackpack::schemas::registry;
 use tracing::debug;
 use url::Url;
 
@@ -17,8 +13,11 @@ mod tests;
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
+/// Where should we cache metdata.
 pub enum CacheLocation<'a> {
+    /// Cache metadata in memory.
     Memory,
+    /// Cache metadata in path.
     Path(&'a Path),
 }
 
@@ -32,6 +31,7 @@ impl std::fmt::Display for CacheLocation<'_> {
 }
 
 #[derive(Debug)]
+/// All columns present in the database.
 enum Columns {
     Name,
     Version,
@@ -40,6 +40,7 @@ enum Columns {
 }
 
 impl Columns {
+    /// Get the SQLite column name.
     const fn name(&self) -> &'static str {
         match self {
             Columns::Name => "name",
@@ -49,6 +50,7 @@ impl Columns {
         }
     }
 
+    /// Get the type of the SQLite column.
     const fn sqlite_type(&self) -> &'static str {
         match self {
             Columns::Name => "TEXT NOT NULL",
@@ -59,6 +61,7 @@ impl Columns {
     }
 }
 
+/// Name of the table where we save metadata.
 const TABLE_NAME: &str = "packages_manifests";
 
 #[derive(Debug)]
@@ -76,11 +79,6 @@ const TABLE_NAME: &str = "packages_manifests";
 ///
 /// However, SQLite doesn't expose a lot of types (unlike postgres, f.e.) so they are simply text.
 pub struct ManifestCache {
-    // We __have__ to use some sort of synchronization.
-    //
-    // Tl;dr: Between tokio::sync::Mutex<rusqlite::Connection> and tokio_rusqlite::Connection
-    // latter has better API for our needs.
-    //
     // According to the SQLite docs:
     // https://sqlite.org/c3ref/open.html
     //  SQLITE_OPEN_NOMUTEX
@@ -102,10 +100,14 @@ pub struct ManifestCache {
     // But [rusqlite::Connection] is `!Sync` (even if it was opened with `SQLITE_OPEN_FULLMUTEX`), so on
     // rust side we would still have to *cheat* and manually implement `Sync`/wrap it with some type
     // which does that.
-    // Because we want to use it in asyncs, I've decided to use tokio_rusqlite::Connection wrapper
-    // for that, since it's easier than tokio::sync::Mutex + rusqlite::Connection (especially
-    // because rusqlite's Transaction is !Send + !Sync, becase it holds *mut pointer).
-    connection: tokio_rusqlite::Connection,
+    //
+    // This means, that we either:
+    // 1. use defaults (`SQLITE_OPEN_NOMUTEX`) and mutable references, so borrow checker ensures SQLite safety,
+    // 2. use defaults (`SQLITE_OPEN_NOMUTEX`) and immutable references + runtime borrow checking.
+    //
+    // Unfortunately, `Connection` always requires a mutable reference for creating transactions,
+    // so there's no point in using `FULLMUTEX`, as we'll have to introduce some overhead on the rust side.
+    connection: rusqlite::Connection,
 }
 
 impl ManifestCache {
@@ -120,31 +122,21 @@ impl ManifestCache {
         connection
             .create_table()
             .with_context(|| format!("failed to create a manifest cache table in {}", location))?;
-        Ok(Self {
-            connection: connection.into(),
-        })
+        Ok(Self { connection })
     }
 
     /// Get a cached manifest of package `package`.
     ///
     /// `Ok(Some)` means that manifest has been fetched successful, `Ok(None)`: we didn't have
     /// `package` in a cache, while `Err` indicates, most likely, internal SQL error.
-    pub async fn get_manifest(
+    pub fn get_manifest(
         &self,
         package: &types::PackageWithUrl,
     ) -> QuackResult<Option<registry::Manifest>> {
-        // We have to clone a package, to make `.call()` on `.connection` `'static`.
-        let package = package.clone();
-        let (_, results) = TokioScope::scope_and_block(|spawner| {
-            spawner.spawn(async move {
-                self.connection
-                    .call(move |connection| connection.get_single_manifest_json(&package))
-                    .await
-            });
-        });
-        let maybe_json = unpack_tokio_scoped_vector(results)?;
-        let maybe_json =
-            extract_single_item_from_vec(maybe_json)?.context_internal("invalid SQL")?;
+        let maybe_json = self
+            .connection
+            .get_single_manifest_json(package)
+            .context_internal("invalid SQL")?;
         maybe_json
             .map(|json| {
                 serde_json::from_str(&json)
@@ -159,21 +151,14 @@ impl ManifestCache {
     ///
     /// Note that `Ok` allows inner `packages_manifest` to be an empty Vec: it means that we don't
     /// have `package` in a cache.
-    pub async fn get_all_manifests(
+    pub fn get_all_manifests(
         &self,
         package: &types::PackageWithUrl,
     ) -> QuackResult<Vec<registry::Manifest>> {
-        // We have to clone a package, to make `.call()` on `.connection` `'static`.
-        let package = package.clone();
-        let (_, results) = TokioScope::scope_and_block(|spawner| {
-            spawner.spawn(async move {
-                self.connection
-                    .call(move |connection| connection.get_all_manifests_json(&package))
-                    .await
-            });
-        });
-        let jsons = unpack_tokio_scoped_vector(results)?;
-        let jsons = extract_single_item_from_vec(jsons)?.context_internal("invalid SQL")?;
+        let jsons = self
+            .connection
+            .get_all_manifests_json(package)
+            .context_internal("invalid SQL")?;
         jsons
             .into_iter()
             .map(|json| serde_json::from_str(&json))
@@ -184,23 +169,16 @@ impl ManifestCache {
     /// Add or replace manifest for package `package`.
     ///
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
-    pub async fn add_or_replace_manifest(
+    pub fn add_or_replace_manifest(
         &self,
         package: &types::PackageWithUrl,
         manifest: registry::Manifest,
     ) -> QuackResult<()> {
         let json = serde_json::to_string(&manifest)
             .context_internal("failed to serialize registry schema to JSON")?;
-        let clone = package.clone();
-        let (_, results) = TokioScope::scope_and_block(|spawner| {
-            spawner.spawn(async move {
-                self.connection
-                    .call(move |connection| connection.add_or_replace_manifest_json(&clone, json))
-                    .await
-            });
-        });
-        let result = unpack_tokio_scoped_vector(results)?;
-        extract_single_item_from_vec(result)?.context_internal("invalid SQL")?;
+        self.connection
+            .add_or_replace_manifest_json(package, json)
+            .context_internal("invalid SQL")?;
         Ok(())
     }
 
@@ -211,8 +189,8 @@ impl ManifestCache {
     /// to inner SQL locking.
     ///
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
-    pub async fn add_or_replace_multiple_manifests(
-        &self,
+    pub fn add_or_replace_multiple_manifests(
+        &mut self,
         registry_url: Url,
         multi_manifest: Vec<registry::Manifest>,
     ) -> QuackResult<()> {
@@ -229,17 +207,9 @@ impl ManifestCache {
                 Ok((package, json))
             })
             .collect::<QuackResult<_>>()?;
-        let (_, results) = TokioScope::scope_and_block(|spawner| {
-            spawner.spawn(async move {
-                self.connection
-                    .call(move |connection| {
-                        connection.add_or_replace_mutliple_manifests_jsons(package_manifest_pairs)
-                    })
-                    .await
-            });
-        });
-        let result = unpack_tokio_scoped_vector(results)?;
-        extract_single_item_from_vec(result)?.context_internal("SQLite thread panicked")?;
+        self.connection
+            .add_or_replace_mutliple_manifests_jsons(package_manifest_pairs)
+            .context_internal("invalid SQL")?;
         Ok(())
     }
 }

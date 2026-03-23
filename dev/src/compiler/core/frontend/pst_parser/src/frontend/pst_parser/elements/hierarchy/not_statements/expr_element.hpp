@@ -11,14 +11,9 @@ namespace pst {
 
 	protected:
 		/**
-		 * @brief Skips tokens, used to preserve position in case of error.
+		 * @brief Sanity check of non-emptyness length.
 		 */
-		static void fastForward(LangParserState& state, i64 length);
-
-		/**
-		 * @brief Sanity check of length.
-		 */
-		static bool checkLength(LangParserState& state, i64 length);
+		static bool checkNonEmpty(LangParserState& state);
 
 		explicit ExprElement(const LangParserState& state, i64 precedence):
 			  NotStmt(state),

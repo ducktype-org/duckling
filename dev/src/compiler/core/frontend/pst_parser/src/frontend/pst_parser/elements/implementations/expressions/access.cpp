@@ -6,8 +6,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> Access::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> Access::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		if (length != 2 && length != 4) {
 			state.logInt(makeBox<BadAccessError>(
@@ -27,11 +29,12 @@ namespace pst::expr {
 			));
 		}
 
-		state.parse(out).eatOne();  // `.` or `.?`
-		state.parse(out).one(&out->name);
+		PARSE().eatOne();  // `.` or `.?`
+		PARSE().one(&out->name);
 
-		if (length > 2 && state[0].is(NamedOperator::Colon) && state[1].isBracketGroup(Token::Curly))
-			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse, 2L);
+		if (state.ctokens().size() >= 2 && state[0].is(NamedOperator::Colon)
+		    && state[1].isBracketGroup(Token::Curly))
+			PARSE().with(&out->template_specifier, TemplateSpecifier::parse);
 
 		PST_RETURN out;
 	}

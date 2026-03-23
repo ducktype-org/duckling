@@ -102,6 +102,7 @@ pub struct CleanLock {
 }
 
 impl CleanLock {
+    /// Create a new [`CleanLock`] for the given storage.
     pub fn new(storage: &Storage) -> QuackResult<Self> {
         let lock = storage.clean_lock().lock(ShouldBlock::Yes)?;
         Ok(Self { _lock: lock })
@@ -130,6 +131,7 @@ pub struct TrySyncLock {
 }
 
 impl TrySyncLock {
+    /// Create a new [`TrySyncLock`] for the given venv in the given storage.
     pub fn new(storage: &Storage, venv_id: VenvId) -> Result<Self, IoErrorWithMsg> {
         let clean_lock = storage.clean_lock().lock_shared(ShouldBlock::No)?;
         let sync_lock = storage.sync_lock(venv_id).lock(ShouldBlock::No)?;
@@ -139,6 +141,7 @@ impl TrySyncLock {
         })
     }
 
+    /// Upgrade self to a [`CompileLock`].
     pub fn to_compile_lock(self, storage: &Storage, venv_id: VenvId) -> QuackResult<CompileLock> {
         let compile_lock = storage.compile_lock(venv_id).lock(ShouldBlock::Yes)?;
         Ok(CompileLock {
@@ -157,6 +160,8 @@ pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
     Ok(())
 }
 
+/// An implementation detail of [`cleanup_locks`].
+/// Removes all venv locks from the given iterator.
 fn cleanup_locks_impl(storage: &Storage, dir_iterator: ReadDir) -> QuackResult<()> {
     for lockfile in dir_iterator {
         let lockfile = lockfile.context("failed to read entry from dir iterator")?;

@@ -122,6 +122,16 @@ General variables (not tied to any context):
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
 
+Subtree-specific variables (applied to a subtree rooted at this node) are __INHERITED__ from the parent node unless explicitly redefined in the child node:
+- `PreNode` - A command executed once before processing the node and its subdirectories.  
+  Example: If a `PreNode` command is `echo '1'` and the node has 3 subdirectories, the command will run 4 times in total: once for the parent node and once for each subdirectory.  
+  Order of execution: `parent node` -> `first child` -> `second child` -> `third child` -> `parent's siblings`.
+
+- `PostNode` - Same as `PreNode`, but the command is executed after processing the node and its subdirectories.  
+  Order of execution: `first child` -> `second child` -> `third child` -> `parent node` -> `parent's siblings`.
+
+Both `PreNode` and `PostNode` commands are executed only if the node or its descendants match the `-t` filter argument. This ensures that irrelevant nodes and their commands are skipped.
+
 Test specific:
 
 - `Name` - Explicit name of a test.

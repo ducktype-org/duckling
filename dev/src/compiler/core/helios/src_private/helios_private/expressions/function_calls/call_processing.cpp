@@ -7,18 +7,17 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/origin.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/expressions/builtin_operators.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/function_calls/errors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/types.hpp>
 
-#include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -132,12 +131,28 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl.parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.valueOrThrow().isInvalid())
-				return NoMatch{ .function = fun,
-					            .reason   = TypeMismatch{ .given_type     = provided_type,
-					                                      .expected_type  = expected_type,
-					                                      .argument_index = i,
-					                                      .function       = fun } };
+			if (coercion.valueOrThrow().isInvalid()) {
+				variant_match(coercion.valueOrThrow().getVariant()) {
+					variant_case_novalue(InvalidCoercion) {
+						return NoMatch{ .function = fun,
+							            .reason   = TypeMismatch{
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .argument_index = i,
+											  .function       = fun,
+                                        } };
+					}
+					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
+						return NoMatch{ .function = fun,
+							            .reason   = code::TypeNotTriviallyCopyable{
+											  .argument_index = i,
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .function       = fun,
+                                        } };
+					}
+				}
+			}
 
 			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
@@ -180,13 +195,27 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.valueOrThrow().isInvalid())
-				return NoMatch{ .function = fun,
-					            .reason
-					            = TypeMismatch{ .given_type     = provided_type,
-					                            .expected_type  = expected_type,
-					                            .argument_index = positional_arguments.size() + i,
-					                            .function       = fun } };
+			if (coercion.valueOrThrow().isInvalid()) {
+				variant_match(coercion.valueOrThrow().getVariant()) {
+					variant_case_novalue(InvalidCoercion) {
+						return NoMatch{ .function = fun,
+							            .reason   = TypeMismatch{ .given_type    = provided_type,
+							                                      .expected_type = expected_type,
+							                                      .argument_index
+                                                                = positional_arguments.size() + i,
+							                                      .function = fun } };
+					}
+					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
+						return NoMatch{ .function = fun,
+							            .reason   = code::TypeNotTriviallyCopyable{
+											  .argument_index = positional_arguments.size() + i,
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .function       = fun,
+                                        } };
+					}
+				}
+			}
 
 			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
@@ -237,32 +266,28 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
-	 * constructs a helios CallExpr. The expressions will be moved from the arguments.
-	 * @p argument_origin define the actual structure of the arguments, while @p
+	 * constructs a helios Expr representing the call of the function. Construction of the
+	 * expressions will move the arguments.
+	 * @p argument_origin defines the actual structure of the arguments, while @p
 	 * positional_arguments and @p named_arguments define their content.
 	 *
 	 * @param ctx Query context
 	 * @param fun The function symbol being called
-	 * @param callee_expr The PST expression representing the callee being invoked.
-	 * @param call_parentheses_expr The PST call expression representing the function call. (the
-	 * `(...)` part and not the callee)
-	 * @param positional_arguments Vector of positional argument of the call
-	 * @param named_arguments Vector of named argument expressions (name, expression) of the call
+	 * @param pst_origin The origins of the expression.
+	 * @param call_arguments The arguments of the call. Will be moved.
 	 * @param argument_origin The origin of each argument in the call (e.x. first argument is
 	 * positional, second is named, third is default, etc.)
 	 * @param coercions Optional vector of coercions to apply to each argument
 	 *
 	 * @return Box<CallExpr> representing the function call
 	 */
-	Box<CallExpr> constructCallExpr(
-		query::Context&                                  ctx,
-		SymID                                            fun,
-		const ElementOrigin&                             callee_literal_origin,
-		const ElementOrigin&                             whole_call_origin,
-		std::vector<Box<Expr>>&                          positional_arguments,
-		std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
-		const std::vector<ArgumentOrigin>&               argument_origin,
-		const base::Optional<std::vector<Coercion>>&     coercions
+	Box<Expr> constructCallExpr(
+		query::Context&                              ctx,
+		SymID                                        fun,
+		const CallPstOrigin&                         pst_origin,
+		CallArguments                                call_arguments,
+		const std::vector<ArgumentOrigin>&           argument_origin,
+		const base::Optional<std::vector<Coercion>>& coercions
 	) {
 		std::vector<Box<Expr>> final_arguments;
 		final_arguments.reserve(argument_origin.size());
@@ -272,13 +297,14 @@ namespace compiler::helios::code {
 				variant_match(argument_origin[i]) {
 					variant_case(PositionalArgumentOrigin, positional_origin) {
 						return std::move(
-							positional_arguments[positional_origin.index_in_positional_args]
+							call_arguments
+								.positional_arguments[positional_origin.index_in_positional_args]
 						);
 					}
 					variant_case(NamedArgumentOrigin, named_argument) {
-						return std::move(
-							std::get<1>(named_arguments[named_argument.index_in_named_args])
-						);
+						return std::move(std::get<1>(
+							call_arguments.named_arguments[named_argument.index_in_named_args]
+						));
 					}
 					variant_case(DefaultArgumentOrigin, default_argument) {
 						return default_argument.default_value_expr->clone();
@@ -296,9 +322,36 @@ namespace compiler::helios::code {
 		}
 		return makeBox<CallExpr>(
 			ctx,
-			whole_call_origin,
-			makeBox<IdentifierExpr>(ctx, callee_literal_origin, fun),
+			pst_origin.whole_call_origin,
+			makeBox<IdentifierExpr>(ctx, pst_origin.callee_origin, fun),
 			std::move(final_arguments)
+		);
+	}
+
+	/**
+	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
+	 * constructs a helios Expr representing the call of the function. Construction of the
+	 * expressions will move the arguments.
+	 * @p argument_origin defines the actual structure of the arguments, while @p
+	 * positional_arguments and @p named_arguments define their content.
+	 */
+	Box<Expr> constructOperatorExpr(
+		query::Context&                              ctx,
+		const CallPstOrigin&                         pst_origin,
+		const SymID                                  fun,
+		CallArguments                                call_arguments,
+		const base::Optional<std::vector<Coercion>>& coercions
+	) {
+		const auto call_origin = pst_origin.whole_call_origin;
+		auto  hout_op   = ctx.query<QueryRegularBinaryBuiltinSymbols>({})->atMaybe(fun).value()->op;
+		auto& arguments = call_arguments.positional_arguments;
+		auto  lhs       = coercions ? coercions->at(0).coerce(ctx, std::move(arguments.at(0)))
+		                            : std::move(arguments.at(0));
+		auto  rhs       = coercions ? coercions->at(1).coerce(ctx, std::move(arguments.at(1)))
+		                            : std::move(arguments.at(1));
+
+		return makeBox<BinaryOperatorExpr>(
+			ctx, call_origin, hout_op, std::move(lhs), std::move(rhs)
 		);
 	}
 
@@ -309,19 +362,25 @@ namespace compiler::helios::code {
 		bool                           as_a_link = false
 	) {
 		if (exact_matches.empty()) return;
-		// We have to differentiate between first candidate beacuse all the other candidates will
+		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<ExactCandidateNote>> first_candidate_msg{};
+		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
 		for (const auto& match: exact_matches) {
-			auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
-			if_opt_none(decl.origin.getSourcePosition()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-					"Exact candidate ", name(match.function), " has no source position"
-				)));
-				continue;
-			}
-			auto candidate_note
-				= makeBox<ExactCandidateNote>(decl.origin.getSourcePosition().value());
+			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
+
+				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
+				if_opt_none(decl.origin.getSourcePosition()) {
+					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
+					return makeBox<dia_int::PlaceholderHeaderError>(
+						"Found exact candidate.",
+						base::strConcat(
+							"Candidate is compiler-generated, with type " + type.toString() + "."
+						)
+					);
+				}
+				return makeBox<ExactCandidateNote>(decl.origin.getSourcePosition().value());
+			}();
 
 			if (not first_candidate_msg.has_value())
 				first_candidate_msg.emplace(std::move(candidate_note));
@@ -344,37 +403,42 @@ namespace compiler::helios::code {
 		bool                              as_a_link
 	) {
 		if (coercible_matches.empty()) return;
-		// We have to differentiate between first candidate beacuse all the other candidates will
+		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<CoercibleCandidateNote>> first_candidate_msg{};
+		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
 		for (const auto& match: coercible_matches) {
-			auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
+			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
-			if_opt_none(decl.origin.getSourcePosition()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-					"Coercible candidate ", name(match.function), " has no source position"
-				)));
-				continue;
-			}
-
-			auto decl_pos = decl.origin.getSourcePosition().value();
-
-			auto candidate_note = makeBox<CoercibleCandidateNote>(decl_pos);
-			for (usize i{ 0 }; i < match.coercions.size(); i++) {
-				auto& coercion = match.coercions[i];
-				if (not coercion.isEmptyCoercion()) {
-					if_opt_none(decl.parameters[i].origin.getSourcePosition()) continue;
-					auto param_pos = decl.parameters[i].origin.getSourcePosition().value();
-
-					auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
-						coercion.to.toString(), coercion.validated_from.toString()
+				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
+				if_opt_none(decl.origin.getSourcePosition()) {
+					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
+					return makeBox<dia_int::PlaceholderHeaderNote>(
+						"Found coercible candidate.",
+						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);
-					auto pm_message_id = dia_int::MessageBase::getUniqueID();
-					candidate_note->addLinkedMessage(pm_message_id, std::move(pm));
-
-					candidate_note->addPointerMessage("coercion", param_pos, pm_message_id);
 				}
-			}
+
+				auto decl_pos = decl.origin.getSourcePosition().value();
+
+				auto result = makeBox<CoercibleCandidateNote>(decl_pos);
+				for (usize i{ 0 }; i < match.coercions.size(); i++) {
+					auto& coercion = match.coercions[i];
+					if (not coercion.isEmptyCoercion()) {
+						if_opt_none(decl.parameters[i].origin.getSourcePosition()) continue;
+						auto param_pos = decl.parameters[i].origin.getSourcePosition().value();
+
+						auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
+							coercion.to.toString(), coercion.validated_from.toString()
+						);
+						auto pm_message_id = dia_int::MessageBase::getUniqueID();
+						result->addLinkedMessage(pm_message_id, std::move(pm));
+
+						result->addPointerMessage("coercion", param_pos, pm_message_id);
+					}
+				}
+				return result;
+			}();
 
 			if (not first_candidate_msg.has_value())
 				first_candidate_msg.emplace(std::move(candidate_note));
@@ -398,26 +462,27 @@ namespace compiler::helios::code {
 		bool                        as_a_link
 	) {
 		if (failed_matches.empty()) return;
-		// We have to differentiate between first candidate beacuse all the other candidates will
+		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
-		base::Optional<Box<FailedCandidateNote>> first_candidate_msg{};
-		for (const auto& match: failed_matches) {
-			auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
-			if_opt_none(decl.origin.getSourcePosition()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-					"Failed candidate ", name(match.function), " has no source position"
-				)));
-				continue;
-			}
-			auto candidate_note
-				= makeBox<FailedCandidateNote>(decl.origin.getSourcePosition().value());
+		base::Optional<Box<dia_int::MessageBase>> first_candidate_msg{};
+		for (const auto& [function, reason]: failed_matches) {
+			auto candidate_note = [&] -> Box<dia_int::MessageBase> {
+				auto& decl = ctx.query<QueryDeclOfFun>(function)->valueOrThrow();
+
+				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
+				if_opt_none(decl.origin.getSourcePosition()) {
+					const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
+					return makeBox<dia_int::PlaceholderHeaderNote>(
+						"Candidate failed to match.",
+						"Candidate is compiler-generated, with type " + type.toString() + "."
+					);
+				}
+
+				return makeBox<FailedCandidateNote>(decl.origin.getSourcePosition().value());
+			}();
 
 			candidate_note->addAttachedMessage(createDetailedCallErrorMessage(
-				ctx,
-				call_pst_origin.whole_call_origin,
-				call_pst_origin.arguments_origin,
-				match.reason,
-				true
+				ctx, call_pst_origin.whole_call_origin, call_pst_origin.arguments_origin, reason, true
 			));
 
 			if (first_candidate_msg.empty())
@@ -434,10 +499,24 @@ namespace compiler::helios::code {
 			main_msg->addAttachedMessage(std::move(first_candidate_msg).value());
 	}
 
-	query::QResult<Box<CallExpr>> callOverloadResolution(
+	using OverloadResolutionResult
+		= std::tuple<SymID, std::vector<ArgumentOrigin>, base::Optional<std::vector<Coercion>>>;
+
+	/**
+	 * @brief Performs overload resolution for a function call, taking into account coercions,
+	 * positional and named arguments. Performs diagnostic logging in case of resolution failure.
+	 * Returns the symbol of the function that should be called, the ArgumentOrigins for the
+	 * arguments and the coercions which should be applied to them (if any).
+	 *
+	 * @note Does *NOT* take into account the name of each candidate. Resolution is performed solely
+	 * based on how well the arguments match the parameters from the declaration.
+	 *
+	 * @return The function symbol, the argument origins, and the coercions.
+	 */
+	query::QResult<OverloadResolutionResult> doOverloadResolution(
 		query::Context&           ctx,
 		const std::vector<SymID>& candidates,
-		CallArguments             call_arguments,
+		const CallArguments&      call_arguments,
 		const CallPstOrigin&      pst_origin
 	) {
 		if (candidates.empty()) {
@@ -451,8 +530,7 @@ namespace compiler::helios::code {
 		std::vector<CoercionMatch> coercion_match;
 		std::vector<NoMatch>       no_match;
 
-
-		for (auto candidate: candidates) {
+		for (const auto candidate: candidates) {
 			MatchResult match = matchOverloadCandidate(
 				ctx, candidate, call_arguments.positional_arguments, call_arguments.named_arguments
 			);
@@ -478,16 +556,11 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 		if (exact_match.size() == 1) {
-			return constructCallExpr(
-				ctx,
+			return OverloadResolutionResult{
 				exact_match.back().function,
-				pst_origin.callee_origin,
-				pst_origin.whole_call_origin,
-				call_arguments.positional_arguments,
-				call_arguments.named_arguments,
 				exact_match.back().argument_origin,
-				{}
-			);
+				{},
+			};
 		}
 
 		if (coercion_match.size() > 1) {
@@ -500,16 +573,11 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 		if (coercion_match.size() == 1) {
-			return constructCallExpr(
-				ctx,
+			return OverloadResolutionResult{
 				coercion_match.back().function,
-				pst_origin.callee_origin,
-				pst_origin.whole_call_origin,
-				call_arguments.positional_arguments,
-				call_arguments.named_arguments,
 				coercion_match.back().argument_origin,
-				{ coercion_match.back().coercions }
-			);
+				coercion_match.back().coercions,
+			};
 		}
 
 		if (candidates.size() == 1) {
@@ -582,7 +650,7 @@ namespace compiler::helios::code {
 		return arguments_origin;
 	}
 
-	query::QResult<Box<CallExpr>> processFunctionCall(
+	query::QResult<Box<Expr>> processFunctionCall(
 		query::Context&               ctx,
 		const std::vector<SymID>&     candidates,
 		pst::Access<pst::LangElement> callee_element,
@@ -598,18 +666,28 @@ namespace compiler::helios::code {
 			fillCallArgs(ctx, call_expr, whole_call_origin, positional_arguments, named_arguments)
 		);
 
-		return callOverloadResolution(
-			ctx,
-			candidates,
-			CallArguments{ .positional_arguments = std::move(positional_arguments),
-		                   .named_arguments      = std::move(named_arguments) },
-			CallPstOrigin{ .whole_call_origin = whole_call_origin,
-		                   .callee_origin     = pstOrigin(callee_element),
-		                   .arguments_origin  = std::move(arguments_origin) }
+		CallArguments call_arguments{
+			.positional_arguments = std::move(positional_arguments),
+			.named_arguments      = std::move(named_arguments),
+		};
+		CallPstOrigin pst_origin{
+			.whole_call_origin = whole_call_origin,
+			.callee_origin     = pstOrigin(callee_element),
+			.arguments_origin  = std::move(arguments_origin),
+		};
+
+		// Resolve overloads and construct call expression
+		auto overload_resolution_qresult
+			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
+		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
+
+		return constructCallExpr(
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
 		);
 	}
 
-	query::QResult<Box<CallExpr>> processMethodCall(
+	query::QResult<Box<Expr>> processMethodCall(
 		query::Context&               ctx,
 		const std::vector<SymID>&     candidates,
 		pst::Access<pst::LangElement> callee_element,
@@ -628,14 +706,73 @@ namespace compiler::helios::code {
 		arguments_origin.insert(arguments_origin.begin(), self_arg->origin);
 		positional_arguments.insert(positional_arguments.begin(), std::move(self_arg));
 
-		return callOverloadResolution(
-			ctx,
-			candidates,
-			CallArguments{ .positional_arguments = std::move(positional_arguments),
-		                   .named_arguments      = std::move(named_arguments) },
-			CallPstOrigin{ .whole_call_origin = whole_call_origin,
-		                   .callee_origin     = pstOrigin(callee_element),
-		                   .arguments_origin  = std::move(arguments_origin) }
+		CallArguments call_arguments{
+			.positional_arguments = std::move(positional_arguments),
+			.named_arguments      = std::move(named_arguments),
+		};
+		CallPstOrigin pst_origin{
+			.whole_call_origin = whole_call_origin,
+			.callee_origin     = pstOrigin(callee_element),
+			.arguments_origin  = std::move(arguments_origin),
+		};
+
+		// Resolve overloads and construct call expression
+		auto overload_resolution_qresult
+			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
+		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
+
+		return constructCallExpr(
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
+		);
+	}
+
+	query::QResult<Box<Expr>> processBinaryOperatorCall(
+		query::Context& ctx, const std::vector<SymID>& candidates, Box<Expr> lhs, Box<Expr> rhs
+	) {
+		// Obtain the call source positions
+		const auto lhs_origin = lhs->origin;
+		const auto rhs_origin = rhs->origin;
+
+		const auto whole_call_origin = elementOrigin(lhs->origin, rhs->origin);
+
+		const CallPstOrigin pst_origin{
+			// @TODO: #2075 Giving the callee the position of the entire call is not
+			// strictly correct, but currently has no adverse effects. Fix this.
+			.whole_call_origin = whole_call_origin,
+			.callee_origin     = whole_call_origin,
+			.arguments_origin  = { lhs_origin, rhs_origin }
+		};
+		CallArguments call_arguments{};
+		call_arguments.positional_arguments.emplace_back(std::move(lhs));
+		call_arguments.positional_arguments.emplace_back(std::move(rhs));
+
+		// Resolve overloads and construct call expression
+		auto overload_resolution_qresult
+			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
+		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
+
+		// Now construct the expression.
+		// If the function is a builtin operator, we use special
+		// handling which may not be simply a single function call.
+		// Note: this does not include numeric operators on numeric arguments,
+		// as that case is handled earlier, before considering overload resolution.
+		variant_match(getSymRef(callee_sym)->other) {
+			variant_case(houtgen::GeneratedSymbolData, generated) {
+				variant_match(generated.data) {
+					variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+						return constructOperatorExpr(
+							ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
+						);
+					}
+				}
+			}
+		}
+
+		// Otherwise, we construct a normal function call expression.
+		return constructCallExpr(
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
 		);
 	}
 }

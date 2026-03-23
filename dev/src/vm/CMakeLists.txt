@@ -86,6 +86,9 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
         ${jit_dependency}
     )
     make_module(JitDep USES llvm_helpers Base Diagnostic)
+    target_compile_options(JitDep PRIVATE
+        --embed-dir=${CMAKE_BINARY_DIR}
+    )
     target_include_directories(JitDep PRIVATE ${LLVM_INCLUDE_DIRS})
 
     target_include_directories(MainVM PRIVATE $<TARGET_PROPERTY:JitDep,INTERFACE_INCLUDE_DIRECTORIES>)
@@ -131,6 +134,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND ${JIT_LLVM_LINKER}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
+                $<TARGET_OBJECTS:cp-stencils_bc>
                 ${vm_dep_objects_bc}
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
@@ -150,6 +154,7 @@ function(add_vm_variant suffix compile_def)
 
             VERBATIM
             DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
+                    cp-stencils_bc
                     $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
                     # Here dependency to both bc files and targets is necessery.
                     ${vm_dep_objects_bc} # File dependency ensures each file will tracked and program will be rebuild if it changes.
@@ -158,6 +163,10 @@ function(add_vm_variant suffix compile_def)
         # JitDep depends to both bc files (it can embed both of them), but is NOT config dependent.
         add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc} ${extracted_func_file})
         add_dependencies(JitDep CommonVMBitcode_${suffix})
+        set_target_properties(CommonVMBitcode_${suffix}
+            PROPERTIES
+                VM_COMMON_BC ${common_bc}
+        )
 
         add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
         

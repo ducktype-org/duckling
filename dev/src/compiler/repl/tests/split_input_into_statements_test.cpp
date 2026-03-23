@@ -1,6 +1,5 @@
-#include <repl/utils.hpp>
+#include <driver/repl_utils/repl_split_helpers.hpp>
 
-#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
 class SplitInputIntoStatementsTest: public tester::TestSuite {
@@ -12,15 +11,11 @@ public:
 		TESTER_ADD_TEST(testEmptyInput);
 		TESTER_ADD_TEST(testSingleStatement);
 		TESTER_ADD_TEST(testMultipleStatements);
-		TESTER_ADD_TEST(testSnippets);
+		TESTER_ADD_TEST(testIdempotency);
 		TESTER_ADD_TEST(testParseError);
 	}
 
 private:
-	std::string readSnippet(const std::string& local_path) {
-		return std::string{ fs::File(path(local_path)).getContent().view().stringView() };
-	}
-
 	void testEmptyInput() {
 		auto result = compiler::repl::splitInputIntoStatements("");
 		assertTrue(result.has_value(), "Expected success for empty input");
@@ -40,6 +35,10 @@ private:
 		check_single("fun foo() = {}");
 		check_single("class Foo {}");
 		check_single("namespace Foo {}");
+		check_single("import Foo as foo;");
+		check_single("using Foo;");
+		check_single("alias Bar = Foo;");
+		check_single("const LIMIT: i32 = 100;");
 	}
 
 	void testMultipleStatements() {
@@ -90,62 +89,62 @@ private:
 			ASSERT_EQUAL(std::string("namespace Bar {}"), (*result)[1]);
 			ASSERT_EQUAL(std::string("fun baz() = {}"), (*result)[2]);
 		}
+		// const declaration mixed with an expression
+		{
+			auto result
+				= compiler::repl::splitInputIntoStatements("const LIMIT: i32 = 100;\nLIMIT * 2;");
+			assertTrue(result.has_value(), "Expected success");
+			ASSERT_EQUAL(2UL, result->size());
+			ASSERT_EQUAL(std::string("const LIMIT: i32 = 100;"), (*result)[0]);
+			ASSERT_EQUAL(std::string("LIMIT * 2;"), (*result)[1]);
+		}
+		// multi-line class body is a single statement
+		{
+			std::string code   = "class Point {\n    var x: i32 = 0;\n    var y: i32 = 0;\n}";
+			auto        result = compiler::repl::splitInputIntoStatements(code);
+			assertTrue(result.has_value(), "Expected success");
+			ASSERT_EQUAL(1UL, result->size());
+			ASSERT_EQUAL(code, (*result)[0]);
+		}
 	}
 
-	void testSnippets() {
-		{
-			auto result = compiler::repl::splitInputIntoStatements(
-				readSnippet("snippets/loops_and_declarations.duck")
-			);
-			assertTrue(result.has_value(), "Expected success for loops_and_declarations snippet");
-			ASSERT_EQUAL(4UL, result->size());
-			ASSERT_EQUAL(std::string("var counter: i32 = 0;"), (*result)[0]);
-			ASSERT_EQUAL(std::string("class Storage {}"), (*result)[3]);
-			assertTrue((*result)[1].starts_with("while"), "Second statement must be the while loop");
-			assertTrue(
-				(*result)[1].find("counter + 1") != std::string::npos,
-				"While loop must contain the counter increment"
-			);
-			assertTrue(
-				(*result)[2].starts_with("fun doubleCounter"),
-				"Third statement must be the function declaration"
-			);
-			assertTrue(
-				(*result)[2].find("while (i < n)") != std::string::npos,
-				"Function body must contain nested while loop"
-			);
-		}
-		{
-			auto result = compiler::repl::splitInputIntoStatements(
-				readSnippet("snippets/declarations_only.duck")
-			);
-			assertTrue(result.has_value(), "Expected success for declarations_only snippet");
-			ASSERT_EQUAL(6UL, result->size());
-			ASSERT_EQUAL(std::string("import X as x;"), (*result)[0]);
-			ASSERT_EQUAL(std::string("using X;"), (*result)[1]);
-			ASSERT_EQUAL(std::string("alias X = X;"), (*result)[2]);
-			ASSERT_EQUAL(std::string("class Foo {}"), (*result)[3]);
-			ASSERT_EQUAL(std::string("namespace Math {}"), (*result)[4]);
-			assertTrue(
-				(*result)[5].starts_with("fun add"),
-				"Last statement must be the function declaration"
-			);
-			assertTrue(
-				(*result)[5].find("return a + b;") != std::string::npos,
-				"Function body must contain the return statement"
-			);
-		}
+	void testIdempotency() {
+		const std::string_view code = "var x: i32 = 1;\n1 + 5;\nfun foo() = {}";
+
+		auto first  = compiler::repl::splitInputIntoStatements(code);
+		auto second = compiler::repl::splitInputIntoStatements(code);
+
+		assertTrue(first.has_value(), "First call must succeed");
+		assertTrue(second.has_value(), "Second call must succeed");
+		ASSERT_EQUAL(first->size(), second->size());
+		for (std::size_t i = 0; i < first->size(); ++i) ASSERT_EQUAL((*first)[i], (*second)[i]);
+
+		auto err1 = compiler::repl::splitInputIntoStatements("{\nfun broken() = {");
+		auto err2 = compiler::repl::splitInputIntoStatements("{\nfun broken() = {");
+		assertTrue(!err1.has_value(), "First error call must fail");
+		assertTrue(!err2.has_value(), "Second error call must fail");
+		ASSERT_EQUAL(err1.error(), err2.error());
 	}
 
 	void testParseError() {
-		// Unclosed brace — guaranteed parse error
-		auto result = compiler::repl::splitInputIntoStatements("{");
-		assertTrue(!result.has_value(), "Expected error for invalid syntax");
-		assertTrue(!result.error().empty(), "Expected non-empty error message");
+		auto check_error = [&](std::string_view code, std::string_view label) {
+			auto result = compiler::repl::splitInputIntoStatements(code);
+			assertTrue(!result.has_value(), "Expected parse error: " + std::string(label));
+			assertTrue(
+				!result.error().empty(), "Error message must be non-empty: " + std::string(label)
+			);
+		};
 
-		auto result2 = compiler::repl::splitInputIntoStatements("fun foo() = {");
-		assertTrue(!result2.has_value(), "Expected error for unclosed function body");
-		assertTrue(!result2.error().empty(), "Expected non-empty error message");
+		check_error("{", "lone open brace");
+		check_error("fun foo() = {", "unclosed function body");
+		check_error("class Foo {", "unclosed class body");
+		check_error("namespace N {", "unclosed namespace body");
+
+		check_error("fun outer() = {\n    fun inner() = {\n", "nested unclosed blocks");
+
+		// Error recovery: a valid statement followed by a broken one
+		// — the whole input must still be rejected
+		check_error("var x: i32 = 1;\n{", "valid then unclosed brace");
 	}
 
 public:

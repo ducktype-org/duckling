@@ -11,6 +11,7 @@ use crate::{
 };
 use clap::ArgMatches;
 
+/// Creates parser for the `generate` subcommand.
 pub fn get_parser() -> Command {
     subcommand("generate")
         .about("Generate shell completions")
@@ -23,6 +24,7 @@ pub fn get_parser() -> Command {
         )
 }
 
+/// Logic for executing the `generate` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let Some(generator) = matches.get_one::<Shell>("generator").cloned() else {
         qp_bail_internal!("this should be guarded by a `.required(true)` in a parser")
@@ -31,6 +33,7 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     Ok(())
 }
 
+/// Print shell completion file to the stdout.
 fn print_completions<G: Generator>(generator: G, mut cli: Command, ctx: &DuckCtx) {
     let mut console: &Terminal = ctx.console();
     generate(generator, &mut cli, crate_name!(), &mut console);

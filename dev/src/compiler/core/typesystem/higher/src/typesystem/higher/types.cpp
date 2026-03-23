@@ -110,6 +110,16 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getElementType();
 	}
 
+	TypeTemplateAbstractType::Source TypeTemplateAbstractType::getSource() const {
+		return toCPimpl(pimpl)->getSource();
+	}
+
+	AbstractType TypeTemplateAbstractType::instantiate(
+		query::Context& ctx, const SymbolType<>& element_type
+	) const {
+		return toCPimpl(pimpl)->instantiate(ctx, element_type);
+	}
+
 	usize StaticArrayAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
 	/*****************\
@@ -193,4 +203,5 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(NamespaceAbstractType)
 	INSTANTIATE_CHECKED_CAST(ModuleAbstractType)
 	INSTANTIATE_CHECKED_CAST(MetaAbstractType)
+	INSTANTIATE_CHECKED_CAST(TypeTemplateAbstractType)
 }

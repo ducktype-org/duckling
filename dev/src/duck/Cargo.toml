@@ -12,13 +12,12 @@ path = "src/lib/lib.rs"
 name = "duck"
 
 [dependencies]
-async-scoped = { version = "0.9.0", features = ["use-tokio"] }
 clap = { version = "4.5.54", features = ["cargo"] }
 clap_complete = { version = "4.5.65", optional = true }
 console = "0.16.2"
+curl = "0.4.49"
 dialoguer = "0.12.0"
 flate2 = "1.1.9"
-futures = "0.3.32"
 git2 = "0.20.3"
 indicatif = "0.18.3"
 itertools = "0.14.0"
@@ -27,12 +26,8 @@ libgit2-sys = "0.18.3"
 libssh2-sys = "0.3.1"
 openssl = "0.10.75"
 openssl-sys = "0.9.111"
-ordered-float = "5.1.0" # We have to add it, because saphyr (YAML library) exposes this type explicitly, so we have to pull it in order to use it.
-paste = "1.0.15"
-reqwest = { version = "0.13.1", features = ["deflate", "gzip", "json", "multipart", "stream"] }
 rusqlite = "0.37.0"
 russcip = { version = "0.9.1", features = ["bundled"]}
-saphyr = "0.0.6"
 scip-sys = { version = "0.1.26", features = ["bundled"]}
 serde = { version = "1.0.228", features = ["derive"] }
 serde-untagged = "0.1.9"
@@ -43,8 +38,6 @@ shellexpand = "3.1.1"
 soft-canonicalize = "0.5.4"
 tar = "0.4.44"
 tempfile = "3.24.0"
-tokio = { version = "1.49.0", features = ["full"] }
-tokio-rusqlite = "0.7.0"
 toml = "1.0.1"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
@@ -54,7 +47,7 @@ url = { version = "2.5.8", features = ["serde"] }
 windows-sys = { version = "0.61", features = [ "Win32_Foundation", "Win32_System_Console"] }
 
 [dev-dependencies]
-wiremock = "0.6.5"
+httpmock = { version = "0.8.3", default-features = false }
 
 [features]
 shell-completion = ["dep:clap_complete"]

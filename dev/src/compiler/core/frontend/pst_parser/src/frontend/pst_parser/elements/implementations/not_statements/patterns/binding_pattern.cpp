@@ -6,7 +6,7 @@ namespace pst {
 	MBox<BindingPattern> BindingPattern::parse(LangParserState& state) {
 		if (!state[0].isIdentifier()) return nullptr;
 		auto out = makeBox<BindingPattern>(state);
-		state.parse(out).one(&out->name);
+		PARSE().one(&out->name);
 		PST_RETURN out;
 	}
 

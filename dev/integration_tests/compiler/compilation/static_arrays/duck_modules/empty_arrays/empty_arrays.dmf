@@ -13,7 +13,7 @@ fun return_empty_array() -> i32[0] = {
     return tmp;
 }
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     var units: ()[10];
     units[0] = ();
     units[9] = units[0];

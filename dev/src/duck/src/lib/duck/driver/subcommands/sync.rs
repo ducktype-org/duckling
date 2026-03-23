@@ -6,6 +6,7 @@ use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
 
+/// Creates parser for the `sync` subcommand.
 pub fn get_parser() -> Command {
     subcommand("sync")
         .about("Synchronize the current venv")
@@ -27,6 +28,7 @@ pub fn get_parser() -> Command {
         ))
 }
 
+/// Logic for executing the `sync` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let options = SyncOptions {
         global: matches.get_flag("global"),

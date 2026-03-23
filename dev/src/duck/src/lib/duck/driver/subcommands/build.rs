@@ -1,5 +1,5 @@
 use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::{DuckCtx, QpCtx, QuackResult};
+use crate::{DuckCtx, QuackResult};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
@@ -8,6 +8,7 @@ use crate::duck::driver::cli_ext::{
 
 use crate::quackpack::subcommands::build::{BuildOptions, compile};
 
+/// Creates parser for the `build` subcommand.
 pub fn get_parser() -> Command {
     subcommand("build")
         .about("Build the current package")
@@ -42,18 +43,18 @@ pub fn get_parser() -> Command {
             "Halt computation after encountering errors in foreign manifests",
         ))
 }
+
+/// Logic for executing the `build` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
-    let qpctx = QpCtx::new(ctx);
     let global = matches.get_flag("global");
     let package = if global {
-        PackageLoader::global_package(&qpctx)?
+        PackageLoader::global_package(ctx)?
     } else {
-        PackageLoader::find_from_cwd(&qpctx, AllowGlobalPackage::No)?
+        PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
     let features = features_from_matches(matches, package.package());
     let profile = profile_from_matches(matches);
     let opts = BuildOptions {
-        ctx,
         package,
         used_features: features,
         profile,

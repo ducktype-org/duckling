@@ -3,6 +3,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
 
+/// Creates parser for the `init` subcommand.
 pub fn get_parser() -> Command {
     subcommand("init")
         .about("Initialize a new package")
@@ -28,6 +29,7 @@ pub fn get_parser() -> Command {
         )
 }
 
+/// Logic for executing the `init` subcommand.
 pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
     qp_bail!("implement init")
 }

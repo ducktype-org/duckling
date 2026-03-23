@@ -1,5 +1,7 @@
 add_subdirectory(llvm/)
 
+add_subdirectory(copy-and-patch)
+
 add_files(
     block_detection.cpp
 )

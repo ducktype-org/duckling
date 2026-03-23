@@ -1,3 +1,4 @@
+//! Parsing of the {dev-,}dependencies fields in a manifest.
 use std::{collections::HashMap, path::Path};
 
 use super::source;
@@ -7,6 +8,7 @@ use tracing::trace;
 
 use super::Scope;
 
+use crate::DuckCtx;
 use crate::StrId;
 use crate::quackpack::core::Conditions;
 use crate::quackpack::core::Dependency;
@@ -20,13 +22,13 @@ use crate::quackpack::schemas::manifest::DependencyFeature as FeatureSchema;
 use crate::quackpack::schemas::manifest::DependencySource;
 use crate::util_common::error::QuackResultContext;
 
-use crate::{QpCtx, QuackResult, quackpack::core::Dependencies};
+use crate::{QuackResult, quackpack::core::Dependencies};
 
 /// Parse [`Dependencies`] from the [`DependenciesSchema`].
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
-    ctx: &QpCtx<'_>,
+    ctx: &DuckCtx,
     scope: &mut Scope,
 ) -> QuackResult<Dependencies> {
     let Some(schema) = schema else {
@@ -52,7 +54,7 @@ fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
     package_root: &Path,
-    ctx: &QpCtx<'_>,
+    ctx: &DuckCtx,
     scope: &mut Scope,
 ) -> QuackResult<Dependency> {
     trace!("parsing a dependency");
@@ -85,7 +87,7 @@ fn parse_single_dependency(
         .with_context(|| format!("when parsing the field `{}`", scope.format()))
 }
 
-/// Parse dependencies features
+/// Parse dependency's features
 fn parse_features(
     schema: Option<&Vec<FeatureSchema>>,
     scope: &mut Scope,
