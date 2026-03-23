@@ -132,10 +132,6 @@ namespace query::internal {
 		// This line is not needed, but it sometimes avoids scheduling duplicate tasks
 		if (task_status_map.contains(task_id)) return TaskHandle(*this, task_id);
 
-		// @note It is possible that the free (due to tasks from outside query execution) worker would not be free by the time we will
-		// schedule a task on it. This would be unfortunate, but not a problem, as the worker
-		// manager will just queue the task for later execution.
-
 		// Add to current worker's pool
 		addToWorkerPool(current_worker, std::move(task));
 		auto free_worker_opt = getFreeWorker();
