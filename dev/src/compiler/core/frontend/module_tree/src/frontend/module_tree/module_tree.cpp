@@ -176,6 +176,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTree::invalidateHash() {
+		std::scoped_lock lock(*m_hash_mutex);
 		// If ModuleHash is invalid, then children are also invalid
 		if (!m_path_component_hash.has_value()) {
 			// m_hash should not have value if path component hash is invalid
@@ -249,9 +250,15 @@ namespace compiler::frontend {
 		std::scoped_lock lock(*m_hash_mutex);
 		if (!m_path_component_hash.has_value()) {
 			// iterate thru parents to find one with component hash set or reach root (go up)
-			if (m_parent.has_value()) m_parent.value()->updateModuleHashFromRootToThis();
+			base::Ref<ModuleTree>              g_parent          = this;
+			std::vector<base::Ref<ModuleTree>> modules_to_update = { g_parent };
+			while (g_parent->m_parent.has_value()
+			       && !g_parent->m_parent.value()->m_path_component_hash.has_value()) {
+				g_parent = g_parent->m_parent.value();
+				modules_to_update.push_back(g_parent);
+			}
 			// go from top module to bottom module, so its in linear time
-			updateModuleHash();
+			for (auto& it: std::ranges::reverse_view(modules_to_update)) it->updateModuleHash();
 		}
 	}
 
