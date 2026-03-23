@@ -742,13 +742,13 @@ namespace vm {
 	}
 
 	void VMThread::releaseGil() {
-		if (!has_gil) return;
+		CORE_ASSERT(has_gil, "Cannot release GIL without acquiring it first");
 		has_gil = false;
 		process.getGIL().release();
 	}
 
 	void VMThread::acquireGil() {
-		if (has_gil) return;
+		CORE_ASSERT(!has_gil, "Cannot acquire GIL twice");
 		process.getGIL().acquire();
 		has_gil = true;
 	}
