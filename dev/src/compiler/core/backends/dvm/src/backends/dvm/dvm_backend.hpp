@@ -50,7 +50,7 @@ namespace compiler::backend_vm {
 
 		/**
 		 * @brief Builds the debug info for the module if the class
-		 * was constructed with build_debug_info=true. Returns nullopt otherwise.
+		 * was constructed with build_debug_info=true. Returns empty optional otherwise.
 		 */
 		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
 

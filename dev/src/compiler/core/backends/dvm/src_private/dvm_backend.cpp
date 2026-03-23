@@ -20,12 +20,8 @@ namespace compiler::backend_vm {
 	}
 
 	base::Optional<debug_info::DebugInfo> DVMCodeBuilder::buildDebugInfo() {
-		CORE_ASSERT(
-			build_debug_info,
-			"Debug info was not built for this module. To build debug info, construct the "
-			"DVMCodeBuilder with build_debug_info=true."
-		);
-		return program_context->buildDebugInfo();
+		if (build_debug_info) return program_context->buildDebugInfo();
+		return {};
 	}
 
 	void DVMCodeBuilder::insertLirFunction(CRef<lir::Function> lir_function) {
