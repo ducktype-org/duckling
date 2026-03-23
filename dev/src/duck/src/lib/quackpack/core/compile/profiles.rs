@@ -326,4 +326,35 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn inheritance_from_overwritten_predefined() {
+        let dev = manifest::Profile {
+            opt_level: None,
+            dvm_bytecode: None,
+            incremental: Some(false),
+            c_std: None,
+            inherits: None,
+        };
+        let a = manifest::Profile {
+            opt_level: None,
+            dvm_bytecode: None,
+            incremental: None,
+            c_std: Some(false),
+            inherits: Some("dev".into()),
+        };
+        let profiles =
+            manifest::Profiles::new([("dev".into(), dev), ("a".into(), a)].into()).unwrap();
+        let profile = Profile::construct_profile("a".into(), &profiles).unwrap();
+        assert_eq!(
+            profile,
+            Profile {
+                name: "a".into(),
+                opt_level: OptLevel::One,
+                dvm_bytecode: false,
+                incremental: false,
+                c_std: false,
+            }
+        );
+    }
 }
