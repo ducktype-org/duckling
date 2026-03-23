@@ -6,12 +6,14 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
 
+#include <mutex>
 #include <regex>
 #include <string>
 
@@ -265,6 +267,7 @@ namespace compiler::frontend {
 		                            // package_name/root/submodule1/sub2
 		base::Optional<hashing::ComponentHash::HashType>
 			m_hash;                 //< This is the actual hash for the Module used in SideInput
+		mutable base::Box<std::recursive_mutex> m_hash_mutex;
 
 		/**
 		 * Package ID associated with this module tree.

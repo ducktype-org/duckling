@@ -1,7 +1,6 @@
 #pragma once
 
 
-#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 #include <frontend/module_tree/access.hpp>
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
@@ -14,6 +13,8 @@
 
 #include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
+
+#include <mutex>
 
 namespace compiler::frontend {
 
@@ -32,11 +33,11 @@ namespace compiler::frontend {
 		 * the file system. In this case, two threads may parse the same physical file at once, but
 		 * since this operation is read-only, it's thread-safe.
 		 */
-		mutable base::Box<concurrent::AtomicFlagSpinlock> state_lock;
-		fs::File                                          file;
-		base::StrID                                       lang_file_name;
-		ModuleID                                          linked_module;
-		base::Optional<pst::PST<>>                        parse_tree;
+		mutable base::Box<std::recursive_mutex> state_lock;
+		fs::File                                file;
+		base::StrID                             lang_file_name;
+		ModuleID                                linked_module;
+		base::Optional<pst::PST<>>              parse_tree;
 		base::Optional<usize> storage_handle;  //< Key to support removal from static storage
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;

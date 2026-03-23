@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
+#include <mutex>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -57,7 +58,8 @@ namespace {
 namespace compiler::frontend {
 
 	const hashing::ComponentHash& ModuleTree::getPathComponentHash(ModuleID module_id) {
-		Ref<ModuleTree> module = module_id.ref;
+		Ref<ModuleTree>  module = module_id.ref;
+		std::scoped_lock lock(*module->m_hash_mutex);
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(
 			module->m_path_component_hash.has_value(),
@@ -67,7 +69,8 @@ namespace compiler::frontend {
 	}
 
 	const hashing::ComponentHash::HashType& ModuleTree::getModuleHash(ModuleID module_id) {
-		Ref<ModuleTree> module = module_id.ref;
+		Ref<ModuleTree>  module = module_id.ref;
+		std::scoped_lock lock(*module->m_hash_mutex);
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(module->m_hash.has_value(), "Module hash should have value after update!");
 		return module->m_hash.value();
@@ -95,7 +98,7 @@ namespace compiler::frontend {
 		return create(root, base::generateRandomString(32), file_reject, dir_reject);
 	}
 
-	ModuleTree::ModuleTree() = default;
+	ModuleTree::ModuleTree(): m_hash_mutex(base::makeBox<std::recursive_mutex>()) {}
 
 	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
 
@@ -173,6 +176,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTree::invalidateHash() {
+		std::scoped_lock lock(*m_hash_mutex);
 		// If ModuleHash is invalid, then children are also invalid
 		if (!m_path_component_hash.has_value()) {
 			// m_hash should not have value if path component hash is invalid
@@ -202,9 +206,11 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTree::updateModuleHash() {
+		std::scoped_lock lock(*m_hash_mutex);
 		// Component hash part
 		// Get parent component hash if existsS
 		if (m_parent.has_value()) {
+			std::scoped_lock parent_lock(*m_parent.value()->m_hash_mutex);
 			CORE_ASSERT(
 				m_parent.value()->m_path_component_hash.has_value(),
 				"Parent component hash should have value!"
@@ -241,6 +247,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTree::updateModuleHashFromRootToThis() {
+		std::scoped_lock lock(*m_hash_mutex);
 		if (!m_path_component_hash.has_value()) {
 			// iterate thru parents to find one with component hash set or reach root (go up)
 			base::Ref<ModuleTree>              g_parent          = this;
