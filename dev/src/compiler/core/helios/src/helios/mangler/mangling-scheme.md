@@ -151,6 +151,10 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "md"                              // module destructor
                         | "gc"                              // global variable constructor
                         | "gd"                              // global variable destructor
+                        | "ic" <function-type>              // implicit class constructor
+                        | "dc" <function-type>              // default class constructor
+                        | "ds" <function-type>              // default static array constructor
+                        | "dt" <function-type>              // default tuple constructor
 //                      | ...                               // @future: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node
