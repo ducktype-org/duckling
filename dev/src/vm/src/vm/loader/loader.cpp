@@ -177,8 +177,9 @@ void Loader::addFileMapping(const code::CodeCollection& code) {
 			auto [line, column] = position->getEndLineColumn();
 			file_mapping.put(file, {});
 			file_mapping[file].emplace(
-				FileCoordinates{ line, column },
-				compiler::FatMicroMapping::OriginCtx::FatPosition{ func.name, i, position }
+				FileCoordinates{ .line = line, .column = column },
+				compiler::FatMicroMapping::OriginCtx::FatPosition{
+					.function_name = func.name, .instr_number = i, .source = position }
 			);
 		}
 	}
