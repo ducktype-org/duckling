@@ -521,7 +521,7 @@ namespace compiler::frontend {
 			"Main source file is already set, remove it first"
 		);
 		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
-		module->invalidateHash();
+		module->updateModuleHashFromRootToThis();
 	}
 
 	void ModuleTreeModifier::addSubmodule(
@@ -613,7 +613,7 @@ namespace compiler::frontend {
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
 		module->m_main_source_file = {};
-		module->invalidateHash();
+		module->updateModuleHashFromRootToThis();
 	}
 
 	void ModuleTreeModifier::removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
