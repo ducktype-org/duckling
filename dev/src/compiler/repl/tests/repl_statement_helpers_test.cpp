@@ -16,6 +16,7 @@ class ReplStatementHelpersTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testClassifySingleExpression);
+		TESTER_ADD_TEST(testClassifyAssignmentExpressionAsInstruction);
 		TESTER_ADD_TEST(testClassifySingleInstruction);
 		TESTER_ADD_TEST(testClassifySingleDefinition);
 		TESTER_ADD_TEST(testClassifyRejectsNonSingleInput);
@@ -42,6 +43,19 @@ private:
 			assertTrue(
 				std::holds_alternative<repl::ExpressionSingleStatementInfo>(*result),
 				"Expected expression variant"
+			);
+		});
+	}
+
+	void testClassifyAssignmentExpressionAsInstruction() {
+		auto module_id = createModule("x = 10;");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto result = repl::classifySingleStatement(ctx, module_id);
+			assertTrue(result.has_value(), "Assignment classification should succeed");
+			assertTrue(
+				std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
+				"Expected assignment ExprStmt to be routed as instruction"
 			);
 		});
 	}
