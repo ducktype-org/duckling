@@ -4,20 +4,20 @@
 //! [`DependencyDescription`] and [`RootDescription`].
 //!
 //! Parsing is implemented in the [`parse`] module.
-mod compiler_options;
 mod dependency;
 mod features;
 mod metadata;
 mod parse;
+mod profiles;
 mod root_description;
 mod source;
 
 pub use parse::*;
 
-pub use compiler_options::*;
 pub use dependency::*;
 pub use features::*;
 pub use metadata::*;
+pub use profiles::*;
 pub use root_description::*;
 pub use source::*;
 
@@ -35,7 +35,7 @@ pub struct Manifest {
 }
 
 impl Manifest {
-    /// Create a new manifest.
+    /// Create a new [`Manifest`].
     pub fn new(
         root_description: RootDescription,
         features: Features,

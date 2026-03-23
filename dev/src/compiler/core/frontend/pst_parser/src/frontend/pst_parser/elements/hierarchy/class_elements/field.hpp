@@ -37,6 +37,8 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]] tpc::Identifier getNameIdent() const { return name; }
+
 		[[nodiscard]]
 		AccessLocked<ExprHolder> getType() const {
 			return type.give();

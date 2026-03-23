@@ -3,7 +3,7 @@
 use tracing::debug;
 
 use crate::{
-    DuckCtx, QpCtx, QuackResultContext, qp_bail, qp_bail_internal,
+    DuckCtx, QuackResultContext, qp_bail, qp_bail_internal,
     quackpack::core::{
         PackageLoader,
         compile::{BuildContext, compiler_package::PackageType},
@@ -132,9 +132,8 @@ fn parse_dependency(
 ) -> QuackResult<CompilerPackage> {
     let storage_id = dep.to_package_id();
     let directory = storage.pkg_dir(&storage_id);
-    let ctx = QpCtx::new(ctx);
     let ctx =
-        PackageLoader::find_at_exact_directory(&directory, &ctx).with_context(
+        PackageLoader::find_at_exact_directory(&directory, ctx).with_context(
             || match storage_id {
                 PackageId::Registry(ref registry_id) => format!(
                     "downloaded malformed dependency `{}` from `{}`",
@@ -185,7 +184,7 @@ impl CompilerDag {
     /// *early* means that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
-    pub fn new_early(ctx: &BuildContext<'_>) -> QuackResult<Self> {
+    pub fn new_early(ctx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
         let graph = DependencyDag::new(&ctx.freeze)?;
         let mut packages = HashMap::new();
@@ -205,7 +204,7 @@ impl CompilerDag {
             } else {
                 PackageType::TransitiveDependency
             };
-            let package = parse_dependency(dep, &ctx.storage, ctx.duck_ctx, pkg_type)?;
+            let package = parse_dependency(dep, &ctx.storage, ctx.package.ctx(), pkg_type)?;
             let overwritten_entry = packages.insert(dep.as_freeze_dep(), package).is_some();
             if overwritten_entry {
                 qp_bail!(

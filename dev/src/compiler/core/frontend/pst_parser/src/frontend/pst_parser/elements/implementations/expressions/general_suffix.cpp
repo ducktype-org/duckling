@@ -6,23 +6,27 @@
 #include <base/misc/int_conv.hpp>
 
 namespace pst::expr {
-	MBox<ExprElement> GeneralSuffix::parseRecursive(LangParserState& state, i64 length, u64 iter) {
-		if (iter == 0) return Lower::parse(state, length);
+	MBox<ExprElement> GeneralSuffix::parseRecursive(LangParserState& state, u64 iter) {
+		if (iter == 0) return Lower::parse(state);
 
-		auto out = makeBox<GeneralSuffix>(state.getPosition(), state[length - 1].getValue());
+		i64  length = base::safeIntConv<i64>(state.ctokens().size());
+		auto out
+			= makeBox<GeneralSuffix>(state, state[base::safeIntConv<i64>(length) - 1].getValue());
 
-		state.parse(out).with(&out->expr, parseRecursive, length - 1, iter - 1);
+		PARSE().autoFallbackLen(length - 1).with(&out->expr, parseRecursive, iter - 1);
 
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		PST_RETURN out;
 	}
 
-	MBox<ExprElement> GeneralSuffix::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> GeneralSuffix::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		i64 fwd            = 0;
-		i64 reduced_length = length;
+		i64 reduced_length = base::safeIntConv<i64>(length);
 		// Here this should include the prefix word operators in the future
 		PST_WHILE(fwd < length && state[fwd].isPrefixOperator()) fwd++;
 		PST_WHILE(fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
@@ -35,6 +39,6 @@ namespace pst::expr {
 		            .map([](auto x) { return x.isAccessOp(); })
 		            .copyValueOr(false))
 			reduced_length--;
-		return parseRecursive(state, length, base::safeIntConv<u64>(length - reduced_length));
+		return parseRecursive(state, base::safeIntConv<u64>(length - reduced_length));
 	}
 }

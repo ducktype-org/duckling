@@ -1,26 +1,30 @@
-use tokio::runtime;
-
+//! `sync` subcommand execution logic.
 use crate::{
-    DuckCtx, QpCtx, QuackResult,
+    DuckCtx, QuackResult,
     quackpack::core::{AllowGlobalPackage, PackageLoader, storage},
 };
 
 #[derive(Debug, Default, Clone, Copy)]
+/// All options that can be passed to sync.
 pub struct SyncOptions {
+    /// Use a global package instead of a local one.
     pub global: bool,
+    /// Overwrite any existing venvs.
     pub overwrite: bool,
+    /// Assume, that freezefile doesn't change.
     pub frozen: bool,
+    /// Disallow any errors in foreign packages' manifests.
     pub strict_errors: bool,
 }
 
+/// Synchronize a virtual environment found from CWD, if `options.global` is false, otherwise use a
+/// global environment.
 pub fn sync(ctx: &DuckCtx, options: SyncOptions) -> QuackResult<()> {
-    let qp_ctx = QpCtx::new(ctx);
     let pkg = if options.global {
-        PackageLoader::global_package(&qp_ctx)?
+        PackageLoader::global_package(ctx)?
     } else {
-        PackageLoader::find_from_cwd(&qp_ctx, AllowGlobalPackage::No)?
+        PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
-    let rt = runtime::Builder::new_multi_thread().enable_all().build()?;
-    rt.block_on(async { storage::sync(ctx, &pkg, options) })?;
+    storage::sync(&pkg, options)?;
     Ok(())
 }

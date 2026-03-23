@@ -15,7 +15,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ExprHolder::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ExprHolder::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 
@@ -40,15 +40,15 @@ namespace pst {
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseAssignment(LangParserState& state) {
-		return expr::Assignment::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+		return expr::Assignment::parse(state);
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseComma(LangParserState& state) {
-		return expr::Comma::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+		return expr::Comma::parse(state);
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseTernary(LangParserState& state) {
-		return expr::Ternary::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+		return expr::Ternary::parse(state);
 	}
 
 }

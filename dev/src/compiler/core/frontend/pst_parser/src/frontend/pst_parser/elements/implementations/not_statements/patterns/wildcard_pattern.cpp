@@ -7,9 +7,8 @@ namespace pst {
 	MBox<WildcardPattern> WildcardPattern::parse(LangParserState& state) {
 		if (!state[0].is(Special::Underscore)) return nullptr;
 
-		auto position = state.getPosition();
-		auto out      = makeBox<WildcardPattern>(position);
-		state.parse(out).eatOne();
+		auto out = makeBox<WildcardPattern>(state);
+		PARSE().eatOne();
 		PST_RETURN out;
 	}
 
@@ -17,7 +16,7 @@ namespace pst {
 		out << R"({ "pattern_type": "wildcard" })";
 	}
 
-	LangElement::HashAlg& WildcardPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& WildcardPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

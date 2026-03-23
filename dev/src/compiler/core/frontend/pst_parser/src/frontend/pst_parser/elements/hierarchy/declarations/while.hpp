@@ -15,7 +15,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit While(const dia::SourcePosition& position): CodeDecl(position) {
+		explicit While(const LangParserState& state): CodeDecl(state) {
 			element_kind = ElementKind::While;
 		}
 

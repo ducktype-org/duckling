@@ -40,7 +40,7 @@ private:
 		std::filesystem::remove_all(artifacts_path.getPath());
 
 		// Initialize compiler (as in markPreviousLeavesGreenTest, first stage)
-		compiler::driver::initializeTheCompiler(
+		auto init_result= compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
@@ -55,6 +55,8 @@ private:
 				.execution_options     = { .worker_count = 1 },
             }
         );
+
+		ASSERT_TRUE(init_result.status().isOk());
 
 		// First compilation creates a current graph
 		auto module = frontend::createModuleTree(

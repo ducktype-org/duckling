@@ -66,9 +66,7 @@ namespace compiler::helios {
 		query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
 	) {
 		auto hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
-
 		if (!hout_expr->hasValue()) return {};
-
 		return querySymIDOfHOUTExpr(ctx, hout_expr->valueOrThrow().ref());
 	}
 }

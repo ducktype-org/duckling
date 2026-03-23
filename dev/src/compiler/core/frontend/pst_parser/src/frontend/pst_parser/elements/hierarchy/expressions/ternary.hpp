@@ -20,14 +20,14 @@ namespace pst::expr {
 		NAMED_CHILD(if_false, ExprElement);
 
 	public:
-		explicit Ternary(const dia::SourcePosition& position): ExprElement(position, 800) {}
+		explicit Ternary(const LangParserState& state): ExprElement(state, 800) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Ternary Expr";
 		}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~Ternary() override = default;
 		void     dprint(std::ostream& out) const final;

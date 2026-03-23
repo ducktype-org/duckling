@@ -1,5 +1,7 @@
 #include "stable_position.hpp"
 
+#include "lang_parser_element.hpp"
+
 #include <algorithm>
 
 namespace pst {
@@ -26,7 +28,7 @@ namespace pst {
 		// and store the two that are the furthest apart (the one with the smallest start and the
 		// one with the largest end)
 
-		std::vector<LangElement::HashType> hashes_to_compare{ begin_scope_node };
+		std::vector<HashType> hashes_to_compare{ begin_scope_node };
 		if (end_scope_node.has_value()) hashes_to_compare.push_back(end_scope_node.value());
 
 		hashes_to_compare.push_back(other.begin_scope_node);
@@ -34,7 +36,7 @@ namespace pst {
 			hashes_to_compare.push_back(other.end_scope_node.value());
 
 		// Get first
-		auto min_start_pos = [](StablePosition::HashType hash1, StablePosition::HashType hash2) {
+		auto min_start_pos = [](HashType hash1, HashType hash2) {
 			auto pos1
 				= LangElement::getByStableHash(hash1).illegalAccess().value()->getSourcePosition();
 			auto pos2
@@ -45,7 +47,7 @@ namespace pst {
 			);
 			return pos1.getStart() < pos2.getStart();
 		};
-		auto max_end_pos = [](StablePosition::HashType hash1, StablePosition::HashType hash2) {
+		auto max_end_pos = [](HashType hash1, HashType hash2) {
 			auto pos1
 				= LangElement::getByStableHash(hash1).illegalAccess().value()->getSourcePosition();
 			auto pos2
@@ -67,5 +69,11 @@ namespace pst {
 			begin_scope_node = min_start_hash;
 			end_scope_node   = max_end_hash;
 		}
+	}
+
+	StablePosition StablePosition::extendedWith(const StablePosition& other) const {
+		StablePosition copy = *this;
+		copy.extendWith(other);
+		return copy;
 	}
 }

@@ -1,5 +1,6 @@
 #include "repl_dvm_helpers.hpp"
 
+#include <backends/dvm/repl_lowering.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/lir_module_data.hpp>
 #include <driver_private/operations.hpp>
@@ -22,11 +23,19 @@ namespace compiler::repl {
 	static_assert(sizeof(bool) == 1, "bool must be 1 byte for DVM compatibility");
 
 	std::expected<void, std::string> compileAndLoad(
-		query::Context&         ctx,
-		const helios::HOUTUnit& hout_unit,
-		std::string_view        module_name,
-		vm::PID                 pid
+		query::Context&                  ctx,
+		const helios::HOUTUnit&          hout_unit,
+		std::string_view                 module_name,
+		vm::PID                          pid,
+		backend_vm::ReplLoweringContext& lowering_context
 	) {
+		auto active_ctx = lowering_context.getActiveContext();
+		CORE_ASSERT(
+			active_ctx.has_value() && active_ctx.value().get() == &ctx,
+			"ReplLoweringContext's active query context must match the ctx parameter passed to "
+			"compileAndLoad()"
+		);
+
 		// Debug: Log HOUT functions before compilation
 		for (const auto& hout_func: hout_unit.functions) {
 			CORE_DEV_LOG(
@@ -39,7 +48,7 @@ namespace compiler::repl {
 			);
 		}
 
-		auto module_unique_name = base::StrID(module_name.data());
+		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
@@ -47,9 +56,40 @@ namespace compiler::repl {
 			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_unique_name })
 		           ->valueOrPanic();
 
-		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data, ctx);
+		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
+		// This is strictly connected to the loading dvm context.
+		vm::code::CodeCollection new_code;
 
-		return vm::api::loadCode(pid, dvm_code_collection).transform_error(vm::api::errorToString);
+		// We mimic the same idea as in compiling a single module,
+		// but this time we append the new functions to the lowering context.
+		for (const auto& global: lir_data->globals) {
+			const auto& dvm_global = lowering_context.lowerAndKeepLirGlobal(
+				global.lir_global, global.global_ctor, global.global_dtor
+			);
+			new_code.global_data.push_back(dvm_global);
+
+			// lowerAndKeepLirGlobal internally lowers the ctor/dtor into the persistent
+			// context, but we still need to explicitly add them to this batch for the DVM.
+			if (global.global_ctor.has_value()) {
+				const auto& ctor_func
+					= lowering_context.lowerAndKeepLirFunction(global.global_ctor.value());
+				new_code.functions.push_back(ctor_func);
+			}
+			if (global.global_dtor.has_value()) {
+				const auto& dtor_func
+					= lowering_context.lowerAndKeepLirFunction(global.global_dtor.value());
+				new_code.functions.push_back(dtor_func);
+			}
+		}
+
+		// Lower all functions
+		for (const auto& lir_function: lir_data->functions) {
+			CORE_DEV_LOG(REPL, "Lowering function: ", lir_function->mangled_name.strView(), "\n");
+			const auto& dvm_func = lowering_context.lowerAndKeepLirFunction(lir_function);
+			new_code.functions.push_back(dvm_func);
+		}
+
+		return vm::api::loadCode(pid, new_code).transform_error(vm::api::errorToString);
 	}
 
 	// @TODO: #1817 This approach is hacky.
@@ -81,7 +121,6 @@ namespace compiler::repl {
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_str == "i64")
 						return std::to_string(exit_value->readBytes<i64>());
-					// @TODO: #1795 DVM should also use f32 and f64.
 					else if (type_str == "f32")
 						return std::to_string(exit_value->readBytes<f32>());
 					else if (type_str == "f64")

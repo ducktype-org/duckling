@@ -1,7 +1,7 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/errors.hpp>
@@ -91,7 +91,18 @@ private:
 	void testErrorLogging() {
 		// ============================ No operator found ============================
 		checkForErrorOnCompileModule(
-			R"(fun a() = true + false;)", { "No builtin binary operator" }, 1
+			R"(fun a() = true + false;)", { "Call failed due to ambiguous overload resolution" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun a() = 'c' + 1i64;)",
+			{
+				"Call failed due to ambiguous overload resolution",
+				"type const Function (const u8, const char) -> (const char).",
+				"given argument type `char` cannot be converted to the expected type `const u8`.",
+				"type const Function (const char, const u8) -> (const char).",
+				"given argument type `i64` cannot be converted to the expected type `const u8`.",
+			},
+			1
 		);
 		checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
 
@@ -211,6 +222,8 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				class MyClass {
+					var dummy: i64 = 0; # to avoid ZST
+
 					fun method(x: i64) = {
 						return x + 1;
 					}
@@ -227,6 +240,8 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				class MyClass {
+					var dummy: i64 = 0; # to avoid ZST
+
 					fun method(x: i64) = {
 						return x + 1;
 					}
@@ -243,6 +258,8 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				class MyClass {
+					var dummy: i64 = 0; # to avoid ZST
+
 					fun method(x: i64) = {
 						return x + 1;
 					}
@@ -361,6 +378,17 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var arr: i32[5];
+					arr["index"] = 1;
+				}
+			)",
+			{ "Type `string` cannot be converted to type `const i64`." },
+			1
+		);
+
 
 		checkForErrorOnCompileModule(
 			R"(
@@ -378,6 +406,21 @@ private:
 			)",
 			{ "The given argument type `const type` cannot be converted to the expected type "
 		      "`()`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun bad() = {
+				    return;
+				    return 0;
+				}
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "inconsistent return statements" },
 			1
 		);
 
@@ -407,6 +450,55 @@ private:
 			1
 		);
 
+		// ========================== Default initialization errors ==========================
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: ref i64;
+					return 0;
+				}
+			)",
+			{ "Type `ref i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: box i64;
+					return 0;
+				}
+			)",
+			{ "Type `box i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Inner { non_defaultable: ref i64; }
+				class Outer { inner: Inner; }
+
+				fun main() -> i64 = {
+					var o: Outer;
+					return 0;
+				}
+			)",
+			{ "Type `Class Outer` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+				var arr: Inner[2];
+					return 0;
+				}
+			)",
+			{ "Type `Class Inner[2]` cannot be default initialized" },
+			1
+		);
 
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
@@ -449,6 +541,7 @@ private:
 			1
 		);
 
+
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
@@ -490,6 +583,16 @@ private:
 				}
 			)",
 			{},
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				import foo;
+
+				let x = foo.z;
+			)",
+			{ "Module not found." },
 			1
 		);
 
@@ -551,13 +654,59 @@ private:
 			1
 		);
 
+		// ============================ Dynamic Arrays ============================
 		checkForErrorOnCompileModule(
 			R"(
-				import foo;
-
-				let x = foo.z;
+				fun main() = {
+					var l: List[i64];
+					l += 1.5;
+				}
 			)",
-			{ "Module not found." },
+			{ "Type `f32` cannot be converted to type `i64`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l: List[i64];
+					l -= "sth";
+				}
+			)",
+			{ "Type `string` cannot be converted to type `u64`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x = 10;
+					var length = len x;
+				}
+			)",
+			{ "No builtin unary operator `len` for type `i32`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l: List;
+					l[0] = 123;
+				}
+			)",
+			{ "Type `List` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var l1: List[i64];
+					var l2: List[f64] = l1;
+				}
+			)",
+			{ "Type `List[i64]` cannot be converted to type `List[f64]`" },
 			1
 		);
 
@@ -681,7 +830,147 @@ private:
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "compile time evaluation" },
+			{ "Feature not implemented", "at compile time", "generated class constructor" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { fun foo() = 0; }
+
+				fun main() -> i64 = {
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "zero-sized classes" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { a: i64 = 1; }
+				fun main() -> i64 = {
+					var a: (i32, A);
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "Generating default constructors for", "tuple types" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: List[i32];
+					var b = a;
+					return 0;
+				};
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U; }
+
+				fun main() -> i64 = {
+					var a: T;
+					var b = a;
+					return 0;
+				};
+			)",
+			{ "Copy constructor for non-trivially-copyable type `Class T`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() -> List[i32] = {
+				    var a: List[i32];
+				    return a;
+				}
+				fun main() -> i64 = {
+				    var list = foo();
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`", "return a", "foo()" },
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(list: List[i32]) -> i32 = {
+				    return 1;
+				}
+				fun main() -> i64 = {
+					var list: List[i32];
+				    foo(list);
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(list: ref List[i32]) -> i32 = {
+				    var list_copy: List[i32] = list;
+				    return list[0];
+				}
+				fun main() -> i64 = {
+				    var list: List[i32];
+				    foo(&list);
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U }
+				fun main() -> i64 = {
+					var a: T;
+				    var b = a.u.list; 
+					return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U }
+				fun main() -> i64 = {
+					var list: List[i32];
+					var a: T = T(U(&list));
+					return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`",
+		      "This was caused by the need" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+    				var nested: List[List[i32]];
+    				var inner: List[i32];
+    				nested += inner;    
+    				return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
 			1
 		);
 	}
@@ -740,13 +1029,6 @@ private:
 
 		try {
 			test_utils::getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			test_utils::getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.

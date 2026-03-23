@@ -13,7 +13,7 @@ use crate::{
         },
         types_common::{ExpandedLocation, InternedExpandedLocation},
     },
-    util_common::path_ops_ext::PathOpsExt,
+    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 use tempfile::TempDir;
 use url::Url;
@@ -51,23 +51,26 @@ fn registry_url_hash() -> StrId {
 /// 2. remove root3, because it's too old,
 /// 3. remove bar, because it was only references by root3.
 fn setup_mock_storage() -> (DuckCtx, TempDir) {
-    let storage_root = TempDir::new().unwrap();
-    setup_mock_packages(storage_root.path());
-    setup_mock_venvs(storage_root.path());
-    setup_mock_locks(storage_root.path());
-    // Also overwrite DUCK_HOME, so we'll use the default configuration options.
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::set_var("DUCK_STORAGE_DIR", storage_root.path());
-        std::env::set_var("DUCK_HOME", storage_root.path());
-    }
-    let ctx = DuckCtx::default();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::remove_var("DUCK_STORAGE_DIR");
-        std::env::remove_var("DUCK_HOME");
-    }
-    (ctx, storage_root)
+    let setup = || {
+        let storage_root = TempDir::new().unwrap();
+        setup_mock_packages(storage_root.path());
+        setup_mock_venvs(storage_root.path());
+        setup_mock_locks(storage_root.path());
+        // Also overwrite DUCK_HOME, so we'll use the default configuration options.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::set_var("DUCK_STORAGE_DIR", storage_root.path());
+            std::env::set_var("DUCK_HOME", storage_root.path());
+        }
+        let ctx = DuckCtx::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::remove_var("DUCK_STORAGE_DIR");
+            std::env::remove_var("DUCK_HOME");
+        }
+        (ctx, storage_root)
+    };
+    setup_test(setup)
 }
 
 fn setup_mock_packages(root: &Path) {

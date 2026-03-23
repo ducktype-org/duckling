@@ -7,7 +7,7 @@
 use tracing::debug;
 
 use crate::{
-    DuckCtx, QuackResult, StrId,
+    QuackResult, StrId,
     quackpack::core::{
         FeatureName, PackageCtx,
         storage::{freeze::VenvFreeze, paths::Storage},
@@ -17,14 +17,14 @@ use crate::{
 pub mod compiler_dag;
 pub mod compiler_package;
 pub mod duckc;
+pub mod profiles;
 use compiler_dag::*;
 use duckc::*;
 
 #[derive(Debug)]
 /// All informations required to compile a project.
-pub struct BuildContext<'duck> {
-    pub duck_ctx: &'duck DuckCtx,
-    pub package: &'duck PackageCtx<'duck>,
+pub struct BuildContext<'duck, 'ctx> {
+    pub package: &'ctx PackageCtx<'duck>,
     pub freeze: VenvFreeze,
     pub storage: Storage,
     pub used_features: Vec<FeatureName>,
@@ -32,12 +32,12 @@ pub struct BuildContext<'duck> {
 }
 
 /// Compile project inside the [`BuildContext`].
-pub fn compile<'duck>(bcx: BuildContext<'duck>) -> QuackResult<()> {
+pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<()> {
     debug!("compiling `{bcx:?}`");
     let mut graph = CompilerDag::new_early(&bcx)?;
     graph.populate_features(&bcx.used_features)?;
     graph.remove_disabled_dependencies()?;
-    let duckc = Duckc::new(bcx.duck_ctx);
+    let duckc = Duckc::new(bcx.package.ctx());
     duckc.compile(&graph, CompilationType::OnlyRootPackage, &bcx)?;
     Ok(())
 }

@@ -1,3 +1,7 @@
+if(JIT_ENABLED)
+    add_subdirectory(jit)
+endif()
+
 add_files(
 		supervisor/supervisor.cpp
 		process/vmprocess.cpp
@@ -13,20 +17,19 @@ add_files(
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
 
 add_files(
-	thread/opcode_functions/opcodes_functions_impl_exec.cpp
-	thread/opcode_functions/opcodes_functions_impl_debug.cpp
-	thread/low_program/instruction.cpp
-	thread/vmthread.cpp
+    thread/opcode_functions/opcodes_functions_impl_exec.cpp
+    thread/opcode_functions/opcodes_functions_impl_debug.cpp
+    thread/low_program/instruction.cpp
+    thread/vmthread.cpp
     thread/vmvalue.cpp
-	thread/vmvalueref.cpp
-	jit/jit_compiler.cpp
+	  thread/vmvalueref.cpp
+	  jit/jit_compiler.cpp
 )
 
-set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
+set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
 
 add_files(
 	jit/opcodes_bitcode_source.cpp
 )
 
 set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)
-
