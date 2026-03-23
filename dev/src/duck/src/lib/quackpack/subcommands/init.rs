@@ -36,12 +36,19 @@ pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
         .write(make_default_manifest_for_name(&opts.name))
         .context("failed to write a default manifest")?;
     let source_file = opts.at.join("src").join(DEFAULT_SOURCE_FILENAME);
-    source_file
-        .touch()
-        .context("failed to create a default source file")?;
-    source_file
-        .write(DEFAULT_SOURCE_CONTENTS)
-        .context("failed to write a default duck file")?;
+    if !source_file.exists() {
+        source_file
+            .touch()
+            .context("failed to create a default source file")?;
+        source_file
+            .write(DEFAULT_SOURCE_CONTENTS)
+            .context("failed to write a default duck file")?;
+    }
+    opts.ctx.console().info(format!(
+        "successfully created new project `{}` at `{}`",
+        opts.name,
+        opts.at.display()
+    ));
     Ok(())
 }
 
