@@ -117,6 +117,8 @@ namespace compiler::tsh {
 			  leakage(leakage),
 			  uniqueness(uniqueness) {}
 
+		
+		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type.
 		/**
 		 * @brief Creates a SymbolType from an AbstractType with a set of default symbol properties.
 		 *
