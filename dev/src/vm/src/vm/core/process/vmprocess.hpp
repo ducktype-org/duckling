@@ -31,6 +31,7 @@ namespace vm {
 		SynchronizationPrimitives        synchronization_primitives;
 
 		VMProcess(PID my_pid);
+
 	private:
 		/**
 		 * @brief Loads the program from a given source into the current loader program state,
@@ -145,7 +146,6 @@ namespace vm {
 		) = 0;
 
 	public:
-
 		ProcIO& getIO();
 
 		/**
