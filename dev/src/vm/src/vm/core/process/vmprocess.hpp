@@ -30,13 +30,124 @@ namespace vm {
 		GIL                              gil;
 		SynchronizationPrimitives        synchronization_primitives;
 
+	private:
+		/**
+		 * @brief Loads the program from a given source into the current loader program state,
+		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
+		 */
+		virtual std::expected<api::Response, api::LoadProgramError> loadProgram(
+			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
+		) = 0;
+
+		/**
+		 * @brief Creates new thread that runs a function.
+		 */
+		virtual std::expected<api::Response, api::ApiError> runFunction(
+			const std::string& func_name, const RunArguments& run_arguments
+		) = 0;
+
+		/**
+		 * @brief Runs a function and waits for it to finish.
+		 * @note Does not create a new thread, runs the function in the current execution thread.
+		 * @return The exit value of the function if it was ran successfully or an API error
+		 * otherwise.
+		 */
+		virtual std::expected<api::Response, api::ApiError> runFunctionAwait(
+			const std::string& func_name, const RunArguments& run_arguments
+		) = 0;
+
+		/**
+		 * @brief Joins the executing thread.
+		 */
+		virtual std::expected<api::Response, api::ApiError> join(api::ThreadID thread_id) = 0;
+
+		/**
+		 * @brief Stops the executing thread (by joining it).
+		 * After this method is called, the thread is removed.
+		 */
+		virtual std::expected<api::Response, api::ApiError> stop() = 0;
+
+		/**
+		 * @brief Passes the input string to the executing thread.
+		 * If the executing thread is paused and waiting for input, it will resume.
+		 * Relevant if "uses_stdio" is false.
+		 */
+		virtual std::expected<api::Response, api::ApiError> input(const api::request::Input& request
+		) = 0;
+
+		/**
+		 * @brief Gets the output of the executing thread and clears the output stream.
+		 * If the output stream is empty, it waits until it is not.
+		 * Relevant if "uses_stdio" is false.
+		 */
+		virtual std::expected<api::Response, api::ApiError> output() = 0;
+
+		/**
+		 * @brief Gets the status of the process (memory-safe).
+		 *
+		 * @return api::ProcStatus
+		 */
+		virtual api::ProcStatus getStatus() = 0;
+
+		/**
+		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
+		 *
+		 * @return api::Response
+		 */
+		virtual std::expected<api::Response, api::StateError> getExitCode() = 0;
+
+		/**
+		 * @brief Expects the process to be stopped and asks memory module if the memory is valid.
+		 * For more information about execution's validation,
+		 * see Memory::validateMemoryState's description.
+		 */
+		virtual std::expected<api::Response, api::ApiError> deinitAndValidate() = 0;
+
+		/**
+		 * @brief Attaching means all IO is interactive, input is read from stdin, output
+		 * @brief is automatically forwarded to stdout.
+		 */
+		virtual std::expected<api::Response, api::ApiError> attach(
+			std::istream& istream, std::ostream& ostream
+		);
+
+		virtual std::expected<api::Response, api::ApiError> detach();
+
+		// Virtual thread dependencies for doRequest
+		virtual base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id) = 0;
+
+		virtual base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) = 0;
+
+		virtual base::Optional<api::ApiError> stepMainVMThread() = 0;
+
+		virtual std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id
+		) = 0;
+
+		virtual std::expected<api::Response, api::ApiError> getMainVMThreadCurrentPosition() = 0;
+
+		virtual void waitForBreakpoint() = 0;
+
+		/**
+		 * @brief Gets type metadata for a given type name. Type must be defined in the loaded
+		 * program.
+		 */
+		virtual std::expected<api::Response, api::ApiError> getTypeMetadata(
+			const std::string& type_name
+		) = 0;
+
+		/**
+		 * @brief Gets empty VMValue for a given type name.
+		 */
+		virtual std::expected<api::Response, api::ApiError> getVMValueForType(
+			const std::string& type_name
+		) = 0;
+
 	public:
 		VMProcess(PID my_pid);
-		virtual ~VMProcess() = default;
 
-		virtual void            setStatus(const api::ProcStatus& new_status) noexcept = 0;
-		virtual api::ProcStatus getStatus()                                           = 0;
-
+		virtual void setStatus(const api::ProcStatus& new_status) noexcept = 0;
+		
 		ProcIO& getIO();
 
 		/**
@@ -49,51 +160,36 @@ namespace vm {
 		 */
 		[[nodiscard]] PID getPID() const;
 
+
+		/**
+		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
+		 * The VmValue is owned by the VMProcess. VmValues created with this function are freed when
+		 * the process is deinitialized.
+		 *
+		 * @param type The type of the data stored in the newly created VmValue.
+		 * @param src The pointer to the data used to fill the newly created VmValue. If not
+		 * specified, created VmValue will be empty.
+		 * @return A non-owning, modifiable reference to the new VmValue.
+		 */
 		virtual Ref<VmValue> createVmValue(TypeCRef type)              = 0;
 		virtual Ref<VmValue> createVmValue(TypeCRef type, Pointer src) = 0;
 
+
+		/**
+		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
+		 * The caller is expected to free the VmValue.
+		 *
+		 * @param type The type of the data stored in the newly created VmValue.
+		 * @param src The pointer to the data used to fill the newly created VmValue. If not
+		 * specified, created VmValue will be empty.
+		 * @return A Box referencing the newly created VmValue.
+		 */
 		virtual Box<VmValue> createOwnedVmValue(TypeCRef type)              = 0;
 		virtual Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) = 0;
 
 		GIL&                       getGIL();
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 
-		virtual std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
-		) = 0;
-		virtual std::expected<api::Response, api::ApiError> runFunction(
-			const std::string& func_name, const RunArguments& run_arguments
-		) = 0;
-		virtual std::expected<api::Response, api::ApiError> runFunctionAwait(
-			const std::string& func_name, const RunArguments& run_arguments
-		)                                                                                 = 0;
-		virtual std::expected<api::Response, api::ApiError> join(api::ThreadID thread_id) = 0;
-		virtual std::expected<api::Response, api::ApiError> stop()                        = 0;
-		virtual std::expected<api::Response, api::ApiError> input(const api::request::Input& request
-		)                                                                                 = 0;
-		virtual std::expected<api::Response, api::ApiError> output()                      = 0;
-
-		virtual std::expected<api::Response, api::StateError> getExitCode()       = 0;
-		virtual std::expected<api::Response, api::ApiError>   deinitAndValidate() = 0;
-
-		virtual std::expected<api::Response, api::ApiError> attach(
-			std::istream& istream, std::ostream& ostream
-		);
-		virtual std::expected<api::Response, api::ApiError> detach();
-
-		// Virtual thread dependencies for doRequest
-		virtual base::Optional<api::ApiError> pauseVMThread(api::ThreadID thread_id)  = 0;
-		virtual base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) = 0;
-		virtual base::Optional<api::ApiError> stepMainVMThread()                      = 0;
-		virtual std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
-			api::ThreadID thread_id
-		)                                                                                    = 0;
-		virtual std::expected<api::Response, api::ApiError> getMainVMThreadCurrentPosition() = 0;
-
-		virtual void waitForBreakpoint() = 0;
-
-		virtual std::expected<api::Response, api::ApiError> getTypeMetadata(
-			const std::string& type_name
-		) = 0;
+		virtual ~VMProcess() = default;
 	};
 }

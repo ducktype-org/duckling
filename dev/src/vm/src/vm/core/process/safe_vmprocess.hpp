@@ -136,5 +136,7 @@ namespace vm {
 		void                                        waitForBreakpoint() override;
 		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
 		) override;
+		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
+		) override;
 	};
 }

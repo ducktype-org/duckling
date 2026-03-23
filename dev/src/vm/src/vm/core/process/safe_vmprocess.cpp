@@ -310,4 +310,27 @@ namespace vm {
 		}
 		CORE_UNREACHABLE();
 	}
+
+	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMValueForType(
+		const std::string& type_name
+	) {
+		std::shared_lock lock(rw_global);
+		match_optional(assertProcessCanRespond()) {
+			opt_some(error) { return std::unexpected(error); }
+			opt_none {
+				auto maybe_type
+					= loaded_program->getTypes().atMaybe(base::StrID(type_name.c_str()));
+				match_optional(maybe_type) {
+					opt_some(type) {
+						auto vm_value = createOwnedVmValue(type);
+						return api::response::VmValue{ std::move(vm_value) };
+					}
+					opt_none {
+						return std::unexpected(api::ApiError{ api::OtherError{ "Type not found" } });
+					}
+				}
+			}
+		}
+		CORE_UNREACHABLE();
+	}
 }
