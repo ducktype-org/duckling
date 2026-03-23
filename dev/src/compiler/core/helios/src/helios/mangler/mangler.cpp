@@ -246,28 +246,6 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
-		 * @TODO: #1568 Remove this. I really needed it.
-		 */
-		std::string mangleType(const tsh::SymbolType<>& type) {
-			std::string s = type.toString();
-			std::ranges::replace(s, ' ', '_');
-			std::ranges::replace(s, '[', 'A');
-			std::ranges::replace(s, ']', 'E');
-			return s;
-		}
-
-		/**
-		 * @TODO: #1568 Remove this. I really needed it.
-		 */
-		std::string mangleType(const tsh::AbstractType& abs_type) {
-			std::string s = abs_type.toString();
-			std::ranges::replace(s, ' ', '_');
-			std::ranges::replace(s, '[', 'A');
-			std::ranges::replace(s, ']', 'E');
-			return s;
-		}
-
-		/**
 		 * @brief Returns mangled name of a function or method
 		 * @note: See mangling-scheme.md for details
 		 */
@@ -325,20 +303,24 @@ namespace compiler::helios::mangler {
 						variant_match(gen_data.data) {
 							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix = "Hic" + func(ctx, symbol_id) + "E";
+								const auto ctor_suffix   = "Hic" + func(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor
 							) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "Hdc" + funcType(ctx, symbol_id) + "E";
+								const auto ctor_suffix   = "Hdc" + func(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 							) {
-								return "Hds" + mangleType(ctor.array_type) + "E";
+								return "Hds"
+								     + ctx.query<QueryMangledType>({ ctor.array_type })
+								           ->valueOrThrow()
+								           .str()
+								     + "E";
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
