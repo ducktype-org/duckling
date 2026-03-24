@@ -3,6 +3,7 @@
 #include "size_constants.hpp"
 
 #include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/maps.hpp>
@@ -31,8 +32,12 @@ namespace compiler::tsl {
 
 		/**
 		 * @brief The source type of a memory layout.
+		 *
+		 * @note Most layouts are created from abstract type wrapped with default values. But
+		 * pointer types might be created directly from symbol type. This is important, because it
+		 * allows to distinguish `T` from `ref T` from `box T` even at the memory layout level.
 		 */
-		tsh::AbstractType source_type;
+		tsh::SymbolType<> source_type;
 
 
 		/**
@@ -67,7 +72,7 @@ namespace compiler::tsl {
 		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
-		tsh::AbstractType getSourceType() const {
+		tsh::SymbolType<> getSourceType() const {
 			return source_type;
 		}
 
@@ -771,7 +776,7 @@ namespace compiler::tsl {
 		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
-		tsh::AbstractType getSourceType() const;
+		tsh::SymbolType<> getSourceType() const;
 
 		/**
 		 * @brief Get a string describing the layout in a human-friendly format.

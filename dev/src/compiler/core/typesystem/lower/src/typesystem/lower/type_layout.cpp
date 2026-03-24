@@ -146,7 +146,7 @@ namespace compiler::tsl {
 		const Bits size, const tsh::SymbolType<> source_type, query::Context& ctx
 	):
 		  size(size),
-		  source_type(source_type.getType()),
+		  source_type(source_type),
 		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
 
 	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
@@ -321,7 +321,7 @@ namespace compiler::tsl {
 	std::string TupleTypeLayout::toStringDefinition(
 		query::Context& ctx, const bool recursive, const u32 indent
 	) const {
-		const tsh::TupleAbstractType tuple_type = getSourceType();
+		const tsh::TupleAbstractType tuple_type = getSourceType().getType();
 		std::stringstream            ss{};
 
 		// Display the tuple header and components
@@ -437,15 +437,16 @@ namespace compiler::tsl {
 	std::string ClassTypeLayout::toStringDefinition(
 		query::Context& ctx, const bool recursive, const u32 indent
 	) const {
-		const tsh::ClassAbstractType class_type = getSourceType();
-		std::stringstream            ss{};
+		const tsh::SymbolType<tsh::ClassAbstractType> class_type = getSourceType();
+		std::stringstream                             ss{};
 
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
 			const Bytes             field_offset = getOffsetOfFieldSymbol(field_sym_id);
-			const tsh::SymbolType<> field_type   = class_type.getMemberType(field_sym_id, ctx);
-			const auto              field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
+			const tsh::SymbolType<> field_type
+				= class_type.getType().getMemberType(field_sym_id, ctx);
+			const auto field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)
 				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else
@@ -478,7 +479,7 @@ namespace compiler::tsl {
 
 	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }
 
-	tsh::AbstractType TypeLayout::getSourceType() const {
+	tsh::SymbolType<> TypeLayout::getSourceType() const {
 		return VISIT(variant, l, return l.getSourceType());
 	}
 
