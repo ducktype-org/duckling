@@ -248,6 +248,35 @@ namespace compiler::helios::code {
 							arg_pos, std::move(function_name)
 						);
 					}
+					variant_case(TypeNotTriviallyCopyable, data) {
+						auto source_pos
+							= arguments_origin[data.argument_index].getSourcePosition().value();
+						if (data.given_type.getRefKind() != tsh::ReferenceKind::Direct
+						    && data.expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
+							return makeBox<dia_int::NotYetImplementedCodeError>(
+								base::strConcat(
+									"Copy constructor for non-trivially-copyable type `",
+									data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)
+										.toString(),
+									"`. This was caused by the need of dereferencing a value of "
+									"type: "
+									"`",
+									data.given_type.toString(),
+									"`."
+								),
+								source_pos
+							);
+						} else {
+							return makeBox<dia_int::NotYetImplementedCodeError>(
+								base::strConcat(
+									"Copy constructor for non-trivially-copyable type `",
+									data.given_type.toString(),
+									"`."
+								),
+								source_pos
+							);
+						}
+					}
 				}
 			}
 		}

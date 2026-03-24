@@ -45,15 +45,18 @@ namespace compiler::helios::houtgen {
 			body.reserve(1 + num_fields + 1);
 
 			// - Declare result variable.
-			const auto  result_symbol_type = ctor_decl.return_type;
-			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name = base::StrID("result"),
-					 .generated_symbol_data
-                = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
-            });
+			const auto result_symbol_type = ctor_decl.return_type;
+			// @TODO: #2307 Classes with a field named `__result` don't work.
+			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
+				.name = base::StrID("__result"),
+				.generated_symbol_data
+				= GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+			});
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
 				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), result_symbol_type),
+				makeBox<code::DefaultValueExpr>(
+					ctx, code::generatedOrigin(), result_symbol_type.getType()
+				),
 				result_symbol_type,
 				result_symbol
 			)));
