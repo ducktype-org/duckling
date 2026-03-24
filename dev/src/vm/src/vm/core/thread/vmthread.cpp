@@ -384,7 +384,7 @@ namespace vm {
 	Ref<VmValue> VMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
-		stepGil();
+		acquireGil();
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
