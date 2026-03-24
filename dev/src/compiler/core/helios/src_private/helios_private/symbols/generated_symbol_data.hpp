@@ -9,6 +9,8 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
+#include <string_id/string_id.hpp>
+
 #include <variant>
 
 namespace compiler::helios::defgen {
@@ -127,6 +129,31 @@ namespace compiler::helios::defgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		/**
+		 * Represents a compiler-generated entry point for script execution.
+		 * This symbol is synthetic and exists only to orchestrate script statements.
+		 */
+		struct ScriptMainWrapper final {
+			/**
+			 * Stable per-script identity used by QueryGeneratedSymbol key hashing.
+			 * This helps keep generated-symbol identity/cache behavior deterministic
+			 * across script compilation units.
+			 *
+			 * @note This does NOT define the emitted linker symbol name.
+			 * The emitted entry name is still `main` (set separately as symbol name).
+			 */
+			base::StrID script_id;
+
+			/**
+			 * Stored so QuerySymbolABI can treat the symbol as global `main`.
+			 * Without a root scope, generated symbols default to non-global linkage.
+			 */
+			ScopeID scope;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		using GeneratedSymbolDataVariant = std::variant<
 			ImplicitConstructor,
 			DefaultClassConstructor,
@@ -136,7 +163,8 @@ namespace compiler::helios::defgen {
 			SelfParameter,
 			Variable,
 			ReplExpressionWrapper,
-			ReplInstructionWrapper>;
+			ReplInstructionWrapper,
+			ScriptMainWrapper>;
 		GeneratedSymbolDataVariant data;
 
 		explicit GeneratedSymbolData(const GeneratedSymbolDataVariant& data);
