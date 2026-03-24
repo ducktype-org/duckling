@@ -48,16 +48,22 @@ private:
 	}
 
 	void testClassifyAssignmentExpressionAsInstruction() {
-		auto module_id = createModule("x = 10;");
+		auto assignment_test = [&](std::string_view code) {
+			auto module_id = createModule(code);
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto result = repl::classifySingleStatement(ctx, module_id);
-			assertTrue(result.has_value(), "Assignment classification should succeed");
-			assertTrue(
-				std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
-				"Expected assignment ExprStmt to be routed as instruction"
-			);
-		});
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto result = repl::classifySingleStatement(ctx, module_id);
+				assertTrue(result.has_value(), "Assignment classification should succeed");
+				assertTrue(
+					std::holds_alternative<repl::InstructionSingleStatementInfo>(*result),
+					"Expected assignment ExprStmt to be routed as instruction"
+				);
+			});
+		};
+
+		assignment_test("x = 10;");
+		assignment_test("x += 10;");
+		assignment_test("x -= 10;");
 	}
 
 	void testClassifySingleInstruction() {
