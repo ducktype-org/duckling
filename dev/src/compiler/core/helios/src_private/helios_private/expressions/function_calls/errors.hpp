@@ -59,13 +59,25 @@ namespace compiler::helios::code {
 		SymID function;
 	};
 
+	struct TypeNotTriviallyCopyable final {
+		usize             argument_index;
+		tsh::SymbolType<> given_type;
+		tsh::SymbolType<> expected_type;
+		SymID             function;
+	};
+
 	using FunctionMatchFailure = std::variant<
 		TooManyCallArguments,
 		NamedArgumentProvidedByPositional,
 		UnknownNamedArgument,
 		TypeMismatch,
-		MissingCallArgument>;
+		MissingCallArgument,
+		TypeNotTriviallyCopyable>;
 
+	/**
+	 * @brief This variant stores errors that do not depend on the function declaration. All
+	 * failures depending on the declaration should be stored in `FunctionMatchFailure`.
+	 */
 	using CallFailure
 		= std::variant<PositionalAfterNamedArgument, RepeatedNamedArgument, FunctionMatchFailure>;
 

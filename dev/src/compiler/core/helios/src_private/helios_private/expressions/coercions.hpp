@@ -32,6 +32,11 @@ namespace compiler::helios {
 	 */
 	struct InvalidCoercion final {};
 
+	/**
+	 * @brief Type used to indicate a copy of a non-trivially-copyable type.
+	 */
+	struct TypeNotTriviallyCopyable final {};
+
 	class CoercionResult;
 	using CoercionQResult = query::QResult<CoercionResult>;
 
@@ -66,7 +71,10 @@ namespace compiler::helios {
 		}
 
 		friend CoercionQResult canCoerce(
-			query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
+			query::Context&   ctx,
+			tsh::SymbolType<> from,
+			tsh::SymbolType<> to,
+			bool              bypass_trivial_copyability_check
 		);
 
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
@@ -94,14 +102,21 @@ namespace compiler::helios {
 
 		CoercionResult(InvalidCoercion invalid): storage(invalid) {}
 
+		CoercionResult(TypeNotTriviallyCopyable invalid): storage(invalid) {}
+
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
 			return std::holds_alternative<Coercion>(storage);
 		}
 
 		[[nodiscard]]
-		constexpr bool isInvalid() const noexcept {
-			return std::holds_alternative<InvalidCoercion>(storage);
+		constexpr bool isInvalid() const {
+			variant_match(storage) {
+				variant_case_novalue(InvalidCoercion) return true;
+				variant_case_novalue(TypeNotTriviallyCopyable) return true;
+				variant_case_novalue(Coercion) return true;
+				variant_default CORE_UNREACHABLE();
+			}
 		}
 
 		[[nodiscard]]
@@ -125,20 +140,25 @@ namespace compiler::helios {
 		}
 
 		[[nodiscard]]
-		const std::variant<Coercion, InvalidCoercion>& getVariant() const {
+		const std::variant<Coercion, InvalidCoercion, TypeNotTriviallyCopyable>& getVariant() const {
 			return storage;
 		}
 
 
 	private:
-		std::variant<Coercion, InvalidCoercion> storage;
+		std::variant<Coercion, InvalidCoercion, TypeNotTriviallyCopyable> storage;
 	};
 
 	/**
 	 * @brief Checks if a coercion from `from` to `to` is possible and returns
 	 * a function performing the coercion if it is.
 	 */
-	CoercionQResult canCoerce(query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to);
+	CoercionQResult canCoerce(
+		query::Context&   ctx,
+		tsh::SymbolType<> from,
+		tsh::SymbolType<> to,
+		bool              bypass_trivial_copyability_check = false
+	);
 
 	/**
 	 * @brief Checks if a coercion from `from` to the meta type is possible and returns
