@@ -37,13 +37,7 @@ protected:
 	}
 
 private:
-	struct ReloadWorkerManagerOnExit final {
-		~ReloadWorkerManagerOnExit() { WorkerManager::testPrivateAccessReloadState(); }
-	};
-
 	void basicFunctionalityTest() {
-		ReloadWorkerManagerOnExit reload_on_exit;
-
 		std::atomic<usize> no_task_counter = 0;
 		auto               now             = std::chrono::steady_clock::now();
 
@@ -64,9 +58,10 @@ private:
 		std::atomic<usize> task_finished_counter = 0;
 		constexpr usize    TASK_WAIT_TIME_MS     = 100;
 		for (const auto& worker: worker_manager.getAllWorkers()) {
-			worker->scheduleTask([&task_finished_counter, TASK_WAIT_TIME_MS](WRef) {
+			worker->scheduleTask([&task_finished_counter, TASK_WAIT_TIME_MS](WRef wref) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(TASK_WAIT_TIME_MS));
 				task_finished_counter.fetch_add(1, std::memory_order_relaxed);
+				wref->setNoTasksCallback([](WRef) {});
 			});
 		}
 
@@ -76,9 +71,8 @@ private:
 		concurrent::runOrTimeout(
 			[&](const std::stop_token& st) {
 				while (!st.stop_requested()
-			           && (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
-			               || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2
-			           )) {
+			           && (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount())
+			    ) {
 					std::cerr << "Waiting... Finished tasks: "
 							  << task_finished_counter.load(std::memory_order_relaxed)
 							  << ", No task callbacks: "
@@ -92,8 +86,8 @@ private:
 		usize val = no_task_counter.load(std::memory_order_relaxed);
 		std::cerr << "No task callback called " << val << " times.\n";
 		// The no_tasks_callback should have been called at least once per worker,
-		// but no more than **three** times per worker.
-		ASSERT_TRUE(getWorkerCount() <= val && val <= getWorkerCount() * 3);
+		// but no more than **two** times per worker.
+		ASSERT_TRUE(getWorkerCount() <= val && val <= getWorkerCount() * 2);
 
 		auto elapsed    = std::chrono::steady_clock::now() - now;
 		auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
@@ -109,8 +103,6 @@ private:
 	}
 
 	void taskPoolFibonacciTest() {
-		ReloadWorkerManagerOnExit reload_on_exit;
-
 		constexpr u64 MOD = static_cast<u64>(1e9 + 7);
 
 		// A simple Fibonacci function. It is a "CPU-bound" task.
