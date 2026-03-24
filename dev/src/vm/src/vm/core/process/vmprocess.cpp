@@ -349,6 +349,8 @@ namespace vm {
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
+
+
 	VMThread& VMProcess::getVMThreadByID(api::ThreadID thread_id) {
 		if (thread_id == api::ThreadID{ 0 }) return getMainVMThread();
 		for (auto& thread: vm_threads) {
@@ -361,6 +363,10 @@ namespace vm {
 		}
 		return getMainVMThread();
 	}
+
+    VMThread& VMProcess::addNewThread(){
+
+    }
 
 	VMThread& VMProcess::getEmptyThread() {
 		for (auto& thread: vm_threads)

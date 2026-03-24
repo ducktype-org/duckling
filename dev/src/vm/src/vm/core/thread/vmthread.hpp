@@ -85,6 +85,8 @@ namespace vm {
 	 */
 	class VMThread final {
 	private:
+        
+        api::ThreadID thread_id;
 		base::Optional<std::thread> exec_thread;
 
 		RuntimeData runtime_data;

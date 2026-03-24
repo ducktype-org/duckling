@@ -187,6 +187,11 @@ namespace vm {
 		 * creates new thread without worker and returns it
 		 */
 		VMThread& getEmptyThread();
+        
+		/**
+		 * @brief Adds new thread and sets correct ID for it.
+		 */
+		VMThread& addNewThread();
 
 	public:
 		void setStatus(const api::ProcStatus& new_status) noexcept;
