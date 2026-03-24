@@ -635,8 +635,25 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				auto&                   mapping = *process.getMapping();
-				const low::LowFuncData* ptr     = nullptr;
+				auto mapping = process.getMapping();
+
+				if (!mapping) {
+					// If the mapping was not enabled we use old method.
+					for (size_t index = 0; index < executing_program->getFunctions().size();
+					     ++index) {
+						const auto& func = executing_program->getFunctions()[index];
+						if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
+							return api::Response(api::response::CodePosition{
+								.function_name = func.name,
+								.instr_number  = static_cast<u64>(instr - func.bc.data()) });
+						}
+					}
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "mapping is not enabled, but couldn't find function with "
+					                     "current instruction" } });
+				}
+
+				const low::LowFuncData* ptr = nullptr;
 
 				if (frame->current_function) {
 					const auto& func = *frame->current_function;
@@ -656,12 +673,12 @@ namespace vm {
 						api::OtherError{ "couldn't find function with current instruction" } });
 
 				auto& func    = *ptr;
-				auto  func_id = mapping.funcname_to_id.atMaybeCopy(func.name);
+				auto  func_id = mapping->funcname_to_id.atMaybeCopy(func.name);
 
 				u64 instr_low_idx = static_cast<u64>(instr - func.bc.data());
 
 				auto high_position = func_id.flatMap([&](auto&& f_id) {
-					return mapping.functions_ctx[f_id].low_to_high.atMaybeCopy(instr_low_idx);
+					return mapping->functions_ctx[f_id].low_to_high.atMaybeCopy(instr_low_idx);
 				});
 
 				return api::Response(api::response::CodePosition{

@@ -17,12 +17,13 @@ public:
 		TESTER_ADD_TEST(killTest);
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(executesStepByStep);
+		TESTER_ADD_TEST(positionWithoutMapping);
 	}
 
 
 private:
-	vm::PID loadProgram(std::string_view path_name) {
-		auto process_pid_response = vm::api::spawn(true);
+	vm::PID loadProgram(std::string_view path_name, bool with_mapping = true) {
+		auto process_pid_response = vm::api::spawn(with_mapping);
 		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
@@ -72,13 +73,36 @@ private:
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(6, execution_position.instr_number, "Line number is not correct");
+		assertEqual(6, execution_position.instr_number, "Line number is not correct (1)");
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(10, execution_position.instr_number, "Line number is not correct");
+		assertEqual(10, execution_position.instr_number, "Line number is not correct (2)");
+
+		vm::api::resume(pid).value();  // "Resume failed (2)"
+
+		vm::api::stop(pid).value();    // "Stop failed (1)"
+	}
+
+	/**
+	 * @brief Checks if the program will pause on breakpoint and if the position of the breakpoint
+	 * is correct when the mapping is disabled.
+	 */
+	void positionWithoutMapping() {
+		auto pid = loadProgram("breakpoint.dbc", false);
+		vm::api::run(pid).value();  // "Run failed (1)"
+
+		auto execution_position
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
+		assertEqual(6, execution_position.instr_number, "Line number is not correct (1)");
+
+		vm::api::resume(pid).value();  // "Resume failed (1)"
+
+		execution_position
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
+		assertEqual(10, execution_position.instr_number, "Line number is not correct (2)");
 
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 
