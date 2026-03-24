@@ -157,4 +157,8 @@ vm::VMValueRef::VMValueRef(VMProcess& process, TypeCRef type, Pointer pointed_da
 	  my_type(type),
 	  pointed_data(pointed_data) {}
 
-vm::TypeCRef vm::VMValueRef::getType() const { return my_type; }
+base::CRef<vm::code::valid_type::ValidType> vm::VMValueRef::getType() const {
+	auto type_id = static_cast<code::valid_type::ValidTypeID>(my_type->getID().asInt());
+	auto types   = my_process->loader.getHighProgram()->types();
+	return types.at(type_id);
+}

@@ -3,6 +3,7 @@
 #include <base/collections/optional.hpp>
 
 #include <vm/api/data/process_info.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/utils/interpret.hpp>
@@ -49,8 +50,8 @@ namespace vm {
 	public:
 		VMValueRef(VMProcess& process, TypeCRef type, Pointer pointed_data);
 
-		[[nodiscard]] TypeCRef                               getType() const;
-		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const;
+		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
+		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const;
 
 		template<class T>
 		requires std::is_trivially_copy_constructible_v<T> T readBytes() const {
