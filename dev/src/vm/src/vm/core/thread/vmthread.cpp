@@ -276,7 +276,7 @@ namespace vm {
 							  mov_l8_imm, 56, static_cast<u64>(c)
 						  ),  // char_tmp_store := c
 					      MAKE_BYTECODE_INSTRUCTION(
-							  dynTableStore_lptr_lany, 40, 56
+							  dynTableStore_lptr_lany, 40, 5
 						  ),  // ptr_tmp_store[ix] := char_tmp_store
 					      MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 					      MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1) }
@@ -288,14 +288,14 @@ namespace vm {
 						// At this point ix == arg.size().
 						MAKE_BYTECODE_INSTRUCTION(mov_l8_imm, 56, 0),  // char_tmp_store := \0
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableStore_lptr_lany, 40, 56
+							dynTableStore_lptr_lany, 40, 5
 						),  // ptr_tmp_store[ix] := char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
 						),  // ix := argv_index
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableStore_lptr_lany, 8, 40
+							dynTableStore_lptr_lany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
@@ -344,7 +344,7 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(
-						dynTableLoad_lany_lptr, 48, 8
+						dynTableLoad_lany_lptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 					MAKE_BYTECODE_INSTRUCTION(free_lptr, 48, 0),    // free ptr_tmp_store

@@ -895,7 +895,6 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-
 			auto src_block   = Ref(frame->block_ref_stack[instr->arg1]);
 			auto src_pointer = Pointer(src_block, 0);
 
@@ -1289,7 +1288,8 @@ namespace vm {
 		{
 			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
 			performInit(instr, local_stack, frame, thread, vm_value.type->getID());
-			vm_value.exportData({ Ref(frame->block_ref_stack[frame->block_ref_stack_count - 1]), 0 });
+			vm_value.exportData({ Ref(frame->block_ref_stack[frame->block_ref_stack_count - 1]), 0 }
+			);
 		}
 		FUNCTION_CONT(1);
 	}

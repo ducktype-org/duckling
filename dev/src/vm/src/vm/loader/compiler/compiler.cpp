@@ -157,11 +157,13 @@ namespace vm::loader::compiler {
 			auto type_ref = low_program.types->at(type.type_name);
 			result.put(
 				local.var_name,
-				{ .offset = curr_stack_size, .block_idx = type_size_stack.size(), .type = type_ref }
+				{ .offset    = curr_stack_size,
+			      .block_idx = type_size_stack.size(),
+			      .type      = type_ref }
 			);
 			auto type_size = type_ref->getSize().asInt();
-			type_size_stack.push_back(type_size);
 			if (type.type_name == "void") return;
+			type_size_stack.push_back(type_size);
 			curr_stack_size += type_size;
 			max_stack_size = std::max(max_stack_size, curr_stack_size);
 		};
