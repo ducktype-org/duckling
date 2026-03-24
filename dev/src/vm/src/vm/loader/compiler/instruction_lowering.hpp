@@ -50,8 +50,18 @@ namespace vm::loader::compiler::detail {
 
 
 	private:
+		/**
+		 * @brief Whether to add a step Gil instruction before the next low instruction.
+		 */
+		bool push_step_gil_on_next_add_low = true;
+
 		template<IsMicroInstructionTag T, typename... Args>
 		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void addLow(Args... args) {
+			if (push_step_gil_on_next_add_low) {
+				push_step_gil_on_next_add_low = false;
+				addLow<Op_stepGil>();
+			}
+
 			result.push_back(makeLowInstruction(T::OPCODE, compiler.lowerArgument(ctx, args)...));
 #if (BUILD_TYPE_DEV_DEBUG)
 			result.back().opcode_id      = T::OPCODE;
@@ -70,8 +80,9 @@ namespace vm::loader::compiler::detail {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
 #endif
-        // Add GIL before every instruction.
-        addLow<Op_stepGil>();
+
+		push_step_gil_on_next_add_low = true;
+
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
 		instr_match(instruction) {
@@ -344,15 +355,9 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
-			instr_case(high::Op_jmp_label, i) {
-				addLow<Op_jmp_label>(i.label);
-			}
-			instr_case(high::Op_jmpIf_label, i) {
-				addLow<Op_jmpIf_label>(i.label);
-			}
-			instr_case(high::Op_jmpIfNot_label, i) {
-				addLow<Op_jmpIfNot_label>(i.label);
-			}
+			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
+			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
+			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
 			instr_case(high::Op_call_func, i) {
 #ifdef ENABLE_JIT
 				addLow<Op_jit_call_entrypoint>(i.function);
@@ -360,16 +365,10 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_call_func>(i.function);
 #endif
 			}
-			instr_case(high::Op_call_builtinfunc, i) {
-				addLow<Op_call_builtinfunc>(i.function);
-			}
-			instr_case(high::Op_call_cfunc, i) {
-				addLow<Op_call_cfunc>(i.function);
-			}
+			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
+			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
-			instr_case(high::Op_ret_tailcall_func, i) {
-				addLow<Op_ret_tailcall_func>(i.function);
-			}
+			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
 			instr_case(high::Op_init_lany_type, i) { addLow<Op_init_lany_type>(i.var, i.type); }
 			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
@@ -451,18 +450,12 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_l64>(i.new_elem_count);
 			}
 			instr_case(high::Op_strOutput_lptr, i) { addLow<Op_strOutput_lptr>(i.string_ptr); }
-			instr_case(high::Op_cast_l8_type, i) {
-				addLow<Op_cast_l8_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l16_type, i) {
-				addLow<Op_cast_l16_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l32_type, i) {
-				addLow<Op_cast_l32_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l64_type, i) {
-				addLow<Op_cast_l64_type>(i.value, i.target_type);
-			}  // Sign Extension
+
+			instr_case(high::Op_cast_l8_type, i) {}
+			instr_case(high::Op_cast_l16_type, i) {}
+			instr_case(high::Op_cast_l32_type, i) {}
+			instr_case(high::Op_cast_l64_type, i) {}  // Sign Extension
+
 			instr_case(high::Op_sext_l16_l8, i) { addLow<Op_sext_l16_l8>(i.dst, i.src); }
 			instr_case(high::Op_sext_l32_l8, i) { addLow<Op_sext_l32_l8>(i.dst, i.src); }
 			instr_case(high::Op_sext_l64_l8, i) { addLow<Op_sext_l64_l8>(i.dst, i.src); }

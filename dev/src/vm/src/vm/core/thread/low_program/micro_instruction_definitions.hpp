@@ -595,15 +595,6 @@ DEF_MICRO_INSTR(
 	strOutput_lptr, vm::opargs::StackLocalPtr /* string_ptr */
 )
 
-// ========= TYPE OPERATIONS ========
-
-// Casts a primitive type in-place. This does nothing at runtime, but is needed
-// for type checking.
-DEF_MICRO_INSTR(cast_l8_type, vm::opargs::StackLocal8, vm::opargs::Type)
-DEF_MICRO_INSTR(cast_l16_type, vm::opargs::StackLocal16, vm::opargs::Type)
-DEF_MICRO_INSTR(cast_l32_type, vm::opargs::StackLocal32, vm::opargs::Type)
-DEF_MICRO_INSTR(cast_l64_type, vm::opargs::StackLocal64, vm::opargs::Type)
-
 // ========= CONVERSION OPERATIONS ========
 // Sign Extension
 DEF_MICRO_INSTR(sext_l16_l8, vm::opargs::StackLocal16, vm::opargs::StackLocal8)
