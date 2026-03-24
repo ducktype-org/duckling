@@ -47,18 +47,24 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 			auto block_id   = memory->requestBlockID(pointed_data.getBlock());
 			auto block_data = memory->requestBlockData(block_id);
 
-			usize    tbl_size = block_data.size() / static_cast<usize>(dyntable_kind.inner_type->getSize());
+			usize tbl_size
+				= block_data.size() / static_cast<usize>(dyntable_kind.inner_type->getSize());
 
-			return vm::interpreted_data_variant::Table(my_process, pointed_data, dyntable_kind.inner_type, tbl_size);
+			return vm::interpreted_data_variant::Table(
+				my_process, pointed_data, dyntable_kind.inner_type, tbl_size
+			);
 		}
 
 		variant_case(vm::kind::FixedSizeTable, fixtable_kind) {
 			auto block_id   = memory->requestBlockID(pointed_data.getBlock());
 			auto block_data = memory->requestBlockData(block_id);
 
-			usize    tbl_size = block_data.size() / static_cast<usize>(fixtable_kind.inner_type->getSize());
+			usize tbl_size
+				= block_data.size() / static_cast<usize>(fixtable_kind.inner_type->getSize());
 
-			return vm::interpreted_data_variant::Table(my_process, pointed_data, fixtable_kind.inner_type, tbl_size);
+			return vm::interpreted_data_variant::Table(
+				my_process, pointed_data, fixtable_kind.inner_type, tbl_size
+			);
 		}
 
 		variant_case(vm::kind::Data, data_kind) {
