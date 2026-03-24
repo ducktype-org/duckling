@@ -1,3 +1,4 @@
+//! Ducknest registry communication.
 use std::path::Path;
 
 use tracing::debug;
@@ -16,6 +17,7 @@ mod endpoints;
 mod tests;
 
 #[derive(Debug, Clone)]
+/// General client communicating with a registry instance over HTTP.
 pub struct DucknestClient<'duck> {
     client: HttpClient<'duck>,
 }

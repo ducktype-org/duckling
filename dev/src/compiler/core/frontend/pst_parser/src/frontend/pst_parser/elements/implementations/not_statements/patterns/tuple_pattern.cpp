@@ -6,7 +6,7 @@ namespace pst {
 	MBox<TuplePattern> TuplePattern::parse(LangParserState& state) {
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Round)) return nullptr;
 		auto out = makeBox<TuplePattern>(state);
-		state.parse(out).one(&out->elements);
+		PARSE().one(&out->elements);
 		PST_RETURN out;
 	}
 

@@ -16,6 +16,7 @@ public:
 		// Function verification
 		TESTER_ADD_TEST(multipleFunctions);
 		TESTER_ADD_TEST(useArgumentAfterCall);
+		TESTER_ADD_TEST(mainVerification);
 
 		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
@@ -32,6 +33,8 @@ public:
 		TESTER_ADD_TEST(afterDeinit);
 		TESTER_ADD_TEST(invalidName);
 		TESTER_ADD_TEST(repeatedName);
+		TESTER_ADD_TEST(wrongDowncast);
+		TESTER_ADD_TEST(wrongPtrMov);
 
 		// @note: Not implemented yet
 		TESTER_ADD_TEST(derefWrongType);
@@ -80,6 +83,15 @@ private:
 			{
 				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
+		);
+	}
+
+	void mainVerification() {
+		loadInvalidDbc(
+			"wrong/functions/invalid_main_ret_type.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"wrong/functions/invalid_main_ret_size.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
 		);
 	}
 
@@ -296,6 +308,24 @@ private:
 			"wrong/types/duplicated_variant_alternative.dbc",
 			{
 				vm::code::DuplicatedVariantAlternativeError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongDowncast() {
+		loadInvalidDbc(
+			"wrong/pointers/wrong_downcast.dbc",
+			{
+				vm::code::InvalidDowncastError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongPtrMov() {
+		loadInvalidDbc(
+			"wrong/types/wrong_ptr_mov.dbc",
+			{
+				vm::code::PointerTypeMismatchError::ERR_MSG,
 			}
 		);
 	}

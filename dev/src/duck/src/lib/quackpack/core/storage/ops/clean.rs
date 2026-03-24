@@ -1,3 +1,4 @@
+//! Removing files from a storage.
 use tracing::debug;
 
 use crate::quackpack::core::storage;
@@ -8,21 +9,25 @@ use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId};
 use std::collections::HashSet;
 use std::fs::DirEntry;
+use std::path::Path;
 use std::time::{Duration, SystemTime};
 use std::{io, path::PathBuf};
 use storage::paths::Storage;
 use storage::{locks, paths};
 
 #[derive(Debug)]
+/// An output of a [`clean_storage`].
 pub struct CleanOutput {
-    pub removed_venvs: Vec<StrId>,
+    /// Ids of removed venvs.
+    pub removed_venvs: Vec<VenvId>,
+    /// Paths to the removed packages.
     pub removed_packages: Vec<PathBuf>,
 }
 
 /// Delete a virtual environment from storage.
-pub fn delete_venv(ctx: &DuckCtx, venv: impl ToVenvId) -> QuackResult<()> {
+pub fn delete_venv(storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
     debug!("deleting venv `{}`", venv.to_venv_id());
-    let storage = paths::Storage::new(ctx.duck_home());
+    let storage = paths::Storage::new(storage_root);
     let venv_id = venv.to_venv_id();
 
     let _sync_lock = {
@@ -61,10 +66,10 @@ pub fn delete_venv(ctx: &DuckCtx, venv: impl ToVenvId) -> QuackResult<()> {
 }
 
 /// Remove orphaned packages and expired temporary virtual environments from storage.
-pub fn clean_storage(ctx: &DuckCtx) -> QuackResult<CleanOutput> {
+pub fn clean_storage(ctx: &DuckCtx, storage_root: &Path) -> QuackResult<CleanOutput> {
     debug!("cleaning storage");
     let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
-    let storage = paths::Storage::new(ctx.duck_home());
+    let storage = paths::Storage::new(storage_root);
     let mut removed_venvs = vec![];
     let _lock = locks::CleanLock::new(&storage).context("failed to acquire a clean lock")?;
     let mut all_deps = HashSet::new();
@@ -107,6 +112,8 @@ pub fn clean_storage(ctx: &DuckCtx) -> QuackResult<CleanOutput> {
     })
 }
 
+/// Remove a single venv from a storage.
+/// A helper for [`clean_storage`].
 fn clean_venv_from_storage(
     dir: DirEntry,
     storage: &Storage,

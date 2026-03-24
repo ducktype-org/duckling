@@ -9,8 +9,8 @@ namespace pst {
 
 		auto out = makeBox<DeconstructorPattern>(state);
 
-		state.parse(out).one(&out->deconstructor_name);
-		state.parse(out).one(&out->arguments);
+		PARSE().one(&out->deconstructor_name);
+		PARSE().one(&out->arguments);
 		PST_RETURN out;
 	}
 

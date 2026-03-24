@@ -1,11 +1,11 @@
 #pragma once
 
 
-#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 #include <frontend/module_tree/access.hpp>
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/misc/shared_view.hpp>
@@ -13,6 +13,8 @@
 
 #include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
+
+#include <mutex>
 
 namespace compiler::frontend {
 
@@ -27,15 +29,17 @@ namespace compiler::frontend {
 		/**
 		 * @brief Synchronizes access to state of SourceFile. Since multiple workers may try to
 		 * parse the same SourceFile simultaneously.
+		 * @note Recursive mutex is required because getPST() can call getComponentHash(), and both
+		 * functions lock this mutex.
 		 * @note: It's possible that there are two SourceFiles pointing to the same physical file in
 		 * the file system. In this case, two threads may parse the same physical file at once, but
 		 * since this operation is read-only, it's thread-safe.
 		 */
-		mutable base::Box<concurrent::AtomicFlagSpinlock> state_lock;
-		fs::File                                          file;
-		base::StrID                                       lang_file_name;
-		ModuleID                                          linked_module;
-		base::Optional<pst::PST<>>                        parse_tree;
+		mutable base::Box<std::recursive_mutex> state_lock;
+		fs::File                                file;
+		base::StrID                             lang_file_name;
+		ModuleID                                linked_module;
+		base::Optional<pst::PST<>>              parse_tree;
 		base::Optional<usize> storage_handle;  //< Key to support removal from static storage
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
@@ -159,4 +163,9 @@ namespace compiler::frontend {
 		SourceFile& operator=(const SourceFile&) = delete;
 		SourceFile(SourceFile&&) noexcept        = default;
 	};
+
+	/**
+	 * @brief Returns FileID for a parsed PST root element if known.
+	 */
+	base::Optional<FileID> getFileIDOfPSTRoot(pst::PstID root_element_id);
 }

@@ -41,7 +41,7 @@ impl Duckc {
         &self,
         graph: &CompilerDag,
         compilation_type: CompilationType,
-        bcx: &BuildContext<'_>,
+        bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<()> {
         match compilation_type {
             CompilationType::OnlyRootPackage => self.compile_root_package_only(graph, bcx),
@@ -52,7 +52,7 @@ impl Duckc {
     fn compile_root_package_only(
         &self,
         graph: &CompilerDag,
-        bcx: &BuildContext<'_>,
+        bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<()> {
         let this = graph.package(&graph.dag().root())?;
         let deps = graph.dag().dependencies_for_package(&graph.dag().root())?;
@@ -72,7 +72,10 @@ impl Duckc {
                 source_dir.display()
             )
         }
-        builder.set_src_dir(this).set_package_artifacts_dir(this);
+        builder
+            .set_src_dir(this)
+            .set_package_artifacts_dir(this)
+            .update_with_profile(&bcx.profile);
         // We need to lock a file, we can't lock a directory.
         let _lock = this.artifacts_directory().join(".duck_lock").lock(ShouldBlock::Yes).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
         bcx.package

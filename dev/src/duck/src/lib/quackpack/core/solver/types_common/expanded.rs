@@ -92,6 +92,20 @@ impl AsRef<ExpandedLocation> for InternedExpandedLocation {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+/// Type describing a localization of a dependency.
+/// Can either be:
+/// * registry - a dependency with a given name from a given server;
+/// * git - a dependency on a commit of a git repository at a given URL;
+/// * local - a dependency on a package that is stored locally on disk.
+///
+/// Diffrence between [`Location`] and [`ExpandedLocation`]
+/// -------------------------------------------------------
+/// [`Location`] directly corresponds to an entry in manifest.
+/// Specyfically, git dependencies can be specified by also tags or branches.
+/// Thus different locations can actually specify the same package,
+/// but it can only be known after cloning git repositories.
+/// Thus firstly we use [`Location`] and after all the manifests are gathered,
+/// we transition to using [`ExpandedLocation`].
 pub enum ExpandedLocation {
     Registry { url: Url, real_name: StrId },
     Git { url: Url, commit: StrId },
@@ -110,9 +124,24 @@ impl ExpandedLocation {
     pub fn is_local(&self) -> bool {
         matches!(self, Self::Local { .. })
     }
+
+    /// Return a descriptive name of this location.
+    pub fn descriptive_name(&self) -> String {
+        match self {
+            Self::Registry { real_name, .. } => format!("`{}", real_name),
+            Self::Git { url, .. } => format!("cloned from `{url}`"),
+            Self::Local { absolute_path } => {
+                format!("at the directory `{}`", absolute_path.display())
+            }
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+/// Type describing a concrete package from the point of view of the solver.
+/// This contains an [`ExpandedLocation`] and a version.
+/// For git and local dependencies the version field is [`None`] and for registry
+/// dependencies the version field contains the version of the dependency.
 pub struct ExpandedPackage {
     pub location: InternedExpandedLocation,
     pub version: Option<Version>,

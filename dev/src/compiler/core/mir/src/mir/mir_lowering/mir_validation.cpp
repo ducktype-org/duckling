@@ -93,7 +93,7 @@ namespace compiler::mir {
 						// Assume constructors are valid (every use is after construct).
 						construction_block.emplace(flag.local->id, block.key);
 					}
-					// Ommit destruct flag - LIR will handle it.
+					// Omit destruct flag - LIR will handle it.
 				}
 				return base::OK;
 			};
@@ -177,12 +177,13 @@ namespace compiler::mir {
 
 							auto get_pos = [&](auto local_ref) {
 								return helios::symbolPst(local_ref->helios_id.value())
+								    .value()
 								    .unlock(ctx)
 								    ->getSourcePosition();
 							};
 							auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
 							msg->addAttachedMessage(
-								makeBox<ShadowedDeclerationNote>(get_pos(shadowed))
+								makeBox<ShadowedDeclarationNote>(get_pos(shadowed))
 							);
 							ctx.logInt(std::move(msg));
 							return base::BAD;

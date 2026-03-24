@@ -1,3 +1,4 @@
+//! Managing all dependencies of the root package.
 use std::collections::HashMap;
 
 use crate::QuackError;
@@ -10,7 +11,7 @@ use crate::{StrId, quackpack::core::Dependency};
 pub struct Dependencies(HashMap<StrId, Dependency>);
 
 impl Dependencies {
-    /// Create a new dependencies map.
+    /// Create a new [`Dependencies`].
     pub fn new(dependencies: HashMap<StrId, Dependency>) -> Self {
         Self(dependencies)
     }

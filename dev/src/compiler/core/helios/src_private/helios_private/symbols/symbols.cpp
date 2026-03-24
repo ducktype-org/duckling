@@ -9,7 +9,8 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -129,8 +130,16 @@ namespace compiler::helios {
 		return getSymRef(id)->stmtCast(ctx);
 	}
 
-	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
-		return getSymRef(id)->getPSTData()->getElement();
+	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID id) {
+		return getSymRef(id)->getPSTDataOpt().map([](auto pst_data) {
+			return pst_data->getElement();
+		});
+	}
+
+	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
+		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstSymbolData> data) {
+			return data->getElement();
+		});
 	}
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
@@ -489,6 +498,9 @@ namespace compiler::helios {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymbolData> output_symbol_data;
 
+					auto char_type = tsh::SymbolType<>(
+						tsh::getCharType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+					);
 					auto i32_type = tsh::SymbolType<>(
 						tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
@@ -521,41 +533,48 @@ namespace compiler::helios {
 							tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 						);
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data
-						= { {
-							{
-								base::StrID("builtin_input_i64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
-							},
-							{
-								base::StrID("builtin_output_i64"),
-								ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
-							},
-							{
-								base::StrID("builtin_input_u64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, u64_type }),
-							},
-							{
-								base::StrID("builtin_output_u64"),
-								ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type }),
-							},
-							{
-								base::StrID("builtin_input_f64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, f64_type }),
-							},
-							{
-								base::StrID("builtin_output_f64"),
-								ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type }),
-							},
-							{
-								base::StrID("builtin_input_string"),
-								ctx.query<tsh::QueryFunctionType>({ {}, str_type }),
-							},
-							{
-								base::StrID("builtin_output_string"),
-								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type }),
-							},
-						} };
+					std::array function_data = {
+						std::make_pair(
+							base::StrID("builtin_input_char"),
+							ctx.query<tsh::QueryFunctionType>({ {}, char_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_char"),
+							ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_i64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, i64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_i64"),
+							ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_u64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, u64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_u64"),
+							ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_f64"),
+							ctx.query<tsh::QueryFunctionType>({ {}, f64_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_f64"),
+							ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_input_string"),
+							ctx.query<tsh::QueryFunctionType>({ {}, str_type })
+						),
+						std::make_pair(
+							base::StrID("builtin_output_string"),
+							ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
+						),
+					};
 
 					for (auto& [name, type]: function_data) {
 						auto sym_data
@@ -1006,7 +1025,7 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& expr) override {
-				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
+				for (const auto& sub_expr: expr.comparisons) sub_expr->acceptVisitor(*this);
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) override {
@@ -1029,37 +1048,31 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
+
+			auto collect_deps = [&]() {
+				const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
+				const auto& function_body   = fun_hout_result.body;
+
+				HoutFunctionCallCollector visitor;
+				for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+				return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+			};
+
 			variant_match(getSymRef(key)->other) {
 				variant_case_novalue(PstSymbolData) {
-					// Just a pst function
-					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-
-					const auto& function_body = fun_hout_result.body;
-
-					HoutFunctionCallCollector visitor;
-					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
-					return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+					// Just a PST function.
+					return collect_deps();
 				}
-
 				variant_case(builtin::BuiltinFunctionData, btd_data) {
 					// Builtin functions have no dependencies
 					return {};
 				}
-
 				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"QueryDirectFunctionCalls is not implemented for generated symbols "
-							"yet. ",
-							"The symbol in question is: ",
-							getSymRef(key)->common.name,
-							". "
-							"This usually means that a class was used inside compile time "
-							"evaluation."
-						),
-						std::nullopt
-					));
-					return query::Failed();
+					CORE_ASSERT(
+						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
+						"QueryDirectFunction calls called on a non-function symbol"
+					);
+					return collect_deps();
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}

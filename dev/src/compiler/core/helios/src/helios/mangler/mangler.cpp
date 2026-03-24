@@ -7,13 +7,13 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -52,7 +52,7 @@ namespace compiler::helios::mangler {
 
 		u64 result = 0;
 
-		hashes.maybePutAndUpdate(*this, 0, [&result](Ref<u64> existing) {
+		hashes.maybePutAndUpdate(*this, 0u, [&result](Ref<u64> existing) {
 			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
 			result = *existing;
 		});
@@ -184,7 +184,7 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto current_pst = symbolPst(symbol_id).unlock(ctx);
+				auto current_pst = symbolPst(symbol_id).value().unlock(ctx);
 				while (true) {
 					auto ancestor     = current_pst;
 					auto ancestor_opt = ancestor->getParent();
@@ -230,6 +230,28 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
+		 * @TODO: #1568 Remove this. I really needed it.
+		 */
+		std::string mangleType(const tsh::SymbolType<>& type) {
+			std::string s = type.toString();
+			std::ranges::replace(s, ' ', '_');
+			std::ranges::replace(s, '[', 'A');
+			std::ranges::replace(s, ']', 'E');
+			return s;
+		}
+
+		/**
+		 * @TODO: #1568 Remove this. I really needed it.
+		 */
+		std::string mangleType(const tsh::AbstractType& abs_type) {
+			std::string s = abs_type.toString();
+			std::ranges::replace(s, ' ', '_');
+			std::ranges::replace(s, '[', 'A');
+			std::ranges::replace(s, ']', 'E');
+			return s;
+		}
+
+		/**
 		 * @brief Returns mangled name of a function or method
 		 * @note: See mangling-scheme.md for details
 		 */
@@ -243,10 +265,10 @@ namespace compiler::helios::mangler {
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
-				ret += fun_decl.return_type.toString();
+				ret += mangleType(fun_decl.return_type);
 
 				for (const auto& param: fun_decl.parameters) {
-					ret += param.type.toString();
+					ret += mangleType(param.type);
 					ret += identifier(param.name.str());
 				}
 
@@ -289,13 +311,34 @@ namespace compiler::helios::mangler {
 						variant_match(gen_data.data) {
 							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "C" + funcType(ctx, symbol_id) + "E";
+
+								const auto ctor_suffix = "Hic" + funcType(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
+							}
+							variant_case(
+								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor
+							) {
+								const auto path_to_class = path(ctx, ctor.class_symbol);
+								const auto ctor_suffix   = "Hdc" + funcType(ctx, symbol_id) + "E";
+								return path_to_class + ctor_suffix;
+							}
+							variant_case(
+								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
+							) {
+								return "Hds" + mangleType(ctor.array_type) + "E";
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
 							) {
 								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
+							}
+							variant_case(
+								houtgen::GeneratedSymbolData::ReplInstructionWrapper,
+								repl_instr_wrapper
+							) {
+								return base::strConcat(
+									"__repl_instr_wrapper_", repl_instr_wrapper.counter
+								);
 							}
 							// Other cases of generated symbols cannot be functions.
 						}
@@ -308,9 +351,9 @@ namespace compiler::helios::mangler {
 				return path(ctx, symbol_id);
 			}
 			default:
-				throw base::LogicError{ base::strConcat(
-					"Cannot mangle symbol of type: ", symbolPst(symbol_id).unlock(ctx)->elementType()
-				) };
+				throw base::LogicError{
+					base::strConcat("Cannot mangle symbol of type: ", kind(symbol_id))
+				};
 				break;
 			}
 		}
