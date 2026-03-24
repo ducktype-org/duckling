@@ -475,13 +475,13 @@ namespace compiler::helios::mangler {
 
 		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
 			if (type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed)
-				return base::strConcat("i", type.getSize());
+				return base::strConcat("i", type.getSize().asInt());
 			else
-				return base::strConcat("j", type.getSize());
+				return base::strConcat("j", type.getSize().asInt());
 		}
 
 		static std::string mangle(query::Context&, tsh::FloatAbstractType type) {
-			return base::strConcat("f", type.getSize());
+			return base::strConcat("f", type.getSize().asInt());
 		}
 
 		static std::string mangle(query::Context&, tsh::RawPointerAbstractType) { return "p"; }
