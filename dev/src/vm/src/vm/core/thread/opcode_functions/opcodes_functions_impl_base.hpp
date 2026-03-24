@@ -1289,7 +1289,7 @@ namespace vm {
 		{
 			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
 			performInit(instr, local_stack, frame, thread, vm_value.type->getID());
-			vm_value.exportData({ Ref(frame->block_ref_stack[frame->block_ref_stack_count]), 0 });
+			vm_value.exportData({ Ref(frame->block_ref_stack[frame->block_ref_stack_count - 1]), 0 });
 		}
 		FUNCTION_CONT(1);
 	}

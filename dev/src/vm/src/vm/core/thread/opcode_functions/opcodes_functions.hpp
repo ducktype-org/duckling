@@ -164,7 +164,7 @@ namespace vm {
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
 			prev_frame->block_ref_stack_count -= arg_count;
-			prev_frame->local_stack_head -= arg_count;
+			prev_frame->local_stack_head -= called_func.arg_size;
 		}
 
 		static

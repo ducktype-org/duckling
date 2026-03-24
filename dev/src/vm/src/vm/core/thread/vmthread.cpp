@@ -420,7 +420,8 @@ namespace vm {
 	End:
 #endif
 		// @note: The return value is the only block left on the block stack.
-		auto block         = Ref(*frame->block_ref_stack);
+		auto block         = Ref(frame->block_ref_stack[frame->block_ref_stack_count - 1]);
+		CORE_ASSERT(frame->block_ref_stack_count == 1, "After function execution, there should be exactly one block on the block stack.");
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
