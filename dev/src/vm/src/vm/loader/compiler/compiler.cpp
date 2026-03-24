@@ -412,7 +412,7 @@ namespace vm::loader::compiler {
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
 
 	void Compiler::digestFileInfo(
-		const fs::File                                                     file,
+		const fs::File&                                                    file,
 		std::map<FileCoordinates, FatMicroMapping::OriginCtx::FatPosition> mapping
 	) {
 		instruction_mapping.files.put(file, FatMicroMapping::OriginCtx{ std::move(mapping) });
