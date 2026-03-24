@@ -119,6 +119,10 @@ namespace vm::jit::cf {
         BlockID edge(usize index) const {
             return succ[index];
         }
+
+        usize edgeCount() const {
+            return succ.size();
+        }
     };
 
     class ControlFlowGraph {
