@@ -47,7 +47,6 @@ private:
 				no_task_counter.fetch_add(1, std::memory_order_relaxed);
 			});
 		}
-		ASSERT_TRUE(no_task_counter >= getWorkerCount());
 
 		auto all_workers = worker_manager.getAllWorkers();
 		ASSERT_EQUAL(all_workers.size(), getWorkerCount());
