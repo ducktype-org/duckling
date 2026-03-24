@@ -2,6 +2,7 @@
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
@@ -60,8 +61,18 @@ namespace compiler::repl {
 		auto root      = pst->getRootElement();
 
 		auto expr_stmt_opt = pst::extractSingleExpression(ctx, root);
-		if (expr_stmt_opt.has_value())
-			return ExpressionSingleStatementInfo{ .expr_stmt = expr_stmt_opt.value() };
+		if (expr_stmt_opt.has_value()) {
+			auto expr_stmt   = expr_stmt_opt.value();
+			auto expr_holder = expr_stmt.unlock(ctx)->getExpr().unlock(ctx);
+			auto inner_expr  = expr_holder->getExpr().unlock(ctx);
+
+			// Assignment is syntactically an expression, but its HOUT lowering currently lives in
+			// statement compilation. Route it as instruction to use that lowering path.
+			if (inner_expr.dynamicCast<pst::expr::Assignment>().has_value())
+				return InstructionSingleStatementInfo{ .instruction_stmt = expr_stmt };
+
+			return ExpressionSingleStatementInfo{ .expr_stmt = expr_stmt };
+		}
 
 		auto instr_stmt_opt = pst::extractSingleInstruction(ctx, root);
 		if (instr_stmt_opt.has_value()) {
