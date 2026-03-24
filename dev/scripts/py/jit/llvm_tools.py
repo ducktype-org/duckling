@@ -36,7 +36,7 @@ class LLVMTool:
 
 
 LLVM_TOOLS: list[LLVMTool] = [
-    LLVMTool(tool_name) for tool_name in ["opt", "link", "nm", "cxxfilt", "extract"]
+    LLVMTool(tool_name) for tool_name in ["opt", "link", "nm", "cxxfilt", "extract", "readobj"]
 ]
 
 def llvm_tools_version_options(func):

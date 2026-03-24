@@ -36,6 +36,7 @@ if(JIT_ENABLED)
         --llvm-opt=${LLVM_OPT}
         --llvm-link=${LLVM_LINK}
         --llvm-nm=${LLVM_NM}
+        --llvm-readobj=${LLVM_READOBJ}
         --llvm-cxxfilt=${LLVM_CXXFILT}
         --llvm-extract=${LLVM_EXTRACT}
     )
