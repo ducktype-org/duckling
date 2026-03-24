@@ -42,13 +42,13 @@ namespace vm {
 		friend class VMProcess;
 
 	private:
-		Ref<VMProcess> my_process;
-		Ref<Memory>    memory;
-		TypeCRef       my_type;
-		Pointer        pointed_data;
+		const Ref<VMProcess> my_process;
+		const Ref<Memory>    memory;
+		const TypeCRef       my_type;
+		const Pointer        pointed_data;
 
 	public:
-		VMValueRef(VMProcess& process, TypeCRef type, Pointer pointed_data);
+		VMValueRef(VMProcess& process, const TypeCRef type, const Pointer pointed_data);
 
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
 		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const;

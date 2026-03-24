@@ -4,6 +4,7 @@
 #include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/thread/vmvalueref.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <ostream>
@@ -67,6 +68,8 @@ namespace vm {
 		void exportData(Pointer dst) const;
 
 		void importData(Pointer src);
+
+		VMValueRef asRef() const;
 
 		[[nodiscard]] PID getPID() const;
 
