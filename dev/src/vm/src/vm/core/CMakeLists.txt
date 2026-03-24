@@ -13,6 +13,7 @@ add_files(
 		process/concurrency/gil.cpp
 		process/concurrency/condition_variable.cpp
 		process/concurrency/synchronization_primitives.cpp
+		process/concurrency/deadlock_detection.cpp
 )
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
