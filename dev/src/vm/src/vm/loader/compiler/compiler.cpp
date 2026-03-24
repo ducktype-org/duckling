@@ -33,13 +33,40 @@ namespace vm::loader::compiler {
 		variant_match(opcode_arg) {
 			variant_case(vm::opargs::Immediate, imm) return imm.value;
 
-			// Every used local variable is guaranteed to exist by static verification.
-#define HANDLE_LOCAL(TYPE)                                                      \
-	variant_case(vm::opargs::TYPE, local_type) {                                \
-		return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset); \
-	}
-			FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
-#undef HANDLE_LOCAL
+			// 			// Every used local variable is guaranteed to exist by static verification.
+			// #define HANDLE_LOCAL(TYPE)                                                      \
+// 	variant_case(vm::opargs::TYPE, local_type) {                                \
+// 		return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset); \
+// 	}
+			break;
+			variant_case(vm::opargs::StackLocal8, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
+			}
+			variant_case(vm::opargs::StackLocal16, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
+			}
+			variant_case(vm::opargs::StackLocal32, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
+			}
+			variant_case(vm::opargs::StackLocal64, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
+			}
+			variant_case(vm::opargs::StackLocalAny, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).block_idx);
+			}
+			variant_case(vm::opargs::StackLocalPtr, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
+			}
+			variant_case(vm::opargs::StackLocalVnt, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).block_idx);
+			}
+			variant_case(vm::opargs::StackLocalOpq, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).block_idx);
+			}
+			variant_case(vm::opargs::StackLocalStructure, local_type) {
+				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).block_idx);
+			}
+			// #undef HANDLE_LOCAL
 
 #define HANDLE_GLOBAL(TYPE)                                     \
 	variant_case(vm::opargs::TYPE, global_data) {               \
@@ -128,7 +155,10 @@ namespace vm::loader::compiler {
 			}
 
 			auto type_ref = low_program.types->at(type.type_name);
-			result.put(local.var_name, { .offset = curr_stack_size, .type = type_ref });
+			result.put(
+				local.var_name,
+				{ .offset = curr_stack_size, .block_idx = type_size_stack.size(), .type = type_ref }
+			);
 			auto type_size = type_ref->getSize().asInt();
 			type_size_stack.push_back(type_size);
 			if (type.type_name == "void") return;

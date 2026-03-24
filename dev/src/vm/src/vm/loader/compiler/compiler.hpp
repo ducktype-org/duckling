@@ -89,6 +89,7 @@ namespace vm::loader::compiler {
 
 			struct LocalEntry {
 				u64      offset;
+				u64      block_idx;
 				TypeCRef type;
 			};
 

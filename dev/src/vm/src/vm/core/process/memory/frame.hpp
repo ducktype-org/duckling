@@ -49,24 +49,9 @@ namespace vm {
 		 * @brief Stack of block IDs used by the function created with init_type
 		 * and destroyed with deinit.
 		 */
-		std::vector<Ref<Block>> block_stack;
+		Block** block_ref_stack;
 
-		/**
-		 * @brief Mapping from stack offset to ID of block
-		 * responsible for data on that offset.
-		 *
-		 * Used when creating pointers to local variables.
-		 */
-		base::HashMap<u64, u64> local_offset_to_block_idx;
-
-		/**
-		 * @brief Mapping from ID of block to the offset on the local stack.
-		 *
-		 * Used when calling and returning from the function to populate the
-		 * local_offset_to_block_idx of the called function (to make is possible
-		 * to create a pointer to a passed argument).
-		 */
-		base::HashMap<u64, u64> block_idx_to_local_offset;
+		u64 block_ref_stack_count = 0;
 
 		/**
 		 * @brief First free byte in the local stack.

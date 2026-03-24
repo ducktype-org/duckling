@@ -388,6 +388,7 @@ namespace vm {
 		std::byte* local_stack = runtime_data.local_stack_base;
 
 		frame->current_function = &start_function;
+		frame->block_ref_stack = runtime_data.block_ref_stack_base;
 
 		const auto* instr = start_function.bc.data();
 
@@ -419,7 +420,7 @@ namespace vm {
 	End:
 #endif
 		// @note: The return value is the only block left on the block stack.
-		auto block         = frame->block_stack.back();
+		auto block         = Ref(*frame->block_ref_stack);
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);

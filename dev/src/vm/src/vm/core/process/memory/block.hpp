@@ -54,5 +54,7 @@ namespace vm {
 
 	public:
 		Block(BlockID id, BlockData data): id(id), data(data) {}
+
+		base::ModRawView getDataView() { return data.view; }
 	};
 }
