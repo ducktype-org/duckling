@@ -85,12 +85,10 @@ namespace compiler::driver {
 					{ key.module_id, key.backend_type, /*build_debug_info=*/true }
 				)
 			);
-			if (compile_module_result.debug_info.empty()) {
-				CORE_USER_LOG(
-					"Invalid query call, debug info was not produced by CompileModule query.\n"
-				);
-				return query::Failed();
-			}
+			CORE_ASSERT(
+				compile_module_result.debug_info.has_value(),
+				"CompileModule does not return debug info. This should never happen."
+			);
 
 			//  @TODO: #2323 this is an expensive copy, this issue would fix this.
 			auto debug_info = compile_module_result.debug_info.value();

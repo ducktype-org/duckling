@@ -36,16 +36,7 @@ namespace compiler::backend_vm::internal {
 		 * This constructor is provided for backward compatibility with existing call sites.
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
-		explicit ProgramLoweringContext(query::Context& query_ctx, bool build_debug_info):
-
-			  query_ctx_for_errors(&query_ctx),
-			  debug_info_builder(
-				  (build_debug_info
-		               ? debug_info::DebugInfoBuilder(
-							 debug_info::Target::DBC, debug_info::SourcePositionsType::PstHash
-						 )
-		               : base::Optional<debug_info::DebugInfoBuilder>{})
-			  ) {}
+		explicit ProgramLoweringContext(query::Context& query_ctx, bool build_debug_info);
 
 		/**
 		 * @brief Set the query context for error reporting during compilation.

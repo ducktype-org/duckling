@@ -330,7 +330,7 @@ namespace compiler::driver {
 
 		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
 
-		// This is temporary.
+		// @TODO: #2354 This is temporary.
 		const bool build_debug_info = backend == BackendType::DVM;
 
 		std::function<void(frontend::ModuleID)> handle_module

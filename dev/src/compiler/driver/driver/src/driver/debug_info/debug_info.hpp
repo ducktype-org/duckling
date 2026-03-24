@@ -36,6 +36,9 @@ namespace compiler::driver {
 	 * query is purely for better incremental compilation, as changing only the location of the
 	 * nodes and not the nodes themselves should not change the PST hash, so the PST-hash debug info
 	 * can be cached on disk, but it should invalidate this query's result.
+	 *
+	 * @warning If you use this query and compileModule make sure you use `compileModule` with
+	 * `build_debug_info=true`, otherwise the module will get compiled twice.
 	 */
 	DECLARE_QUERY(
 		DebugInfoForModule,

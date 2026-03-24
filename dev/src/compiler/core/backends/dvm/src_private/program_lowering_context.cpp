@@ -14,6 +14,18 @@
 
 using namespace compiler::backend_vm::internal;
 
+compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
+	query::Context& query_ctx, bool build_debug_info
+):
+
+	  query_ctx_for_errors(&query_ctx),
+	  debug_info_builder(
+		  (build_debug_info ? debug_info::DebugInfoBuilder(
+								  debug_info::Target::DBC, debug_info::SourcePositionsType::PstHash
+							  )
+                            : base::Optional<debug_info::DebugInfoBuilder>{})
+	  ) {}
+
 const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
 ) {
 	if (tsl_type_to_dvm.contains(layout)) {
