@@ -575,6 +575,59 @@ clah::Clah getClahForMain() {
 					return result.isOk() ? 0 : 1;
 				})
 		)
+	    // For now run works only for DVM backend, but it will be extended to also support running
+	    // LLVM-compiled executables in the future when compilation to executable will be added to
+	    // compile_script command.
+	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
+	                       .addPositional(clah::FileParser::make("script"))
+	                       .add(getLlvmOptLevelParam())
+	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                                .addShortName('w')
+	                                .addLongName("workers")
+	                                .addShortDesc("Worker count.")
+	                                .optional()
+	                                .build())
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   using namespace compiler;
+
+							   auto script_file  = options.getPositional<fs::File>(0);
+							   auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+							   // duckc run doesn't produce any artifacts for now, but this may be
+		                       // changed later by for example adding option to save compiled
+		                       // bytecode. Also, ScriptMode requires artifacts path, maybe this
+		                       // will be refactored later.
+							   auto run_temp_artifacts_path = fs::FilePath(
+								   fs::FilePath::getDefaultTempDirectoryPath().getPath()
+								   / "duckling_script_run_artifacts"
+							   );
+
+							   auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
+						.script_file     = script_file,
+						.backend_options = getBackendOptionsFromClap(options),
+						.compilation_artifacts = {
+							.artifacts_path = run_temp_artifacts_path,
+						},
+						.debug_options     = getDebugOptionsFromClap(options),
+						.execution_options = {
+							.worker_count = base::safeIntConv<u64>(worker_count),
+						},
+					};
+
+							   auto init_result = compiler::driver::initializeTheCompiler(mode);
+							   if (init_result.status().isBad()) {
+								   compiler::driver::exit();
+								   return 1;
+							   }
+
+							   auto run_result = driver::runScriptOnDVM(mode);
+
+							   compiler::driver::exit();
+							   if (!run_result.has_value()) {
+								   std::cerr << "Error: " << run_result.error() << "\n";
+								   return 1;
+							   }
+							   return run_result->exit_code;
+						   }))
 	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   auto init_result = compiler::driver::initializeTheCompiler(

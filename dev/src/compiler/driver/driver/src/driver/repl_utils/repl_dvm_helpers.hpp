@@ -13,6 +13,20 @@
 
 namespace compiler::repl {
 	/**
+	 * @brief Compile a HOUT unit to a standalone DVM code chunk using persistent REPL lowering
+	 * context.
+	 *
+	 * This is the same lowering path used by REPL incremental execution, but without sending
+	 * the code to a running VM process.
+	 */
+	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
+		query::Context&                  ctx,
+		const helios::HOUTUnit&          hout_unit,
+		std::string_view                 module_name,
+		backend_vm::ReplLoweringContext& lowering_context
+	);
+
+	/**
 	 * @brief Compile a HOUT unit to DVM bytecode and load it into a running DVM process.
 	 *
 	 * @param ctx          Active query context for LIR compilation queries.

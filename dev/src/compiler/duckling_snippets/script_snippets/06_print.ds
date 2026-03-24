@@ -1,0 +1,3 @@
+# right now builtin_output works only if it's first statement in the script.
+# This will be fixed soon.
+builtin_output_i64(2+2);

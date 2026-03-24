@@ -65,6 +65,13 @@ namespace compiler::driver {
 		const linker::LinkingOptions&                        linking_options
 	);
 
+	/**
+	 * Compile a Duckling script to DVM bytecode in-memory and execute it.
+	 */
+	std::expected<RunOutput, std::string> runScriptOnDVM(
+		const CompilerModeOfOperationAndOptions::ScriptMode& mode
+	);
+
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;
 		BackendType        backend_type;
