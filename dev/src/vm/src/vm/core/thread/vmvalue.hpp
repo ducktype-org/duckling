@@ -69,7 +69,7 @@ namespace vm {
 
 		void importData(Pointer src);
 
-		VMValueRef asRef() const;
+		[[nodiscard]] VMValueRef asRef() const;
 
 		[[nodiscard]] PID getPID() const;
 
