@@ -343,7 +343,8 @@ namespace {
 		// Free the owned arguments.
 		for (const auto& arg: owned_args) arg->freeData();
 
-		auto exit_value = maybe_exit_value.value();
+		auto exit_value = maybe_exit_value.value()[0];
+		// @todo: handle case when compiler return multiple values
 		return vmValueToCtv(return_type, exit_value);
 	}
 }

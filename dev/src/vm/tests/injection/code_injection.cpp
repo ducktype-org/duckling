@@ -78,7 +78,7 @@ private:
 
 		auto exit_code_response = vm::api::getExitValue(pid);
 		ASSERT_TRUE(exit_code_response.has_value());
-		const auto& exit_value = exit_code_response.value();
+		const auto& exit_value = exit_code_response.value().at(0);
 		if (expected_exit_code.has_value())
 			ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value->readBytes<i64>());
 		else

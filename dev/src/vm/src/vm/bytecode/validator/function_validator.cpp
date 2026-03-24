@@ -107,7 +107,13 @@ public:
 
 	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
 		  types_ctx(&types_ctx) {
-		push(base::StrID("ret_val"), signature.result_type[0].str);
+		if (signature.result_type.size()) {
+			push(base::StrID("ret_val"), signature.result_type[0].str);
+
+			for (auto [idx, ret]: std::views::enumerate(signature.result_type) | std::views::drop(1)) {
+				push(base::StrID(base::strConcat("ret_val", idx).c_str()), ret.str);
+			}
+		}
 		for (auto [idx, param]: std::views::enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
 	}

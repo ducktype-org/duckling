@@ -281,15 +281,23 @@ namespace vm::loader::compiler {
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
+			u64 ret_type_sum = 0;
+			std::vector<TypeCRef> result_types = {};
+			for (auto& ret: signature.result_type) {
+				if (ret.str != "void") {
+					ret_type_sum += low_program.types->at(ret)->getSize().asInt();
+				}
+				result_types.emplace_back(low_program.types->at(ret));
+			}
+
 			low_program.functions.insert(
 				low::LowFuncData{ .name             = function.name,
 			                      .bc               = std::move(bytecode),
 			                      .local_stack_size = ctx.local_stack_size,
 			                      .arg_size         = parameters_size,
-			                      .ret_size
-			                      = low_program.types->at(signature.result_type[0])->getSize().asInt(),
-			                      .parameters  = std::move(parameters),
-			                      .result_type = low_program.types->at(signature.result_type[0]) },
+			                      .ret_size         = ret_type_sum,
+			                      .parameters       = std::move(parameters),
+			                      .result_type      = std::move(result_types) },
 				function.name
 
 			);

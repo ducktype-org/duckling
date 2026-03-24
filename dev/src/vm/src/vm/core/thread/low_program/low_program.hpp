@@ -29,7 +29,7 @@ namespace vm::low {
 		usize                 arg_size;
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
-		TypeCRef              result_type;
+		std::vector<TypeCRef> result_type;
 	};
 
 	/**

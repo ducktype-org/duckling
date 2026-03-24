@@ -106,7 +106,7 @@ private:
 					+ ", reason: " + vm::api::errorToString(value.error())
 				);
 			}
-			const auto vm_value = value.value();
+			const auto vm_value = value.value()[0];
 			switch (type_tag_bits) {
 			case 8:
 				// Using uint8_t, because u8 is not integral

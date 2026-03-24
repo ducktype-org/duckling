@@ -533,8 +533,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
 			// Frame of the function we're returning from.
-			auto*      callee_frame = frame;
-			const bool void_func    = frame->current_function->result_type->getName() == "void";
+			auto* callee_frame = frame;
+			u64   ret_count    = frame->current_function->result_type.size();
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
@@ -549,7 +549,7 @@ namespace vm {
 
 				// We're returning from a non-void function, so the last block on the stack is the
 				// return value. It's being used by the caller so we don't free it.
-				if (void_func || callee_frame->block_stack.size() != 1) {
+				if (callee_frame->block_stack.size() > ret_count) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);
 				}

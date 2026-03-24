@@ -134,7 +134,7 @@ namespace vm {
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
 		 * store a reference to this object.
 		 */
-		base::Optional<Ref<VmValue>> exit_value_storage{};
+		std::vector<Ref<VmValue>> exit_value_storage{};
 
 		/**
 		 * @brief Message queue to send responses to the VMProcess.
@@ -184,7 +184,7 @@ namespace vm {
 		 * @param func - the function to execute.
 		 * @return Mutable reference to a value returned by the program
 		 */
-		Ref<VmValue> executeFunction(
+		std::vector<Ref<VmValue>> executeFunction(
 			const low::LowFuncData& start_function, const low::LowFuncData& func
 		);
 

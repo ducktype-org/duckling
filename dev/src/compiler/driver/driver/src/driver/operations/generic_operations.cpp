@@ -296,9 +296,9 @@ namespace compiler::driver {
 		    .and_then([&] { return vm::api::join(pid); })
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
-		    .transform([](Ref<vm::VmValue> exit_value) {
+		    .transform([](vm::api::ExitValue exit_values) {
 				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
+				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
 			});
 	}
 }

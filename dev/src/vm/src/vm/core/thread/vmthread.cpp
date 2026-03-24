@@ -116,18 +116,22 @@ namespace vm {
 			                             .bc               = {},
 			                             .local_stack_size = 0,
 			                             .arg_size         = 0,
-			                             .ret_size         = func.result_type->getSize().asInt(),
+			                             .ret_size         = func.ret_size,
 			                             .parameters       = {},
 			                             .result_type      = func.result_type };
 
-		u64       result_type_id     = func.result_type->getID().asInt();
 		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
+		u64 offset = 0;
+		for (auto& res: func.result_type) {
+			// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
+			// the return value of the function. Void functions always return with the exit_code = 0.
+			start_function.bc.push_back(
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, offset, res->getID().asInt())
+			);
+			offset += res->getSize().asInt();
+		}
 
-		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
-		// the return value of the function. Void functions always return with the exit_code = 0.
-		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, result_type_id));
-
-		start_function.local_stack_size += func.result_type->getSize().asInt();
+		start_function.local_stack_size += func.ret_size;
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			const auto& arg_value = func_args[i];
@@ -207,7 +211,7 @@ namespace vm {
 			                             .bc               = {},
 			                             .local_stack_size = 72,
 			                             .arg_size         = 0,
-			                             .ret_size         = main_return_type->getSize().asInt(),
+			                             .ret_size         = func.ret_size,
 			                             .parameters       = {},
 			                             .result_type      = func.result_type };
 
@@ -379,7 +383,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	Ref<VmValue> VMThread::executeFunction(
+	std::vector<Ref<VmValue>> VMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		keepOrAcquireGil();
@@ -418,15 +422,27 @@ namespace vm {
 		}
 	End:
 #endif
-		// @note: The return value is the only block left on the block stack.
-		auto block         = frame->block_stack.back();
-		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
-		process_memory.freeBlockData(block);
-		process_memory.decreaseBlockRefcount(block);
+		CORE_ASSERT(
+			frame->block_stack.size() == func.result_type.size(),
+			"after finishing execution, there should be a specific number of blocks at the stack"
+		);
+		
+		exit_value_storage = {};
+		for (u64 idx = 0; idx < frame->block_stack.size(); idx++) {
+			exit_value_storage.emplace_back(process.createVmValue(
+				func.result_type[idx],
+				Pointer(frame->block_stack[idx], frame->block_idx_to_local_offset[idx])
+			));
+		}
+
+		for (auto& block: frame->block_stack) {
+			process_memory.freeBlockData(block);
+			process_memory.decreaseBlockRefcount(block);
+		}
 		frame->resetFrameData();
 		process.getGIL().release();
 
-		return exit_value_storage.value();
+		return exit_value_storage;
 	}
 
 	// executeFunction end
