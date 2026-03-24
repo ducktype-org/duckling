@@ -5,7 +5,6 @@
 #include <concurrent/worker/worker_manager.hpp>
 
 #include <query_framework/internal/task_pool/task_pool.hpp>
-
 #include <tester/tester.hpp>
 
 class TaskPoolTest: public tester::TestSuite {
@@ -43,15 +42,14 @@ private:
 	static bool fakeEraseFunction(query::QueryStableHash) { return false; }
 
 	static query::internal::QueryID getFakeQueryID() {
-		static const query::internal::QueryID fake_query_id = query::internal::registerQuery(
-			query::internal::QueryData(
+		static const query::internal::QueryID fake_query_id
+			= query::internal::registerQuery(query::internal::QueryData(
 				query::internal::QueryKind::Normal,
 				"TaskPoolTestFakeQuery",
-				query::internal::QueryTags{ .used_hashes = query::UsedHashes::UnstableHash,
-				                         .uses_qresult = false },
+				query::internal::QueryTags{ .used_hashes  = query::UsedHashes::UnstableHash,
+		                                    .uses_qresult = false },
 				query::internal::QueryCacheData{ .erase_function = &fakeEraseFunction }
-			)
-		);
+			));
 		return fake_query_id;
 	}
 
@@ -92,15 +90,13 @@ private:
 			}
 
 			query::internal::Task task1(
-				makeFakeNodeID(n - 1), [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 1);
-				}
+				makeFakeNodeID(n - 1),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 1); }
 			);
 
 			query::internal::Task task2(
-				makeFakeNodeID(n - 2), [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 2);
-				}
+				makeFakeNodeID(n - 2),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 2); }
 			);
 
 			auto future1 = task_pool.schedule(std::move(task1));
@@ -143,15 +139,13 @@ private:
 			}
 
 			query::internal::Task task1(
-				makeFakeNodeID(n - 1), [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 1);
-				}
+				makeFakeNodeID(n - 1),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 1); }
 			);
 
 			query::internal::Task task2(
-				makeFakeNodeID(n - 2), [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 2);
-				}
+				makeFakeNodeID(n - 2),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 2); }
 			);
 
 			auto future1 = task_pool.schedule(std::move(task1));
@@ -195,15 +189,13 @@ private:
 			}
 
 			query::internal::Task task1(
-				makeFakeNodeID(n - 1), [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 1);
-				}
+				makeFakeNodeID(n - 1),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 1); }
 			);
 
 			query::internal::Task task2(
-				makeFakeNodeID(n - 2), [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 2);
-				}
+				makeFakeNodeID(n - 2),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 2); }
 			);
 
 			task_pool.query(task1);
@@ -244,15 +236,13 @@ private:
 			}
 
 			query::internal::Task task1(
-				makeFakeNodeID(n - 1), [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 1);
-				}
+				makeFakeNodeID(n - 1),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 1); }
 			);
 
 			query::internal::Task task2(
-				makeFakeNodeID(n - 2), [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 2);
-				}
+				makeFakeNodeID(n - 2),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 2); }
 			);
 
 			auto future1 = task_pool.schedule(std::move(task1));
@@ -294,27 +284,23 @@ private:
 			}
 
 			query::internal::Task task1(
-				makeFakeNodeID(n - 1), [n, &gib_task_gen](concurrent::worker::WRef) {
-				return gib_task_gen(n - 1);
-				}
+				makeFakeNodeID(n - 1),
+				[n, &gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(n - 1); }
 			);
 
 			query::internal::Task task2(
-				makeFakeNodeID(n - 2), [n, &gib_task_gen](concurrent::worker::WRef) {
-				return gib_task_gen(n - 2);
-				}
+				makeFakeNodeID(n - 2),
+				[n, &gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(n - 2); }
 			);
 
 			query::internal::Task task3(
-				makeFakeNodeID(n - 3), [n, &gib_task_gen](concurrent::worker::WRef) {
-				return gib_task_gen(n - 3);
-				}
+				makeFakeNodeID(n - 3),
+				[n, &gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(n - 3); }
 			);
 
 			query::internal::Task task4(
-				makeFakeNodeID(n - 4), [n, &gib_task_gen](concurrent::worker::WRef) {
-				return gib_task_gen(n - 4);
-				}
+				makeFakeNodeID(n - 4),
+				[n, &gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(n - 4); }
 			);
 
 			auto future1 = task_pool.schedule(std::move(task1));

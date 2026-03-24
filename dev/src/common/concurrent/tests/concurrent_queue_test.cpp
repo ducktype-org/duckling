@@ -37,7 +37,8 @@ private:
 		ASSERT_TRUE(!queue.empty());
 		ASSERT_EQUAL(queue.size(), 4ULL);
 
-		auto miss_on_odd_front = queue.tryPopIf([](base::CRef<int> value) { return *value % 2 == 0; });
+		auto miss_on_odd_front
+			= queue.tryPopIf([](base::CRef<int> value) { return *value % 2 == 0; });
 		ASSERT_TRUE(miss_on_odd_front.empty());
 		ASSERT_EQUAL(queue.size(), 4ULL);
 
@@ -78,13 +79,11 @@ private:
 		ASSERT_EQUAL(seen.size(), 8ULL);
 		for (int i = 0; i < 8; ++i) ASSERT_EQUAL(seen[static_cast<usize>(i)], i);
 
-		for (auto it = queue.begin(); it != queue.end();) {
-			if ((*it % 2) == 0) {
+		for (auto it = queue.begin(); it != queue.end();)
+			if ((*it % 2) == 0)
 				it = queue.erase(it);
-			} else {
+			else
 				++it;
-			}
-		}
 
 		ASSERT_EQUAL(queue.size(), 4ULL);
 
@@ -103,7 +102,7 @@ private:
 		constexpr usize TOTAL_ITEMS        = PRODUCER_COUNT * ITEMS_PER_PRODUCER;
 
 		concurrent::ConQueue<u64> queue;
-		std::atomic<usize>        consumed = 0;
+		std::atomic<usize>        consumed         = 0;
 		std::atomic<bool>         has_out_of_range = false;
 		std::atomic<bool>         has_duplicate    = false;
 		std::vector<uint8_t>      seen(TOTAL_ITEMS, 0);
@@ -170,8 +169,8 @@ private:
 		concurrent::ConQueue<u64> queue;
 		for (usize i = 0; i < TOTAL_ITEMS; ++i) queue.push(static_cast<u64>(i));
 
-		std::atomic<usize> evens_taken = 0;
-		std::atomic<usize> odds_taken  = 0;
+		std::atomic<usize> evens_taken      = 0;
+		std::atomic<usize> odds_taken       = 0;
 		std::atomic<bool>  has_out_of_range = false;
 		std::atomic<bool>  has_duplicate    = false;
 
@@ -191,7 +190,8 @@ private:
 
 		std::jthread even_worker([&]() {
 			while (evens_taken.load(std::memory_order_relaxed) < TOTAL_ITEMS / 2) {
-				auto popped = queue.tryPopIf([](base::CRef<u64> value) { return (*value % 2) == 0; });
+				auto popped
+					= queue.tryPopIf([](base::CRef<u64> value) { return (*value % 2) == 0; });
 				if (!popped.has_value()) {
 					std::this_thread::yield();
 					continue;
@@ -205,7 +205,8 @@ private:
 
 		std::jthread odd_worker([&]() {
 			while (odds_taken.load(std::memory_order_relaxed) < TOTAL_ITEMS / 2) {
-				auto extracted = queue.extractIf([](base::CRef<u64> value) { return (*value % 2) == 1; });
+				auto extracted
+					= queue.extractIf([](base::CRef<u64> value) { return (*value % 2) == 1; });
 				if (!extracted.has_value()) {
 					std::this_thread::yield();
 					continue;
