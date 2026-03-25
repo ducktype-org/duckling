@@ -73,6 +73,8 @@ namespace vm {
 
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
 
+		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const;
+
 		[[nodiscard]] PID getPID() const;
 
 		TypeCRef type;

@@ -95,3 +95,5 @@ void vm::VmValue::dprint(std::ostream& out, const std::string& indent) const {
 	hexdump(out, data.data(), data.size(), indent);
 	out << indent << "-----------------\n";
 }
+
+base::Optional<vm::InterpretedDataVariant> vm::VmValue::readData() const { return asRef().readData(); }
