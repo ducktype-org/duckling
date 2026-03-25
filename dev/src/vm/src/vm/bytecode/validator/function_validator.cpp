@@ -98,6 +98,7 @@ class LocalStack {
 
 	CRef<valid_type::ValidTypeMap>                          types_ctx;
 	base::HashMap<base::StrID, CRef<valid_type::ValidType>> local_name_to_type;
+	usize no_of_ret_vals = 0;
 
 public:
 	LocalStack(const LocalStack&)            = default;
@@ -106,7 +107,7 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
-		  types_ctx(&types_ctx) {
+		  types_ctx(&types_ctx), no_of_ret_vals(signature.result_type.size()) {
 		if (signature.result_type.size()) {
 			push(base::StrID("ret_val"), signature.result_type[0].str);
 
@@ -136,7 +137,7 @@ public:
 	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
-		if (stack_state.size() == 1) throw RetValDeinitError(cause);
+		if (stack_state.size() == no_of_ret_vals) throw RetValDeinitError(cause);
 		const auto& top = stack_state.back();
 		local_name_to_type.erase(top.local_name);
 		stack_state.pop_back();

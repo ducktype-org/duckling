@@ -70,16 +70,18 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					func_name.bytecode_pos = func->name.position;
 					function.name          = func_name;
 
-					code::Identifier result_type;
-					result_type.str                = func->result_type.value;
-					result_type.bytecode_pos       = func->result_type.position;
-					function.signature.result_type = { result_type };
-
 					for (const auto& param: func->parameters) {
 						code::Identifier param_id;
 						param_id.str          = param.value;
 						param_id.bytecode_pos = param.position;
 						function.signature.parameters.emplace_back(param_id);
+					}
+
+					for (const auto& reslt: func->result_type) {
+						code::Identifier param_id;
+						param_id.str          = reslt.value;
+						param_id.bytecode_pos = reslt.position;
+						function.signature.result_type.emplace_back(param_id);
 					}
 
 					for (const auto& instr: func->code->opcodes)

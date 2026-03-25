@@ -160,9 +160,11 @@ namespace vm::detail {
 		}                                                                                               \
 		static vm::code::FuncSignature getSignature(vm::PID pid) {                                      \
 			Bytes vm_arg_type_size_sum(0);                                                              \
-			VM_EXT_C_PLACE_VALIDATION(ResCType, ResVmType, result)                                      \
-			vm_arg_type_size_sum                                                                        \
-				-= tp_result->type->getSize(); /* undo what we've done to the sum */                    \
+			if (base::StrID(VM_EXT_C_VM_TYPE_NAME(ResVmType)) != "void") {                              \
+				VM_EXT_C_PLACE_VALIDATION(ResCType, ResVmType, result)                                  \
+				vm_arg_type_size_sum                                                                    \
+					-= tp_result->type->getSize(); /* undo what we've done to the sum */                \
+			}                                                                                           \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_PLACE_VALIDATION, __VA_ARGS__);                        \
 			vm::code::FuncSignature signature;                                                          \
 			signature.result_type = {};                                                                 \
@@ -184,6 +186,7 @@ namespace vm::detail {
 	ResCType FuncName::call(                                                                            \
 		[[maybe_unused]] u64 _ FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_PARAMS, __VA_ARGS__)           \
 	)
+
 
 
 /**

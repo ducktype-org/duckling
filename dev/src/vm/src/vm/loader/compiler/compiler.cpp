@@ -169,7 +169,13 @@ namespace vm::loader::compiler {
 		}
 
 		code::FuncSignature func_signature = ctx.function.signature;
-		push(base::StrID("ret_val"), func_signature.result_type[0].str);
+		if (func_signature.result_type.size()) {
+			push(base::StrID("ret_val"), func_signature.result_type[0].str);
+
+			for (auto [idx, ret_type]: std::views::enumerate(func_signature.result_type) | std::views::drop(1)) {
+				push(base::StrID(base::strConcat("ret_val", idx).c_str()), ret_type.str);
+			}
+		}
 		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size

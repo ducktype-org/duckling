@@ -492,7 +492,31 @@ namespace vm::loader::parser {
 			return nullptr;
 		}
 
-		state.parse().one(&out->result_type);
+		if (state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.goDown();
+			while (state.notEmpty()) {
+				tpc::Identifier field_type;
+				state.parse().one(&field_type);
+				out->result_type.emplace_back(field_type);
+
+				if (state.empty()) break;
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
+				} else {
+					state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Expected comma or `}` after here.", state.getPosition()
+					));
+					state.tokens().skip();
+				}
+			}
+			state.goUpAndSkip();
+		} else {
+			tpc::Identifier field_type;
+			state.parse().one(&field_type);
+			if (field_type.value != "void") {
+				out->result_type.emplace_back(field_type);
+			}
+		}
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -937,7 +961,14 @@ namespace vm::loader::parser {
 			out << param.value.strView();
 			first = false;
 		}
-		out << "} -> " << result_type.value.strView() << "{\n";
+		out << "} -> {";
+		first = true;
+		for (const auto& param: result_type) {
+			if (!first) out << ", ";
+			out << param.value.strView();
+			first = false;
+		}
+		out << "} {\n";
 		code->dprint(out);
 		out << "}\n";
 	}
