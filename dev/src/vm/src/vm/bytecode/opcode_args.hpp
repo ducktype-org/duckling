@@ -71,6 +71,7 @@ namespace vm::opargs {
 	DEFINE_GLOBAL(16, "g16");
 	DEFINE_GLOBAL(32, "g32");
 	DEFINE_GLOBAL(64, "g64");
+	DEFINE_GLOBAL(Any, "gany");
 	DEFINE_GLOBAL(Ptr, "gptr");
 	DEFINE_GLOBAL(Opq, "gopq");
 	DEFINE_GLOBAL(Structure, "gste");
@@ -79,7 +80,7 @@ namespace vm::opargs {
 	 * @brief List of all argument types that target global data.
 	 */
 #define VM_OPARG_GLOBAL_TYPES \
-	Global64, Global32, Global16, Global8, GlobalPtr, GlobalOpq, GlobalStructure
+	Global64, Global32, Global16, Global8, GlobalAny, GlobalPtr, GlobalOpq, GlobalStructure
 
 	/**
 	 * @brief Represents type name argument.
