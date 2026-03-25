@@ -1,8 +1,7 @@
 //! Implementation of traversing YAML documents, and getting/setting values at dotted keys.
 use serde::Deserialize;
 use std::{
-    fmt,
-    io::ErrorKind,
+    fmt, io,
     path::{Path, PathBuf},
 };
 use tracing::debug;
@@ -92,18 +91,21 @@ impl YamlConfig {
         debug!("parsing YAML config at `{}`", path.display());
         let content = match path.as_path().read_to_string() {
             Ok(string) => string,
-            Err(e) if matches!(e.source().kind(), ErrorKind::NotFound) => {
-                debug!(
-                    "there is no config at `{}`, falling back to defaults...",
-                    path.display()
-                );
-                return Ok(Self::default());
-            }
             Err(e) => {
-                return Err(e).context(format!(
-                    "when trying to read a user config at `{}`",
-                    path.display()
-                ));
+                if let Some(err) = e.downcast_ref_in_chain::<io::Error>()
+                    && err.kind() == io::ErrorKind::NotFound
+                {
+                    debug!(
+                        "there is no config at `{}`, falling back to defaults...",
+                        path.display()
+                    );
+                    return Ok(Self::default());
+                } else {
+                    return Err(e).context(format!(
+                        "when trying to read a user config at `{}`",
+                        path.display()
+                    ));
+                }
             }
         };
         let content: Value = from_str(&content).with_context(|| {

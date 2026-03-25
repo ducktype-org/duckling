@@ -34,7 +34,10 @@ pub fn delete_venv(storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> 
         let mut would_block = false;
         locks::TrySyncLock::new(&storage, venv_id)
             .inspect_err(|err| {
-                if err.source().kind() == io::ErrorKind::WouldBlock {
+                if err
+                    .downcast_ref_in_chain::<io::Error>()
+                    .is_some_and(|io_err| io_err.kind() == io::ErrorKind::WouldBlock)
+                {
                     would_block = true;
                 }
             })
