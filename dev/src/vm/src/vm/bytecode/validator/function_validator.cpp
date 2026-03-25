@@ -195,7 +195,7 @@ class FunctionValidator {
 
 		bool check_ret_val = signature->result_type.size() && signature->result_type[0].str != base::StrID("void");
 
-		if (signature->parameters.size() > local_stack.size() + check_ret_val)
+		if (signature->parameters.size() + signature->result_type.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		for (auto param: signature->parameters | std::views::reverse) {
 			if (local_stack.back().type->getName() != param.str)
