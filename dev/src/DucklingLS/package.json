@@ -4,7 +4,8 @@
     "description": "Duckling Language Server",
     "version": "0.0.1",
     "icon": "images/icon.png",
-    "author": "Ducktype",
+    "author": "DuckType",
+    "publisher": "DuckType",
     "categories": [
         "Programming Languages"
     ],
