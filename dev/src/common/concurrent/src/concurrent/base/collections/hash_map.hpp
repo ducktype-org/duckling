@@ -6,6 +6,8 @@
 #include <base/collections/stable_hashmap.hpp>
 
 #include <atomic>
+#include <concepts>
+#include <type_traits>
 
 namespace concurrent {
 
@@ -168,7 +170,8 @@ namespace concurrent {
 		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
 		 * already existed.
 		 */
-		template<typename K = KEY_T, typename D = DATA_T>
+		template<typename K, typename D = DATA_T>
+		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
@@ -197,36 +200,41 @@ namespace concurrent {
 		 * Performs atomically a following sequence:
 		 * 1. Inserts key->value into the container if key does not exist.
 		 * 2. Calls f with reference to the value associated with the key.
+		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
+		 * already existed.
 		 */
-		template<typename K = KEY_T, typename D = DATA_T, typename Func>
-		void maybePutAndUpdate(const K& key, D&& value, Func f) RELEASE_NOEXCEPT {
+		template<typename K, typename D = DATA_T, typename Func>
+		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
+		MRef<KeyValuePair> maybePutAndUpdate(K&& key, D&& value, Func&& f) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
-			auto inserted = shards[lock.shard_index].maybePut(key, std::forward<D>(value));
+			auto inserted = shards[lock.shard_index].maybePutAndUpdate(
+				std::forward<K>(key), std::forward<D>(value), std::forward<Func>(f)
+			);
 			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
-			f(Ref<DATA_T>(&shards[lock.shard_index][key]));
+			return inserted;
 		}
 
 		/**
 		 * Calls f with reference to the value associated with the key if the key exists.
 		 */
 		template<typename K = KEY_T, typename Func>
-		void maybeCallOn(const K& key, Func f) RELEASE_NOEXCEPT {
+		void maybeCallOn(const K& key, Func&& f) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto data = shards[lock.shard_index].atMaybe(key);
-			if (data.has_value()) f(Ref<DATA_T>(data.value()));
+			if (data.has_value()) std::forward<Func>(f)(Ref<DATA_T>(data.value()));
 		}
 
 		/**
 		 * Calls f with const reference to the value associated with the key if the key exists.
 		 */
 		template<typename K = KEY_T, typename Func>
-		void maybeCallOn(const K& key, Func f) const RELEASE_NOEXCEPT {
+		void maybeCallOn(const K& key, Func&& f) const RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto data = shards[lock.shard_index].atMaybe(key);
-			if (data.has_value()) f(CRef<DATA_T>(data.value()));
+			if (data.has_value()) std::forward<Func>(f)(CRef<DATA_T>(data.value()));
 		}
 
 		/**
@@ -300,13 +308,13 @@ namespace concurrent {
 		 * Atomically erases the key-value pair if the key exists and the predicate returns true.
 		 */
 		template<typename Predicate>
-		bool eraseIf(const KEY_T& key, Predicate pred) RELEASE_NOEXCEPT {
+		bool eraseIf(const KEY_T& key, Predicate&& pred) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			auto&         shard = shards[lock.shard_index];
 
 			auto opt_ref = shard.atMaybe(key);
 			if (opt_ref.has_value()) {
-				if (pred(opt_ref.value())) {
+				if (std::forward<Predicate>(pred)(opt_ref.value())) {
 					if (shard.erase(key)) {
 						elements_count.fetch_sub(1, std::memory_order_relaxed);
 						return true;

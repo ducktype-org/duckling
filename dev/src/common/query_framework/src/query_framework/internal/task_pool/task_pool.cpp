@@ -76,16 +76,6 @@ namespace query::internal {
 	}
 
 	void TaskPool::query(const Task& task) {
-		// Fast path check without locking
-		if (auto task_status = task_status_map.atMaybeCopy(task.id)) {
-			if (task_status.value() == TaskStatus::Done) {
-				return;
-			} else if (task_status.value() == TaskStatus::InProgress) {
-				waitForTask(task.id);
-				return;
-			}
-		}
-
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) waitForTask(task.id);
 	}
@@ -96,7 +86,23 @@ namespace query::internal {
 		// preferred by the LLM models (but using `maybePut` has the same semantics but on adding
 		// instead of comparing).
 
-		auto change_status_result = task_status_map.maybePut(task.id, TaskStatus::InProgress);
+		bool task_already_done = false;
+
+		auto change_status_result = task_status_map.maybePutAndUpdate(
+			task.id,
+			TaskStatus::InProgress,
+			[&task_already_done](base::CRef<TaskStatus> existing_status) {
+				if (*existing_status == TaskStatus::Done) {
+					task_already_done = true;
+					return;
+				}
+			}
+		);
+
+		if (task_already_done) {
+			// The task was already done, we can return immediately
+			return true;
+		}
 
 		// This insert decides who gets to execute the task.
 		if (change_status_result.toOpt().has_value()) {

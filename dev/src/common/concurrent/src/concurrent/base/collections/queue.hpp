@@ -33,10 +33,10 @@ namespace concurrent {
 		 */
 		template<typename Predicate>
 		[[nodiscard]]
-		base::Optional<DATA_T> tryPopIf(Predicate pred) {
+		base::Optional<DATA_T> tryPopIf(Predicate&& pred) {
 			WithLock scoped_lock(&lock);
 			if (queue.empty()) return {};
-			if (pred(base::CRef<DATA_T>(&queue.front()))) {
+			if (std::forward<Predicate>(pred)(base::CRef<DATA_T>(&queue.front()))) {
 				DATA_T data = std::move(queue.front());
 				queue.pop_front();
 				return data;
@@ -50,12 +50,13 @@ namespace concurrent {
 		 */
 		template<typename Predicate>
 		[[nodiscard]]
-		base::Optional<DATA_T> extractIf(Predicate pred) {
+		base::Optional<DATA_T> extractIf(Predicate&& pred) {
 			WithLock scoped_lock(&lock);
 			if (queue.empty()) return {};
+			auto&& pred_ref = std::forward<Predicate>(pred);
 
 			auto it = std::find_if(queue.begin(), queue.end(), [&](const DATA_T& elem) {
-				return pred(base::CRef<DATA_T>(&elem));
+				return pred_ref(base::CRef<DATA_T>(&elem));
 			});
 
 			if (it == queue.end()) return {};
