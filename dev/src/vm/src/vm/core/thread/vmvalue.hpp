@@ -71,6 +71,8 @@ namespace vm {
 
 		[[nodiscard]] VMValueRef asRef() const;
 
+		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
+
 		[[nodiscard]] PID getPID() const;
 
 		TypeCRef type;

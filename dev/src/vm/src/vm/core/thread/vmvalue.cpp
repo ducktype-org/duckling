@@ -60,6 +60,12 @@ void vm::VmValue::freeData() {
 
 vm::PID vm::VmValue::getPID() const { return my_process->my_pid; }
 
+base::CRef<vm::code::valid_type::ValidType> vm::VmValue::getType() const {
+	auto type_id = static_cast<code::valid_type::ValidTypeID>(type->getID().asInt());
+	auto types   = my_process->loader.getHighProgram()->types();
+	return types.at(type_id);
+}
+
 byte* vm::VmValue::getBytes() { return data.data(); }
 
 const byte* vm::VmValue::getBytes() const { return data.data(); }
