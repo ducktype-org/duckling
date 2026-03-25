@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(classWithArrayFieldTest);
 		TESTER_ADD_TEST(mutabilityTest);
+		TESTER_ADD_TEST(pointerLayoutManglingTest);
 	}
 
 private:
@@ -55,7 +56,7 @@ private:
 
 			assertTrue(unit_layout->getSize() == Bits(0), "Empty layout should have size zero.");
 			assertTrue(
-				unit_layout->getSourceType() == getUnitType(),
+				unit_layout->getSourceType().getType() == getUnitType(),
 				"Layout should have source type as constructed."
 			);
 			variant_match(unit_layout->getVariant()) {
@@ -76,7 +77,7 @@ private:
 					"Integral layout should have size equal to that of the source type."
 				);
 				assertTrue(
-					small_layout->getSourceType() == small_type,
+					small_layout->getSourceType().getType() == small_type,
 					"Layout should have source type as constructed."
 				);
 				variant_match(small_layout->getVariant()) {
@@ -98,7 +99,7 @@ private:
 					"Integral layout should have size equal to that of the source type."
 				);
 				assertTrue(
-					int_layout->getSourceType() == int_type,
+					int_layout->getSourceType().getType() == int_type,
 					"Layout should have source type as constructed."
 				);
 				variant_match(int_layout->getVariant()) {
@@ -118,7 +119,7 @@ private:
 					"Float layout should have size equal to that of the source type."
 				);
 				assertTrue(
-					float_layout->getSourceType() == float_type,
+					float_layout->getSourceType().getType() == float_type,
 					"Layout should have source type as constructed."
 				);
 				variant_match(float_layout->getVariant()) {
@@ -136,7 +137,7 @@ private:
 				"Functional layout should have size equal to the size of a pointer."
 			);
 			assertTrue(
-				functional_layout->getSourceType() == function_type,
+				functional_layout->getSourceType().getType() == function_type,
 				"Layout should have source type as constructed."
 			);
 			variant_match(functional_layout->getVariant()) {
@@ -153,7 +154,7 @@ private:
 				"Raw pointer layout should have size equal to the size of a pointer."
 			);
 			assertTrue(
-				raw_pointer_layout->getSourceType() == raw_pointer_type,
+				raw_pointer_layout->getSourceType().getType() == raw_pointer_type,
 				"Layout should have source type as constructed."
 			);
 			variant_match(raw_pointer_layout->getVariant()) {
@@ -172,7 +173,7 @@ private:
 				"Typed pointer layout should have size equal to the size of a pointer."
 			);
 			assertTrue(
-				unit_pointer_layout->getSourceType() == unit_pointer_type,
+				unit_pointer_layout->getSourceType().getType() == unit_pointer_type,
 				"Layout should have source type as constructed."
 			);
 			variant_match(unit_pointer_layout->getVariant()) {
@@ -195,7 +196,7 @@ private:
 			auto string_layout                   = ctx.query<QueryAbstractTypeLayout>(string_type);
 
 			assertTrue(
-				string_layout->getSourceType() == string_type,
+				string_layout->getSourceType().getType() == string_type,
 				"Layout should have source type as constructed."
 			);
 			variant_match(string_layout->getVariant()) {
@@ -217,7 +218,7 @@ private:
 				= ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
 
 			assertEqual(
-				dynamic_array_layout->getSourceType(),
+				dynamic_array_layout->getSourceType().getType(),
 				dynamic_array_type,
 				"Layout should have source type as constructed."
 			);
@@ -257,7 +258,7 @@ private:
 			);
 
 			assertEqual(
-				static_array_layout->getSourceType(),
+				static_array_layout->getSourceType().getType(),
 				static_array_type,
 				"Layout source type mismatch."
 			);
@@ -305,7 +306,7 @@ private:
 				"Variant layout size should account for data alignment."
 			);
 			assertTrue(
-				variant_layout->getSourceType() == variant_type,
+				variant_layout->getSourceType().getType() == variant_type,
 				"Layout should have source type as constructed."
 			);
 			variant_match(variant_layout->getVariant()) {
@@ -323,8 +324,8 @@ private:
 						"Different variant options should have different indices."
 					);
 					assertTrue(
-						l.getLayoutOfIndex(0)->getSourceType()
-							!= l.getLayoutOfIndex(1)->getSourceType(),
+						l.getLayoutOfIndex(0)->getSourceType().getType()
+							!= l.getLayoutOfIndex(1)->getSourceType().getType(),
 						"Different indices should correspond to different types."
 					);
 				}
@@ -355,7 +356,7 @@ private:
 				"Tuple layout size should account for data alignment and references."
 			);
 			assertTrue(
-				tuple_layout->getSourceType() == tuple_type,
+				tuple_layout->getSourceType().getType() == tuple_type,
 				"Layout should have source type as constructed."
 			);
 			variant_match(tuple_layout->getVariant()) {
@@ -424,7 +425,7 @@ private:
 				"Class alignment should equal the maximum alignment of its members."
 			);
 			assertTrue(
-				my_class_layout->getSourceType() == my_class_type,
+				my_class_layout->getSourceType().getType() == my_class_type,
 				"Layout should have source type as constructed."
 			);
 
@@ -513,6 +514,35 @@ private:
 
 			testPrinting(int_layout, ctx);
 			testPrinting(const_int_layout, ctx);
+		});
+	}
+
+	void pointerLayoutManglingTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			auto i64 = SymbolType<>::withDefaults(
+				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+			);
+			auto ref_i64 = i64.withReferenceKind(ReferenceKind::Ref);
+			auto box_i64 = i64.withReferenceKind(ReferenceKind::Box);
+
+			auto i64_layout     = ctx.query<QuerySymbolTypeLayout>(i64);
+			auto ref_i64_layout = ctx.query<QuerySymbolTypeLayout>(ref_i64);
+			auto box_i64_layout = ctx.query<QuerySymbolTypeLayout>(box_i64);
+
+			auto i64_name     = i64_layout->getMangledName();
+			auto ref_i64_name = ref_i64_layout->getMangledName();
+			auto box_i64_name = box_i64_layout->getMangledName();
+
+			assertFalse(
+				i64_name == ref_i64_name, "`i64 and `ref i64` layout should be mangled diferently."
+			);
+			assertFalse(
+				ref_i64_name == box_i64_name,
+				"`ref i64 and `box i64` layout should be mangled diferently."
+			);
+			assertFalse(
+				box_i64_name == i64_name, "`box i64 and `i64` layout should be mangled diferently."
+			);
 		});
 	}
 

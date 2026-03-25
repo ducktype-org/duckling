@@ -189,10 +189,30 @@ namespace compiler::tsl {
 		}
 	}
 
+	TypeLayoutABC::TypeLayoutABC(
+		const Bits size, const tsh::SymbolType<> source_type, query::Context& ctx
+	):
+		  size(size),
+		  alignment(computeDefaultAlignment(size)),
+		  source_type(source_type),
+		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
+
+	TypeLayoutABC::TypeLayoutABC(
+		Bits size, Bytes alignment, tsh::SymbolType<> source_type, query::Context& ctx
+	):
+		  size(size),
+		  alignment(alignment),
+		  source_type(source_type),
+		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
+
 	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
 		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3, dynamic_array_type),
+		  TypeLayoutABC(
+			  POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3,
+			  tsh::SymbolType<>::withDefaults(dynamic_array_type),
+			  ctx
+		  ),
 		  element_layout(ctx.query<QuerySymbolTypeLayout>(dynamic_array_type.getElementType())) {}
 
 	std::string DynamicArrayTypeLayout::toStringDefinition(
@@ -219,7 +239,8 @@ namespace compiler::tsl {
 			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getSize()
 				  * static_array_type.getSize(),
 			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getAlignment(),
-			  static_array_type
+			  tsh::SymbolType<>::withDefaults(static_array_type),
+			  ctx
 		  ),
 		  element_layout(ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())),
 		  element_count(static_array_type.getSize()) {}
@@ -261,7 +282,9 @@ namespace compiler::tsl {
 		const VariantTypeLayoutConstructionHelper& helper, query::Context& ctx
 	):
 		  TypeLayoutABC(
-			  bytes2bits(helper.offsets[1]) + helper.max_component_size, helper.variant_type
+			  bytes2bits(helper.offsets[1]) + helper.max_component_size,
+			  tsh::SymbolType<>::withDefaults(helper.variant_type),
+			  ctx
 		  ),
 		  tag_offset{ 0 },                   // 0 bytes
 		  tag_size{ 8 },                     // 8 bits
@@ -335,10 +358,10 @@ namespace compiler::tsl {
 	};
 
 	TupleTypeLayout::TupleTypeLayout(const tsh::TupleAbstractType tuple_type, query::Context& ctx):
-		  TupleTypeLayout(TupleTypeLayoutConstructionHelper(tuple_type, ctx)) {}
+		  TupleTypeLayout(TupleTypeLayoutConstructionHelper(tuple_type, ctx), ctx) {}
 
-	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper):
-		  TypeLayoutABC(helper.total_size, helper.tuple_type),
+	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper, query::Context& ctx):
+		  TypeLayoutABC(helper.total_size, tsh::SymbolType<>::withDefaults(helper.tuple_type), ctx),
 		  num_sub_layouts(helper.layout_idx_to_component_idx.size()),
 		  component_offsets(std::move(helper).component_offsets),
 		  layout_idx_to_component_idx(std::move(helper).layout_idx_to_component_idx),
@@ -351,7 +374,7 @@ namespace compiler::tsl {
 	std::string TupleTypeLayout::toStringDefinition(
 		query::Context& ctx, const bool recursive, const u32 indent
 	) const {
-		const tsh::TupleAbstractType tuple_type = getSourceType();
+		const tsh::TupleAbstractType tuple_type = getSourceType().getType();
 		std::stringstream            ss{};
 
 		// Display the tuple header and components
@@ -409,14 +432,12 @@ namespace compiler::tsl {
 
 		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(CRef<tsh::TypeInterface>
 		                                                                   interface) {
-			const auto&                        elements = interface->getElementsByName();
+			const auto&                        elements = interface->getElements();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
 
-			for (const auto& val: elements | std::views::values) {
-				for (const auto& element: val)
-					if (element.isField()) fields.push_back(element);
-			}
+			for (const auto& element: elements)
+				if (element.isField()) fields.push_back(element);
 
 			return fields;
 		}
@@ -447,14 +468,14 @@ namespace compiler::tsl {
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx), ctx) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
-		  TypeLayoutABC(helper.total_size, helper.max_alignment, helper.class_type),
+		  TypeLayoutABC(
+			  helper.total_size,
+			  helper.max_alignment,
+			  tsh::SymbolType<>::withDefaults(helper.class_type),
+			  ctx
+		  ),
 		  num_sub_layouts(helper.layout_idx_to_field_idx.size()),
-		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id),
-		  mangled_name(ctx.query<compiler::helios::mangler::QueryMangledSymbol>(
-			  compiler::helios::mangler::KeyOf_MangledSymbol{
-				  .symbol_key = helper.class_type.getSymbol(),
-			  }
-		  )) {
+		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
 		// Fill out the sym_id_to_offset map based on the subsequent field symbols and their offsets.
 		for (u32 i = 0; i < num_sub_layouts; i++) {
 			sym_id_to_offset.put(
@@ -489,15 +510,16 @@ namespace compiler::tsl {
 	std::string ClassTypeLayout::toStringDefinition(
 		query::Context& ctx, const bool recursive, const u32 indent
 	) const {
-		const tsh::ClassAbstractType class_type = getSourceType();
-		std::stringstream            ss{};
+		const tsh::SymbolType<tsh::ClassAbstractType> class_type = getSourceType();
+		std::stringstream                             ss{};
 
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
 			const base::Optional<Bytes> field_offset = getOffsetOfFieldSymbol(field_sym_id);
-			const tsh::SymbolType<>     field_type   = class_type.getMemberType(field_sym_id, ctx);
-			const auto                  field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
+			const tsh::SymbolType<>     field_type
+				= class_type.getType().getMemberType(field_sym_id, ctx);
+			const auto field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)
 				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else
@@ -516,11 +538,11 @@ namespace compiler::tsl {
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, pointer_type),
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
 		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())) {}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
-		  TypeLayoutABC(POINTER_SIZE, symbol_type.getType()),
+		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
 		  pointee(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
@@ -533,7 +555,7 @@ namespace compiler::tsl {
 
 	Bytes TypeLayout::getAlignment() const { return VISIT(variant, l, return l.getAlignment()); }
 
-	tsh::AbstractType TypeLayout::getSourceType() const {
+	tsh::SymbolType<> TypeLayout::getSourceType() const {
 		return VISIT(variant, l, return l.getSourceType());
 	}
 
@@ -544,5 +566,9 @@ namespace compiler::tsl {
 
 	std::string TypeLayout::toStringIdentification() const {
 		return VISIT(variant, l, return l.toStringIdentification());
+	}
+
+	base::StrID TypeLayout::getMangledName() const {
+		return VISIT(variant, l, return l.getMangledName());
 	}
 }

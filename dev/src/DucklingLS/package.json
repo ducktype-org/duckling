@@ -1,10 +1,11 @@
 {
-    "name": "duckling-support",
+    "name": "duckling-language-server",
     "displayName": "DucklingLS",
     "description": "Duckling Language Server",
     "version": "0.0.1",
     "icon": "images/icon.png",
-    "author": "Ducktype",
+    "author": "DuckType",
+    "publisher": "DuckType",
     "categories": [
         "Programming Languages"
     ],
@@ -14,6 +15,16 @@
     "main": "./client/out/extension",
     "activationEvents": [
         "onLanguage:duckling"
+    ],
+    "files": [
+        "client/out/",
+        "client/node_modules/",
+        "server/out/",
+        "server/node_modules/",
+        "images/",
+        "syntaxes/",
+        "language-configuration.json",
+        "README.md"
     ],
     "contributes": {
         "commands": [
@@ -105,8 +116,5 @@
         "lsp",
         "syntax highlighting"
     ],
-    "dependencies": {
-        "@types/node-fetch": "^2.6.11",
-        "node-fetch": "^3.3.2"
-    }
+    "dependencies": {}
 }

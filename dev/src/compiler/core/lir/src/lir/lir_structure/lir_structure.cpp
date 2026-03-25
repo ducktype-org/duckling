@@ -1,5 +1,6 @@
 #include "lir_structure.hpp"
 
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -23,9 +24,15 @@ namespace compiler::lir {
 	 * @return LIRLocal
 	 */
 	LIRLocal LIRLocal::fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
-
-		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
+		auto             type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
+		LIRLocalMetadata metadata;
+		if_opt_some(mir_local->helios_id, helios_id) {
+			metadata.source_code_name = helios::name(helios_id);
+			if_opt_some(helios::symbolPst(helios_id), pst_elem) {
+				metadata.position = pst_elem.unlock(ctx)->getStablePosition();
+			}
+		}
+		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index, metadata };
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
