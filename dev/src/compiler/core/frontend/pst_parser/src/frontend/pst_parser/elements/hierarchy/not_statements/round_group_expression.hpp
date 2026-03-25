@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Expression surrounded by parenthesis.
 	 */
 	class RoundGroupExpr final: public NotStmt {
-		NAMED_CHILD(expr, CommaExprHolder);
+		NAMED_CHILD(expr, CommaAllowBlocksExprHolder);
 
 	public:
 		explicit RoundGroupExpr(const LangParserState& state): NotStmt(state) {

@@ -251,6 +251,8 @@ namespace lexer {
 			blockCommentHandler(output);
 		} else if (isCommentBegin()) {
 			commentHandler(output);
+		} else if (isFormatStringBegin()) {
+			formatStringHandler(output);
 		} else if (peek().is(Class::operator_start)) {
 			operatorHandler(output);
 		} else if (peek().is(Class::name_start)) {
@@ -504,6 +506,78 @@ namespace lexer {
 		));
 	}
 
+	void Lexer::formatSubStringHandler(Tokens& output) {
+		usize begin = where;
+		usize end{};
+		auto  source_start = currentPosition();
+
+		while (!peek().is('"') && !peek().is('{') && !isEOL() && !isEOF())
+			if (peek().is('\\'))
+				skip(2);
+			else
+				next();
+
+		end = where - 1;
+
+		dia::SourcePosition source_position(source_start, end);
+
+		addTokenMsg(begin, end, "format_sub_string");
+		output.push_back(
+			Token::makeFormatStringSubString(file->getCharRange(begin, end + 1), source_position)
+		);
+	}
+
+	void Lexer::formatStringHandler(Tokens& output) {
+		usize begin = where;
+		usize end{};
+		auto  source_start = currentPosition();
+		bool  closed       = true;
+
+		CORE_DEV_LOG(Lexer, "format string begin", generateLineColumnInfo(), "\n");
+
+		Tokens inner_tokens;
+
+		skip(2);  // skip f"
+		while (!peek().is('"')) {
+			if (isEOL()) {
+				dia::SourcePosition err_pos(source_start, where - 1);
+				auto                error = makeBox<UnclosedStringEolError>(err_pos);
+				logger->log(std::move(error));
+				closed = false;
+				break;
+			} else if (isEOF()) {
+				dia::SourcePosition err_pos(source_start, where - 1);
+				logger->log(makeBox<UnclosedStringEofError>(err_pos));
+				closed = false;
+				break;
+			} else if (peek().is('{')) {
+				bracketHandler(inner_tokens);
+			} else {
+				formatSubStringHandler(inner_tokens);
+			}
+		}
+		end = where - 1 + usize(closed);
+
+		if (closed) next();
+
+		dia::SourcePosition source_position(source_start, end);
+
+		Token sentinel_begin = Token::makeSentinel(
+			file->getCharRange(begin + 1, begin + 2), { source_start.getLocation(), begin, begin }
+		);
+		Token sentinel_end = Token::makeSentinel(
+			file->getCharRange(end, end + 1), { source_start.getLocation(), end, end }
+		);
+
+		addTokenMsg(begin, end, "format_string");
+		output.push_back(Token::makeFormatString(
+			std::move(inner_tokens),
+			std::move(sentinel_begin),
+			std::move(sentinel_end),
+			source_position
+		));
+	}
+
 	void Lexer::charHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
@@ -609,6 +683,8 @@ namespace lexer {
 	bool Lexer::isBlockCommentEnd() const { return tryRawValue('#') && tryRawValue('}', 1); }
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
+
+	bool Lexer::isFormatStringBegin() const { return tryRawValue('f') && tryRawValue('"', 1); }
 
 	bool Lexer::isCharBegin() const { return tryRawValue('\''); }
 

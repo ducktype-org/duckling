@@ -58,6 +58,13 @@ Tests:
         Output:
           String: "5\n7\n"
         ExitCode: 0
+  type_overloading:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0
 
 
 
