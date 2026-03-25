@@ -13,6 +13,7 @@ add_library(Driver
 	src/driver/module_flags/module_flags.cpp
 	src/driver/incremental_utils/collect_input.cpp
 	src/driver/backend_type.cpp
+	src/driver/debug_info/debug_info.cpp
 	src/driver/operations/generic_operations.cpp
 	src/driver/initialize.cpp
 	src/driver/exit.cpp
