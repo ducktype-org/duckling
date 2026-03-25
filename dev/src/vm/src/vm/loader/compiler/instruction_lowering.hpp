@@ -25,8 +25,7 @@ namespace vm::loader::compiler::detail {
 	template<typename LowArg, typename HighArg>
 	concept IsTranslatableInstructionArgumentPair
 		= base::IsTupleMember<std::remove_cvref_t<HighArg>, typename LowArg::ConstructibleFrom>
-	   && (std::constructible_from<vm::opargs::OpCodeArg, std::remove_cvref_t<HighArg>>
-	       || std::same_as<std::remove_cvref_t<HighArg>, u64>);
+	   && std::constructible_from<vm::opargs::OpCodeArg, std::remove_cvref_t<HighArg>>;
 
 	/**
 	 * @brief Type-level validation of translation for full argument lists.
@@ -114,7 +113,7 @@ namespace vm::loader::compiler::detail {
 				result.back().representation = current_high_instruction_representation;
 #endif
 				next_instruction_index++;
-			}(static_cast<typename T::ArgTypes*>(nullptr));
+			}(static_cast<T::ArgTypes*>(nullptr));
 		}
 
 		void addLabel(opargs::Label label) {
