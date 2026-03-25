@@ -13,6 +13,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(multithreadingTest);
 		TESTER_ADD_TEST(mutexTest);
+		TESTER_ADD_TEST(cvTest);
 	}
 
 private:
@@ -25,6 +26,12 @@ private:
 	void mutexTest() {
 		// On the contrary here, this test should give clear result
 		runTestOnVm("mutex.dbc", "", "20000", {});
+	}
+
+	void cvTest() {
+		runTestOnVm("cv_permit_barrier_test.dbc", "", "20000221", {});
+		runTestOnVm("cv_simple_barrier_all_test.dbc", "", "22020201", {});
+		runTestOnVm("producer_consumer.dbc", "", "20000200000221", {});
 	}
 };
 
