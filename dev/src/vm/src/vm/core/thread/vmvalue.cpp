@@ -50,7 +50,7 @@ void vm::VmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, p
 
 void vm::VmValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
-vm::VMValueRef vm::VmValue::asRef() const { return VMValueRef(*my_process.get(), type, pointer); }
+vm::VMValueRef vm::VmValue::asRef() const { return { *my_process.get(), type, pointer }; }
 
 void vm::VmValue::freeData() {
 	memory->freeBlockData(pointer.getBlock());
