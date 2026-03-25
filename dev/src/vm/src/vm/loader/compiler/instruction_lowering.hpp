@@ -93,8 +93,8 @@ namespace vm::loader::compiler::detail {
 		template<typename LowArg, typename HighArg>
 		requires IsTranslatableInstructionArgumentPair<LowArg, HighArg>
 		u64 lowerLowArg(HighArg&& arg) {
-			if constexpr (std::is_same_v<u64, std::remove_cvref_t<HighArg>>) {
-				return static_cast<u64>(arg);
+			if constexpr (std::constructible_from<u64, HighArg>) {
+				return u64(arg);
 			} else {
 				return compiler.lowerArgument(
 					ctx, vm::opargs::OpCodeArg{ std::forward<HighArg>(arg) }
