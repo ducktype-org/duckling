@@ -227,11 +227,13 @@ namespace compiler::helios {
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				[[maybe_unused]] auto element_ptr = &*element;
-				CORE_PANIC(base::strConcat(
-					"Scope of element for which scope does not make sense (or was not "
-					"added.): ",
-					typeid(*element_ptr).name()
-				));
+				CORE_PANIC(
+					base::strConcat(
+						"Scope of element for which scope does not make sense (or was not "
+						"added.): ",
+						typeid(*element_ptr).name()
+					)
+				);
 			}
 
 			ScopeID parent = element->getParent().has_value()
@@ -633,7 +635,16 @@ namespace compiler::helios {
 			auto scope_data = getScopeRef(key.scope);
 			if (scope_data->is_root) {
 				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
-				return builtin::lookupGlobalBuiltins(ctx, key.name);
+
+				auto       module = frontend::GetModuleID_Functor::get(scope_data->parent_module);
+				const bool repl_has_parent
+					= module->isReplModule() && module->getReplModuleParent().has_value();
+
+				if (!repl_has_parent) return builtin::lookupGlobalBuiltins(ctx, key.name);
+
+				// For REPL modules with parents, skip duplicating builtins here.
+				// They will be resolved via the parent chain in QueryLookupInScopeAndParents.
+				return LookupResult{};
 			}
 
 			LookupResult result{ .leaves = {}, .children = {} };
