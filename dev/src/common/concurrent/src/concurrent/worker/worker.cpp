@@ -79,24 +79,27 @@ namespace concurrent::worker {
 	}
 
 	void Worker::setNoTasksCallback(const NoTasksCallback& callback) {
-		std::unique_lock lock(mut);
-		no_tasks_callback = callback;
+		{
+			std::unique_lock lock(mut);
+			no_tasks_callback = callback;
 
-		// This is copied as the no_tasks_callback might be changed during its invocation.
-		// Also the lifetime of the callback is not guaranteed to be longer than the invocation.
-		auto copy_no_tasks_callback = callback;
+			// This is copied as the no_tasks_callback might be changed during its invocation.
+			// Also the lifetime of the callback is not guaranteed to be longer than the invocation.
+			auto copy_no_tasks_callback = callback;
 
-		if (!is_free) return;
+			if (!is_free) return;
 
-		// Schedule this callback as a task, if the worker is free have a guarantee
-		// that the callback will be called first
-		// also note that we do not want to set the worker as free
-		// we just simulate a "notaskcallback" call here
-		task_queue.emplace([copy_no_tasks_callback = std::move(copy_no_tasks_callback)](WRef ref) {
-			copy_no_tasks_callback(ref);
-		});
+			// Set is free to false, since worker will be calling no tasks callback
+			// The workers are only free in waiting on the condition variable
+			is_free = false;
 
-		// wake up the worker to call the the scheduled callback
+			// Schedule this callback as a task, if the worker was free we have a guarantee
+			// that the callback will be called first
+			task_queue.emplace([copy_no_tasks_callback = std::move(copy_no_tasks_callback)](WRef ref
+			                   ) { copy_no_tasks_callback(ref); });
+
+			// wake up the worker to call the scheduled callback
+		}
 		task_cv.notify_one();
 	}
 
