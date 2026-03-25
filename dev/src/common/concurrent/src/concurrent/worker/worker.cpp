@@ -83,13 +83,24 @@ namespace concurrent::worker {
 			std::unique_lock lock(mut);
 			no_tasks_callback = callback;
 
-			if (is_free) {
-				lock.unlock();
-				// Calling the original `callback`, because `no_tasks_callback` might be changed
-				// during the invocation.
-				callback(this);
-			}
+			// This is copied as the no_tasks_callback might be changed during its invocation.
+			// Also the lifetime of the callback is not guaranteed to be longer than the invocation.
+			auto copy_no_tasks_callback = callback;
+
+			if (!is_free) return;
+
+			// Set is free to false, since worker will be calling no tasks callback
+			// The workers are only free in waiting on the condition variable
+			is_free = false;
+
+			// Schedule this callback as a task, if the worker was free we have a guarantee
+			// that the callback will be called first
+			task_queue.emplace([copy_no_tasks_callback = std::move(copy_no_tasks_callback)](WRef ref
+			                   ) { copy_no_tasks_callback(ref); });
+
+			// wake up the worker to call the scheduled callback
 		}
+		task_cv.notify_one();
 	}
 
 	Worker::Worker(usize seed): rng(seed) {}
