@@ -100,7 +100,7 @@ namespace compiler::tsl {
 			for (const auto& layout: layouts) {
 				// Skip empty layout
 				if (layout->is<EmptyTypeLayout>()) {
-					offsets.push_back({});
+					offsets.emplace_back();
 					continue;
 				}
 
@@ -111,7 +111,7 @@ namespace compiler::tsl {
 				bytes_taken = (bytes_taken + Bytes(alignment - 1)) / alignment * alignment;
 
 				// Save offset.
-				offsets.push_back(bytes_taken);
+				offsets.emplace_back(bytes_taken);
 				bytes_taken += size_in_bytes;
 			}
 

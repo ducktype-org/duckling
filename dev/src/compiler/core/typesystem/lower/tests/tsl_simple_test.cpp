@@ -459,16 +459,16 @@ private:
 			const ClassAbstractType class_type      = ctx.query<QueryClassType>(class_symbol);
 			CRef<TypeInterface>     class_interface = class_type.getInterface(ctx);
 
-			auto getElementSymbol = [&](const std::string& name) {
+			auto get_element_symbol = [&](const std::string& name) {
 				const auto& matching = class_interface->getElementsWithName(base::StrID(name));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
 			};
 
-			const SymID element1_symbol = getElementSymbol("element1");
-			const SymID element2_symbol = getElementSymbol("element2");
-			const SymID element3_symbol = getElementSymbol("element3");
-			const SymID elements_symbol = getElementSymbol("elements");
+			const SymID element1_symbol = get_element_symbol("element1");
+			const SymID element2_symbol = get_element_symbol("element2");
+			const SymID element3_symbol = get_element_symbol("element3");
+			const SymID elements_symbol = get_element_symbol("elements");
 
 			const auto class_layout = ctx.query<QueryAbstractTypeLayout>(class_type);
 
