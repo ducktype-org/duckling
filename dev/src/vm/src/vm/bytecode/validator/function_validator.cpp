@@ -559,28 +559,14 @@ class FunctionValidator {
 			}
 
 			instr_case_novalue(Comment) {}
-			instr_case(Op_mov_l8_imm, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type[0].str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
-			}
+			instr_case(Op_mov_l8_imm, instr) {}
 			instr_case(Op_mov_l8_l8, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type[0].str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_cmov_l8_l8, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type[0].str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_cmov_l8_imm, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type[0].str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
-			}
+			instr_case(Op_cmov_l8_imm, instr) {}
 			instr_case_novalue(Op_mov_l16_imm) {}
 			instr_case_novalue(Op_mov_l16_l16) {
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
@@ -1651,10 +1637,11 @@ class FunctionValidator {
 		}
 		for (const auto& param_type: function.signature.parameters) {
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
-			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
 		}
-		if (!types_ctx.contains(function.signature.result_type[0].str))
-			throw UnknownTypeError(opargs::Type{ function.signature.result_type[0].str });
+
+		for (const auto& reslts: function.signature.result_type) {
+			if (!types_ctx.contains(reslts)) throw UnknownTypeError(opargs::Type{ reslts });
+		}
 	}
 
 public:

@@ -78,9 +78,6 @@ namespace vm {
 		 */
 		template<class T>
 		T readBytes(const usize offset = 0) const {
-			CORE_ASSERT(
-				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
-			);
 			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds read");
 			return vm::safeReadPointerBytes<T>(data.data(), offset);
 		}
@@ -90,9 +87,6 @@ namespace vm {
 		 */
 		template<class T>
 		void writeBytes(const T& value, const usize offset = 0) {
-			CORE_ASSERT(
-				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
-			);
 			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds write");
 			return vm::safeWriteBytes<T>(data.data(), value);
 		}

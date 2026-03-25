@@ -131,7 +131,6 @@ namespace vm::loader::compiler {
 			result.put(local.var_name, { .offset = curr_stack_size, .type = type_ref });
 			auto type_size = type_ref->getSize().asInt();
 			type_size_stack.push_back(type_size);
-			if (type.type_name == "void") return;
 			curr_stack_size += type_size;
 			max_stack_size = std::max(max_stack_size, curr_stack_size);
 		};
@@ -284,9 +283,7 @@ namespace vm::loader::compiler {
 			u64 ret_type_sum = 0;
 			std::vector<TypeCRef> result_types = {};
 			for (auto& ret: signature.result_type) {
-				if (ret.str != "void") {
-					ret_type_sum += low_program.types->at(ret)->getSize().asInt();
-				}
+				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
@@ -342,7 +339,8 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
+	void Compiler::compileNewExtCFunctions(
+		const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
 			program_ctx.ext_c_functions.insert(new_func, new_func.name);
@@ -358,13 +356,20 @@ namespace vm::loader::compiler {
 				0,
 				std::plus()
 			);
+
+			std::vector<TypeCRef> rets = new_func.signature.result_type
+			                           | std::views::transform([this](const auto& param_name) {
+											 return low_program.types->at(param_name);
+										 })
+			                           | std::ranges::to<std::vector<TypeCRef>>();
+
 			low_program.extern_c_functions.insert(
 				low::LowExternCFunction{
 					.name               = new_func.name,
 					.function_pointer   = new_func.function_pointer,
 					.parameter_size_sum = param_size_sum,
 					.parameters         = std::move(params),
-					.result_type        = low_program.types->at(new_func.signature.result_type[0]),
+					.result_type        = std::move(rets),
 				},
 				new_func.name
 			);

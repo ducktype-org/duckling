@@ -49,7 +49,7 @@ namespace vm::low {
 		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
 		usize                 parameter_size_sum;
 		std::vector<TypeCRef> parameters;
-		TypeCRef              result_type;
+		std::vector<TypeCRef> result_type;
 	};
 
 	/**

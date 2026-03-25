@@ -97,7 +97,7 @@ namespace vm::builtins {
 	 * @brief Returns the map of builtin functions types with lazy initialization.
 	 * @note Function types here should match HELIOS types.
 	 * The types used for the parameters and the return value are defined in the @file
-	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
+	 * bytecode/builtin_types.hpp file (like "i64", "i32").
 	 */
 	auto getBuiltinFunctions()
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>>;
