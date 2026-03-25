@@ -2,6 +2,7 @@
 
 #include "../../hierarchy/expressions/block_expr.hpp"
 #include "../../hierarchy/expressions/char_value.hpp"
+#include "../../hierarchy/expressions/format_string_value.hpp"
 #include "../../hierarchy/expressions/identifier_literal.hpp"
 #include "../../hierarchy/expressions/keyword_literal.hpp"
 #include "../../hierarchy/expressions/numeric_value.hpp"
@@ -23,6 +24,8 @@ namespace pst::expr {
 			return ExprNumericValue::parse(state);
 		} else if (state[0].isString()) {
 			return ExprStrValue::parse(state);
+		} else if (state[0].isFormatString()) {
+			return ExprFormatStrValue::parse(state);
 		} else if (state[0].isChar()) {
 			return ExprCharValue::parse(state);
 		} else if (state[0].isBracketGroup(lexer::Token::Round)) {
