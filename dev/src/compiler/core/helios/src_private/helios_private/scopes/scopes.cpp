@@ -227,13 +227,11 @@ namespace compiler::helios {
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				[[maybe_unused]] auto element_ptr = &*element;
-				CORE_PANIC(
-					base::strConcat(
-						"Scope of element for which scope does not make sense (or was not "
-						"added.): ",
-						typeid(*element_ptr).name()
-					)
-				);
+				CORE_PANIC(base::strConcat(
+					"Scope of element for which scope does not make sense (or was not "
+					"added.): ",
+					typeid(*element_ptr).name()
+				));
 			}
 
 			ScopeID parent = element->getParent().has_value()
@@ -636,9 +634,11 @@ namespace compiler::helios {
 			if (scope_data->is_root) {
 				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
 
-				auto       module = frontend::GetModuleID_Functor::get(scope_data->parent_module);
+				auto       module_id      = scope_data->parent_module;
+				const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(module_id);
 				const bool repl_has_parent
-					= module->isReplModule() && module->getReplModuleParent().has_value();
+					= is_repl_module
+				   && ctx.query<frontend::QueryReplModuleParent>(module_id).has_value();
 
 				if (!repl_has_parent) return builtin::lookupGlobalBuiltins(ctx, key.name);
 
@@ -736,65 +736,65 @@ namespace compiler::helios {
 				return parent_result;
 			} else {
 				// At root scope - check if this is a REPL module with a parent
-				auto current_module_id = key.scope.ref->parent_module;
-				auto current_module    = frontend::GetModuleID_Functor::get(current_module_id);
+				auto       current_module_id = key.scope.ref->parent_module;
+				const bool is_repl_module
+					= ctx.query<frontend::QueryIsReplModule>(current_module_id);
+				auto repl_parent_opt
+					= ctx.query<frontend::QueryReplModuleParent>(current_module_id);
 
-				static thread_local u32 repl_parent_depth = 0;
+				static u32 repl_parent_depth = 0;
 
 				CORE_DEV_LOG(
 					REPL,
 					"At root scope, module #",
 					current_module_id.queryUnstablePerfectHash(),
 					", isRepl=",
-					current_module->isReplModule(),
+					is_repl_module,
 					", hasParent=",
-					current_module->getReplModuleParent().has_value(),
+					repl_parent_opt.has_value(),
 					"\n"
 				);
 
-				if (current_module->isReplModule()) {
-					auto repl_parent_opt = current_module->getReplModuleParent();
-					if (repl_parent_opt.has_value()) {
-						++repl_parent_depth;
+				if (is_repl_module && repl_parent_opt.has_value()) {
+					++repl_parent_depth;
 
-						// Query the parent REPL module's TopLevel scope.
-						auto parent_module_id = repl_parent_opt.value();
-						auto parent_toplevel_scope
-							= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
+					// Query the parent REPL module's TopLevel scope.
+					auto parent_module_id = repl_parent_opt.value();
+					auto parent_toplevel_scope
+						= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
 
-						CORE_DEV_LOG(
-							REPL,
-							"Recursively searching parent module #",
-							parent_module_id.queryUnstablePerfectHash(),
-							" TopLevel scope, depth=",
-							repl_parent_depth,
-							"\n"
-						);
+					CORE_DEV_LOG(
+						REPL,
+						"Recursively searching parent module #",
+						parent_module_id.queryUnstablePerfectHash(),
+						" TopLevel scope, depth=",
+						repl_parent_depth,
+						"\n"
+					);
 
-						UNPACK_QRESULT_CREF(
-							LookupResult parent_result =,
-							ctx.query<QueryLookupInScopeAndParents>(
-								{ parent_toplevel_scope, key.name, key.with_wildcards }
-							)
-						);
+					UNPACK_QRESULT_CREF(
+						LookupResult parent_result =,
+						ctx.query<QueryLookupInScopeAndParents>(
+							{ parent_toplevel_scope, key.name, key.with_wildcards }
+						)
+					);
 
-						parent_result.merge(std::move(result));
+					parent_result.merge(std::move(result));
 
-						CORE_DEV_LOG(
-							REPL,
-							"LookupInScopeAndParents: total REPL parent depth traversed = ",
-							repl_parent_depth,
-							"\n"
-						);
+					CORE_DEV_LOG(
+						REPL,
+						"LookupInScopeAndParents: total REPL parent depth traversed = ",
+						repl_parent_depth,
+						"\n"
+					);
 
-						--repl_parent_depth;
+					--repl_parent_depth;
 
-						return parent_result;
-					}
+					return parent_result;
 				}
-
-				return result;
 			}
+
+			return result;
 		}
 
 		QUERY_AUTO_CACHE_CREF

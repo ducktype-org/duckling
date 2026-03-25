@@ -891,6 +891,40 @@ namespace compiler::frontend {
 			return createModuleTree(virtual_file, package_id.value());
 	}
 
+	/**********************
+	 * QueryIsReplModule *
+	 **********************/
+	struct IMPLEMENT_QUERY(QueryIsReplModule, bool) {
+		static auto provide(Context&, QKey key) -> PResult {
+			return GetModuleID_Functor::get(key)->isReplModule();
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIsReplModule);
+
+	/***************************
+	 * QueryReplModuleParent *
+	 ***************************/
+	struct IMPLEMENT_QUERY(QueryReplModuleParent, base::Optional<ModuleID>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto module_tree = GetModuleID_Functor::get(key);
+			if (!module_tree->isReplModule()) return {};
+			auto repl_parent = module_tree->getReplModuleParent();
+			if (repl_parent.has_value()) {
+				// Register dependency on the parent module contents so incremental rebuilds propagate
+				ctx.query<QueryModuleSideInput>(KeyOf_ModuleSideInput{
+					ModuleTree::getModuleHash(repl_parent.value()) });
+			}
+			return repl_parent;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplModuleParent);
+
 	/*********************
 	 * QueryParentModule *
 	 *********************/

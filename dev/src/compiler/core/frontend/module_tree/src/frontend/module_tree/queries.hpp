@@ -29,6 +29,24 @@ namespace compiler::frontend {
 	DECLARE_QUERY(QueryParentModule, ModuleID, base::Optional<ModuleID>, ({ .uses_qresult = false }))
 
 	/**
+	 * @brief Query whether the module was produced by the REPL pipeline.
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(QueryIsReplModule, ModuleID, bool, ({ .uses_qresult = false }))
+
+	/**
+	 * @brief Query parent link in the REPL module chain (if any).
+	 *
+	 * Returns empty optional for non-REPL modules as well as for the first REPL module.
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(
+		QueryReplModuleParent, ModuleID, base::Optional<ModuleID>, ({ .uses_qresult = false })
+	)
+
+	/**
 	 * @brief Query main source file of a module.
 	 *
 	 * \query_thread_safe
