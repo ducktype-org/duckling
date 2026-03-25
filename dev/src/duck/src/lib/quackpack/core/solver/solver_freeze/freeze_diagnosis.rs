@@ -109,7 +109,8 @@ impl SolverFreeze {
             };
             let mut is_every_dep_satisfied = true;
             for dep in manifest.dependencies().all_dependencies().iter() {
-                let Some(realization) = freeze.dependencies_realization.get(&dep.name()) else {
+                let Some(realization) = freeze.dependencies_realization.get(&dep.effective_name())
+                else {
                     is_every_dep_satisfied = false;
                     break;
                 };
