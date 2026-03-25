@@ -100,6 +100,8 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_GLOBAL(32, "g32", vm::opargs::Global32);
 	/** @brief Stores ID/index of 64-bit global variable in LowVMProgram globals map. */
 	DEFINE_MICRO_GLOBAL(64, "g64", vm::opargs::Global64);
+	/** @brief Stores ID/index of global variable of any type in LowVMProgram globals map. */
+	DEFINE_MICRO_GLOBAL(Any, "gany", vm::opargs::GlobalAny);
 	/** @brief Stores ID/index of global Pointer value in LowVMProgram globals map. */
 	DEFINE_MICRO_GLOBAL(Ptr, "gptr", vm::opargs::GlobalPtr);
 	/** @brief Stores ID/index of global opaque value in LowVMProgram globals map. */

@@ -474,6 +474,8 @@ DEF_MICRO_INSTR(load_lany_lptr, vm::low::opargs::StackLocalAny, vm::low::opargs:
 
 // stores reference to local object of any type T in pointer<T>
 DEF_MICRO_INSTR(ref_lptr_lany, vm::low::opargs::StackLocalPtr, vm::low::opargs::StackLocalAny)
+// stores reference to global object of any type T in pointer<T>
+DEF_MICRO_INSTR(ref_lptr_gany, vm::low::opargs::StackLocalPtr, vm::low::opargs::GlobalAny)
 
 // ========= STRUCTURE OPERATIONS ========
 
