@@ -676,6 +676,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_gany)(FUNCTION_ARGS) {
+		{
+			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       src_block = GET_GLOBAL_BLOCK(instr->arg1);
+			const auto new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { src_block, 0 });
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
