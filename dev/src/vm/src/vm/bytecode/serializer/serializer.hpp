@@ -10,25 +10,25 @@ namespace vm::code {
 	 * @brief Serializes bytecode function into a parse-able by the DVM
 	 * text representation.
 	 */
-	void serialize(const Function& function, std::ostream& out);
+	void serializeFunction(const Function& function, std::ostream& out);
 
 	/**
 	 * @brief Serializes bytecode type into a parse-able by the DVM
 	 * text representation.
 	 */
-	void serialize(const TypeOfData& type, std::ostream& out);
+	void serializeType(const TypeOfData& type, std::ostream& out);
 
 	/**
 	 * @brief Serializes bytecode global data into a parse-able by the DVM
 	 * text representation.
 	 */
-	void serialize(const GlobalData& type, std::ostream& out);
+	void serializeGlobal(const GlobalData& type, std::ostream& out);
 
 	/**
 	 * @brief Serializes code collection into a parse-able by the DVM
 	 * text representation.
 	 */
-	void serialize(const CodeCollection& code_collection, std::ostream& out);
+	void serializeCode(const CodeCollection& code_collection, std::ostream& out);
 
 	/**
 	 * @brief Stringifies instruction arguments.

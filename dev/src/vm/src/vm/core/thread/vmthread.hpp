@@ -326,6 +326,11 @@ namespace vm {
 		void releaseGil();
 
 		/**
+		 * @brief Acquires GIL.
+		 */
+		void acquireGil();
+
+		/**
 		 * @brief Sets name of the function that will be used in builtin spawn thread.
 		 */
 		void setThreadCtx(std::string);
