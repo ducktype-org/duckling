@@ -26,7 +26,26 @@ env:
   BUILD_SYSTEM: Ninja
 
 jobs:
+  # Determines the build matrix based on the event type.
+  # On regular PRs only Dev/gcc runs; on push, workflow_dispatch or approved reviews the full matrix runs.
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Determine build matrix
+        id: set-matrix
+        run: |
+          FULL='{"build-type":["Dev","DevOpt"],"compiler":[{"name":"gcc","cxx":"g++-14","cc":"gcc-14","gcov":"gcov-14","linker":"mold","cache-prefix":"gcc-build"},{"name":"clang","cxx":"clang++-19","cc":"clang-19","linker":"mold","cache-prefix":"clang-build"}]}'
+          PR_ONLY='{"build-type":["Dev"],"compiler":[{"name":"gcc","cxx":"g++-14","cc":"gcc-14","gcov":"gcov-14","linker":"mold","cache-prefix":"gcc-build"}]}'
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "matrix=$PR_ONLY" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=$FULL" >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: [setup]
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
@@ -38,20 +57,7 @@ jobs:
        github.event.review.state == 'approved')
 
     strategy:
-      matrix:
-        build-type: [Dev, DevOpt]  # (Release, Dev, RelWithDebInfo, etc.)
-        compiler:
-          - name: gcc
-            cxx: g++-14
-            cc: gcc-14
-            gcov: gcov-14
-            linker: mold
-            cache-prefix: gcc-build
-          - name: clang
-            cxx: clang++-19
-            cc: clang-19
-            linker: mold
-            cache-prefix: clang-build
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
       fail-fast: false
 
     outputs:
