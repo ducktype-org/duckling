@@ -144,9 +144,13 @@ public:
 
 	usize size() const { return stack_state.size(); }
 
-	const LocalStackEntry& back() const { return stack_state.back(); }
+	const LocalStackEntry& back(long long i = 0) const {
+		return stack_state.at(stack_state.size() - 1 - (usize)(i));
+	}
 
-	const LocalStackEntry& front() const { return stack_state.front(); }
+	const LocalStackEntry& front(long long i = 0) const {
+		return stack_state.at((usize)(i));
+	}
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
 		auto  local_name = VISIT(local, l, return l.var_name);
@@ -193,17 +197,23 @@ class FunctionValidator {
             return &signatures.at(instr.function.function_name);
 		}();
 
-		bool check_ret_val = signature->result_type.size() && signature->result_type[0].str != base::StrID("void");
-
-		if (signature->parameters.size() + signature->result_type.size() > local_stack.size())
+		auto& params = signature->parameters;
+		auto& reslts = signature->result_type;
+		
+		if (params.size() + reslts.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
-		for (auto param: signature->parameters | std::views::reverse) {
+
+		using namespace std::views;
+		for (auto param: params | reverse) {
 			if (local_stack.back().type->getName() != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && local_stack.back().type->getName() != signature->result_type[0].str)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
+
+		for (auto [idx, reslt]: enumerate(reslts | reverse)) {
+			if (local_stack.back(idx).type->getName() != reslt.str)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+		}
 	}
 
 	/**
@@ -235,17 +245,18 @@ class FunctionValidator {
 		}();
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.method };
-		bool check_ret_val = method_signature->result.size() == 1
-		                  && types_ctx.at(method_signature->result[0])->getName() != "void";
+
+		auto& params = method_signature->parameters;
+		auto& reslts = method_signature->result;
 
 		// Too many parameters.
-		if (method_signature->parameters.size() > local_stack.size() + check_ret_val)
+		if (params.size() + reslts.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
+		using namespace std::views;
 		// Check individual parameter's types. The first parameter is special, because it should be
 		// a pointer to the same type as the pointer passed as `obj_ptr`.
-		for (auto param_id:
-		     method_signature->parameters | std::views::drop(1) | std::views::reverse) {
+		for (auto param_id: params | drop(1) | reverse) {
 			if (local_stack.back().type->getID() != param_id)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
@@ -260,8 +271,10 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && local_stack.back().type->getID() != method_signature->result[0])
-			throw InvalidFunctionCallArgumentsError(generic_arg);
+		for (auto [idx, reslt]: enumerate(reslts | reverse)) {
+			if (local_stack.back(idx).type->getID() != reslt)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+		}
 	}
 
 	void validateTailcall(
@@ -275,18 +288,25 @@ class FunctionValidator {
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
 		auto signature   = signatures.at(fun_name);
 
-		if (!(signature.result_type[0].str == current_signature.result_type[0].str
+		if (!(signature.result_type == current_signature.result_type
 		      && signature.parameters == current_signature.parameters))
 			throw InvalidTailcallSignatureError(generic_arg);
 
-		if (signature.parameters.size() + 1 != local_stack.size())
+		auto& params = signature.parameters;
+		auto& reslts = signature.result_type;
+
+		if (params.size() + reslts.size() != local_stack.size())
 			throw InvalidTailcallArgumentsError(generic_arg);
 
-		if (local_stack.front().type->getName() != signature.result_type[0].str)
-			throw InvalidTailcallArgumentsError(generic_arg);
-		for (auto [param, stack_elem]: std::views::zip(
-				 signature.parameters, local_stack.getStackState() | std::views::drop(1)
-			 ))
+		using namespace std::views;
+		for (auto [reslt, stack_elem]:
+		     zip(reslts, local_stack.getStackState() | take(reslts.size())))
+			
+			if (stack_elem.type->getName() != reslt.str)
+				throw InvalidTailcallArgumentsError(generic_arg);
+
+		for (auto [param, stack_elem]:
+		     zip(params, local_stack.getStackState() | drop(reslts.size())))
 			if (stack_elem.type->getName() != param.str)
 				throw InvalidTailcallArgumentsError(generic_arg);
 	}
