@@ -20,7 +20,7 @@ namespace vm::loader::compiler::detail {
 	 *
 	 * A pair is valid when:
 	 * 1) the high arg type is listed in `LowArg::ConstructibleFrom`, and
-	 * 2) it can be lowered either through `vm::opargs::OpCodeArg` or directly as `u64`.
+	 * 2) the high arg can be lowered by constructing `vm::opargs::OpCodeArg` from it
 	 */
 	template<typename LowArg, typename HighArg>
 	concept IsTranslatableInstructionArgumentPair
