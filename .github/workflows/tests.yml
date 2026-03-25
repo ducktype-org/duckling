@@ -9,6 +9,8 @@ on:
     branches: [ "main", "dev" ]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
 
 env:
@@ -25,7 +27,16 @@ env:
 
 jobs:
   build:
-    if: github.event.pull_request.draft == false
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.draft == false &&
+       github.event_name == 'pull_request' &&
+       matrix.build-type == 'Dev' &&
+       matrix.compiler.name == 'gcc') ||
+      (github.event.pull_request.draft == false &&
+       github.event_name == 'pull_request_review' &&
+       github.event.review.state == 'approved')
 
     strategy:
       matrix:
