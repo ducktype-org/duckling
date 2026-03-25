@@ -100,6 +100,9 @@ private:
 		);
 
 		ASSERT_EQUAL(task_finished_counter.load(std::memory_order_relaxed), getWorkerCount());
+
+		free_workers = worker_manager.getFreeWorkers(getWorkerCount());
+		ASSERT_EQUAL(free_workers.size(), getWorkerCount());
 	}
 
 	void taskPoolFibonacciTest() {
