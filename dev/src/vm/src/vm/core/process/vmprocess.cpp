@@ -303,14 +303,14 @@ namespace vm {
 				}
 			}
 
-			variant_case_novalue(api::request::DebuggerGetNumberOfCurrentStackFrames) {
+			variant_case(api::request::DebuggerGetNumberOfCurrentStackFrames, request) {
 				std::shared_lock lock(rw_global);
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
 						// +1 because frame_stack_current points to the current frame, not the next
 						// free slot
-						RuntimeData& runtime_data = getMainVMThread().runtime_data;
+						RuntimeData& runtime_data = getVMThreadByID(request.thread_id).runtime_data;
 						u64          frames
 							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base)
 						    + 1;
@@ -325,7 +325,7 @@ namespace vm {
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						RuntimeData& runtime_data = getMainVMThread().runtime_data;
+						RuntimeData& runtime_data = getVMThreadByID(request.thread_id).runtime_data;
 						u64          frames
 							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base)
 						    + 1;

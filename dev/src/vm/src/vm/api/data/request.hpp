@@ -87,10 +87,13 @@ namespace vm::api {
 
 		struct DeinitAndValidate {};
 
-		struct DebuggerGetNumberOfCurrentStackFrames {};
+		struct DebuggerGetNumberOfCurrentStackFrames {
+			ThreadID thread_id;
+		};
 
 		struct DebuggerGetStackFrameData {
-			u64 frame_index;
+			ThreadID thread_id;
+			u64      frame_index;
 		};
 	}
 

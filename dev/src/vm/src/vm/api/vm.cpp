@@ -158,19 +158,23 @@ namespace vm::api {
 	}
 
 	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
-		PID pid
+		PID pid, ThreadID thread_id
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::DebuggerGetNumberOfCurrentStackFrames{}))
+		    .doRequest(
+				SupervisorRequest(pid, request::DebuggerGetNumberOfCurrentStackFrames{ thread_id })
+			)
 		    .and_then(mapOrWrongResponse<response::NumberOfCurrentStackFrames>);
 	}
 
 	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
-		PID pid, u64 frame_index
+		PID pid, ThreadID thread_id, u64 frame_index
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
-				pid, request::DebuggerGetStackFrameData{ .frame_index = frame_index }
+				pid,
+				request::DebuggerGetStackFrameData{ .thread_id   = thread_id,
+		                                            .frame_index = frame_index }
 			))
 		    .and_then(mapOrWrongResponse<response::StackFrameData>);
 	}

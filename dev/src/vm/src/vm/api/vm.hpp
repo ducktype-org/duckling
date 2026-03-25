@@ -193,7 +193,7 @@ namespace vm::api {
 	 * @return The response containing the number of stack frames or an API error.
 	 */
 	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
-		PID pid
+		PID pid, ThreadID thread_id
 	);
 
 	/**
@@ -201,6 +201,6 @@ namespace vm::api {
 	 * @return The response containing the variables of the stack frame or an API error.
 	 */
 	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
-		PID pid, u64 stack_frame_number
+		PID pid, ThreadID thread_id, u64 stack_frame_number
 	);
 }

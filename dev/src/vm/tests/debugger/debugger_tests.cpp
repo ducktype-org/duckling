@@ -150,26 +150,27 @@ private:
 	 */
 	void vmApiMemoryAllTypes() {
 		auto pid = loadProgram("breakpoint_all_types.dbc");
+		auto tid = vm::api::ThreadID(0);
 
 		ASSERT_TRUE(vm::api::run(pid).has_value());
 		ASSERT_TRUE(vm::api::waitForBreakpoint(pid).has_value());
 
 		{
-			auto response = vm::api::debuggerGetNumberOfStackFrames(pid);
+			auto response = vm::api::debuggerGetNumberOfStackFrames(pid, tid);
 			ASSERT_TRUE(response.has_value());
 			auto num_frames_response = response.value();
 			ASSERT_EQUAL_PRINT(num_frames_response.number_of_stack_frames, 2);
 		}
 
 		{
-			auto response = vm::api::debuggerGetStackFrameData(pid, 2);
+			auto response = vm::api::debuggerGetStackFrameData(pid, tid, 2);
 			ASSERT_TRUE(!response.has_value());
 		}
 
 		{
 			namespace idv = vm::interpreted_data_variant;
 
-			auto response = vm::api::debuggerGetStackFrameData(pid, 1);
+			auto response = vm::api::debuggerGetStackFrameData(pid, tid, 1);
 			ASSERT_TRUE(response.has_value());
 
 			auto stack_frame_data = response.value();
