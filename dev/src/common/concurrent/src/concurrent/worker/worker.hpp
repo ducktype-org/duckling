@@ -4,25 +4,88 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <concepts>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <random>
 #include <thread>
+#include <type_traits>
 
 namespace concurrent::worker {
 	class Worker;
 	using WRef = Ref<Worker>;
 
 	/**
+	 * @brief Move-only callable wrapper for worker jobs and callbacks.
+	 */
+	class Work final {
+	public:
+		Work() = default;
+
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, Work>)
+		explicit Work(F&& fn):
+			  callable_data(new std::decay_t<F>(std::forward<F>(fn))),
+			  invoke_fn(&invokeCallable<std::decay_t<F>>),
+			  destroy_fn(&destroyCallable<std::decay_t<F>>) {}
+
+		Work(const Work&)            = delete;
+		Work& operator=(const Work&) = delete;
+
+		Work(Work&& other) noexcept:
+			  callable_data(std::exchange(other.callable_data, nullptr)),
+			  invoke_fn(std::exchange(other.invoke_fn, nullptr)),
+			  destroy_fn(std::exchange(other.destroy_fn, nullptr)) {}
+
+		Work& operator=(Work&& other) noexcept {
+			if (this == &other) return *this;
+
+			if (callable_data != nullptr) destroy_fn(callable_data);
+
+			callable_data = std::exchange(other.callable_data, nullptr);
+			invoke_fn     = std::exchange(other.invoke_fn, nullptr);
+			destroy_fn    = std::exchange(other.destroy_fn, nullptr);
+			return *this;
+		}
+
+		~Work() {
+			if (callable_data != nullptr) destroy_fn(callable_data);
+		}
+
+		void operator()(WRef worker_ref) const {
+			if (invoke_fn == nullptr) return;
+			invoke_fn(callable_data, worker_ref);
+		}
+
+	private:
+		template<typename Callable>
+		static void invokeCallable(void* data, WRef worker_ref) {
+			auto* callable = static_cast<Callable*>(data);
+			(*callable)(worker_ref);
+		}
+
+		template<typename Callable>
+		static void destroyCallable(void* data) {
+			delete static_cast<Callable*>(data);
+		}
+
+		void* callable_data = nullptr;
+
+		void (*invoke_fn)(void*, WRef) = nullptr;
+		void (*destroy_fn)(void*)      = nullptr;
+	};
+
+	/**
 	 * @brief Callback type invoked when a worker has no tasks to execute.
 	 */
-	using NoTasksCallback = std::function<void(WRef)>;
+	using NoTasksCallback = Work;
 
 	/**
 	 * @brief Represents a task to be executed by a worker.
 	 */
-	using Task = std::function<void(WRef)>;
+	using Task = Work;
 
 	/**
 	 * @brief Represents a single worker in the WorkerManager.
@@ -45,15 +108,36 @@ namespace concurrent::worker {
 		 * @brief Pushes a task to the worker's task queue.
 		 * @param task The task to be executed.
 		 */
-		void scheduleTask(const Task& task);
+		void scheduleTask(Task&& task);
 
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, Task>)
+		void scheduleTask(F&& task) {
+			scheduleTask(Task(std::forward<F>(task)));
+		}
+
+		/**
+		 * @brief Pushes a task to the worker's task queue via move.
+		 * @param task The task to be executed.
+		 */
 		/**
 		 * @brief Pushes a task to the worker's task queue only if the worker is free.
 		 * @param task The task to be executed.
 		 * @return True if the task was pushed, false otherwise.
 		 */
-		bool scheduleTaskIfFree(const Task& task);
+		bool scheduleTaskIfFree(Task&& task);
 
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, Task>)
+		bool scheduleTaskIfFree(F&& task) {
+			return scheduleTaskIfFree(Task(std::forward<F>(task)));
+		}
+
+		/**
+		 * @brief Pushes a task to the worker's task queue via move only if the worker is free.
+		 * @param task The task to be executed.
+		 * @return True if the task was pushed, false otherwise.
+		 */
 		/**
 		 * @brief Checks if a worker is free.
 		 * Free means that the worker is not currently executing any task
@@ -84,7 +168,13 @@ namespace concurrent::worker {
 		 * longer than the lifetime of a callback inside a worker. This means that you need to make
 		 * sure to reset the callback before the destruction of the variables
 		 */
-		void setNoTasksCallback(const NoTasksCallback& callback);
+		void setNoTasksCallback(NoTasksCallback&& callback);
+
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, NoTasksCallback>)
+		void setNoTasksCallback(F&& callback) {
+			setNoTasksCallback(NoTasksCallback(std::forward<F>(callback)));
+		}
 
 		/**
 		 * @brief Gets the reference of the current worker
@@ -125,7 +215,8 @@ namespace concurrent::worker {
 		std::atomic_bool is_free       = true;
 		std::atomic_bool loop_run_flag = true;  /// Controls the main loop of the worker thread.
 
-		NoTasksCallback no_tasks_callback = [](WRef) {};  /// Callback when there are no tasks.
+		std::shared_ptr<NoTasksCallback> no_tasks_callback
+			= std::make_shared<NoTasksCallback>([](WRef) {});  /// Callback when there are no tasks.
 
 		std::queue<Task> task_queue;
 

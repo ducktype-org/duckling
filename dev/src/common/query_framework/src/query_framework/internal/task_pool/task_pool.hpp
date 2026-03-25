@@ -13,8 +13,10 @@
 #include <query_framework/internal/query_graph/node_id.hpp>
 
 #include <atomic>
+#include <concepts>
 #include <condition_variable>
 #include <mutex>
+#include <type_traits>
 #include <vector>
 
 namespace query::internal {
@@ -33,14 +35,12 @@ namespace query::internal {
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
 	struct Task final {
-		// @TODO: #2035 at least one layer of std::function should be removed here, as it adds
-		// unnecessary overhead. (the other one is inside the task pool implementation). See if
-		// std::any approach/manual void* is sufficiently faster to be used instead of std::function.
-
 		NodeID                   id;
-		concurrent::worker::Task work;
+		concurrent::worker::Work work;
 
-		Task(NodeID id, concurrent::worker::Task&& work): id(id), work(std::move(work)) {}
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, concurrent::worker::WRef>)
+		Task(NodeID id, F&& fn): id(id), work(std::forward<F>(fn)) {}
 	};
 
 	/**

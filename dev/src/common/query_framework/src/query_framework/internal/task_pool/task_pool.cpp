@@ -39,8 +39,8 @@ namespace query::internal {
 	void TaskPool::addTask(Task&& task) {
 		auto free_worker_opt = getFreeWorker();
 		if (free_worker_opt.has_value()) {
-			free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](WRef) mutable {
-				tryExecuteTask(pt);
+			free_worker_opt.value()->scheduleTask([this, task = std::move(task)](WRef) mutable {
+				tryExecuteTask(task);
 				onWorkerNoTasks();
 			});
 			return;
@@ -241,8 +241,8 @@ namespace query::internal {
 		}
 
 		if (task_opt.has_value()) {
-			current_worker->scheduleTask([this, pt = std::move(task_opt).value()](WRef) mutable {
-				tryExecuteTask(pt);
+			current_worker->scheduleTask([this, task = std::move(task_opt).value()](WRef) mutable {
+				tryExecuteTask(task);
 				onWorkerNoTasks();
 			});
 		}

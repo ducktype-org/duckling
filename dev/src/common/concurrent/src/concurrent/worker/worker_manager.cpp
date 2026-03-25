@@ -27,22 +27,22 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
-	WRef WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
+	WRef WorkerManager::scheduleTaskOnAnyWorker(Task&& task) {
 		for (auto& worker: workers)
-			if (worker->scheduleTaskIfFree(task)) return worker.get();
+			if (worker->scheduleTaskIfFree(std::move(task))) return worker.get();
 
 		// If no free worker is found, push to a random worker
 		std::scoped_lock lock(mut);
 		auto             id = static_cast<usize>(rng()) % (workers.size());
 
-		workers[id]->scheduleTask(task);
+		workers[id]->scheduleTask(std::move(task));
 		return workers[id].get();
 	}
 
 	bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
 
-	void WorkerManager::setNoTasksCallback(WRef worker, const NoTasksCallback& callback) {
-		worker->setNoTasksCallback(callback);
+	void WorkerManager::setNoTasksCallback(WRef worker, NoTasksCallback&& callback) {
+		worker->setNoTasksCallback(std::move(callback));
 	}
 
 	WorkerManager& WorkerManager::get() {

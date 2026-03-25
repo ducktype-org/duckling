@@ -6,6 +6,10 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
+#include <concepts>
+#include <memory>
+#include <type_traits>
+
 namespace concurrent::worker {
 
 	/**
@@ -55,7 +59,13 @@ namespace concurrent::worker {
 		 * @param task The task to be executed.
 		 * @return The reference of the worker the task was scheduled on.
 		 */
-		WRef scheduleTaskOnAnyWorker(const Task& task);
+		WRef scheduleTaskOnAnyWorker(Task&& task);
+
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, Task>)
+		WRef scheduleTaskOnAnyWorker(F&& task) {
+			return scheduleTaskOnAnyWorker(Task(std::forward<F>(task)));
+		}
 
 		/**
 		 * @brief Checks if a worker is free.
@@ -77,13 +87,35 @@ namespace concurrent::worker {
 		 * longer than the lifetime of a callback inside a worker. This means that you need to make
 		 * sure to reset the callback before the destruction of the variables
 		 */
-		void setNoTasksCallback(WRef worker, const NoTasksCallback& callback);
+		void setNoTasksCallback(WRef worker, NoTasksCallback&& callback);
+
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, NoTasksCallback>)
+		void setNoTasksCallback(WRef worker, F&& callback) {
+			setNoTasksCallback(worker, NoTasksCallback(std::forward<F>(callback)));
+		}
 
 		/**
 		 * @brief Same as above, but sets the same callback for all workers sequentially.
 		 */
-		void setNoTasksCallback(const NoTasksCallback& callback) {
-			for (auto& worker: getAllWorkers()) worker->setNoTasksCallback(callback);
+		void setNoTasksCallback(NoTasksCallback&& callback) {
+			auto callback_ptr = std::make_shared<NoTasksCallback>(std::move(callback));
+			for (auto& worker: getAllWorkers()) {
+				worker->setNoTasksCallback([callback_ptr](WRef worker_ref) {
+					(*callback_ptr)(worker_ref);
+				});
+			}
+		}
+
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, NoTasksCallback>)
+		void setNoTasksCallback(F&& callback) {
+			auto callback_ptr = std::make_shared<NoTasksCallback>(std::forward<F>(callback));
+			for (auto& worker: getAllWorkers()) {
+				worker->setNoTasksCallback([callback_ptr](WRef worker_ref) {
+					(*callback_ptr)(worker_ref);
+				});
+			}
 		}
 
 	private:
