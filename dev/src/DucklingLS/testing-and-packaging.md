@@ -1,6 +1,6 @@
 ## Dependencies
 
-To correctly package this extension node version >=20 is requires.
+To correctly package this extension node version >=20 is required.
 
 NVM is an easy way to manage node versions that also allows to install vsce in user files.
 
