@@ -2,10 +2,9 @@
 
 #include <tester/tester.hpp>
 
-#include <algorithm>
-#include <array>
 #include <atomic>
 #include <mutex>
+#include <random>
 #include <thread>
 #include <vector>
 
@@ -20,6 +19,8 @@ public:
 		TESTER_ADD_TEST(multiThreadedPushPopLossless_2p3c);
 		TESTER_ADD_TEST(multiThreadedPushPopLossless_4p4c);
 		TESTER_ADD_TEST(multiThreadedTryPopIfAndExtractIf);
+		TESTER_ADD_TEST(multiThreadedRandomMixedOps2w);
+		TESTER_ADD_TEST(multiThreadedRandomMixedOps4w);
 	}
 
 private:
@@ -230,6 +231,124 @@ private:
 
 		for (usize i = 0; i < TOTAL_ITEMS; ++i) ASSERT_TRUE(seen[i] == uint8_t(1));
 	}
+
+	template<usize WORKER_COUNT>
+	void multiThreadedRandomMixedOps() {
+		constexpr usize OPS_PER_WORKER     = 2'000;
+		constexpr usize TOTAL_OPS          = WORKER_COUNT * OPS_PER_WORKER;
+		constexpr usize MAX_ERASE_PER_ITER = 8;
+		constexpr u64   RNG_SEED_BASE      = 0xC0'FF'EE'12'34ULL;
+
+		concurrent::ConQueue<u64> queue;
+
+		std::atomic<usize> push_ops    = 0;
+		std::atomic<usize> pop_ops     = 0;
+		std::atomic<usize> pop_if_ops  = 0;
+		std::atomic<usize> extract_ops = 0;
+		std::atomic<usize> iter_ops    = 0;
+
+		std::atomic<usize>     performed_ops = 0;
+		std::atomic<long long> net_delta     = 0;
+
+		std::vector<std::jthread> workers;
+		workers.reserve(WORKER_COUNT);
+
+		for (usize worker_id = 0; worker_id < WORKER_COUNT; ++worker_id) {
+			workers.emplace_back([&, worker_id]() {
+				std::mt19937_64 rng(RNG_SEED_BASE + worker_id * 0x9E'37'79'B1'85'EB'CA'87ULL);
+				std::uniform_int_distribution<int> op_dist(0, 4);
+				std::uniform_int_distribution<u64> val_dist(0, 100'000);
+
+				for (usize op_i = 0; op_i < OPS_PER_WORKER; ++op_i) {
+					int op = op_dist(rng);
+
+					switch (op) {
+					case 0: {
+						push_ops.fetch_add(1, std::memory_order_relaxed);
+						u64 value = val_dist(rng);
+						queue.push(value);
+						net_delta.fetch_add(1, std::memory_order_relaxed);
+						break;
+					}
+					case 1: {
+						pop_ops.fetch_add(1, std::memory_order_relaxed);
+						auto popped = queue.tryPop();
+						if (popped.has_value()) net_delta.fetch_sub(1, std::memory_order_relaxed);
+						break;
+					}
+					case 2: {
+						pop_if_ops.fetch_add(1, std::memory_order_relaxed);
+						u64  parity = val_dist(rng) & 1ULL;
+						auto popped = queue.tryPopIf([parity](base::CRef<u64> value) {
+							return ((*value) & 1ULL) == parity;
+						});
+						if (popped.has_value()) net_delta.fetch_sub(1, std::memory_order_relaxed);
+						break;
+					}
+					case 3: {
+						extract_ops.fetch_add(1, std::memory_order_relaxed);
+						u64  mod_target = val_dist(rng) % 8ULL;
+						auto extracted  = queue.extractIf([mod_target](base::CRef<u64> value) {
+                            return (*value % 8ULL) == mod_target;
+                        });
+						if (extracted.has_value())
+							net_delta.fetch_sub(1, std::memory_order_relaxed);
+						break;
+					}
+					case 4: {
+						iter_ops.fetch_add(1, std::memory_order_relaxed);
+						u64   mod_target = val_dist(rng) % 16ULL;
+						usize erased     = 0;
+						for (auto it = queue.begin(); it != queue.end();) {
+							if ((*it % 16ULL) == mod_target) {
+								it = queue.erase(it);
+								erased++;
+								if (erased >= MAX_ERASE_PER_ITER) break;
+							} else {
+								++it;
+							}
+						}
+						if (erased > 0)
+							net_delta.fetch_sub(
+								static_cast<long long>(erased), std::memory_order_relaxed
+							);
+						break;
+					}
+					default:
+						CORE_PANIC("Unexpected randomized operation id");
+					}
+
+					performed_ops.fetch_add(1, std::memory_order_relaxed);
+				}
+			});
+		}
+
+		for (auto& worker: workers) worker.join();
+
+		ASSERT_EQUAL(performed_ops.load(std::memory_order_relaxed), TOTAL_OPS);
+
+		auto ops_sum = push_ops.load(std::memory_order_relaxed)
+		             + pop_ops.load(std::memory_order_relaxed)
+		             + pop_if_ops.load(std::memory_order_relaxed)
+		             + extract_ops.load(std::memory_order_relaxed)
+		             + iter_ops.load(std::memory_order_relaxed);
+		ASSERT_EQUAL(ops_sum, TOTAL_OPS);
+
+		auto expected_size = net_delta.load(std::memory_order_relaxed);
+		ASSERT_TRUE(expected_size >= 0);
+		ASSERT_EQUAL(queue.size(), static_cast<usize>(expected_size));
+
+		auto drained_count = 0ULL;
+		while (queue.tryPop().has_value()) drained_count++;
+
+		ASSERT_EQUAL(drained_count, static_cast<usize>(expected_size));
+		ASSERT_TRUE(queue.empty());
+		ASSERT_EQUAL(queue.size(), 0ULL);
+	}
+
+	void multiThreadedRandomMixedOps2w() { multiThreadedRandomMixedOps<2>(); }
+
+	void multiThreadedRandomMixedOps4w() { multiThreadedRandomMixedOps<4>(); }
 };
 
 TESTER_COMMON_MAIN("/src/common/concurrent/tests/");
