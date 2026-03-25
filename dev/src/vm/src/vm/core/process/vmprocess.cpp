@@ -146,8 +146,7 @@ namespace vm {
 		return status;
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::input(
-		const api::request::Input& request
+	std::expected<api::Response, api::ApiError> VMProcess::input(const api::request::Input& request
 	) {
 		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();

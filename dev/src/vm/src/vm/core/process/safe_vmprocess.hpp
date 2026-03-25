@@ -32,9 +32,6 @@ namespace vm {
 
 	private:
 		std::shared_mutex rw_global;
-		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
-		std::ios_base::Init cin_cout_init;
-
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
 		 * representation of the currently executed program. `loaded_program` references the low

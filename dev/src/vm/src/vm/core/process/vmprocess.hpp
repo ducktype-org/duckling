@@ -43,11 +43,14 @@ namespace vm {
 		PID                              my_pid;
 		ProcIO                           io;
 		base::Optional<ProcIORedirecter> io_redirecter;
-		GIL                              gil;
-		SynchronizationPrimitives        synchronization_primitives;
-		api::ProcStatus                  status;
-		std::shared_mutex                rw_status;
-		std::condition_variable_any      status_cv;
+		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
+		std::ios_base::Init cin_cout_init;
+
+		GIL                         gil;
+		SynchronizationPrimitives   synchronization_primitives;
+		api::ProcStatus             status;
+		std::shared_mutex           rw_status;
+		std::condition_variable_any status_cv;
 
 		VMProcess(PID my_pid);
 

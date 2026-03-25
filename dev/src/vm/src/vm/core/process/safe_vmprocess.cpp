@@ -105,9 +105,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	void SafeVMProcess::notifyPausedMainVMThread() {
-		getMainVMThread().notifyPaused();
-	}
+	void SafeVMProcess::notifyPausedMainVMThread() { getMainVMThread().notifyPaused(); }
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
 		for (auto& thread: vm_threads) {
@@ -193,8 +191,6 @@ namespace vm {
 		vm_threads.emplace_back(*this);
 		return vm_threads.back();
 	}
-
-	
 
 	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
 		std::unique_lock lock(rw_global);
