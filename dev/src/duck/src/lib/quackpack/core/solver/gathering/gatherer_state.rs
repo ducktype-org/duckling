@@ -1,22 +1,21 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
+use crate::quackpack::core::gathering::{
+    error_surpression::{GathererComputation, GathererResult},
+    fetch_types::{
+        FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
+        NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
+    },
+};
+use crate::quackpack::core::solver::types_common::{
+    ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
+};
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{FeatureName, Manifest, Version};
+use crate::util_common::error::MessageError;
 use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
-    quackpack::core::{
-        FeatureName, Manifest, Version,
-        gathering::{
-            error_surpression::{GathererComputation, GathererResult},
-            fetch_types::{
-                FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
-                NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
-            },
-        },
-        types_common::{
-            ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
-        },
-        version::CompatibilityCheck,
-    },
-    util_common::error::QuackMessage,
 };
 
 /// Gathered information about a particular package.
@@ -311,9 +310,12 @@ impl GathererState {
                     origin_package,
                     "Fetched manifest's version differs from required",
                 )?
-                .context(format!(
-                    "While handling response for the fetch of {:?}",
-                    origin_package
+                .context(MessageError(
+                    format!(
+                        "While handling response for the fetch of {:?}",
+                        origin_package
+                    )
+                    .into(),
                 )));
         }
 
@@ -329,19 +331,18 @@ impl GathererState {
     }
 
     /// Creates errors for a successful pinned response incoherent with the request.
-    fn fail_incoherent_success_pinned<T, U: Default>(
+    fn fail_incoherent_success_pinned<U: Default>(
         &mut self,
         pkg: Package,
-        reason: T,
-    ) -> GathererResult<U>
-    where
-        T: QuackMessage + Sized + 'static,
-    {
+        reason: impl Into<Cow<'static, str>>,
+    ) -> GathererResult<U> {
         let Some(status) = self.pinned_fetches.get_mut(&pkg) else {
-            return Err(qp_internal!("Failed request with no status").context(reason));
+            return Err(
+                qp_internal!("Failed request with no status").context(MessageError(reason.into()))
+            );
         };
         *status = QueryState::Failed;
-        Ok(GathererComputation::empty().context(reason))
+        Ok(GathererComputation::empty().context(MessageError(reason.into())))
     }
 
     /// Handles a successful response to a a not pinned fetch.
@@ -379,27 +380,30 @@ impl GathererState {
                     not_pinned_response.origin_location,
                     "Invalid fetch response",
                 )?
-                .context(format!(
-                    "While handling response for the fetch of {:?}",
-                    not_pinned_response.origin_location
+                .context(MessageError(
+                    format!(
+                        "While handling response for the fetch of {:?}",
+                        not_pinned_response.origin_location
+                    )
+                    .into(),
                 )))
         }
     }
 
     /// Creates errors for a successful not pinned response incoherent with the request.
-    fn fail_incoherent_success_not_pinned<T, U: Default>(
+    fn fail_incoherent_success_not_pinned<U: Default>(
         &mut self,
         location: InternedLocation,
-        reason: T,
+        reason: impl Into<Cow<'static, str>>,
     ) -> GathererResult<U>
-    where
-        T: QuackMessage + Sized + 'static,
-    {
+where {
         let Some(status) = self.not_pinned_fetches.get_mut(&location) else {
-            return Err(qp_internal!("Failed request with no status").context(reason));
+            return Err(
+                qp_internal!("Failed request with no status").context(MessageError(reason.into()))
+            );
         };
         *status = QueryState::Failed;
-        Ok(GathererComputation::empty().context(reason))
+        Ok(GathererComputation::empty().context(MessageError(reason.into())))
     }
 
     /// After a failed fetch, updates the state and decides what further requests to make.

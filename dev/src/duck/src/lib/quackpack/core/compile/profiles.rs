@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fmt::Display, sync::LazyLock};
 
+use crate::util_common::error::MessageError;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, quackpack::core::manifest};
 
 pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::new(|| {
@@ -128,7 +129,9 @@ macro_rules! determine_field {
                         QuackError::hint(
                             "In order to use a profile you have to define it in the manifest first",
                         )
-                        .context(format!("Unknown profile `{}`", profile_name))
+                        .context(MessageError(
+                            format!("Unknown profile `{}`", profile_name).into(),
+                        ))
                     });
             };
             $fun_name_help(profile_name, starting_profile, profiles)

@@ -1,5 +1,5 @@
 //! A [`Deserializer`](serde::Deserializer) support for [`YamlConfig`].
-use crate::QuackError;
+use crate::{QuackError, util_common::error::MessageError};
 
 use super::YamlConfig;
 use std::fmt;
@@ -41,7 +41,7 @@ impl de::Error for QuackErrorWrapper {
     where
         T: fmt::Display,
     {
-        QuackError::error(msg.to_string()).into()
+        QuackError::new(MessageError(msg.to_string().into())).into()
     }
 }
 

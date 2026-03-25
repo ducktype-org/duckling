@@ -7,6 +7,7 @@ use itertools::Itertools;
 use crate::{
     QuackError, QuackResult, QuackResultContext,
     quackpack::core::{compile::compiler_package::CompilerPackage, storage::freeze::FreezeDep},
+    util_common::error::MessageError,
 };
 
 pub mod creating_dag;
@@ -15,7 +16,7 @@ pub mod modifying_dag;
 /// Common helper for creating a consistent error.
 fn bail_cycle_message(cycle: &[FreezeDep]) -> QuackError {
     let cycle = cycle.iter().map(|dep| format!("`{}`", dep)).join(" -> ");
-    QuackError::error(format!("malformed freezefile: cycle {cycle}"))
+    MessageError(format!("malformed freezefile: cycle {cycle}").into()).into()
 }
 
 #[cfg(test)]
