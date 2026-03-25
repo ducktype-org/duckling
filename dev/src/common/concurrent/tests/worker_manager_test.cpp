@@ -42,17 +42,18 @@ private:
 		auto               now             = std::chrono::steady_clock::now();
 
 		auto& worker_manager = WorkerManager::get();
-		for (const auto& id: worker_manager.getAllWorkers()) {
-			worker_manager.setNoTasksCallback(id, [&no_task_counter](WRef) {
-				no_task_counter.fetch_add(1, std::memory_order_relaxed);
-			});
-		}
 
 		auto all_workers = worker_manager.getAllWorkers();
 		ASSERT_EQUAL(all_workers.size(), getWorkerCount());
 
 		auto free_workers = worker_manager.getFreeWorkers(getWorkerCount());
 		ASSERT_EQUAL(free_workers.size(), getWorkerCount());
+
+		for (const auto& id: worker_manager.getAllWorkers()) {
+			worker_manager.setNoTasksCallback(id, [&no_task_counter](WRef) {
+				no_task_counter.fetch_add(1, std::memory_order_relaxed);
+			});
+		}
 
 		std::atomic<usize> task_finished_counter = 0;
 		constexpr usize    TASK_WAIT_TIME_MS     = 100;
