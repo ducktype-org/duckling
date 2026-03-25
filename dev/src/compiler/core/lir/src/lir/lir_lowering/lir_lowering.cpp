@@ -839,8 +839,6 @@ namespace compiler::lir {
 
 			auto fun = std::move(mir2lir).get();
 
-			if (key.function->name.str() == "UnitFieldClass") int breakpoint = 0;
-
 			// @opt: remove it in optimized, release builds
 			CORE_ASSERT(fun.validateBlockOrder().isOk(), "Invalid block order");
 			CORE_ASSERT(fun.validateParameters().isOk(), "Invalid parameters");

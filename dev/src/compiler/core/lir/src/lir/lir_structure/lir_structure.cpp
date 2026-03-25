@@ -84,7 +84,7 @@ namespace compiler::lir {
 						  const auto& class_layout
 							  = std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
 						  const auto layout_idx
-							  = class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+							  = class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
 						  current_layout = class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					  }
 					  variant_case(IndexProjection, index) {

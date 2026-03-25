@@ -330,10 +330,10 @@ namespace compiler::backend_llvm {
 				// - First, create an opaque type.
 				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
 				// - Then, collect the member types.
-				const usize              num_fields = class_layout.getNumFields();
+				const usize              num_sub_layouts = class_layout.getNumSubLayouts();
 				std::vector<llvm::Type*> member_types;
-				member_types.reserve(num_fields);
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+				member_types.reserve(num_sub_layouts);
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
 					const CRef<tsl::TypeLayout> field_layout
 						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					// We filter out empty types here, as they don't have a valid LLVM
@@ -351,23 +351,16 @@ namespace compiler::backend_llvm {
 				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
 
 				// - Then, check each field's offset.
-				// @TODO: This PR — we should not have to count this here.
-				u64 discarded = 0;
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
-					const CRef<tsl::TypeLayout> field_layout
-						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
-					// Do not check empty fields, but count them to provide proper index to LLVM.
-					if (field_layout->is<tsl::EmptyTypeLayout>()) {
-						discarded++;
-						continue;
-					}
-
-					const Bytes expected_offset = class_layout.getOffsetOfFieldSymbol(
-						class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
+					const Bytes expected_offset
+						= class_layout
+					          .getOffsetOfFieldSymbol(
+								  class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
+							  )
+					          .value();
+					const auto actual_offset = Bytes(
+						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
 					);
-					const auto actual_offset = Bytes(struct_layout.getElementOffset(
-						base::safeIntConv<unsigned>(layout_idx - discarded)
-					));
 					CORE_ASSERT(
 						expected_offset == actual_offset,
 						base::strConcat(
@@ -727,7 +720,8 @@ namespace compiler::backend_llvm {
 						const auto& current_class_layout
 							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
 						const auto layout_idx
-							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id)
+						          .value();
 
 						gep_indices.push_back(
 							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
