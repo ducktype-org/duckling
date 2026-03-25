@@ -16,8 +16,8 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(singleThreadedBasicOps);
 		TESTER_ADD_TEST(singleThreadedIterateAndErase);
-		TESTER_ADD_TEST(multiThreadedPushPopLossless_2p3c);
-		TESTER_ADD_TEST(multiThreadedPushPopLossless_4p4c);
+		TESTER_ADD_TEST(multiThreadedPushPopLossless2p3c);
+		TESTER_ADD_TEST(multiThreadedPushPopLossless4p4c);
 		TESTER_ADD_TEST(multiThreadedTryPopIfAndExtractIf);
 		TESTER_ADD_TEST(multiThreadedRandomMixedOps2w);
 		TESTER_ADD_TEST(multiThreadedRandomMixedOps4w);
@@ -160,9 +160,9 @@ private:
 		for (usize i = 0; i < TOTAL_ITEMS; ++i) ASSERT_TRUE(seen[i] == uint8_t(1));
 	}
 
-	void multiThreadedPushPopLossless_2p3c() { multiThreadedPushPopLossless<2, 3>(); }
+	void multiThreadedPushPopLossless2p3c() { multiThreadedPushPopLossless<2, 3>(); }
 
-	void multiThreadedPushPopLossless_4p4c() { multiThreadedPushPopLossless<4, 4>(); }
+	void multiThreadedPushPopLossless4p4c() { multiThreadedPushPopLossless<4, 4>(); }
 
 	void multiThreadedTryPopIfAndExtractIf() {
 		constexpr usize TOTAL_ITEMS = 4'000;

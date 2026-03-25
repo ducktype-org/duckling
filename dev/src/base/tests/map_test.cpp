@@ -50,7 +50,7 @@ public:
 
 			for (u64 i = 0; i < count; i++) {
 				auto v       = rng() % 1'000'000;
-				auto put_res = map.maybePut(v, v * 10);
+				auto put_res = map.maybePut(BigObject<13>(v), BigObject<16>(v * 10));
 
 				if (put_res != nullptr) {
 					ASSERT_EQUAL(put_res->key, v);

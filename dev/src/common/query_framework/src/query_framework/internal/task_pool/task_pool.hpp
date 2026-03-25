@@ -222,7 +222,7 @@ namespace query::internal {
 		std::vector<concurrent::ConQueue<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
-		/// @TODO: #1988 #2035 hash map per query id? Or even stronger, lock free data structure.
+		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
 
 		static constexpr usize              TASK_SHARDS = 113;

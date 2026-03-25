@@ -127,7 +127,7 @@ private:
 		map.put("lol", "test 1");
 		map.put("a", "test 2");
 		map.put("b", "test 3");
-		auto put_res = map.maybePut("lol", "test");
+		auto put_res = map.maybePut(std::string("lol"), std::string("test"));
 
 		assertTrue(put_res == nullptr, "Value was wrongly inserted");
 
