@@ -1,8 +1,10 @@
 #include "program_lowering_context.hpp"
 
+#include "debug_info_utils.hpp"
 #include "function_lowering_context.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
+#include <debug_info/debug_info_builder.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -12,6 +14,18 @@
 
 using namespace compiler::backend_vm::internal;
 
+compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
+	query::Context& query_ctx, bool build_debug_info
+):
+
+	  query_ctx_for_errors(&query_ctx),
+	  debug_info_builder(
+		  (build_debug_info ? debug_info::DebugInfoBuilder(
+								  debug_info::Target::DBC, debug_info::SourcePositionsType::PstHash
+							  )
+                            : base::Optional<debug_info::DebugInfoBuilder>{})
+	  ) {}
+
 const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
 ) {
 	if (tsl_type_to_dvm.contains(layout)) {
@@ -19,6 +33,11 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 	} else {
 		auto dvm_type = lowerTslTypeInternal(layout);
 		tsl_type_to_dvm.put(layout, dvm_type);
+
+		if_opt_some(debug_info_builder, builder) {
+			builder.addType(vm::code::typeName(dvm_type).str(), layout->getSourceType().toString());
+		}
+
 		return tsl_type_to_dvm.at(layout);
 	}
 }
@@ -102,10 +121,23 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	for (const auto& param_layout: lir_function->parameter_layouts)
 		func_param_types.push_back(lowerAndKeepTslType(param_layout));
 
+
+	base::Optional<debug_info::FunctionBuilder> function_di_builder_opt;
+	if_opt_some(debug_info_builder, builder) {
+		function_di_builder_opt.emplace(builder.beginFunction(
+			lir_function->mangled_name.str(),
+			lir_function->metadata.source_code_name.map([](auto str_id) { return str_id.str(); }),
+			lir_function->metadata.position.map(mapDIPosition)
+		));
+	}
+
+
 	auto func_ctx = FunctionLoweringContext{ *this,
 		                                     lir_function->mangled_name,
 		                                     lir_function->return_type_layout,
-		                                     lir_function->parameter_layouts };
+		                                     lir_function->parameter_layouts,
+		                                     std::move(function_di_builder_opt) };
+
 
 	for (const auto& param: lir_function->local_list) {
 		match_optional(param.parameter_index) {
@@ -213,6 +245,16 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		valid      = valid.tryInsertCode(collection);
 		return valid.produceValidCodeCollection();
 	} catch (vm::code::ValidationError& e) { return std::unexpected(e.what()); }
+}
+
+base::Optional<debug_info::DebugInfo> compiler::backend_vm::internal::ProgramLoweringContext::buildDebugInfo(
+) {
+	if_opt_some(debug_info_builder, builder) {
+		auto result        = std::move(builder).build();
+		debug_info_builder = {};
+		return result;
+	}
+	return {};
 }
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(compiler::backend_vm::internal::ProgramLoweringContext);
