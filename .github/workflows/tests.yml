@@ -37,6 +37,42 @@ jobs:
         id: set-matrix
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            HAS_APPROVAL=$(
+              curl --silent --show-error --fail \
+                -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews?per_page=100" \
+              | python3 -c "import json,sys; reviews=json.load(sys.stdin); print('true' if any(r.get('state') == 'APPROVED' for r in reviews) else 'false')"
+            )
+
+            if [[ "$HAS_APPROVAL" == "true" ]]; then
+              {
+                echo "matrix<<EOF"
+                cat <<'JSON'
+          {
+            "build-type": ["Dev", "DevOpt"],
+            "compiler": [
+              {
+                "name": "gcc",
+                "cxx": "g++-14",
+                "cc": "gcc-14",
+                "gcov": "gcov-14",
+                "linker": "mold",
+                "cache-prefix": "gcc-build"
+              },
+              {
+                "name": "clang",
+                "cxx": "clang++-19",
+                "cc": "clang-19",
+                "linker": "mold",
+                "cache-prefix": "clang-build"
+              }
+            ]
+          }
+          JSON
+                echo "EOF"
+              } >> "$GITHUB_OUTPUT"
+            else
             {
               echo "matrix<<EOF"
               cat <<'JSON'
@@ -56,6 +92,7 @@ jobs:
           JSON
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
+            fi
           else
             {
               echo "matrix<<EOF"
