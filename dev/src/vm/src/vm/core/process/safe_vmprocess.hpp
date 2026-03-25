@@ -13,10 +13,8 @@
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
 
-#include <condition_variable>
 #include <deque>
 #include <expected>
-#include <shared_mutex>
 #include <string>
 #include <variant>
 #include <vector>
@@ -24,19 +22,9 @@
 namespace vm {
 
 	/**
-	 * @brief The API for using the virtual process of the VM.
-	 * It manages process's data, loader and threads.
+	 * @brief A "safe" implementation of the VMProcess interface.
 	 *
-	 * SafeVMProcess is an abstract concept that represents the program's execution environment.
-	 *
-	 * @note The code in this class is executed in the supervisor's thread.
-	 *
-	 * It is responsible for loading and parsing of the program,
-	 * creating and resetting the Execution Thread,
-	 * setting the status of the execution (pause, stop, run),
-	 * managing the input and output of the executing thread and some more.
-	 *
-	 * Only execution of the code is done in the separate thread,
+	 * @note Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class SafeVMProcess final: public VMProcess {
@@ -44,11 +32,6 @@ namespace vm {
 
 	private:
 		std::shared_mutex rw_global;
-
-		api::ProcStatus             status;
-		std::shared_mutex           rw_status;
-		std::condition_variable_any status_cv;
-
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
@@ -112,11 +95,6 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> stop() override;
 
-		std::expected<api::Response, api::ApiError> input(const api::request::Input& request
-		) override;
-
-		std::expected<api::Response, api::ApiError> output() override;
-
 		std::expected<api::Response, api::StateError> getExitCode() override;
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
@@ -132,6 +110,8 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> getMainVMThreadCurrentPosition() override;
 
+		void notifyPausedMainVMThread() override;
+
 		void waitForBreakpoint() override;
 
 		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
@@ -142,9 +122,6 @@ namespace vm {
 
 	public:
 		SafeVMProcess(PID my_pid);
-
-		void            setStatus(const api::ProcStatus& new_status) noexcept override;
-		api::ProcStatus getStatus() override;
 
 		Memory& getMemory();
 

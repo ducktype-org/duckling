@@ -6,7 +6,7 @@
 
 namespace vm {
 
-	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid) {}
+	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid), status(api::ExecutionNotStarted{}) {}
 
 	ProcIO& VMProcess::getIO() { return io; }
 
@@ -132,4 +132,44 @@ namespace vm {
 		io_redirecter.reset();
 		return api::Response(api::response::Empty());
 	}
+
+	void VMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
+		{
+			std::unique_lock<std::shared_mutex> lock(rw_status);
+			status = new_status;
+		}
+		status_cv.notify_all();
+	}
+
+	api::ProcStatus VMProcess::getStatus() {
+		std::shared_lock lock(rw_status);
+		return status;
+	}
+
+	std::expected<api::Response, api::ApiError> VMProcess::input(
+		const api::request::Input& request
+	) {
+		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
+		auto lock = io.lock();
+		io.inputStream() << request.input;
+		notifyPausedMainVMThread();
+		return api::Response(api::response::Empty());
+	}
+
+	std::expected<api::Response, api::ApiError> VMProcess::output() {
+		auto lock = io.lock();
+		// @TODO: #2342 Cannot read output from api when IO is being redirected
+		if (io_redirecter)
+			return std::unexpected(api::ApiError{
+				api::IOError{ "Cannot read output from api when IO is being redirected" } });
+
+		if (isExecuting(status))
+			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
+
+		const std::string content = io.outputStream().str();
+		io.outputStream().str("");
+		io.outputStream().clear();
+		return api::Response(api::response::Output{ content });
+	}
+
 }

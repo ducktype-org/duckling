@@ -16,12 +16,28 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 
 #include <expected>
+#include <shared_mutex>
 #include <variant>
 
 namespace vm {
 
 	class VmValue;
 
+	/**
+	 * @brief The API for using the virtual process of the VM.
+	 * It manages process's data, loader and threads.
+	 *
+	 * This is an abstract class that represents the program's execution environment.
+	 *
+	 * @note The implementations of this class run the loading and parsing of the program,
+	 * in the caller's thread, only the execution of the program in a separate thread.
+	 *
+	 * It is responsible for loading and parsing of the program,
+	 * creating and resetting the Execution Thread,
+	 * setting the status of the execution (pause, stop, run),
+	 * managing the input and output of the executing thread and some more.
+	 *
+	 */
 	class VMProcess {
 	protected:
 		PID                              my_pid;
@@ -29,6 +45,9 @@ namespace vm {
 		base::Optional<ProcIORedirecter> io_redirecter;
 		GIL                              gil;
 		SynchronizationPrimitives        synchronization_primitives;
+		api::ProcStatus                  status;
+		std::shared_mutex                rw_status;
+		std::condition_variable_any      status_cv;
 
 		VMProcess(PID my_pid);
 
@@ -74,22 +93,22 @@ namespace vm {
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		virtual std::expected<api::Response, api::ApiError> input(const api::request::Input& request
-		) = 0;
+		std::expected<api::Response, api::ApiError> input(const api::request::Input& request);
 
 		/**
 		 * @brief Gets the output of the executing thread and clears the output stream.
 		 * If the output stream is empty, it waits until it is not.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		virtual std::expected<api::Response, api::ApiError> output() = 0;
+		std::expected<api::Response, api::ApiError> output();
 
+	protected:
 		/**
 		 * @brief Gets the status of the process (memory-safe).
 		 *
 		 * @return api::ProcStatus
 		 */
-		virtual api::ProcStatus getStatus() = 0;
+		api::ProcStatus getStatus();
 
 		/**
 		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
@@ -127,6 +146,8 @@ namespace vm {
 		) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> getMainVMThreadCurrentPosition() = 0;
+
+		virtual void notifyPausedMainVMThread() = 0;
 
 		virtual void waitForBreakpoint() = 0;
 
@@ -166,7 +187,7 @@ namespace vm {
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 
-		virtual void setStatus(const api::ProcStatus& new_status) noexcept = 0;
+		void setStatus(const api::ProcStatus& new_status) noexcept;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess

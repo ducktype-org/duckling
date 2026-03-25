@@ -25,11 +25,6 @@
 namespace vm {
 	Memory& SafeVMProcess::getMemory() { return memory; }
 
-	api::ProcStatus SafeVMProcess::getStatus() {
-		std::shared_lock lock(rw_status);
-		return status;
-	}
-
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
@@ -110,30 +105,8 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMProcess::input(
-		const api::request::Input& request
-	) {
-		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
-		auto lock = io.lock();
-		io.inputStream() << request.input;
+	void SafeVMProcess::notifyPausedMainVMThread() {
 		getMainVMThread().notifyPaused();
-		return api::Response(api::response::Empty());
-	}
-
-	std::expected<api::Response, api::ApiError> SafeVMProcess::output() {
-		auto lock = io.lock();
-		// @TODO: #2342 Cannot read output from api when IO is being redirected
-		if (io_redirecter)
-			return std::unexpected(api::ApiError{
-				api::IOError{ "Cannot read output from api when IO is being redirected" } });
-
-		if (isExecuting(status))
-			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
-
-		const std::string content = io.outputStream().str();
-		io.outputStream().str("");
-		io.outputStream().clear();
-		return api::Response(api::response::Output{ content });
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
@@ -194,7 +167,6 @@ namespace vm {
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid):
 		  VMProcess(my_pid),
-		  status(api::ExecutionNotStarted{}),
 		  loaded_program(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
 	}
@@ -222,13 +194,7 @@ namespace vm {
 		return vm_threads.back();
 	}
 
-	void SafeVMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
-		{
-			std::unique_lock<std::shared_mutex> lock(rw_status);
-			status = new_status;
-		}
-		status_cv.notify_all();
-	}
+	
 
 	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
 		std::unique_lock lock(rw_global);
