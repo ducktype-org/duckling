@@ -23,7 +23,7 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let pkg2 = registry::Dependency {
@@ -39,7 +39,7 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let pkg3 = registry::Dependency {
@@ -55,7 +55,7 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let bar_256 = registry::Manifest {

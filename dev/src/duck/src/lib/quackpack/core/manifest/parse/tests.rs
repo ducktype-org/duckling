@@ -402,7 +402,7 @@ dependencies:
     }
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
-    assert!(a.explicit_manifest_name().is_none());
+    assert!(a.alias().is_none());
 
     let a1 = summary
         .dependencies()
@@ -424,7 +424,7 @@ dependencies:
         assert!(local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "../xd");
     }
-    assert!(a1.explicit_manifest_name().is_none());
+    assert!(a1.alias().is_none());
 
     let a2 = summary
         .dependencies()
@@ -437,7 +437,7 @@ dependencies:
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "~/xd");
     }
-    assert!(a2.explicit_manifest_name().is_none());
+    assert!(a2.alias().is_none());
 
     let a3 = summary
         .dependencies()
@@ -449,7 +449,7 @@ dependencies:
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "/xd");
     }
-    assert!(a3.explicit_manifest_name().is_none());
+    assert!(a3.alias().is_none());
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
     assert!(b.source().is_registry());
@@ -460,7 +460,7 @@ dependencies:
     assert_eq!(b.versions().len(), 1);
     assert_eq!(b.versions()[0].to_string(), "0.1.0");
     assert_eq!(b.name(), b.effective_name());
-    assert!(b.explicit_manifest_name().is_none());
+    assert!(b.alias().is_none());
 
     let c = summary
         .dependencies()
@@ -469,7 +469,7 @@ dependencies:
     assert!(c.source().is_registry());
     assert_eq!(c.versions().len(), 1);
     assert_eq!(c.name(), "alias");
-    assert_eq!(c.explicit_manifest_name(), Some("c".into()));
+    assert_eq!(c.alias(), Some("c".into()));
     assert_ne!(c.name(), c.effective_name());
 
     let d = summary
@@ -482,7 +482,7 @@ dependencies:
     }
     assert_eq!(d.versions().len(), 1);
     assert_eq!(d.name(), "alias2");
-    assert_eq!(d.explicit_manifest_name(), Some("d".into()));
+    assert_eq!(d.alias(), Some("d".into()));
     assert_ne!(d.name(), d.effective_name());
 
     let e = summary.dependencies().get_by_name(StrId::new("e")).unwrap();
@@ -497,7 +497,7 @@ dependencies:
     }
     assert!(e.versions().is_empty());
     assert_eq!(e.name(), e.effective_name());
-    assert!(b.explicit_manifest_name().is_none());
+    assert!(b.alias().is_none());
 }
 
 #[test]

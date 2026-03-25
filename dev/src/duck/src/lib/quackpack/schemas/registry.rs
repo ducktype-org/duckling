@@ -58,7 +58,7 @@ pub struct Dependency {
     /// Conditions required for enabling this dependency.
     pub conditions: DependencyCondition,
     /// Whether it's aliased.
-    pub is_alias_for: Option<String>,
+    pub alias: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

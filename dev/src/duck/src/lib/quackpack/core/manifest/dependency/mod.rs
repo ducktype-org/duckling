@@ -23,8 +23,8 @@ pub struct Dependency {
     conditions: Option<Conditions>,
     /// The real (unaliased) name of the dependency.
     name: StrId,
-    /// Explicit name specified in the manifest.
-    explicit_manifest_name: Option<StrId>,
+    /// Alias specified in the manifest.
+    alias: Option<StrId>,
     /// All versions of this dependency.
     versions: Vec<Version>,
     /// Source of this dependency.
@@ -44,12 +44,12 @@ impl Dependency {
         features: Vec<DependencyFeature>,
         is_pinned: bool,
         conditions: Option<Conditions>,
-        explicit_manifest_name: Option<StrId>,
+        alias: Option<StrId>,
     ) -> QuackResult<Self> {
         debug_assert_ne!(
             Some(name),
-            explicit_manifest_name,
-            "explicit_manifest_name should be None, if it's the same as name"
+            alias,
+            "alias should be None, if it's the same as name"
         );
         if source.is_registry() && versions.is_empty() {
             qp_bail!("a registry dependency must provide at least one version")
@@ -65,7 +65,7 @@ impl Dependency {
             is_pinned,
             conditions,
             name,
-            explicit_manifest_name,
+            alias,
             versions,
             source: source.into(),
         })
@@ -106,7 +106,7 @@ impl Dependency {
 
     /// Whether this dependency was aliased in the manifest.
     pub fn is_aliased(&self) -> bool {
-        self.explicit_manifest_name.is_some()
+        self.alias.is_some()
     }
 
     /// Get an iterator over features that are enabled for the given features.
@@ -130,8 +130,8 @@ impl Dependency {
 
     /// Get the aliased name of this package.
     /// If none, then this package has not been aliased.
-    pub fn explicit_manifest_name(&self) -> Option<StrId> {
-        self.explicit_manifest_name
+    pub fn alias(&self) -> Option<StrId> {
+        self.alias
     }
 
     /// Get versions of this package.
@@ -146,9 +146,9 @@ impl Dependency {
 
     /// Get the effective name of this dependency.
     ///
-    /// Helper for `self.explicit_manifest_name().unwrap_or(self.name())`.
+    /// Helper for `self.alias().unwrap_or(self.name())`.
     pub fn effective_name(&self) -> StrId {
-        self.explicit_manifest_name.unwrap_or(self.name)
+        self.alias.unwrap_or(self.name)
     }
 }
 
@@ -163,21 +163,25 @@ impl TryFrom<registry::Dependency> for Dependency {
             features,
             pinned,
             conditions,
-            is_alias_for,
+            alias,
         } = value;
-        let manifest_name = is_alias_for.map(Into::into);
+        let alias = alias.map(StrId::from);
+        let name = name.into();
+        if alias == Some(name) {
+            qp_bail!("registry dependency `{name}` specified itself as an alias")
+        }
         let features = features
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()?;
         Self::new(
-            name.into(),
+            name,
             version,
             source.try_into()?,
             features,
             pinned,
             Some(conditions.try_into()?),
-            manifest_name,
+            alias,
         )
     }
 }
@@ -191,7 +195,7 @@ impl TryFrom<Dependency> for registry::Dependency {
             is_pinned,
             conditions,
             name,
-            explicit_manifest_name,
+            alias,
             versions,
             source,
         } = value;
@@ -208,7 +212,7 @@ impl TryFrom<Dependency> for registry::Dependency {
             features,
             pinned: is_pinned,
             conditions,
-            is_alias_for: explicit_manifest_name.map(Into::into),
+            alias: alias.map(Into::into),
             name: name.into(),
         })
     }

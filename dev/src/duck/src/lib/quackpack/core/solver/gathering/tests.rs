@@ -93,7 +93,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let foo1 = registry::Manifest {
@@ -171,7 +171,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let xd1 = registry::Manifest {
@@ -216,7 +216,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let a_c_dep = registry::Dependency {
@@ -232,7 +232,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: Some(vec!["f".into()]),
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let a1 = registry::Manifest {

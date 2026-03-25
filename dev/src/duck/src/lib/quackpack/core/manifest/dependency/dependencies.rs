@@ -49,9 +49,7 @@ impl Dependencies {
 
     /// Get a dependency by an alias.
     pub fn get_by_alias(&self, name: StrId) -> Option<&Dependency> {
-        self.0
-            .iter()
-            .find(|dep| dep.explicit_manifest_name() == Some(name))
+        self.0.iter().find(|dep| dep.alias() == Some(name))
     }
 
     /// Check if a dependency exists by a compilatio name.
