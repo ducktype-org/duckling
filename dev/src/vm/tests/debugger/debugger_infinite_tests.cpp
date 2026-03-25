@@ -48,7 +48,7 @@ private:
 		// work correctly.
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		// Because of stepGIL
+		// Because of stepGILs are inserted, there are more instructions.
 		ASSERT_EQUAL_PRINT(2, execution_position.instr_number);
 
 		vm::api::resume(pid).value();                 // "Resume failed (1)"

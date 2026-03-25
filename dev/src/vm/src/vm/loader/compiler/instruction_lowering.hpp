@@ -109,7 +109,7 @@ namespace vm::loader::compiler::detail {
 
 		template<typename T, typename... Args>
 		requires AreTranslatableInstructionTagArgs<T, Args...> void addLow(Args&&... args) {
-      if (push_step_gil_on_next_add_low) {
+			if (push_step_gil_on_next_add_low) {
 				push_step_gil_on_next_add_low = false;
 				addLow<Op_stepGil>();
 			}
@@ -511,8 +511,9 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_cast_l8_type, i) {}
 			instr_case(high::Op_cast_l16_type, i) {}
 			instr_case(high::Op_cast_l32_type, i) {}
-			instr_case(high::Op_cast_l64_type, i) {}  // Sign Extension
+			instr_case(high::Op_cast_l64_type, i) {}
 
+			// Sign Extension
 			instr_case(high::Op_sext_l16_l8, i) { addLow<Op_sext_l16_l8>(i.dst, i.src); }
 			instr_case(high::Op_sext_l32_l8, i) { addLow<Op_sext_l32_l8>(i.dst, i.src); }
 			instr_case(high::Op_sext_l64_l8, i) { addLow<Op_sext_l64_l8>(i.dst, i.src); }
