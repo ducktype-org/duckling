@@ -58,7 +58,7 @@ namespace compiler::backend_vm::internal {
 	private:
 		struct FunctionCallInfo {
 			DVMCallable                          call_target;
-			base::Optional<vm::code::TypeOfData> return_type;
+			std::vector<vm::code::TypeOfData>    return_type;
 			std::vector<vm::code::TypeOfData>    param_types;
 			bool                                 is_extern_c;
 

@@ -182,9 +182,10 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
 	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 ) {
-	base::Optional<vm::code::TypeOfData> called_result_type = {};
+	std::vector<vm::code::TypeOfData> called_result_type = {};
+	// @todo: #966 add support to compiler about multiple return values
 	if (func_literal.return_type_layout->getSize() != Bits{ 0 })
-		called_result_type = program_context.lowerAndKeepTslType(func_literal.return_type_layout);
+		called_result_type.emplace_back(program_context.lowerAndKeepTslType(func_literal.return_type_layout));
 
 	std::vector<vm::code::TypeOfData> param_types
 		= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
@@ -205,9 +206,9 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 ) {
 	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
 
-	base::Optional<vm::code::TypeOfData> called_result_type = {};
-	if (ext_func.signature.result_type[0].str != base::StrID("void"))
-		called_result_type = vm::code::getBuiltinTypeByName(ext_func.signature.result_type[0]);
+	std::vector<vm::code::TypeOfData> called_result_type = {};
+	for (auto reslt : ext_func.signature.result_type)
+		called_result_type.emplace_back(*vm::code::getBuiltinTypeByName(reslt));
 
 	std::vector<vm::code::TypeOfData> param_types
 		= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {

@@ -154,8 +154,9 @@ void FunctionLoweringContext::handleCall(
 	);
 
 	auto call_result_storage = [&] -> base::Optional<DVMLocal> {
-		if (call_info.return_type)
-			return pushTempLocal(call_info.return_type.value(), "call_result");
+		// @todo: #966 remove the void type at the LIR lowering functions
+		if (call_info.return_type.size() == 1 && vm::code::typeName(call_info.return_type.at(0)) != "void")
+			return pushTempLocal(call_info.return_type.at(0), "call_result");
 		else
 			return {};
 	}();
