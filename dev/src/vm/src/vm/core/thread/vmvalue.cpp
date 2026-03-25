@@ -96,4 +96,6 @@ void vm::VmValue::dprint(std::ostream& out, const std::string& indent) const {
 	out << indent << "-----------------\n";
 }
 
-base::Optional<vm::InterpretedDataVariant> vm::VmValue::readData() const { return asRef().readData(); }
+base::Optional<vm::InterpretedDataVariant> vm::VmValue::readData() const {
+	return asRef().readData();
+}
