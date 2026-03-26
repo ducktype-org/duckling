@@ -144,8 +144,10 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)
 		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
-	function.signature.result_type
-		= { vm::code::Identifier(vm::code::typeName(function_return_type)) };
+	function.signature.result_type = {};
+	if (auto type_name = vm::code::typeName(function_return_type); type_name != "void") {
+		function.signature.result_type.emplace_back(type_name);
+	}
 	function.body                  = std::move(function_body);
 	return function;
 }
