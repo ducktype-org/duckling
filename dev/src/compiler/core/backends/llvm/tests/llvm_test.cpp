@@ -203,7 +203,7 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 8, 9); }
+	void classTest() { runTestForModule("modules/classes/records", 10, 11); }
 
 	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
 
@@ -308,7 +308,7 @@ private:
 
 		// Is List[i64] defined.
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(%"list\.i64:64b"\s*=\s*type\s*\{)" }),
+			std::regex_search(ir, std::regex{ R"(%Di64E\s*=\s*type\s*\{)" }),
 			"Expected list struct definition for i64"
 		);
 
@@ -334,7 +334,7 @@ private:
 		const std::regex access_pattern(
 			// GEP to 'data' field (0th index).
 		    // %(\w+) captures the GEP result as group 1.
-			R"(%(\w+)\s*=\s*getelementptr\s+%"list\.i64:64b",\s+ptr\s+%\w+,\s+i32\s+0,\s+i32\s+0\s*)"
+			R"(%(\w+)\s*=\s*getelementptr\s+%Di64E,\s+ptr\s+%\w+,\s+i32\s+0,\s+i32\s+0\s*)"
 			// Accept newlines.
 			R"(\s*)"
 			// Now we expect load from the pointer returned by GEP (group 1) and store the result in
