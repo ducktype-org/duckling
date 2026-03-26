@@ -3,9 +3,11 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
-#include <iostream>
+#include <chrono>
 #include <fstream>
+#include <iostream>
 #include <vector>
+#include <filesystem>
 
 namespace logger {
 	namespace {
@@ -42,14 +44,24 @@ namespace logger {
 
 	void setDevLogOutputStream(Ref<std::ostream> str) { current_stream = str; }
 
-	void devLogOutputFile(const std::string& path) {
-        // This introduces memory-leak.
-        // That is intentional, although not sure this is correct.
-        // Motivation is that ostream shouldn't be deleted until very very late in the program,
-        // such that anything that logs in the destructors can do that safely.
-        // OS should reclaim resources and close file descriptors anyway.
+	void setDevLogOutputFile(const std::string& path) {
 		auto* fs = new std::ofstream(path, std::ios::out);
-        setDevLogOutputStream(fs);
+		setDevLogOutputStream(fs);
+	}
+
+	void setDevLogOutputStreamCurrentDate() {
+        auto now = std::chrono::system_clock::now();
+        auto now_sec = std::chrono::floor<std::chrono::seconds>(now);
+
+        std::string filename = std::format("log_{:%Y-%m-%d_%H-%M-%S}.txt", now_sec);
+
+        std::filesystem::path log_directory = "logs";
+
+        std::filesystem::create_directories(log_directory);
+
+        std::filesystem::path full_file_path = log_directory / filename;
+
+		setDevLogOutputFile(full_file_path);
 	}
 
 /**

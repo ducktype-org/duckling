@@ -73,6 +73,8 @@ namespace logger {
 	bool isCategoryEnabled(DevLogCategories category);
 
 	void devLogOutputFile(const std::string& path);
+
+	void setDevLogOutputStreamCurrentDate();
 }
 
 /**
