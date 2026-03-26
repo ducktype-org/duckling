@@ -74,7 +74,7 @@ namespace vm {
 		 */
 		CRef<low::GeneralizedLowVMProgram> loaded_program;
 
-		base::Optional<low::LowVMProgramCopy> loaded_program_copy;
+		low::LowVMProgramCopy loaded_program_copy;
 
 		Memory memory;
 
@@ -191,12 +191,6 @@ namespace vm {
 		 */
 		VMThread& getEmptyThread();
 
-		/**
-		 * @brief Creates or deletes own LowVMProgram copy if needed.
-		 * @note Affects only subsequent runs.
-		 */
-		void setCodeCopyMode(bool enable);
-
 	public:
 		void setStatus(const api::ProcStatus& new_status) noexcept;
 
@@ -236,7 +230,7 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type);
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
-		VMProcess(PID my_pid, bool code_copy_mode = false);
+		VMProcess(PID my_pid);
 
 		GIL&                       getGIL();
 		SynchronizationPrimitives& getSynchronizationPrimitives();

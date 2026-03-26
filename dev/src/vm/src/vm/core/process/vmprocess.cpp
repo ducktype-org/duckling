@@ -44,6 +44,7 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
+			loaded_program_copy.selfUpdate();
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -56,8 +57,6 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-
-		if (loaded_program_copy.has_value()) loaded_program_copy->selfUpdate();
 
 		VMThread& thread   = getEmptyThread();
 		bool      response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
@@ -74,8 +73,6 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-
-		if (loaded_program_copy.has_value()) loaded_program_copy->selfUpdate();
 
 		getMainVMThread().runNoSpawn(loaded_program, func_name, run_arguments);
 		variant_match(getStatus()) {
@@ -392,26 +389,12 @@ namespace vm {
 
 	PID VMProcess::getPID() const { return my_pid; }
 
-	VMProcess::VMProcess(const PID my_pid, bool code_copy_mode):
+	VMProcess::VMProcess(const PID my_pid):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
-		  loaded_program(loader.getProgram()) {
+		  loaded_program(&loaded_program_copy),
+		  loaded_program_copy(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
-
-		setCodeCopyMode(code_copy_mode);
-	}
-
-	void VMProcess::setCodeCopyMode(bool enable) {
-		if (enable && loaded_program_copy.empty()) {
-			loaded_program_copy = low::LowVMProgramCopy(loader.getProgram());
-			loaded_program
-				= dynamic_cast<low::GeneralizedLowVMProgram*>(&loaded_program_copy.value());
-		}
-
-		if (!enable && loaded_program_copy.has_value()) {
-			loaded_program      = loader.getProgram();
-			loaded_program_copy = std::nullopt;
-		}
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }
