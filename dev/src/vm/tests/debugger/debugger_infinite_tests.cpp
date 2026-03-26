@@ -60,31 +60,31 @@ private:
 		auto position = vm::api::pause(pid);
 		assertTrue(position.has_value(), "Pause failed (1)");
 		assertTrue(
-			4 <= position.value().instr_number && position.value().instr_number <= 9,
+			4 <= position.value().instr_number && position.value().instr_number <= 5,
 			"Line number is not correct (1)"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 4) return 7;  // Mapped -> Not mapped
-			if (x == 7) return 5;  // Not mapped -> Mapped
-			if (x == 5) return 9;  // Mapped -> Not mapped
-			if (x == 9) return 4;  // Not mapped -> Mapped
+			if (x == 4) return 5;
+			if (x == 5) return 4;
 			this->fail("Unexpected line number: " + std::to_string(x));
 			CORE_UNREACHABLE();
 		};
-		auto line_number2 = stepAndGetLine(pid);
+
+		// Because of stepGILs are inserted, there are more instructions so we use double steps
+		auto line_number2 = stepAndGetLine(pid, true);
 		ASSERT_EQUAL_PRINT(expected_next_line(position.value().instr_number), line_number2);
 
-		auto line_number3 = stepAndGetLine(pid);
+		auto line_number3 = stepAndGetLine(pid, true);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
 
-		auto line_number4 = stepAndGetLine(pid);
+		auto line_number4 = stepAndGetLine(pid, true);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number3), line_number4);
 
-		auto line_number5 = stepAndGetLine(pid);
+		auto line_number5 = stepAndGetLine(pid, true);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number4), line_number5);
 
-		auto line_number6 = stepAndGetLine(pid);
+		auto line_number6 = stepAndGetLine(pid, true);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number5), line_number6);
 
 		resume_response = vm::api::resume(pid);
@@ -151,9 +151,16 @@ private:
 		assertTrue(stop_response.has_value(), "Stop failed");
 	}
 
-	u64 stepAndGetLine(u64 pid) {
+	// Untill we have better step implementation, we have to do double step for every step to be
+	// sure that we step over GIL release and acquire instructions.
+	u64 stepAndGetLine(u64 pid, bool double_step_gil = false) {
 		auto step_response = vm::api::step(base::safeIntConv<vm::PID>(pid));
 		assertTrue(step_response.has_value(), "Step failed");
+
+		if (double_step_gil) {
+			step_response = vm::api::step(base::safeIntConv<vm::PID>(pid));
+			assertTrue(step_response.has_value(), "Step failed (double step)");
+		}
 
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid));
 		assertTrue(execution_position.has_value(), "Get current position failed");

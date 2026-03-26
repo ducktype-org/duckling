@@ -74,8 +74,8 @@ namespace vm::loader::compiler::detail {
 
 		using Entry = FatMicroMapping::FunctionCtx::EntryMicroToFat;
 
-		base::HashMap<usize, usize> high_to_low{};
-		base::HashMap<usize, Entry> low_to_high{};
+		base::HashMap<usize, usize>                 high_to_low{};
+		std::map<usize, Entry, std::greater<usize>> low_to_high{};
 
 #if (BUILD_TYPE_DEV_DEBUG)
 		std::string current_high_instruction_representation{};
@@ -625,7 +625,7 @@ namespace vm::loader::compiler::detail {
 		if (instruction.opcode()
 		    != high::Op_label::OPCODE) {  // exclude all the opcodes which won't change the
 			                              // `next_instruction_index`
-			low_to_high.put(
+			low_to_high.emplace(
 				next_instruction_index,
 				Entry{ high_instr_idx, instruction.visit([](auto&& i) { return i.bytecode_pos; }) }
 			);

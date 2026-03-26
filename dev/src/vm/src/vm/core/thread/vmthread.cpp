@@ -679,13 +679,18 @@ namespace vm {
 
 				u64 instr_low_idx = static_cast<u64>(instr - func.bc.data());
 
-				auto high_position = func_id.flatMap([&](auto&& f_id) {
-					return mapping->functions_ctx[f_id].low_to_high.atMaybeCopy(instr_low_idx);
-				});
+				std::optional<loader::compiler::FatMicroMapping::FunctionCtx::EntryMicroToFat>
+					high_position;
+
+				if (func_id) {
+					const auto& low_to_high = mapping->functions_ctx[*func_id].low_to_high;
+					auto        it          = low_to_high.lower_bound(instr_low_idx);
+					if (it != low_to_high.end()) high_position = it->second;
+				}
 
 				return api::Response(api::response::CodePosition{
 					.function_name = func.name,
-					.instr_number  = high_position ? high_position->fat_pos : instr_low_idx,
+					.instr_number  = high_position ? high_position.value().fat_pos : instr_low_idx,
 				});
 			}
 			variant_default {

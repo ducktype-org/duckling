@@ -133,11 +133,9 @@ private:
 		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (1)");
 		ASSERT_EQUAL_PRINT(6, execution_position.value().instr_number);
 
-		u64 line = stepAndGetLine(pid);
-		// Because of stepGILs are inserted, there are more instructions.
-		ASSERT_EQUAL_PRINT(13, line);  // line is not mapped...
+		// Because of stepGILs are inserted we have to use double step
+		u64 line = stepAndGetLine(pid, true);
 
-		line = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(7, line);
 
 		auto resume_response = vm::api::resume(pid);
@@ -154,9 +152,16 @@ private:
 		assertTrue(stop_response.has_value(), "Stop failed (1)");
 	}
 
-	u64 stepAndGetLine(u64 pid) {
+	// Untill we have better step implementation, we have to do double step for every step to be
+	// sure that we step over GIL release and acquire instructions.
+	u64 stepAndGetLine(u64 pid, bool double_step_gil = false) {
 		auto step_response = vm::api::step(base::safeIntConv<vm::PID>(pid));
 		assertTrue(step_response.has_value(), "Step failed");
+
+		if (double_step_gil) {
+			step_response = vm::api::step(base::safeIntConv<vm::PID>(pid));
+			assertTrue(step_response.has_value(), "Step failed (double step)");
+		}
 
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid));
 		assertTrue(execution_position.has_value(), "Get current position failed");

@@ -35,10 +35,10 @@ namespace vm::loader::compiler {
 				base::Optional<dia::SourcePosition> src_pos;
 			};
 
-			base::HashMap<base::StrID, usize>     label_to_code_offset{};
-			base::HashMap<base::StrID, usize>     varname_to_stack_offset{};
-			base::HashMap<usize, usize>           high_to_low{};
-			base::HashMap<usize, EntryMicroToFat> low_to_high{};
+			base::HashMap<base::StrID, usize>                     label_to_code_offset{};
+			base::HashMap<base::StrID, usize>                     varname_to_stack_offset{};
+			base::HashMap<usize, usize>                           high_to_low{};
+			std::map<usize, EntryMicroToFat, std::greater<usize>> low_to_high{};
 		};
 
 		struct OriginCtx {
