@@ -35,7 +35,7 @@ impl PackageData {
             return Ok(GathererComputation::only_success(vec![]));
         }
         let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
-        for dependency in self.manifest.dependencies().all_dependencies().values() {
+        for dependency in self.manifest.dependencies().all_dependencies() {
             if !dependency.is_enabled_for(self.requested_features.iter().copied()) {
                 continue;
             }
@@ -46,7 +46,6 @@ impl PackageData {
             );
             if dependency.is_pinned() {
                 let version = dependency
-                    .desc()
                     .versions()
                     .first()
                     .copied()
@@ -57,7 +56,7 @@ impl PackageData {
                     features,
                 }));
             } else {
-                let versions = dependency.desc().versions().to_vec();
+                let versions = dependency.versions().to_vec();
                 result.0.push(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location,
                     versions: if !versions.is_empty() {
@@ -580,8 +579,15 @@ impl GathererState {
             requested_features.remove(feature);
         }
         if !nonexistent_features.is_empty() {
+            let package = pkg.location().descriptive_name();
+            let missing_features = nonexistent_features.join(", ");
+            let plural = if nonexistent_features.len() == 1 {
+                ""
+            } else {
+                "s"
+            };
             return Ok(GathererComputation::only_error(qp_err!(
-                "Package {pkg:?} does not have features {nonexistent_features:?}"
+                "Package {package}` does not have feature{plural} `{missing_features}`"
             )));
         }
         if !requested_features.is_empty() || !pkg_data.referenced_by_requests {

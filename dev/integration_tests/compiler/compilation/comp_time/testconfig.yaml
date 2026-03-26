@@ -1,0 +1,14 @@
+Tests:
+  recursive_comp_time_eval:
+    Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+        

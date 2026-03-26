@@ -111,7 +111,7 @@ namespace vm::builtins {
 	void FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
 		thread.releaseGil();
 		vm::api::join(thread.process.getPID(), api::ThreadID{ thread_id });
-		thread.keepOrAcquireGil();
+		thread.acquireGil();
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
@@ -120,9 +120,12 @@ namespace vm::builtins {
 
 	void FunctionHandlers::builtinLockMutex(VMThread& thread, u64 mutex_id) {
 		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
-		thread.releaseGil();
-		mutex->lock();
-		thread.keepOrAcquireGil();
+
+		if (!mutex->try_lock()) {
+			thread.releaseGil();
+			mutex->lock();
+			thread.acquireGil();
+		}
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(VMThread& thread, u64 mutex_id) {
@@ -143,11 +146,26 @@ namespace vm::builtins {
 		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
 
 		thread.releaseGil();
-		// @TODO: #2109 Possible UB if the mutex is not actually locked by this thread.
-		// @TODO: #2109 If lock tries to accqquire other mutex than used before then we sould return
-		// error.
-		cv->wait(mutex);
-		thread.keepOrAcquireGil();
+		try {
+			cv->wait(*mutex);
+		} catch (const vm::exceptions::VMRuntimeException&) {
+			// Ensure the GIL is held again before propagating VM runtime exceptions.
+			thread.acquireGil();
+			throw;
+		} catch (const std::exception& e) {
+			// Reacquire GIL and wrap standard exceptions so the VM can report ExecutionPanicked.
+			thread.acquireGil();
+			std::string msg = "builtinWaitCV failed during condition variable wait: ";
+			msg += e.what();
+			throw vm::exceptions::VMRuntimeException(std::move(msg));
+		} catch (...) {
+			// Reacquire GIL and convert unknown exceptions into a VMRuntimeException.
+			thread.acquireGil();
+			throw vm::exceptions::VMRuntimeException(
+				"builtinWaitCV failed during condition variable wait with an unknown exception"
+			);
+		}
+		thread.acquireGil();
 	}
 
 	void FunctionHandlers::builtinNotifyCV(VMThread& thread, u64 cv_id) {

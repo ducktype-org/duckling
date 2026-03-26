@@ -64,6 +64,11 @@ namespace compiler::helios::code {
 			return id;
 		}
 
+		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const {
+			return origin.getStablePosition();
+		}
+
+
 	private:
 		HOUTExprID id = HOUTExprID::next();
 	};
@@ -743,9 +748,9 @@ namespace compiler::helios::code {
 	 * Used for implicit variable initialization. This gets then mapped to `llvm::getNullValue(type)`.
 	 */
 	struct DefaultValueExpr final: public Expr {
-		tsh::SymbolType<> type;
+		tsh::AbstractType type;
 
-		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::SymbolType<> type);
+		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::AbstractType type);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -755,7 +760,7 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		DefaultValueExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
 		);
 	};
 

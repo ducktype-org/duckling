@@ -22,6 +22,7 @@
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
+#include <helios_private/hout_code_generation/default_constructors.hpp>
 #include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -339,8 +340,11 @@ namespace compiler::helios {
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
 				// Get the initial value for the field from the PST.
-				const auto field_pst_data
-					= symbolPst(field.getSymbol()).unlock(ctx).dynamicCast<pst::Field>().value();
+				const auto field_pst_data = symbolPst(field.getSymbol())
+				                                .value()
+				                                .unlock(ctx)
+				                                .dynamicCast<pst::Field>()
+				                                .value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
 					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
@@ -443,8 +447,64 @@ namespace compiler::helios {
 							) {
 								return getImplicitCtorDecl(ctx, ctor_data);
 							}
+							variant_case(
+								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor_data
+							) {
+								const auto class_type
+									= ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
+								          ->valueOrThrow()
+								          .getType()
+								          .as<tsh::ClassAbstractType>();
+
+								const auto return_type = tsh::SymbolType<>{
+									class_type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+								};
+
+								return HOUTFunctionDeclaration{
+									key, return_type, {}, code::generatedOrigin()
+								};
+							}
+							variant_case(
+								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor,
+								ctor_data
+							) {
+								const auto return_type
+									= tsh::SymbolType<>{ ctor_data.array_type,
+									                     tsh::ReferenceKind::Direct,
+									                     tsh::Mutability::Mutable };
+
+								return HOUTFunctionDeclaration{
+									key, return_type, {}, code::generatedOrigin()
+								};
+							}
 							variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);
+							}
+							variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper
+							) {
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
+							}
+							variant_case_novalue(houtgen::GeneratedSymbolData::ReplInstructionWrapper
+							) {
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
 							}
 							variant_default {
 								// Other generated symbols are not functions.
@@ -560,18 +620,60 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			CORE_ASSERT(
-				kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
-				"Function creation called on non-function and non-method symbol"
-			);
-			CORE_ASSERT(
-				getSymRef(key)->getPSTDataOpt().has_value(),
-				"Query code of function does not support generated functions"
-			);
-			HOUTFunctionMaker func_maker(ctx, key);
-			stmt(ctx, key).value()->acceptVisitor(func_maker);
+			const auto& sym_ref = getSymRef(key);
+			// Non-generated symbol data.
+			if (sym_ref->getPSTDataOpt().has_value()) {
+				CORE_ASSERT(
+					kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
+					"Function creation called on non-function and non-method symbol"
+				);
+				HOUTFunctionMaker func_maker(ctx, key);
+				stmt(ctx, key).value()->acceptVisitor(func_maker);
 
-			return func_maker.out.value();
+				return func_maker.out.value();
+			}
+
+
+			// Generated symbol data.
+			variant_match(sym_ref->other) {
+				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
+					variant_match(gsd_data.data) {
+						variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
+							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
+							                       ->valueOrThrow()
+							                       .getType()
+							                       .as<tsh::ClassAbstractType>();
+							return ctx.query<houtgen::QueryImplicitClassConstructor>(type)
+							    ->valueOrThrow();
+						}
+						variant_case(houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor) {
+							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
+							                       ->valueOrThrow()
+							                       .getType()
+							                       .as<tsh::ClassAbstractType>();
+							return ctx.query<houtgen::QueryDefaultClassConstructor>(type)
+							    ->valueOrThrow();
+						}
+						variant_case(
+							houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
+						) {
+							return ctx
+							    .query<houtgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
+							    ->valueOrThrow();
+						}
+						variant_default {
+							CORE_PANIC(base::strConcat(
+								"QueryTypeOfSymbol: Generated symbol '",
+								prettyDebugPrint(key, ctx),
+								"' not supported"
+							));
+						}
+					}
+				}
+				variant_default {
+					CORE_PANIC("QueryCodeOfFun: Symbol is neither PST nor Generated");
+				}
+			}
 		}
 
 		QUERY_AUTO_CACHE_CREF

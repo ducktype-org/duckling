@@ -1,6 +1,9 @@
 #include <helios/symbols/symbol_id.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios::mangler {
@@ -47,6 +50,13 @@ namespace compiler::helios::mangler {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({ .uses_qresult = false }));
+
+	/**
+	 * @brief Gets the mangled name of a type. The type can either be AbstractType or SymbolType.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryMangledType, tsh::SymbolType<>, CRef<query::QResult<base::StrID>>, ({}));
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id);
 
