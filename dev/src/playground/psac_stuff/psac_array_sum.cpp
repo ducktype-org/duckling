@@ -1,6 +1,8 @@
 #include "common.h"
 #include "psac/types.hpp"
 
+#include <psac/psac.hpp>
+
 #include "base/str/str_utils.hpp"
 #include <base/types/ints.hpp>
 
@@ -32,10 +34,10 @@ psac_function(
 	psac::Mod<ValueTp>*              r_mod
 ) {
 	psac_read((ValueTp my_index, ValueTp l, ValueTp r), (my_index_mod, l_mod, r_mod), {
-		LOG_WORKER("Calculating " << my_index << " L=" << l << " R=" << r);
+		// LOG_WORKER("Calculating " << my_index << " L=" << l << " R=" << r);
 		if (l == r - 1) {
 			psac_read((ValueTp my_value), (&source_array_mod->at(l)), {
-				LOG_WORKER("Writing at " << my_index << " value=" << my_value);
+				// LOG_WORKER("Writing at " << my_index << " value=" << my_value);
 				psac_write(&value_tree.at(my_index), my_value);
 			});
 			return;
@@ -58,7 +60,7 @@ psac_function(
 			(ValueTp l_value, ValueTp r_value),
 			(&value_tree.at(my_index * 2), &value_tree.at(my_index * 2 + 1)),
 			{
-				LOG_WORKER("Writing at " << my_index << " value=" << l_value + r_value);
+				// LOG_WORKER("Writing at " << my_index << " value=" << l_value + r_value);
 				psac_write(&value_tree.at(my_index), l_value + r_value);
 			}
 		);
