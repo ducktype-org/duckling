@@ -21,6 +21,7 @@
 
 using ValueTp            = u64;
 constexpr int ARRAY_SIZE = (1 << 18);
+// std::atomic<int> count = 0;
 
 std::vector<ValueTp> g_array;
 
@@ -49,6 +50,7 @@ DECLARE_QUERY(SumQuery, SumKey, ValueTp, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(SumQuery, ValueTp) {
 	static auto provide(query::Context& ctx, QKey key) -> PResult {
+		// count++;
 		if (key.r - key.l == 1) {
 			ctx.query<ArrayInput>(ArrayKey{ key.l });
 			return g_array[static_cast<usize>(key.l)];
@@ -71,7 +73,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(SumQuery);
 
 int main(int argc, const char* argv[]) {
 	init::InitObject init;
-	concurrent::worker::setWorkerCount(9);
+	concurrent::worker::setWorkerCount(1);
 	query::track_reverse_graph = true;
 
 	std::ios::sync_with_stdio(false);
@@ -104,6 +106,7 @@ int main(int argc, const char* argv[]) {
 
 		std::cout << "real_sum = " << simple_sum << '\n';
 		std::cout << "query_sum = " << query_sum << '\n';
+		// std::cout << "Query count: " << count << '\n';
 
 		if (user_value == "update") {
 			ValueTp new_val = 1'000;
@@ -115,12 +118,14 @@ int main(int argc, const char* argv[]) {
 			auto node_id = query::internal::makeNodeID<ArrayInput>(ArrayKey{ 0 });
 			updates.emplace_back(ArrayInput::getID(), node_id.hash.val);
 
-			query::external::invalidateQueries(std::move(updates));
+			query::external::invalidateQueries({}, std::move(updates));
+			// count = 0;
 
 			query_sum = query::entryPoint<SumQuery>({ .l = 0, .r = ARRAY_SIZE });
 
 			std::cout << "real_sum = " << simple_sum << '\n';
 			std::cout << "query_sum = " << query_sum << '\n';
+			// std::cout << "Query count: " << count << '\n';
 		}
 	}
 
