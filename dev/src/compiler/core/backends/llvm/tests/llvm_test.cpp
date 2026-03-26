@@ -491,7 +491,18 @@ private:
 		assertTrue(has_i16_to_i64, "Expected sext/zext i16-> i64 in IR");
 	}
 
-	void tuplesTest() { runTestForModule("modules/tuples"); }
+	void tuplesTest() {
+		// @TODO: check tuple types and matching struct creations
+		auto        llvm_module = getLLVMModuleFromPath("modules/tuples");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Ckeck if tuple types are present
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(%T.*E)" }),
+			"Expected tuple struct definition"
+		);
+
+	}
 };
 
 
