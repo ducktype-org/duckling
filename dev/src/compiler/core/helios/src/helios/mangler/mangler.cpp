@@ -37,17 +37,21 @@
 namespace compiler::helios::mangler {
 
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) noexcept {
+		addToHash(h, k.symbol_key.index());
 		if (k.symbol_key.index() == 0)
 			addToHash(h, std::get<0>(k.symbol_key));
 		else if (k.symbol_key.index() == 1)
 			addToHash(h, std::get<1>(k.symbol_key));
+		else
+			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+
 		addToHash(h, k.kind);
 		addToHash(h, k.mangling_scheme_version);
 		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
 	}
 
 	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
-		return hashing::justHash(*this).data.at(0);
+		return hashing::justHash<hashing::SHA256>(*this).data.at(0);
 	}
 
 	namespace internal {
