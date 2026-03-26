@@ -36,7 +36,7 @@
  */
 namespace compiler::helios::mangler {
 
-	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) noexcept {
+	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
 		addToHash(h, k.symbol_key.index());
 		if (k.symbol_key.index() == 0)
 			addToHash(h, std::get<0>(k.symbol_key));

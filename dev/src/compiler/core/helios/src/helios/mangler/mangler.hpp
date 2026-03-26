@@ -36,7 +36,8 @@ namespace compiler::helios::mangler {
 		u64                         mangling_scheme_version = 0;
 		base::Optional<std::string> additional_metadata     = std::nullopt;
 
-		friend void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) noexcept;
+		friend void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k)
+			RELEASE_NOEXCEPT;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;

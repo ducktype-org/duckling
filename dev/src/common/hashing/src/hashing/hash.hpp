@@ -35,7 +35,7 @@ namespace hashing {
 		using result_type = typename HashAlgorithm::result_type;
 
 		template<typename T>
-		constexpr result_type operator()(const T& t) const noexcept {
+		constexpr result_type operator()(const T& t) const {
 			HashAlgorithm h{};
 
 			addToHash(h, t);
@@ -61,7 +61,7 @@ namespace hashing {
 		using result_type = typename HashAlgorithm::result_type;
 
 		template<typename T>
-		constexpr StatefulHash& operator()(const T& t) noexcept {
+		constexpr StatefulHash& operator()(const T& t) {
 			addToHash(h, t);
 
 			return *this;
