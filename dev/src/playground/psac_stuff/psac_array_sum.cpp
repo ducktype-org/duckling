@@ -95,7 +95,6 @@ int main(int argc, const char* argv[]) {
 	usize                                  simple_sum = 0;
 	for (auto [i, elem]: std::views::enumerate(arr)) {
 		auto val = dist(rng);
-		std::cout << base::strConcat("arr[", i, "] = ", val, '\n');
 		psac_write(&elem, val);
 		simple_sum += val;
 	}

@@ -22,8 +22,6 @@
 using ValueTp = u64;
 int g_n_input;
 
-std::atomic<u64> count = 0;
-
 struct FibInputKey {
 	bool operator==(const FibInputKey&) const = default;
 
@@ -48,7 +46,6 @@ DECLARE_QUERY(FibQuery, FibKey, ValueTp, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(FibQuery, ValueTp) {
 	static auto provide(query::Context& ctx, QKey key) -> PResult {
-		count++;
 		if (key.n < 2) return key.n;
 
 		auto fib1_handle = ctx.schedule<FibQuery>({ .n = key.n - 1 });
@@ -111,20 +108,16 @@ int main(int argc, const char* argv[]) {
 	if (user_value == "calc" || user_value == "update") {
 		auto result = query::entryPoint<MainFibQuery>(MainFibKey{ .n = 10 });
 		std::cout << "Result of fib: " << result << '\n';
-		std::cout << "Query count: " << count << '\n';
 		if (user_value == "update") {
 			const int n_new = g_n_input + 1;
 			g_n_input       = n_new;
 			std::vector<query::external::InputData> updates;
 			auto node_id = query::internal::makeNodeID<FibInput>(FibInputKey{});
 			updates.emplace_back(FibInput::getID(), node_id.hash.val);
-			query::external::invalidateQueries(std::move(updates));
-
-			count = 0;
+			query::external::invalidateQueries({}, std::move(updates));
 
 			result = query::entryPoint<MainFibQuery>(MainFibKey{ .n = 31 });
 			std::cout << "Result of sum after propagation is: " << result << '\n';
-			std::cout << "Query count: " << count << '\n';
 		}
 	}
 	return 0;

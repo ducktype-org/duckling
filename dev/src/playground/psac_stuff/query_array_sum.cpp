@@ -21,7 +21,6 @@
 
 using ValueTp            = u64;
 constexpr int ARRAY_SIZE = (1 << 18);
-// std::atomic<int> count = 0;
 
 std::vector<ValueTp> g_array;
 
@@ -95,8 +94,7 @@ int main(int argc, const char* argv[]) {
 	std::uniform_int_distribution<ValueTp> dist(0, 100);
 	ValueTp                                simple_sum = 0;
 	for (usize i = 0; i < ARRAY_SIZE; ++i) {
-		auto val = dist(rng);
-		std::cout << base::strConcat("arr[", i, "] = ", val, '\n');
+		auto val   = dist(rng);
 		g_array[i] = val;
 		simple_sum += val;
 	}
@@ -106,7 +104,6 @@ int main(int argc, const char* argv[]) {
 
 		std::cout << "real_sum = " << simple_sum << '\n';
 		std::cout << "query_sum = " << query_sum << '\n';
-		// std::cout << "Query count: " << count << '\n';
 
 		if (user_value == "update") {
 			ValueTp new_val = 1'000;
@@ -119,13 +116,11 @@ int main(int argc, const char* argv[]) {
 			updates.emplace_back(ArrayInput::getID(), node_id.hash.val);
 
 			query::external::invalidateQueries({}, std::move(updates));
-			// count = 0;
 
 			query_sum = query::entryPoint<SumQuery>({ .l = 0, .r = ARRAY_SIZE });
 
 			std::cout << "real_sum = " << simple_sum << '\n';
 			std::cout << "query_sum = " << query_sum << '\n';
-			// std::cout << "Query count: " << count << '\n';
 		}
 	}
 
