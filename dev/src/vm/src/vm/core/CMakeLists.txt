@@ -23,7 +23,8 @@ add_files(
     thread/low_program/instruction.cpp
     thread/vmthread.cpp
     thread/vmvalue.cpp
-    jit/jit_compiler.cpp
+	  thread/vmvalueref.cpp
+	  jit/jit_compiler.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)

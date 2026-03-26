@@ -11,6 +11,7 @@ use tempfile::tempdir;
 
 fn create_mock_server() -> (MockServer, DuckCtx) {
     let pkg1 = registry::Dependency {
+        name: "pkg1".into(),
         version: vec![Version::new(2, 3, 6)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -22,10 +23,11 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let pkg2 = registry::Dependency {
+        name: "pkg2".into(),
         version: vec![Version::new(2, 3, 4)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -37,10 +39,11 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let pkg3 = registry::Dependency {
+        name: "pkg3".into(),
         version: vec![Version::new(2, 4, 7)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -52,7 +55,7 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let bar_256 = registry::Manifest {
@@ -63,7 +66,7 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
             name: "bar".into(),
             description: "".into(),
         },
-        dependencies: [("pkg1".into(), pkg1)].into(),
+        dependencies: vec![pkg1],
         dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
@@ -77,7 +80,7 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
             name: "foo".into(),
             description: "".into(),
         },
-        dependencies: [("pkg2".into(), pkg2), ("pkg3".into(), pkg3)].into(),
+        dependencies: vec![pkg2, pkg3],
         dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
