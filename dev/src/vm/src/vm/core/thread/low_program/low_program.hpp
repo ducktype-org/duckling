@@ -123,7 +123,7 @@ namespace vm::low {
 	};
 
 	/**
-	 * @brief Overlay over `LowVMProgram` with it's own and therefore modifiable copy of functions.
+	 * @brief Overlay over `LowVMProgram` with its own and therefore modifiable copy of functions.
 	 *
 	 * @note Needs updating via `selfUpdate()` to make new functions visible.
 	 * @note Program with current everything except functions is still a valid program.
