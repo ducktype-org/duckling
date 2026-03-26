@@ -20,12 +20,15 @@ class VmDebugInfiniteTest: public tester::TestSuite {
 #define TESTER_CLASS VmDebugInfiniteTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(pausesExecution); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(pausesExecution);
+		TESTER_ADD_TEST(pausesExecutionWithoutMapping);
+	}
 
 
 private:
-	vm::PID loadProgram(std::string_view path_name) {
-		auto process_pid_response = vm::api::spawn(true);
+	vm::PID loadProgram(std::string_view path_name, bool with_mapping = true) {
+		auto process_pid_response = vm::api::spawn(with_mapping);
 		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
@@ -42,30 +45,35 @@ private:
 	void pausesExecution() {
 		auto pid = loadProgram("while_true.dbc");
 
-		vm::api::run(pid).value();  // "Run failed (1)"
+		auto run_response = vm::api::run(pid);
+		assertTrue(run_response.has_value(), "Run failed (1)");
 
 		// We want to assure that the start function already managed to call main for the test to
 		// work correctly.
-		auto execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(1, execution_position.instr_number, "Line number is not correct (0)");
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (1)");
+		ASSERT_EQUAL_PRINT(1, execution_position.value().instr_number);
 
-		vm::api::resume(pid).value();                 // "Resume failed (1)"
-		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
+		auto resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (1)");
+
+		auto position = vm::api::pause(pid);
+		assertTrue(position.has_value(), "Pause failed (1)");
 		assertTrue(
-			4 <= position.instr_number && position.instr_number <= 5,
+			4 <= position.value().instr_number && position.value().instr_number <= 9,
 			"Line number is not correct (1)"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 4) return 5;
-			if (x == 5) return 4;
-			this->fail("Unexpected line number");
+			if (x == 4) return 7; // Mapped -> Not mapped
+			if (x == 7) return 5; // Not mapped -> Mapped
+			if (x == 5) return 9; // Mapped -> Not mapped
+			if (x == 9) return 4; // Not mapped -> Mapped
+			this->fail("Unexpected line number: " + std::to_string(x));
 			CORE_UNREACHABLE();
 		};
-
 		auto line_number2 = stepAndGetLine(pid);
-		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number), line_number2);
+		ASSERT_EQUAL_PRINT(expected_next_line(position.value().instr_number), line_number2);
 
 		auto line_number3 = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
@@ -79,16 +87,77 @@ private:
 		auto line_number6 = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number5), line_number6);
 
-		vm::api::resume(pid).value();  // "Resume failed (1)"
+		resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (2)");
 
-		vm::api::stop(pid).value();    // "Stop failed (1)"
+		auto stop_response = vm::api::stop(pid);
+		assertTrue(stop_response.has_value(), "Stop failed");
+	}
+
+	/**
+	 * @brief Checks if the program will pause on user request.
+	 * The program is an infinite loop, so it will never stop.
+	 * This test is the same as `pausesExecution` but with disabled mapping to check if the pause
+	 * and step work correctly without it.
+	 */
+	void pausesExecutionWithoutMapping() {
+		auto pid = loadProgram("while_true.dbc", false);
+
+		auto run_response = vm::api::run(pid);
+		assertTrue(run_response.has_value(), "Run failed");
+
+		// We want to assure that the start function already managed to call main for the test to
+		// work correctly.
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (1)");
+		// Because of stepGILs are inserted, there are more instructions.
+		ASSERT_EQUAL_PRINT(2, execution_position.value().instr_number);
+
+		auto resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (1)");
+
+		auto position = vm::api::pause(pid);
+		assertTrue(position.has_value(), "Pause failed (1)");
+		ASSERT_TRUE(6 <= position.value().instr_number && position.value().instr_number <= 9);
+
+		auto expected_next_line = [this](u64 x) -> u64 {
+			if (x == 6) return 7;
+			if (x == 7) return 8;
+			if (x == 8) return 9;
+			if (x == 9) return 6;
+			this->fail("Unexpected line number: " + std::to_string(x));
+			CORE_UNREACHABLE();
+		};
+
+		auto line_number2 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(position.value().instr_number), line_number2);
+
+		auto line_number3 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
+
+		auto line_number4 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number3), line_number4);
+
+		auto line_number5 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number4), line_number5);
+
+		auto line_number6 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number5), line_number6);
+
+		resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (2)");
+
+		auto stop_response = vm::api::stop(pid);
+		assertTrue(stop_response.has_value(), "Stop failed");
 	}
 
 	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(base::safeIntConv<vm::PID>(pid)).value();  // "Step failed"
-		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
-		                              .value();                  // "Get current position failed"
-		return execution_position.instr_number;
+		auto step_response = vm::api::step(base::safeIntConv<vm::PID>(pid));
+		assertTrue(step_response.has_value(), "Step failed");
+
+		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid));
+		assertTrue(execution_position.has_value(), "Get current position failed");
+		return execution_position.value().instr_number;
 	}
 };
 

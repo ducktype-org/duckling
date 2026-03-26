@@ -41,12 +41,12 @@ private:
 		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
-		assertTrue(run_response.has_value(), "Run failed (1)");
+		assertTrue(run_response.has_value(), "Run failed");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 		auto stop_response = vm::api::stop(pid);
-		assertTrue(stop_response.has_value(), "Stop failed (1)");
+		assertTrue(stop_response.has_value(), "Stop failed");
 	}
 
 	/**
@@ -56,12 +56,12 @@ private:
 		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
-		assertTrue(run_response.has_value(), "Run failed (1)");
+		assertTrue(run_response.has_value(), "Run failed");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 		auto kill_response = vm::api::kill(pid);
-		assertTrue(kill_response.has_value(), "Kill failed (1)");
+		assertTrue(kill_response.has_value(), "Kill failed");
 	}
 
 	/**
@@ -70,21 +70,26 @@ private:
 	 */
 	void pausesOnBreakpointAndResumes() {
 		auto pid = loadProgram("breakpoint.dbc");
-		vm::api::run(pid).value();  // "Run failed (1)"
 
-		auto execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(6, execution_position.instr_number, "Line number is not correct (1)");
+		auto run_response = vm::api::run(pid);
+		assertTrue(run_response.has_value(), "Run failed");
 
-		vm::api::resume(pid).value();  // "Resume failed (1)"
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (1)");
+		ASSERT_EQUAL_PRINT(6, execution_position.value().instr_number);
 
-		execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(10, execution_position.instr_number, "Line number is not correct (2)");
+		auto resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (1)");
 
-		vm::api::resume(pid).value();  // "Resume failed (2)"
+		execution_position = vm::api::waitForBreakpoint(pid);
+		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (2)");
+		ASSERT_EQUAL_PRINT(10, execution_position.value().instr_number);
 
-		vm::api::stop(pid).value();    // "Stop failed (1)"
+		resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (2)");
+
+		auto stop_response = vm::api::stop(pid);
+		assertTrue(stop_response.has_value(), "Stop failed");
 	}
 
 	/**
@@ -93,22 +98,26 @@ private:
 	 */
 	void positionWithoutMapping() {
 		auto pid = loadProgram("breakpoint.dbc", false);
-		vm::api::run(pid).value();  // "Run failed (1)"
 
-		auto execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(6, execution_position.instr_number, "Line number is not correct (1)");
-		ASSERT_EQUAL_PRINT(12, execution_position.instr_number);
+		auto run_response = vm::api::run(pid);
+		assertTrue(run_response.has_value(), "Run failed");
 
-		vm::api::resume(pid).value();  // "Resume failed (1)"
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (1)");
+		ASSERT_EQUAL_PRINT(12, execution_position.value().instr_number);
 
-		execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(20, execution_position.instr_number);
+		auto resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (1)");
 
-		vm::api::resume(pid).value();  // "Resume failed (2)"
+		execution_position = vm::api::waitForBreakpoint(pid);
+		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (2)");
+		ASSERT_EQUAL_PRINT(20, execution_position.value().instr_number);
 
-		vm::api::stop(pid).value();    // "Stop failed (1)"
+		resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (2)");
+
+		auto stop_response = vm::api::stop(pid);
+		assertTrue(stop_response.has_value(), "Stop failed");
 	}
 
 	/**
@@ -117,34 +126,41 @@ private:
 	void executesStepByStep() {
 		auto pid = loadProgram("breakpoint.dbc");
 
-		vm::api::run(pid).value();  // "Run failed (1)"
+		auto run_response = vm::api::run(pid);
+		assertTrue(run_response.has_value(), "Run failed");
 
-		auto execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(12, execution_position.instr_number, "Line number is not correct");
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (1)");
+		ASSERT_EQUAL_PRINT(6, execution_position.value().instr_number);
 
 		u64 line = stepAndGetLine(pid);
-		ASSERT_EQUAL_PRINT(13, line);
+		// Because of stepGILs are inserted, there are more instructions.
+		ASSERT_EQUAL_PRINT(13, line);  // line is not mapped...
 
 		line = stepAndGetLine(pid);
-		ASSERT_EQUAL_PRINT(14, line);
+		ASSERT_EQUAL_PRINT(7, line);
 
-		vm::api::resume(pid).value();  // "Resume failed (1)"
+		auto resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (1)");
 
-		execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (2)"
-		ASSERT_EQUAL_PRINT(20, execution_position.instr_number);
+		execution_position = vm::api::waitForBreakpoint(pid);
+		assertTrue(execution_position.has_value(), "Wait for breakpoint failed (2)");
+		ASSERT_EQUAL_PRINT(10, execution_position.value().instr_number);
 
-		vm::api::resume(pid).value();  // "Resume failed (2)"
+		resume_response = vm::api::resume(pid);
+		assertTrue(resume_response.has_value(), "Resume failed (2)");
 
-		vm::api::stop(pid).value();    // "Stop failed (1)"
+		auto stop_response = vm::api::stop(pid);
+		assertTrue(stop_response.has_value(), "Stop failed (1)");
 	}
 
 	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(base::safeIntConv<vm::PID>(pid)).value();  // "Step failed"
-		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
-		                              .value();                  // "Get current position failed"
-		return execution_position.instr_number;
+		auto step_response = vm::api::step(base::safeIntConv<vm::PID>(pid));
+		assertTrue(step_response.has_value(), "Step failed");
+
+		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid));
+		assertTrue(execution_position.has_value(), "Get current position failed");
+		return execution_position.value().instr_number;
 	}
 
 	template<typename FiedDataType>
