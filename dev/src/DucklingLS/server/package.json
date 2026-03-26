@@ -2,7 +2,7 @@
 	"name": "duckling-server",
 	"description": "DucklingLS server",
 	"version": "0.0.1",
-	"author": "zpp-2.1",
+	"author": "DuckType",
 	"engines": {
 		"node": "*"
 	},

@@ -201,7 +201,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     origin_version: request.version,
                     expanded_package: ExpandedPackage {
                         location: expanded_loc,
-                        version: Some(manifest.root_description().version()),
+                        version: Some(manifest.version()),
                     },
                     fetched_manifest: Box::new(manifest),
                 }),
@@ -250,7 +250,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     fetch_response.fetched_manifests.insert(
                         ExpandedPackage {
                             location: expanded_loc,
-                            version: Some(manifest.root_description().version()),
+                            version: Some(manifest.version()),
                         },
                         Box::new(manifest),
                     );

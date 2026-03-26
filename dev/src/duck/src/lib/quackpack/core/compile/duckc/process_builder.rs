@@ -50,7 +50,7 @@ impl DuckcProcessBuilder {
 
     /// Set package name of the currently compiling package.
     pub fn set_package_name(&mut self, package: &Package) -> &mut Self {
-        let name = package.manifest().root_description().name();
+        let name = package.manifest().name();
         self.inner.arg("-n").arg(name);
         self
     }

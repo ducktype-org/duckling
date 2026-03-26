@@ -50,6 +50,8 @@ void vm::VmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, p
 
 void vm::VmValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
+vm::VMValueRef vm::VmValue::asRef() const { return { *my_process.get(), type, pointer }; }
+
 void vm::VmValue::freeData() {
 	memory->freeBlockData(pointer.getBlock());
 	memory->decreaseBlockRefcount(pointer.getBlock());
@@ -57,6 +59,12 @@ void vm::VmValue::freeData() {
 }
 
 vm::PID vm::VmValue::getPID() const { return my_process->my_pid; }
+
+base::CRef<vm::code::valid_type::ValidType> vm::VmValue::getType() const {
+	auto type_id = static_cast<code::valid_type::ValidTypeID>(type->getID().asInt());
+	auto types   = my_process->loader.getHighProgram()->types();
+	return types.at(type_id);
+}
 
 byte* vm::VmValue::getBytes() { return data.data(); }
 
@@ -86,4 +94,8 @@ void vm::VmValue::dprint(std::ostream& out, const std::string& indent) const {
 	out << "Bytes:\n";
 	hexdump(out, data.data(), data.size(), indent);
 	out << indent << "-----------------\n";
+}
+
+base::Optional<vm::InterpretedDataVariant> vm::VmValue::readData() const {
+	return asRef().readData();
 }

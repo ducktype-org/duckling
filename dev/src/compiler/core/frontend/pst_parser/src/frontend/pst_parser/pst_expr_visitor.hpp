@@ -15,6 +15,7 @@ namespace pst::expr {
 		ExprNumericValue,
 		ExprStrValue,
 		ExprCharValue,
+		ExprFormatStrValue,
 		TemplateSpecifier,
 		IdentifierLiteral,
 		KeywordLiteral,

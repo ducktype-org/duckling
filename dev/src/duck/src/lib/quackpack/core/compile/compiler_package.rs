@@ -85,7 +85,7 @@ impl CompilerPackage {
                 format!(
                     "while expanding features of the {} `{}`",
                     self.pkg_type,
-                    self.package.manifest().root_description().name()
+                    self.package.manifest().name()
                 )
             })?;
         for feature in features {

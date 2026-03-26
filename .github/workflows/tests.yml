@@ -24,17 +24,8 @@ env:
   BUILD_SYSTEM: Ninja
 
 jobs:
-  determine-runners:
-    if: github.event.pull_request.draft == false
-    uses: ./.github/workflows/determine-runners.yml
-    with:
-      self-hosted-labels: '["debug", "release"]'
-      github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
-    secrets: inherit
-
   build:
     if: github.event.pull_request.draft == false
-    needs: determine-runners
 
     strategy:
       matrix:
@@ -65,23 +56,18 @@ jobs:
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
     timeout-minutes: 40  # (Per matrix run)
-    runs-on: ${{ matrix.build-type == 'Dev' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
+    runs-on:
+      group: SelfHostedRunners
+      labels: ${{ matrix.build-type == 'Dev' && 'debug' || 'release' }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'gcc' }}
 
     steps:
-      - name: Set self-hosted flag
+      - name: Set self-hosted placeholder
         id: set-self-hosted
-        run: |
-          if [[ "${{ matrix.build-type }}" == "Dev" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
-            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "DevOpt" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
-            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          else
-            echo "is-self-hosted=false" >> $GITHUB_OUTPUT
-          fi
+        run: echo "is-self-hosted=true" >> $GITHUB_OUTPUT
 
       - name: Set number of threads
         id: set-jobs
@@ -94,7 +80,7 @@ jobs:
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
 
-      - name: Clean workspace (self-hosted only)
+      - name: Clean workspace
         if: ${{ steps.set-self-hosted.outputs.is-self-hosted == 'true' }}
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
