@@ -11,6 +11,7 @@ mod list;
 mod publish;
 mod remove;
 mod run;
+mod run_script;
 mod search;
 mod sync;
 mod tree;
@@ -29,6 +30,7 @@ pub fn subcommands() -> Vec<Command> {
         publish::get_parser(),
         remove::get_parser(),
         run::get_parser(),
+        run_script::get_parser(),
         search::get_parser(),
         sync::get_parser(),
         tree::get_parser(),
@@ -54,6 +56,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "publish" => publish::execute,
         "remove" => remove::execute,
         "run" => run::execute,
+        "run_script" => run_script::execute,
         "search" => search::execute,
         "sync" => sync::execute,
         "tree" => tree::execute,
