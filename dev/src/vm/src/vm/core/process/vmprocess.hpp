@@ -72,7 +72,7 @@ namespace vm {
 		 * @brief The program being executed by this process.
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module.
 		 */
-		CRef<low::GeneralizedLowVMProgram> loaded_program;
+		CRef<low::ILowVMProgram> loaded_program;
 
 		low::LowVMProgramCopy loaded_program_copy;
 

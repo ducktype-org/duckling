@@ -128,7 +128,7 @@ namespace vm {
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
 		 * nullptr if no code was loaded.
 		 */
-		MCRef<low::GeneralizedLowVMProgram> executing_program = nullptr;
+		MCRef<low::ILowVMProgram> executing_program = nullptr;
 
 		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
@@ -199,9 +199,9 @@ namespace vm {
 		 * running code and respond to the process with the panicked status.
 		 */
 		void safeRun(
-			CRef<low::GeneralizedLowVMProgram> program,
-			const std::string&                 func_name,
-			const RunArguments&                run_arguments
+			CRef<low::ILowVMProgram> program,
+			const std::string&       func_name,
+			const RunArguments&      run_arguments
 		);
 
 	public:
@@ -224,9 +224,9 @@ namespace vm {
 		 * there is already a thread running.
 		 */
 		bool spawnThreadAndRun(
-			CRef<low::GeneralizedLowVMProgram> program,
-			const std::string&                 func_name,
-			const RunArguments&                run_arguments
+			CRef<low::ILowVMProgram> program,
+			const std::string&       func_name,
+			const RunArguments&      run_arguments
 		);
 
 
@@ -237,9 +237,9 @@ namespace vm {
 		 * otherwise.
 		 */
 		void runNoSpawn(
-			CRef<low::GeneralizedLowVMProgram> program,
-			const std::string&                 func_name,
-			const RunArguments&                run_arguments
+			CRef<low::ILowVMProgram> program,
+			const std::string&       func_name,
+			const RunArguments&      run_arguments
 		);
 
 		/**
@@ -278,16 +278,16 @@ namespace vm {
 		 * @brief Run a single function with given parameters.
 		 */
 		void run(
-			CRef<low::GeneralizedLowVMProgram> program,
-			const std::string&                 func_name,
-			const RunArguments&                run_arguments
+			CRef<low::ILowVMProgram> program,
+			const std::string&       func_name,
+			const RunArguments&      run_arguments
 		);
 
 		/**
 		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
 		 * destructor functions.
 		 */
-		void execGlobalDestructors(CRef<low::GeneralizedLowVMProgram> program);
+		void execGlobalDestructors(CRef<low::ILowVMProgram> program);
 
 		std::expected<api::Response, api::ApiError> getCurrentPosition();
 

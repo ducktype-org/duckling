@@ -52,7 +52,7 @@ namespace vm::low {
 		TypeCRef              result_type;
 	};
 
-	class GeneralizedLowVMProgram {
+	class ILowVMProgram {
 	public:
 		[[nodiscard]]
 		virtual const TypeMetadata& getTypes() const
@@ -74,7 +74,7 @@ namespace vm::low {
 		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
 			= 0;
 
-		virtual ~GeneralizedLowVMProgram() = default;
+		virtual ~ILowVMProgram() = default;
 	};
 
 	/**
@@ -91,7 +91,7 @@ namespace vm::low {
 	 * (used internally in `ObjIdNameMap`). Similar holds for `ObjIdNameMap<LowGlobalData,
 	 * GlobalDataID>` - global data.
 	 */
-	class LowVMProgram final: public GeneralizedLowVMProgram {
+	class LowVMProgram final: public ILowVMProgram {
 	public:
 		friend class vm::loader::compiler::Compiler;
 
@@ -130,7 +130,7 @@ namespace vm::low {
 	 *
 	 * @note Lookup in `getMethodNamePool()` may give false-positive if program is not updated.
 	 */
-	class LowVMProgramCopy final: public GeneralizedLowVMProgram {
+	class LowVMProgramCopy final: public ILowVMProgram {
 		CRef<LowVMProgram>               original_program;
 		ObjIdNameMap<LowFuncData, usize> functions{};
 
