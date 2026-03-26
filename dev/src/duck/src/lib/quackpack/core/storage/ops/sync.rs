@@ -120,7 +120,7 @@ fn check_if_overwrites(
     {
         let replaces =
             PackageLoader::find_at_exact_directory(venv.data().last_location(), pkg_ctx.ctx())
-                .map(|pkg| pkg.package().manifest().root_description().name() == id)
+                .map(|pkg| pkg.package().manifest().name() == id)
                 .unwrap_or(false);
         if replaces {
             Err(
