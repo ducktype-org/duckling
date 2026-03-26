@@ -1,4 +1,5 @@
 #include "synchronization_primitives.hpp"
+#include <vm/core/process/exceptions.hpp>
 
 namespace vm {
 	Ref<std::mutex> SynchronizationPrimitives::getMutex(usize mutex_id) {
