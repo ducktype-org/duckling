@@ -65,19 +65,19 @@ private:
 		};
 
 		auto line_number2 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(position.instr_number), line_number2, "Line number is not correct (2)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number), line_number2);
 
 		auto line_number3 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(line_number2), line_number3, "Line number is not correct (3)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
 
 		auto line_number4 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(line_number3), line_number4, "Line number is not correct (4)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number3), line_number4);
+
+		auto line_number5 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number4), line_number5);
+
+		auto line_number6 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number5), line_number6);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
