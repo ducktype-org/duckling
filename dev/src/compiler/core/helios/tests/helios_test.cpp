@@ -781,7 +781,9 @@ private:
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
+			[[maybe_unused]] auto debug_print_out = ss.str();
 		});
 	}
 
@@ -1196,7 +1198,9 @@ private:
 
 		// debug print test just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
+			[[maybe_unused]] auto debug_print_out = ss.str();
 		});
 	}
 
@@ -1742,7 +1746,9 @@ private:
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
+			[[maybe_unused]] auto debug_print_out = ss.str();
 		});
 	}
 
@@ -2987,7 +2993,7 @@ private:
 		check_function_origin(base::StrID("a"));
 		check_function_origin(base::StrID("b"));
 
-		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
+		query::utils::withContextDo([&](query::Context& ctx) { hout.debugPrint(ctx, std::cout); });
 	}
 
 	void testScopeParentsAndDepth() {
