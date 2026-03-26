@@ -5,6 +5,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/preproc/for_each.hpp>
+#include <base/types/floats.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
@@ -102,7 +103,7 @@ namespace vm::loader::parser {
 		/**
 		 * @brief Parses number literal and returns it's bits stored in type T. If it contains a
 		 * type specifier like `i32`, `f64`, etc., it will adjust the parsing behavior accordingly.
-		 * By default, it assumes 64-bit integer or double if it has a dot or an `e` (works for hex
+		 * By default, it assumes 64-bit integer or f64 if it has a dot or an `e` (works for hex
 		 * and binary too). T has to be type of size 64bits.
 		 */
 		template<class T>
@@ -168,11 +169,11 @@ namespace vm::loader::parser {
 					}
 
 					if (suffix == "f32") {
-						float value = std::stof(str, &pos) * static_cast<float>(sign);
-						result      = detail::packValue<T>(value);
+						f32 value = std::stof(str, &pos) * static_cast<f32>(sign);
+						result    = detail::packValue<T>(value);
 					} else if (suffix == "f64") {
-						double value = std::stod(str, &pos) * static_cast<double>(sign);
-						result       = detail::packValue<T>(value);
+						f64 value = std::stod(str, &pos) * static_cast<f64>(sign);
+						result    = detail::packValue<T>(value);
 					} else if (suffix == "i32") {
 						u64 raw_val = std::stoull(str, &pos, base);
 						if (detail::checkSignedBoundsAndLog<i32>(state, token, raw_val, sign)) {
@@ -209,10 +210,10 @@ namespace vm::loader::parser {
 						return { T{ 0 }, 0 };
 					}
 				} else {
-					// By default, we assume 64-bit integer or a double if it has a dot.
+					// By default, we assume 64-bit integer or a f64 if it has a dot.
 					if (str.find_first_of(".eE") != std::string::npos && base == 10) {
-						double value = std::stod(str, &pos) * static_cast<double>(sign);
-						result       = detail::packValue<T>(value);
+						f64 value = std::stod(str, &pos) * static_cast<f64>(sign);
+						result    = detail::packValue<T>(value);
 					} else {
 						u64 raw_val = std::stoull(str, &pos, base);
 						i64 value   = static_cast<i64>(raw_val) * sign;
@@ -886,7 +887,7 @@ namespace vm::loader::parser {
 
 	void Type::dprint(std::ostream& out) const {
 		out << "type: ";
-		VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { vm::code::serialize(data, out); }))
+		VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { vm::code::serializeType(data, out); }))
 		out << "\n}";
 	}
 

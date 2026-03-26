@@ -128,13 +128,13 @@ impl SolverFreeze {
                     .get(&realization)
                     .context_internal("No manifest for realization")?;
                 dependencies.push(FreezeDep::new(
-                    realization_manifest.root_description().name(),
-                    realization_manifest.root_description().version(),
+                    realization_manifest.name(),
+                    realization_manifest.version(),
                 ));
             }
             pkg_freezes.push(FreezePackage::new(
-                package_manifest.root_description().name(),
-                package_manifest.root_description().version(),
+                package_manifest.name(),
+                package_manifest.version(),
                 freeze.features.into_iter().collect(),
                 dependencies,
                 pkg.location,
@@ -149,13 +149,13 @@ impl SolverFreeze {
                 .get(&realization)
                 .context_internal("No manifest for realization")?;
             root_deps.push(FreezeDep::new(
-                realization_manifest.root_description().name(),
-                realization_manifest.root_description().version(),
+                realization_manifest.name(),
+                realization_manifest.version(),
             ));
         }
         let root = RootPackage::new(
-            root_manifest.root_description().name(),
-            root_manifest.root_description().version(),
+            root_manifest.name(),
+            root_manifest.version(),
             root_freeze.features.into_iter().collect(),
             root_deps,
         );
@@ -168,7 +168,7 @@ mod test {
     use std::path::PathBuf;
 
     use crate::{
-        DuckCtx, QpCtx,
+        DuckCtx,
         quackpack::core::{
             parse_manifest,
             types_common::{ExpandedLocation, InternedExpandedLocation},
@@ -185,6 +185,7 @@ mod test {
         let manifest = dir.path().join("quackconfig.yml");
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
+        dir.path().try_fsync_dir().unwrap();
         (dir, manifest)
     }
 
@@ -310,10 +311,9 @@ features:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_root = parse_manifest(&path_root, &qpctx).unwrap();
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_root = parse_manifest(&path_root, &ctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_root = InternedExpandedLocation::new(ExpandedLocation::Local {
             absolute_path: PathBuf::new().join("./root_path"),
         });

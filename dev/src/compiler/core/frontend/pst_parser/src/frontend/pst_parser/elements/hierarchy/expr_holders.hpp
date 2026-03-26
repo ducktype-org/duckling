@@ -24,7 +24,7 @@ namespace pst {
 		);
 
 	public:
-		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
+		explicit ExprHolder(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::ExprHolder;
 		}
 
@@ -54,6 +54,7 @@ namespace pst {
 		static bool untilUniversalEnd(const TokenStream&, i64);
 		static bool untilUniversalAllowBlockEnd(const TokenStream&, i64);
 		static bool untilUniversalAllowCommaEnd(const TokenStream&, i64);
+		static bool untilUniversalAllowCommaAndBlockEnd(const TokenStream&, i64);
 		static bool untilSemicolon(const TokenStream&, i64);
 		static bool untilForTypeEnd(const TokenStream&, i64);
 		static bool untilExtendsEnd(const TokenStream&, i64);
@@ -80,8 +81,7 @@ namespace pst {
 		using ExprHolder::ExprHolder;
 
 		static MBox<Self> parse(LangParserState& state) {
-			auto position = internal::getPosition(state);
-			auto out      = makeBox<Self>(position);
+			auto out = makeBox<Self>(state);
 
 			auto length = internal::getTokenStream(state).countUntil<until>();
 			internal::parseExprIntoHolder(state, out.refMut(), parseFun, length);
@@ -141,6 +141,21 @@ namespace pst {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolderLowerLevel() final = default;
+	};
+
+	/**
+	 * @brief Secondary entry point to expression parsing that allows comma expressions but doesn't
+	 * allow for assignment expressions top-level, allows block expressions.
+	 */
+	class CommaAllowBlocksExprHolder final:
+		  public ExprHolderTemplate<
+			  CommaAllowBlocksExprHolder,
+			  ExprParserHelper::parseComma,
+			  ExprParserHelper::untilUniversalAllowCommaAndBlockEnd,
+			  true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~CommaAllowBlocksExprHolder() final = default;
 	};
 
 	/**

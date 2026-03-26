@@ -8,7 +8,6 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/worker/worker_manager.hpp>
-#include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
@@ -21,24 +20,12 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
+#include <mutex>
 #include <ranges>
 #include <regex>
 #include <sstream>
 
 namespace {
-	/**
-	 * @brief Map storing FileID of each parsed PST (by root element ID)
-	 * @note: as of right now it is needed only for QueryPrimaryCodeScopeFor for acquiring
-	 * the root scope via extendQueryModuleIDOfPST.
-	 * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put
-	 * information from this map into PST nodes.
-	 *
-	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used
-	 * during PST construction/association; must be safe if PST is built concurrently.
-	 */
-	inline static concurrent::ConHashMap<pst::PstID, compiler::frontend::FileID>
-		root_element_file_back_map;
-
 	/**
 	 * StableHashMap that stores all ModuleTree instances.
 	 */
@@ -72,6 +59,7 @@ namespace compiler::frontend {
 
 	const hashing::ComponentHash& ModuleTree::getPathComponentHash(ModuleID module_id) {
 		Ref<ModuleTree> module = module_id.ref;
+		// Update the component hash from root to this module if not valid
 		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(
 			module->m_path_component_hash.has_value(),
@@ -109,7 +97,7 @@ namespace compiler::frontend {
 		return create(root, base::generateRandomString(32), file_reject, dir_reject);
 	}
 
-	ModuleTree::ModuleTree() = default;
+	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
 
 	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
 
@@ -219,10 +207,15 @@ namespace compiler::frontend {
 		// Component hash part
 		// Get parent component hash if existsS
 		if (m_parent.has_value()) {
-			CORE_ASSERT(
-				m_parent.value()->m_path_component_hash.has_value(),
-				"Parent component hash should have value!"
-			);
+			{
+				IF_BUILD_TYPE_DEV(
+					std::scoped_lock parent_lock(*m_parent.value()->m_hash_recompute_mutex);
+					CORE_ASSERT(
+						m_parent.value()->m_path_component_hash.has_value(),
+						"Parent component hash should have value!"
+					);
+				);
+			}
 			m_path_component_hash.emplace(m_parent.value()->m_path_component_hash.value(), m_name);
 		} else {
 			// root module tree, use package id as base
@@ -255,17 +248,12 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTree::updateModuleHashFromRootToThis() {
+		std::scoped_lock lock(*m_hash_recompute_mutex);
 		if (!m_path_component_hash.has_value()) {
 			// iterate thru parents to find one with component hash set or reach root (go up)
-			base::Ref<ModuleTree>              g_parent          = this;
-			std::vector<base::Ref<ModuleTree>> modules_to_update = { g_parent };
-			while (g_parent->m_parent.has_value()
-			       && !g_parent->m_parent.value()->m_path_component_hash.has_value()) {
-				g_parent = g_parent->m_parent.value();
-				modules_to_update.push_back(g_parent);
-			}
+			if (m_parent.has_value()) m_parent.value()->updateModuleHashFromRootToThis();
 			// go from top module to bottom module, so its in linear time
-			for (auto& it: std::ranges::reverse_view(modules_to_update)) it->updateModuleHash();
+			updateModuleHash();
 		}
 	}
 
@@ -500,7 +488,6 @@ namespace compiler::frontend {
 
 	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
-		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeSourceFileFromStorage(base::Ref<SourceFile> file) {
@@ -524,13 +511,6 @@ namespace compiler::frontend {
 		// Remove file from source_files
 		source_files.erase(it);
 
-		// Update module hash
-		module->updateModuleHash();
-
-		// Remove entry from root_element_file_back_map if exists
-		if (auto root_id = file->getPST()->getRootElement().illegalAccess(); root_id.has_value())
-			root_element_file_back_map.erase(root_id.value()->getID());
-
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(file);
 	}
@@ -541,7 +521,7 @@ namespace compiler::frontend {
 			"Main source file is already set, remove it first"
 		);
 		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
-		module->updateModuleHash();
+		module->updateModuleHashFromRootToThis();
 	}
 
 	void ModuleTreeModifier::addSubmodule(
@@ -595,12 +575,6 @@ namespace compiler::frontend {
 
 		// Invalidate component hash for the submodule and its children
 		submodule->invalidateHash();
-
-		// Update module hash for the parent module since the number of children changed
-		// Adding a submodule does not change the path component hash of the module so we do not
-		// need to invalidate hash For all SourceFiles and Submodules
-		// @TODO: #1253 every update and change to module should invalidate query caches
-		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -624,8 +598,6 @@ namespace compiler::frontend {
 		);
 
 		module->m_other_files.at(ext_id).push_back(file);
-		//@TODO: do we need to update the module here? #1253
-		// module->update();
 	}
 
 	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
@@ -641,7 +613,7 @@ namespace compiler::frontend {
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
 		module->m_main_source_file = {};
-		module->updateModuleHash();
+		module->updateModuleHashFromRootToThis();
 	}
 
 	void ModuleTreeModifier::removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -674,8 +646,6 @@ namespace compiler::frontend {
 		);
 
 		files.erase(it);
-		//@TODO: do we need to update the module here? #1253
-		// module->update();
 	}
 
 	void ModuleTreeModifier::setParent(
@@ -712,9 +682,6 @@ namespace compiler::frontend {
 
 		// Invalidate component hash for the module and its children as the parent changed
 		module->invalidateHash();
-
-		// Update module hash for the parent module since the number of children changed
-		parent->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::changePackageID(
@@ -782,11 +749,6 @@ namespace compiler::frontend {
 			submodule->invalidateHash();  // invalidate hash as parent changed
 		}
 
-		if (parent.has_value()) {
-			// Update module hash for the parent module since the number of children changed
-			parent.value()->updateModuleHash();
-		}
-
 		// Remove all source files from storage this will invalidate the SourceFile instances!
 		for (auto& source_file: module->m_source_files)
 			SourceFile::removeSourceFileFromStorage(source_file);
@@ -822,7 +784,6 @@ namespace compiler::frontend {
 				)
 			);
 			submodules.erase(it);
-			parent.value()->updateModuleHash();
 		}
 
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
@@ -1002,23 +963,12 @@ namespace compiler::frontend {
 	/****************
 	 * getFilePST *
 	 ****************/
-	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id) {
+	CRef<pst::PST<>> getFilePST([[maybe_unused]] ::query::Context& ctx, FileID file_id) {
 		Ref<SourceFile> file
 			= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				file_id
 			);
-		auto pst              = file->getPST();
-		auto root_id          = pst->getRootElement().unlock(ctx)->getID();
-		auto maybe_put_result = root_element_file_back_map.maybePut(root_id, file_id);
-		if (!maybe_put_result) {
-			// If the key already exists, assert that it maps to the same value
-			CORE_ASSERT(
-				root_element_file_back_map.getCopy(root_id) == file_id,
-				"Root element ID already exists in back map with a different file ID"
-			);
-		}
-
-		return pst;
+		return file->getPST();
 	}
 
 	ModuleID extendQueryModuleIDOfPST(
@@ -1029,7 +979,12 @@ namespace compiler::frontend {
 
 		// this access depends on the global state that might
 		// become a problem in incremental compilation:
-		auto file_id = root_element_file_back_map.getCopy(element.unlock(ctx)->getID());
+		auto maybe_file_id = getFileIDOfPSTRoot(element.unlock(ctx)->getID());
+		CORE_ASSERT(
+			maybe_file_id.has_value(),
+			"PST root element ID does not exist in root-element-to-file map"
+		);
+		auto file_id = maybe_file_id.value();
 		return getFileRef(file_id)->getModule().unlock(ctx).getID();
 	}
 }

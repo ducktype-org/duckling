@@ -1,12 +1,13 @@
 //! Cross-platform environment variables snapshot.
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
+use std::fmt;
 
 use crate::{QuackResult, qp_err};
 
 /// Safe wrapper around [`std::env::vars_os`], which is safe to access on Windows: some of its
 /// environmental variables are case-insensitive.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Env {
     env: HashMap<OsString, OsString>,
 
@@ -15,7 +16,7 @@ pub struct Env {
 }
 
 impl Env {
-    /// Create new default [`Env`].
+    /// Create a new default [`Env`].
     pub fn new() -> Self {
         Self::new_from(std::env::vars_os().collect())
     }
@@ -50,11 +51,11 @@ impl Env {
 
     /// Get environmental variable pointed by `key`.
     ///
-    /// # Arguments
+    /// ## Arguments
     ///
     /// * `key` - key for environmental variable. Must implement [`AsRef<OsStr>`].
     ///
-    /// # Returns
+    /// ## Returns
     /// [`Option<&OsStr>`]. [`None`] variant indicates missing key, [`Some`]: existing key.
     ///
     pub fn get_os(&self, key: impl AsRef<OsStr>) -> Option<&OsStr> {
@@ -82,9 +83,9 @@ impl Env {
         self.get_os(key).is_some()
     }
 
-    /// Get environmental variable pointed by `key` and convert it to UTF-8.
+    /// Get environmental variable pointed by `key` and convert it to utf8.
     ///
-    /// # Arguments
+    /// ## Arguments
     ///
     /// * `key` - key for environmental variable. Must implement [`AsRef<Str>`].
     pub fn get(&self, key: impl AsRef<OsStr>) -> QuackResult<&str> {
@@ -127,6 +128,12 @@ impl FromIterator<(OsString, OsString)> for Env {
 impl<const N: usize> From<[(OsString, OsString); N]> for Env {
     fn from(value: [(OsString, OsString); N]) -> Self {
         <Self as FromIterator<(OsString, OsString)>>::from_iter(value)
+    }
+}
+
+impl fmt::Debug for Env {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Env").finish_non_exhaustive()
     }
 }
 

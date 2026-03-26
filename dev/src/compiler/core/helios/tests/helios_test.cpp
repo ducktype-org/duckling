@@ -12,7 +12,8 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -26,6 +27,7 @@
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/errors.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
+#include <helios_private/hout_code_generation/default_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -82,6 +84,7 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testStaticArrays);
+		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
@@ -93,6 +96,7 @@ public:
 		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
+		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
@@ -162,6 +166,7 @@ private:
 		ASSERT_EQUAL(-3, getConstValueAs<i32>("B", root_scope));
 		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
 		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
+		ASSERT_EQUAL(27, getConstValueAs<i32>("MOD", root_scope));
 		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
@@ -537,18 +542,22 @@ private:
 			= compiler::helios::HInterface::ofTypeInstance(simple_class_abstract_type);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto a_result = h_interface.lookup(ctx, base::StrID("a"));
+			using compiler::helios::LookupResult;
+			CRef<LookupResult> a_result
+				= &h_interface.lookup(ctx, base::StrID("a"))->valueOrPanic();
 			ASSERT_TRUE(a_result->isSingle());
 			auto a_symbol = a_result->leaves.at(0);
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
-			auto get_a_result = h_interface.lookup(ctx, base::StrID("getA"));
+			CRef<LookupResult> get_a_result
+				= &h_interface.lookup(ctx, base::StrID("getA"))->valueOrPanic();
 			ASSERT_TRUE(get_a_result->isSingle());
 			auto get_a_symbol = get_a_result->leaves.at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
 
-			auto empty_result = h_interface.lookup(ctx, base::StrID("non_existent_symbol"));
+			CRef<LookupResult> empty_result
+				= &h_interface.lookup(ctx, base::StrID("non_existent_symbol"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 		});
 	}
@@ -655,14 +664,29 @@ private:
 			auto int_type = compiler::tsh::getIntegralType(ctx, 64, Signed);
 
 
-			// Build chain comparison expressions vector
-			std::vector<base::Box<Expr>> chain_exprs;
-			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
-			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
-			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3));
+			// Build chain comparison expressions vector (1 < 2 <= 3)
+			auto first_expr = makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1);
+			auto second_expr
+				= makeBox<ReusableExpr>(ctx, makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
+			auto second_expr_reused = second_expr->nextUse();
+			auto third_expr         = makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3);
 
-			std::vector<BuiltinBinary> chain_ops{ BuiltinBinary::IntegerLt,
-				                                  BuiltinBinary::IntegerLteq };
+			// Build the comparisons vector
+			std::vector<Box<Expr>> comparisons;
+			comparisons.emplace_back(makeBox<BinaryOperatorExpr>(
+				ctx,
+				generatedOrigin(),
+				BuiltinBinary::IntegerLt,
+				std::move(first_expr),
+				std::move(second_expr)
+			));
+			comparisons.emplace_back(makeBox<BinaryOperatorExpr>(
+				ctx,
+				generatedOrigin(),
+				BuiltinBinary::IntegerLteq,
+				std::move(second_expr_reused),
+				std::move(third_expr)
+			));
 
 			// Build tuple elements
 			std::vector<base::Box<Expr>> tuple_elements;
@@ -696,6 +720,7 @@ private:
 					ctx,
 					generatedOrigin(),
 					makeBox<UnaryOperatorExpr>(
+						ctx,
 						generatedOrigin(),
 						BuiltinUnary::IntegerNegation,
 						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
@@ -722,9 +747,7 @@ private:
 				ctx,
 				generatedOrigin(),
 				// Condition: ChainComparisonExpr (1 < 2 <= 3)
-				makeBox<ChainComparisonExpr>(
-					ctx, generatedOrigin(), std::move(chain_exprs), std::move(chain_ops)
-				),
+				makeBox<ChainComparisonExpr>(ctx, generatedOrigin(), std::move(comparisons)),
 				// If true: SequenceExpr with nested expressions including CallExpr
 				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
@@ -963,6 +986,8 @@ private:
 		auto symbol_name = [](const char* name, auto&& symbol) {
 			return base::strConcat("(Symbol ", name, " (", symbol.queryUnstablePerfectHash(), "))");
 		};
+		auto tmp   = [](const std::string& expr) { return base::strConcat("[tmp](", expr, ")"); };
+		auto reuse = [](const std::string& expr) { return base::strConcat("[reuse](", expr, ")"); };
 
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
@@ -984,7 +1009,7 @@ private:
 		std::stringstream out_v256;
 		auto              tree_v256 = getExprOfConst(sym_v256);
 		tree_v256->debugPrint(out_v256);
-		ASSERT_EQUAL("(3+4-4*16/5%7)**8", out_v256.str());
+		ASSERT_EQUAL("(3 + 4 - 4 * 16 / 5 % 7) ** 8", out_v256.str());
 
 		ASSERT_EQUAL(12, getConstValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();
@@ -995,7 +1020,7 @@ private:
 		auto sym_v3      = getChain("N.V3", root_scope).back();
 		auto sym_v3_repr = symbol_name("V3", sym_v3);
 		ASSERT_EQUAL(
-			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
+			base::strConcat(sym_v3_repr, " + ", sym_v3_repr, " * ", sym_v3_repr), out_v12.str()
 		);
 
 		ASSERT_EQUAL(false, getConstValueAs<bool>("CMP", root_scope));
@@ -1005,7 +1030,29 @@ private:
 		expr_cmp->debugPrint(out_cmp);
 		ASSERT_EQUAL_PRINT(
 			(base::strConcat(
-				symbol_name("V1", sym_v1), "<3<=4==5!=6>=7>", symbol_name("VM1", sym_vm1)
+				symbol_name("V1", sym_v1),
+				" < ",
+				tmp("3"),
+				" and ",
+				reuse("3"),
+				" <= ",
+				tmp("4"),
+				" and ",
+				reuse("4"),
+				" == ",
+				tmp("5"),
+				" and ",
+				reuse("5"),
+				" != ",
+				tmp("6"),
+				" and ",
+				reuse("6"),
+				" >= ",
+				tmp("7"),
+				" and ",
+				reuse("7"),
+				" > ",
+				tmp(symbol_name("VM1", sym_vm1))
 			)),
 			out_cmp.str()
 		);
@@ -1777,6 +1824,67 @@ private:
 		}
 	}
 
+	void testDynamicArrays() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/dynamic_arrays")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function   = hout.functions.at(0);
+		auto& statements = function->body->statements;
+
+		using namespace compiler::helios::code;
+		using namespace compiler::tsh;
+
+		{
+			// var l: List[i64];
+			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(0));
+			ASSERT_EQUAL(compiler::helios::name(var_decl.helios_symbol), "l");
+
+			auto type = var_decl.type.getType();
+			ASSERT_EQUAL(type.getKind(), Kind::DynamicArray);
+
+			auto dyn_array_type = type.as<DynamicArrayAbstractType>();
+			auto i64_type       = getIntegralTypeNoContext(
+                64, compiler::tsh::IntegralAbstractType::Signedness::Signed
+            );
+			ASSERT_EQUAL(dyn_array_type.getElementType().getType(), i64_type);
+
+			auto* default_val
+				= dynamic_cast<const DefaultValueExpr*>(var_decl.initial_value->get());
+			ASSERT_TRUE(default_val != nullptr);
+		}
+		{
+			// l += 1;
+			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(1));
+			auto* push_expr = dynamic_cast<const ListPushExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(push_expr != nullptr);
+		}
+		{
+			// l -= 1;
+			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(2));
+			auto* pop_expr  = dynamic_cast<const ListPopExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(pop_expr != nullptr);
+		}
+		{
+			// let l_len = len l;
+			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
+			auto* len_expr = dynamic_cast<const UnaryOperatorExpr*>(var_decl.initial_value->get());
+			ASSERT_TRUE(len_expr != nullptr);
+			ASSERT_EQUAL(len_expr->operation, BuiltinUnary::Len);
+		}
+		{
+			// l[0] = 42;
+			auto& assign_stmt = dynamic_cast<const AssignmentStmt&>(*statements.at(4));
+			auto* index_expr  = dynamic_cast<const IndexExpr*>(assign_stmt.location_expr.get());
+			ASSERT_TRUE(index_expr != nullptr);
+		}
+		{
+			// let x = l[0];
+			auto& var_decl   = dynamic_cast<const VariableStmt&>(*statements.at(5));
+			auto* index_expr = dynamic_cast<const IndexExpr*>(var_decl.initial_value->get());
+			ASSERT_TRUE(index_expr != nullptr);
+		}
+	}
+
 	void testBuiltinFunctions() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/builtins")));
 		auto& hout
@@ -2034,7 +2142,7 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
 		ASSERT_EQUAL(
-			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i321af641bE$metadata_v123", mangled_goo.str()
+			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E1a1bE$metadata_v123", mangled_goo.str()
 		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
@@ -2042,7 +2150,7 @@ private:
 
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
 
-		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.str());
+		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32EE$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
 	}
 
@@ -2476,6 +2584,147 @@ private:
 		// Test overload resolution with coercion (f32 -> f64 is preferred over f32 -> i64)
 		auto call_goo_f64_sym = getChain("CALL_GOO_F64", root_scope).back();
 		ASSERT_EQUAL(goo_f64, get_function_sym_by_var_sym(call_goo_f64_sym));
+	}
+
+	void testDefaultInitializers() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+		using namespace compiler::helios::houtgen;
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/default_constructors")));
+
+		auto trivial_sym      = getChain("Trivial", root_scope).back();
+		auto with_init_sym    = getChain("WithInit", root_scope).back();
+		auto nested_sym       = getChain("Nested", root_scope).back();
+		auto holder_sym       = getChain("ArrayHolder", root_scope).back();
+		auto deep_sym         = getChain("DeepStack", root_scope).back();
+		auto deep_trivial_sym = getChain("DeepStackTrivial", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto get_class_type = [&](SymID sym_id) {
+				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow();
+			};
+
+			auto i32_st = st(compiler::tsh::getIntegralType(
+				ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+			));
+
+			// Primitives should be zero initialized.
+			{
+				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(i32_st)->valueOrThrow();
+				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
+			}
+
+			// Unit type should be initialized with a unit literal.
+			{
+				auto        unit_st = st(compiler::tsh::getUnitType());
+				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(unit_st)->valueOrThrow();
+				ASSERT_TRUE(dynamic_cast<const LiteralUnitExpr*>(expr.get()) != nullptr);
+			}
+
+			// Meta type should be initialized with a type literal (void by default).
+			{
+				auto        meta_st = st(compiler::tsh::getMetaType());
+				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(meta_st)->valueOrThrow();
+				auto        type_lit = dynamic_cast<const LiteralTypeExpr*>(expr.get());
+				ASSERT_TRUE(type_lit != nullptr);
+				ASSERT_EQUAL(compiler::tsh::getVoidType(), type_lit->value_type.getType());
+			}
+
+			// Trivial class should be zero initialized.
+			{
+				auto        trivial_st = get_class_type(trivial_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(trivial_st)->valueOrThrow();
+				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
+			}
+
+			// Class with an initial value provided for field should emit a call to a ctor.
+			{
+				auto        with_init_st = get_class_type(with_init_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(with_init_st)->valueOrThrow();
+
+				auto call = dynamic_cast<const CallExpr*>(expr.get());
+				ASSERT_TRUE(call != nullptr);
+
+				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+
+				// Should not call any recursive ctors.
+				ASSERT_EQUAL_PRINT(1, deps.size());
+			}
+
+			// Class with a class field which is non zero-initializable should emit a ctor call.
+			// This ctor should call a ctor of the inner non zero-initializable field.
+			{
+				auto        nested_st = get_class_type(nested_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(nested_st)->valueOrThrow();
+
+				auto call     = dynamic_cast<const CallExpr*>(expr.get());
+				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+
+				// The top-level constructor should call one function which is a default ctor of
+				// `WithInit`.
+				ASSERT_EQUAL_PRINT(2, deps.size());
+
+				auto dep_gsd = std::get<GeneratedSymbolData>(getSymRef(deps[0])->other);
+				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultClassConstructor>(
+					dep_gsd.data
+				));
+			}
+
+			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
+			// inner element.
+			{
+				auto        holder_st = get_class_type(holder_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(holder_st)->valueOrThrow();
+
+				auto call     = dynamic_cast<const CallExpr*>(expr.get());
+				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+
+				// Ctor(ArrayHolder) -> Ctor(WithInit[5]) -> Ctor(WithInit)
+				ASSERT_EQUAL_PRINT(3, deps.size());
+
+				bool found_array_ctor = false;
+				for (auto d: deps) {
+					auto gsd = std::get<GeneratedSymbolData>(getSymRef(d)->other);
+					if (std::holds_alternative<GeneratedSymbolData::DefaultStaticArrayConstructor>(
+							gsd.data
+						))
+						found_array_ctor = true;
+				}
+				ASSERT_TRUE(found_array_ctor);
+			}
+
+			// `DeepStack` ctor should call a ctor of the `Nested` field, which calls a ctor of
+			// `WithInit`
+			{
+				auto        deep_st = get_class_type(deep_sym);
+				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(deep_st)->valueOrThrow();
+
+				auto call     = dynamic_cast<const CallExpr*>(expr.get());
+				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+
+				// Ctor(DeepStack) -> Ctor(Nested) -> Ctor(WithInit)
+				ASSERT_EQUAL_PRINT(3, deps.size());
+			}
+
+			// `DeepStackTrivial` ctor should not call any default constructors, since it stores
+			// a static array of trivially zero-initializable types which can be zero initialized,
+			// thus its zero-initializable.
+			{
+				auto        deep_trivial_st = get_class_type(deep_trivial_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_st)->valueOrThrow();
+				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
+			}
+		});
 	}
 
 	void testCastsHout() {

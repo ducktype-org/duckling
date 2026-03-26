@@ -1,6 +1,5 @@
 #pragma once
 
-#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <helios/hout/elements/expr.hpp>
 
 #include <base/pointers/box.hpp>
@@ -8,47 +7,60 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios::code {
-
 	/**
 	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
 	 * the given call expression and creates CallExpr from it. The function is selected based on
-	 * argument types and named arguments. If no function or multiple functions match the call, an
-	 * error is returned.
+	 * argument types and named arguments, but not the name, so all provided candidates must have
+	 * the expected name. If no function or multiple functions match the call, an error is returned.
 	 *
 	 * @note takes actual symbols that might be called, does not perform any lookup.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
-	 * @param callable_expr The PST expression representing the callee being invoked.
 	 * @param callee_element The PST element representing the identifier of the function being
 	 * called, like `foo` in `foo(10)`.
 	 * @param call_expr The PST call expression representing the function call. (the `(...)` part
 	 * and not the callee)
 	 */
-	query::QResult<Box<CallExpr>> processFunctionCall(
+	query::QResult<Box<Expr>> processFunctionCall(
 		query::Context&               ctx,
 		const std::vector<SymID>&     candidates,
 		pst::Access<pst::LangElement> callee_element,
 		pst::Access<pst::expr::Call>  call_expr
 	);
 
-
 	/**
 	 * @brief Same as above, but for methods. It finds the "self" argument and then calls the same
 	 * overload resolution as for normal function calls.
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
-	 * @param callable_expr The PST expression representing the callee being invoked.
 	 * @param callee_element The PST element representing the identifier of the function being
 	 * called, like `foo` in `object.foo(10)`.
 	 * @param call_expr The PST call expression representing the function call. (the `(...)` part
 	 * and not the callee)
+	 * @param self_arg The processed "self" argument of the method call.
 	 */
-	query::QResult<Box<CallExpr>> processMethodCall(
+	query::QResult<Box<Expr>> processMethodCall(
 		query::Context&               ctx,
 		const std::vector<SymID>&     candidates,
 		pst::Access<pst::LangElement> callee_element,
 		pst::Access<pst::expr::Call>  call_expr,
 		Box<Expr>                     self_arg
+	);
+
+	/**
+	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
+	 * the given argument expressions and creates callexpr from it. The function is selected based
+	 * on argument types only, not the name, so all provided candidates must have the expected name.
+	 * If no function or multiple functions match the call, an error is returned.
+	 *
+	 * @note takes actual symbols that might be called, does not perform any lookup.
+	 *
+	 * @param candidates Contains all candidate functions that could be called.
+	 * @param lhs The preprocessed left-hand side argument of the operator call.
+	 * @param rhs The preprocessed right-hand side argument of the operator call.
+	 */
+	query::QResult<Box<Expr>> processBinaryOperatorCall(
+		query::Context& ctx, const std::vector<SymID>& candidates, Box<Expr> lhs, Box<Expr> rhs
 	);
 
 	/**
@@ -79,23 +91,4 @@ namespace compiler::helios::code {
 			arguments_origin;  // whole arguments, with the name if it is a named argument, for
 		                       // example `arg1`, `arg2` or `name: arg3`
 	};
-
-	/**
-	 * @brief More general version that performs the matching of the provided arguments,
-	 * logs the errors and constructs the CallExpr.
-	 *
-	 * @param ctx
-	 * @param candidates Candidates for the call.
-	 * @param call_arguments The HOUT expressions of the arguments of the call, both positional and
-	 * named.
-	 * @param pst_origin The PST origin of the whole call, callee and arguments, used for error
-	 * reporting.
-	 * @return query::QResult<Box<CallExpr>>
-	 */
-	query::QResult<Box<CallExpr>> callOverloadResolution(
-		query::Context&           ctx,
-		const std::vector<SymID>& candidates,
-		CallArguments             call_arguments,
-		const CallPstOrigin&      pst_origin
-	);
 }

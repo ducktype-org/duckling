@@ -12,7 +12,7 @@ namespace pst {
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:
-		explicit Param(const dia::SourcePosition& position): NotStmt(position) {
+		explicit Param(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::Param;
 		}
 
@@ -35,6 +35,8 @@ namespace pst {
 		base::StrID getName() const {
 			return name.value;
 		}
+
+		[[nodiscard]] tpc::Identifier getNameIdent() const { return name; }
 
 		[[nodiscard]]
 		base::Optional<AccessLocked<UniversalExprHolder>> getValue() const;

@@ -11,12 +11,12 @@ namespace pst {
 		base::Optional<tpc::Identifier> as;
 
 	public:
-		explicit ImportIdentifierAs(const dia::SourcePosition& position): ImportChain(position) {
+		explicit ImportIdentifierAs(const LangParserState& state): ImportChain(state) {
 			this->element_kind = ElementKind::ImportIdentifierAs;
 		}
 
 		[[nodiscard]]
-		const std::vector<tpc::Identifier>& getNames() const {
+		const std::vector<tpc::Identifier>& getNames() const final {
 			return names;
 		}
 

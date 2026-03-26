@@ -1,6 +1,7 @@
 #include "printers.hpp"
 
 #include <diagnostic_interactive/term_ui/code_section.hpp>
+#include <diagnostic_interactive/term_ui/module_flags/module_flags.hpp>
 #include <diagnostic_interactive/term_ui/styles.hpp>
 
 namespace term_ui {
@@ -33,7 +34,7 @@ namespace term_ui {
 		bool                                                  use_color_local
 	) {
 		// Set the global coloring flag.
-		use_color = use_color_local;
+		configureColoring(use_color_local);
 
 		// Display the diagnostics.
 		bool first_diag = true;

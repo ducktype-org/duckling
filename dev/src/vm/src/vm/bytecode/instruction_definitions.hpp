@@ -1,3 +1,4 @@
+
 /**
  * @file instruction_definitions.hpp
  * @brief Contains definitions of all high bytecode instructions. Can be used for generating
@@ -82,6 +83,13 @@ DEF_INSTR(mov_l32_g32, (vm::opargs::StackLocal32, dst), (vm::opargs::Global32, s
 DEF_INSTR(mov_l16_g16, (vm::opargs::StackLocal16, dst), (vm::opargs::Global16, src))
 DEF_INSTR(mov_l8_g8, (vm::opargs::StackLocal8, dst), (vm::opargs::Global8, src))
 DEF_INSTR(mov_lptr_gptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::GlobalPtr, src))
+
+DEF_INSTR(
+	mov_lste_lste, (vm::opargs::StackLocalStructure, dst), (vm::opargs::StackLocalStructure, src)
+)
+DEF_INSTR(mov_gste_gste, (vm::opargs::GlobalStructure, dst), (vm::opargs::GlobalStructure, src))
+DEF_INSTR(mov_gste_lste, (vm::opargs::GlobalStructure, dst), (vm::opargs::StackLocalStructure, src))
+DEF_INSTR(mov_lste_gste, (vm::opargs::StackLocalStructure, dst), (vm::opargs::GlobalStructure, src))
 
 // does a shallow pointer copy
 DEF_INSTR(mov_lptr_lptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::StackLocalPtr, src))
@@ -424,12 +432,7 @@ DEF_INSTR(resetVTable_lptr, (vm::opargs::StackLocalPtr, object_ptr))
 // casts pointed object to its superclass
 DEF_INSTR(upcast_lptr_lptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::StackLocalPtr, src))
 // tries to cast pointed object to its subclass
-DEF_INSTR(
-	downcast_lptr_lptr_type,
-	(vm::opargs::StackLocalPtr, dst),
-	(vm::opargs::StackLocalPtr, src),
-	(vm::opargs::Type, target_type)
-)
+DEF_INSTR(downcast_lptr_lptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::StackLocalPtr, src), )
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
 DEF_INSTR(
 	virtual_call_lptr_method,
@@ -452,6 +455,8 @@ DEF_INSTR(load_lany_lptr, (vm::opargs::StackLocalAny, dst), (vm::opargs::StackLo
 
 // stores reference to local object of any type T in pointer<T>
 DEF_INSTR(ref_lptr_lany, (vm::opargs::StackLocalPtr, dst_ptr), (vm::opargs::StackLocalAny, src))
+// stores reference to global object of any type T in pointer<T>
+DEF_INSTR(ref_lptr_gany, (vm::opargs::StackLocalPtr, dst_ptr), (vm::opargs::GlobalAny, src))
 
 // ========= STRUCTURE OPERATIONS ========
 
@@ -471,6 +476,27 @@ DEF_INSTR(
 DEF_INSTR(
 	structStore_lptr_lany_field,
 	(vm::opargs::StackLocalPtr, dst_data_ptr),
+	(vm::opargs::StackLocalAny, src),
+	(vm::opargs::Field, field)
+)
+
+// These are the same as above, but for structs referenced via local stack
+
+DEF_INSTR(
+	structLea_lptr_lste_field,
+	(vm::opargs::StackLocalPtr, dst_ptr),
+	(vm::opargs::StackLocalStructure, src_data_struct),
+	(vm::opargs::Field, field)
+)
+DEF_INSTR(
+	structLoad_lany_lste_field,
+	(vm::opargs::StackLocalAny, dst),
+	(vm::opargs::StackLocalStructure, src_data_struct),
+	(vm::opargs::Field, field)
+)
+DEF_INSTR(
+	structStore_lste_lany_field,
+	(vm::opargs::StackLocalStructure, dst_data_struct),
 	(vm::opargs::StackLocalAny, src),
 	(vm::opargs::Field, field)
 )

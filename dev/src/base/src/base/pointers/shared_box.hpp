@@ -2,6 +2,7 @@
 
 #include <base/comptime/type_traits.hpp>
 #include <base/misc/noexcept.hpp>
+#include <base/pointers/box.hpp>
 #include <base/pointers/default_deleter.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -124,6 +125,13 @@ namespace base {
 			if (isFullyNull()) return;
 			assertNotNull();
 			other.nullify();
+		}
+
+		explicit SharedBox(Box<T>&& other) noexcept:
+			  data_ptr{ std::move(other).ptr },
+			  ctrl_ptr{ new ControlBlock(std::move(other).deleter) } {
+			other.ptr = nullptr;
+			assertNotNull();
 		}
 
 		/**

@@ -17,4 +17,19 @@ namespace pst {
 		}
 		state.exitFallback();
 	}
+
+	void setSoftFallback(LangParserState& state, TokenStreamCondition fun) {
+		if (state.isSkipping()) {
+			state.skipEntry();
+			return;
+		}
+		state.setSoftFallback(fun);
+	}
+
+	void exitSoftFallback(LangParserState& state) {
+		if (state.isSkipping()) {
+			if (!state.removeEntry()) return;
+		}
+		state.exitSoftFallback();
+	}
 }

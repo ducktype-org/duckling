@@ -61,7 +61,11 @@ use tracing::debug;
 
 use crate::{
     QuackResult, QuackResultContext,
-    quackpack::core::storage::{freeze, paths::Storage, venv_id::VenvId},
+    quackpack::core::storage::{
+        freeze::{self, VenvFreeze},
+        paths::Storage,
+        venv_id::VenvId,
+    },
     util_common::{
         hash,
         path_ops_ext::{MkdirOptions, PathOpsExt},
@@ -83,6 +87,7 @@ pub struct VenvData {
 }
 
 impl VenvData {
+    /// Create a new [`VenvData`].
     pub fn new(
         freeze: freeze::VenvFreeze,
         is_ephemeral: bool,
@@ -97,6 +102,7 @@ impl VenvData {
         }
     }
 
+    /// Load [`VenvData`] from the given path.
     pub fn load(path: &Path) -> QuackResult<Result<Self, CorruptedFileError>> {
         debug!("loading venv data from `{}`", path.display());
         let content = path.read_to_string()?;
@@ -123,6 +129,7 @@ impl VenvData {
         }))
     }
 
+    /// Save to the given path.
     pub fn save_to(&self, path: &Path) -> QuackResult<()> {
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
@@ -135,74 +142,109 @@ impl VenvData {
         Ok(())
     }
 
+    /// Get a reference to the underlying [`VenvFreeze`].
     pub fn freeze(&self) -> &freeze::VenvFreeze {
         &self.freeze
     }
 
+    /// Get a mutable reference to the underlying [`VenvFreeze`].
     pub fn freeze_mut(&mut self) -> &mut freeze::VenvFreeze {
         &mut self.freeze
     }
 
+    /// Set the [`VenvFreeze`].
     pub fn set_freeze(&mut self, freeze: freeze::VenvFreeze) {
         self.freeze = freeze;
     }
 
+    /// Whether this venv is ephemeral (temporary).
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
     }
 
+    /// Set the ephemerality (temporality) of this venv.
     pub fn set_ephemeral(&mut self, is_ephemeral: bool) {
         self.is_ephemeral = is_ephemeral;
     }
 
-    pub fn last_location(&self) -> &PathBuf {
+    /// Get the last known location of this venv.
+    pub fn last_location(&self) -> &Path {
         &self.last_location
     }
 
+    /// A mutable counterpart to the [`last_location`](Self::last_location).
     pub fn last_location_mut(&mut self) -> &mut PathBuf {
         &mut self.last_location
     }
 
+    /// Set the last know location of this venv.
     pub fn set_last_location(&mut self, last_location: PathBuf) {
         self.last_location = last_location;
     }
 
+    /// Get the last access time of this venv.
     pub fn last_access(&self) -> SystemTime {
         self.last_access
     }
 
+    /// Set the last access time of this venv.
     pub fn set_last_access(&mut self, last_access: SystemTime) {
         self.last_access = last_access;
     }
 }
 
+impl From<VenvData> for VenvFreeze {
+    fn from(value: VenvData) -> Self {
+        value.freeze
+    }
+}
+
+impl From<Venv> for VenvData {
+    fn from(value: Venv) -> Self {
+        value.data
+    }
+}
+
+impl From<Venv> for VenvFreeze {
+    fn from(value: Venv) -> Self {
+        value.data.freeze
+    }
+}
+
 #[derive(Debug)]
+/// A virtual environment.
 pub struct Venv {
     id: VenvId,
     data: VenvData,
 }
 
 impl Venv {
+    /// Create a new [`Venv`].
     pub fn new(id: VenvId, data: VenvData) -> Self {
         Self { id, data }
     }
 
+    /// Get the ID of this venv.
     pub fn id(&self) -> VenvId {
         self.id
     }
 
+    /// Set the ID of this venv.
     pub fn set_id(&mut self, id: VenvId) {
         self.id = id;
     }
 
+    /// Get the underlying data of this venv.
     pub fn data(&self) -> &VenvData {
         &self.data
     }
 
+    /// A mutable counterpart to the [`data`](Self::data).
     pub fn data_mut(&mut self) -> &mut VenvData {
         &mut self.data
     }
 
+    /// Set the data of this venv.
     pub fn set_data(&mut self, data: VenvData) {
         self.data = data;
     }
@@ -217,8 +259,8 @@ impl Venv {
             debug!("storage for venv `{venv_id}` is not a directory");
             return Ok(None);
         }
-        let path = storage.vevn_metadata(venv_id);
-        let backup_path = storage.vevn_backup_metadata(venv_id);
+        let path = storage.venv_metadata(venv_id);
+        let backup_path = storage.venv_backup_metadata(venv_id);
         let existed = path.exists();
         let backup_existed = backup_path.exists();
         // if main file is valid, return state held in it
@@ -253,8 +295,8 @@ impl Venv {
     /// Assumes that the current ``metadata`` file is valid. This is typically ensured
     /// by calling :func:`fix_and_load_venv` before.
     pub fn save_to(&self, storage: &Storage) -> QuackResult<()> {
-        let path = storage.vevn_metadata(self.id);
-        let backup_path = storage.vevn_backup_metadata(self.id);
+        let path = storage.venv_metadata(self.id);
+        let backup_path = storage.venv_backup_metadata(self.id);
         let existed = path.exists();
         let backup_existed = backup_path.exists();
         let parent = path

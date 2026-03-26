@@ -4,13 +4,13 @@
 
 namespace pst {
 	MBox<CallArgument> CallArgument::parse(LangParserState& state) {
-		auto out = makeBox<CallArgument>(state.getPosition());
+		auto out = makeBox<CallArgument>(state);
 		if (state[1].is(lang_def::NamedOperator::Assign)) {
-			state.parse(out).one(&out->arg_name);
-			state.parse(out).one(lang_def::NamedOperator::Assign);
+			PARSE().one(&out->arg_name);
+			PARSE().one(lang_def::NamedOperator::Assign);
 		}
 
-		state.parse(out).one(&out->arg);
+		PARSE().one(&out->arg);
 		PST_RETURN out;
 	}
 
@@ -23,8 +23,12 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& CallArgument::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& CallArgument::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, arg_name);
 		return partial_hash;
+	}
+
+	void CallArgument::acceptVisitor(PstVisitor& visitor) const {
+		visitor.visitCallArgument(*this);
 	}
 }

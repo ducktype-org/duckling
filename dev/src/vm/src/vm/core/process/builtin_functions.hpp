@@ -57,7 +57,12 @@ namespace vm::builtins {
 		CreateMutex,
 		LockMutex,
 		UnlockMutex,
-		DestroyMutex
+		DestroyMutex,
+		CreateCV,
+		WaitCV,
+		NotifyCV,
+		NotifyAllCV,
+		DestroyCV
 	};
 
 	/**
@@ -76,10 +81,15 @@ namespace vm::builtins {
 		static i64  builtinStoi(VMThread& process, Pointer ptr);
 		static i64  builtinStartThread(VMThread& process);
 		static void builtinJoinThread(VMThread& process, i64 thread_id);
-		static i64  builtinCreateMutex(VMThread& process);
-		static void builtinLockMutex(VMThread& process, i64 mutex_id);
-		static void builtinUnlockMutex(VMThread& process, i64 mutex_id);
-		static void builtinDestroyMutex(VMThread& process, i64 mutex_id);
+		static u64  builtinCreateMutex(VMThread& process);
+		static void builtinLockMutex(VMThread& process, u64 mutex_id);
+		static void builtinUnlockMutex(VMThread& process, u64 mutex_id);
+		static void builtinDestroyMutex(VMThread& process, u64 mutex_id);
+		static u64  builtinCreateCV(VMThread& process);
+		static void builtinWaitCV(VMThread& process, u64 cv_id, u64 mutex_id);
+		static void builtinNotifyCV(VMThread& process, u64 cv_id);
+		static void builtinNotifyAllCV(VMThread& process, u64 cv_id);
+		static void builtinDestroyCV(VMThread& process, u64 cv_id);
 	};
 
 	/**
@@ -121,6 +131,4 @@ namespace vm::builtins {
 	 * @brief Returns true if the name is a builtin function name.
 	 */
 	bool isBuiltinFunction(base::StrID name);
-
-	void setThreadCtx(const std::string ctx);
 }

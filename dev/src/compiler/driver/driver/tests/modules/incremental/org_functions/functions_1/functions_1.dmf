@@ -1,6 +1,6 @@
-fun main() = {
+fun main() -> i64 = {
 	var a: i64 = 0;
-	return;
+	return 0;
 }
 
 fun second() = {

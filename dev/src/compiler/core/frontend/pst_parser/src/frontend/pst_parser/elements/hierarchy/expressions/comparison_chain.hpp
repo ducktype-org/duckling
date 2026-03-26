@@ -15,17 +15,17 @@ namespace pst::expr {
 		std::vector<AccessInternalAnonymous<ExprElement>> sub_expr;
 		std::vector<Operator>                             operators;
 
-		static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
+		static i64 skipToOp(const LangParserState& state, i64 base);
 
 	public:
-		ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600) {}
+		ComparisonChain(const LangParserState& state): ExprElement(state, 600) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Comparison Chain";
 		}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		[[nodiscard]]
 		const auto& getOperators() const {

@@ -5,7 +5,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>

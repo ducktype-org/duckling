@@ -1,7 +1,7 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -46,7 +46,7 @@ private:
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			backend_vm::DVMCodeBuilder m(ctx);
+			backend_vm::DVMCodeBuilder m(ctx, false);
 
 			for (auto& hout_glob: top_level.glob_data) {
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
@@ -107,8 +107,8 @@ private:
 	) {
 		using namespace compiler;
 		auto code = getModuleFromPath(std::move(module_path));
-		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
-		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
+		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
+		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		runTestOnVm(code, input, output, args, exit_code);
 	}
 

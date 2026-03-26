@@ -142,6 +142,8 @@ namespace vm {
 		 */
 		BlockingQueue<api::ProcStatus> execution_response_queue;
 
+		std::string thread_ctx = "";
+
 #ifdef ENABLE_JIT
 		jit::JitData jit_data;
 #endif
@@ -307,14 +309,33 @@ namespace vm {
 		friend class builtins::FunctionHandlers;
 
 		/**
-		 * @brief Called only on instruction execution.
-		 * Checks if thread has GIL and if not then acquires it.
+		 * @brief Runs GIL logic. Should be called periodically to allow GIL release.
+		 *
+		 * If thread does not have GIL then acquires it.
+		 * If thread already has GIL:
+		 *   -> if the GIL should be released, releases it
+		 *   -> otherwise does nothing.
 		 */
-		void keepOrAcquireGil();
+		void stepGil();
 
 		/**
 		 * @brief Releases GIL.
 		 */
 		void releaseGil();
+
+		/**
+		 * @brief Acquires GIL.
+		 */
+		void acquireGil();
+
+		/**
+		 * @brief Sets name of the function that will be used in builtin spawn thread.
+		 */
+		void setThreadCtx(std::string);
+
+		/**
+		 * @brief Gets name of the function that will be used in builtin spawn thread.
+		 */
+		std::string getThreadCtx();
 	};
 }

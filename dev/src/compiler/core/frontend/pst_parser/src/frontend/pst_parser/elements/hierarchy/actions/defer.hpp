@@ -5,7 +5,7 @@
 namespace pst {
 	class Defer final: public Action {
 	public:
-		explicit Defer(const dia::SourcePosition& position): Action(position) {}
+		explicit Defer(const LangParserState& state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Defer() final = default;

@@ -13,6 +13,7 @@
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/thread/vmvalueref.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
@@ -57,6 +58,8 @@ namespace vm {
 		std::unique_lock lock(rw_global);
 		VMThread&        thread = getEmptyThread();
 		bool response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
+		// Setting thread ctx necessary for now, until function pointers implemented
+		thread.setThreadCtx("");
 
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 		i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
@@ -296,6 +299,54 @@ namespace vm {
 									api::OtherError{ "Type not found" } });
 							}
 						}
+					}
+				}
+			}
+
+			variant_case(api::request::DebuggerGetNumberOfCurrentStackFrames, request) {
+				std::shared_lock lock(rw_global);
+				match_optional(assertProcessCanRespond()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						// +1 because frame_stack_current points to the current frame, not the next
+						// free slot
+						RuntimeData& runtime_data = getVMThreadByID(request.thread_id).runtime_data;
+						u64          frames
+							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base)
+						    + 1;
+						return api::Response(api::response::NumberOfCurrentStackFrames{
+							.number_of_stack_frames = frames });
+					}
+				}
+			}
+
+			variant_case(api::request::DebuggerGetStackFrameData, request) {
+				std::shared_lock lock(rw_global);
+				match_optional(assertProcessCanRespond()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						RuntimeData& runtime_data = getVMThreadByID(request.thread_id).runtime_data;
+						u64          frames
+							= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base)
+						    + 1;
+						if (request.frame_index >= frames)
+							return std::unexpected(api::ApiError{
+								api::OtherError{ "Frame index out of bounds" } });
+						Frame& frame = runtime_data.frame_stack_base[request.frame_index];
+
+						std::vector<api::response::StackFrameData::FrameVar> frame_vars;
+						for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
+							Ref<Block> block = frame.block_stack[block_idx];
+							frame_vars.push_back(api::response::StackFrameData::FrameVar{
+								.offset = offset,
+								.value
+								= VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
+							});
+						}
+
+						return api::Response(api::response::StackFrameData{
+							.function_name = frame.current_function->name,
+							.frame_vars    = frame_vars });
 					}
 				}
 			}
