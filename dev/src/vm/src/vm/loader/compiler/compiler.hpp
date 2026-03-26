@@ -58,8 +58,7 @@ namespace vm::loader::compiler {
 		 * @brief Digests file information of the mapping and stores it in instruction_mapping.
 		 */
 		void digestFileInfo(
-			const fs::File&                                                    file,
-			std::map<FileCoordinates, FatMicroMapping::OriginCtx::FatPosition> mapping
+			const fs::File& file, FatMicroMapping::OriginCtx::ReversedFileToFatMap mapping
 		);
 
 	private:

@@ -48,7 +48,9 @@ namespace vm::loader::compiler {
 				base::Optional<dia::SourcePosition> source;
 			};
 
-			std::map<FileCoordinates, FatPosition> coord_to_fat;
+			using ReversedFileToFatMap
+				= std::map<FileCoordinates, FatPosition, std::greater<FileCoordinates>>;
+			ReversedFileToFatMap coord_to_fat;
 		};
 
 		base::HashMap<fs::File, OriginCtx> files;
@@ -79,12 +81,6 @@ namespace vm::loader::compiler {
 
 			auto ret = files[file].coord_to_fat.lower_bound(coord);
 			if (ret == files[file].coord_to_fat.end()) return std::nullopt;
-
-			if (ret->second.source.has_value()) {
-				auto src_pos = ret->second.source.value();
-				if (src_pos.getStartLineColumn() > std::pair{ coord.line, coord.column })
-					return std::nullopt;
-			}
 
 			return ret->second;
 		}
