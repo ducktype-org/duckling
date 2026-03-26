@@ -418,9 +418,14 @@ namespace vm {
 				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
+			std::vector<TypeCRef> ret_types = {};
+			if (function_signature->result_type.size()) {
+				ret_types.emplace_back(thread.executing_program->getTypes().at(function_signature->result_type.at(0)));
+			}
+
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id,
-				thread.executing_program->getTypes().at(function_signature->result_type[0]),
+				ret_types,
 				thread.process,
 				thread,
 				args

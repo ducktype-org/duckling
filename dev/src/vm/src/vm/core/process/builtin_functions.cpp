@@ -17,17 +17,19 @@ namespace vm::builtins {
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), std::vector<TypeCRef> vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
 			} else {
+				CORE_ASSERT(vm_return_type.size() == 1, "not imeplemented support for builtins with multiple ret-vals");
 				auto value = function(thread, args[Is]->template readBytes<FunArgs>()...);
 				CORE_ASSERT(
-					sizeof(value) == vm_return_type->getSize().asInt(), "Type sizes do not match"
+					sizeof(value) == vm_return_type.at(0)->getSize().asInt(),
+					"Type sizes do not match"
 				);
 
-				auto vm_value = process.createOwnedVmValue(vm_return_type);
+				auto vm_value = process.createOwnedVmValue(vm_return_type.at(0));
 
 				vm_value->writeBytes<Ret>(value);
 				return vm_value;
@@ -54,7 +56,7 @@ namespace vm::builtins {
 		template<class Ret, class... FunArgs>
 		base::Optional<Box<VmValue>> callUnpackArgs(
 			Ret (*function)(VMThread&, FunArgs...),
-			TypeCRef                         vm_return_type,
+			std::vector<TypeCRef>            vm_return_type,
 			VMProcess&                       process,
 			VMThread&                        thread,
 			const std::vector<Box<VmValue>>& args
@@ -135,7 +137,7 @@ namespace vm::builtins {
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		TypeCRef                         result_type,
+		std::vector<TypeCRef>            result_type,
 		VMProcess&                       process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
