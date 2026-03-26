@@ -55,12 +55,18 @@ private:
 		auto                 maybe_opcode = program_copy.replaceOpcode(main_function_id, 0, opcode);
 
 		assertTrue(maybe_opcode.has_value(), "Main does not seem to have any instructions");
-		
+
 		vm::low::MicroOpcode expected_opcode = vm::low::MicroOpcode::stepGil;
 		assertEqual(
 			maybe_opcode.value(),
 			expected_opcode,
-			base::strConcat("Main first istruction was not `", vm::low::OPCODE_NAMES[static_cast<usize>(expected_opcode)], "` but `", vm::low::OPCODE_NAMES[static_cast<usize>(maybe_opcode.value())], "`")
+			base::strConcat(
+				"Main first istruction was not `",
+				vm::low::OPCODE_NAMES[static_cast<usize>(expected_opcode)],
+				"` but `",
+				vm::low::OPCODE_NAMES[static_cast<usize>(maybe_opcode.value())],
+				"`"
+			)
 		);
 	}
 };
