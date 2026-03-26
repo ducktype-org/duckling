@@ -64,5 +64,7 @@ namespace vm::loader {
 		 */
 		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
+
+		CRef<code::ValidProgram> getHighProgram() const;
 	};
 }

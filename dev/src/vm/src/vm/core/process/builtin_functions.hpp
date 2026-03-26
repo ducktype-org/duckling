@@ -57,7 +57,12 @@ namespace vm::builtins {
 		CreateMutex,
 		LockMutex,
 		UnlockMutex,
-		DestroyMutex
+		DestroyMutex,
+		CreateCV,
+		WaitCV,
+		NotifyCV,
+		NotifyAllCV,
+		DestroyCV
 	};
 
 	/**
@@ -80,6 +85,11 @@ namespace vm::builtins {
 		static void builtinLockMutex(VMThread& process, u64 mutex_id);
 		static void builtinUnlockMutex(VMThread& process, u64 mutex_id);
 		static void builtinDestroyMutex(VMThread& process, u64 mutex_id);
+		static u64  builtinCreateCV(VMThread& process);
+		static void builtinWaitCV(VMThread& process, u64 cv_id, u64 mutex_id);
+		static void builtinNotifyCV(VMThread& process, u64 cv_id);
+		static void builtinNotifyAllCV(VMThread& process, u64 cv_id);
+		static void builtinDestroyCV(VMThread& process, u64 cv_id);
 	};
 
 	/**

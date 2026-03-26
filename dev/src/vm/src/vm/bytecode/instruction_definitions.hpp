@@ -455,6 +455,8 @@ DEF_INSTR(load_lany_lptr, (vm::opargs::StackLocalAny, dst), (vm::opargs::StackLo
 
 // stores reference to local object of any type T in pointer<T>
 DEF_INSTR(ref_lptr_lany, (vm::opargs::StackLocalPtr, dst_ptr), (vm::opargs::StackLocalAny, src))
+// stores reference to global object of any type T in pointer<T>
+DEF_INSTR(ref_lptr_gany, (vm::opargs::StackLocalPtr, dst_ptr), (vm::opargs::GlobalAny, src))
 
 // ========= STRUCTURE OPERATIONS ========
 

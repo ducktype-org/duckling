@@ -148,7 +148,7 @@ namespace compiler::helios {
 					          .as<tsh::FunctionAbstractType>();
 					auto param_symbol_type
 						= function_type.getParameterTypes().at(param.parameter_index);
-					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
+					return param_symbol_type;
 				}
 				variant_case(SelfParameter, param) {
 					const auto class_type
