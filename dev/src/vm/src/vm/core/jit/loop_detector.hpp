@@ -36,17 +36,24 @@ namespace vm::jit::cf {
         std::vector<Loop> findLoops(const ControlFlowGraph& cfg) {
             std::vector<Loop> loops;
 
+            calcPredecessors(cfg);
             calcDominators(cfg);
 
-            for (usize bid = 0; bid < cfg.size(); ++bid) {
-                const auto& block = cfg.getBlock(bid);
-                // Implementation of loop detection
+            for (BlockID bid = 0; bid < cfg.size(); ++bid) {
+                // PLACEHOLDER IMPLEMENTATION
+                for (BlockID pred : predecessors[bid]) {
+                    if (isDominatedBy(pred, bid)) {
+                        loops.emplace_back(cfg.getBlock(bid), cfg.getBlock(pred));
+                    }
+                }
             }
 
             return loops;
         }
 
       private:
+        const BlockID UNDEFINED = std::numeric_limits<BlockID>::max();
+
         std::vector<bool> visited;
         std::vector<u32> postorder;
         std::vector<BlockID> invPostorderMap;
@@ -102,11 +109,8 @@ namespace vm::jit::cf {
         }
 
         void calcImmediateDominators(const ControlFlowGraph& cfg) {
-            const BlockID UNDEFINED = std::numeric_limits<BlockID>::max();
             immDom.assign(cfg.size(), UNDEFINED);
-
             calcPostorder(cfg);
-            calcPredecessors(cfg);
 
             immDom[0] = 0; // Entry block dominates itself
             bool changed = true;
