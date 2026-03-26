@@ -8,7 +8,7 @@ use super::dependency;
 use crate::{
     DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail,
     quackpack::{
-        core::{Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles, RootDescription},
+        core::{Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles},
         schemas::manifest::{
             Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
         },
@@ -29,24 +29,23 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: &DuckCtx) -> Quac
         qp_bail!("missing the obligatory key `metadata.name`")
     };
     debug!("package name is `{name}`, version is `{version}`");
-    let root_description = RootDescription::new(name.into(), version);
     let mut scope = Scope::new();
     scope.push("dependencies".into());
     let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, &mut scope)?;
     scope.pop();
 
-    scope.push("dev_dependencies".into());
+    scope.push("dev-dependencies".into());
     let dev_deps = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, &mut scope)?;
     scope.pop();
 
     scope.push("features".into());
-    let features = parse_features(schema.features.as_ref())
-        .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
+    let features =
+        parse_features(schema.features.as_ref()).with_context(|| scope.make_context_string())?;
     scope.pop();
 
     scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), &mut scope)
-        .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
+        .with_context(|| scope.make_context_string())?;
     scope.pop();
 
     let authors = metadata
@@ -61,7 +60,8 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: &DuckCtx) -> Quac
     );
 
     Ok(Manifest::new(
-        root_description,
+        name.into(),
+        version,
         features,
         package_metadata,
         dependencies,
@@ -96,7 +96,7 @@ fn parse_profiles(
             scope.push(k.into());
             let result = (parse_profile(v))
                 .map(|new_v| (k.into(), new_v))
-                .with_context(|| format!("when parsing the field `{}`", scope.format()));
+                .with_context(|| scope.make_context_string());
             scope.pop();
             result
         })

@@ -44,6 +44,7 @@ namespace vm {
 	 */
 	class VMProcess final {
 		friend class VmValue;
+		friend class VMValueRef;
 
 	private:
 		PID my_pid;

@@ -312,8 +312,7 @@ clah::Clah getClahForMain() {
 
 					auto root = global_state::getMainPackage().root_module;
 
-					auto output_artifact
-						= query::entryPoint<driver::CompileModule>({ root, backend_type });
+					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
 
 					compiler::driver::exit();
