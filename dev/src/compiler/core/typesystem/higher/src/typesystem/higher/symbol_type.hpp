@@ -117,6 +117,30 @@ namespace compiler::tsh {
 			  leakage(leakage),
 			  uniqueness(uniqueness) {}
 
+		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type.
+		/**
+		 * @brief Creates a SymbolType from an AbstractType with a set of default symbol properties.
+		 *
+		 * This static factory method makes a SylbolType<> that has Direct reference kind, is
+		 * Mutable, NonLeaking and NonUnique and wrpas the given abstract type.
+		 *
+		 * @warning Do not wrap this method in "convenience" functions or implicit conversions.
+		 * Hiding this call behind a shorter or automated wrapper defeats its purpose of making the
+		 * transition from AbstractType to SymbolType explicit and conscious decision.
+		 *
+		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
+		 * @return A SymbolType<ABSTRACT_TYPE> with default symbol properties.
+		 */
+		static SymbolType<ABSTRACT_TYPE> withDefaults(const ABSTRACT_TYPE abstract_type) {
+			return SymbolType<ABSTRACT_TYPE>(
+				abstract_type,
+				ReferenceKind::Direct,
+				Mutability::Mutable,
+				Leakage::NonLeaking,
+				Uniqueness::NonUnique
+			);
+		}
+
 		/**
 		 * @brief Gets the underlying abstract type.
 		 * @return The underlying abstract type.
@@ -163,9 +187,9 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Determines weather the symbol has a trivial destructor.
-		 *
-		 * It is needed to determine if createing a lifetime flag is needed during LIR lowering.
+		 * @brief Determines weather the symbol has a trivial destructor i.e. destructor that does
+		 * not perform any operations. Importantly, It is used in LIR lowering to determine if
+		 * destructor calls and lifetime flag are needed.
 		 *
 		 * @return true if the symbol has a trivial destructor, false otherwise.
 		 */
@@ -184,6 +208,74 @@ namespace compiler::tsh {
 			// @TODO #1271: add more cases where destructor is trivial
 			// NOTE: abstract_type check should probably be the last one as it may be expensive
 			return false;
+		}
+
+		/**
+		 * @brief Determines weather the symbol has a default constructor. This is true for
+		 * primitive types or classes/arrays that store default constructible types, but not true
+		 * for types like `void`, references and boxes;
+		 *
+		 * @return true if the symbol has a default constructor, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isDefaultConstructible(query::Context& ctx) const {
+			// References and boxes are not default constructible.
+			if (reference_kind != ReferenceKind::Direct) return false;
+			return abstract_type.isDefaultConstructible(ctx);
+		}
+
+		/**
+		 * @brief Determines weather the type has a trivial zero constructor, meaning it can be
+		 * safely zero initialized and doesn't need a specially generated default constructor.
+		 * This is true for primitive types, strings, lists and static arrays storing other
+		 * trivially zero initializable types, but also classes with all of their fields being zero
+		 * initializable and every one of them not having an initial value. For example:
+		 * - `class T { a: i64 = 1; }` - this is not trivially zero initializable
+		 * - `class U { b: i64; }` - this is trivially zero initializable
+		 * - `class V { t: T; }` - this is not trivially zero initializable cause it's field type
+		 * isn't.
+		 * - `class V { u: U; }` - this is trivially zero initializable cause `U.b` doesn't have an
+		 * initial value.
+		 *
+		 * @return true if the type can be default initialized by zeros, false otherwise
+		 */
+		[[nodiscard]]
+		bool isTriviallyZeroInitializable(query::Context& ctx) const {
+			// References and boxes are not default constructible.
+			if (reference_kind != ReferenceKind::Direct) return false;
+			return abstract_type.isTriviallyZeroInitializable(ctx);
+		}
+
+		/**
+		 * @brief Checks if a value of this symbol can be copied.
+		 *
+		 * - Direct values are copyable if their underlying abstract type is copyable.
+		 * - References are always copyable (the reference itself is copied).
+		 * - Boxes are copyable if their underlying abstract type is copyable (implies a deep copy).
+		 * @return True if the symbol is copyable, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isCopyable(query::Context& ctx) const {
+			// References are always copyable, just a pointer copy.
+			if (reference_kind == ReferenceKind::Ref) return true;
+			// Box is copyable if the inner abstract type is. Although it requires a deep copy.
+			return abstract_type.isCopyable(ctx);
+		}
+
+		/**
+		 * @brief Checks if a value of this symbol can be copied trivially by just copying the
+		 * values bytes.
+		 *
+		 * - Direct values are trivially copyable if their underlying abstract type is.
+		 * - References are trivially copyable.
+		 * - Boxes are never trivially copyable as they require heap allocation and a deep copy.
+		 * @return True if the symbol is trivially copyable, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isTriviallyCopyable(query::Context& ctx) const {
+			if (reference_kind == ReferenceKind::Ref) return true;
+			if (reference_kind == ReferenceKind::Box) return false;
+			return abstract_type.isTriviallyCopyable(ctx);
 		}
 
 		[[nodiscard]]

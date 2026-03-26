@@ -73,6 +73,9 @@ namespace concurrent::worker {
 		 * if the worker has no tasks - once in the method call, and later when the worker
 		 * loop checks for tasks. If the first call adds tasks, then the second call will not
 		 * happen.
+		 * @warning The lifetime of the variables used in the callback must be guaranteed to be
+		 * longer than the lifetime of a callback inside a worker. This means that you need to make
+		 * sure to reset the callback before the destruction of the variables
 		 */
 		void setNoTasksCallback(WRef worker, const NoTasksCallback& callback);
 

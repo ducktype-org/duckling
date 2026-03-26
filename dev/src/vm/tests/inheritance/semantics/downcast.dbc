@@ -26,7 +26,7 @@ function main { i64, ptr_argv } -> i64 {
 	setVTable_lptr_type helper_dog, Dog;
 	upcast_lptr_lptr animal, helper_dog;
 
-	downcast_lptr_lptr_type cat, animal, Cat;  # cat := static_cast<CatPtr>(animal)
+	downcast_lptr_lptr cat, animal;  # cat := static_cast<CatPtr>(animal)
 	cmpNull_lptr cat;  # flag := cat != nullptr
 
 	# Check if succeeded
@@ -34,7 +34,7 @@ function main { i64, ptr_argv } -> i64 {
 		add_l64_imm x, 10;
 	label notCat;
 
-	downcast_lptr_lptr_type dog, animal, Dog;  # dog := static_cast<DogPtr>(animal)
+	downcast_lptr_lptr dog, animal;  # dog := static_cast<DogPtr>(animal)
 	cmpNull_lptr dog;  # flag := dog != nullptr
 
 	# Check if succeeded

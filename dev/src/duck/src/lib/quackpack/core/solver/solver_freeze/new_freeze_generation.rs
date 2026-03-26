@@ -97,10 +97,11 @@ impl SolverFreeze {
             .context_internal("Freeze package with no manifest")?;
         let base_pkg_features = self.current_pkg_features(new_pkg_freezes, &base_pkg)?;
 
-        for (dep_name, dependency) in base_manifest.dependencies().all_dependencies() {
+        for dependency in base_manifest.dependencies().all_dependencies() {
             if !dependency.is_enabled_for(base_pkg_features.clone()) {
                 continue;
             }
+            let dep_name = dependency.effective_name();
             let realization = self.get_realization(&base_pkg, dep_name)?;
             Self::add_realization(new_pkg_freezes, &base_pkg, dep_name, realization)?;
             let forced_features = dependency.enabled_features(base_pkg_features.clone());
@@ -139,13 +140,13 @@ impl SolverFreeze {
     fn get_realization(
         &self,
         pkg: &ExpandedPackage,
-        dep_name: &StrId,
+        dep_name: StrId,
     ) -> QuackResult<&ExpandedPackage> {
         self.package_freezes
             .get(pkg)
             .context_internal("Current package does not appear in the freeze")?
             .dependencies_realization
-            .get(dep_name)
+            .get(&dep_name)
             .context_internal("No realisation for package")
     }
 
@@ -154,14 +155,14 @@ impl SolverFreeze {
     fn add_realization(
         new_pkg_freezes: &mut HashMap<ExpandedPackage, SolverPackageFreeze>,
         pkg: &ExpandedPackage,
-        dep_name: &StrId,
+        dep_name: StrId,
         realization: &ExpandedPackage,
     ) -> QuackResult<()> {
         new_pkg_freezes
             .get_mut(pkg)
             .context_internal("Current package does not appear in the new package freezes map")?
             .dependencies_realization
-            .entry(*dep_name)
+            .entry(dep_name)
             .or_insert(*realization);
         Ok(())
     }

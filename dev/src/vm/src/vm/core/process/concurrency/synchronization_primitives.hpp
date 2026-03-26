@@ -1,6 +1,10 @@
+#pragma once
+
+#include "condition_variable.hpp"
+
 #include <base/collections/maps.hpp>
 #include <base/collections/object_pool.hpp>
-#include <base/pointers/shared_box.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <mutex>
@@ -12,6 +16,12 @@ namespace vm {
 		 * @brief Pool for mutexes used in the process.
 		 */
 		base::StableObjectPool<std::mutex, u64, false> mutex_pool;
+
+		/**
+		 * @brief Pool for condition variables used in the process.
+		 */
+		base::StableObjectPool<ConditionVariable, u64, false> cv_pool;
+
 
 	public:
 		/**
@@ -28,5 +38,21 @@ namespace vm {
 		 * @brief Removes mutex from pool.
 		 */
 		void removeMutex(usize);
+
+
+		/**
+		 * @brief Getter for condition variables in the pool.
+		 */
+		base::Ref<ConditionVariable> getCV(usize cv_id);
+
+		/**
+		 * @brief Adds new condition variable into pool.
+		 */
+		usize addCV();
+
+		/**
+		 * @brief Removes condition variable from pool.
+		 */
+		void removeCV(usize);
 	};
 }
