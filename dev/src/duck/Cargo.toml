@@ -17,7 +17,7 @@ clap_complete = { version = "4.5.65", optional = true }
 console = "0.16.2"
 curl = "0.4.49"
 dialoguer = "0.12.0"
-flate2 = "1.1.9"
+flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
 git2 = "0.20.3"
 indicatif = "0.18.3"
 itertools = "0.14.0"
@@ -36,7 +36,7 @@ serde_yaml_ng = "0.10.0"
 sha2 = "0.10.9"
 shellexpand = "3.1.1"
 soft-canonicalize = "0.5.4"
-tar = "0.4.44"
+tar = { version = "0.4.44", default-features = false }
 tempfile = "3.24.0"
 toml = "1.0.1"
 tracing = "0.1.44"
@@ -52,7 +52,8 @@ httpmock = { version = "0.8.3", default-features = false }
 [features]
 shell-completion = ["dep:clap_complete"]
 
-bundled-all = ["bundled-sqlite3", "bundled-openssl", "bundled-git2", "bundled-ssh2"]
+bundled-all = ["bundled-sqlite3", "bundled-openssl", "bundled-git2", "bundled-ssh2", "bundled-curl"]
+bundled-curl = ["curl/static-curl", "curl/force-system-lib-on-osx"]
 bundled-git2 = ["libgit2-sys/vendored"]
 bundled-openssl = ["openssl/vendored"]
 bundled-sqlite3 = ["rusqlite/bundled"]
