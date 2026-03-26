@@ -9,14 +9,13 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <mutex>
+#include <thread>
 
 namespace query::internal {
-
-	namespace {
-		usize taskHash(const query::internal::NodeID& node) {
-			return std::hash<query::internal::NodeID>{}(node);
-		}
+	usize TaskPool::taskHash(const query::internal::NodeID& node) {
+		return std::hash<query::internal::NodeID>{}(node);
 	}
 
 	TaskPool::TaskPool():
@@ -63,6 +62,10 @@ namespace query::internal {
 		task_cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
+	void TaskPool::waitForFastTask(NodeID id) {
+		while (!isTaskDone(id)) std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+	}
+
 	void TaskPool::invalidateTask(NodeID id) {
 		CORE_ASSERT(
 			!id.q_id.getData().isInputQuery(), "Input query nodes are not present in the task pool."
@@ -76,54 +79,8 @@ namespace query::internal {
 	}
 
 	void TaskPool::query(const Task& task) {
-		bool task_done = tryExecuteTask(task);
-		if (not task_done) waitForTask(task.id);
-	}
-
-	bool TaskPool::tryExecuteTask(const Task& task) {
-		// @note This can also be achieved via setting to `NotStarted` and then using
-		// compareAndExchange(expected=NotStarted, desired=InProgress) and this is strongly
-		// preferred by the LLM models (but using `maybePut` has the same semantics but on adding
-		// instead of comparing).
-
-		bool task_already_done = false;
-
-		auto change_status_result = task_status_map.maybePutAndUpdate(
-			task.id,
-			TaskStatus::InProgress,
-			[&task_already_done](base::CRef<TaskStatus> existing_status) {
-				if (*existing_status == TaskStatus::Done) {
-					task_already_done = true;
-					return;
-				}
-			}
-		);
-
-		if (task_already_done) {
-			// The task was already done, we can return immediately
-			return true;
-		}
-
-		// This insert decides who gets to execute the task.
-		if (change_status_result.toOpt().has_value()) {
-			// The key was inserted by us, we can execute the task
-			auto wd = concurrent::worker::Worker::getCurrentWorker();
-
-			task.work(wd);
-
-			task_status_map.update(task.id, TaskStatus::Done);
-			{
-				auto  task_hash  = taskHash(task.id);
-				auto& task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
-				auto& task_cv    = task_completed_cv.at(task_hash % TASK_SHARDS);
-
-				std::lock_guard lock(task_mutex);
-				task_cv.notify_all();
-			}
-			return true;
-		}
-
-		return false;
+		bool task_done = tryExecuteTask<true>(task);
+		if (not task_done) waitForFastTask(task.id);
 	}
 
 	TaskHandle TaskPool::schedule(Task&& task) {

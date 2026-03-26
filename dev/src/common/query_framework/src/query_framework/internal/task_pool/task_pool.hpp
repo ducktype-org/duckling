@@ -142,6 +142,11 @@ namespace query::internal {
 		 */
 		void waitForTask(NodeID id);
 
+		/**
+		 * @brief Waits until some worker executed the task.
+		 */
+		void waitForFastTask(NodeID id);
+
 		void invalidateTask(NodeID id);
 
 	private:
@@ -164,20 +169,6 @@ namespace query::internal {
 		base::Optional<Task> tryStealFromWorker(WRef worker_ref, NodeID task_id);
 
 		/**
-		 * @brief Tries to execute the given task.
-		 * If the task is already in progress or done, does nothing.
-		 * If the task is not started, executes it.
-		 * @param task The task to execute.
-		 * @return True if the task has been completed by us or was already
-		 * done in the middle of the function.
-		 * Otherwise returns false.
-		 *
-		 * So if returns true we know for sure that the task is done,
-		 * but if returns false then we don't know if the task is done or still in progress.
-		 */
-		bool tryExecuteTask(const Task& task);
-
-		/**
 		 * @brief Add a task to a worker's local pool.
 		 * @param worker_ref The worker ref.
 		 * @param task The task to add.
@@ -189,6 +180,70 @@ namespace query::internal {
 		 * @param task The task to add.
 		 */
 		void addToGlobalPool(Task&& task);
+
+		/**
+		 * @brief Hash of a task.
+		 */
+		usize taskHash(const query::internal::NodeID& node);
+
+		/**
+		 * @brief Tries to execute the given task.
+		 * @param task The task to execute.
+		 * @return True if the task has been completed by us or was already
+		 * done in the middle of the function.
+		 * Otherwise returns false.
+		 *
+		 * So if returns true we know for sure that the task is done,
+		 * but if returns false then we don't know if the task is done or still in progress.
+		 */
+		template<bool isFastTask = false>
+		bool tryExecuteTask(const Task& task) {
+			// @note This can also be achieved via setting to `NotStarted` and then using
+			// compareAndExchange(expected=NotStarted, desired=InProgress) and this is strongly
+			// preferred by the LLM models (but using `maybePut` has the same semantics but on
+			// adding instead of comparing).
+
+			bool task_already_done = false;
+
+			auto change_status_result = task_status_map.maybePutAndUpdate(
+				task.id,
+				TaskStatus::InProgress,
+				[&task_already_done](base::CRef<TaskStatus> existing_status) {
+					if (*existing_status == TaskStatus::Done) {
+						task_already_done = true;
+						return;
+					}
+				}
+			);
+
+			// The task was already done, we can return immediately
+			if (task_already_done) return true;
+
+			// This insert decides who gets to execute the task.
+			if (change_status_result.toOpt().has_value()) {
+				// The key was inserted by us, we can execute the task
+				auto wd = concurrent::worker::Worker::getCurrentWorker();
+
+				task.work(wd);
+
+				task_status_map.update(task.id, TaskStatus::Done);
+				if (isFastTask) {
+					// Fast tasks are not awaited on, so we can skip the notification to save time.
+					return true;
+				}
+				{
+					auto  task_hash  = taskHash(task.id);
+					auto& task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
+					auto& task_cv    = task_completed_cv.at(task_hash % TASK_SHARDS);
+
+					std::lock_guard lock(task_mutex);
+					task_cv.notify_all();
+				}
+				return true;
+			}
+
+			return false;
+		}
 
 		/**
 		 * @brief Gets the reference of a free worker if available.
