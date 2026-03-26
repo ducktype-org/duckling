@@ -14,7 +14,6 @@
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
-	 * @param code_copy_mode Allows created process to edit loaded code. Defaults to `false`.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
