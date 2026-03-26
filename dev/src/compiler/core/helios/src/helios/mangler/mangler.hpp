@@ -40,7 +40,7 @@ namespace compiler::helios::mangler {
 			RELEASE_NOEXCEPT;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const;
+		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
 	/**

@@ -50,8 +50,8 @@ namespace compiler::helios::mangler {
 		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
 	}
 
-	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
-		return hashing::justHash<hashing::SHA256>(*this).data.at(0);
+	base::Bit256 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
+		return hashing::justHash<hashing::SHA256>(*this);
 	}
 
 	namespace internal {
