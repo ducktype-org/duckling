@@ -109,7 +109,7 @@ namespace vm::builtins {
 	void FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
 		thread.releaseGil();
 		vm::api::join(thread.process.getPID(), api::ThreadID{ thread_id });
-		thread.keepOrAcquireGil();
+		thread.acquireGil();
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
@@ -122,7 +122,7 @@ namespace vm::builtins {
 		if (!mutex->try_lock()) {
 			thread.releaseGil();
 			mutex->lock();
-			thread.keepOrAcquireGil();
+			thread.acquireGil();
 		}
 	}
 
@@ -148,22 +148,22 @@ namespace vm::builtins {
 			cv->wait(*mutex);
 		} catch (const vm::exceptions::VMRuntimeException&) {
 			// Ensure the GIL is held again before propagating VM runtime exceptions.
-			thread.keepOrAcquireGil();
+			thread.acquireGil();
 			throw;
 		} catch (const std::exception& e) {
 			// Reacquire GIL and wrap standard exceptions so the VM can report ExecutionPanicked.
-			thread.keepOrAcquireGil();
+			thread.acquireGil();
 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
 			msg += e.what();
 			throw vm::exceptions::VMRuntimeException(std::move(msg));
 		} catch (...) {
 			// Reacquire GIL and convert unknown exceptions into a VMRuntimeException.
-			thread.keepOrAcquireGil();
+			thread.acquireGil();
 			throw vm::exceptions::VMRuntimeException(
 				"builtinWaitCV failed during condition variable wait with an unknown exception"
 			);
 		}
-		thread.keepOrAcquireGil();
+		thread.acquireGil();
 	}
 
 	void FunctionHandlers::builtinNotifyCV(VMThread& thread, u64 cv_id) {
