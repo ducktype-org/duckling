@@ -54,6 +54,7 @@ namespace pst {
 		static bool untilUniversalEnd(const TokenStream&, i64);
 		static bool untilUniversalAllowBlockEnd(const TokenStream&, i64);
 		static bool untilUniversalAllowCommaEnd(const TokenStream&, i64);
+		static bool untilUniversalAllowCommaAndBlockEnd(const TokenStream&, i64);
 		static bool untilSemicolon(const TokenStream&, i64);
 		static bool untilForTypeEnd(const TokenStream&, i64);
 		static bool untilExtendsEnd(const TokenStream&, i64);
@@ -140,6 +141,21 @@ namespace pst {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolderLowerLevel() final = default;
+	};
+
+	/**
+	 * @brief Secondary entry point to expression parsing that allows comma expressions but doesn't
+	 * allow for assignment expressions top-level, allows block expressions.
+	 */
+	class CommaAllowBlocksExprHolder final:
+		  public ExprHolderTemplate<
+			  CommaAllowBlocksExprHolder,
+			  ExprParserHelper::parseComma,
+			  ExprParserHelper::untilUniversalAllowCommaAndBlockEnd,
+			  true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~CommaAllowBlocksExprHolder() final = default;
 	};
 
 	/**

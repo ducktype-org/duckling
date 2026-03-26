@@ -76,6 +76,10 @@ namespace compiler::repl {
 	 * @brief Classify a single-statement module into expression/instruction/definition.
 	 *
 	 * The module is expected to contain exactly one top-level statement.
+	 *
+	 * @note Assignment syntax is parsed as ExprStmt, but in REPL/script execution it must flow
+	 * through instruction statement compilation (where assignment lowering is implemented). For
+	 * this reason, classifySingleStatement() special-cases assignment ExprStmt as instruction.
 	 */
 	std::expected<SingleStatementInfo, std::string> classifySingleStatement(
 		query::Context& ctx, frontend::ModuleID module_id

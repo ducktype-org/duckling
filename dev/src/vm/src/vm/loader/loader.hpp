@@ -73,5 +73,7 @@ namespace vm::loader {
 		template<LoadMode = LoadMode::Normal>
 		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
+
+		CRef<code::ValidProgram> getHighProgram() const;
 	};
 }

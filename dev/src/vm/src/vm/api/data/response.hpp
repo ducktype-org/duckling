@@ -7,7 +7,7 @@
 
 #include <diagnostic/source_position.hpp>
 
-#include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/thread/vmvalueref.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
@@ -55,6 +55,21 @@ namespace vm::api {
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_name);
 		};
 
+		struct NumberOfCurrentStackFrames {
+			u64 number_of_stack_frames;
+		};
+
+		struct StackFrameData {
+			struct FrameVar {
+				// @todo: #2264 should express name in CodeCollection instead of offset in LowVMProgram
+				u64        offset = 0;
+				VMValueRef value;
+			};
+
+			base::StrID           function_name;
+			std::vector<FrameVar> frame_vars;
+		};
+
 		using Boolean = bool;
 	}
 
@@ -67,5 +82,7 @@ namespace vm::api {
 		response::VmValue,
 		response::Boolean,
 		ThreadID,
+		response::NumberOfCurrentStackFrames,
+		response::StackFrameData,
 		ExitValue>;
 }

@@ -205,6 +205,10 @@ CRef<compiler::FatMicroMapping> Loader::getMapping() const { return compiler.get
 
 vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
 
+base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
+	return &validated_high_program;
+}
+
 template std::expected<void, LoaderLogger> Loader::loadAndCompile<
 	LoadMode::Normal>(const std::vector<fs::File>&);
 template std::expected<void, LoaderLogger> Loader::loadAndCompile<
