@@ -22,7 +22,6 @@ pub fn get_possible_realizations(
     if dependency_description.is_pinned() {
         // For a pinned dependency only one package can be a realization.
         let version = dependency_description
-            .desc()
             .versions()
             .first()
             .context_internal("Pinned dependency should have exactly one version specified")?;
@@ -44,7 +43,6 @@ pub fn get_possible_realizations(
             vec![None]
         } else {
             dependency_description
-                .desc()
                 .versions()
                 .iter()
                 .copied()
@@ -124,8 +122,7 @@ dependencies:
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
-            .all_dependencies()
-            .get(&StrId::new("b"))
+            .get_by_name(StrId::new("b"))
             .unwrap();
         let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
@@ -176,8 +173,7 @@ dependencies:
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
-            .all_dependencies()
-            .get(&StrId::new("b"))
+            .get_by_name(StrId::new("b"))
             .unwrap();
         let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
