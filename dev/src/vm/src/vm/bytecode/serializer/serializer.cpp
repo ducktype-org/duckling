@@ -113,7 +113,14 @@ namespace vm::code {
 				out << param.str.strView();
 				first = false;
 			}
-			out << " } -> " << function.signature.result_type[0].str.strView() << " {\n";
+			out << " } -> { ";
+			first = true;
+			for (const auto& param: function.signature.result_type) {
+				if (!first) out << ", ";
+				out << param.str.strView();
+				first = false;
+			}
+			out << " } {\n";
 
 			indentUp();
 			displayCode();
