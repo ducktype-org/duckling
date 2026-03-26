@@ -175,7 +175,17 @@ namespace vm::code {
 					out << param.strView();
 					first = false;
 				}
-				out << " } -> " << fun.result[0].strView();
+				out << " } -> {";
+				first = true;
+				for (const auto& reslts: fun.result) {
+					if (first)
+						out << " ";
+					else
+						out << ", ";
+					out << reslts.strView();
+					first = false;
+				}
+				out << " }";
 			}
 
 			void operator()(const OpaqueType& type) const {

@@ -129,7 +129,7 @@ private:
 		loadInvalidDbc(
 			"void_instantiation.dbc",
 			{
-				vm::code::UninstantiableValueError::ERR_MSG,
+				vm::code::UnknownTypeError::ERR_MSG,
 			}
 		);
 		loadInvalidDbc(
@@ -141,7 +141,7 @@ private:
 		loadInvalidDbc(
 			"void_arg.dbc",
 			{
-				vm::code::VoidTypeArgumentError::ERR_MSG,
+				vm::code::UnknownTypeError::ERR_MSG,
 			}
 		);
 	}

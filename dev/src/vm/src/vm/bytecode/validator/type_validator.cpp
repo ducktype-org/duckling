@@ -328,8 +328,8 @@ namespace {
 				for (auto& param: function.parameters)
 					if (!tod_types.contains(param)) throw UnknownSubtypeError(function, param);
 				
-				for (auto& ret : function.result)
-					if (!tod_types.contains(ret)) throw UnknownSubtypeError(function, ret);	
+				for (auto& reslt : function.result)
+					if (!tod_types.contains(reslt)) throw UnknownSubtypeError(function, reslt);	
 			}
 			variant_case(VariantType, variant) {
 				if (variant.variant_alternatives.size() < 2)

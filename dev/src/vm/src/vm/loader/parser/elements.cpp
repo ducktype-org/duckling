@@ -705,9 +705,35 @@ namespace vm::loader::parser {
 				}
 			}
 			state.goUpAndSkip();
-			tpc::Identifier result;
-			state.parse().one(&result);
-			auto tp         = FunctionType{ name, arguments, result };
+
+			std::vector<base::StrID> returned;
+			if (state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.goDown();
+				while (state.notEmpty()) {
+					tpc::Identifier field_type;
+					state.parse().one(&field_type);
+					returned.emplace_back(field_type.value);
+
+					if (state.empty()) break;
+					if (state[0].is(lang_def::Special::Comma)) {
+						state.parse().one(lang_def::Special::Comma);
+					} else {
+						state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Expected comma or `}` after here.", state.getPosition()
+						));
+						state.tokens().skip();
+					}
+				}
+				state.goUpAndSkip();
+			} else {
+				tpc::Identifier result;
+				state.parse().one(&result);
+				if (result.value != "void") {
+					returned.emplace_back(result.value);
+				}
+			}
+
+			auto tp         = FunctionType{ name, arguments, returned };
 			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
