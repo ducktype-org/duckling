@@ -65,10 +65,10 @@ private:
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 4) return 7; // Mapped -> Not mapped
-			if (x == 7) return 5; // Not mapped -> Mapped
-			if (x == 5) return 9; // Mapped -> Not mapped
-			if (x == 9) return 4; // Not mapped -> Mapped
+			if (x == 4) return 7;  // Mapped -> Not mapped
+			if (x == 7) return 5;  // Not mapped -> Mapped
+			if (x == 5) return 9;  // Mapped -> Not mapped
+			if (x == 9) return 4;  // Not mapped -> Mapped
 			this->fail("Unexpected line number: " + std::to_string(x));
 			CORE_UNREACHABLE();
 		};
