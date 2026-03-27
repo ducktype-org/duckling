@@ -85,9 +85,6 @@ namespace vm {
 		 */
 		template<class T>
 		T readBytes() const {
-			CORE_ASSERT(
-				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
-			);
 			CORE_ASSERT(sizeof(T) <= data.size(), "VmValue: Out of bounds read");
 			return vm::safeReadPointerBytes<T>(data.data());
 		}
