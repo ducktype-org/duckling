@@ -38,7 +38,7 @@ namespace vm::loader::compiler {
 			base::HashMap<base::StrID, usize>                     label_to_code_offset{};
 			base::HashMap<base::StrID, usize>                     varname_to_stack_offset{};
 			base::HashMap<usize, usize>                           high_to_low{};
-			std::map<usize, EntryMicroToFat, std::greater<usize>> low_to_high{};
+			std::map<usize, EntryMicroToFat, std::greater<>> low_to_high{};
 		};
 
 		struct OriginCtx {
@@ -49,7 +49,7 @@ namespace vm::loader::compiler {
 			};
 
 			using ReversedFileToFatMap
-				= std::map<FileCoordinates, FatPosition, std::greater<FileCoordinates>>;
+				= std::map<FileCoordinates, FatPosition, std::greater<>>;
 			ReversedFileToFatMap coord_to_fat;
 		};
 
