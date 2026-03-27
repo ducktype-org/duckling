@@ -125,42 +125,42 @@ impl Terminal {
     delegate_styles! {
         FunctionName: error,
         VerboseName: error_verbose,
-        Prefix: "Error:",
+        Prefix: "error:",
         OptionalStyles: red + bold,
     }
 
     delegate_styles! {
         FunctionName: warning,
         VerboseName: warning_verbose,
-        Prefix: "Warning:",
+        Prefix: "warning:",
         OptionalStyles: yellow + bold,
     }
 
     delegate_styles! {
         FunctionName: info,
         VerboseName: info_verbose,
-        Prefix: "Info:",
+        Prefix: "info:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: note,
         VerboseName: note_verbose,
-        Prefix: "Note:",
+        Prefix: "note:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: hint,
         VerboseName: hint_verbose,
-        Prefix: "Hint:",
+        Prefix: "hint:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: critical,
         VerboseName: critical_verbose,
-        Prefix: "Critical:",
+        Prefix: "critical:",
         OptionalStyles: red + bold + reverse,
     }
 

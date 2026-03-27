@@ -7,7 +7,7 @@ Tests:
         ExitCode: 1
         Err:
           String: |
-            Error: No such command as \`x\`. Did you mean:
+            error: No such command as \`x\`. Did you mean:
                    - \`b\`
                    - \`r\`?
 
@@ -15,7 +15,7 @@ Tests:
         test_cmd: not-a-subcmd
         ExitCode: 1
         Err:
-          String: 'Error: No such command: \`not-a-subcmd\`\n'
+          String: 'error: No such command: \`not-a-subcmd\`\n'
 
       invalid-config:
         before_cmd: export DUCK_HOME=.
@@ -23,7 +23,7 @@ Tests:
         ExitCode: 0
         Output:
           String: |
-            Error: when trying to check the maximum typos fixing distance
+            error: when trying to check the maximum typos fixing distance
 
               Caused by:
                 the key \`security.typos.max_distance\` expects an integer, not a string
