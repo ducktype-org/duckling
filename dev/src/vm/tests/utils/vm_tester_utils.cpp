@@ -114,6 +114,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 		ASSERT_EQUAL_PRINT(wanted_output, program_output->output);
 	}
 	const auto exit_value = vm::api::getExitValue(pid).transform([&](vm::api::ExitValue values) {
+		ASSERT_TRUE(values.size() == 1);
 		auto& value = values.at(0);
 		ASSERT_TRUE(value->type->getName().str() == "i64");
 		auto exit_code = value->readBytes<i64>();
@@ -180,7 +181,7 @@ void VmTestSuite::runFunctionSynchronouslyAsTest(
 
 	auto exit_value = run_result.value();
 	if (expected_exit_code.has_value()) {
-		ASSERT_TRUE(exit_value.size());
+		ASSERT_EQUAL(exit_value.size(), 1);
 		ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value.at(0)->readBytes<i64>());
 	}
 	else

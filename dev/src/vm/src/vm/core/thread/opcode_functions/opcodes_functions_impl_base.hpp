@@ -420,6 +420,7 @@ namespace vm {
 
 			std::vector<TypeCRef> ret_types = {};
 			if (function_signature->result_type.size()) {
+				CORE_ASSERT(function_signature->result_type.size() == 1, "No support for returning multiple types");
 				ret_types.emplace_back(thread.executing_program->getTypes().at(function_signature->result_type.at(0)));
 			}
 
@@ -453,6 +454,7 @@ namespace vm {
 
 			auto arg_count = ext_func->parameters.size();
 			bool is_void   = ext_func->result_type.size() == 0;
+			CORE_ASSERT(ext_func->result_type.size() <= 1, "C function cannot return more than 1 type");
 
 			if (arg_count == 0 && is_void) {
 				// Special case: void function with no arguments.

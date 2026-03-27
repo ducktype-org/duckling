@@ -165,6 +165,7 @@ i64 DuckVMRepl::runOnVm(const std::string& func_name, OwnedArgumentList& func_ar
 
 	auto exit_code_response = vm::api::getExitValue(pid);
 	if (!exit_code_response.has_value()) throw ReplEmptyExitCodeException();
+	if (exit_code_response.value().size() != 1) throw ReplEmptyExitCodeException();
 	// @TODO: Improve this to allow other types as well. This should change in #1132.
 	if (exit_code_response.value().at(0)->type->getName() != base::StrID("i64"))
 		throw ReplWrongReturnTypeException();

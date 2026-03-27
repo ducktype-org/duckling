@@ -188,7 +188,6 @@ namespace vm::detail {
 	)
 
 
-
 /**
  * @brief Helper macro to create a vm::code::ExternalCFunction instance for registering a C/C++
  *        function with the VM.

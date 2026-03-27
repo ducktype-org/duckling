@@ -1633,7 +1633,8 @@ class FunctionValidator {
 
 	void validateSignature() {
 		if (function.name.str == base::StrID("main")
-		    && function.signature.result_type[0].str != base::StrID("i64")) {
+			&& !(function.signature.result_type.size() == 1
+		    && function.signature.result_type[0].str == base::StrID("i64"))) {
 			throw InvalidMainReturnType(function.signature);
 		}
 		for (const auto& param_type: function.signature.parameters) {

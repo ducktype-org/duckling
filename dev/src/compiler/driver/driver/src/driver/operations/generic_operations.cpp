@@ -297,6 +297,7 @@ namespace compiler::driver {
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .transform([](vm::api::ExitValue exit_values) {
+				CORE_ASSERT(exit_values.size() == 1, "Support for multtiple retvals in compiler not implemented");
 				return RunOutput{ .exit_code
 				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
 			});
