@@ -51,9 +51,9 @@ namespace vm {
 			}
 
 			variant_case_novalue(api::request::Step) {
-				auto response = stepMainVMThread();
+				auto response = stepVMThread(getMainThreadID());
 				if (response) return std::unexpected(*response);
-				return getMainVMThreadCurrentPosition();
+				return getVMThreadCurrentPosition(getMainThreadID());
 			}
 
 			variant_case(api::request::LoadFiles, load_request) {
@@ -71,7 +71,7 @@ namespace vm {
 			variant_case_novalue(api::request::Stop) { return stop(); }
 
 			variant_case_novalue(api::request::ExecutionPosition) {
-				return getMainVMThreadCurrentPosition();
+				return getVMThreadCurrentPosition(getMainThreadID());
 			}
 
 			variant_case_novalue(api::request::WaitForBreakpoint) {
@@ -81,7 +81,7 @@ namespace vm {
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "unexpected status response" } });
 
-				return getMainVMThreadCurrentPosition();
+				return getVMThreadCurrentPosition(getMainThreadID());
 			}
 
 			variant_case(api::request::Input, input_request) { return input(input_request); }
@@ -151,7 +151,7 @@ namespace vm {
 		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
 		io.inputStream() << request.input;
-		notifyPausedMainVMThread();
+		for (auto id: getAllThreadIDs()) notifyPausedVMThread(id);
 		return api::Response(api::response::Empty());
 	}
 

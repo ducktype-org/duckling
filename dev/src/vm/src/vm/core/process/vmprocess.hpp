@@ -142,15 +142,13 @@ namespace vm {
 
 		virtual base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) = 0;
 
-		virtual base::Optional<api::ApiError> stepMainVMThread() = 0;
+		virtual base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) = 0;
 
 		virtual std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
 			api::ThreadID thread_id
 		) = 0;
 
-		virtual std::expected<api::Response, api::ApiError> getMainVMThreadCurrentPosition() = 0;
-
-		virtual void notifyPausedMainVMThread() = 0;
+		virtual void notifyPausedVMThread(api::ThreadID thread_id) = 0;
 
 		virtual void waitForBreakpoint() = 0;
 
@@ -168,6 +166,10 @@ namespace vm {
 		virtual std::expected<api::Response, api::ApiError> getVMValueForType(
 			const std::string& type_name
 		) = 0;
+
+		virtual std::vector<api::ThreadID> getAllThreadIDs() = 0;
+
+		virtual api::ThreadID getMainThreadID() = 0;
 
 	public:
 		ProcIO& getIO();

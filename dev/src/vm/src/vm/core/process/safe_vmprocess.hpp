@@ -100,14 +100,12 @@ namespace vm {
 
 		base::Optional<api::ApiError> resumeVMThread(api::ThreadID thread_id) override;
 
-		base::Optional<api::ApiError> stepMainVMThread() override;
+		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
 		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
 		) override;
 
-		std::expected<api::Response, api::ApiError> getMainVMThreadCurrentPosition() override;
-
-		void notifyPausedMainVMThread() override;
+		void notifyPausedVMThread(api::ThreadID thread_id) override;
 
 		void waitForBreakpoint() override;
 
@@ -116,6 +114,10 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
+
+		std::vector<api::ThreadID> getAllThreadIDs() override;
+
+		api::ThreadID getMainThreadID() override;
 
 	public:
 		SafeVMProcess(PID my_pid);

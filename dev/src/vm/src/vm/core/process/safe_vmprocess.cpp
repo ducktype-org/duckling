@@ -105,7 +105,9 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	void SafeVMProcess::notifyPausedMainVMThread() { getMainVMThread().notifyPaused(); }
+	void SafeVMProcess::notifyPausedVMThread(api::ThreadID thread_id) {
+		getVMThreadByID(thread_id).notifyPaused();
+	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
 		for (auto& thread: vm_threads) {
@@ -240,8 +242,8 @@ namespace vm {
 		return {};
 	}
 
-	base::Optional<api::ApiError> SafeVMProcess::stepMainVMThread() {
-		auto response = getMainVMThread().step();
+	base::Optional<api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
+		auto response = getVMThreadByID(thread_id).step();
 		if (!response) return api::ApiError{ api::OtherError{ "step error" } };
 		return {};
 	}
@@ -250,10 +252,6 @@ namespace vm {
 		api::ThreadID thread_id
 	) {
 		return getVMThreadByID(thread_id).getCurrentPosition();
-	}
-
-	std::expected<api::Response, api::ApiError> SafeVMProcess::getMainVMThreadCurrentPosition() {
-		return getMainVMThread().getCurrentPosition();
 	}
 
 	void SafeVMProcess::waitForBreakpoint() {
@@ -303,5 +301,26 @@ namespace vm {
 			}
 		}
 		CORE_UNREACHABLE();
+	}
+
+	std::vector<api::ThreadID> SafeVMProcess::getAllThreadIDs() {
+		std::shared_lock           lock(rw_global);
+		std::vector<api::ThreadID> thread_ids;
+		for (const auto& thread: vm_threads) {
+			if (thread.exec_thread) {
+				api::ThreadID id = static_cast<api::ThreadID>(
+					std::hash<std::thread::id>{}(thread.exec_thread->get_id())
+				);
+				thread_ids.push_back(id);
+			}
+		}
+		return thread_ids;
+	}
+
+	api::ThreadID SafeVMProcess::getMainThreadID() {
+		std::shared_lock lock(rw_global);
+		return static_cast<api::ThreadID>(
+			std::hash<std::thread::id>{}(getMainVMThread().exec_thread->get_id())
+		);
 	}
 }
