@@ -21,7 +21,6 @@ namespace logger {
 			return current_stream;
 		}
 
-
 	}
 
 	bool isCategoryEnabled(DevLogCategories category) {
@@ -32,7 +31,6 @@ namespace logger {
 
 	namespace internal {
 		void logMessage(std::string_view message) {
-			// In the future this could be directed to a file or other streams.
 			(*getCurrentLoggingStream()) << message;
 		}
 	}
