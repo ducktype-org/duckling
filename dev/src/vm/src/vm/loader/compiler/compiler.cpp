@@ -172,7 +172,8 @@ namespace vm::loader::compiler {
 		if (func_signature.result_type.size()) {
 			push(base::StrID("ret_val"), func_signature.result_type[0].str);
 
-			for (auto [idx, ret_type]: std::views::enumerate(func_signature.result_type) | std::views::drop(1)) {
+			for (auto [idx, ret_type]:
+			     std::views::enumerate(func_signature.result_type) | std::views::drop(1)) {
 				push(base::StrID(base::strConcat("ret_val", idx).c_str()), ret_type.str);
 			}
 		}
@@ -286,7 +287,7 @@ namespace vm::loader::compiler {
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
-			u64 ret_type_sum = 0;
+			u64                   ret_type_sum = 0;
 			std::vector<TypeCRef> result_types = {};
 			for (auto& ret: signature.result_type) {
 				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
@@ -345,8 +346,7 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::compileNewExtCFunctions(
-		const std::vector<code::ExternalCFunction>& new_functions
+	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
 			program_ctx.ext_c_functions.insert(new_func, new_func.name);

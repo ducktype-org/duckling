@@ -98,7 +98,7 @@ class LocalStack {
 
 	CRef<valid_type::ValidTypeMap>                          types_ctx;
 	base::HashMap<base::StrID, CRef<valid_type::ValidType>> local_name_to_type;
-	usize no_of_ret_vals = 0;
+	usize                                                   no_of_ret_vals = 0;
 
 public:
 	LocalStack(const LocalStack&)            = default;
@@ -107,11 +107,13 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
-		  types_ctx(&types_ctx), no_of_ret_vals(signature.result_type.size()) {
+		  types_ctx(&types_ctx),
+		  no_of_ret_vals(signature.result_type.size()) {
 		if (signature.result_type.size()) {
 			push(base::StrID("ret_val"), signature.result_type[0].str);
 
-			for (auto [idx, ret]: std::views::enumerate(signature.result_type) | std::views::drop(1)) {
+			for (auto [idx, ret]:
+			     std::views::enumerate(signature.result_type) | std::views::drop(1)) {
 				push(base::StrID(base::strConcat("ret_val", idx).c_str()), ret.str);
 			}
 		}
@@ -146,12 +148,10 @@ public:
 	usize size() const { return stack_state.size(); }
 
 	const LocalStackEntry& back(long long i = 0) const {
-		return stack_state.at(stack_state.size() - 1 - (usize)(i));
+		return stack_state.at(stack_state.size() - 1 - (usize) (i));
 	}
 
-	const LocalStackEntry& front(long long i = 0) const {
-		return stack_state.at((usize)(i));
-	}
+	const LocalStackEntry& front(long long i = 0) const { return stack_state.at((usize) (i)); }
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
 		auto  local_name = VISIT(local, l, return l.var_name);
@@ -200,7 +200,7 @@ class FunctionValidator {
 
 		auto& params = signature->parameters;
 		auto& reslts = signature->result_type;
-		
+
 		if (params.size() + reslts.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
@@ -211,10 +211,9 @@ class FunctionValidator {
 			local_stack.pop(instr);
 		}
 
-		for (auto [idx, reslt]: enumerate(reslts | reverse)) {
+		for (auto [idx, reslt]: enumerate(reslts | reverse))
 			if (local_stack.back(idx).type->getName() != reslt.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
-		}
 	}
 
 	/**
@@ -245,7 +244,7 @@ class FunctionValidator {
 			return function_type->getKindAs<valid_type::finalized::Function>();
 		}();
 
-		auto generic_arg   = opargs::OpCodeArg{ instr.method };
+		auto generic_arg = opargs::OpCodeArg{ instr.method };
 
 		auto& params = method_signature->parameters;
 		auto& reslts = method_signature->result;
@@ -272,10 +271,9 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		for (auto [idx, reslt]: enumerate(reslts | reverse)) {
+		for (auto [idx, reslt]: enumerate(reslts | reverse))
 			if (local_stack.back(idx).type->getID() != reslt)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
-		}
 	}
 
 	void validateTailcall(
@@ -302,7 +300,7 @@ class FunctionValidator {
 		using namespace std::views;
 		for (auto [reslt, stack_elem]:
 		     zip(reslts, local_stack.getStackState() | take(reslts.size())))
-			
+
 			if (stack_elem.type->getName() != reslt.str)
 				throw InvalidTailcallArgumentsError(generic_arg);
 
@@ -1645,17 +1643,17 @@ class FunctionValidator {
 
 	void validateSignature() {
 		if (function.name.str == base::StrID("main")
-			&& !(function.signature.result_type.size() == 1
-		    && function.signature.result_type[0].str == base::StrID("i64"))) {
+		    && !(
+				function.signature.result_type.size() == 1
+				&& function.signature.result_type[0].str == base::StrID("i64")
+			)) {
 			throw InvalidMainReturnType(function.signature);
 		}
-		for (const auto& param_type: function.signature.parameters) {
+		for (const auto& param_type: function.signature.parameters)
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
-		}
 
-		for (const auto& reslts: function.signature.result_type) {
+		for (const auto& reslts: function.signature.result_type)
 			if (!types_ctx.contains(reslts)) throw UnknownTypeError(opargs::Type{ reslts });
-		}
 	}
 
 public:

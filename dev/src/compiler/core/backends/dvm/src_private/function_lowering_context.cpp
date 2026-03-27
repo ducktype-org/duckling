@@ -157,10 +157,9 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	for (const auto& param_type: function_parameter_types)
 		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
 	function.signature.result_type = {};
-	if (auto type_name = vm::code::typeName(function_return_type); type_name != "void") {
+	if (auto type_name = vm::code::typeName(function_return_type); type_name != "void")
 		function.signature.result_type.emplace_back(type_name);
-	}
-	function.body                  = std::move(function_body);
+	function.body = std::move(function_body);
 
 	if_opt_some(fun_di_builder_opt, builder) { builder.end(); }
 
@@ -210,7 +209,9 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 	std::vector<vm::code::TypeOfData> called_result_type = {};
 	// @todo: #966 add support to compiler about multiple return values
 	if (func_literal.return_type_layout->getSize() != Bits{ 0 })
-		called_result_type.emplace_back(program_context.lowerAndKeepTslType(func_literal.return_type_layout));
+		called_result_type.emplace_back(
+			program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+		);
 
 	std::vector<vm::code::TypeOfData> param_types
 		= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
@@ -232,7 +233,7 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
 
 	std::vector<vm::code::TypeOfData> called_result_type = {};
-	for (auto reslt : ext_func.signature.result_type)
+	for (auto reslt: ext_func.signature.result_type)
 		called_result_type.emplace_back(*vm::code::getBuiltinTypeByName(reslt));
 
 	std::vector<vm::code::TypeOfData> param_types

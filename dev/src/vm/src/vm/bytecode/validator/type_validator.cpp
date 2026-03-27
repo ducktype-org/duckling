@@ -327,9 +327,9 @@ namespace {
 			variant_case(FunctionType, function) {
 				for (auto& param: function.parameters)
 					if (!tod_types.contains(param)) throw UnknownSubtypeError(function, param);
-				
-				for (auto& reslt : function.result)
-					if (!tod_types.contains(reslt)) throw UnknownSubtypeError(function, reslt);	
+
+				for (auto& reslt: function.result)
+					if (!tod_types.contains(reslt)) throw UnknownSubtypeError(function, reslt);
 			}
 			variant_case(VariantType, variant) {
 				if (variant.variant_alternatives.size() < 2)

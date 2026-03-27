@@ -513,9 +513,7 @@ namespace vm::loader::parser {
 		} else {
 			tpc::Identifier field_type;
 			state.parse().one(&field_type);
-			if (field_type.value != "void") {
-				out->result_type.emplace_back(field_type);
-			}
+			if (field_type.value != "void") out->result_type.emplace_back(field_type);
 		}
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
@@ -728,9 +726,7 @@ namespace vm::loader::parser {
 			} else {
 				tpc::Identifier result;
 				state.parse().one(&result);
-				if (result.value != "void") {
-					returned.emplace_back(result.value);
-				}
+				if (result.value != "void") returned.emplace_back(result.value);
 			}
 
 			auto tp         = FunctionType{ name, arguments, returned };

@@ -117,15 +117,14 @@ namespace vm {
 				VMThread&                thread,
 				usize                    function_id
 			) {
-			auto&      runtime_data     = thread.runtime_data;
-			auto&      called_func      = thread.executing_program->getFunctions()[function_id];
+			auto& runtime_data = thread.runtime_data;
+			auto& called_func  = thread.executing_program->getFunctions()[function_id];
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
 				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
 
 			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size
-				= called_func.arg_size + called_func.ret_size;
+			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
 
 			// Save current registers and flow.
 			frame->instr       = instr + 1;
@@ -153,8 +152,8 @@ namespace vm {
 			// Move shared blocks into callee's block stack and block_local_offset map.
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
-			u64 arg_count = called_func.parameters.size();
-			u64 ret_count = called_func.result_type.size();
+			u64 arg_count              = called_func.parameters.size();
+			u64 ret_count              = called_func.result_type.size();
 			u64 shared_block_count     = arg_count + ret_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 

@@ -82,8 +82,7 @@ private:
 		if (expected_exit_code.has_value()) {
 			ASSERT_EQUAL(exit_value.size(), 1);
 			ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value.at(0)->readBytes<i64>());
-		}
-		else
+		} else
 			// @note: If expected_exit_code is an empty optional, it's expected that a called
 			// function is void.
 			ASSERT_TRUE(exit_value.size() == 0);

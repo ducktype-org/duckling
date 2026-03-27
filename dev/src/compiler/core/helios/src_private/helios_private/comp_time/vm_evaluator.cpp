@@ -343,7 +343,10 @@ namespace {
 		// Free the owned arguments.
 		for (const auto& arg: owned_args) arg->freeData();
 
-		CORE_ASSERT(maybe_exit_value.value().size() == 1, "Compiler support for multiple values not implemented");
+		CORE_ASSERT(
+			maybe_exit_value.value().size() == 1,
+			"Compiler support for multiple values not implemented"
+		);
 		auto exit_value = maybe_exit_value.value().at(0);
 		return vmValueToCtv(return_type, exit_value);
 	}

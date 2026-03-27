@@ -90,9 +90,7 @@ namespace vm {
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
-	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) {
-		IF_TC(return;)
-	}
+	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
@@ -420,17 +418,17 @@ namespace vm {
 
 			std::vector<TypeCRef> ret_types = {};
 			if (function_signature->result_type.size()) {
-				CORE_ASSERT(function_signature->result_type.size() == 1, "No support for returning multiple types");
-				ret_types.emplace_back(thread.executing_program->getTypes().at(function_signature->result_type.at(0)));
+				CORE_ASSERT(
+					function_signature->result_type.size() == 1,
+					"No support for returning multiple types"
+				);
+				ret_types.emplace_back(
+					thread.executing_program->getTypes().at(function_signature->result_type.at(0))
+				);
 			}
 
-			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
-				builtin_id,
-				ret_types,
-				thread.process,
-				thread,
-				args
-			);
+			base::Optional<Box<VmValue>> return_value
+				= builtins::callBuiltinFunction(builtin_id, ret_types, thread.process, thread, args);
 
 			if (return_value.has_value()) {
 				auto value = std::move(return_value.value());
@@ -454,7 +452,9 @@ namespace vm {
 
 			auto arg_count = ext_func->parameters.size();
 			bool is_void   = ext_func->result_type.size() == 0;
-			CORE_ASSERT(ext_func->result_type.size() <= 1, "C function cannot return more than 1 type");
+			CORE_ASSERT(
+				ext_func->result_type.size() <= 1, "C function cannot return more than 1 type"
+			);
 
 			if (arg_count == 0 && is_void) {
 				// Special case: void function with no arguments.
@@ -479,8 +479,8 @@ namespace vm {
 
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
-				byte* args_pointer
-					= result_pointer + (is_void ? 0 : ext_func->result_type.at(0)->getSize().asInt());
+				byte* args_pointer   = result_pointer
+				                   + (is_void ? 0 : ext_func->result_type.at(0)->getSize().asInt());
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 

@@ -175,9 +175,11 @@ namespace vm::code {
 			  main_signature(std::move(main_signature)) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			CORE_ASSERT(main_signature.result_type.size() <= 1, "No support for main returning multiple variables");
-			if (main_signature.result_type.size() != 1)
-				return std::nullopt;
+			CORE_ASSERT(
+				main_signature.result_type.size() <= 1,
+				"No support for main returning multiple variables"
+			);
+			if (main_signature.result_type.size() != 1) return std::nullopt;
 			return static_cast<CRef<ElementBase>>(&main_signature.result_type[0]);
 		}
 	};

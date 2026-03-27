@@ -121,10 +121,11 @@ namespace vm {
 			                             .result_type      = func.result_type };
 
 		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
-		u64 offset = 0;
+		u64       offset             = 0;
 		for (auto& res: func.result_type) {
-			// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
-			// the return value of the function. Void functions always return with the exit_code = 0.
+			// Initialize an exit code/return value spot. In case of non-void functions the
+			// exit_code is the return value of the function. Void functions always return with the
+			// exit_code = 0.
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, offset, res->getID().asInt())
 			);
@@ -428,7 +429,7 @@ namespace vm {
 			frame->block_stack.size() == func.result_type.size(),
 			"after finishing execution, there should be a specific number of blocks at the stack"
 		);
-		
+
 		exit_value_storage = {};
 		for (u64 idx = 0; idx < frame->block_stack.size(); idx++) {
 			exit_value_storage.emplace_back(process.createVmValue(

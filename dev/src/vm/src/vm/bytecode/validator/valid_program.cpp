@@ -95,8 +95,11 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 		// Validate arguments exist and are trivially copyable
 
 		if (new_func.signature.result_type.size()) {
-			CORE_ASSERT(new_func.signature.result_type.size() == 1, "C functions return only one type");
-			if (auto tp = type_context.getCurrentTypes().atMaybe(new_func.signature.result_type[0])) {
+			CORE_ASSERT(
+				new_func.signature.result_type.size() == 1, "C functions return only one type"
+			);
+			if (auto tp
+			    = type_context.getCurrentTypes().atMaybe(new_func.signature.result_type[0])) {
 				if (!tp.value()->isTriviallyCopyable())
 					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
 			} else
