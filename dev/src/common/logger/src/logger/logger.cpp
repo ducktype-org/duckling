@@ -16,11 +16,10 @@ namespace logger {
 			return &enabled_categories;
 		}
 
-        Ref<std::ostream>& getCurrentLoggingStream(){
-            static Ref<std::ostream> current_stream = &std::cout;
-            return current_stream;
-
-        }
+		Ref<std::ostream>& getCurrentLoggingStream() {
+			static Ref<std::ostream> current_stream = &std::cout;
+			return current_stream;
+		}
 
 
 	}

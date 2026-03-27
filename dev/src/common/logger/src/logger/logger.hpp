@@ -73,7 +73,7 @@ namespace logger {
 	bool isCategoryEnabled(DevLogCategories category);
 
 	/**
-	 * @brief Sets output stream to the file pointed by path. 
+	 * @brief Sets output stream to the file pointed by path.
 	 */
 	void devLogOutputFile(const std::string& path);
 
