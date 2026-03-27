@@ -73,13 +73,13 @@ private:
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(6, execution_position.instr_number, "Line number is not correct");
+		ASSERT_EQUAL_PRINT(12, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(10, execution_position.instr_number, "Line number is not correct");
+		ASSERT_EQUAL_PRINT(20, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 
@@ -96,19 +96,19 @@ private:
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(6, execution_position.instr_number, "Line number is not correct");
+		assertEqual(12, execution_position.instr_number, "Line number is not correct");
 
 		u64 line = stepAndGetLine(pid);
-		assertEqual(7, line, "Line number is not correct (2)");
+		ASSERT_EQUAL_PRINT(13, line);
 
 		line = stepAndGetLine(pid);
-		assertEqual(8, line, "Line number is not correct (3)");
+		ASSERT_EQUAL_PRINT(14, line);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (2)"
-		assertEqual(10, execution_position.instr_number, "Line number is not correct (4)");
+		ASSERT_EQUAL_PRINT(20, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 

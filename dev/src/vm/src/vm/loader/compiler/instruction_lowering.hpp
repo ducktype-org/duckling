@@ -90,6 +90,11 @@ namespace vm::loader::compiler::detail {
 
 
 	private:
+		/**
+		 * @brief Whether to add a step Gil instruction before the next low instruction.
+		 */
+		bool push_step_gil_on_next_add_low = true;
+
 		template<typename LowArg, typename HighArg>
 		requires IsTranslatableInstructionArgumentPair<LowArg, HighArg>
 		u64 lowerLowArg(HighArg&& arg) {
@@ -104,6 +109,11 @@ namespace vm::loader::compiler::detail {
 
 		template<typename T, typename... Args>
 		requires AreTranslatableInstructionTagArgs<T, Args...> void addLow(Args&&... args) {
+			if (push_step_gil_on_next_add_low) {
+				push_step_gil_on_next_add_low = false;
+				addLow<Op_stepGil>();
+			}
+
 			[&]<typename... LowArgs>(std::tuple<LowArgs...>*) {
 				result.push_back(
 					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
@@ -126,6 +136,9 @@ namespace vm::loader::compiler::detail {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
 #endif
+
+		push_step_gil_on_next_add_low = true;
+
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
 		instr_match(instruction) {
@@ -494,18 +507,13 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_l64>(i.new_elem_count);
 			}
 			instr_case(high::Op_strOutput_lptr, i) { addLow<Op_strOutput_lptr>(i.string_ptr); }
-			instr_case(high::Op_cast_l8_type, i) {
-				addLow<Op_cast_l8_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l16_type, i) {
-				addLow<Op_cast_l16_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l32_type, i) {
-				addLow<Op_cast_l32_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l64_type, i) {
-				addLow<Op_cast_l64_type>(i.value, i.target_type);
-			}  // Sign Extension
+
+			instr_case(high::Op_cast_l8_type, i) {}
+			instr_case(high::Op_cast_l16_type, i) {}
+			instr_case(high::Op_cast_l32_type, i) {}
+			instr_case(high::Op_cast_l64_type, i) {}
+
+			// Sign Extension
 			instr_case(high::Op_sext_l16_l8, i) { addLow<Op_sext_l16_l8>(i.dst, i.src); }
 			instr_case(high::Op_sext_l32_l8, i) { addLow<Op_sext_l32_l8>(i.dst, i.src); }
 			instr_case(high::Op_sext_l64_l8, i) { addLow<Op_sext_l64_l8>(i.dst, i.src); }
