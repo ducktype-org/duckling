@@ -512,9 +512,9 @@ namespace vm {
 	 * @brief Starts the execution of a function with a given name and arguments.
 	 */
 	void VMThread::run(
-		CRef<low::LowVMProgram> program,
-		const std::string&      func_name,
-		const RunArguments&     run_arguments
+		CRef<low::ILowVMProgram> program,
+		const std::string&       func_name,
+		const RunArguments&      run_arguments
 	) {
 		respondExecutionRequest(api::Running{});
 
@@ -564,7 +564,7 @@ namespace vm {
 		}
 	}
 
-	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
+	void VMThread::execGlobalDestructors(CRef<low::ILowVMProgram> program) {
 		executing_program = program;
 		for (const auto& [global, id, name]: executing_program->getGlobals().allData()) {
 			if (global->dtor_name.has_value()) {
@@ -672,9 +672,9 @@ namespace vm {
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
 	void VMThread::safeRun(
-		CRef<low::LowVMProgram> program,
-		const std::string&      func_name,
-		const RunArguments&     run_arguments
+		CRef<low::ILowVMProgram> program,
+		const std::string&       func_name,
+		const RunArguments&      run_arguments
 	) {
 		try {
 			run(program, func_name, run_arguments);
@@ -685,9 +685,9 @@ namespace vm {
 	}
 
 	void VMThread::runNoSpawn(
-		CRef<low::LowVMProgram> program,
-		const std::string&      func_name,
-		const RunArguments&     run_arguments
+		CRef<low::ILowVMProgram> program,
+		const std::string&       func_name,
+		const RunArguments&      run_arguments
 	) {
 		// @TODO: #2040 Make this function check if anyone else is executing anything,
 		// or simplify the state checking, perhaps remove state from thread and move all the state
@@ -697,9 +697,9 @@ namespace vm {
 	}
 
 	bool VMThread::spawnThreadAndRun(
-		CRef<low::LowVMProgram> program,
-		const std::string&      func_name,
-		const RunArguments&     run_arguments
+		CRef<low::ILowVMProgram> program,
+		const std::string&       func_name,
+		const RunArguments&      run_arguments
 	) {
 		if (exec_thread)  // There is already a thread running.
 			return false;

@@ -38,6 +38,7 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
+			loaded_program_copy.selfUpdate();
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -167,7 +168,9 @@ namespace vm {
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid):
 		  VMProcess(my_pid),
-		  loaded_program(loader.getProgram()) {
+		  loaded_program(loader.getProgram()),
+		  loaded_program(&loaded_program_copy),
+		  loaded_program_copy(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
 	}
 

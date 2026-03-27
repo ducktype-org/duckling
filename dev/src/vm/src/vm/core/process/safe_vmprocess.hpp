@@ -40,11 +40,13 @@ namespace vm {
 		 */
 		loader::Loader loader{};
 
+		low::LowVMProgramCopy loaded_program_copy;
+
 		/**
 		 * @brief The program being executed by this process.
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module.
 		 */
-		CRef<low::LowVMProgram> loaded_program;
+		CRef<low::ILowVMProgram> loaded_program;
 
 		Memory memory;
 
