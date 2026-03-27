@@ -1,9 +1,0 @@
-# Config for `toolbox.py itest --concurrent`
-# Number of duplicated copies created for each source `.dmf` file.
-copy_count: 3
-
-# Paths of test cases to skip in concurrent mode.
-# Example:
-# blacklist:
-#   - integration_tests/compiler/compilation/functions/named_default_args/llvm
-blacklist:
