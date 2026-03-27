@@ -109,15 +109,22 @@ namespace vm {
 
 		void waitForBreakpoint() override;
 
+		std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
+			api::ThreadID thread_id
+		) override;
+
+		std::expected<api::Response, api::ApiError> getStackFrameData(api::ThreadID thread_id, u64 frame_index
+		) override;
+
 		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
 		) override;
 
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
-		std::vector<api::ThreadID> getAllThreadIDs() override;
-
 		api::ThreadID getMainThreadID() override;
+
+		std::vector<api::ThreadID> getAllThreadIDs() override;
 
 	public:
 		SafeVMProcess(PID my_pid);

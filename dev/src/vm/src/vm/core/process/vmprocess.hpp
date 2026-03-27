@@ -40,6 +40,7 @@ namespace vm {
 	 */
 	class VMProcess {
 		friend class VMValueRef;
+
 	protected:
 		PID                              my_pid;
 		ProcIO                           io;
@@ -147,6 +148,13 @@ namespace vm {
 
 		virtual std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
 			api::ThreadID thread_id
+		) = 0;
+
+		virtual std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
+			api::ThreadID thread_id
+		) = 0;
+
+		virtual std::expected<api::Response, api::ApiError> getStackFrameData(api::ThreadID thread_id, u64 frame_index
 		) = 0;
 
 		virtual void notifyPausedVMThread(api::ThreadID thread_id) = 0;

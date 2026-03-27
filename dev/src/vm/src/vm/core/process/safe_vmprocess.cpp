@@ -261,6 +261,55 @@ namespace vm {
 		});
 	}
 
+	std::expected<api::Response, api::ApiError> SafeVMProcess::getNumberOfCurrentStackFrames(
+		api::ThreadID thread_id
+	) {
+		std::shared_lock lock(rw_global);
+		match_optional(assertProcessCanRespond()) {
+			opt_some(error) { return std::unexpected(error); }
+			opt_none {
+				// +1 because frame_stack_current points to the current frame, not the next
+				// free slot
+				RuntimeData& runtime_data = getVMThreadByID(thread_id).runtime_data;
+				u64          frames
+					= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+				return api::Response(api::response::NumberOfCurrentStackFrames{ .number_of_stack_frames = frames });
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	std::expected<api::Response, api::ApiError> SafeVMProcess::getStackFrameData(
+		api::ThreadID thread_id, u64 frame_index
+	) {
+		std::shared_lock lock(rw_global);
+		match_optional(assertProcessCanRespond()) {
+			opt_some(error) { return std::unexpected(error); }
+			opt_none {
+				RuntimeData& runtime_data = getVMThreadByID(thread_id).runtime_data;
+				u64          frames
+					= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+				if (frame_index >= frames)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "Frame index out of bounds" } });
+				Frame& frame = runtime_data.frame_stack_base[frame_index];
+
+				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
+				for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
+					Ref<Block> block = frame.block_stack[block_idx];
+					frame_vars.push_back(api::response::StackFrameData::FrameVar{
+						.offset = offset,
+						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
+					});
+				}
+
+				return api::Response(api::response::StackFrameData{
+					.function_name = frame.current_function->name, .frame_vars = frame_vars });
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getTypeMetadata(
 		const std::string& type_name
 	) {
