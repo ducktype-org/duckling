@@ -17,23 +17,24 @@ fn create_sample_metadata() -> registry::Manifest {
         "license": "GPS",
         "description": ""
     },
-    "dependencies": {
-        "pkg1": {
+    "dependencies": [
+        {
+            "name": "pkg1",
             "version": ["2.3.4"],
             "source": {
                 "inner": {
                     "type": "registry",
-                    "registry_url": "xd"
+                    "registry-url": "xd"
                 }
             },
             "features": [],
             "pinned": false,
             "conditions": {
-                "package_features": []
+                "package-features": []
             }
         }
-    },
-    "dev_dependencies": {},
+    ],
+    "dev-dependencies": [],
     "features": {},
     "profiles": {}
 }

@@ -4,6 +4,7 @@
 #include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/thread/vmvalueref.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <ostream>
@@ -68,6 +69,12 @@ namespace vm {
 
 		void importData(Pointer src);
 
+		[[nodiscard]] VMValueRef asRef() const;
+
+		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
+
+		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const;
+
 		[[nodiscard]] PID getPID() const;
 
 		TypeCRef type;
@@ -77,9 +84,12 @@ namespace vm {
 		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
 		 */
 		template<class T>
-		T readBytes(const usize offset = 0) const {
-			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds read");
-			return vm::safeReadPointerBytes<T>(data.data(), offset);
+		T readBytes() const {
+			CORE_ASSERT(
+				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
+			);
+			CORE_ASSERT(sizeof(T) <= data.size(), "VmValue: Out of bounds read");
+			return vm::safeReadPointerBytes<T>(data.data());
 		}
 
 		/**

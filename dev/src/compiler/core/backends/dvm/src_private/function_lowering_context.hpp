@@ -2,6 +2,7 @@
 
 #include "dvm_value.hpp"
 
+#include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -22,10 +23,11 @@ namespace compiler::backend_vm::internal {
 		friend class CastOperationLowerer;
 
 		FunctionLoweringContext(
-			ProgramLoweringContext&                   program_context,
-			base::StrID                               name,
-			CRef<tsl::TypeLayout>                     return_type,
-			const std::vector<CRef<tsl::TypeLayout>>& parameter_types
+			ProgramLoweringContext&                     program_context,
+			base::StrID                                 name,
+			CRef<tsl::TypeLayout>                       return_type,
+			const std::vector<CRef<tsl::TypeLayout>>&   parameter_types,
+			base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 		);
 
 		FunctionLoweringContext(const FunctionLoweringContext&)            = delete;
@@ -104,6 +106,8 @@ namespace compiler::backend_vm::internal {
 			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
 		);
 
+		[[nodiscard]] usize instructionsCount() const;
+
 		ProgramLoweringContext& program_context;
 
 		base::Map<lir::LIRLocalRef, DVMLocal> lir_local_to_dvm;
@@ -113,5 +117,10 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::TypeOfData>  function_parameter_types;
 		base::StrID                        function_name;
 		std::vector<vm::code::Instruction> function_body;
+
+		/**
+		 * @brief Optional debug info builder for the function.
+		 */
+		base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt;
 	};
 }

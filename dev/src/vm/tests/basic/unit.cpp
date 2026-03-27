@@ -60,6 +60,7 @@ private:
 		     { "pointer_to_local.dbc", "pointer_copy.dbc", "pointer_to_passed_blocks.dbc" }) {
 			runTestOnVm(filename, "", "42");
 		}
+		runTestOnVm("pointer_to_global.dbc", {}, "429913371337", {}, 1'337);
 	}
 
 	void commandLineArguments() {

@@ -1,5 +1,5 @@
 class Point {
-    x: i32 = 0;
+    x: i32;
 }
 
 fun static_array_test() -> i64 = {

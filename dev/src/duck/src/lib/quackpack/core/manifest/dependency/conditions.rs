@@ -29,7 +29,7 @@ impl Conditions {
             Ok(())
         }
 
-        check_non_empty(&required_root_package_features, "package_features")?;
+        check_non_empty(&required_root_package_features, "package-features")?;
         Ok(Self {
             required_root_package_features,
         })
@@ -101,7 +101,7 @@ mod tests {
         let result = Conditions::new(Some(vec![]));
         assert_eq!(
             result.unwrap_err().to_string(),
-            "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
+            "the field `package-features` is present but empty, if you don't want to specify it, remove it from the manifest"
         );
     }
 

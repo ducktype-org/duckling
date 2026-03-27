@@ -168,6 +168,7 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
+				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
@@ -333,6 +334,7 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
+				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
@@ -386,7 +388,7 @@ namespace vm {
 	std::vector<Ref<VmValue>> VMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
-		keepOrAcquireGil();
+		acquireGil();
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
@@ -440,7 +442,7 @@ namespace vm {
 			process_memory.decreaseBlockRefcount(block);
 		}
 		frame->resetFrameData();
-		process.getGIL().release();
+		releaseGil();
 
 		return exit_value_storage;
 	}
@@ -742,26 +744,31 @@ namespace vm {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
 
-	void VMThread::keepOrAcquireGil() {
+	void VMThread::stepGil() {
 		if (has_gil) {
 			// Check if you can hold it longer - releasing policy
 			// If you can't hold it longer then
 			// 1. say
 			if (!process.getGIL().shouldRelease()) return;
-			has_gil = false;
 			// 2. release gil
-			process.getGIL().release();
+			releaseGil();
 			// 3. yield - to not reacquire instantly
 			std::this_thread::yield();
 		}
 		// Try to acquire GIL
-		process.getGIL().acquire();
-		has_gil = true;
+		acquireGil();
 	}
 
 	void VMThread::releaseGil() {
+		CORE_ASSERT(has_gil, "Cannot release GIL without acquiring it first");
 		has_gil = false;
 		process.getGIL().release();
+	}
+
+	void VMThread::acquireGil() {
+		CORE_ASSERT(!has_gil, "Cannot acquire GIL twice");
+		process.getGIL().acquire();
+		has_gil = true;
 	}
 
 	void VMThread::setThreadCtx(std::string name) { thread_ctx = std::move(name); }
