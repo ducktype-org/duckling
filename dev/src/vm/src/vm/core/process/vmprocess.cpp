@@ -44,6 +44,7 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
+			loaded_program_copy.selfUpdate();
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -56,8 +57,9 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-		VMThread&        thread = getEmptyThread();
-		bool response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
+
+		VMThread& thread   = getEmptyThread();
+		bool      response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
 		// Setting thread ctx necessary for now, until function pointers implemented
 		thread.setThreadCtx("");
 
@@ -390,7 +392,8 @@ namespace vm {
 	VMProcess::VMProcess(const PID my_pid):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
-		  loaded_program(loader.getProgram()) {
+		  loaded_program(&loaded_program_copy),
+		  loaded_program_copy(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
 	}
 

@@ -1,5 +1,7 @@
 class T {}
 
+var uninit_global: i32;
+
 fun foo() -> i32 = {
 	var a: i32 = i32(in_n);
 	var b: i32 = i32(0);
