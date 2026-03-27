@@ -1,85 +1,111 @@
-# Dockling: Duckling in Docker aka. running a `dockling-dev` container
+# Dockling: Running Duckling in Docker (`dockling-dev`)
 
-## Ensure Docker is installed
 
-You can either follow [official Docker documentation](https://docs.docker.com/get-started/) (we only need Docker Engine... Docker Desktop is some sort of non-root bloat, but should work as well) or just skip to the unimportant bloated webpage part and run the beautifull https://get.docker.com/. You can open this link in your browser and read at the beggining:
+## Prerequisites
+
+Ensure that Docker is installed on your system. Follow [the official documentation](https://docs.docker.com/get-started/get-docker/) or use the official installation script available at:
+
+[https://get.docker.com/](https://get.docker.com/)
+
+Example installation workflow:
 
 ```shell
-# Usage
-# ==============================================================================
-#
-# To install the latest stable versions of Docker CLI, Docker Engine, and their
-# dependencies:
-#
-# 1. download the script
-#
-#   $ curl -fsSL https://get.docker.com -o install-docker.sh
-#
-# 2. verify the script's content
-#
-#   $ cat install-docker.sh
-#
-# 3. run the script with --dry-run to verify the steps it executes
-#
-#   $ sh install-docker.sh --dry-run
-#
-# 4. run the script either as root, or using sudo to perform the installation.
-#
-#   $ sudo sh install-docker.sh
+# Download the installation script
+curl -fsSL https://get.docker.com -o install-docker.sh
+
+# Review the script (recommended)
+cat install-docker.sh
+
+# Optional: perform a dry run
+sh install-docker.sh --dry-run
+
+# Install Docker (requires root or sudo privileges)
+sudo sh install-docker.sh
 ```
 
-## Build a docker image
-Run the build script:
+
+## Building the Development Image
+
+Build the `dockling-dev` image:
+
 ```shell
 dockling-dev/build.sh
 ```
 
-## Run built dev container
 
-You have two main options: run container directly using Docker CLI or let your VSCode take care of it.
+## Running the Container
 
-Other IDE's should work similar - just search for their support of dev containers. CLion docs are [here](https://www.jetbrains.com/help/clion/connect-to-devcontainer.html).
+Two supported workflows are available:
 
-### Option 1: Docker CLI - if you like to be in control
+### 1. Docker CLI
 
-Run the run script:
+Run the container directly:
+
 ```shell
 dockling-dev/run.sh
 ```
 
-Above command will start the bash inside the container and remove the container once that bash terminates.
+This starts an interactive shell inside the container. The container is automatically removed when the session exits.
 
-You can work with that if you like terminal or "Attach to Running Container" with vscode [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
+You may also attach to the running container using tools such as Visual Studio Code (Dev Containers extension).
 
-### Option 2: Dev Containers extenstion in VSCode
+---
 
-Install [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension and "Reopen in Container".
+### 2. VS Code Dev Containers
 
-## First compilation inside the container
+Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension for Visual Studio Code and use **“Reopen in Container”**.
 
-Due to possible differences in paths on the host and in the container (which venv especially does not like), it is worth initializing the repo with `toolbox.py` only inside the container.
+Other IDEs offer similar functionality. For example, **CLion** provides [support for development containers](https://www.jetbrains.com/help/clion/connect-to-devcontainer.html).
 
-In `/duckling/dev` directory:
+
+## Initial Setup (Inside Container)
+
+To avoid issues caused by differences between host and container environments (e.g., virtual environment paths), initialize the repository inside the container only.
+
+From `/duckling/dev`:
+
 ```shell
 ./toolbox.py init
 ./toolbox.py setup-build
 ```
 
-And now compilation should work normally. In your build directory (likely `/duckling/dev/build`) run:
+
+## Building Project
+
+As usual run the build from the build directory (typically `/duckling/dev/build`):
 
 ```shell
 ninja all
 ```
 
-### You can also use the container only for singular tasks like compiling:
+## Good To Know
+
+### Mounts
+
+By default, the dev container config file and run script mount three directories:
+
+- duckling repo → `/duckling`
+
+- `dockling-dev/home_ubuntu` → `/home/ubuntu` - to make your home directory in the container persistent, so your configuration stays. You can access it or delete it from outside of the container.
+
+- `$HOME/.ssh` → `/home/ubuntu/.ssh` - for your git to authenticate with github
+
+### Non-Interactive Usage
+
+For one-off commands:
 
 ```shell
 dockling-dev/run.sh bash -c "cd dev/build; ninja all"
 ```
 
-Or even copy and modify run sript to be like follows:
+Alternatively, you may adapt the run script to execute commands directly:
 
 ```shell
 docker ...args... -w /duckling/dev/build dockling-dev ninja all
 ```
-Where `-w` is the same as `--workdir`.
+
+The `-w` (`--workdir`) flag sets the working directory inside the container.
+
+### Run Script Limitations
+
+It sets the name of the container, allowing only one running instance, but making it easier to recognise the container when connecting from VSCode. You can comment this line out if you want.

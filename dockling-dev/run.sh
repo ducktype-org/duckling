@@ -1,5 +1,7 @@
 SCRIPT_DIR=$(dirname -- "${BASH_SOURCE[0]}")
 
+mkdir -p "$SCRIPT_DIR"/home_ubuntu
+
 docker run -it --rm \
 	--name "dockling" \
 	-h "dockling" \
