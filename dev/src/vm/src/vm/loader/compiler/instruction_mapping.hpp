@@ -73,16 +73,5 @@ namespace vm::loader::compiler {
 
 			return MicroBytecodePosition{ .function_id = id, .instruction_number = *instr_no };
 		}
-
-		base::Optional<OriginCtx::FatPosition> translateToFatPos(
-			const fs::File& file, const FileCoordinates& coord
-		) const {
-			if (!files.contains(file)) return std::nullopt;
-
-			auto ret = files[file].coord_to_fat.lower_bound(coord);
-			if (ret == files[file].coord_to_fat.end()) return std::nullopt;
-
-			return ret->second;
-		}
 	};
 }
