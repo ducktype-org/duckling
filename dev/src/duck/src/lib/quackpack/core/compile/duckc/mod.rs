@@ -101,7 +101,7 @@ fn bail_if_has_explicit_aliases(package: &CompilerPackage) -> QuackResult<()> {
     if manifest
         .dependencies()
         .all_dependencies()
-        .values()
+        .iter()
         .any(|dep| dep.is_aliased())
     {
         let desc = package.package().as_freeze_dep();

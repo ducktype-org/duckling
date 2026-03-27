@@ -257,7 +257,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_case(tsl::StringTypeLayout, string_layout) {
-				const auto string_type_name = "str";
+				const auto string_type_name = string_layout.getMangledName().strView();
 
 				// Get the string type from the context, if it has been previously defined.
 				if (llvm::StructType* string_type
@@ -286,9 +286,7 @@ namespace compiler::backend_llvm {
 				return string_type;
 			}
 			variant_case(tsl::DynamicArrayTypeLayout, list_layout) {
-				const auto list_type_name = base::strConcat(
-					"list.", list_layout.getElementLayout()->toStringIdentification()
-				);
+				const auto list_type_name = list_layout.getMangledName().strView();
 
 				// Get the list type from the context, if it has been previously defined.
 				if (llvm::StructType* list_type

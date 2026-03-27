@@ -12,6 +12,7 @@ add_files(
 		process/type_metadata/type.cpp
 		process/memory/memory.cpp
 		process/concurrency/gil.cpp
+		process/concurrency/condition_variable.cpp
 		process/concurrency/synchronization_primitives.cpp
 )
 
@@ -23,7 +24,8 @@ add_files(
     thread/low_program/instruction.cpp
     thread/vmthread.cpp
     thread/vmvalue.cpp
-    jit/jit_compiler.cpp
+	  thread/vmvalueref.cpp
+	  jit/jit_compiler.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)

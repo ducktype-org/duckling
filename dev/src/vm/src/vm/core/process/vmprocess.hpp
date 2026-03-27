@@ -39,6 +39,7 @@ namespace vm {
 	 *
 	 */
 	class VMProcess {
+		friend class VMValueRef;
 	protected:
 		PID                              my_pid;
 		ProcIO                           io;
