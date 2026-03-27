@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
+		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(unitsTest);
 	}
 
@@ -123,6 +124,16 @@ private:
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
+
+	void referencesTest() {
+		runTest(
+			"modules/references",
+			{},
+			"10\n20\n20\n20\n-20\n-20\n-40\n-30\n222\n111\n222\n300\n400\n300\n500\n",
+			{},
+			0
+		);
+	}
 
 	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
 };

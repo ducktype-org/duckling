@@ -4,6 +4,8 @@
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 
+#include "base/str/str_utils.hpp"
+
 namespace compiler::backend_vm::internal {
 
 	vm::code::builders::OpKind getOpKindFromLIRLayouts(const lir::CastParameters& cast_params) {
@@ -74,7 +76,12 @@ namespace compiler::backend_vm::internal {
 					}
 				}
 			}
-			variant_default { CORE_PANIC("Unsupported cast source layout in DVM lowering"); }
+			variant_default {
+				CORE_PANIC(base::strConcat(
+					"Unsupported cast source layout in DVM lowering: ",
+					source_layout->toStringIdentification()
+				));
+			}
 		}
 		CORE_UNREACHABLE();
 	}
