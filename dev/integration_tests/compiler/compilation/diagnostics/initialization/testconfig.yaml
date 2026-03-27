@@ -1,3 +1,5 @@
+enable_conc_detterministic_tests: "false"
+
 Tests:
   no_main_source_file:
     Cases:

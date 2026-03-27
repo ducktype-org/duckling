@@ -2,7 +2,6 @@ from ..impl.integration.tester import (
     DEFAULT_LOG_FILE_PATH,
     tester_impl,
 )
-from ..impl.integration.concurrent_itest import concurrent_tester_impl
 from .helpers import (
     build_dir,
     verbose,
@@ -20,16 +19,6 @@ from click import command, option
     is_flag=True,
     default=False,
     help="Runs `Clean` command on every test. If passed, no tests are ran.",
-)
-@option(
-    "-C",
-    "--concurrent",
-    is_flag=True,
-    default=False,
-    help=(
-        "Runs compile_package LLVM/DVM integration tests in concurrent determinism mode: "
-        "duplicate modules, compile with 1 and 3 workers, and compare produced .o/.dbc artifacts."
-    ),
 )
 @option(
     "--duckc-worker-count",
@@ -68,8 +57,4 @@ from click import command, option
 @verbose(help="Prints some debug information about test cases")
 def itest(*args, **kwargs):
     """Runs integration tests"""
-    if kwargs.pop("concurrent"):
-        concurrent_tester_impl(*args, **kwargs)
-        return
-
     tester_impl(*args, **kwargs)

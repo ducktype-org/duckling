@@ -34,7 +34,6 @@ def tester_impl(
         log_file: str | Path,
         build_dir: str,
         duckc_worker_count: int,
-        allowed_case_paths: set[str] | None = None,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -62,15 +61,7 @@ def tester_impl(
     test_set = load_tests("integration_tests", user_values=user_values)
 
     (succeeded, failed, disabled) = run_tests(
-        test_set,
-        filter,
-        [],
-        clean,
-        dry,
-        fail_fast,
-        verbose,
-        log_file,
-        allowed_case_paths,
+        test_set, filter, [], clean, dry, fail_fast, verbose, log_file
     )
 
     if dry:
@@ -100,7 +91,6 @@ def run_test(
         fail_fast: bool,
         verbose: bool,
         log_file: Path,
-        allowed_case_paths: set[str] | None,
 ) -> TestStatistics:
     """
     Runs a test from `Test` object.
@@ -122,8 +112,6 @@ def run_test(
             continue
         log_info_if_needed(f"Run [{i + 1}/{len(test)}] - {case.name}", dry, verbose)
         case_path = path + "/" + case.name
-        if allowed_case_paths is not None and case_path not in allowed_case_paths:
-            continue
         try:
             match run_case(test, case, dry, verbose, log_file):
                 case Failure(error):
@@ -309,7 +297,6 @@ def run_tests(
         fail_fast: bool,
         verbose: bool,
         log_file: Path,
-        allowed_case_paths: set[str] | None = None,
 ) -> TestStatistics:
     """
     A recursive function for running all tests.
@@ -322,12 +309,6 @@ def run_tests(
     """
     tree.append(node.name)
     all_stats = TestStatistics([], [], [])
-    node_path = "/".join(tree)
-
-    if allowed_case_paths is not None and not any(
-            case_path.startswith(f"{node_path}/") for case_path in allowed_case_paths
-    ):
-        return all_stats
 
     # Check if the current node is relevant to the filter
     current_path = "/".join(tree)
@@ -357,31 +338,14 @@ def run_tests(
         if clean:
             clean_test(test, path, dry, verbose)
         else:
-            stats = run_test(
-                test,
-                path,
-                filter,
-                dry,
-                fail_fast,
-                verbose,
-                log_file,
-                allowed_case_paths,
-            )
+            stats = run_test(test, path, filter, dry, fail_fast, verbose, log_file)
             all_stats += stats
             if fail_fast and len(stats.failed) > 0:
                 return all_stats
 
     for subtest in node.subtests:
         all_stats += run_tests(
-            subtest,
-            filter,
-            tree.copy(),
-            clean,
-            dry,
-            fail_fast,
-            verbose,
-            log_file,
-            allowed_case_paths,
+            subtest, filter, tree.copy(), clean, dry, fail_fast, verbose, log_file
         )
 
     # Post-node command
