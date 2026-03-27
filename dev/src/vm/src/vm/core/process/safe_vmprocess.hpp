@@ -29,6 +29,7 @@ namespace vm {
 	 */
 	class SafeVMProcess final: public VMProcess {
 		friend class VmValue;
+		friend class VMValueRef;
 
 	private:
 		std::shared_mutex rw_global;
@@ -113,7 +114,8 @@ namespace vm {
 			api::ThreadID thread_id
 		) override;
 
-		std::expected<api::Response, api::ApiError> getStackFrameData(api::ThreadID thread_id, u64 frame_index
+		std::expected<api::Response, api::ApiError> getStackFrameData(
+			api::ThreadID thread_id, u64 frame_index
 		) override;
 
 		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name

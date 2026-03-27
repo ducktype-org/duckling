@@ -273,7 +273,8 @@ namespace vm {
 				RuntimeData& runtime_data = getVMThreadByID(thread_id).runtime_data;
 				u64          frames
 					= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
-				return api::Response(api::response::NumberOfCurrentStackFrames{ .number_of_stack_frames = frames });
+				return api::Response(api::response::NumberOfCurrentStackFrames{
+					.number_of_stack_frames = frames });
 			}
 		}
 		CORE_UNREACHABLE();
