@@ -74,7 +74,7 @@ namespace vm::loader::compiler::detail {
 
 		using Entry = FatMicroMapping::FunctionCtx::EntryMicroToFat;
 
-		base::HashMap<usize, usize>                 high_to_low{};
+		base::HashMap<usize, usize>            high_to_low{};
 		std::map<usize, Entry, std::greater<>> low_to_high{};
 
 #if (BUILD_TYPE_DEV_DEBUG)
