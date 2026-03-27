@@ -37,7 +37,7 @@ pub struct PackageLoader(PhantomData<()>);
 impl PackageLoader {
     pub const MANIFEST_NAME: &str = "quackconfig.yml";
     pub const FREEZE_NAME: &str = "quackfreeze.json";
-    pub const VENV_CONFIG_NAME: &str = "venvconfig.toml";
+    pub const VENV_CONFIG_NAME: &str = "venvconfig.yaml";
 
     /// Get the global package.
     pub fn global_package<'duck>(_ctx: &'duck DuckCtx) -> QuackResult<PackageCtx<'duck>> {
