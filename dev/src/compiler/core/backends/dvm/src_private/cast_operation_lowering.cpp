@@ -1,5 +1,6 @@
 #include "cast_operation_lowering.hpp"
 
+#include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 
@@ -79,15 +80,15 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void CastOperationLowerer::lowerCastOperation(
-		const CastOperation&     cast_operation,
-		std::deque<DVMValue>&    args,
-		base::Optional<DVMValue> maybe_output,
+		const CastOperation&  cast_operation,
+		std::deque<DVMValue>& args,
+		const base::Optional<DVMPlace>&
+			maybe_output,  // TODOP: This is strange, it should not taken an opt.
 		FunctionLoweringContext& function_context
 	) {
 		// Operation in form a = OP b (like mov)
 		CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
 		CORE_ASSERT(maybe_output.has_value(), "Cast operations must have an output destination");
-		auto output    = maybe_output.value();
 		auto operation = getOpKindFromLIRLayouts(cast_operation.cast_params);
 
 		// The cast operations are only supported between local stack values.
@@ -104,39 +105,25 @@ namespace compiler::backend_vm::internal {
 			auto source_type = function_context.program_context.lowerAndKeepTslType(
 				cast_operation.cast_params.source_layout
 			);
-
 			src_temp = function_context.pushTempLocal(source_type, "cast_src_tmp");
-			src_arg  = DVMValue(src_temp.value());
+			function_context.pushInstruction({ OpKind::mov, src_temp->asArgument(), args[0] });
+			src_arg = { src_temp.value(), DVMPlace::AccessKind::Direct };
 		}
 
-		// ---- Resolve destination ----
-		DVMValue                 dst_arg = output;
-		base::Optional<DVMLocal> dst_temp;
 
-		if (not dst_arg.is<DVMLocal>()) {
-			auto target_type = function_context.program_context.lowerAndKeepTslType(
-				cast_operation.cast_params.target_layout
-			);
+		auto target_type = function_context.program_context.lowerAndKeepTslType(
+			cast_operation.cast_params.target_layout
+		);
+		auto dst_temp = function_context.pushTempLocal(target_type, "cast_dst_tmp");
 
-			dst_temp = function_context.pushTempLocal(target_type, "cast_dst_tmp");
-			dst_arg  = DVMValue(dst_temp.value());
-		}
+		function_context.pushInstruction({ operation, dst_temp.asArgument(), src_arg });
 
-		// ---- Move the source to temp if needed ----
+		function_context.storeResult(
+			*maybe_output, { dst_temp, DVMPlace::AccessKind::Direct }, target_type
+		);
+
+		function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
 		if (src_temp.has_value())
-			function_context.pushInstruction({ OpKind::mov, src_arg, args[0] });
-
-		// ---- Perform cast (local → local) ----
-		function_context.pushInstruction({ operation, dst_arg, src_arg });
-
-		// ---- Move to final destination if needed ----
-		if (dst_temp.has_value())
-			function_context.pushInstruction({ OpKind::mov, output, dst_temp->asArgument() });
-
-		// ---- Cleanup ----
-		if (src_temp.has_value())
-			function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
-		if (dst_temp.has_value())
 			function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
 	}
 }

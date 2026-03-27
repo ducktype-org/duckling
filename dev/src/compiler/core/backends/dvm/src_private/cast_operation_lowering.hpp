@@ -17,19 +17,19 @@ namespace compiler::backend_vm::internal {
 	class CastOperationLowerer {
 	public:
 		/**
-		 * @brief Generates instructions to perform a cast operation.
+		 * @brief Generates instructions to perform a cast operation and store the result in the @p
+		 * maybe_output place if provided.
 		 *
 		 * @param cast_operation The cast operation to lower.
 		 * @param args The arguments of the cast operation.
-		 * @param maybe_output The optional output of the cast operation, but this functions panics
-		 * if not present.
+		 * @param maybe_output The optional output place to store the result.
 		 * @param function_context The function lowering context to use.I
 		 */
 		static void lowerCastOperation(
-			const CastOperation&     cast_operation,
-			std::deque<DVMValue>&    args,
-			base::Optional<DVMValue> maybe_output,
-			FunctionLoweringContext& program_context
+			const CastOperation&            cast_operation,
+			std::deque<DVMValue>&           args,
+			const base::Optional<DVMPlace>& maybe_output,
+			FunctionLoweringContext&        program_context
 		);
 	};
 }

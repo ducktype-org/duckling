@@ -3,11 +3,13 @@
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
+#include "typesystem/lower/type_layout.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include <string_id/string_id.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -78,16 +80,135 @@ namespace {
 	}
 }
 
+// TODOP: Potentially move type of data into DVMValue.
+void FunctionLoweringContext::storeResult(
+	const DVMPlace& dest_place, const DVMValue& src_value, CRef<tsl::TypeLayout> layout
+) {
+	// If a place is direct we just move the value into it.
+	if (dest_place.isDirect()) {
+		pushInstruction(
+			{ vm::code::builders::OpKind::mov, dest_place.asArgument(), src_value.asArgument() }
+		);
+	} else {  //  Otherwise, we store the result in the memory pointed by the pointer.
+		// If the src_value is immediate we have to store it in a temp first, as store requires a
+		// place as source.
+		DVMValue safe_src = src_value;
+		if (src_value.is<DVMImmediate>()) {
+			auto type = program_context.lowerAndKeepTslType(layout);
+			auto tmp  = pushTempLocal(type, "store_tmp");
+			pushInstruction(
+				{ vm::code::builders::OpKind::mov, tmp.asArgument(), src_value.asArgument() }
+			);
+			safe_src = { tmp, DVMPlace::AccessKind::Direct };
+		}
+		pushInstruction(
+			{ vm::code::builders::OpKind::store, dest_place.asArgument(), safe_src.asAnyArgument() }
+		);
+	}
+}
+
+void FunctionLoweringContext::storeResult(
+	const DVMPlace& dest_place, const DVMValue& src_value, const vm::code::TypeOfData& type
+) {
+	// If a place is direct we just move the value into it.
+	if (dest_place.isDirect()) {
+		pushInstruction(
+			{ vm::code::builders::OpKind::mov, dest_place.asArgument(), src_value.asArgument() }
+		);
+	} else {  //  Otherwise, we store the result in the memory pointed by the pointer.
+		// If the src_value is immediate we have to store it in a temp first, as store requires a
+		// place as source.
+		DVMValue safe_src = src_value;
+		if (src_value.is<DVMImmediate>()) {
+			auto tmp = pushTempLocal(type, "store_tmp");
+			pushInstruction(
+				{ vm::code::builders::OpKind::mov, tmp.asArgument(), src_value.asArgument() }
+			);
+			safe_src = { tmp, DVMPlace::AccessKind::Direct };
+		}
+		pushInstruction(
+			{ vm::code::builders::OpKind::store, dest_place.asArgument(), safe_src.asAnyArgument() }
+		);
+	}
+}
+
+DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
+	// First get the base place.
+	DVMPlace base_place = [&]() -> DVMPlace {
+		variant_match(place.base) {
+			variant_case(lir::LIRLocalRef, lir_local) {
+				return { getLirLocal(lir_local), DVMPlace::AccessKind::Direct };
+			}
+			variant_case(lir::LIRGlobal, lir_global) {
+				return { program_context.getLirGlobal(&lir_global), DVMPlace::AccessKind::Direct };
+			}
+		}
+		CORE_UNREACHABLE();
+	}();
+
+	// If a place has no projections we access the global/local directly, not through a pointer.
+	if (not place.hasProjections()) return base_place;
+
+	CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
+	DVMPlace              current_place  = base_place;
+	// Go through all the projections and perform appropriate loads to get to the final destination
+	// place.
+	for (usize i{ 0 }; i < place.projection_chain.size(); i++) {
+		const auto& projection = place.projection_chain[i];
+		// Skip the last projection to not perform an unnecessary load if the last projection is a
+		// dereference. DVMPlace now stores a pointer to the final place after all projections have
+		// been applied.
+		if (i == place.projection_chain.size() - 1
+		    && std::holds_alternative<lir::LIRPlace::DerefProjection>(projection.storage)) {
+			current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
+			break;
+		}
+
+		variant_match(projection.storage) {
+			variant_case(lir::LIRPlace::DerefProjection, deref) {
+				// Update types after the projection has been applied.
+				const auto& current_pointer_layout
+					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
+				auto pointee_type
+					= program_context.lowerAndKeepTslType(current_pointer_layout.getPointee());
+				auto next_ptr = pushTempLocal(pointee_type, "deref_tmp_");
+				pushInstruction({ vm::code::builders::OpKind::load,
+				                  next_ptr.asAnyArgument(),
+				                  current_place.asArgument() });
+				current_place  = { next_ptr, DVMPlace::AccessKind::Pointer };
+				current_layout = current_pointer_layout.getPointee();
+			}
+			variant_case(lir::LIRPlace::FieldProjection, field) {
+				// @TODO: #1560 handle access into fields.
+				throw base::NotYetImplemented("Field Projection in DVM backend");
+			}
+			variant_case(lir::LIRPlace::IndexProjection, index) {
+				throw base::NotYetImplemented("Index Projection in DVM backend");
+			}
+		}
+	}
+
+	return current_place;
+}
+
 DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) {
 	variant_match(lir_value.getVariant()) {
 		variant_case(lir::LIRConstant, value) { return { lirConstantToImmediate(value) }; }
 		variant_case(lir::LIRPlace, place) {
-			// @TODO: #1560 handle access into fields.
-			variant_match(place.base) {
-				variant_case(lir::LIRLocalRef, local_ref) { return { getLirLocal(local_ref) }; }
-				variant_case(lir::LIRGlobal, global) {
-					return { program_context.getLirGlobal(&global) };
-				}
+			DVMPlace resolved = resolveLirPlace(place);
+			if (resolved.isDirect()) {
+				// If the resolved place is a direct value (it's stored in a stack variable or a
+				// global) we return it directly.
+				return { resolved };
+			} else {
+				// Otherwise it's indirect. We have to load it from memory into a stack variable.
+				auto val_type = program_context.lowerAndKeepTslType(place.layout);
+				auto tmp      = pushTempLocal(val_type, "deref_load");
+				pushInstruction(
+					{ vm::code::builders::OpKind::load, tmp.asAnyArgument(), resolved.asArgument() }
+				);
+				// Now mark the place as direct as the value was loaded from the pointer.
+				return { tmp, DVMPlace::AccessKind::Direct };
 			}
 		}
 		variant_case(lir::BlockRef, block_ref) { return { DVMLabel{ getBlockLabel(block_ref) } }; }

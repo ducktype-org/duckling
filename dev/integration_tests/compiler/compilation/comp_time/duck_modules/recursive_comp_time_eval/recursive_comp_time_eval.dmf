@@ -8,3 +8,5 @@ fun main() -> i64 = {
     var a: if fibb(12) > 0 then i64 else f64 = 0;
     return 0;
 }
+
+# TODOP: Add pointers in comptime

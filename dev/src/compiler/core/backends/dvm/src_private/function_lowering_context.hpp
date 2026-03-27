@@ -81,6 +81,13 @@ namespace compiler::backend_vm::internal {
 			);
 		};
 
+		/**
+		 * @brief Translates a LIRPlace to a DVMPlace. In case of direct values returns a place
+		 * representing a local/global variable, for references and projection chains (like
+		 * a.field[3].*) returns a pointer to final calculated place.
+		 */
+		DVMPlace resolveLirPlace(const lir::LIRPlace& place);
+
 		// Creates a mapping between a LIR local and DVM local.
 		const DVMLocal& createLirLocalToDVMMapping(lir::LIRLocalRef local);
 
@@ -91,6 +98,19 @@ namespace compiler::backend_vm::internal {
 
 		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
 
+		/**
+		 * @brief Stores a given @p src_value in @p dest_place. Depending on the place type,
+		 * performs a `mov_X_X` or a `store_X_X`.
+		 * TODOP: Remove one of those.
+		 */
+		void storeResult(
+			const DVMPlace& dest_place, const DVMValue& src_value, CRef<tsl::TypeLayout> layout
+		);
+		void storeResult(
+			const DVMPlace& dest_place, const DVMValue& src_value, const vm::code::TypeOfData& type
+		);
+
+
 		void pushInstruction(const vm::code::Instruction& instruction);
 
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
@@ -98,7 +118,7 @@ namespace compiler::backend_vm::internal {
 		void handleCall(
 			const FunctionCallInfo&     call_info,
 			const std::deque<DVMValue>& func_args,
-			base::Optional<DVMValue>    output
+			base::Optional<DVMPlace>    output
 		);
 
 		usize    next_temp_id = 0;

@@ -4,8 +4,11 @@
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "meta_operation_lowering.hpp"
+#include "program_lowering_context.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
+
+#include "base/str/str_utils.hpp"
 
 #include <logger/logger.hpp>
 
@@ -147,7 +150,7 @@ namespace {
 void FunctionLoweringContext::handleCall(
 	const FunctionCallInfo&     call_info,
 	const std::deque<DVMValue>& func_args,
-	base::Optional<DVMValue>    output
+	base::Optional<DVMPlace>    output
 ) {
 	CORE_ASSERT(
 		call_info.param_types.size() == func_args.size(),
@@ -174,13 +177,12 @@ void FunctionLoweringContext::handleCall(
 	pushInstruction({ OpKind::call,
 	                  VISIT(call_info.call_target, callable, return callable.asArgument()) });
 
-	if (output) {
-		pushInstruction({
-			OpKind::mov,
+	if (output)
+		storeResult(
 			output.value(),
-			call_result_storage->asArgument(),
-		});
-	}
+			{ call_result_storage.value(), DVMPlace::AccessKind::Direct },
+			call_info.return_type.value()
+		);
 
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
 }
@@ -192,12 +194,31 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 	}
 
+	if (lir_instruction.operation == lir::Operation::AddressOf) {
+		// TODOP: This should probably be a DVMOperation
+		auto     src_place = lir_instruction.arguments[0].get<lir::LIRPlace>();
+		DVMValue value     = lowerLirValue(src_place);
+		DVMPlace output    = resolveLirPlace(lir_instruction.output.value());
+
+		// Create a temp for the address.
+		// TODOP: Opt that.
+		auto addr_temp = pushTempLocal(
+			program_context.lowerAndKeepTslType(lir_instruction.output->layout), "addr_of"
+		);
+
+		pushInstruction({ OpKind::ref, addr_temp.asArgument(), value.asAnyArgument() });
+		storeResult(
+			output, { addr_temp, DVMPlace::AccessKind::Direct }, lir_instruction.output->layout
+		);
+		return;
+	}
+
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
 	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
 	    | std::ranges::to<std::deque>();
 	const auto maybe_output
-		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
+		= lir_instruction.output.map([&](auto& place) { return resolveLirPlace(place); });
 
 	const auto dvm_operation = lirInstrToDVMOperation(lir_instruction);
 
@@ -215,22 +236,22 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 	}
 	auto operation = std::get<SimpleOperation>(dvm_operation).op;
 
-
 	if (isComparison(operation)) {
+		// TODOP: Prolly move comparison to it's own operation.
 		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
 		CORE_ASSERT(
 			maybe_output.has_value(), "Comparison operations must have an output destination"
 		);
 		auto output = maybe_output.value();
 
+		DVMValue result_val = { DVMImmediate(0) };
+
 		if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
 			auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
 			auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
-			bool result    = compTimeEvaluateComparison(operation, lhs_value, rhs_value);
-			if (result)
-				pushInstruction({ OpKind::mov, output, DVMImmediate(1).asArgument() });
-			else
-				pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
+			result_val     = {
+                DVMImmediate(compTimeEvaluateComparison(operation, lhs_value, rhs_value) ? 1 : 0)
+			};
 		} else {
 			if (args[0].is<DVMImmediate>()) {
 				// Swap arguments to place immediate on the right side.
@@ -242,43 +263,64 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			// a CMP b;
 			// mov x, 0;
 			// cmov x, 1;
+			auto tmp_res = pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
 			pushInstruction({ operation, args[0], args[1] });
-			pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
-			pushInstruction({ OpKind::cmov, output, DVMValue(1).asArgument() });
+			pushInstruction({ OpKind::mov, tmp_res.asArgument(), DVMImmediate(0).asArgument() });
+			pushInstruction({ OpKind::cmov, tmp_res.asArgument(), DVMValue(1).asArgument() });
+			result_val = { tmp_res, DVMPlace::AccessKind::Direct };
 		}
-
+		storeResult(output, result_val, lir_instruction.output->layout);
 	} else if (operation == OpKind::call) {
-		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-		auto called_func_name = args.front();
+		auto called_function = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 		args.pop_front();
 		handleCall(
 			FunctionCallInfo::fromLirFunction(called_function, program_context), args, maybe_output
 		);
 	} else if (isUnaryOperation(operation)) {
 		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
-		auto output = maybe_output.value();
+		DVMPlace output = maybe_output.value();
 		// If instruction is of the form: a = OP b, then
 		// we transform it to:
 		// a = b;
 		// a = OP a;
-		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
 
-		pushInstruction({ operation, output });
+		if (output.isDirect()) {
+			// If output is a direct place we just use it.
+			storeResult(output, args[0], lir_instruction.output->layout);
+			pushInstruction({ operation, output.asArgument() });
+		} else {
+			// Otherwise we perform the operations on the
+			// temporary and than store it in the indirect place.
+			auto type = program_context.lowerAndKeepTslType(lir_instruction.output->layout);
+			auto tmp  = pushTempLocal(type, "unary_tmp");
+			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
+			pushInstruction({ operation, tmp.asArgument() });
+			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, type);
+			pushInstruction({ vm::code::instructions::Op_deinit() });
+		}
 	} else if (args.size() == 2) {
 		// In this case we assume we have a very general quadruple of the form:
 		// output = arg1 OP arg2;
 		auto output = maybe_output.value();
 
-		// If instruction is of the form: a = b OP c, then
-		// we transform it to:
-		// a = b;
-		// a = a OP c;
-		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
-
-		pushInstruction({ operation, output, args[1] });
+		if (output.isDirect()) {
+			// If instruction is of the form: a = b OP c, then
+			// we transform it to:
+			// a = b;
+			// a = a OP c;
+			storeResult(output, args[0], lir_instruction.output->layout);
+			pushInstruction({ operation, output.asArgument(), args[1].asArgument() });
+		} else {
+			auto type = program_context.lowerAndKeepTslType(lir_instruction.output->layout);
+			auto tmp  = pushTempLocal(type, "binary_tmp");
+			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
+			pushInstruction({ operation, tmp.asArgument(), args[1].asArgument() });
+			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, type);
+			pushInstruction({ vm::code::instructions::Op_deinit() });
+		}
+		return;
 	} else {
-		auto output = maybe_output.value();
-		pushInstruction({ operation, output, args[0] });
+		storeResult(maybe_output.value(), args[0], lir_instruction.output->layout);
 	}
 }
 
