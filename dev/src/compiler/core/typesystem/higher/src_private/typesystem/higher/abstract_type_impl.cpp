@@ -229,7 +229,9 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context&) const {
-		throw base::NotYetImplemented("Tuple type interface not yet implemented");
+		// note: It is only for the pourpuse of unifying tuple type layput into class type layout, tuple generated fields will soon be introduced
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	CRef<TypeInterface> FunctionAbstractTypeImpl::getInterface(query::Context&) const {

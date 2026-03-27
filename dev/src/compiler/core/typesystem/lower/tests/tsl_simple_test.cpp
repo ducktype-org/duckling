@@ -350,28 +350,23 @@ private:
 				"Layout should have source type as constructed."
 			);
 			variant_match(tuple_layout->getVariant()) {
-				variant_case(TupleTypeLayout, l) {
+				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getOffsetOfComponentIndex(0) == Bytes(0)
-							&& l.getOffsetOfComponentIndex(1) == Bytes(2)
-							&& l.getOffsetOfComponentIndex(2) == Bytes(8),
+						l.getOffsetOfLayoutIndex(0) == Bytes(0)
+							&& l.getOffsetOfLayoutIndex(1) == Bytes(2)
+							&& l.getOffsetOfLayoutIndex(2) == Bytes(8),
 						"Tuple layout should align its component layouts."
 					);
 
-					for (usize i = 0; i < l.getNumComponents(); i++) {
+					for (usize i = 0; i < l.getNumFields(); i++) {
 						assertTrue(
-							l.getComponentIndexOfLayoutIndex(l.getLayoutIndexOfComponentIndex(i))
-								== i,
-							"Component index to layout index mapping should be reversible."
-						);
-						assertTrue(
-							l.getLayoutIndexOfComponentIndex(l.getComponentIndexOfLayoutIndex(i))
+							l.getLayoutIndexOfFieldSymbol(l.getFieldSymbolOfLayoutIndex(i))
 								== i,
 							"Layout index to component index mapping should be reversible."
 						);
 					}
 				}
-				variant_default { fail("Layout of tuple type should be tuple-like."); }
+				variant_default { fail("Layout of tuple type should be class-like."); }
 			}
 			testPrinting(tuple_layout, ctx, true);
 		});
@@ -428,11 +423,11 @@ private:
 			variant_match(my_class_layout->getVariant()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getOffsetOfFieldSymbol(a_field_symbol) == Bytes(0)
-							&& l.getOffsetOfFieldSymbol(b_field_symbol) == Bytes(2)
-							&& l.getOffsetOfFieldSymbol(c_field_symbol) == Bytes(8)
-							&& l.getOffsetOfFieldSymbol(d_field_symbol) == Bytes(16)
-							&& l.getOffsetOfFieldSymbol(e_field_symbol) == Bytes(24),
+						l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(a_field_symbol)) == Bytes(0)
+							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(b_field_symbol)) == Bytes(2)
+							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(c_field_symbol)) == Bytes(8)
+							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(d_field_symbol)) == Bytes(16)
+							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(e_field_symbol)) == Bytes(24),
 						"Class layout should align its component layouts."
 					);
 				}
