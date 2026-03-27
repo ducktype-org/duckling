@@ -4,10 +4,10 @@
 #include <base/pointers/ref.hpp>
 
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <filesystem>
 
 namespace logger {
 	namespace {
@@ -16,9 +16,11 @@ namespace logger {
 			return &enabled_categories;
 		}
 
-		Ref<std::ostream> current_stream = &std::cout;
+        Ref<std::ostream>& getCurrentLoggingStream(){
+            static Ref<std::ostream> current_stream = &std::cout;
+            return current_stream;
 
-		Ref<std::ostream> getOutputStream() { return current_stream; }
+        }
 
 
 	}
@@ -32,7 +34,7 @@ namespace logger {
 	namespace internal {
 		void logMessage(std::string_view message) {
 			// In the future this could be directed to a file or other streams.
-			(*getOutputStream()) << message;
+			(*getCurrentLoggingStream()) << message;
 		}
 	}
 
@@ -42,7 +44,7 @@ namespace logger {
 		getEnabledCategories()->push_back(category);
 	}
 
-	void setDevLogOutputStream(Ref<std::ostream> str) { current_stream = str; }
+	void setDevLogOutputStream(Ref<std::ostream> str) { getCurrentLoggingStream() = str; }
 
 	void setDevLogOutputFile(const std::string& path) {
 		auto* fs = new std::ofstream(path, std::ios::out);
@@ -50,16 +52,16 @@ namespace logger {
 	}
 
 	void setDevLogOutputStreamCurrentDate() {
-        auto now = std::chrono::system_clock::now();
-        auto now_sec = std::chrono::floor<std::chrono::seconds>(now);
+		auto now     = std::chrono::system_clock::now();
+		auto now_sec = std::chrono::floor<std::chrono::seconds>(now);
 
-        std::string filename = std::format("log_{:%Y-%m-%d_%H-%M-%S}.txt", now_sec);
+		std::string filename = std::format("log_{:%Y-%m-%d_%H-%M-%S}.txt", now_sec);
 
-        std::filesystem::path log_directory = "logs";
+		std::filesystem::path log_directory = "logs";
 
-        std::filesystem::create_directories(log_directory);
+		std::filesystem::create_directories(log_directory);
 
-        std::filesystem::path full_file_path = log_directory / filename;
+		std::filesystem::path full_file_path = log_directory / filename;
 
 		setDevLogOutputFile(full_file_path);
 	}

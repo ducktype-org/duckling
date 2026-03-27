@@ -339,7 +339,7 @@ namespace vm {
 		std::string getThreadCtx();
 
 		/**
-		 * @brief Gets id of current exec_thread. 
+		 * @brief Gets id of current exec_thread.
 		 */
 		api::ThreadID getRunningThreadId();
 	};

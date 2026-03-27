@@ -3,7 +3,7 @@
 #include "module_flags/module_flags.hpp"  // IWYU pragma: keep
 
 #include <base/pointers/ref.hpp>
-#include <base/str/str_utils.hpp>         // IWYU pragma: export
+#include <base/str/str_utils.hpp>  // IWYU pragma: export
 
 #include <string_view>
 
@@ -49,9 +49,9 @@ namespace logger {
 
 	/**
 	 * Changes output stream used for logs.
-     * DEFAULT: stdout
+	 * DEFAULT: stdout
 	 */
-    void setDevLogOutputStream(Ref<std::ostream> str);
+	void setDevLogOutputStream(Ref<std::ostream> str);
 
 	/**
 	 * Enables logging for the specified category by its string name.
@@ -72,8 +72,14 @@ namespace logger {
 	 */
 	bool isCategoryEnabled(DevLogCategories category);
 
+	/**
+	 * @brief Sets output stream to the file pointed by path. 
+	 */
 	void devLogOutputFile(const std::string& path);
 
+	/**
+	 * @brief Sets output stream to the file logs/log_<timestamp>.txt
+	 */
 	void setDevLogOutputStreamCurrentDate();
 }
 

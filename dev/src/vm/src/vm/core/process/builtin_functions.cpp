@@ -190,14 +190,14 @@ namespace vm::builtins {
 		const std::vector<Box<VmValue>>& arguments
 	) {
 		switch (id) {
-#define CASE_FUNC(ID_NAME)                                                                          \
-	case BuiltinFunctionID::ID_NAME: {                                                              \
-		CORE_DEV_LOG(                                                                               \
+#define CASE_FUNC(ID_NAME)                                                                      \
+	case BuiltinFunctionID::ID_NAME: {                                                          \
+		CORE_DEV_LOG(                                                                           \
 			DVMDetails, "builtin, ", #ID_NAME, ", ", thread.getRunningThreadId().asInt(), ";\n" \
-		);                                                                                          \
-		return callUnpackArgs(                                                                      \
-			FunctionHandlers::builtin##ID_NAME, result_type, process, thread, arguments             \
-		);                                                                                          \
+		);                                                                                      \
+		return callUnpackArgs(                                                                  \
+			FunctionHandlers::builtin##ID_NAME, result_type, process, thread, arguments         \
+		);                                                                                      \
 	}
 
 			FOR_EACH(

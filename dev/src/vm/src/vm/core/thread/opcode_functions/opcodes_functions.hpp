@@ -128,7 +128,7 @@ namespace vm {
 					called_func.name.str(),
 					", ",
 					thread.getRunningThreadId().asInt(),
-                    ";\n"
+					";\n"
 				);
 
 			// Size of the shared stack space between called functions.

@@ -404,12 +404,7 @@ namespace vm {
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(                                                                           \
-				DVMDetails,                                                                         \
-				"opcode, ",                                                                \
-				#opcode_name,                                                                       \
-				", ",                                                                        \
-				getRunningThreadId().asInt(),                                                       \
-				";\n"                                                                                \
+				DVMDetails, "opcode, ", #opcode_name, ", ", getRunningThreadId().asInt(), ";\n"     \
 			);                                                                                      \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
