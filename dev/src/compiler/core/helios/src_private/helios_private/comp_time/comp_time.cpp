@@ -5,7 +5,8 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
@@ -626,7 +627,7 @@ namespace compiler::helios {
 				const auto& numeric = ctv.get<NumericValue>();
 				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
 
-				auto maybe_new_numeric = numeric->castTo(cast.target_type);
+				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
 
 				if (!maybe_new_numeric.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -651,7 +652,7 @@ namespace compiler::helios {
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDefaultValueExpr(const code::DefaultValueExpr& expr) final {
-				switch (expr.type.getType().getKind()) {
+				switch (expr.type.getKind()) {
 				case tsh::Kind::Integral:
 				case tsh::Kind::Float: {
 					// Creates a 0 initialized numeric by default.

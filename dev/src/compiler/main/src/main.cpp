@@ -15,7 +15,7 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
@@ -240,7 +240,7 @@ clah::Clah getClahForMain() {
 		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
-									   std::cout << hout_unit->debugPrint(ctx);
+									   hout_unit->debugPrint(ctx, std::cout);
 							   });
 
 							   return exit_code;
@@ -312,8 +312,7 @@ clah::Clah getClahForMain() {
 
 					auto root = global_state::getMainPackage().root_module;
 
-					auto output_artifact
-						= query::entryPoint<driver::CompileModule>({ root, backend_type });
+					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
 
 					compiler::driver::exit();

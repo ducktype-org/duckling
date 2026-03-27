@@ -11,8 +11,10 @@
 #include "frontend.hpp"
 #include "helper_structs.hpp"
 
+#include <backends/dvm/repl_lowering.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
@@ -43,6 +45,13 @@ namespace compiler::repl {
 		int run();
 
 	private:
+		/**
+		 * @brief Grant ReplSimulationTest access to private members for testing.
+		 *
+		 * Allows the test suite to access private methods and members to verify
+		 * internal behavior without exposing them in the public API.
+		 */
+		friend class ReplSimulationTest;
 		/**
 		 * @brief Process a single line of input from the user.
 		 *
@@ -147,10 +156,29 @@ namespace compiler::repl {
 		/**
 		 * @brief Compile and load definitions (functions, variables, etc.) into the REPL environment.
 		 *
-		 * @param module_id The module containing the definitions to load
+		 * @param stmt The top-level statement being treated as a definition
 		 * @return ReplResult indicating success or error
 		 */
-		ReplResult handleDefinition(frontend::ModuleID module_id);
+		ReplResult handleDefinition(const pst::AccessLocked<pst::Stmt>& stmt);
+
+		/**
+		 * @brief Compile and execute a single instruction (if/while/for/block) in the REPL.
+		 *
+		 * Wraps the instruction in a synthetic void function, compiles it to DVM bytecode,
+		 * executes it, and reports the outcome.
+		 *
+		 * @param stmt The instruction statement to execute
+		 * @return ReplResult indicating success or error
+		 */
+		ReplResult handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt);
+
+		/**
+		 * @brief Return the currently processed REPL module.
+		 *
+		 * The current module is the most recently created module in REPL history.
+		 * It is later compiled to HOUT and sent to DVM for execution.
+		 */
+		[[nodiscard]] frontend::ModuleID getCurrentModuleID() const;
 
 		/**
 		 * @brief Initialize the DVM process for code execution.
@@ -160,11 +188,19 @@ namespace compiler::repl {
 		 */
 		void initDVM();
 
-		bool                       m_should_exit;  /// Flag to terminate the REPL loop
-		std::vector<ReplStatement> m_history;      /// All statements entered in this session
-		u64          m_inputs_counter;  /// Counter for generating unique wrapper function names
-		vm::PID      m_dvm_pid;         /// Process ID of the running DVM instance
-		ReplFrontend m_frontend;        /// Frontend for user interaction
+		bool                       m_should_exit;  ///< Flag to terminate the REPL loop
+		std::vector<ReplStatement> m_history;      ///< All statements entered in this session
+		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
+		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
+		ReplFrontend m_frontend;      ///< Frontend for user interaction
+		/**
+		 * @brief Persistent lowering context for REPL statement compilation.
+		 *
+		 * Maintains state across multiple REPL statements, allowing accumulated functions,
+		 * globals, and types from previous statements to be referenced in new statements.
+		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
+		 */
+		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
 	};
 
 }  // namespace compiler::repl

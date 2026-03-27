@@ -6,12 +6,14 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
 
+#include <mutex>
 #include <regex>
 #include <string>
 
@@ -174,14 +176,16 @@ namespace compiler::frontend {
 		}
 
 		/**
-		 * Returns ComponentHash of the module.
-		 * it is calculated from module logical path
-		 * eg. for module tree like:
+		 * Returns the ComponentHash of the module.
+		 * It is calculated from the module logical path.
+		 * For example, for a module tree like:
 		 * /root
 		 *   /sub1
 		 *     /sub2
 		 * The component hash of sub2 will be ComponentHash({"root", "sub1", "sub2"})
 		 * @param module_id ModuleID of the module to get the component hash for.
+		 * @note This function is thread-safe only if the module tree hash is not modified/deleted
+		 * concurrently.
 		 */
 		[[nodiscard]]
 		static const hashing::ComponentHash& getPathComponentHash(ModuleID module_id);
@@ -212,6 +216,8 @@ namespace compiler::frontend {
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes
 		 * This also invalidates all children modules recursively
+		 * @note This is not thread-safe, this should be called in main thread only with no active
+		 * workers.
 		 */
 		void invalidateHash();
 
@@ -226,7 +232,7 @@ namespace compiler::frontend {
 		 * Updates the module hashes from the root module down to this module.
 		 * This is needed to ensure that all parent modules have their hashes updated before this
 		 * module.
-		 * @note This fuction will update both module hash and path component hash.
+		 * @note This function updates both module hash and path component hash.
 		 */
 		void updateModuleHashFromRootToThis();
 
@@ -265,6 +271,12 @@ namespace compiler::frontend {
 		                            // package_name/root/submodule1/sub2
 		base::Optional<hashing::ComponentHash::HashType>
 			m_hash;                 //< This is the actual hash for the Module used in SideInput
+		/**
+		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
+		 * @note Hold this lock while reading/writing m_path_component_hash or m_hash during lazy
+		 * recomputation flow (updateModuleHashFromRootToThis/updateModuleHash).
+		 */
+		mutable base::Box<std::mutex> m_hash_recompute_mutex;
 
 		/**
 		 * Package ID associated with this module tree.
@@ -459,7 +471,6 @@ namespace compiler::frontend {
 		/**
 		 * Removes a source file from its module.
 		 * @param file The SourceFile to remove.
-		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
 		static void removeSourceFileFromStorage(base::Ref<SourceFile> file);
 
@@ -473,7 +484,6 @@ namespace compiler::frontend {
 		/**
 		 * Removes the main source file from the given module.
 		 * @param module The module to modify.
-		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
 		static void removeMainSourceFile(base::Ref<ModuleTree> module);
 
@@ -529,7 +539,6 @@ namespace compiler::frontend {
 		 * Also removes it from its parent's submodules and deletes associated source files.
 		 * @param module_id The ModuleID to remove.
 		 * This will set the parent of all submodules to the parent of the removed module.
-		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
 		 */
 		static void removeSingleModule(base::Ref<ModuleTree> module);
 
@@ -537,7 +546,6 @@ namespace compiler::frontend {
 		 * Removes the given module and all of its submodules recursively.
 		 * Parent hashes are updated once after the entire subtree is removed.
 		 * @param module_id The ModuleID to remove.
-		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
 		 */
 		static void removeModuleRecursive(base::Ref<ModuleTree> module);
 

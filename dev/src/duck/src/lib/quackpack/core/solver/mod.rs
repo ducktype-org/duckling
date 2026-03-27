@@ -56,6 +56,8 @@ pub struct SolverGathererData<'duck, 'ctx> {
 }
 
 /// Dependency realization returned by [`solve`](SolverEngineData::solve).
+/// Contains the new, currently valid [`SolverFreeze`]
+/// and its packages manifests to generate a serializable freeze.
 pub struct SolverAnswer {
     pub new_freeze: SolverFreeze,
     pub pkgs_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
@@ -179,12 +181,14 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         let Some(root_freeze) = freeze.package_freezes.get(&freeze.main_pkg) else {
             qp_bail_internal!("Maximal valid freeze without main package freeze")
         };
-        for dep in root_freeze.dependencies_realization.keys() {
-            root_manifest
-                .dependencies_mut()
-                .all_dependencies_mut()
-                .remove(dep);
-        }
+        root_manifest
+            .dependencies_mut()
+            .all_dependencies_mut()
+            .retain(|dep| {
+                !root_freeze
+                    .dependencies_realization
+                    .contains_key(&dep.effective_name())
+            });
         Ok(root_manifest)
     }
 }
@@ -201,6 +205,8 @@ pub struct SolverEngineData {
 }
 
 impl SolverEngineData {
+    /// Finds dependency resolution of a given package.
+    /// Returns a [`SolverAnswer`].
     pub fn solve(self) -> QuackResult<SolverAnswer> {
         let manifests = self.input.gathered_manifests.clone();
         let solver_output =

@@ -26,12 +26,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	Float,
 	RawPointer,
 	Pointer,
-	Reference,
 	String,
 	Function,
-	Enum,
-	Flag,
-	Optional,
 	DynamicArray,
 	StaticArray,
 	Tuple,
@@ -39,9 +35,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	Class,
 	TypeTemplate,
 	Namespace,
-	CodeBlock,
 	Module,
-	VTable,
 
 	/** @brief The kind of the import value. */
 	Import,

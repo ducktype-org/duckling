@@ -12,7 +12,7 @@ pub struct SetOnce {
 }
 
 impl SetOnce {
-    /// Create new, unset [`Self`].
+    /// Create new, unset [`SetOnce`].
     pub fn new() -> Self {
         Self { was_set: false }
     }

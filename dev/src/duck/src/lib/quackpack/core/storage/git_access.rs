@@ -1,3 +1,4 @@
+//! A storage management of gits.
 use std::path::{Path, PathBuf};
 
 use url::Url;
@@ -12,11 +13,13 @@ use super::package_id::{GitId, PackageId};
 
 use super::paths::Storage;
 #[derive(Debug, Clone, Copy)]
+/// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {
     paths: &'paths Storage,
 }
 
 impl<'paths> StorageGitAccess<'paths> {
+    /// Create a new [`StorageGitAccess`].
     pub fn new(paths: &'paths Storage) -> Self {
         Self { paths }
     }

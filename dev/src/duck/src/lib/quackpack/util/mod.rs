@@ -1,3 +1,4 @@
+//! Various quackpack-only utilities.
 pub mod paths;
 pub mod progress_bar;
 pub mod qp_ctx;

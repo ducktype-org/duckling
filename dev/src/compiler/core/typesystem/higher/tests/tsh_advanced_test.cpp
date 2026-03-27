@@ -16,7 +16,10 @@ class TypeSystemClassFieldsTest final: public tester::TestSuite {
 #define TESTER_CLASS TypeSystemClassFieldsTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(classInterfaceTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(classInterfaceTest);
+		TESTER_ADD_TEST(classConstructabilityTest);
+	}
 
 private:
 	void classInterfaceTest() {
@@ -66,6 +69,79 @@ private:
 			assertTrue(
 				my_class_interface->getElementsWithName(base::StrID("nonExistent")).empty(),
 				"There should be exactly no 'nonExistent' members."
+			);
+		});
+	}
+
+	void classConstructabilityTest() {
+		auto [_, root_scope] = getModule(fs::File(path("class_definitions")));
+
+		const auto trivial_class_sym = getChain("TrivialClass", root_scope).back();
+		const auto my_class_sym      = getChain("MyClass", root_scope).back();
+		const auto complex_class_sym = getChain("ComplexClass", root_scope).back();
+		const auto non_def_const_class_sym
+			= getChain("NonDefaultConstructibleClass", root_scope).back();
+		const auto complex_complex_class_sym
+			= getChain("MoreComplexComplexClass", root_scope).back();
+		const auto complex_non_defaultable_sym
+			= getChain("MoreComplexNonDefaultable", root_scope).back();
+
+		withContextDo([&](query::Context& ctx) {
+			auto get_type = [&](const compiler::helios::SymID sym_id) {
+				return ctx.query<compiler::helios::QueryTypeFromDefinition>(sym_id)->valueOrPanicMsg(
+					"Not expecting an ERROR here..."
+				);
+			};
+
+			auto assert_flags = [&](const SymbolType<>& type,
+			                        bool                def,
+			                        bool                zero,
+			                        bool                copy,
+			                        bool                triv,
+			                        std::string_view    msg) {
+				assertTrue(
+					type.isDefaultConstructible(ctx) == def,
+					base::strConcat(msg, " isDefaultConstructible check failed")
+				);
+				assertTrue(
+					type.isTriviallyZeroInitializable(ctx) == zero,
+					base::strConcat(msg, " isTriviallyZeroInitializable check failed")
+				);
+				assertTrue(
+					type.isCopyable(ctx) == copy, base::strConcat(msg, " isCopyable check failed")
+				);
+				assertTrue(
+					type.isTriviallyCopyable(ctx) == triv,
+					base::strConcat(msg, " isTriviallyCopyable check failed")
+				);
+			};
+
+			// Just a POD, should be as trivial as it can get.
+			const auto trivial_class = get_type(trivial_class_sym);
+			assert_flags(trivial_class, true, true, true, true, "TrivialClass");
+
+			// POD but it's field has an initial value so its not trivially zero initializable.
+			const auto my_class = get_type(my_class_sym);
+			assert_flags(my_class, true, false, true, true, "MyClass");
+
+			// Has a List[i32] field, so it's not trivially copyable cause deep copy is required.
+			const auto complex_class = get_type(complex_class_sym);
+			assert_flags(complex_class, true, true, true, false, "ComplexClass");
+
+			// Has a `ref i64` field, so it's not default constructible, but trivially copyable.
+			const auto non_def_const_class = get_type(non_def_const_class_sym);
+			assert_flags(non_def_const_class, false, false, true, true, "NonDefaultConstructible");
+
+			// Has List[i32] field deeper in the hierarchy, so it's not trivially copyable cause
+			// deep copy is required.
+			const auto complex_complex_class = get_type(complex_complex_class_sym);
+			assert_flags(complex_complex_class, true, true, true, false, "MoreComplexComplexClass");
+
+			// Has `ref i64` field deeper in the hierarchy, so it's not default constructible, but
+			// trivially copyable.
+			const auto complex_non_defaultable = get_type(complex_non_defaultable_sym);
+			assert_flags(
+				complex_non_defaultable, false, false, true, true, "MoreComplexNonDefaultable"
 			);
 		});
 	}

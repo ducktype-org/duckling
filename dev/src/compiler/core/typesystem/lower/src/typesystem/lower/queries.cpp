@@ -8,27 +8,27 @@ namespace compiler::tsl {
 			using enum tsh::Kind;
 			switch (key.getKind()) {
 			case Unit:
-				return EmptyTypeLayout(key);
+				return EmptyTypeLayout(key, ctx);
 			case Meta:
-				return MetaTypeLayout(tsh::MetaAbstractType(key));
+				return MetaTypeLayout(tsh::MetaAbstractType(key), ctx);
 			case Byte:
-				return IntegralTypeLayout(tsh::ByteAbstractType(key));
+				return IntegralTypeLayout(tsh::ByteAbstractType(key), ctx);
 			case Bool:
-				return IntegralTypeLayout(tsh::BoolAbstractType(key));
+				return IntegralTypeLayout(tsh::BoolAbstractType(key), ctx);
 			case Char:
-				return IntegralTypeLayout(tsh::CharAbstractType(key));
+				return IntegralTypeLayout(tsh::CharAbstractType(key), ctx);
 			case Integral:
-				return IntegralTypeLayout(tsh::IntegralAbstractType(key));
+				return IntegralTypeLayout(tsh::IntegralAbstractType(key), ctx);
 			case Float:
-				return FloatTypeLayout(key);
+				return FloatTypeLayout(key, ctx);
 			case RawPointer:
-				return PointerTypeLayout(key);
+				return PointerTypeLayout(tsh::RawPointerAbstractType(key), ctx);
 			case Pointer:
-				return PointerTypeLayout(key, ctx);
+				return PointerTypeLayout(tsh::PointerAbstractType(key), ctx);
 			case String:
-				return StringTypeLayout(key);
+				return StringTypeLayout(key, ctx);
 			case Function:
-				return FunctionalTypeLayout(key);
+				return FunctionalTypeLayout(key, ctx);
 			case DynamicArray:
 				return DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
 			case StaticArray:

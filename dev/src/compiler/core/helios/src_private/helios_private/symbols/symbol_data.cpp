@@ -15,6 +15,15 @@ namespace compiler::helios {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::DefaultClassConstructor::queryUnstablePerfectHash() const {
+			return { class_symbol.queryUnstablePerfectHash() };
+		}
+
+		base::Bit256 GeneratedSymbolData::DefaultStaticArrayConstructor::queryUnstablePerfectHash(
+		) const {
+			return { array_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
 			return { operator_type.queryUnstablePerfectHash() };
 		}
@@ -37,13 +46,11 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(return_type, counter);
 		}
 
-		GeneratedSymbolData::GeneratedSymbolData(const std::variant<
-												 ImplicitConstructor,
-												 BuiltinOperator,
-												 Parameter,
-												 SelfParameter,
-												 Variable,
-												 ReplExpressionWrapper>& data):
+		base::Bit256 GeneratedSymbolData::ReplInstructionWrapper::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(counter);
+		}
+
+		GeneratedSymbolData::GeneratedSymbolData(const GeneratedSymbolDataVariant& data):
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
@@ -83,6 +90,49 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(DefaultClassConstructor, ctor) {
+					const auto class_type
+						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
+					          ->valueOrThrow()
+					          .getType()
+					          .as<tsh::ClassAbstractType>();
+
+					// @TODO: #1328 Properly handle value categories in class constructors.
+					const tsh::SymbolType<> return_type{
+						class_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+
+					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						{},
+						return_type,
+					});
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(DefaultStaticArrayConstructor, ctor) {
+					const tsh::SymbolType<> return_type{
+						ctor.array_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+
+					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						{},
+						return_type,
+					});
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 				variant_case(BuiltinOperator, op) {
 					return tsh::SymbolType<>{
 						op.operator_type,
@@ -98,7 +148,7 @@ namespace compiler::helios {
 					          .as<tsh::FunctionAbstractType>();
 					auto param_symbol_type
 						= function_type.getParameterTypes().at(param.parameter_index);
-					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
+					return param_symbol_type;
 				}
 				variant_case(SelfParameter, param) {
 					const auto class_type
@@ -122,6 +172,22 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(ReplInstructionWrapper, repl) {
+					// Unit (not Void) is the correct return type for procedures.
+					// Per the language spec: "void ... cannot be returned from a function".
+					const auto void_type = tsh::SymbolType<>{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+					const auto function_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ {}, void_type });
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -129,6 +195,12 @@ namespace compiler::helios {
 		ScopeID GeneratedSymbolData::getScope() const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) {
+					CORE_PANIC("Can't get scope of implicit constructor yet.");
+				}
+				variant_case(DefaultClassConstructor, ctor) {
+					CORE_PANIC("Can't get scope of implicit constructor yet.");
+				}
+				variant_case(DefaultStaticArrayConstructor, ctor) {
 					CORE_PANIC("Can't get scope of implicit constructor yet.");
 				}
 				variant_case(BuiltinOperator, op) {
@@ -144,6 +216,9 @@ namespace compiler::helios {
 				variant_case(ReplExpressionWrapper, repl) {
 					CORE_PANIC("Can't get scope of repl expr wrapper yet.");
 				}
+				variant_case(ReplInstructionWrapper, repl) {
+					CORE_PANIC("Can't get scope of repl instruction wrapper yet.");
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -152,11 +227,14 @@ namespace compiler::helios {
 		base::Optional<ScopeID> GeneratedSymbolData::maybeScope() const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) { return {}; }
+				variant_case(DefaultClassConstructor, ctor) { return {}; }
+				variant_case(DefaultStaticArrayConstructor, ctor) { return {}; }
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
 				variant_case(Variable, var) { return {}; }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
+				variant_case(ReplInstructionWrapper, repl) { return {}; }
 				variant_default { CORE_PANIC("Unhandled symbol kind"); }
 			}
 			CORE_UNREACHABLE();
@@ -192,6 +270,12 @@ namespace compiler::helios {
 			variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
 				kind = SymbolKind::Function;
 			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::DefaultClassConstructor) {
+				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor) {
+				kind = SymbolKind::Function;
+			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
 				kind = SymbolKind::Function;
 			}
@@ -205,6 +289,9 @@ namespace compiler::helios {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper) {
+				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::ReplInstructionWrapper) {
 				kind = SymbolKind::Function;
 			}
 			variant_default { CORE_UNREACHABLE(); }

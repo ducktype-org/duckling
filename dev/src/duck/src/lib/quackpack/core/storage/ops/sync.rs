@@ -1,3 +1,5 @@
+//! Synchronize a given venv.
+//! This includes: creating a venv, resolving dependencies, downloading them.
 use std::{fs::File, path::PathBuf, time::SystemTime};
 
 use flate2::read::GzDecoder;
@@ -34,12 +36,6 @@ use crate::quackpack::core::storage;
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
 
 /// Synchronize virtual environment for package, and return information required to build it.
-///
-/// Why is it safe:
-///
-/// Even though we drop `SyncLock`, we block cleanups from happening. And because solver only
-/// returns *new* packages to install, we never remove nor overwrite anything in [`sync`],
-/// therefore we can drop `SyncLock`.
 pub fn sync(
     package: &PackageCtx<'_>,
     options: SyncOptions,
@@ -124,7 +120,7 @@ fn check_if_overwrites(
     {
         let replaces =
             PackageLoader::find_at_exact_directory(venv.data().last_location(), pkg_ctx.ctx())
-                .map(|pkg| pkg.package().manifest().root_description().name() == id)
+                .map(|pkg| pkg.package().manifest().name() == id)
                 .unwrap_or(false);
         if replaces {
             Err(

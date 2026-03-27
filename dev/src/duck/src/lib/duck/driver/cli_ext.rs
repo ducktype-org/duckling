@@ -2,46 +2,51 @@ use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser}
 
 use crate::{StrId, quackpack::core::Package};
 
-const DEFAULT_PROFILE: &str = "debug";
+const DEFAULT_PROFILE: &str = "dev";
 
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;
 
+    /// Add the `--global` flag, which uses a global venv.
     fn add_global_venv(self) -> Self {
         self._arg_impl(flag("global", "Add packages to the global venv"))
     }
 
+    /// Add the optional `-F`/`--features` flag which collects all features.
     fn add_features(self, help: &'static str) -> Self {
-        self._arg_impl(multi_optional("features", help).short('F'))
+        self._arg_impl(multi("features", help).short('F'))
     }
 
+    /// Same as [`add_features`](Self::add_features), but `-F`/`--features` flag conflicts with
+    /// `with`.
     fn add_features_conflicting(self, help: &'static str, with: &'static str) -> Self {
-        self._arg_impl(
-            multi_optional("features", help)
-                .short('F')
-                .conflicts_with(with),
-        )
+        self._arg_impl(multi("features", help).short('F').conflicts_with(with))
     }
 
+    /// Adds `--packages` flag, which collects names of packages.
     fn add_packages(self, help: &'static str) -> Self {
         self._arg_impl(multi("packages", help))
     }
 
+    /// Adds conflicting `--local`, `--git` flags.
     fn add_local_git_deps(self, local_help: &'static str, git_help: &'static str) -> Self {
         self._arg_impl(flag("local", local_help).conflicts_with("git"))
             ._arg_impl(flag("git", git_help).conflicts_with("local"))
     }
 
+    /// Adds `--profile` flag, conflicting with `--release`.
     fn add_profile(self) -> Self {
         self._arg_impl(
             optional("profile", "Select the compilation profile").conflicts_with("release"),
         )
     }
 
+    /// Adds `--release` flag, conflicting with `--profile`.
     fn add_release(self) -> Self {
         self._arg_impl(flag("release", "Alias for `--profile=release`").conflicts_with("profile"))
     }
 
+    /// Adds `-v`/`--verbose` flags, conflicting with `--quiet`.
     fn add_verbose(self) -> Self {
         self._arg_impl(
             flag("verbose", "Use more verbose output")
@@ -50,6 +55,7 @@ pub trait CommandExt: Sized {
         )
     }
 
+    /// Adds `-q`/`--quiet` flags, conflicting with `--verbose`.
     fn add_quiet(self) -> Self {
         self._arg_impl(
             flag("quiet", "Suppress all output")
@@ -58,6 +64,7 @@ pub trait CommandExt: Sized {
         )
     }
 
+    /// Adds `-C`/`--directory` flag, for changing the current directory before making any actions.
     fn add_chdir(self) -> Self {
         self._arg_impl(
             optional(
@@ -71,6 +78,7 @@ pub trait CommandExt: Sized {
         )
     }
 
+    /// Adds `--color` flag.
     fn add_color(self) -> Self {
         self._arg_impl(
             optional("color", "Control the colored output")
@@ -79,10 +87,12 @@ pub trait CommandExt: Sized {
         )
     }
 
+    /// Adds `--offline` flag.
     fn add_offline(self) -> Self {
         self._arg_impl(flag("offline", "Don't perform any network requests"))
     }
 
+    /// Adds `-j`/`--jobs` flags, for specifying number of threads to use.
     fn add_jobs(self) -> Self {
         self._arg_impl(
             optional(
@@ -95,6 +105,7 @@ pub trait CommandExt: Sized {
         )
     }
 
+    /// Adds `--dev` flag.
     fn add_dev(self, dev_help: &'static str) -> Self {
         self._arg_impl(flag("dev", dev_help))
     }
@@ -106,26 +117,30 @@ impl CommandExt for Command {
     }
 }
 
+/// Create a new boolean argument.
 pub fn flag(name: &'static str, help: &'static str) -> Arg {
-    optional(name, help).action(ArgAction::SetTrue)
+    Arg::new(name)
+        .help(help)
+        .long(name)
+        .action(ArgAction::SetTrue)
 }
 
+/// Create a new optional flag.
 pub fn optional(name: &'static str, help: &'static str) -> Arg {
     Arg::new(name).help(help).long(name).action(ArgAction::Set)
 }
 
-pub fn multi_optional(name: &'static str, help: &'static str) -> Arg {
-    optional(name, help).action(ArgAction::Append)
-}
-
+/// Create an argument which takes multiple values.
 pub fn multi(name: &'static str, help: &'static str) -> Arg {
     Arg::new(name).help(help).action(ArgAction::Append)
 }
 
+/// Create a new subcommand.
 pub fn subcommand(name: &'static str) -> Command {
     Command::new(name)
 }
 
+/// Get selected profile from `args`.
 pub fn profile_from_matches(args: &ArgMatches) -> StrId {
     if args.get_flag("release") {
         "release".into()
@@ -136,6 +151,7 @@ pub fn profile_from_matches(args: &ArgMatches) -> StrId {
     }
 }
 
+/// Get enabled features from `args` for package `pkg`.
 pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
     if args.get_flag("all-features") {
         pkg.manifest()

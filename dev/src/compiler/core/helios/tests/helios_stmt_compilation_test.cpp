@@ -10,7 +10,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
 #include <helios_private/scopes/scopes.hpp>

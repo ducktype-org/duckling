@@ -41,8 +41,9 @@ namespace lexer {
 			TypeSpecifier,
 			String,
 			Char,
-			FormattedString,  ///< group
-			BracketGroup,     ///< group storing opening bracket value in group_type
+			FormatString,  ///< group
+			FormatStringSubString,
+			BracketGroup,  ///< group storing opening bracket value in group_type
 			Operator,
 			Comment,
 			Special,
@@ -61,7 +62,7 @@ namespace lexer {
 			None   = 0,
 			Round  = '(',
 			Square = '[',
-			Curly  = '{',
+			Curly  = '{',  ///< Is also used for format string sub expressions
 			Angle  = 0x30'08,
 		};
 
@@ -76,7 +77,13 @@ namespace lexer {
 		static Token makeNumber(const base::RawView number, dia::SourcePosition);
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
 		static Token makeChar(base::RawView string, const dia::SourcePosition&);
-		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition);  ///< Unimplemented
+		static Token makeFormatString(
+			Tokens&&                  tokens,
+			Token&&                   sentinel_begin,
+			Token&&                   sentinel_end,
+			const dia::SourcePosition position
+		);
+		static Token makeFormatStringSubString(base::RawView string, const dia::SourcePosition);
 		static Token
 			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition&);
 		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
@@ -110,6 +117,13 @@ namespace lexer {
 			Token&&                    sentinel_end,
 			const dia::SourcePosition& position,
 			BracketType                bracket
+		);
+		Token(
+			Type                       type,
+			Tokens&&                   recursive,
+			Token&&                    sentinel_begin,
+			Token&&                    sentinel_end,
+			const dia::SourcePosition& position
 		);
 		Token(
 			Type type, base::RawView value, Tokens&& recursive, const dia::SourcePosition& position
@@ -200,6 +214,8 @@ namespace lexer {
 		bool isComment() const;
 		[[nodiscard]]
 		bool isString() const;
+		[[nodiscard]]
+		bool isFormatString() const;
 		[[nodiscard]]
 		bool isChar() const;
 

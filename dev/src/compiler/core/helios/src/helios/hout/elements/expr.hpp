@@ -64,6 +64,11 @@ namespace compiler::helios::code {
 			return id;
 		}
 
+		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const {
+			return origin.getStablePosition();
+		}
+
+
 	private:
 		HOUTExprID id = HOUTExprID::next();
 	};
@@ -301,17 +306,17 @@ namespace compiler::helios::code {
 		FloatPow,
 
 		// Comparison operators
-		IntegerLt,    // Less then
-		IntegerLteq,  // Less then or equal to
-		IntegerGt,    // Greater then
-		IntegerGteq,  // Greater then or equal to
+		IntegerLt,    // Less than
+		IntegerLteq,  // Less than or equal to
+		IntegerGt,    // Greater than
+		IntegerGteq,  // Greater than or equal to
 		IntegerEq,    // Equal
 		IntegerNeq,   // Not equal
 
-		FloatLt,      // Less then
-		FloatLteq,    // Less then or equal to
-		FloatGt,      // Greater then
-		FloatGteq,    // Greater then or equal to
+		FloatLt,      // Less than
+		FloatLteq,    // Less than or equal to
+		FloatGt,      // Greater than
+		FloatGteq,    // Greater than or equal to
 		FloatEq,      // Equal
 		FloatNeq,     // Not equal
 
@@ -743,9 +748,9 @@ namespace compiler::helios::code {
 	 * Used for implicit variable initialization. This gets then mapped to `llvm::getNullValue(type)`.
 	 */
 	struct DefaultValueExpr final: public Expr {
-		tsh::SymbolType<> type;
+		tsh::AbstractType type;
 
-		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::SymbolType<> type);
+		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::AbstractType type);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -755,7 +760,7 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		DefaultValueExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
 		);
 	};
 

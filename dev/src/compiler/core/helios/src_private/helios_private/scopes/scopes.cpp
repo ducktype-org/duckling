@@ -1,5 +1,7 @@
 #include "scopes.hpp"
 
+#include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -722,6 +724,49 @@ namespace compiler::helios {
 
 				return parent_result;
 			} else {
+				// At root scope - check if this is a REPL module with a parent
+				auto current_module_id = key.scope.ref->parent_module;
+				auto current_module    = frontend::GetModuleID_Functor::get(current_module_id);
+
+				CORE_DEV_LOG(
+					REPL,
+					"At root scope, module #",
+					current_module_id.queryUnstablePerfectHash(),
+					", isRepl=",
+					current_module->isReplModule(),
+					", hasParent=",
+					current_module->getReplModuleParent().has_value(),
+					"\n"
+				);
+
+				if (current_module->isReplModule()) {
+					auto repl_parent_opt = current_module->getReplModuleParent();
+					if (repl_parent_opt.has_value()) {
+						// Query the parent REPL module's TopLevel scope.
+						auto parent_module_id = repl_parent_opt.value();
+						auto parent_toplevel_scope
+							= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
+
+						CORE_DEV_LOG(
+							REPL,
+							"Recursively searching parent module #",
+							parent_module_id.queryUnstablePerfectHash(),
+							" TopLevel scope\n"
+						);
+
+						// Recursively lookup in parent REPL module's TopLevel scope.
+						UNPACK_QRESULT_CREF(
+							LookupResult parent_result =,
+							ctx.query<QueryLookupInScopeAndParents>(
+								{ parent_toplevel_scope, key.name, key.with_wildcards }
+							)
+						);
+
+						parent_result.merge(std::move(result));
+						return parent_result;
+					}
+				}
+
 				return result;
 			}
 		}

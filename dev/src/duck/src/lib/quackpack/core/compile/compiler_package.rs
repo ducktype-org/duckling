@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-/// Describes, what type dependency type, in respect to the root, is this package.
+/// Describes what type dependency type, in respect to the root, is this package.
 pub enum PackageType {
     RootPackage,
     DirectDependency,
@@ -43,7 +43,7 @@ impl fmt::Display for PackageType {
 }
 
 #[derive(Debug)]
-/// An abstraction over complete informations required to compile a single package.
+/// An abstraction over complete information required to compile a single package.
 pub struct CompilerPackage {
     enabled_features: HashSet<FeatureName>,
     package: Package,
@@ -51,7 +51,7 @@ pub struct CompilerPackage {
 }
 
 impl CompilerPackage {
-    /// Create new [`CompilerPackage`], with empty features.
+    /// Create a new [`CompilerPackage`], with empty features.
     pub fn new(package: Package, pkg_type: PackageType) -> Self {
         Self {
             enabled_features: HashSet::new(),
@@ -85,7 +85,7 @@ impl CompilerPackage {
                 format!(
                     "while expanding features of the {} `{}`",
                     self.pkg_type,
-                    self.package.manifest().root_description().name()
+                    self.package.manifest().name()
                 )
             })?;
         for feature in features {

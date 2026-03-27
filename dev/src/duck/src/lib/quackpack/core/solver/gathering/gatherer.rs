@@ -6,9 +6,7 @@ use tempfile::TempDir;
 use url::Url;
 
 use crate::{
-    QuackResult, QuackResultContext, StrId,
-    duck::util::indent::indent,
-    qp_bail_internal,
+    QuackResult, QuackResultContext, StrId, qp_bail_internal,
     quackpack::{
         core::{
             BranchOrTag, FeatureName, Git, Manifest, PackageLoader,
@@ -96,16 +94,15 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         if !errors.is_empty() {
             if mode.supress_foreign_manifests_errors {
                 for e in errors {
-                    self.fetcher.ctx().error_console().info(format!(
-                        "Error\n{}\nsuppressed due to the Merciful mode of the solver",
-                        indent(&format!("{e}"), 6)
+                    self.fetcher.ctx().error_console().info_verbose(format!(
+                        "Error\n{e}\nsuppressed due to the Merciful mode of the solver",
                     ));
                 }
             } else {
                 return Err(errors.into_iter().next().unwrap());
             }
         }
-        state.into_gathered_info()
+        state.try_into()
     }
 
     /// Helper for [`Gatherer::explore()`], creates a dummy [`ManifestsRequest`] for the root package to update the state
@@ -204,7 +201,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     origin_version: request.version,
                     expanded_package: ExpandedPackage {
                         location: expanded_loc,
-                        version: Some(manifest.root_description().version()),
+                        version: Some(manifest.version()),
                     },
                     fetched_manifest: Box::new(manifest),
                 }),
@@ -253,7 +250,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     fetch_response.fetched_manifests.insert(
                         ExpandedPackage {
                             location: expanded_loc,
-                            version: Some(manifest.root_description().version()),
+                            version: Some(manifest.version()),
                         },
                         Box::new(manifest),
                     );

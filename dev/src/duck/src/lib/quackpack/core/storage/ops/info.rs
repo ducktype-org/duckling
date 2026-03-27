@@ -1,3 +1,4 @@
+//! Querying a storage's data.
 use std::collections::HashMap;
 use std::path::Path;
 

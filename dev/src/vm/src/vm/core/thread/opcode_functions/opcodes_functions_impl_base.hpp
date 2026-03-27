@@ -50,7 +50,6 @@
 
 #include <cmath>
 #include <limits>
-#include <type_traits>
 
 
 #ifdef DEBUG_OPCODES
@@ -677,6 +676,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_gany)(FUNCTION_ARGS) {
+		{
+			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       src_block = GET_GLOBAL_BLOCK(instr->arg1);
+			const auto new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { src_block, 0 });
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
@@ -726,6 +736,52 @@ namespace vm {
 			// @TODO: #1728 remove this evil instruction
 			const void* value = safeReadObjectBytes<void*>(instr->arg1);
 			writeToStack(local_stack, instr->arg0, value);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lste_lste)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[instr->arg0];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
+			auto src_block     = frame->block_stack[src_block_idx];
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_gste)(FUNCTION_ARGS) {
+		{
+			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
+			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lste_gste)(FUNCTION_ARGS) {
+		{
+			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];
+			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_lste)(FUNCTION_ARGS) {
+		{
+			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
+			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -928,6 +984,60 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lste)(FUNCTION_ARGS) {
+		{
+			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
+			const auto src       = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			const auto src_block = frame->block_stack[src];
+			auto       offset    = static_cast<usize>(instr[1].arg0);
+
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { src_block, offset });
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lste_lany)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Pointer(dst_block, 0);
+
+			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
+			dst_pointer.movePointer(field_offset);
+
+			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto src_block     = frame->block_stack[src_block_idx];
+			auto src_pointer   = Pointer(src_block, 0);
+
+			auto type = Memory::getBlockType(src_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_lany_lste)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Pointer(dst_block, 0);
+
+			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto src_block     = frame->block_stack[src_block_idx];
+			auto src_pointer   = Pointer(src_block, 0);
+
+			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
+			src_pointer.movePointer(field_offset);
+
+			auto type = Memory::getBlockType(dst_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(2);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst          = readFromStack<Pointer>(local_stack, instr->arg0);
@@ -1067,13 +1177,6 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	// `cast_lN_type` instructions are no-ops at runtime, they are only used by the validator.
-#define CAST_PRIMITIVE(SIZE) \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cast_l##SIZE##_type)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
-	FOR_EACH(CAST_PRIMITIVE, 8, 16, 32, 64)
-#undef CAST_PRIMITIVE
-
-
 #define DEFINE_STATIC_CAST_CONVERSION_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {    \
 		{                                                                                 \
@@ -1201,6 +1304,11 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
+		{ thread.stepGil(); }
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {

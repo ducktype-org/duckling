@@ -1,3 +1,6 @@
+//! A [`StrId`], an interned version of a string (also known as a fly string).
+//!
+//! It's trivially copyable.
 use std::{
     borrow::{Borrow, Cow},
     collections::HashSet,
@@ -18,15 +21,18 @@ use crate::quackpack::util::PANIC_MESSAGE;
 static STRID_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
+/// An interned/cached string.
 pub struct StrId {
     inner: &'static str,
 }
 
 impl StrId {
+    /// Get the inner [`str`] as a static.
     pub fn as_str(&self) -> &'static str {
         self.inner
     }
 
+    /// Construct a new [`StrId`].
     pub fn new<'a>(s: impl Into<Cow<'a, str>>) -> Self {
         Self::from(s.into())
     }

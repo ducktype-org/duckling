@@ -1,3 +1,4 @@
+//! Implementation of traversing TOML documents, and getting/setting values at dotted keys.
 use std::{
     fmt::Display,
     io::ErrorKind,
@@ -13,10 +14,10 @@ use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
     util_common::path_ops_ext::PathOpsExt,
 };
-use paste::item;
 use toml::value::{Array, Datetime};
 
 #[derive(Default, Debug)]
+/// TOML config manager.
 pub struct TomlConfig {
     content: Table,
     source: Option<PathBuf>,
@@ -38,47 +39,45 @@ impl DescriptionWithAnArticle for Value {
 
 macro_rules! delegate_getter {
     (
-        $(
-            $name:ident => $toml_value_fn:ident -> $ret:ty: $human_type:literal $(,)?
-        ),*
+        FunctionName: $name:ident,
+        ReturnType: $ret:ty,
+        DocType: $doc:ty,
+        HumanType: $human_type:literal,
+        CastFunctionName: $toml_value_fn:ident $(,)?
     ) => {
-        item! {
-            $(
-                pub fn [<get_ $name>](&self, key: &str) -> QuackResult<Option<$ret>> {
-                    let value = self.get(key)?;
-                    let Some(value) = value else {
-                        return Ok(None);
-                    };
-                    match value.[<as_ $toml_value_fn>]() {
-                        Some(x) => Ok(Some(x)),
-                        None => Err(qp_err!("{}", self.make_location_error())).context(
-                            format!("the key `{key}` expects {}, not {}", $human_type, value.desc_with_article())
-                        )
-                    }
-                }
-            )*
+        #[doc = concat!("Get [`", stringify!($doc), "`] at the dotted key.")]
+        pub fn $name(&self, key: &str) -> QuackResult<Option<$ret>> {
+            let value = self.get(key)?;
+            let Some(value) = value else {
+                return Ok(None);
+            };
+            match value.$toml_value_fn() {
+                Some(x) => Ok(Some(x)),
+                None => Err(qp_err!("{}", self.make_location_error())).context(format!(
+                    "the key `{key}` expects {}, not {}",
+                    $human_type,
+                    value.desc_with_article()
+                )),
+            }
         }
     };
 }
 
 macro_rules! delegate_setter {
     (
-        $(
-            $name:ident => $toml_value_enum:ident -> $value:ty $(,)?
-        ),*
+        FunctionName: $name:ident,
+        InputType: $value:ty $(,)?
     ) => {
-        item! {
-            $(
-                pub fn [<set_ $name>](&mut self, key: &str, value: $value) -> QuackResult<()> {
-                    let value = Value::$toml_value_enum(value);
-                    self.set(key, value)
-                }
-            )*
+        #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
+        pub fn $name(&mut self, key: &str, value: $value) -> QuackResult<()> {
+            let value: Value = value.into();
+            self.set(key, value)
         }
     };
 }
 
 impl TomlConfig {
+    /// Create a new [`TomlConfig`] from the TOML file at `path`.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
         debug!("parsing TOML config at `{}`", path.display());
         let content = match path.as_path().read_to_string() {
@@ -109,6 +108,7 @@ impl TomlConfig {
         })
     }
 
+    /// Create an error message.
     pub fn make_location_error(&self) -> String {
         match self.source {
             Some(ref path) => format!("when parsing the configuration at `{}`", path.display()),
@@ -120,6 +120,7 @@ impl TomlConfig {
     }
 
     #[track_caller]
+    /// Get the value from the dotted key.
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
         debug!(
             "getting the key `{key}` from config at `{}`",
@@ -161,11 +162,13 @@ impl TomlConfig {
         Ok(current.get(last))
     }
 
+    /// Convenient wrapper around [`_get`](Self::_get).
     fn get(&self, key: &str) -> QuackResult<Option<&Value>> {
         self._get(key).with_context(|| self.make_location_error())
     }
 
     #[track_caller]
+    /// Set the value at the dotted key.
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         if key.is_empty() {
             qp_bail_internal!("empty key")
@@ -198,11 +201,13 @@ impl TomlConfig {
         Ok(())
     }
 
+    /// Convenient wrapper around [`_set`](Self::_set).
     fn set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         self._set(key, value)
             .with_context(|| self.make_location_error())
     }
 
+    /// Make an error message, if i-th part of the key is empty (there are two consecutive dots).
     fn make_empty_key_fragment_error(mut i: usize, key: &str) -> QuackError {
         i += 1;
         let last_two = i % 100;
@@ -218,34 +223,108 @@ impl TomlConfig {
     }
 
     delegate_getter! {
-        str => str -> &str: "a string",
-        array => array -> &Array: "an array",
-        table => table -> &Table: "a table",
-        date => datetime -> &Datetime: "a datetime",
-        int => integer -> i64: "an integer",
-        float => float -> f64: "a float",
-        bool => bool -> bool: "a boolean",
+        FunctionName: get_str,
+        ReturnType: &str,
+        DocType: str,
+        HumanType: "a string",
+        CastFunctionName: as_str,
+    }
+
+    delegate_getter! {
+        FunctionName: get_array,
+        ReturnType: &Array,
+        DocType: Array,
+        HumanType: "an array",
+        CastFunctionName: as_array,
+    }
+
+    delegate_getter! {
+        FunctionName: get_table,
+        ReturnType: &Table,
+        DocType: Table,
+        HumanType: "a table",
+        CastFunctionName: as_table,
+    }
+
+    delegate_getter! {
+        FunctionName: get_int,
+        ReturnType: i64,
+        DocType: i64,
+        HumanType: "an integer",
+        CastFunctionName: as_integer,
+    }
+
+    delegate_getter! {
+        FunctionName: get_bool,
+        ReturnType: bool,
+        DocType: bool,
+        HumanType: "a boolean",
+        CastFunctionName: as_bool,
+    }
+
+    delegate_getter! {
+        FunctionName: get_float,
+        ReturnType: f64,
+        DocType: f64,
+        HumanType: "a float",
+        CastFunctionName: as_float,
+    }
+
+    delegate_getter! {
+        FunctionName: get_date,
+        ReturnType: &Datetime,
+        DocType: Datetime,
+        HumanType: "a date",
+        CastFunctionName: as_datetime,
     }
 
     delegate_setter! {
-        str => String -> String,
-        array => Array -> Array,
-        table => Table -> Table,
-        date => Datetime -> Datetime,
-        int => Integer -> i64,
-        float => Float -> f64,
-        bool => Boolean -> bool,
+        FunctionName: set_array,
+        InputType: Array,
     }
 
+    delegate_setter! {
+        FunctionName: set_table,
+        InputType: Table,
+    }
+
+    delegate_setter! {
+        FunctionName: set_bool,
+        InputType: bool,
+    }
+
+    delegate_setter! {
+        FunctionName: set_int,
+        InputType: i64,
+    }
+
+    delegate_setter! {
+        FunctionName: set_str,
+        InputType: String,
+    }
+
+    delegate_setter! {
+        FunctionName: set_float,
+        InputType: f64,
+    }
+
+    delegate_setter! {
+        FunctionName: set_date,
+        InputType: Datetime,
+    }
+
+    /// Get the root [`Table`] for this config.
     pub fn get_root_table(&self) -> &Table {
         &self.content
     }
 
+    /// Get [`Path`] for the dotted key.
     pub fn get_path(&self, key: &str) -> QuackResult<Option<&Path>> {
         let path = self.get_str(key)?;
         Ok(path.map(Path::new))
     }
 
+    /// Set [`Path`] at the dotted key.
     pub fn set_path(&mut self, key: &str, value: &Path) -> QuackResult<()> {
         self.set_str(key, value.display().to_string())
     }
