@@ -21,8 +21,7 @@ namespace compiler::helios {
 		out << "HOUT UNIT:\n\n";
 
 		out << "Constants:\n";
-		for (auto& const_gd: glob_data)
-			const_gd.debugPrint(ctx, out);
+		for (auto& const_gd: glob_data) const_gd.debugPrint(ctx, out);
 
 		out << "\nFunctions:\n";
 		for (auto& func: functions) {
