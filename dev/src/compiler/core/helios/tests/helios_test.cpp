@@ -783,7 +783,6 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			std::stringstream ss;
 			hout.debugPrint(ctx, ss);
-			[[maybe_unused]] auto debug_print_out = ss.str();
 		});
 	}
 
@@ -1200,7 +1199,6 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			std::stringstream ss;
 			hout.debugPrint(ctx, ss);
-			[[maybe_unused]] auto debug_print_out = ss.str();
 		});
 	}
 
@@ -1748,7 +1746,6 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			std::stringstream ss;
 			hout.debugPrint(ctx, ss);
-			[[maybe_unused]] auto debug_print_out = ss.str();
 		});
 	}
 

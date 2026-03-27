@@ -22,7 +22,7 @@ namespace compiler::helios {
 
 		out << "Constants:\n";
 		for (auto& const_gd: glob_data)
-			const_gd.debugPrint(ctx, out);  // Przekazujemy strumień dalej
+			const_gd.debugPrint(ctx, out);
 
 		out << "\nFunctions:\n";
 		for (auto& func: functions) {
