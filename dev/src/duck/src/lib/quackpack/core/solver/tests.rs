@@ -9,7 +9,7 @@ use crate::{
         core::{PackageLoader, Version, fetcher::types, git_access::GitAccess},
         schemas::registry,
     },
-    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
+    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
 use url::Url;

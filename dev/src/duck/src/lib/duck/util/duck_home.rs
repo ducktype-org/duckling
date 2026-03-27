@@ -9,7 +9,7 @@
 //! ├── global_venv/ <root of the global shared virtual environment>
 //! └── storage/ <root of the storage internal files>
 
-use crate::{QuackResult, util_common::env::Env};
+use crate::{QuackResult, util::env::Env};
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
@@ -38,7 +38,7 @@ macro_rules! ensure_file {
         #[doc = $desc]
         /// exists on the disk
         pub fn $fn(&self) -> QuackResult<&Path> {
-            use $crate::util_common::path_ops_ext::PathOpsExt;
+            use $crate::util::path_ops_ext::PathOpsExt;
             let file = self.$name();
             let _ = file.touch()?;
             Ok(file)
@@ -56,7 +56,7 @@ macro_rules! ensure_dir {
         #[doc = $desc]
         /// exists on the disk
         pub fn $fn(&self) -> QuackResult<&Path> {
-            use $crate::util_common::path_ops_ext::{MkdirOptions, PathOpsExt};
+            use $crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
             let file = self.$name();
             let _ = file.mkdir(MkdirOptions::WithParents)?;
             Ok(file)

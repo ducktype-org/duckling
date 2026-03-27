@@ -5,7 +5,7 @@ use crate::quackpack::core::storage;
 
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
+use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId};
 use std::collections::HashSet;
 use std::fs::DirEntry;

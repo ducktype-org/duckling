@@ -8,7 +8,7 @@ use crate::{
         driver::cli_args_preprocessing::aliases_expansion::{Alias, Aliases},
         util::duck_home::DuckHome,
     },
-    util_common::yaml_config::YamlConfig,
+    util::yaml_config::YamlConfig,
 };
 
 #[derive(Debug, Default)]

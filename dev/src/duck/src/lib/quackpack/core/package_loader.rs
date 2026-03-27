@@ -5,7 +5,7 @@ use tracing::{debug, trace};
 
 use crate::{
     DuckCtx, QuackResult, qp_bail, qp_internal, quackpack::core::PackageCtx,
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -113,7 +113,7 @@ mod tests {
     use crate::{
         DuckCtx,
         quackpack::core::PackageLoader,
-        util_common::path_ops_ext::{MkdirOptions, PathOpsExt},
+        util::path_ops_ext::{MkdirOptions, PathOpsExt},
     };
 
     const BASIC_MANIFEST: &str = r"
