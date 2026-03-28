@@ -17,6 +17,7 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/hout_code_generation/default_constructors.hpp>
+#include <helios_private/hout_code_generation/tuple_constructor.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -63,13 +64,22 @@ namespace compiler::helios {
 
 			auto register_ctor_if_needed = [&](SymID sym) {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+				const auto& type        = symbol_type.getType();
+
+				// @TODO: Find a better place for this
+				if (type.getKind() == tsh::Kind::Tuple) {
+					auto        tuple_type = type.as<tsh::TupleAbstractType>();
+					const auto& tuple_ctor
+						= ctx.query<houtgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
+					out.functions.emplace_back(&tuple_ctor);
+					return;
+				}
 
 				// Don't insert any constructors if a type is trivially zero-initializable or not
 				// default constructible.
 				if (symbol_type.isTriviallyZeroInitializable(ctx)) return;
 				if (!symbol_type.isDefaultConstructible(ctx)) return;
 
-				const auto& type = symbol_type.getType();
 				if (type.getKind() == tsh::Kind::StaticArray) {
 					auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
 					const auto& arr_ctor
