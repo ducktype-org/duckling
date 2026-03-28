@@ -1,14 +1,15 @@
 #include "coercions.hpp"
-#include "base/except/exceptions.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/types.hpp>
+
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/context/context.hpp>
-#include "typesystem/higher/types.hpp"
 
 namespace compiler::helios {
 	namespace {
@@ -58,13 +59,50 @@ namespace compiler::helios {
 			return std::move(expr);
 		}
 
-		struct TupleCoercionVisitor final: public code::HoutExprVisitor {
-				query::Context& ctx;
-				const tsh::SymbolType<> to;
+		// Performs element by element coercion.
+		struct TupleCoercionHandler final: public code::HoutExprVisitorPanicky {
+			query::Context&                 ctx;
+			const tsh::SymbolType<>         to;
+			base::Optional<Box<code::Expr>> out;
 
-				TupleCoercionVisitor(query::Context& ctx, const tsh::SymbolType<>& to):
-					  ctx(ctx),
-					  to(to) {}
+			TupleCoercionHandler(query::Context& ctx, const tsh::SymbolType<>& to):
+				  ctx(ctx),
+				  to(to) {}
+
+			void output(Box<code::Expr> lowering_result) {
+				CORE_ASSERT(out.empty(), "Output already set.");
+				out.emplace(std::move(lowering_result));
+			}
+
+			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
+				expr.inner->acceptVisitor(*this);
+			}
+
+			void visitTupleExpr(const code::TupleExpr& expr) override {
+				auto source_type = expr.expression_type.getType().as<tsh::TupleAbstractType>();
+				auto to_type     = to.getType().as<tsh::TupleAbstractType>();
+
+				std::vector<Box<code::Expr>> coerced_elements;
+				coerced_elements.reserve(source_type.getComponents().size());
+
+				for (usize i = 0; i < expr.elements.size(); i++) {
+					const auto& source_element_type = source_type.getComponents()[i];
+					const auto& to_element_type     = to_type.getComponents()[i];
+
+					auto element_coercion
+						= canCoerce(ctx, source_element_type, to_element_type).valueOrThrow();
+					if (element_coercion.isInvalid())
+						CORE_PANIC("Coercion should always be valid at this point.");
+
+					coerced_elements.emplace_back(
+						element_coercion.getCoercion().coerce(ctx, expr.elements[i]->clone())
+					);
+				}
+
+				output(makeBox<code::TupleExpr>(
+					ctx, expr.origin.generatedFrom(), std::move(coerced_elements)
+				));
+			}
 		};
 	}
 
@@ -128,25 +166,9 @@ namespace compiler::helios {
 			);
 		} else if (source_type.getKind() == tsh::Kind::Tuple
 		           and to.getType().getKind() == tsh::Kind::Tuple) {
-			// Tuple element by element coercion.
-			std::vector<Box<code::Expr>> coerced_elements;
-			coerced_elements.reserve(source_type.as<tsh::TupleAbstractType>().getComponents().size());
-			
-			Box<code::TupleExpr> tuple_expr = std::move(current_expr);
-			auto source_tuple_type = current_expr->expression_type.getType().as<tsh::TupleAbstractType>();
-			auto to_tuple_type  = to.getType().as<tsh::TupleAbstractType>();
-			for (usize i = 0; i < tuple_expr->elements.size(); i++) {
-				const auto& source_element_type = source_tuple_type.getComponents()[i];
-				const auto& to_element_type = to_tuple_type.getComponents()[i];
-
-				auto element_coercion = canCoerce(ctx, source_element_type, to_element_type);
-				if (element_coercion.valueOrThrow().isInvalid()) {
-					CORE_PANIC("Coercion should always be valid at this point.");
-				}
-				coerced_elements.emplace_back(element_coercion.valueOrThrow().getCoercion().coerce(ctx, std::move(tuple_expr)));
-			}
-
-			return makeBox<code::TupleExpr>(ctx, current_expr->origin.generatedFrom(), std::move(coerced_elements));
+			auto visitor = TupleCoercionHandler(ctx, to);
+			current_expr->acceptVisitor(visitor);
+			return std::move(visitor.out.value());
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}
