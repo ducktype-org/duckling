@@ -1,13 +1,10 @@
 //! `build` subcommand execution logic.
 use crate::{
     QuackResult, QuackResultContext, StrId,
-    quackpack::{
-        core::{
-            FeatureName, PackageCtx,
-            compile::{self, BuildContext, profiles::Profile},
-            storage::{sync, venv_id::ToVenvId},
-        },
-        subcommands::sync::SyncOptions,
+    quackpack::core::{
+        FeatureName, PackageCtx,
+        compile::{self, BuildContext, profiles::Profile},
+        storage::{StorageSyncOptions, sync, venv_id::ToVenvId},
     },
 };
 
@@ -20,13 +17,11 @@ pub struct BuildOptions<'duck> {
     pub used_features: Vec<FeatureName>,
     /// Selected build profile.
     pub profile: StrId,
-    /// Artefact from [`SyncOptions`].
-    pub global: bool,
-    /// Artefact from [`SyncOptions`].
+    /// Artefact from [`StorageSyncOptions`].
     pub overwrite: bool,
-    /// Artefact from [`SyncOptions`].
+    /// Artefact from [`StorageSyncOptions`].
     pub frozen: bool,
-    /// Artefact from [`SyncOptions`].
+    /// Artefact from [`StorageSyncOptions`].
     pub strict_errors: bool,
 }
 
@@ -36,15 +31,13 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         package,
         used_features,
         profile,
-        global,
         overwrite,
         frozen,
         strict_errors,
     } = options;
     let (lock, venv, storage) = sync(
         &package,
-        SyncOptions {
-            global,
+        StorageSyncOptions {
             overwrite,
             frozen,
             strict_errors,

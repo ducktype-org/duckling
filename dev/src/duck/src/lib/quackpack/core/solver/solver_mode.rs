@@ -1,4 +1,4 @@
-use crate::quackpack::subcommands::sync::SyncOptions;
+use crate::quackpack::core::storage::StorageSyncOptions;
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(test, derive(Default))]
@@ -13,8 +13,8 @@ pub struct SolverMode {
     pub frozen: bool,
 }
 
-impl From<SyncOptions> for SolverMode {
-    fn from(value: SyncOptions) -> Self {
+impl From<StorageSyncOptions> for SolverMode {
+    fn from(value: StorageSyncOptions) -> Self {
         Self {
             supress_foreign_manifests_errors: value.strict_errors,
             frozen: value.frozen,

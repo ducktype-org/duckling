@@ -1,6 +1,6 @@
 use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser};
 
-use crate::{StrId, quackpack::core::Package};
+use crate::{QuackResult, StrId, quackpack::core::Package};
 
 const DEFAULT_PROFILE: &str = "dev";
 
@@ -10,6 +10,13 @@ pub trait CommandExt: Sized {
     /// Add the `--global` flag, which uses a global venv.
     fn add_global_venv(self) -> Self {
         self._arg_impl(flag("global", "Add packages to the global venv"))
+    }
+
+    /// Adds `--venv` flag.
+    fn add_venv(self) -> Self {
+        self._arg_impl(
+            optional("venv", "Select the venv to run the script in").conflicts_with("global"),
+        )
     }
 
     /// Add the optional `-F`/`--features` flag which collects all features.
@@ -141,28 +148,29 @@ pub fn subcommand(name: &'static str) -> Command {
 }
 
 /// Get selected profile from `args`.
-pub fn profile_from_matches(args: &ArgMatches) -> StrId {
+pub fn profile_from_matches(args: &ArgMatches) -> QuackResult<StrId> {
     if args.get_flag("release") {
-        "release".into()
-    } else if let Some(profile) = args.get_one::<String>("profile") {
-        profile.into()
+        Ok("release".into())
+    } else if let Some(profile) = args.try_get_one::<String>("profile")? {
+        Ok(profile.into())
     } else {
-        DEFAULT_PROFILE.into()
+        Ok(DEFAULT_PROFILE.into())
     }
 }
 
 /// Get enabled features from `args` for package `pkg`.
-pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
+pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> QuackResult<Vec<StrId>> {
     if args.get_flag("all-features") {
-        pkg.manifest()
+        Ok(pkg
+            .manifest()
             .features()
             .all_features()
             .keys()
             .copied()
-            .collect()
-    } else if let Some(cli_features) = args.get_many::<String>("features") {
-        cli_features.map(StrId::from).collect()
+            .collect())
+    } else if let Some(cli_features) = args.try_get_many::<String>("features")? {
+        Ok(cli_features.map(StrId::from).collect())
     } else {
-        vec![]
+        Ok(vec![])
     }
 }

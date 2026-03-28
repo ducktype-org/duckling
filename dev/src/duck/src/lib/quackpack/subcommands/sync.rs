@@ -1,7 +1,10 @@
 //! `sync` subcommand execution logic.
 use crate::{
     DuckCtx, QuackResult,
-    quackpack::core::{AllowGlobalPackage, PackageLoader, storage},
+    quackpack::core::{
+        AllowGlobalPackage, PackageLoader,
+        storage::{self, StorageSyncOptions},
+    },
 };
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -25,6 +28,13 @@ pub fn sync(ctx: &DuckCtx, options: SyncOptions) -> QuackResult<()> {
     } else {
         PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
-    storage::sync(&pkg, options)?;
+    storage::sync(
+        &pkg,
+        StorageSyncOptions {
+            overwrite: options.overwrite,
+            frozen: options.frozen,
+            strict_errors: options.strict_errors,
+        },
+    )?;
     Ok(())
 }

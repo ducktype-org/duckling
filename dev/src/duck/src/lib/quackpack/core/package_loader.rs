@@ -4,7 +4,11 @@ use std::{marker::PhantomData, path::Path};
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, qp_bail, qp_internal, quackpack::core::PackageCtx,
+    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_internal,
+    quackpack::core::{
+        PackageCtx,
+        storage::{paths::Storage, venv::Venv},
+    },
     util_common::path_ops_ext::PathOpsExt,
 };
 
@@ -103,6 +107,19 @@ impl PackageLoader {
     ) -> QuackResult<PackageCtx<'duck>> {
         let cwd = ctx.cwd();
         Self::find_from_directory(cwd, ctx, allow_global_package)
+    }
+
+    pub fn find_venv_by_name<'duck>(
+        ctx: &'duck DuckCtx,
+        venv_id: StrId,
+    ) -> QuackResult<PackageCtx<'duck>> {
+        let storage_loc = ctx.default_storage_root();
+        let storage = Storage::new(storage_loc);
+        let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
+            qp_bail!("Could not find venv {} in the main storage", venv_id);
+        };
+        Self::find_at_exact_directory(venv.data().last_location(), ctx)
+            .context(format!("Lost track of the venv {venv_id}"))
     }
 }
 
