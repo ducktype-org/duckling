@@ -289,13 +289,13 @@ namespace compiler::helios {
 					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
 				total_elements += sub_hout.size();
 
-				sub_results.push_back(std::move(sub_hout));
+				sub_results.emplace_back(std::move(sub_hout));
 			}
 
 			std::vector<CRef<HOUTUnit>> out;
 			out.reserve(total_elements);
 
-			out.push_back(current_unit);
+			out.emplace_back(current_unit);
 
 			for (auto& sub_vec: sub_results) out.insert(out.end(), sub_vec.begin(), sub_vec.end());
 
