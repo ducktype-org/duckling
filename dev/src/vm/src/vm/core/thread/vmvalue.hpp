@@ -10,7 +10,7 @@
 #include <ostream>
 
 namespace vm {
-	class VMProcess;
+	class SafeVMProcess;
 
 	/**
 	 * @brief Storage for a value. It is meant to import value into/export value out of VM.
@@ -29,22 +29,22 @@ namespace vm {
 	 */
 	class VmValue final {
 	private:
-		friend class VMProcess;
+		friend class SafeVMProcess;
 
 		/**
 		 * @brief Creates an empty VmValue of the specified type.
 		 */
-		VmValue(VMProcess& process, TypeCRef type);
+		VmValue(SafeVMProcess& process, TypeCRef type);
 
 		/**
 		 * @brief Creates a VmValue of specified type and fills it with the bytes from the `src`
 		 * pointer.
 		 */
-		VmValue(VMProcess& process, TypeCRef type, Pointer src);
+		VmValue(SafeVMProcess& process, TypeCRef type, Pointer src);
 
-		std::vector<byte> data;        /// data.size() == type.getSize()
-		Ref<VMProcess>    my_process;  /// The process for which the VmValue exists.
-		Ref<Memory>       memory;
+		std::vector<byte>  data;        /// data.size() == type.getSize()
+		Ref<SafeVMProcess> my_process;  /// The process for which the VmValue exists.
+		Ref<Memory>        memory;
 
 	public:
 		VmValue(const VmValue&)            = delete;

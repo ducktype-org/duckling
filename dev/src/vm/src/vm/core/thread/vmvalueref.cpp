@@ -2,7 +2,7 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 
 vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
 	if (index >= size) throw std::out_of_range("Table index out of range");
@@ -144,14 +144,14 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 }
 
 vm::interpreted_data_variant::Table::Table(
-	base::Ref<VMProcess> process, vm::Pointer begin, TypeCRef type, usize size
+	base::Ref<SafeVMProcess> process, vm::Pointer begin, TypeCRef type, usize size
 ):
 	  process(process),
 	  begin(begin),
 	  type(type),
 	  size(size) {}
 
-vm::VMValueRef::VMValueRef(VMProcess& process, TypeCRef type, Pointer pointed_data):
+vm::VMValueRef::VMValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data):
 	  my_process(&process),
 	  memory(&process.getMemory()),
 	  my_type(type),
