@@ -36,6 +36,10 @@ namespace compiler::helios {
 			return { method_symbol.queryUnstablePerfectHash(), scope.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::Field::queryUnstablePerfectHash() const {
+			return { parent_type.queryUnstablePerfectHash(), index };
+		}
+
 		base::Bit256 GeneratedSymbolData::Variable::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
 		}
@@ -160,6 +164,7 @@ namespace compiler::helios {
 					};
 					return param_symbol_type;
 				}
+				variant_case(Field, field) { return field.field_type; }
 				variant_case(Variable, var) { return var.type; }
 				variant_case(ReplExpressionWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
@@ -210,6 +215,9 @@ namespace compiler::helios {
 					CORE_PANIC("Can't get scope of generated parameter yet.");
 				}
 				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(Field, field) {
+					CORE_PANIC("Can't get scope of generated field yet.");
+				}
 				variant_case(Variable, var) {
 					CORE_PANIC("Can't get scope of generated variable yet.");
 				}
@@ -232,6 +240,7 @@ namespace compiler::helios {
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(Field, field) { return {}; }
 				variant_case(Variable, var) { return {}; }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
 				variant_case(ReplInstructionWrapper, repl) { return {}; }
@@ -285,6 +294,7 @@ namespace compiler::helios {
 			variant_case_novalue(houtgen::GeneratedSymbolData::SelfParameter) {
 				kind = SymbolKind::Parameter;
 			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::Field) { kind = SymbolKind::Field; }
 			variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
 				kind = SymbolKind::Variable;
 			}

@@ -5,7 +5,7 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <helios/symbols/query_class_symbol_data.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
@@ -228,10 +228,8 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("Static array type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context&) const {
-		// note: It is only for the pourpuse of unifying tuple type layput into class type layout, tuple generated fields will soon be introduced
-		static TypeInterface empty{};
-		return &empty;
+	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context& ctx) const {
+		return &ctx.query<QueryInterfaceOfTuple>(this)->valueOrThrow();
 	}
 
 	CRef<TypeInterface> FunctionAbstractTypeImpl::getInterface(query::Context&) const {

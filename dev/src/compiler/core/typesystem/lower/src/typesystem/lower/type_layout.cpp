@@ -3,6 +3,7 @@
 #include "queries.hpp"
 
 #include <helios/mangler/mangler.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -290,7 +291,8 @@ namespace compiler::tsl {
 		std::vector<compiler::helios::SymID> layout_idx_to_sym_id;
 		Bits                                 total_size;
 
-		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(CRef<tsh::TypeInterface> interface) {
+		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(CRef<tsh::TypeInterface>
+		                                                                   interface) {
 			const auto&                        elements = interface->getElements();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
@@ -324,7 +326,7 @@ namespace compiler::tsl {
 					  ? Bits(0)
 					  : bytes2bits(field_offsets.back()) + field_layouts.back()->getSize()
 			  ) {}
-		
+
 		ClassTypeLayoutConstructionHelper(
 			const tsh::TupleAbstractType tuple_type, query::Context& ctx
 		):
@@ -352,9 +354,8 @@ namespace compiler::tsl {
 		  num_fields(helper.field_layouts.size()),
 		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
 		layout_idx_to_offset.reserve(num_fields);
-		for (u32 i = 0; i < num_fields; i++) {
+		for (u32 i = 0; i < num_fields; i++)
 			layout_idx_to_offset.push_back(helper.field_offsets.at(i));
-		}
 		for (u32 i = 0; i < num_fields; i++) {
 			// Fill out the map as the inverse of layout_idx_to_sym_id.
 			sym_id_to_layout_idx.put(layout_idx_to_sym_id.at(i), i);
@@ -371,15 +372,16 @@ namespace compiler::tsl {
 	std::string ClassTypeLayout::toStringDefinition(
 		query::Context& ctx, const bool recursive, const u32 indent
 	) const {
-		const tsh::SymbolType<tsh::ClassAbstractType> class_type = getSourceType();
-		std::stringstream                             ss{};
+		const tsh::SymbolType<> class_type = getSourceType();
+		std::stringstream       ss{};
 
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
-			const Bytes             field_offset = getOffsetOfLayoutIndex(getLayoutIndexOfFieldSymbol(field_sym_id));
+			const Bytes field_offset
+				= getOffsetOfLayoutIndex(getLayoutIndexOfFieldSymbol(field_sym_id));
 			const tsh::SymbolType<> field_type
-				= class_type.getType().getMemberType(field_sym_id, ctx);
+				= ctx.query<helios::QueryTypeOfSymbol>(field_sym_id)->valueOrThrow();
 			const auto field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)
 				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);

@@ -89,6 +89,18 @@ namespace compiler::helios::houtgen {
 		};
 
 		/**
+		 * Represents a compiler-generated field in a type. That type does not need to be a class.
+		 */
+		struct Field final {
+			tsh::AbstractType parent_type;  // The type that the field belongs to
+			tsh::SymbolType<> field_type;   // The type of the field
+			u64               index;        // The index of the generated field
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
 		 * Represents a compiler-generated variable (not parameter) in a function. This function may
 		 * itself be compiler-generated, such as the `ImplicitConstructor`.
 		 */
@@ -134,6 +146,7 @@ namespace compiler::helios::houtgen {
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,
+			Field,
 			Variable,
 			ReplExpressionWrapper,
 			ReplInstructionWrapper>;

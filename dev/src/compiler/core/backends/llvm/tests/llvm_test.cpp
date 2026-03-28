@@ -498,10 +498,8 @@ private:
 
 		// Ckeck if tuple types are present
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(%T.*E)" }),
-			"Expected tuple struct definition"
+			std::regex_search(ir, std::regex{ R"(%T.*E)" }), "Expected tuple struct definition"
 		);
-
 	}
 };
 

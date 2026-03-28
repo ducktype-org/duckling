@@ -451,7 +451,8 @@ namespace compiler::tsl {
 		usize num_fields;
 
 		/**
-		 * @brief A mapping of the order of appearance in the layout to the offsets of the fields, in bytes.
+		 * @brief A mapping of the order of appearance in the layout to the offsets of the fields,
+		 * in bytes.
 		 */
 		std::vector<Bytes> layout_idx_to_offset;
 

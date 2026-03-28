@@ -225,7 +225,7 @@ namespace compiler::mir {
 
 		void visitTupleExpr(const hc::TupleExpr& expr) override {
 			auto hole = continuation->addHole();
-			
+
 			BlockBuilderRef       current = continuation;
 			std::vector<MIRValue> element_values;
 			element_values.reserve(expr.elements.size());

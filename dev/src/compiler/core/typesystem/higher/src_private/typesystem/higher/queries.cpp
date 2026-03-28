@@ -2,8 +2,8 @@
 
 #include "abstract_type_impl.hpp"
 
-#include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -48,4 +48,34 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfClass)
+
+	struct IMPLEMENT_QUERY(QueryInterfaceOfTuple, query::QResult<TypeInterface>) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			std::vector<InterfaceElement> elements;
+			elements.reserve(key.value->getComponents().size());
+
+			auto components = ctx.query<helios::QueryTupleTypeData>(key.value->toAbstractType())
+			                      ->valueOrThrow()
+			                      .members;
+			u32 declaration_order = 0;
+			for (const auto& component: components) {
+				elements.emplace_back(
+					component,
+					ctx.query<helios::QueryTypeOfSymbol>(component)->valueOrThrow().getType(),
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Field,
+					ClassMemberVisibility::Public
+				);
+				declaration_order++;
+			}
+
+
+			auto interface = TypeInterface(elements);
+			return interface;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfTuple)
 }

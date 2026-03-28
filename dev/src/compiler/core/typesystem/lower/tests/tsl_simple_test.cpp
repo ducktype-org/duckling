@@ -360,8 +360,7 @@ private:
 
 					for (usize i = 0; i < l.getNumFields(); i++) {
 						assertTrue(
-							l.getLayoutIndexOfFieldSymbol(l.getFieldSymbolOfLayoutIndex(i))
-								== i,
+							l.getLayoutIndexOfFieldSymbol(l.getFieldSymbolOfLayoutIndex(i)) == i,
 							"Layout index to component index mapping should be reversible."
 						);
 					}
@@ -423,11 +422,16 @@ private:
 			variant_match(my_class_layout->getVariant()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(a_field_symbol)) == Bytes(0)
-							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(b_field_symbol)) == Bytes(2)
-							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(c_field_symbol)) == Bytes(8)
-							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(d_field_symbol)) == Bytes(16)
-							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(e_field_symbol)) == Bytes(24),
+						l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(a_field_symbol))
+								== Bytes(0)
+							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(b_field_symbol
+					           )) == Bytes(2)
+							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(c_field_symbol
+					           )) == Bytes(8)
+							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(d_field_symbol
+					           )) == Bytes(16)
+							&& l.getOffsetOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(e_field_symbol
+					           )) == Bytes(24),
 						"Class layout should align its component layouts."
 					);
 				}
