@@ -7,7 +7,8 @@
 //! │   └── metadata_db.sqlite <file with fetcher metadata cache>
 //! ├── config.toml <user config file>
 //! ├── global_venv/ <root of the global shared virtual environment>
-//! └── storage/ <root of the storage internal files>
+//! ├── storage/ <root of the storage internal files>
+//! └── active_venv.txt <file containing the name of the current active venv>
 
 use crate::{QuackResult, util_common::env::Env};
 use std::path::{Path, PathBuf};
@@ -76,6 +77,11 @@ macro_rules! call_on_files {
             Description: "fetcher metadata database",
             EnsureFunction: ensure_metadata_db,
         }
+        $callback! {
+            MemberName: active_venv_file,
+            Description: "Active venv name",
+            EnsureFunction: ensure_active_venv,
+        }
     };
 
     ($callback:ident INCLUDE_USER_CONFIG) => {
@@ -94,6 +100,11 @@ macro_rules! call_on_files {
             MemberName: metadata_db,
             Description: "fetcher metadata database",
             EnsureFunction: ensure_metadata_db,
+        }
+        $callback! {
+            MemberName: active_venv_file,
+            Description: "Active venv name",
+            EnsureFunction: ensure_active_venv,
         }
     };
 }
@@ -150,6 +161,7 @@ pub struct DuckHome {
     user_config: PathBuf,
     storage_dir: PathBuf,
     global_venv_dir: PathBuf,
+    active_venv_file: PathBuf,
 }
 
 impl DuckHome {
@@ -188,6 +200,9 @@ impl DuckHome {
 
         let global_venv_dir =
             get_key_with_fallback(env, "DUCK_STORAGE_GLOBAL_VENV", || root.join("global_venv"));
+        let active_venv_file = get_key_with_fallback(env, "DUCK_ACTIVE_VENV_FILE", || {
+            root.join("active_venv.txt")
+        });
         let duck_home = Self {
             root,
             cache_dir,
@@ -198,6 +213,7 @@ impl DuckHome {
             user_config,
             storage_dir,
             global_venv_dir,
+            active_venv_file,
         };
         debug!("duck home layout is `{duck_home:?}`");
         duck_home

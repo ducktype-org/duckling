@@ -1,5 +1,5 @@
 //! Loading packages from the disk.
-use std::{marker::PhantomData, path::Path};
+use std::{fs, marker::PhantomData, path::Path};
 
 use tracing::{debug, trace};
 
@@ -48,15 +48,19 @@ impl PackageLoader {
         Err(qp_internal!("@TODO: #1394 it needs the EditableManifest"))
     }
 
-    /// Find a [`PackageCtx`] from a given `start`.
+    /// Find a [`PackageCtx`] which is the active venv or from the given `start`.
     ///
     /// This function __expands tildes__ and __resolves__ path fully.
     /// Also, it walks up the chain of path's ancestors.
-    pub fn find_from_directory<'duck>(
+    pub fn find_active_or_from_directory<'duck>(
         start: &Path,
         ctx: &'duck DuckCtx,
         allow_global_package: AllowGlobalPackage,
+        allow_active_venv: bool,
     ) -> QuackResult<PackageCtx<'duck>> {
+        if allow_active_venv && let Some(pkg) = Self::try_get_active_venv(ctx)? {
+            return Ok(pkg);
+        }
         let start = start.expand_user()?.resolve()?;
         if !start.is_dir() {
             qp_bail!("the path `{}` is not a directory", start.display())
@@ -84,7 +88,7 @@ impl PackageLoader {
 
     /// Find package at a given directory.
     ///
-    /// Unlike [`find_from_directory`](Self::find_from_directory) this function __does not__ walk up
+    /// Unlike [`find_active_or_from_directory`](Self::find_active_or_from_directory) this function __does not__ walk up
     /// `path`'s ancestors.
     pub fn find_at_exact_directory<'duck>(
         path: &Path,
@@ -106,9 +110,10 @@ impl PackageLoader {
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageCtx<'duck>> {
         let cwd = ctx.cwd();
-        Self::find_from_directory(cwd, ctx, allow_global_package)
+        Self::find_active_or_from_directory(cwd, ctx, allow_global_package, true)
     }
 
+    /// Find the root of the venv with the given name.
     pub fn find_venv_by_name<'duck>(
         ctx: &'duck DuckCtx,
         venv_id: StrId,
@@ -118,8 +123,24 @@ impl PackageLoader {
         let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
             qp_bail!("Could not find venv {} in the main storage", venv_id);
         };
-        Self::find_at_exact_directory(venv.data().last_location(), ctx)
+        let parent = venv
+            .data()
+            .last_location()
+            .parent()
+            .context(format!("Lost track of the venv {venv_id}"))?;
+        Self::find_at_exact_directory(parent, ctx)
             .context(format!("Lost track of the venv {venv_id}"))
+    }
+
+    /// If exists, reads the current active venv file and finds the venv specified there.
+    fn try_get_active_venv<'duck>(ctx: &'duck DuckCtx) -> QuackResult<Option<PackageCtx<'duck>>> {
+        let active_venv_file = ctx.duck_home().active_venv_file();
+        println!("{active_venv_file:?}");
+        if !active_venv_file.exists() {
+            return Ok(None);
+        }
+        let venv_id: StrId = fs::read_to_string(active_venv_file)?.into();
+        Self::find_venv_by_name(ctx, venv_id).map(Some)
     }
 }
 
@@ -143,8 +164,13 @@ metadata:
     fn no_package_from_directory() {
         let tmp_file = tempdir().unwrap();
         let ctx = DuckCtx::default();
-        let err =
-            PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap_err();
+        let err = PackageLoader::find_active_or_from_directory(
+            tmp_file.path(),
+            &ctx,
+            false.into(),
+            false,
+        )
+        .unwrap_err();
         assert_eq!(
             format!("{err}"),
             format!(
@@ -159,7 +185,8 @@ metadata:
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("x");
         let ctx = DuckCtx::default();
-        let err = PackageLoader::find_from_directory(&file, &ctx, false.into()).unwrap_err();
+        let err = PackageLoader::find_active_or_from_directory(&file, &ctx, false.into(), false)
+            .unwrap_err();
         assert_eq!(
             format!("{err}"),
             format!(
@@ -176,8 +203,13 @@ metadata:
         file.touch().unwrap();
         file.write(BASIC_MANIFEST).unwrap();
         let ctx = DuckCtx::default();
-        let package =
-            PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap();
+        let package = PackageLoader::find_active_or_from_directory(
+            tmp_file.path(),
+            &ctx,
+            false.into(),
+            false,
+        )
+        .unwrap();
         assert_eq!(
             package.package().root_directory().resolve().unwrap(),
             tmp_file.path().resolve().unwrap()
@@ -194,7 +226,9 @@ metadata:
         child.mkdir(MkdirOptions::WithoutParents).unwrap();
         assert!(child.is_dir());
         let ctx = DuckCtx::default();
-        let package = PackageLoader::find_from_directory(&child, &ctx, false.into()).unwrap();
+        let package =
+            PackageLoader::find_active_or_from_directory(&child, &ctx, false.into(), false)
+                .unwrap();
         assert_eq!(
             package.package().root_directory().resolve().unwrap(),
             tmp_file.path().resolve().unwrap()

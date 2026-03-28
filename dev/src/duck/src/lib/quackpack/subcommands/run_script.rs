@@ -38,10 +38,11 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
             if rs_options.global {
                 PackageLoader::global_package(rs_options.ctx)?
             } else {
-                PackageLoader::find_from_directory(
+                PackageLoader::find_active_or_from_directory(
                     rs_options.folder_path,
                     rs_options.ctx,
                     AllowGlobalPackage::Yes,
+                    true,
                 )?
             }
         }
