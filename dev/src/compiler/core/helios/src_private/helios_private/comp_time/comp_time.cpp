@@ -625,7 +625,15 @@ namespace compiler::helios {
 				}
 				const auto& ctv     = expr_to_cast.valueOrThrow();
 				const auto& numeric = ctv.get<NumericValue>();
-				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
+				if (!numeric) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Casts of non-numeric compile-time values are not yet implemented.",
+						cast.origin.getSourcePosition()
+					));
+					result = query::Failed();
+					return;
+				}
+
 
 				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
 
