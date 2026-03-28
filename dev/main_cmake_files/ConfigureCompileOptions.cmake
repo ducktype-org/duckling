@@ -31,8 +31,11 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		"-pedantic "
 		"-Wno-sign-compare "
 		"-Wno-redundant-move "
+
+		"-static"
 		)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_GNU_FLAGS}")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
 	# Debug version uses O0.
 

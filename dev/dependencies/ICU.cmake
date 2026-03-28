@@ -1,5 +1,11 @@
 include(FetchContent)
 
+set (BUILD_STATIC_ICU true)
+set (FindOrBuildICU_URL https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz)
+# set (FindOrBuildICU_URL https://github.com/unicode-org/icu/archive/refs/tags/release-74-1.tar.gz)
+
+
+
 set(ICU_VERSION_REQUIRED "74.1")
 set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
 set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b71d146812f5e66db95f044e8aaa11b94e99edd4a48ab1aa8efbe3d72a73870cd56b564c2")
@@ -40,45 +46,7 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 		# probably could, but it's more trouble than it's worth I think
 		message("-- ICU building not supported on Windows.")
 		message(FATAL_ERROR "   -- Please download the latest ICU binaries from http://site.icu-project.org/download")
-	elseif(DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
-		# Be careful this is mostly for github actions
-	message("-- Downloading ubuntu icu build for ubuntu 22.04")
-
-		set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-2/icu4c-74_2-Ubuntu22.04-x64.tgz")
-		set(ICU_CONTROL "MD5=6786f210e101e0440582ba2d9a057aed")
-
-		FetchContent_Declare(
-			ubuntu-icu
-			URL ${ICU_RELEASE}
-			URL_HASH ${ICU_CONTROL}
-			SYSTEM
-		)
-
-		FetchContent_MakeAvailable(ubuntu-icu)
-
-		set(ICU_PREFIX ${PROJECT_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local)
-		set(ICU_INCLUDE_DIRS ${ICU_PREFIX}/include)
-
-		set(ICU_DATA_LIBRARY ${ICU_PREFIX}/lib/libicudata.so.74)
-		set(ICU_I18N_LIBRARY ${ICU_PREFIX}/lib/libicui18n.so.74)
-		set(ICU_UC_LIBRARY ${ICU_PREFIX}/lib/libicuuc.so.74)
-		set(ICU_IO_LIBRARY ${ICU_PREFIX}/lib/libicuio.so.74)
-
-		add_library(icudata IMPORTED SHARED GLOBAL)
-		set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
-		target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
-
-		add_library(icu18n IMPORTED SHARED GLOBAL)
-		set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
-		target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
-
-		add_library(icuuc IMPORTED SHARED GLOBAL)
-		set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
-		target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
-
-		add_library(icuio IMPORTED SHARED GLOBAL)
-		set_target_properties(icuio PROPERTIES IMPORTED_LOCATION ${ICU_IO_LIBRARY})
-		target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
+	
 
 	elseif(UNIX)
 		set(ICU_CFLAGS "-w")
@@ -187,8 +155,9 @@ else()
 endif()
 
 add_library(unicode INTERFACE)
-target_link_libraries(unicode INTERFACE ICU::i18n ICU::uc ICU::io ICU::data)
-set(ICU_LIBRARIES ICU::i18n ICU::uc ICU::data ICU::io)
+# target_link_libraries(unicode INTERFACE ICU::i18n ICU::uc ICU::io ICU::data)
+target_link_libraries(unicode INTERFACE icui18n icuuc icuio icudata)
+set(ICU_LIBRARIES icui18n icuuc icuio icudata)
 
 message("-- ICU version: ${ICU_VERSION}")
 message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
