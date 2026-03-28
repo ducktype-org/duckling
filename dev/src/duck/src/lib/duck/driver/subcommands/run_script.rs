@@ -63,7 +63,7 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
         .context_internal("we assured that the path points to a file")?;
     let venv_id = matches
         .try_get_one::<String>("venv")?
-        .map(|arg| StrId::new(arg));
+        .map(StrId::new);
     run_script(RunScriptOptions {
         ctx,
         script_name,
@@ -82,7 +82,7 @@ fn check_is_script(path: &Path) -> QuackResult<()> {
         qp_bail!("the path {} does not exist", path.display());
     } else if !path.is_file() {
         qp_bail!("the path {} does not point to a file", path.display());
-    } else if !(path.extension() == Some(&OsString::from(DUCKLING_SCRIPT_EXT))) {
+    } else if path.extension() != Some(&OsString::from(DUCKLING_SCRIPT_EXT)) {
         qp_bail!(
             QuackError::hint(format!(
                 "the extension of Duckling scripts is `.{}`",

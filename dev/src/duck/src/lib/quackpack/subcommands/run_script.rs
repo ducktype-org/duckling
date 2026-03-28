@@ -1,17 +1,14 @@
 use std::{
-    ffi::{OsStr, OsString},
-    path::{Path, PathBuf},
+    ffi::OsStr,
+    path::Path,
 };
 
 use crate::{
     DuckCtx, QuackResult, StrId, qp_bail_internal,
-    quackpack::{
-        core::{
+    quackpack::core::{
             AllowGlobalPackage, PackageLoader,
-            storage::{StorageSyncOptions, paths::Storage, sync, venv::Venv},
+            storage::{StorageSyncOptions, sync},
         },
-        subcommands::sync::SyncOptions,
-    },
 };
 
 pub struct RunScriptOptions<'duck> {
