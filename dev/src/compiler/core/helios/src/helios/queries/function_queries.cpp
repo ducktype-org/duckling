@@ -34,6 +34,7 @@
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+#include "base/collections/optional.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -352,25 +353,30 @@ namespace compiler::helios {
 					.generated_symbol_data
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
-				// Get the initial value for the field from the PST.
-				const auto field_pst_data = symbolPst(field.getSymbol())
-				                                .value()
-				                                .unlock(ctx)
-				                                .dynamicCast<pst::Field>()
-				                                .value();
-				auto init_expr_opt         = field_pst_data->getInit();
-				auto init_expr_coerced_opt = init_expr_opt.map(
-					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
-						const auto field_type = field.getType(ctx);
-						auto       expr
-							= getHoutOfExprWithExpectedType(
-								  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
-							)
-					              .valueOrThrow();
-						return expr;
-					}
-				);
 
+				base::Optional<Box<code::Expr>> init_expr_coerced_opt = std::nullopt;
+				code::ElementOrigin             field_origin          = code::generatedOrigin();
+				if (symbolPst(field.getSymbol()).has_value()) {
+					// Get the initial value for the field from the PST.
+					const auto field_pst_data = symbolPst(field.getSymbol())
+					                                .value()
+					                                .unlock(ctx)
+					                                .dynamicCast<pst::Field>()
+					                                .value();
+					field_origin          = code::pstOrigin(field_pst_data).generatedFrom();
+					auto init_expr_opt    = field_pst_data->getInit();
+					init_expr_coerced_opt = init_expr_opt.map(
+						[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
+							const auto field_type = field.getType(ctx);
+							auto       expr
+								= getHoutOfExprWithExpectedType(
+									  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
+								)
+						              .valueOrThrow();
+							return expr;
+						}
+					);
+				}
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
 				// in class constructors.
 				parameters.emplace_back(
@@ -378,7 +384,7 @@ namespace compiler::helios {
 					field.getType(ctx),
 					std::move(init_expr_coerced_opt),
 					argument_symbol,
-					code::pstOrigin(field_pst_data).generatedFrom()
+					field_origin
 				);
 				argument_index++;
 			}

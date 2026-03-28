@@ -1,11 +1,14 @@
 #include "coercions.hpp"
+#include "base/except/exceptions.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/visitors.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
+#include "typesystem/higher/types.hpp"
 
 namespace compiler::helios {
 	namespace {
@@ -54,6 +57,15 @@ namespace compiler::helios {
 
 			return std::move(expr);
 		}
+
+		struct TupleCoercionVisitor final: public code::HoutExprVisitor {
+				query::Context& ctx;
+				const tsh::SymbolType<> to;
+
+				TupleCoercionVisitor(query::Context& ctx, const tsh::SymbolType<>& to):
+					  ctx(ctx),
+					  to(to) {}
+		};
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
@@ -114,6 +126,27 @@ namespace compiler::helios {
 			return makeBox<code::LiftToTypeExpr>(
 				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
 			);
+		} else if (source_type.getKind() == tsh::Kind::Tuple
+		           and to.getType().getKind() == tsh::Kind::Tuple) {
+			// Tuple element by element coercion.
+			std::vector<Box<code::Expr>> coerced_elements;
+			coerced_elements.reserve(source_type.as<tsh::TupleAbstractType>().getComponents().size());
+			
+			Box<code::TupleExpr> tuple_expr = std::move(current_expr);
+			auto source_tuple_type = current_expr->expression_type.getType().as<tsh::TupleAbstractType>();
+			auto to_tuple_type  = to.getType().as<tsh::TupleAbstractType>();
+			for (usize i = 0; i < tuple_expr->elements.size(); i++) {
+				const auto& source_element_type = source_tuple_type.getComponents()[i];
+				const auto& to_element_type = to_tuple_type.getComponents()[i];
+
+				auto element_coercion = canCoerce(ctx, source_element_type, to_element_type);
+				if (element_coercion.valueOrThrow().isInvalid()) {
+					CORE_PANIC("Coercion should always be valid at this point.");
+				}
+				coerced_elements.emplace_back(element_coercion.valueOrThrow().getCoercion().coerce(ctx, std::move(tuple_expr)));
+			}
+
+			return makeBox<code::TupleExpr>(ctx, current_expr->origin.generatedFrom(), std::move(coerced_elements));
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}
