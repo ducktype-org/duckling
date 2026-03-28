@@ -273,15 +273,32 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<CRef<HOUTUnit>>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<CRef<HOUTUnit>> out = { &ctx.query<QueryModuleHOUT>(key)->valueOrThrow() };
+			auto current_unit = &ctx.query<QueryModuleHOUT>(key)->valueOrThrow();
 
 			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
+
+			if (submodules->empty()) return std::vector<CRef<HOUTUnit>>{ current_unit };
+
+			std::vector<std::vector<CRef<HOUTUnit>>> sub_results;
+			sub_results.reserve(submodules->size());
+
+			size_t total_elements = 1;
+
 			for (auto submodule: *submodules) {
-				// @TODO: #2239 optimize multiple concatenations
-				auto submodule_hout
+				auto sub_hout
 					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
-				for (const auto& i: submodule_hout) out.push_back(i);
+				total_elements += sub_hout.size();
+
+				sub_results.emplace_back(std::move(sub_hout));
 			}
+
+			std::vector<CRef<HOUTUnit>> out;
+			out.reserve(total_elements);
+
+			out.emplace_back(current_unit);
+
+			for (auto& sub_vec: sub_results) out.insert(out.end(), sub_vec.begin(), sub_vec.end());
+
 			return out;
 		}
 
