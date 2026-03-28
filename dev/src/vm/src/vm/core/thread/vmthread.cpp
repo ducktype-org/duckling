@@ -18,9 +18,9 @@
 #include <vm/core/process/concurrency/gil.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
-#include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/module_flags/module_flags.hpp>
 
@@ -34,7 +34,7 @@ namespace vm {
 #define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
 	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
-	VMThread::VMThread(VMProcess& process):
+	VMThread::VMThread(SafeVMProcess& process):
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),
 		  process_memory(process.getMemory()) {}
