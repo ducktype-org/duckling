@@ -1,6 +1,7 @@
 #include "tuple_constructor.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -27,7 +28,9 @@ namespace compiler::helios::houtgen {
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID{ "" },
+				.name
+				= ctx.query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(tuple_type))
+			          ->valueOrThrow(),
 				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ tuple_type } },
 			});
 

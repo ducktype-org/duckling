@@ -1,5 +1,4 @@
 #include <llvm_helpers/llvm_helpers.hpp>
-#include <typesystem/higher/abstract_type.hpp>
 
 #include <type_traits>
 

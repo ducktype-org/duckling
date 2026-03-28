@@ -6,12 +6,13 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "helios/symbols/symbol_id.hpp"
-#include "helios_private/symbols/generated_symbol_data.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries.hpp>
 
@@ -539,7 +540,8 @@ namespace compiler::helios::code {
 		  ),
 		  elements(std::move(elements)),
 		  tuple_ctor_symbol(ctx.query<houtgen::QueryGeneratedSymbol>(
-			  { .name = base::StrID{ "" },
+			  { .name = ctx.query<mangler::QueryMangledType>(expression_type.getSymbolType())
+	                        ->valueOrThrow(),
 	            .generated_symbol_data
 	            = houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::ImplicitConstructor{
 					expression_type.getType() } } }
