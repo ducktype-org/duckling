@@ -90,10 +90,10 @@ pub enum Location {
 
 impl From<&Dependency> for Location {
     fn from(dependency: &Dependency) -> Self {
-        match &dependency.desc().source().as_ref() {
+        match &dependency.source().as_ref() {
             Source::Registry(registry) => Self::Registry {
                 url: registry.url().clone(),
-                real_name: dependency.real_name(),
+                real_name: dependency.name(),
             },
             Source::Local(local) => Self::Local {
                 path: local.absolute().to_path_buf(),

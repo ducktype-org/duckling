@@ -2,6 +2,7 @@
 
 #include "dvm_value.hpp"
 
+#include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -35,8 +36,7 @@ namespace compiler::backend_vm::internal {
 		 * This constructor is provided for backward compatibility with existing call sites.
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
-		explicit ProgramLoweringContext(query::Context& query_ctx):
-			  query_ctx_for_errors(&query_ctx) {}
+		explicit ProgramLoweringContext(query::Context& query_ctx, bool build_debug_info);
 
 		/**
 		 * @brief Set the query context for error reporting during compilation.
@@ -112,6 +112,15 @@ namespace compiler::backend_vm::internal {
 		 */
 		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
 
+		/**
+		 * @brief Builds the debug info for the module
+		 * if the class was constructed with debug info building enabled,
+		 * returns nullopt otherwise.
+		 * @note It leaves the internal debug info builder in an empty state,
+		 * so subsequent calls to this method will return nullopt.
+		 */
+		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
+
 	private:
 		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
@@ -130,5 +139,8 @@ namespace compiler::backend_vm::internal {
 		// Using names as keys to avoid issues with CRef hash/equality.
 		base::HashMap<base::StrID, DVMGlobal>            global_name_to_dvm;
 		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
+
+		// Optional debug info builder.
+		base::Optional<debug_info::DebugInfoBuilder> debug_info_builder;
 	};
 }

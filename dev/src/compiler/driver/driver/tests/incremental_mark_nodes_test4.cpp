@@ -95,10 +95,10 @@ private:
 
 		// Check the location of .o object in artifacts before compilation, it should be present
 		// because of previous compilation step
-		compiler::driver::KeyOf_CompileModule key{
-			.module_id    = module,
-			.backend_type = compiler::driver::BackendType::LLVM,
-		};
+		compiler::driver::KeyOf_CompileModule key{ .module_id = module,
+			                                       .backend_type
+			                                       = compiler::driver::BackendType::LLVM,
+			                                       .build_debug_info = false };
 
 		auto output_name = key.queryStablePerfectHash().toStringHex() + ".o";
 

@@ -41,7 +41,7 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
 #include <vm/core/thread/vmthread.hpp>
@@ -676,6 +676,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_gany)(FUNCTION_ARGS) {
+		{
+			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       src_block = GET_GLOBAL_BLOCK(instr->arg1);
+			const auto new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { src_block, 0 });
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
@@ -1166,13 +1177,6 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	// `cast_lN_type` instructions are no-ops at runtime, they are only used by the validator.
-#define CAST_PRIMITIVE(SIZE) \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cast_l##SIZE##_type)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
-	FOR_EACH(CAST_PRIMITIVE, 8, 16, 32, 64)
-#undef CAST_PRIMITIVE
-
-
 #define DEFINE_STATIC_CAST_CONVERSION_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {    \
 		{                                                                                 \
@@ -1300,6 +1304,11 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
+		{ thread.stepGil(); }
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {

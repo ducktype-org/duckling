@@ -162,11 +162,11 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
 "#,
         &url, &url,
@@ -277,7 +277,7 @@ metadata:
 dependencies:
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
 "#,
         &url,
@@ -392,7 +392,7 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
     features: [a]
 "#,

@@ -86,6 +86,15 @@ namespace vm::api {
 		struct ExitCodeRequest {};
 
 		struct DeinitAndValidate {};
+
+		struct DebuggerGetNumberOfCurrentStackFrames {
+			ThreadID thread_id;
+		};
+
+		struct DebuggerGetStackFrameData {
+			ThreadID thread_id;
+			u64      frame_index;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -104,6 +113,8 @@ namespace vm::api {
 		request::TypeMetadata,
 		request::VmValue,
 		request::StatusRequest,
+		request::DebuggerGetNumberOfCurrentStackFrames,
+		request::DebuggerGetStackFrameData,
 		request::Input,
 		request::Output,
 		request::Attach,

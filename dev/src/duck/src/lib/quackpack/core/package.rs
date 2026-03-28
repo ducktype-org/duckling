@@ -75,10 +75,7 @@ impl Package {
 
     /// Convert this package to a [`FreezeDep`].
     pub fn as_freeze_dep(&self) -> FreezeDep {
-        FreezeDep::new(
-            self.manifest().root_description().name(),
-            self.manifest().root_description().version(),
-        )
+        FreezeDep::new(self.manifest().name(), self.manifest().version())
     }
 }
 

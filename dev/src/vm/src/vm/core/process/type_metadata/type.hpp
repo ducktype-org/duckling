@@ -123,6 +123,11 @@ namespace vm {
 			return kind_type;
 		}
 
+		[[nodiscard]]
+		auto getKindVariant() const {
+			return kind;
+		}
+
 		// @todo: Interface below may change
 
 		// @TODO: move function below to kind:: structures without `option`

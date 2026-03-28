@@ -1,8 +1,7 @@
 #pragma once
 
+#include "micro_instruction_args.hpp"
 #include "opcodes.hpp"
-
-#include <vm/bytecode/opcode_args.hpp>
 
 #include <tuple>
 

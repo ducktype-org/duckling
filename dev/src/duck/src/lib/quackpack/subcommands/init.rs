@@ -57,7 +57,7 @@ fn bail_if_would_override_project(ctx: &DuckCtx, root: &Path) -> QuackResult<()>
     if let Ok(package) = PackageLoader::find_at_exact_directory(root, ctx) {
         qp_bail!(
             "cannot reinitialize project `{}` at `{}`",
-            package.package().manifest().root_description().name(),
+            package.package().manifest().name(),
             package.package().root_directory().display()
         )
     }

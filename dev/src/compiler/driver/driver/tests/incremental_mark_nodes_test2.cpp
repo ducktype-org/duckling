@@ -104,7 +104,7 @@ private:
 		auto root_deps = prev->getNodeDeps(root_node);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 
 			// Trigger metadata merge by calling the same queries
 			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });

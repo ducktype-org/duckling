@@ -192,14 +192,17 @@ impl CompilerDag {
             ctx.freeze.root().as_freeze_dep(),
             CompilerPackage::new(ctx.package.package().clone(), PackageType::RootPackage),
         );
+        let direct_dependencies_names = ctx
+            .package
+            .package()
+            .manifest()
+            .dependencies()
+            .all_dependencies()
+            .iter()
+            .map(|dep| dep.name())
+            .collect::<HashSet<_>>();
         for dep in ctx.freeze.dependencies() {
-            let pkg_type = if ctx
-                .package
-                .package()
-                .manifest()
-                .dependencies()
-                .has_dependency(dep.name())
-            {
+            let pkg_type = if direct_dependencies_names.contains(&dep.name()) {
                 PackageType::DirectDependency
             } else {
                 PackageType::TransitiveDependency

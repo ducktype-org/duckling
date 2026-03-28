@@ -129,7 +129,7 @@ impl<'a> SolverEngine<'a> {
                 .all_possible_features
                 .get(package)
                 .unwrap_or(&empty_hashset);
-            for dependency in manifest.dependencies().all_dependencies().values() {
+            for dependency in manifest.dependencies().all_dependencies() {
                 if dependency.is_enabled_for(possible_features.iter().cloned()) {
                     self.construct_for_single_dependency(package, dependency)?;
                 }
