@@ -286,9 +286,11 @@ namespace compiler::helios::mangler {
 						// If the symbol is generated, it has no path.
 						variant_match(gen_data.data) {
 							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "Hic" + func(ctx, symbol_id) + "E";
-								return path_to_class + ctor_suffix;
+								const auto mangled_class = ctx.query<QueryMangledType>(
+									tsh::SymbolType<>::withDefaults(ctor.class_type)
+								);
+								const auto ctor_suffix = "Hic" + func(ctx, symbol_id) + "E";
+								return mangled_class->valueOrThrow().str() + ctor_suffix;
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor

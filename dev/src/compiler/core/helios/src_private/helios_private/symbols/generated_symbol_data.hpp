@@ -21,9 +21,11 @@ namespace compiler::helios::houtgen {
 		 *
 		 * The implicit constructor is a function that takes parameters for each field of the class
 		 * and returns an instance of the class with those fields initialised accordingly.
+		 *
+		 * @note Different types, such as tuples, might have an implicit ctor as well.
 		 */
 		struct ImplicitConstructor final {
-			SymID class_symbol;  // The symbol of the class this constructor belongs to.
+			tsh::AbstractType class_type;  // The type of the class this constructor belongs to.
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;

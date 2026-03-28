@@ -13,6 +13,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -305,22 +306,34 @@ namespace compiler::helios {
 			using std::views::transform;
 
 			// Get class data
-			const auto class_type = ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
-
-			const SymID class_symbol    = class_type.getSymbol();
-			auto        class_interface = class_type.getInterface(ctx);
+			const auto class_type      = ctor_data.class_type;
+			auto       class_interface = class_type.getInterface(ctx);
 
 			const std::vector<tsh::InterfaceElement> fields
 				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
+			base::StrID ctor_name;
+			switch (class_type.getKind()) {
+			case tsh::Kind::Class:
+				ctor_name = name(class_type.as<tsh::ClassAbstractType>().getSymbol());
+				break;
+			case tsh::Kind::Tuple:
+				ctor_name
+					= ctx.query<mangler::QueryMangledType>(
+							 tsh::SymbolType<>::withDefaults(class_type.as<tsh::TupleAbstractType>())
+					)
+				          ->valueOrThrow();
+				break;
+			default:
+				// @TODO: Log proper error.
+				return query::Failed();
+			}
+
 			// Prepare the necessary symbols (of the constructor and its parameters).
 			const SymID ctor_symbol        = ctx.query<houtgen::QueryGeneratedSymbol>({
-					   .name                  = name(class_type.getSymbol()),
-					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
+					   .name                  = ctor_name,
+					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_type } },
             });
 			const auto  result_symbol_type = tsh::SymbolType<>{
                 class_type,
@@ -639,10 +652,7 @@ namespace compiler::helios {
 				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
 					variant_match(gsd_data.data) {
 						variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
-							                       ->valueOrThrow()
-							                       .getType()
-							                       .as<tsh::ClassAbstractType>();
+							const auto& type = ctor.class_type;
 							return ctx.query<houtgen::QueryImplicitClassConstructor>(type)
 							    ->valueOrThrow();
 						}

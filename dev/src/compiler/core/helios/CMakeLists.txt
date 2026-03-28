@@ -20,6 +20,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/comp_time/vm_evaluator.cpp
 	src_private/helios_private/comp_time/comptime_type_operations.cpp
 	src_private/helios_private/hout_code_generation/class_constructors.cpp
+	src_private/helios_private/hout_code_generation/tuple_constructor.cpp
 	src_private/helios_private/hout_code_generation/default_constructors.cpp
 	src_private/helios_private/hout_code_generation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp

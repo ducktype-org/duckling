@@ -12,7 +12,7 @@
 namespace compiler::helios {
 	namespace houtgen {
 		base::Bit256 GeneratedSymbolData::ImplicitConstructor::queryUnstablePerfectHash() const {
-			return { class_symbol.queryUnstablePerfectHash() };
+			return { class_type.queryUnstablePerfectHash() };
 		}
 
 		base::Bit256 GeneratedSymbolData::DefaultClassConstructor::queryUnstablePerfectHash() const {
@@ -66,11 +66,7 @@ namespace compiler::helios {
 		tsh::SymbolType<> GeneratedSymbolData::getType(query::Context& ctx) const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) {
-					const auto class_type
-						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
-					          ->valueOrThrow()
-					          .getType()
-					          .as<tsh::ClassAbstractType>();
+					const auto class_type = ctor.class_type;
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
 					auto class_fields = class_type.getInterface(ctx)->getFieldsView();
