@@ -85,8 +85,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,
-	
-	TuplePack, // N arguments, creates a tuple with those arguments as fields.
 
 	/** Operations on meta types for compile time function evaluation */
 	MetaCreateBox,

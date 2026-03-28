@@ -224,10 +224,13 @@ namespace compiler::mir {
 		}
 
 		void visitTupleExpr(const hc::TupleExpr& expr) override {
-			auto hole = continuation->addHole();
+			auto call = continuation->addHole();
 
 			BlockBuilderRef       current = continuation;
 			std::vector<MIRValue> element_values;
+
+			auto tuple_type = expr.expression_type.getType().as<tsh::TupleAbstractType>()
+
 			element_values.reserve(expr.elements.size());
 
 			for (auto& element: expr.elements | std::views::reverse) {
@@ -239,7 +242,7 @@ namespace compiler::mir {
 
 			return noValueOutput(
 				continuation,
-				hole,
+				call,
 				Instruction(Operation::TuplePack, {}, element_values, {}, expr_scope),
 				expr.expression_type.getSymbolType()
 			);
