@@ -949,6 +949,8 @@ private:
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
+		(void) query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+
 		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
