@@ -32,7 +32,10 @@ pub fn get_parser() -> Command {
             )
             .conflicts_with("global"),
         )
-        .add_global_venv()
+        .arg(
+            flag("global", "Run the script in the global virtual environment")
+                .conflicts_with("overwrite"),
+        )
         .arg(flag(
             "external-errors",
             "Halt computation after encountering errors in foreign manifests",
@@ -61,9 +64,7 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let folder_path = path
         .parent()
         .context_internal("we assured that the path points to a file")?;
-    let venv_id = matches
-        .try_get_one::<String>("venv")?
-        .map(StrId::new);
+    let venv_id = matches.try_get_one::<String>("venv")?.map(StrId::new);
     run_script(RunScriptOptions {
         ctx,
         script_name,
