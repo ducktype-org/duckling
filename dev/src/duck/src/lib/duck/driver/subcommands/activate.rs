@@ -7,7 +7,7 @@ use clap::{Arg, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::subcommand;
 
-/// Creates parser for the `info` subcommand.
+/// Creates parser for the `activate` subcommand.
 pub fn get_parser() -> Command {
     subcommand("activate")
         .about("Activate a virtual environment")
@@ -19,7 +19,7 @@ pub fn get_parser() -> Command {
         )
 }
 
-/// Logic for executing the `info` subcommand.
+/// Logic for executing the `activate` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let venv_id = matches.try_get_one::<String>("venv")?.map(StrId::new);
     activate(ActivateOptions {
