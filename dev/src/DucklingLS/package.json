@@ -1,7 +1,7 @@
 {
-    "name": "duckling-language-server",
-    "displayName": "DucklingLS",
-    "description": "Duckling Language Server",
+    "name": "duckling-language-support",
+    "displayName": "Duckling",
+    "description": "Duckling Language Support",
     "version": "0.0.1",
     "icon": "images/icon.png",
     "author": "DuckType",
