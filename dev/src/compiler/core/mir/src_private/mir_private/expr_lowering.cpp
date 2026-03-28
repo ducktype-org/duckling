@@ -224,26 +224,26 @@ namespace compiler::mir {
 		}
 
 		void visitTupleExpr(const hc::TupleExpr& expr) override {
+			// Tuple packing is a call to implicit tuple constructor
 			auto call = continuation->addHole();
 
-			BlockBuilderRef       current = continuation;
-			std::vector<MIRValue> element_values;
+			auto                  current = continuation;
+			std::vector<MIRValue> args;
+			args.reserve(1 + expr.elements.size());  // ctor + each element
 
-			auto tuple_type = expr.expression_type.getType().as<tsh::TupleAbstractType>()
+			auto ctor_symid = expr.tuple_ctor_symbol;
+			args.emplace_back(MIRFunctionLiteral{ ctor_symid });
 
-			element_values.reserve(expr.elements.size());
-
-			for (auto& element: expr.elements | std::views::reverse) {
+			for (const auto& element: expr.elements) {
 				auto lowered_element = lowerSubExpr(*element, continuation);
-				element_values.push_back(lowered_element.getResult(function));
+				args.push_back(lowered_element.getResult(function));
 				current = lowered_element.begin;
 			}
-			std::ranges::reverse(element_values);
 
 			return noValueOutput(
 				continuation,
 				call,
-				Instruction(Operation::TuplePack, {}, element_values, {}, expr_scope),
+				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}
