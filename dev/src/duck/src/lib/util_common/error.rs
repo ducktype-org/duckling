@@ -28,9 +28,19 @@ pub enum DisplayPlace {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-/// A type of an [`Error`].
+/// A type of a single [`Error`] on the errors' stack.
 ///
 /// Used for printing.
+///
+/// The underlying options represent:
+/// * [`Error`](ErrorType::Error) - error at the user side (wrong usage of the program).
+/// * [`Internal`](ErrorType::Internal) - program's internal logic error, means a critical bug is present.
+/// * [`Hint`](ErrorType::Hint) - a suggestion for the user how to fix the error.
+/// * [`Note`](ErrorType::Note) - any additional information that the user should know.
+/// * [`BareMessage`](ErrorType::BareMessage) - a non-error message, which does not classify as hint nor note.
+///
+/// # Usage
+/// The errors are added on a stack, so when adding an error with a hint, the hint should be added before the error.
 pub enum ErrorType {
     Internal,
     Error,
