@@ -6,7 +6,9 @@ use std::{
 };
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, qp_bail,
+    DuckCtx, QuackResult, QuackResultContext,
+    duck::driver::subcommands::run_script,
+    qp_bail,
     util_common::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
 };
 use clap::ArgMatches;
@@ -43,13 +45,26 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
         })?;
         ctx.reload_cwd()?;
     }
-    let args = fix_typos(matches, ctx, &external)?;
+    let args = if !check_is_subcmd_file(&matches) {
+        fix_typos(matches, ctx, &external)?
+    } else {
+        matches
+    };
     let args = expand_aliases(args, ctx, &external, vec![])?;
-    debug!(
-        "after expanding everything we have the subcommand: `{:#?}`",
-        args.subcommand_name()
-    );
-    run_subcmd(ctx, args, &external)
+    if check_is_subcmd_file(&args) {
+        let path = args
+            .subcommand_name()
+            .context_internal("checked that user supplied path-like subcmd")?;
+        debug!("assuming user wants to run a script at {}", path);
+        let args = run_script::get_parser().try_get_matches_from(vec!["run_script", path])?;
+        run_script::execute(ctx, &args)
+    } else {
+        debug!(
+            "after expanding everything we have the subcommand: `{:#?}`",
+            args.subcommand_name()
+        );
+        run_subcmd(ctx, args, &external)
+    }
 }
 
 /// Get [`GlobalOptions`] from the CLI arguments.
@@ -149,4 +164,13 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);
     command.exec_replace().map(|_| ())
+}
+
+/// Guess whether the user meant to provide a file.
+fn check_is_subcmd_file(args: &ArgMatches) -> bool {
+    let Some(sub_cmd) = args.subcommand_name() else {
+        return false;
+    };
+    let path = PathBuf::new().join(sub_cmd);
+    path.extension().is_some() || path.components().count() > 1
 }

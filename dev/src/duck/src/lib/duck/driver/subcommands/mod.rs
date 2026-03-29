@@ -11,7 +11,7 @@ mod list;
 mod publish;
 mod remove;
 mod run;
-mod run_script;
+pub mod run_script;
 mod search;
 mod sync;
 mod tree;
