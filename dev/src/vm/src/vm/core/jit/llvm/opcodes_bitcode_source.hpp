@@ -9,6 +9,8 @@
 	#include <llvm_helpers/llvm_helpers.hpp>
 
 	#include <vm/core/thread/low_program/opcodes.hpp>
+
+	#include <base/collections/optional.hpp>
 LLVM_INCLUDE_BEGIN()
 	#include <llvm/ExecutionEngine/Orc/LLJIT.h>
 	#include <llvm/IR/Function.h>
@@ -23,7 +25,12 @@ llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun);
  * @brief Returns the name of the corresponding LLVM function for the given opcode.
  * @note Required because LLVM modules "disappear" upon materialization.
  */
-std::string llvmGetFunName(const vm::low::MicroOpcode &fun);
+base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode &fun);
+
+/**
+ * @brief Returns true if the opcode should not be invoked (e.g. `ext` opcodes). 
+ */
+bool isOpcodeNonExecutable(const vm::low::MicroOpcode &fun);
 
 /**
  * @brief Returns the ThreadSafeContext instance.
