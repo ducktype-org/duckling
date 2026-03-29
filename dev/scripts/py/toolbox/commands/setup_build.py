@@ -1,4 +1,4 @@
-from ..impl.setup_build import setup_build_impl
+from ..impl.setup_build import (setup_build_impl, LLVM_TOOLS)
 from .helpers import (
     build_system,
     build_dir,
@@ -11,8 +11,8 @@ from ..impl.helpers import (
     default_linker_from_ctx,
     default_gcov_from_ctx,
 )
+from ...llvm_tools import (LLVM_TOOLS, llvm_version_options)
 from click import Choice, option, command, prompt
-
 
 @command()
 @build_dir(help="The name of the directory.")
@@ -29,6 +29,14 @@ from click import Choice, option, command, prompt
         ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
         case_sensitive=False,
     ),
+)
+@option(
+    "--enable-jit",
+    prompt="Enable JIT",
+    help="Whether or not to enable JIT compilation.",
+    type=bool,
+    default=False,
+    is_flag=True,
 )
 # @TODO check if it is necessary to get compiler path from context
 @cxx_compiler(
@@ -129,36 +137,20 @@ from click import Choice, option, command, prompt
     is_flag=True,
 )
 @option(
-    "--enable-jit",
-    prompt="Enable JIT",
-    help="Whether or not to enable JIT compilation.",
-    type=bool,
-    default=False,
-    is_flag=True,
+    "--llvm-version",
+    type=str,
+    default="19",
+    metavar="VERSION",
+    help="Default version of llvm tools",
 )
+@llvm_version_options
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
 
-    enable_jit = kwargs.pop("enable_jit")
-
-    if enable_jit:
-        llvm_linker = prompt(
-            "Path to LLVM linker, llvm-link",
-        )
-        opt_path = prompt(
-            "Path to LLVM optimizer, opt",
-        )
-    else:
-        llvm_linker = None
-        opt_path = None
-
-    kwargs.update(
-        {
-            "enable_jit": enable_jit,
-            "llvm_linker": llvm_linker,
-            "opt_path": opt_path,
-        }
-    )
+    global_version = kwargs["llvm_version"]
+    for tool in LLVM_TOOLS:
+        if kwargs[tool.param()] == None:
+            kwargs[tool.param()] = tool.default(global_version)
 
     setup_build_impl(
         *args,

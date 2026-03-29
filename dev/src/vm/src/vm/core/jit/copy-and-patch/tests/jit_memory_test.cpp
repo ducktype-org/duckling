@@ -19,7 +19,7 @@ PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 constexpr static char FULL_ELF[] = {
-	#if __has_embed("wrapper-so")
+	#if __has_embed("mock_stencils-so")
 		#embed "mock_stencils-so"
 	#else
 	0
