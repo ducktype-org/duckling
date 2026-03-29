@@ -118,10 +118,28 @@ fn check_if_overwrites(
     if pkg_ctx.package().manifest_path() != venv.data().last_location()
         && venv.data().last_location().exists()
     {
-        let replaces =
-            PackageLoader::find_at_exact_directory(venv.data().last_location(), pkg_ctx.ctx())
-                .map(|pkg| pkg.package().manifest().name() == id)
-                .unwrap_or(false);
+        let venv_dir = venv.data().last_location().parent().ok_or_else(|| {
+            qp_err!(
+                "last location of venv `{}` (`{}`) doesn't have a parent",
+                venv.id(),
+                venv.data().last_location().display()
+            )
+        })?;
+        let package = PackageLoader::find_at_exact_directory(venv_dir, pkg_ctx.ctx());
+
+        // let replaces = PackageLoader::find_at_exact_directory(
+        //     venv.data().last_location().parent().unwrap(),
+        //     pkg_ctx.ctx(),
+        // )
+        // .map(|pkg| pkg.package().manifest().name() == id)
+        // .unwrap_or(false);
+        let replaces = match package {
+            Ok(package) => package.package().manifest().name() == id,
+            Err(e) => {
+                // TODO: Replace with context_aware_downcast_ref, after errors are merged.
+                panic!()
+            }
+        };
         if replaces {
             Err(
                 qp_err!("tried to overwrite an existing virtual environment from another location")
