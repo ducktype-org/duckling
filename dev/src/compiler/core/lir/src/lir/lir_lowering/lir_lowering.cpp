@@ -341,9 +341,9 @@ namespace compiler::lir {
 					usize lir_param_index = 0;
 					for (const auto& mir_param_type: key.function->parameter_types)
 						if (!mir_param_type.getType().carriesInformation(ctx))
-							mir_to_lir_parameter_indices.push_back({});
+							mir_to_lir_parameter_indices.emplace_back();
 						else
-							mir_to_lir_parameter_indices.push_back(lir_param_index++);
+							mir_to_lir_parameter_indices.emplace_back(lir_param_index++);
 				}
 
 				for (const auto& mir_local: key.function->local_list) {
