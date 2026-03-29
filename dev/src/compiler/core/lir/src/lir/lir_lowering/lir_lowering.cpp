@@ -335,20 +335,28 @@ namespace compiler::lir {
 			 * maps MIR locals to LIR local refs.
 			 */
 			void makeLocals() {
-				u64 discarded = 0;
+				// Mapping of MIR parameters to LIR parameters, accounting for empty param layouts.
+				std::vector<base::Optional<usize>> mir_to_lir_parameter_indices;
+				{
+					usize lir_param_index = 0;
+					for (const auto& mir_param_type: key.function->parameter_types)
+						if (!mir_param_type.getType().carriesInformation(ctx))
+							mir_to_lir_parameter_indices.push_back({});
+						else
+							mir_to_lir_parameter_indices.push_back(lir_param_index++);
+				}
+
 				for (const auto& mir_local: key.function->local_list) {
-					// Discard data-less variables, but count how many were discarded.
-					if (!mir_local.carriesInformation(ctx)) {
-						discarded++;
-						continue;
-					}
+					// Discard data-less variables.
+					if (!mir_local.carriesInformation(ctx)) continue;
 
 					auto lir_local = LIRLocal::fromMIR(ctx, &mir_local);
-					// Adjust parameter index to account for discarded parameters.
-					lir_local.parameter_index
-						= lir_local.parameter_index.map([discarded](const u64 idx) {
-							  return idx - discarded;
-						  });
+					// Adjust parameter index to account for empty parameters.
+					lir_local.parameter_index = mir_local.parameter_index.map(
+						[&mir_to_lir_parameter_indices](const usize mir_index) {
+							return mir_to_lir_parameter_indices[mir_index].value();
+						}
+					);
 
 					locals.pushBack(lir_local);
 					auto local_index = locals.lastIndex();

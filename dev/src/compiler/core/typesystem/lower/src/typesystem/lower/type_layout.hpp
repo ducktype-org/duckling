@@ -272,6 +272,7 @@ namespace compiler::tsl {
 		explicit StringTypeLayout(const tsh::StringAbstractType string_type, query::Context& ctx):
 			  TypeLayoutABC(
 				  POINTER_SIZE + base::bytes2bits(METADATA_SIZE) * 3,
+				  /*alignment=*/POINTER_SIZE_BYTES,
 				  tsh::SymbolType<>::withDefaults(string_type),
 				  ctx
 			  ) {}

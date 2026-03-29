@@ -130,8 +130,10 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @brief Get the permutation of where the component types land in a layout based on
-		 * offsets.
+		 * @brief Get the permutation of where the component types land in a layout based on their
+		 * offsets. Indices corresponding to empty components are omitted.
+		 * For example, for a tuple type (i32, (), f64), the offsets might be [0, -, 8], and the
+		 * resulting permutation would be [0, 2].
 		 * @param offsets The offsets of the component types.
 		 * @return How the component types are permuted.
 		 */
@@ -210,6 +212,7 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(
 			  POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3,
+			  /*alignment=*/POINTER_SIZE_BYTES,
 			  tsh::SymbolType<>::withDefaults(dynamic_array_type),
 			  ctx
 		  ),
@@ -327,14 +330,16 @@ namespace compiler::tsl {
 		 */
 		std::vector<CRef<TypeLayout>> component_layouts;
 		/**
-		 * The offsets of the components in the abstract tuple type, if not empty..
+		 * The offsets of the components in the abstract tuple type.
+		 * If the component has empty layout, then the optional is empty.
 		 * Note, the offsets are not necessarily increasing.
 		 */
 		std::vector<base::Optional<Bytes>> component_offsets;
 		/**
 		 * Mapping from the order of appearance of sub-objects in the layout
 		 * to the index of the component in the abstract tuple type.
-		 * @note This is effectively a permutation represented by an integer vector.
+		 * @note Empty layouts are not included in the tuple layout, so this mapping may be
+		 * shorter than `component_layouts`. Otherwise, this is effectively a permutation.
 		 */
 		std::vector<usize> layout_idx_to_component_idx;
 		/**
@@ -351,7 +356,7 @@ namespace compiler::tsl {
 			  component_offsets(alignOffsetsForLayoutVector(component_layouts)),
 			  layout_idx_to_component_idx(offsetsToPermutation(component_offsets)),
 			  total_size(offsetsToTotalSize(component_offsets, component_layouts)) {
-			layout_idx_to_component_layout.reserve(component_layouts.size());
+			layout_idx_to_component_layout.reserve(layout_idx_to_component_idx.size());
 			for (const auto component_idx: layout_idx_to_component_idx)
 				layout_idx_to_component_layout.push_back(component_layouts.at(component_idx));
 		}
@@ -367,7 +372,7 @@ namespace compiler::tsl {
 		  layout_idx_to_component_idx(std::move(helper).layout_idx_to_component_idx),
 		  layout_idx_to_layout(std::move(helper).layout_idx_to_component_layout) {
 		component_idx_to_layout_idx.resize(helper.component_layouts.size());
-		for (u32 i = 0; i < layout_idx_to_component_idx.size(); i++)
+		for (u32 i = 0; i < num_sub_layouts; i++)
 			component_idx_to_layout_idx.at(layout_idx_to_component_idx.at(i)) = i;
 	}
 
