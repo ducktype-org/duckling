@@ -7,9 +7,8 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <vm/core/thread/low_program/instruction.hpp>
-#include <vm/core/thread/low_program/opcodes.hpp>
 
-#include  <base/collections/optional.hpp>
+#include <base/collections/optional.hpp>
 
 #include <algorithm>
 #include <string>
@@ -118,21 +117,19 @@ namespace vm::jit {
 			usize                   end
 		) {
 			for (usize instr_idx = start; instr_idx < end; ++instr_idx) {
-				const vm::MicroInstruction& mi = function_to_compile.bc[instr_idx];
+				const vm::MicroInstruction& mi = function_to_compile.bc.at(instr_idx);
 				std::string opfun_name;
+				
 				auto opcode = vm::getInstructionOpcode(mi);
-
 				if (isOpcodeNonExecutable(opcode)) {
 					continue;
 				}
-				
-				// TODO: This only works for switch-case; generalise it so it works with both execution modes.
 				match_optional(llvmGetFunName(opcode)) {
 					opt_some(op_name) {
 						opfun_name = op_name;
 					}
 					opt_none {
-						opfun_name = vm::low::OPCODE_NAMES.at(static_cast<u64>(opcode));
+						opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode));
 					}
 				}
 
@@ -220,6 +217,7 @@ namespace vm::jit {
 		}
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
+
 			// Get basic block boundaries
 			block_beginnings = collectBasicBlockBeginnings(function_to_compile);
 
