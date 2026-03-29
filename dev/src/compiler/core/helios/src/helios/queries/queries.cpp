@@ -66,14 +66,13 @@ namespace compiler::helios {
 				if (type.getKind() == tsh::Kind::StaticArray) {
 					auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
 					const auto& arr_ctor
-						= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
+						= ctx.query<defgen::QueryDefaultStaticArrayConstructor>(arr_type)
 					          ->valueOrThrow();
 					default_ctors.insert(arr_ctor.declaration->original_symbol);
 				} else if (type.getKind() == tsh::Kind::Class) {
 					auto        class_type = type.as<tsh::ClassAbstractType>();
 					const auto& class_ctor
-						= ctx.query<houtgen::QueryDefaultClassConstructor>(class_type)
-					          ->valueOrThrow();
+						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
 					default_ctors.insert(class_ctor.declaration->original_symbol);
 				}
 			};
@@ -162,9 +161,9 @@ namespace compiler::helios {
 					// `foo()` will get returned as a result of `QueryTransitiveFunctionCalls` since
 					// it's called by the default constructor of `T`. This function was already
 					// added when looping through the symbols in scope thus we skip it here.
-					if (!std::holds_alternative<houtgen::GeneratedSymbolData>(sym_ref->other))
+					if (!std::holds_alternative<defgen::GeneratedSymbolData>(sym_ref->other))
 						continue;
-					const auto gsd_data = std::get<houtgen::GeneratedSymbolData>(sym_ref->other);
+					const auto gsd_data = std::get<defgen::GeneratedSymbolData>(sym_ref->other);
 					// Insert only other default constructors to not insert implicit constructors twice.
 					if (gsd_data.isDefaultConstructor()) all_required_functions.insert(dependency);
 				}
@@ -199,7 +198,7 @@ namespace compiler::helios {
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
 			const auto& implicit_ctor
-				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
+				= ctx.query<defgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
 			out_functions.emplace_back(&implicit_ctor);
 		}
 

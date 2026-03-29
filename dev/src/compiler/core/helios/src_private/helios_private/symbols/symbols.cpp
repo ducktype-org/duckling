@@ -117,7 +117,7 @@ namespace compiler::helios {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
 			variant_case_novalue(builtin::BuiltinFunctionData) { return {}; }
-			variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
+			variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();
@@ -864,7 +864,7 @@ namespace compiler::helios {
 				return {};
 			}
 
-			if (std::holds_alternative<houtgen::GeneratedSymbolData>(getSymRef(key)->other)) {
+			if (std::holds_alternative<defgen::GeneratedSymbolData>(getSymRef(key)->other)) {
 				// Generated symbols have no specifiers (for now)
 				return {};
 			}
@@ -909,7 +909,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
 
-	namespace houtgen {
+	namespace defgen {
 		base::Bit256 KeyFor_QueryGeneratedSymbol::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
 				std::hash<base::StrID>()(name), generated_symbol_data.queryUnstablePerfectHash()
@@ -1064,7 +1064,7 @@ namespace compiler::helios {
 					// Builtin functions have no dependencies
 					return {};
 				}
-				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
+				variant_case(defgen::GeneratedSymbolData, gsd_data) {
 					CORE_ASSERT(
 						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
 						"QueryDirectFunction calls called on a non-function symbol"
@@ -1132,7 +1132,7 @@ namespace compiler::helios {
 		auto builtin_symbols
 			= builtin::ImplementationOf_QueryGlobalBuiltinSymbols::getAllCachedSymbols();
 		auto generated_symbols
-			= houtgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
+			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 
 		std::vector<SymID> output;
 		output.reserve(pst_symbols.size() + builtin_symbols.size() + generated_symbols.size());

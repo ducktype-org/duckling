@@ -433,7 +433,7 @@ private:
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
 		const auto& first_ctor
-			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
 				  first_class_abstract_type
 			)
 		          ->valueOrPanic();
@@ -465,7 +465,7 @@ private:
 		ASSERT_EQUAL(1, class_with_member_info.methods.size());
 
 		const auto& class_with_members_ctor
-			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
 				  class_with_member_abstract_type
 			)
 		          ->valueOrPanic();
@@ -2591,7 +2591,7 @@ private:
 	void testDefaultInitializers() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
-		using namespace compiler::helios::houtgen;
+		using namespace compiler::helios::defgen;
 
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/default_constructors")));
 

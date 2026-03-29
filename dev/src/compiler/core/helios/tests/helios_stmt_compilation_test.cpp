@@ -110,7 +110,7 @@ private:
 																tsh::Mutability::Mutable,
 															};
 
-		return houtgen::compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
+		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
 
 	/**

@@ -75,10 +75,10 @@ private:
 			ASSERT_EQUAL(counter.void_return_count, 1u);
 
 			auto sym_ref  = helios::getSymRef(wrapper.declaration->original_symbol);
-			auto gen_data = std::get_if<helios::houtgen::GeneratedSymbolData>(&sym_ref->other);
+			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
 			assertTrue(gen_data != nullptr, "Expected generated symbol data");
 			assertTrue(
-				std::holds_alternative<helios::houtgen::GeneratedSymbolData::ReplInstructionWrapper>(
+				std::holds_alternative<helios::defgen::GeneratedSymbolData::ReplInstructionWrapper>(
 					gen_data->data
 				),
 				"Expected ReplInstructionWrapper generated symbol kind"
@@ -147,11 +147,11 @@ private:
 			ASSERT_EQUAL(helios::kind(sym), helios::SymbolKind::Function);
 
 			auto sym_ref  = helios::getSymRef(sym);
-			auto gen_data = std::get_if<helios::houtgen::GeneratedSymbolData>(&sym_ref->other);
+			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
 			assertTrue(gen_data != nullptr, "Expected generated symbol data");
 
 			auto repl_data
-				= std::get_if<helios::houtgen::GeneratedSymbolData::ReplInstructionWrapper>(
+				= std::get_if<helios::defgen::GeneratedSymbolData::ReplInstructionWrapper>(
 					&gen_data->data
 				);
 			assertTrue(repl_data != nullptr, "Expected ReplInstructionWrapper generated symbol");

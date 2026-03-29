@@ -175,7 +175,7 @@ namespace compiler::helios {
 						builtin_data.type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 					);
 				}
-				variant_case(houtgen::GeneratedSymbolData, generated_data) {
+				variant_case(defgen::GeneratedSymbolData, generated_data) {
 					return generated_data.getType(ctx);
 				}
 				variant_default { CORE_PANIC("Unknown symbol data type"); }

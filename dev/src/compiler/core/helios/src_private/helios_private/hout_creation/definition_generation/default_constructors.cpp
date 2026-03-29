@@ -13,7 +13,7 @@
 
 #include <query_framework/standard_query/query_impl.hpp>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios::defgen {
 	// -----------------------------------------------------------
 	//                  Class Default Constructors
 	// -----------------------------------------------------------
