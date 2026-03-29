@@ -48,7 +48,7 @@ impl PackageLoader {
         Err(qp_internal!("@TODO: #1394 it needs the EditableManifest"))
     }
 
-    /// Find a [`PackageCtx`] which is the active venv or from the given `start`.
+    /// Find a [`PackageCtx`] from the given `start`.
     ///
     /// This function __expands tildes__ and __resolves__ path fully.
     /// Also, it walks up the chain of path's ancestors.
@@ -84,7 +84,7 @@ impl PackageLoader {
 
     /// Find package at a given directory.
     ///
-    /// Unlike [`find_active_or_from_directory`](Self::find_active_or_from_directory) this function __does not__ walk up
+    /// Unlike [`find_from_directory`](Self::find_from_directory) this function __does not__ walk up
     /// `path`'s ancestors.
     pub fn find_at_exact_directory<'duck>(
         path: &Path,

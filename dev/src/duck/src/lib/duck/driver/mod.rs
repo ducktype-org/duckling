@@ -14,8 +14,9 @@ use crate::duck::driver::styles::get_styles;
 /// Create main cli parser.
 fn cli() -> Command {
     let style = *styles::get_styles().get_literal();
-    let after_help =
-        format!("To run a script you can also use syntax `{style}duck [OPTIONS] [PATH TO SCRIPT]{style:#}`");
+    let after_help = format!(
+        "To run a script you can also use syntax `{style}duck [OPTIONS] [PATH TO SCRIPT]{style:#}`"
+    );
     Command::new(crate_name!())
         .version(crate_version!())
         .add_verbose()
