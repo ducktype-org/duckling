@@ -24,7 +24,9 @@ public:
 		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(classTest);
+		TESTER_ADD_TEST(classWithArrayFieldTest);
 		TESTER_ADD_TEST(mutabilityTest);
 		TESTER_ADD_TEST(pointerLayoutManglingTest);
 	}
@@ -261,6 +263,14 @@ private:
 				"Layout source type mismatch."
 			);
 
+			// The alignment of a static array must equal the element alignment,
+			// not be derived from the total array size.
+			assertEqual(
+				static_array_layout->getAlignment(),
+				i32_layout->getAlignment(),
+				"Static array alignment should equal the element alignment."
+			);
+
 			variant_match(static_array_layout->getVariant()) {
 				variant_case(StaticArrayTypeLayout, l) {
 					assertEqual(l.getElementCount(), count, "Stored element count mismatch.");
@@ -407,6 +417,13 @@ private:
 				my_class_layout->getSize() == BYTE_SIZE * 32,
 				"Class layout size should account for data alignment."
 			);
+			// The class alignment equals the max alignment of its members.
+			// f64, ref i32, box f16 are all 8-byte aligned, so class alignment = 8.
+			assertEqual(
+				my_class_layout->getAlignment(),
+				Bytes(8),
+				"Class alignment should equal the maximum alignment of its members."
+			);
 			assertTrue(
 				my_class_layout->getSourceType().getType() == my_class_type,
 				"Layout should have source type as constructed."
@@ -426,6 +443,60 @@ private:
 				variant_default { fail("Layout of class type should be class-like."); }
 			}
 			testPrinting(my_class_layout, ctx, true);
+		});
+	}
+
+	void classWithArrayFieldTest() {
+		using namespace compiler::helios;
+		using namespace test_utils;
+
+		// This test considers a class containing a static array to check if the element
+		// alignment is computed correctly.
+		auto [_, root_scope]     = getModule(fs::File(path("class_layout_with_array")));
+		const SymID class_symbol = getChain("ClassWithArray", root_scope).back();
+
+		withContextDo([&](query::Context& ctx) -> void {
+			const ClassAbstractType class_type      = ctx.query<QueryClassType>(class_symbol);
+			CRef<TypeInterface>     class_interface = class_type.getInterface(ctx);
+
+			auto get_element_symbol = [&](const std::string& name) {
+				const auto& matching = class_interface->getElementsWithName(base::StrID(name));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
+			};
+
+			const SymID element1_symbol = get_element_symbol("element1");
+			const SymID element2_symbol = get_element_symbol("element2");
+			const SymID element3_symbol = get_element_symbol("element3");
+			const SymID elements_symbol = get_element_symbol("elements");
+
+			const auto class_layout = ctx.query<QueryAbstractTypeLayout>(class_type);
+
+			// element1(4) + element2(4) + element3(4) + elements(8) = 20 bytes.
+			// No padding needed because all fields are 4-byte aligned.
+			assertEqual(
+				class_layout->getSize(),
+				BYTE_SIZE * 20,
+				"Class layout size should account for array element alignment."
+			);
+
+			variant_match(class_layout->getVariant()) {
+				variant_case(ClassTypeLayout, l) {
+					// elements: i32[2] must be placed at offset 12 (4-byte aligned),
+					// not offset 16 (8-byte aligned), because the array's alignment is
+					// determined by its element type (i32 = 4 bytes), not by its total
+					// size (8 bytes).
+					assertTrue(
+						l.getOffsetOfFieldSymbol(element1_symbol) == Bytes(0)
+							&& l.getOffsetOfFieldSymbol(element2_symbol) == Bytes(4)
+							&& l.getOffsetOfFieldSymbol(element3_symbol) == Bytes(8)
+							&& l.getOffsetOfFieldSymbol(elements_symbol) == Bytes(12),
+						"Array field offset must use element alignment, not total array size."
+					);
+				}
+				variant_default { fail("Layout of Database class should be class-like."); }
+			}
+			testPrinting(class_layout, ctx, true);
 		});
 	}
 

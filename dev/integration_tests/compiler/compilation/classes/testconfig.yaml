@@ -19,3 +19,15 @@ Tests:
         backend: llvm
         Output:
           String: "7\n6\n5\n0\n4\n5\n"
+  class_alignment:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n3\n4\n5\n10\n20\n30\n2\n99\n"
+  unit_fields:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "42\n69\n"
