@@ -7,9 +7,9 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/context/context.hpp>

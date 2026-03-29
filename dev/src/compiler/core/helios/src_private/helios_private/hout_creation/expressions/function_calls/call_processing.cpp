@@ -10,11 +10,11 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/expressions/builtin_operators.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/function_calls/call_processing.hpp>
-#include <helios_private/expressions/function_calls/errors.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/expressions/builtin_operators.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
+#include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
