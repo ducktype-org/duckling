@@ -15,15 +15,11 @@
 #include <set>
 
 namespace compiler::lir {
-	/**
-	 * @brief Creates LIR local data from MIR local data.
-	 * @important remember that LIRLocal should only be stored in a LIR function.
-	 *
-	 * @param ctx
-	 * @param mir_local
-	 * @return LIRLocal
-	 */
-	LIRLocal LIRLocal::fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local) {
+	LIRLocal LIRLocal::fromMIR(
+		query::Context&           ctx,
+		const mir::MIRLocalRef    mir_local,
+		const base::Optional<u64> new_parameter_index
+	) {
 		auto             type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 		LIRLocalMetadata metadata;
 		if_opt_some(mir_local->helios_id, helios_id) {
@@ -32,7 +28,7 @@ namespace compiler::lir {
 				metadata.position = pst_elem.unlock(ctx)->getStablePosition();
 			}
 		}
-		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index, metadata };
+		return LIRLocal{ mir_local->helios_id, type_layout, new_parameter_index, metadata };
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {

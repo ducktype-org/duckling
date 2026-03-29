@@ -350,12 +350,14 @@ namespace compiler::lir {
 					// Discard data-less variables.
 					if (!mir_local.carriesInformation(ctx)) continue;
 
-					auto lir_local = LIRLocal::fromMIR(ctx, &mir_local);
-					// Adjust parameter index to account for empty parameters.
-					lir_local.parameter_index = mir_local.parameter_index.map(
-						[&mir_to_lir_parameter_indices](const usize mir_index) {
-							return mir_to_lir_parameter_indices[mir_index].value();
-						}
+					auto lir_local = LIRLocal::fromMIR(
+						ctx,
+						&mir_local,
+						mir_local.parameter_index.flatMap(
+							[&mir_to_lir_parameter_indices](const usize mir_index) {
+								return mir_to_lir_parameter_indices[mir_index];
+							}
+						)
 					);
 
 					locals.pushBack(lir_local);
