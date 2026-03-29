@@ -35,7 +35,7 @@ impl PackageData {
             return Ok(GathererComputation::only_success(vec![]));
         }
         let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
-        for dependency in self.manifest.dependencies().all_dependencies().values() {
+        for dependency in self.manifest.dependencies().all_dependencies() {
             if !dependency.is_enabled_for(self.requested_features.iter().copied()) {
                 continue;
             }
@@ -46,7 +46,6 @@ impl PackageData {
             );
             if dependency.is_pinned() {
                 let version = dependency
-                    .desc()
                     .versions()
                     .first()
                     .copied()
@@ -57,7 +56,7 @@ impl PackageData {
                     features,
                 }));
             } else {
-                let versions = dependency.desc().versions().to_vec();
+                let versions = dependency.versions().to_vec();
                 result.0.push(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location,
                     versions: if !versions.is_empty() {

@@ -25,7 +25,7 @@ private:
 
 	void mutexTest() {
 		// On the contrary here, this test should give clear result
-		runTestOnVm("mutex.dbc", "", "20000", {});
+		for (usize i = 0; i < 5; i++) runTestOnVm("mutex.dbc", "", "20000", {});
 	}
 
 	void cvTest() {

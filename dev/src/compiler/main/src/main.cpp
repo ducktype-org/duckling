@@ -240,7 +240,7 @@ clah::Clah getClahForMain() {
 		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
-									   std::cout << hout_unit->debugPrint(ctx);
+									   hout_unit->debugPrint(ctx, std::cout);
 							   });
 
 							   return exit_code;

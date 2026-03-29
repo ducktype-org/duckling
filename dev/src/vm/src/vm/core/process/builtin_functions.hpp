@@ -31,6 +31,7 @@
 
 namespace vm {
 	class VMThread;
+	class VMProcess;
 }
 
 namespace vm::builtins {
