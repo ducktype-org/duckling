@@ -200,6 +200,7 @@ namespace vm {
 		// @note: All the following are guaranteed to exist or their existence was checked
 		// during code loading.
 
+		// @note: Main return type should always be single i64
 		auto        main_return_type = func.result_type;
 		const auto& types            = executing_program->getTypes();
 		auto        argv_type        = types.at(base::StrID("argv"));
@@ -391,8 +392,14 @@ namespace vm {
 	) {
 		acquireGil();
 		// Frame of the called function.
-		Frame*     frame       = runtime_data.frame_stack_base;
-		std::byte* local_stack = runtime_data.local_stack_base;
+		Frame* frame          = runtime_data.frame_stack_current;
+		Frame* orig_frame_ptr = frame;
+		Frame  orig_frame_cpy = *runtime_data.frame_stack_current;
+		std::byte* local_stack = frame->local_stack;
+		if (local_stack == nullptr) {
+			local_stack = runtime_data.local_stack_base;
+		}
+		usize orig_block_stack_size = frame->block_stack.size();
 
 		frame->current_function = &start_function;
 
@@ -426,23 +433,32 @@ namespace vm {
 	End:
 #endif
 		CORE_ASSERT(
-			frame->block_stack.size() == func.result_type.size(),
-			"after finishing execution, there should be a specific number of blocks at the stack"
+			frame == orig_frame_ptr,
+			"After executing function we have to return to original place in call stack"
 		);
 
-		exit_value_storage = {};
-		for (u64 idx = 0; idx < frame->block_stack.size(); idx++) {
+		CORE_ASSERT(
+			frame->block_stack.size() >= orig_block_stack_size + func.result_type.size(),
+			"after finishing execution, number of local variables is increased by the number of "
+		    "return vals"
+		);
+
+		exit_value_storage        = {};
+		for (u64 idx = 0; idx < func.result_type.size(); idx++) {
 			exit_value_storage.emplace_back(process.createVmValue(
 				func.result_type[idx],
-				Pointer(frame->block_stack[idx], frame->block_idx_to_local_offset[idx])
+				Pointer(
+					frame->block_stack[orig_block_stack_size + idx],
+					frame->block_idx_to_local_offset[orig_block_stack_size + idx]
+				)
 			));
 		}
 
-		for (auto& block: frame->block_stack) {
+		for (auto& block : frame->block_stack | std::views::drop(orig_block_stack_size)) {
 			process_memory.freeBlockData(block);
 			process_memory.decreaseBlockRefcount(block);
 		}
-		frame->resetFrameData();
+		*orig_frame_ptr = orig_frame_cpy;
 		releaseGil();
 
 		return exit_value_storage;
