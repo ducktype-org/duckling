@@ -1,10 +1,8 @@
 use crate::{DuckCtx, QuackResult};
 use clap::{ArgMatches, Command};
 
-mod activate;
 mod add;
 mod build;
-mod deactivate;
 #[cfg(feature = "shell-completion")]
 mod generate;
 mod info;
@@ -22,10 +20,8 @@ mod unsync;
 /// Get parsers for all the builtin subcommands.
 pub fn subcommands() -> Vec<Command> {
     vec![
-        activate::get_parser(),
         add::get_parser(),
         build::get_parser(),
-        deactivate::get_parser(),
         #[cfg(feature = "shell-completion")]
         generate::get_parser(),
         info::get_parser(),
@@ -50,10 +46,8 @@ pub type ExecFn = fn(&DuckCtx, &ArgMatches) -> QuackResult<()>;
 /// Returns [`None`], if `name` is not a valid duck builtin subcommand name.
 pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
-        "activate" => activate::execute,
         "add" => add::execute,
         "build" => build::execute,
-        "deactivate" => deactivate::execute,
         #[cfg(feature = "shell-completion")]
         "generate" => generate::execute,
         "info" => info::execute,
