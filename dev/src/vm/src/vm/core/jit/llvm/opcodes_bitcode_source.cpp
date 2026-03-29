@@ -5,6 +5,7 @@
 
 #ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
 	#include "opcodes_bitcode_source.hpp"
+	#include "absolute_symbols.hpp"
 
 	#include "llvm_init.hpp"
 
@@ -15,12 +16,15 @@
 	#include <cstddef>
 	#include <cstring>
 	#include <array>
+	#include <iostream>
 
 LLVM_INCLUDE_BEGIN()
 	#include <llvm/Bitcode/BitcodeReader.h>
 	#include <llvm/Demangle/Demangle.h>
 	#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
 	#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+	#include <llvm/ExecutionEngine/Orc/Core.h>
+	#include <llvm/ExecutionEngine/JITSymbol.h>
 	#include <llvm/IR/Function.h>
 	#include <llvm/IR/LLVMContext.h>
 	#include <llvm/IR/Module.h>
@@ -99,7 +103,7 @@ namespace {
 	}
 }
 
-static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> non_exec_opcodes = constructNonExecOpcodeArray();
+static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> NON_EXEC_OPCODES = constructNonExecOpcodeArray();
 
 void llvmInit() {
 	llvm::InitializeNativeTarget();
@@ -115,6 +119,8 @@ void llvmInit() {
 	jd.addGenerator(cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
 		lljit_instance->getDataLayout().getGlobalPrefix()
 	)));
+
+	registerAbsoluteJITSymbols(*lljit_instance);
 
 	// Load embedded BC into module
 	auto buffer = MemoryBuffer::getMemBuffer(StringRef(OPCODES, sizeof(OPCODES)), "", false);
@@ -165,7 +171,7 @@ llvm::orc::ThreadSafeContext* llvmGetTSCtx() { return g_context.get(); }
 llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }
 
 bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
-	for (const auto& mo: non_exec_opcodes) {
+	for (const auto& mo: NON_EXEC_OPCODES) {
 		if (mo == opcode) {
 			return true;
 		}

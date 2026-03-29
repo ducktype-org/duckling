@@ -1,5 +1,6 @@
 add_files(
 	llvm_compiler.cpp
+	absolute_symbols.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
