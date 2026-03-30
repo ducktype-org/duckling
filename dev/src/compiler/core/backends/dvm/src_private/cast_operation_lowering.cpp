@@ -96,7 +96,7 @@ namespace compiler::backend_vm::internal {
 
 		// The cast operations are only supported between local stack values.
 		// So if we have a non-local source (like immediate value or global),
-		// we first move it to a temporary local and perform the cast there,
+		// we first move it to a temporary local and perform the cast there.
 
 		// If the destination is non-local, we put the result in a temporary local
 		// and then move the result to the final destination.

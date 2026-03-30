@@ -236,38 +236,39 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 	auto operation = std::get<SimpleOperation>(dvm_operation).op;
 
 	if (isComparison(operation)) {
-		// TODOP: Prolly move comparison to it's own operation.
 		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
 		CORE_ASSERT(
 			maybe_output.has_value(), "Comparison operations must have an output destination"
 		);
 		auto output = maybe_output.value();
 
-		DVMValue result_val = { DVMImmediate(0) };
-
-		if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
-			auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
-			auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
-			result_val     = {
-                DVMImmediate(compTimeEvaluateComparison(operation, lhs_value, rhs_value) ? 1 : 0)
-			};
-		} else {
-			if (args[0].is<DVMImmediate>()) {
-				// Swap arguments to place immediate on the right side.
-				std::swap(args[0], args[1]);
-				operation = getComparisonOppositeDirection(operation);
+		DVMValue result_val = [&]() -> DVMValue {
+			if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
+				auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
+				auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
+				return { DVMImmediate(
+					compTimeEvaluateComparison(operation, lhs_value, rhs_value) ? 1 : 0
+				) };
+			} else {
+				if (args[0].is<DVMImmediate>()) {
+					// Swap arguments to place immediate on the right side.
+					std::swap(args[0], args[1]);
+					operation = getComparisonOppositeDirection(operation);
+				}
+				// This resolves e.g. `x = a CMP b;`
+				// by splitting it into three instructions:
+				// a CMP b;
+				// mov x, 0;
+				// cmov x, 1;
+				auto tmp_res
+					= pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
+				pushInstruction({ operation, args[0], args[1] });
+				pushInstruction({ OpKind::mov, tmp_res.asArgument(), DVMImmediate(0).asArgument() });
+				pushInstruction({ OpKind::cmov, tmp_res.asArgument(), DVMValue(1).asArgument() });
+				return { tmp_res, DVMPlace::AccessKind::Direct };
 			}
-			// This resolves e.g. `x = a CMP b;`
-			// by splitting it into three instructions:
-			// a CMP b;
-			// mov x, 0;
-			// cmov x, 1;
-			auto tmp_res = pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
-			pushInstruction({ operation, args[0], args[1] });
-			pushInstruction({ OpKind::mov, tmp_res.asArgument(), DVMImmediate(0).asArgument() });
-			pushInstruction({ OpKind::cmov, tmp_res.asArgument(), DVMValue(1).asArgument() });
-			result_val = { tmp_res, DVMPlace::AccessKind::Direct };
-		}
+		}();
+
 		storeResult(output, result_val, maybe_output_type.value());
 	} else if (operation == OpKind::call) {
 		auto called_function = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
@@ -277,24 +278,23 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		);
 	} else if (isUnaryOperation(operation)) {
 		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
-		DVMPlace output = maybe_output.value();
+		auto output = maybe_output.value();
 		// If instruction is of the form: a = OP b, then
 		// we transform it to:
 		// a = b;
 		// a = OP a;
 
-		if (output.isDirect()) {
+		if (output.isDirect() && output.is<DVMLocal>()) {
 			// If output is a direct place we just use it.
 			storeResult(output, args[0], maybe_output_type.value());
 			pushInstruction({ operation, output.asArgument() });
 		} else {
-			// Otherwise we perform the operations on the
+			// Otherwise it's a global or indirect. We perform the operations on the
 			// temporary and than store it in the indirect place.
-			auto type = program_context.lowerAndKeepTslType(lir_instruction.output->layout);
-			auto tmp  = pushTempLocal(type, "unary_tmp");
+			auto tmp = pushTempLocal(maybe_output_type.value(), "unary_tmp");
 			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
 			pushInstruction({ operation, tmp.asArgument() });
-			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, type);
+			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, maybe_output_type.value());
 			pushInstruction({ vm::code::instructions::Op_deinit() });
 		}
 	} else if (args.size() == 2) {
@@ -302,7 +302,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		// output = arg1 OP arg2;
 		auto output = maybe_output.value();
 
-		if (output.isDirect()) {
+		if (output.isDirect() && output.is<DVMLocal>()) {
 			// If instruction is of the form: a = b OP c, then
 			// we transform it to:
 			// a = b;
@@ -310,11 +310,10 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			storeResult(output, args[0], maybe_output_type.value());
 			pushInstruction({ operation, output.asArgument(), args[1].asArgument() });
 		} else {
-			auto type = program_context.lowerAndKeepTslType(lir_instruction.output->layout);
-			auto tmp  = pushTempLocal(type, "binary_tmp");
+			auto tmp = pushTempLocal(maybe_output_type.value(), "binary_tmp");
 			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
 			pushInstruction({ operation, tmp.asArgument(), args[1].asArgument() });
-			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, type);
+			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, maybe_output_type.value());
 			pushInstruction({ vm::code::instructions::Op_deinit() });
 		}
 		return;
