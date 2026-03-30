@@ -24,14 +24,13 @@ Tests:
           String: ""
         ExitCode: 0
 
-  comparison-chain:
+  comparison_chain:
     Cases:
-#      @TODO: #2179 Re-enable when ops on globals are implemented.
-#      dvm:
-#        backend: dvm
-#        Output:
-#          String: ""
-#        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:

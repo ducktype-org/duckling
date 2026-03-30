@@ -234,6 +234,16 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 					compTimeEvaluateComparison(operation, lhs_value, rhs_value) ? 1 : 0
 				) };
 			} else {
+				// Force globals into locals if needed.
+				for (usize i: { 0u, 1u }) {
+					if (args[i].is<DVMGlobal>()) {
+						auto global = args[i].get<DVMGlobal>();
+						auto tmp    = pushTempLocal(global.type, "cmp_glob_tmp");
+						pushInstruction({ OpKind::mov, tmp.asArgument(), args[i].asArgument() });
+						args[i] = { tmp, DVMPlace::AccessKind::Direct };
+					}
+				}
+
 				if (args[0].is<DVMImmediate>()) {
 					// Swap arguments to place immediate on the right side.
 					std::swap(args[0], args[1]);
