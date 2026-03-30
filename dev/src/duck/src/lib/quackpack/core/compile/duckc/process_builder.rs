@@ -1,7 +1,6 @@
 //! [`Command`]-based backend communicating with the compiler.
 
-use itertools::Itertools;
-use std::{ffi::OsStr, fmt, process::Command};
+use std::{convert::Infallible, fmt, process::Command};
 
 use crate::{
     QuackResult, QuackResultContext, qp_bail,
@@ -135,12 +134,6 @@ impl DuckcProcessBuilder {
 
 impl fmt::Display for DuckcProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let command_name = self.inner.get_program().display();
-        let args = self.inner.get_args().map(OsStr::display).join(" ");
-        if !args.is_empty() {
-            write!(f, "{command_name} {args}")
-        } else {
-            write!(f, "{command_name}")
-        }
+        self.inner.display().fmt(f)
     }
 }
