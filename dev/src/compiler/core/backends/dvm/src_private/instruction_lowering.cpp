@@ -303,6 +303,15 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			storeResult(output, args[0], maybe_output_type.value());
 			pushInstruction({ operation, output.asArgument() });
 		} else {
+			// Force globals into locals if needed.
+			for (usize i: { 0u, 1u }) {
+				if (args[i].is<DVMGlobal>()) {
+					auto global = args[i].get<DVMGlobal>();
+					auto tmp    = pushTempLocal(global.type, "cmp_glob_tmp");
+					pushInstruction({ OpKind::mov, tmp.asArgument(), args[i].asArgument() });
+					args[i] = { tmp, DVMPlace::AccessKind::Direct };
+				}
+			}
 			// Otherwise it's a global or indirect. We perform the operations on the
 			// temporary and than store it in the indirect place.
 			auto tmp = pushTempLocal(maybe_output_type.value(), "unary_tmp");
@@ -323,6 +332,15 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			storeResult(output, args[0], maybe_output_type.value());
 			pushInstruction({ operation, output.asArgument(), args[1].asArgument() });
 		} else {
+			// Force globals into locals if needed.
+			for (usize i: { 0u, 1u }) {
+				if (args[i].is<DVMGlobal>()) {
+					auto global = args[i].get<DVMGlobal>();
+					auto tmp    = pushTempLocal(global.type, "cmp_glob_tmp");
+					pushInstruction({ OpKind::mov, tmp.asArgument(), args[i].asArgument() });
+					args[i] = { tmp, DVMPlace::AccessKind::Direct };
+				}
+			}
 			auto tmp = pushTempLocal(maybe_output_type.value(), "binary_tmp");
 			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
 			pushInstruction({ operation, tmp.asArgument(), args[1].asArgument() });
