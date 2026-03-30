@@ -26,15 +26,23 @@ namespace compiler::helios::code {
 	);
 
 	/**
-	 * @brief Represents a builtin binary operator which is not a numeric operator, and its
-	 * corresponding HOUT .
+	 * @brief Represents a builtin binary operator which is not a numeric operator, and how it
+	 * should appear in HOUT (as a BuiltinBinary, or a function call).
 	 */
-	struct RegularBinaryBuiltin {
+	struct RegularBinaryBuiltin final {
 		// The symbol of the builtin operator.
 		SymID symbol;
 
-		// The HOUT operation to perform (might be extended to, say, function calls in the future).
-		BuiltinBinary op;
+		struct FunctionCall final {
+			SymID function_symbol;
+		};
+
+		using HOUTRepresentation = std::variant<BuiltinBinary, FunctionCall>;
+
+		// The HOUT operation to perform — either a BuiltinBinary or a function call.
+		// Note: the called function may be different from the symbol. For example, the `++`
+		// operator on strings actually calls a built-in concat function under a different name.
+		HOUTRepresentation op;
 	};
 
 	// Type for storing a mapping between regular binary builtin symbols and related helpful data.

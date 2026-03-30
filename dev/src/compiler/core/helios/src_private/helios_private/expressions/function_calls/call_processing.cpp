@@ -265,7 +265,7 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
+	 * @brief Given function symbol and Box<Expr> of all the arguments and argument origins
 	 * constructs a helios Expr representing the call of the function. Construction of the
 	 * expressions will move the arguments.
 	 * @p argument_origin defines the actual structure of the arguments, while @p
@@ -329,11 +329,14 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
+	 * @brief Given function symbol and Box<Expr> of all the arguments and argument origins
 	 * constructs a helios Expr representing the call of the function. Construction of the
 	 * expressions will move the arguments.
 	 * @p argument_origin defines the actual structure of the arguments, while @p
 	 * positional_arguments and @p named_arguments define their content.
+	 *
+	 * @note May construct a BinaryOperatorExpr or a CallExpr depending on what the HELIoS operator
+	 * translates to in the lower level.
 	 */
 	Box<Expr> constructOperatorExpr(
 		query::Context&                              ctx,
@@ -350,9 +353,25 @@ namespace compiler::helios::code {
 		auto  rhs       = coercions ? coercions->at(1).coerce(ctx, std::move(arguments.at(1)))
 		                            : std::move(arguments.at(1));
 
-		return makeBox<BinaryOperatorExpr>(
-			ctx, call_origin, hout_op, std::move(lhs), std::move(rhs)
-		);
+		variant_match(hout_op) {
+			variant_case(BuiltinBinary, op) {
+				return makeBox<BinaryOperatorExpr>(
+					ctx, call_origin, op, std::move(lhs), std::move(rhs)
+				);
+			}
+			variant_case(RegularBinaryBuiltin::FunctionCall, call) {
+				std::vector<Box<Expr>> final_call_arguments;
+				final_call_arguments.emplace_back(std::move(lhs));
+				final_call_arguments.emplace_back(std::move(rhs));
+				return makeBox<CallExpr>(
+					ctx,
+					call_origin,
+					makeBox<IdentifierExpr>(ctx, pst_origin.callee_origin, call.function_symbol),
+					std::move(final_call_arguments)
+				);
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	void appendExactMatchesErrors(
