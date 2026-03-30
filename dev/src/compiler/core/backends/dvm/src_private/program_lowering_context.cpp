@@ -7,6 +7,11 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "base/str/str_utils.hpp"
+
+#include "string_id/string_id.hpp"
+
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
@@ -196,6 +201,24 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			auto pointee_type      = lowerAndKeepTslType(pointer_layout.getPointee());
 			auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
 			return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
+		}
+		variant_case(tsl::ClassTypeLayout, class_layout) {
+			std::vector<vm::code::Field> fields;
+			const usize                  num_fields = class_layout.getNumSubLayouts();
+			fields.reserve(num_fields);
+
+			for (usize i{ 0 }; i < num_fields; i++) {
+				const auto  field_layout  = class_layout.getFieldLayoutOfLayoutIndex(i);
+				const auto& vm_field_type = lowerAndKeepTslType(field_layout);
+				fields.emplace_back(
+					base::StrID(base::strConcat("_", i + 1)), typeName(vm_field_type)
+				);
+			}
+
+			return vm::code::DataType{
+				base::StrID(class_layout.getMangledName()),
+				std::move(fields),
+			};
 		}
 		variant_default {
 			CORE_ASSERT(

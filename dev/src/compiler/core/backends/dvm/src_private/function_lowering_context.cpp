@@ -4,8 +4,12 @@
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
+#include "typesystem/lower/type_layout.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
+
+#include "base/except/exceptions.hpp"
+#include "base/str/str_utils.hpp"
 
 #include <string_id/string_id.hpp>
 
@@ -173,6 +177,36 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				current_layout = current_pointer_layout.getPointee();
 			}
 			variant_case(lir::LIRPlace::FieldProjection, field) {
+				CORE_ASSERT(
+					current_layout->is<tsl::ClassTypeLayout>(), "FieldProjection on non-class layout"
+				);
+				// Prepare field name for access.
+				const auto& class_layout
+					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+				const usize field_index
+					= class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
+				auto vm_field_name = base::strConcat("_", field_index + 1);
+
+				// Prepare the pointer to field type.
+				const auto field_layout  = class_layout.getFieldLayoutOfLayoutIndex(field_index);
+				const auto field_vm_type = program_context.lowerAndKeepTslType(field_layout);
+				// TODOP: This may not be true. This may not be inserted into the context.
+				const auto ptr_to_field_type = vm::code::PointerType(
+					base::StrID(base::strConcat("ptr_", vm::code::typeName(field_vm_type)).c_str()),
+					vm::code::typeName(field_vm_type)
+				);
+
+				auto field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
+
+				pushInstruction({ vm::code::builders::OpKind::structLea,
+				                  field_ptr_tmp,
+				                  current_place,
+				                  vm::opargs::Field{ typeName(field_vm_type),
+				                                     base::StrID(vm_field_name) } });
+
+				current_place  = { field_ptr_tmp, DVMPlace::AccessKind::Pointer };
+				current_layout = field_layout;
+
 				// @TODO: #1560 handle access into fields.
 				throw base::NotYetImplemented("Field Projection in DVM backend");
 			}
