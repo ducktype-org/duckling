@@ -46,24 +46,6 @@ pub trait CommandExt: Sized {
         self._arg_impl(flag("release", "Alias for `--profile=release`").conflicts_with("profile"))
     }
 
-    /// Adds `-v`/`--verbose` flags, conflicting with `--quiet`.
-    fn add_verbose(self) -> Self {
-        self._arg_impl(
-            flag("verbose", "Use more verbose output")
-                .conflicts_with("quiet")
-                .short('v'),
-        )
-    }
-
-    /// Adds `-q`/`--quiet` flags, conflicting with `--verbose`.
-    fn add_quiet(self) -> Self {
-        self._arg_impl(
-            flag("quiet", "Suppress all output")
-                .short('q')
-                .conflicts_with("verbose"),
-        )
-    }
-
     /// Adds `-C`/`--directory` flag, for changing the current directory before making any actions.
     fn add_chdir(self) -> Self {
         self._arg_impl(
@@ -76,20 +58,6 @@ pub trait CommandExt: Sized {
             .value_hint(ValueHint::DirPath)
             .short('C'),
         )
-    }
-
-    /// Adds `--color` flag.
-    fn add_color(self) -> Self {
-        self._arg_impl(
-            optional("color", "Control the colored output")
-                .value_parser(["always", "never", "auto"])
-                .default_value("auto"),
-        )
-    }
-
-    /// Adds `--offline` flag.
-    fn add_offline(self) -> Self {
-        self._arg_impl(flag("offline", "Don't perform any network requests"))
     }
 
     /// Adds `-j`/`--jobs` flags, for specifying number of threads to use.

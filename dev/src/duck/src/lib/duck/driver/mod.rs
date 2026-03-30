@@ -9,17 +9,34 @@ pub mod subcommands;
 
 use cli_ext::CommandExt;
 
-use crate::duck::driver::styles::get_styles;
+use crate::duck::driver::{
+    cli_ext::{flag, optional},
+    styles::get_styles,
+};
 
 /// Create main cli parser.
 fn cli() -> Command {
     Command::new(crate_name!())
         .version(crate_version!())
-        .add_verbose()
-        .add_quiet()
+        .arg(
+            flag("verbose", "Use more verbose output")
+                .conflicts_with("quiet")
+                .short('v')
+                .global(true),
+        )
+        .arg(
+            flag("quiet", "Suppress all output")
+                .short('q')
+                .conflicts_with("verbose")
+                .global(true),
+        )
         .add_chdir()
-        .add_color()
-        .add_offline()
+        .arg(
+            optional("color", "Control the colored output")
+                .value_parser(["always", "never", "auto"])
+                .global(true),
+        )
+        .arg(flag("offline", "Don't perform any network requests").global(true))
         .allow_external_subcommands(true)
         .subcommands(subcommands::subcommands())
         .styles(get_styles())
