@@ -86,7 +86,7 @@ dependencies:
   baz:
     version: 1.0.0
     conditions:
-      package_features: [use_baz]
+      package-features: [use_baz]
 features:
   use_baz: []
 ",
@@ -102,7 +102,7 @@ dependencies:
   baz:
     version: 1.0.0
     conditions:
-      package_features: [use_baz]
+      package-features: [use_baz]
 features:
   use_baz: []
 ",
@@ -142,14 +142,14 @@ dependencies:
     version: 1.0.0
     features:
       - use_baz:
-          package_features: [use_foo_with_baz]
+          package-features: [use_foo_with_baz]
       - nonexistent:
-          package_features: [nonexistent]
+          package-features: [nonexistent]
   bar:
     version: 1.0.0
     features:
       - use_baz:
-          package_features: [use_bar_with_baz]
+          package-features: [use_bar_with_baz]
 features:
   use_bar_with_baz: []
   use_foo_with_baz: []

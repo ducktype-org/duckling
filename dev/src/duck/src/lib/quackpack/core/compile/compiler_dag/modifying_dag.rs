@@ -17,7 +17,7 @@ impl DependencyDag {
                     .package()
                     .manifest()
                     .dependencies()
-                    .get_dependency(dep.name())
+                    .get_by_name(dep.name())
                     .with_context_internal(|| {
                         format!(
                             "dependency `{}` was in a freezefile, but not in a manifest of `{}`?!",
@@ -63,7 +63,7 @@ impl CompilerDag {
                     let entry_in_dep_manifest = this
                         .manifest()
                         .dependencies()
-                        .get_dependency(dep.name())
+                        .get_by_name(dep.name())
                         .with_context_internal(|| {
                             format!(
                                 "dependency `{}` was in a freezefile, but not in a manifest of `{}`?!",

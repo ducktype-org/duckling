@@ -607,15 +607,6 @@ DEF_MICRO_INSTR(
 	strOutput_lptr, vm::low::opargs::StackLocalPtr /* string_ptr */
 )
 
-// ========= TYPE OPERATIONS ========
-
-// Casts a primitive type in-place. This does nothing at runtime, but is needed
-// for type checking.
-DEF_MICRO_INSTR(cast_l8_type, vm::low::opargs::StackLocal8, vm::low::opargs::Type)
-DEF_MICRO_INSTR(cast_l16_type, vm::low::opargs::StackLocal16, vm::low::opargs::Type)
-DEF_MICRO_INSTR(cast_l32_type, vm::low::opargs::StackLocal32, vm::low::opargs::Type)
-DEF_MICRO_INSTR(cast_l64_type, vm::low::opargs::StackLocal64, vm::low::opargs::Type)
-
 // ========= CONVERSION OPERATIONS ========
 // Sign Extension
 DEF_MICRO_INSTR(sext_l16_l8, vm::low::opargs::StackLocal16, vm::low::opargs::StackLocal8)
@@ -701,6 +692,8 @@ DEF_MICRO_INSTR(nop)
 DEF_MICRO_INSTR(exit)
 
 DEF_MICRO_INSTR(breakpoint)
+
+DEF_MICRO_INSTR(stepGil)
 
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.

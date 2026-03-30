@@ -63,6 +63,11 @@ impl Scope {
     pub fn format(&self) -> String {
         self.inner.iter().join(".")
     }
+
+    /// A helper for creating common context messages.
+    pub fn make_context_string(&self) -> String {
+        format!("when parsing the field `{}`", self.format())
+    }
 }
 
 /// Helper for [`parse_manifest`].

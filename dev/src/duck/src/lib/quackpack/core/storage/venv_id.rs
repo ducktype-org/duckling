@@ -65,6 +65,6 @@ impl ToVenvId for Package {
 impl ToVenvId for Manifest {
     fn to_venv_id(&self) -> VenvId {
         // VenvId of a manifest is a package's name.
-        self.root_description().name()
+        self.name()
     }
 }
