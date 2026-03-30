@@ -1,5 +1,7 @@
 #include "dvm_value.hpp"
 
+#include "common.hpp"
+
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
@@ -80,22 +82,6 @@ DVMGlobal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 }
 
 DVMPlace::operator vm::opargs::OpCodeArg() const { return asArgument(); }
-
-namespace {
-	template<class T>
-	u64 translateToU64(T value) {
-		if constexpr (sizeof(T) == 8)
-			return vm::safeReadObjectBytes<u64>(value);
-		else if constexpr (sizeof(T) == 4)
-			return vm::safeReadObjectBytes<u32>(value);
-		else if constexpr (sizeof(T) == 2)
-			return vm::safeReadObjectBytes<u16>(value);
-		else if constexpr (sizeof(T) == 1)
-			return static_cast<u64>(vm::safeReadObjectBytes<u8>(value));
-		else
-			CORE_PANIC("Unsupported immediate size: ", sizeof(T));
-	}
-}
 
 DVMImmediate::DVMImmediate(u64 value, vm::code::TypeOfData type):
 	  value(value),
