@@ -49,7 +49,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let args = expand_aliases(args, ctx, &external, vec![])?;
     if let Some(path) = possible_path_subcmd(&args) {
         debug!("assuming user wants to run a script at {}", path);
-        let args = run_script::get_parser().try_get_matches_from(vec!["run_script", path])?;
+        let args = run_script::get_parser().try_get_matches_from(vec!["run-script", path])?;
         run_script::execute(ctx, &args)
     } else {
         debug!(
