@@ -187,9 +187,22 @@ namespace compiler::lir {
 
 	public:
 		/**
+		 * @brief Creates LIR local data from MIR local data.
+		 * @important remember that LIRLocal should only be stored in a LIR function.
 		 * @note Do not use this function outside of LIR lowering.
+		 *
+		 * @param ctx
+		 * @param mir_local
+		 * @param new_parameter_index If the local is a parameter, this should be its index in the
+		 * LIR function's parameter list. This is needed to adjust for discarded parameters with
+		 * information-less types.
+		 * @return LIRLocal
 		 */
-		static LIRLocal fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local);
+		static LIRLocal fromMIR(
+			query::Context&     ctx,
+			mir::MIRLocalRef    mir_local,
+			base::Optional<u64> new_parameter_index = {}
+		);
 
 		/**
 		 * @brief Crates unique local with bool-type, and without
