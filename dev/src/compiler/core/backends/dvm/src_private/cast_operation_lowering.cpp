@@ -1,5 +1,6 @@
 #include "cast_operation_lowering.hpp"
 
+#include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 
@@ -95,37 +96,63 @@ namespace compiler::backend_vm::internal {
 
 		// The cast operations are only supported between local stack values.
 		// So if we have a non-local source (like immediate value or global),
-		// we first move it to a temporary local, perform the cast there,
+		// we first move it to a temporary local and perform the cast there,
 
 		// If the destination is non-local, we put the result in a temporary local
 		// and then move the result to the final destination.
 		// ---- Resolve source ----
-		DVMValue                 src_arg = args[0];
 		base::Optional<DVMLocal> src_temp;
+		DVMValue                 src_arg = [&]() -> DVMValue {
+            if (not args[0].is<DVMLocal>()) {
+                auto source_type = function_context.program_context.lowerAndKeepTslType(
+                    cast_operation.cast_params.source_layout
+                );
+                src_temp = function_context.pushTempLocal(source_type, "cast_src_tmp");
+                return { src_temp.value(), DVMPlace::AccessKind::Direct };
+            } else {
+                return args[0];
+            }
+		}();
 
-		if (not src_arg.is<DVMLocal>()) {
-			auto source_type = function_context.program_context.lowerAndKeepTslType(
-				cast_operation.cast_params.source_layout
+
+		// ---- Resolve destination ----
+		base::Optional<DVMLocal> dst_temp;
+		auto                     target_type = function_context.program_context.lowerAndKeepTslType(
+            cast_operation.cast_params.target_layout
+        );
+
+		DVMLocal dst_arg = [&]() {
+			if (output.isDirect() && output.is<DVMLocal>()) {
+				// If output is a direct (not a local storing a pointer to the output place) local,
+				// we optimize the cast to work directly on the local.
+				return output.get<DVMLocal>();
+			} else {
+				// Otherwise, if the output place is not direct or a global we have to create a
+				// temporary to perform the operation on.
+				dst_temp = function_context.pushTempLocal(target_type, "cast_dst_tmp");
+				return *dst_temp;
+			}
+		}();
+
+
+		// ---- Move the source to temp if needed ----
+		if (src_temp.has_value())
+			function_context.pushInstruction({ OpKind::mov, src_arg, args[0] });
+
+		// ---- Perform cast (local → local) ----
+		function_context.pushInstruction({ operation, dst_arg.asArgument(), src_arg.asArgument() });
+
+		// ---- Move to final destination if needed ----
+		if (dst_temp.has_value()) {
+			function_context.storeResult(
+				output, { *dst_temp, DVMPlace::AccessKind::Direct }, target_type
 			);
-			src_temp = function_context.pushTempLocal(source_type, "cast_src_tmp");
-			function_context.pushInstruction({ OpKind::mov, src_temp->asArgument(), args[0] });
-			src_arg = { src_temp.value(), DVMPlace::AccessKind::Direct };
 		}
 
-
-		auto target_type = function_context.program_context.lowerAndKeepTslType(
-			cast_operation.cast_params.target_layout
-		);
-		auto dst_temp = function_context.pushTempLocal(target_type, "cast_dst_tmp");
-
-		function_context.pushInstruction({ operation, dst_temp.asArgument(), src_arg });
-
-		function_context.storeResult(
-			output, { dst_temp, DVMPlace::AccessKind::Direct }, target_type
-		);
-
-		function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
+		// ---- Cleanup ----
 		if (src_temp.has_value())
+			function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
+		if (dst_temp.has_value())
 			function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
 	}
 }

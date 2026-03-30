@@ -22,6 +22,19 @@ fun main() -> i64 = {
     var b: i32 = r_a;
     builtin_output_i64(b);      # 20
     builtin_output_i64(r_a);    # 20
+    
+    # ===== Cast with ref source ===== 
+    var big_a: i64 = a;
+    builtin_output_i64(big_a);    # 20
+    r_a = r_a + 1;
+    big_a = r_a;
+    builtin_output_i64(big_a);    # 21
+    
+    # ===== Cast with ref dest ===== 
+    r_a = 16i16;
+    builtin_output_i64(r_a);    # 16
+    r_a = b;
+    builtin_output_i64(r_a);    # 20
 
     # ===== Unary ===== 
     r_a = -r_a;
