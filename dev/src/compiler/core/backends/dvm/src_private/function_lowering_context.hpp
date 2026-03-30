@@ -98,11 +98,7 @@ namespace compiler::backend_vm::internal {
 
 		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
 
-		DVMLocal forceToLocal(
-			const DVMValue&             value,
-			const vm::code::TypeOfData& type,
-			base::Optional<const char*> name_hint = {}
-		);
+		DVMLocal forceToLocal(const DVMValue& value, base::Optional<const char*> name_hint = {});
 
 		/**
 		 * @brief Stores a given @p src_value in @p dest_place.

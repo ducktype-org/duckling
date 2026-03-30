@@ -91,7 +91,10 @@ namespace compiler::backend_vm::internal {
 	) {
 		// Operation in form a = OP b (like mov)
 		CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
-		auto operation = getOpKindFromLIRLayouts(cast_operation.cast_params);
+		auto operation   = getOpKindFromLIRLayouts(cast_operation.cast_params);
+		auto target_type = function_context.program_context.lowerAndKeepTslType(
+			cast_operation.cast_params.target_layout
+		);
 
 		// The cast operations are only supported between local stack values.
 		// So if we have a non-local source (like immediate value or global),
@@ -99,50 +102,20 @@ namespace compiler::backend_vm::internal {
 
 		// If the destination is non-local, we put the result in a temporary local
 		// and then move the result to the final destination.
-		// ---- Resolve source ----
-		base::Optional<DVMLocal> src_temp;
-		DVMValue                 src_arg = [&]() -> DVMValue {
-            if (not args[0].is<DVMLocal>()) {
-                auto source_type = function_context.program_context.lowerAndKeepTslType(
-                    cast_operation.cast_params.source_layout
-                );
-                src_temp = function_context.pushTempLocal(source_type, "cast_src_tmp");
-                return { src_temp.value(), DVMPlace::AccessKind::Direct };
-            } else {
-                return args[0];
-            }
-		}();
+		DVMLocal src_arg = function_context.forceToLocal(args[0], "cast_src_tmp");
 
+		if (output.isDirect() && output.is<DVMLocal>()) {
+			// If output is a direct (not a local storing a pointer to the output place) local,
+			// we optimize the cast to work directly on the local.
+			auto dst_local = output.get<DVMLocal>();
+			function_context.pushInstruction({ operation, dst_local, src_arg });
+		} else {
+			// Otherwise, if the output place is not direct or a global we have to create a
+			// temporary to perform the operation on.
+			DVMLocal dst_temp = function_context.pushTempLocal(target_type, "cast_dst_tmp");
 
-		// ---- Resolve destination ----
-		base::Optional<DVMLocal> dst_temp;
-		auto                     target_type = function_context.program_context.lowerAndKeepTslType(
-            cast_operation.cast_params.target_layout
-        );
-
-		DVMLocal dst_arg = [&]() {
-			if (output.isDirect() && output.is<DVMLocal>()) {
-				// If output is a direct (not a local storing a pointer to the output place) local,
-				// we optimize the cast to work directly on the local.
-				return output.get<DVMLocal>();
-			} else {
-				// Otherwise, if the output place is not direct or a global we have to create a
-				// temporary to perform the operation on.
-				dst_temp = function_context.pushTempLocal(target_type, "cast_dst_tmp");
-				return *dst_temp;
-			}
-		}();
-
-
-		// ---- Move the source to temp if needed ----
-		if (src_temp.has_value())
-			function_context.pushInstruction({ OpKind::mov, src_arg, args[0] });
-
-		// ---- Perform cast (local → local) ----
-		function_context.pushInstruction({ operation, dst_arg.asArgument(), src_arg.asArgument() });
-
-		// ---- Move to final destination if needed ----
-		if (dst_temp.has_value())
-			function_context.storeResult(output, { *dst_temp, DVMPlace::AccessKind::Direct });
+			function_context.pushInstruction({ operation, dst_temp, src_arg });
+			function_context.storeResult(output, { dst_temp, DVMPlace::AccessKind::Direct });
+		}
 	}
 }

@@ -27,6 +27,8 @@ using namespace compiler::backend_vm::internal;
 	return vm::opargs::StackLocalAny{ name };
 }
 
+DVMLocal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
+
 [[nodiscard]] vm::opargs::OpCodeArg DVMGlobal::asArgument() const {
 	variant_match(type) {
 		variant_case(vm::code::PrimitiveType, primitive) {
@@ -43,6 +45,8 @@ using namespace compiler::backend_vm::internal;
 	}
 	CORE_UNREACHABLE();
 }
+
+DVMGlobal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMGlobal::asAnyArgument() const {
 	return vm::opargs::GlobalAny{ name };
@@ -74,6 +78,8 @@ using namespace compiler::backend_vm::internal;
 [[nodiscard]] vm::opargs::OpCodeArg DVMImmediate::asArgument() const {
 	return vm::opargs::Immediate{ value };
 }
+
+DVMPlace::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 namespace {
 	template<class T>
@@ -126,6 +132,8 @@ DVMImmediate DVMImmediate::boolean(bool value) {
 DVMImmediate DVMImmediate::character(char value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), 1) };
 }
+
+DVMImmediate::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMLabel::asArgument() const {
 	return vm::opargs::Label{ name };

@@ -69,5 +69,6 @@ SubDirs:
   - optimisations
   - references
   - boxes
+  - globals
   - imports
   - diagnostics

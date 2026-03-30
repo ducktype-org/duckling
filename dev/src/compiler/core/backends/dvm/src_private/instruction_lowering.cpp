@@ -203,8 +203,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 
 	variant_match(dvm_operation) {
 		variant_case(MetaOperation, operation) {
-			MetaOperationLowerer lowerer(*this);
-			lowerer.lower(operation, args, maybe_output);
+			MetaOperationLowerer(*this).lower(operation, args, maybe_output);
 			return;
 		}
 		variant_case(CastOperation, operation) {
@@ -226,29 +225,21 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
 				auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
 				auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
-				return { DVMImmediate::i8(
-					compTimeEvaluateComparison(operation, lhs_value, rhs_value) ? u8(1) : u8(0)
-				) };
+				auto res       = compTimeEvaluateComparison(operation, lhs_value, rhs_value);
+				return { DVMImmediate::boolean(res) };
 			} else {
-				// Force globals into locals if needed.
-				auto lhs = forceToLocal(args[0], args[0].getType(), "lhs_temp");
-				auto rhs = forceToLocal(args[1], args[1].getType(), "rhs_temp");
-
-
-				for (usize i: { 0u, 1u }) {
-					if (args[i].is<DVMGlobal>()) {
-						auto global = args[i].get<DVMGlobal>();
-						auto tmp    = pushTempLocal(global.type, "cmp_glob_tmp");
-						pushInstruction({ OpKind::mov, tmp.asArgument(), args[i].asArgument() });
-						args[i] = { tmp, DVMPlace::AccessKind::Direct };
-					}
-				}
-
 				if (args[0].is<DVMImmediate>()) {
 					// Swap arguments to place immediate on the right side.
 					std::swap(args[0], args[1]);
 					operation = getComparisonOppositeDirection(operation);
 				}
+
+				// Force globals into locals if needed.
+				auto lhs = forceToLocal(args[0], "lhs_temp");
+				auto rhs = args[1].is<DVMGlobal>() ? DVMValue{ forceToLocal(args[1], "rhs_temp"),
+					                                           DVMPlace::AccessKind::Direct }
+				                                   : args[1];
+
 				// This resolves e.g. `x = a CMP b;`
 				// by splitting it into three instructions:
 				// a CMP b;
@@ -256,13 +247,9 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 				// cmov x, 1;
 				auto tmp_res
 					= pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
-				pushInstruction({ operation, args[0], args[1] });
-				pushInstruction(
-					{ OpKind::mov, tmp_res.asArgument(), DVMImmediate::i8(u8(0)).asArgument() }
-				);
-				pushInstruction(
-					{ OpKind::cmov, tmp_res.asArgument(), DVMImmediate::i8(u8(1)).asArgument() }
-				);
+				pushInstruction({ operation, lhs, rhs });
+				pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::i8(u8(0)) });
+				pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::i8(u8(1)) });
 				return { tmp_res, DVMPlace::AccessKind::Direct };
 			}
 		}();
@@ -300,22 +287,12 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		if (output.isDirect() && output.is<DVMLocal>()) {
 			// If output is a direct place we just use it.
 			storeResult(output, args[0]);
-			pushInstruction({ operation, output.asArgument() });
+			pushInstruction({ operation, output });
 		} else {
-			// Force globals into locals if needed.
-			for (usize i: { 0u, 1u }) {
-				if (args[i].is<DVMGlobal>()) {
-					auto global = args[i].get<DVMGlobal>();
-					auto tmp    = pushTempLocal(global.type, "cmp_glob_tmp");
-					pushInstruction({ OpKind::mov, tmp.asArgument(), args[i].asArgument() });
-					args[i] = { tmp, DVMPlace::AccessKind::Direct };
-				}
-			}
 			// Otherwise it's a global or indirect. We perform the operations on the
 			// temporary and than store it in the indirect place.
-			auto tmp = pushTempLocal(maybe_output_type.value(), "unary_tmp");
-			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
-			pushInstruction({ operation, tmp.asArgument() });
+			auto tmp = forceToLocal(args[0]);
+			pushInstruction({ operation, tmp });
 			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
 		}
 	} else if (args.size() == 2) {
@@ -323,26 +300,22 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		// output = arg1 OP arg2;
 		auto output = maybe_output.value();
 
+		// Force globals into locals. Immediates are allowed.
+		DVMValue rhs = args[1].is<DVMGlobal>() ? DVMValue{ forceToLocal(args[1], "bin_rhs_tmp"),
+			                                               DVMPlace::AccessKind::Direct }
+		                                       : args[1];
+
 		if (output.isDirect() && output.is<DVMLocal>()) {
 			// If instruction is of the form: a = b OP c, then
 			// we transform it to:
 			// a = b;
 			// a = a OP c;
 			storeResult(output, args[0]);
-			pushInstruction({ operation, output.asArgument(), args[1].asArgument() });
+			pushInstruction({ operation, output, rhs });
 		} else {
 			// Force globals into locals if needed.
-			for (usize i: { 0u, 1u }) {
-				if (args[i].is<DVMGlobal>()) {
-					auto global = args[i].get<DVMGlobal>();
-					auto tmp    = pushTempLocal(global.type, "cmp_glob_tmp");
-					pushInstruction({ OpKind::mov, tmp.asArgument(), args[i].asArgument() });
-					args[i] = { tmp, DVMPlace::AccessKind::Direct };
-				}
-			}
-			auto tmp = pushTempLocal(maybe_output_type.value(), "binary_tmp");
-			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
-			pushInstruction({ operation, tmp.asArgument(), args[1].asArgument() });
+			auto tmp = forceToLocal(args[0], "bin_tmp");
+			pushInstruction({ operation, tmp, rhs });
 			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
 		}
 		return;

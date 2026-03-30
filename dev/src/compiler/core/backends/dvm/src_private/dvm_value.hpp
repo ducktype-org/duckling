@@ -15,6 +15,7 @@ namespace compiler::backend_vm::internal {
 		vm::code::TypeOfData type;
 
 		bool operator==(const DVMLocal& other) const = default;
+		operator vm::opargs::OpCodeArg() const;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
@@ -25,6 +26,7 @@ namespace compiler::backend_vm::internal {
 		vm::code::TypeOfData type;
 
 		bool operator==(const DVMGlobal& other) const = default;
+		operator vm::opargs::OpCodeArg() const;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
@@ -46,6 +48,7 @@ namespace compiler::backend_vm::internal {
 		u64                  value{};
 		vm::code::TypeOfData type;
 		bool                 operator==(const DVMImmediate& other) const = default;
+		operator vm::opargs::OpCodeArg() const;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
@@ -108,6 +111,7 @@ namespace compiler::backend_vm::internal {
 			  access_kind(access_kind) {}
 
 		bool operator==(const DVMPlace& other) const = default;
+		operator vm::opargs::OpCodeArg() const;
 
 		[[nodiscard]] bool isDirect() const { return access_kind == AccessKind::Direct; }
 

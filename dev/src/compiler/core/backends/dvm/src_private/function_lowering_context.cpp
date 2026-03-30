@@ -97,11 +97,11 @@ namespace {
 }
 
 DVMLocal FunctionLoweringContext::forceToLocal(
-	const DVMValue& value, const vm::code::TypeOfData& type, base::Optional<const char*> name_hint
+	const DVMValue& value, base::Optional<const char*> name_hint
 ) {
 	if (value.is<DVMLocal>()) return value.get<DVMLocal>();
 
-	DVMLocal temp = pushTempLocal(type, name_hint);
+	DVMLocal temp = pushTempLocal(value.getType(), name_hint);
 	pushInstruction({ vm::code::builders::OpKind::mov, temp.asArgument(), value.asArgument() });
 	return temp;
 }

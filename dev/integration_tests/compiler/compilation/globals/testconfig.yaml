@@ -5,7 +5,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "101\n105\n109\n"
+          String: "4\n1\n3\n4\n"
         ExitCode: 0
       dvm:
         backend: dvm 
