@@ -1,3 +1,5 @@
+#pragma once
+
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/symbol_type.hpp>

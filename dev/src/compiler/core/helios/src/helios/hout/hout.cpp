@@ -7,32 +7,27 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/context/context.hpp>
 
 #include <memory>
-#include <sstream>
 
 namespace compiler::helios {
-	std::string HOUTUnit::debugPrint(query::Context& ctx) const {
-		std::string out;
+	void HOUTUnit::debugPrint(query::Context& ctx, std::ostream& out) const {
+		out << "HOUT UNIT:\n\n";
 
-		out += "HOUT UNIT:\n\n";
+		out << "Constants:\n";
+		for (auto& const_gd: glob_data) const_gd.debugPrint(ctx, out);
 
-		out += "Constants:\n";
-		for (auto& const_gd: glob_data) out += const_gd.debugPrint(ctx);
-
-		out += "\nFunctions:\n";
+		out << "\nFunctions:\n";
 		for (auto& func: functions) {
-			out += func->debugPrint();
-			out += "\n";
+			func->debugPrint(out);
+			out << "\n";
 		}
-
-		return out;
 	}
 
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
@@ -57,8 +52,7 @@ namespace compiler::helios {
 		return original_symbol.queryUnstablePerfectHash();
 	}
 
-	std::string HOUTFunctionDeclaration::debugPrint() const {
-		std::stringstream out;
+	void HOUTFunctionDeclaration::debugPrint(std::ostream& out) const {
 		out << "fun ";
 		out << original_name.strView() << " (" << original_symbol.queryUnstablePerfectHash() << ")";
 		out << " : " << "Return type: ";
@@ -74,7 +68,6 @@ namespace compiler::helios {
 			}
 			out << "\n";
 		}
-		return out.str();
 	}
 
 	u64 HOUTFunction::queryUnstablePerfectHash() const {
@@ -82,12 +75,11 @@ namespace compiler::helios {
 		return declaration->queryUnstablePerfectHash();
 	}
 
-	std::string HOUTFunction::debugPrint() const {
-		std::stringstream out;
+	void HOUTFunction::debugPrint(std::ostream& out) const {
+		declaration->debugPrint(out);
 		out << "{\n";
 		for (auto& stmt: body->statements) stmt->debugPrint(out, 1);
 		out << "}\n";
-		return declaration->debugPrint() + out.str();
 	}
 
 	HOUTFunction::HOUTFunction(
@@ -100,23 +92,19 @@ namespace compiler::helios {
 		  declaration(other),
 		  body(body) {}
 
-	std::string HOUTGlobalData::debugPrint(query::Context& ctx) const {
-		std::stringstream out;
+	void HOUTGlobalData::debugPrint(query::Context& ctx, std::ostream& out) const {
 		variant_match(value) {
 			variant_case(HOUTGlobalConst, const_value) {
 				out << "const " << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString()
 					<< " = " << const_value.value.toString() << '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
-				std::string decl
-					= type.getMutability() == tsh::Mutability::Mutable ? "var   " : "let   ";
-				out << decl << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString()
-					<< " = ";
+				out << (type.getMutability() == tsh::Mutability::Mutable ? "var   " : "let   ");
+				out << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString() << " = ";
 				val.initial_value.get()->ref()->debugPrint(out);
 				out << '\n';
 			}
 		}
-		return out.str();
 	}
 
 	HOUTGlobalData::HOUTGlobalData(
@@ -139,7 +127,7 @@ namespace compiler::helios {
                           return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
                               .valueOrThrow();
                       } else {
-                          return houtgen::getDefaultInitializerExpr(
+                          return defgen::getDefaultInitializerExpr(
                                      ctx, variable_type, origin.getSourcePosition().value()
                           )
                               .valueOrThrow();

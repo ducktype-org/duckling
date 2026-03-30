@@ -11,7 +11,7 @@
 
 #include <vector>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios::defgen {
 	struct ImplementationOf_QueryImplicitClassConstructor;
 }
 
