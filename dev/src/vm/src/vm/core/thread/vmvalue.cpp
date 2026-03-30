@@ -2,7 +2,7 @@
 
 #include <logger/logger.hpp>
 
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 
 #include <ostream>
 
@@ -29,16 +29,16 @@ namespace {
 	}
 }
 
-vm::VmValue::VmValue(VMProcess& process, TypeCRef type):
+vm::VmValue::VmValue(SafeVMProcess& process, TypeCRef type):
 	  data(type->getSize()),
 	  my_process(&process),
-	  memory(&process.memory),
+	  memory(&process.getMemory()),
 	  type(type),
 	  pointer(memory->allocateDummy(type, data.data()), 0) {
 	memory->increaseBlockRefcount(pointer.getBlock());
 }
 
-vm::VmValue::VmValue(VMProcess& process, TypeCRef type, Pointer src): VmValue(process, type) {
+vm::VmValue::VmValue(SafeVMProcess& process, TypeCRef type, Pointer src): VmValue(process, type) {
 	importData(src);
 }
 
@@ -58,7 +58,7 @@ void vm::VmValue::freeData() {
 	pointer = Pointer::null();
 }
 
-vm::PID vm::VmValue::getPID() const { return my_process->my_pid; }
+vm::PID vm::VmValue::getPID() const { return my_process->getPID(); }
 
 base::CRef<vm::code::valid_type::ValidType> vm::VmValue::getType() const {
 	auto type_id = static_cast<code::valid_type::ValidTypeID>(type->getID().asInt());

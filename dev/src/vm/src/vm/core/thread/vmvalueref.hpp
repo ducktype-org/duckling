@@ -9,7 +9,7 @@
 #include <vm/utils/interpret.hpp>
 
 namespace vm {
-	class VMProcess;
+	class SafeVMProcess;
 	class VMValueRef;
 
 	namespace interpreted_data_variant {
@@ -42,13 +42,13 @@ namespace vm {
 		friend class VMProcess;
 
 	private:
-		const Ref<VMProcess> my_process;
-		const Ref<Memory>    memory;
-		const TypeCRef       my_type;
-		const Pointer        pointed_data;
+		const Ref<SafeVMProcess> my_process;
+		const Ref<Memory>        memory;
+		const TypeCRef           my_type;
+		const Pointer            pointed_data;
 
 	public:
-		VMValueRef(VMProcess& process, const TypeCRef type, const Pointer pointed_data);
+		VMValueRef(SafeVMProcess& process, const TypeCRef type, const Pointer pointed_data);
 
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
 		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const;
@@ -78,16 +78,16 @@ namespace vm {
 			friend class vm::VMValueRef;
 
 		private:
-			base::Ref<VMProcess> process;
-			vm::Pointer          begin;
-			TypeCRef             type;
+			base::Ref<SafeVMProcess> process;
+			vm::Pointer              begin;
+			TypeCRef                 type;
 
 		public:
 			const usize size;
 			VMValueRef  get(usize index);
 
 		private:
-			Table(base::Ref<VMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
+			Table(base::Ref<SafeVMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
 		};
 
 		struct Data final {
