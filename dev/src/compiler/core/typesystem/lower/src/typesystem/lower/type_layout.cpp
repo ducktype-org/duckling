@@ -90,34 +90,82 @@ namespace compiler::tsl {
 		 * @param layouts The layouts of the types.
 		 * @return The aligned offsets.
 		 */
-		std::vector<Bytes> alignOffsetsForLayoutVector(const std::vector<CRef<TypeLayout>>& layouts
+		std::vector<base::Optional<Bytes>> alignOffsetsForLayoutVector(
+			const std::vector<CRef<TypeLayout>>& layouts
 		) {
-			std::vector<Bits> sizes;
-			sizes.reserve(layouts.size());
-			for (const auto& layout: layouts) sizes.push_back(layout->getSize());
-			return alignOffsetsForSizeVector(sizes);
+			std::vector<base::Optional<Bytes>> offsets{};
+			offsets.reserve(layouts.size());
+			Bytes bytes_taken{ 0 };
+
+			for (const auto& layout: layouts) {
+				// Skip empty layout
+				if (layout->is<EmptyTypeLayout>()) {
+					offsets.emplace_back();
+					continue;
+				}
+
+				const Bytes size_in_bytes = base::bits2bytesRoundUp(layout->getSize());
+				const usize alignment     = usize(layout->getAlignment());
+
+				// Round up offset to nearest multiple of alignment.
+				bytes_taken = (bytes_taken + Bytes(alignment - 1)) / alignment * alignment;
+
+				// Save offset.
+				offsets.emplace_back(bytes_taken);
+				bytes_taken += size_in_bytes;
+			}
+
+			return offsets;
 		}
 
 		/**
-		 * @brief Get the permutation of where the component types land in a layout based on
-		 * offsets.
+		 * @brief Gets the maximum alignment of a type layout in a vector.
+		 * @param layouts Vector of type layouts to aggregate over.
+		 * @return The maximum alignment of a type layout in the vector.
+		 */
+		Bytes maxTypeLayoutAlignmentInVector(const std::vector<CRef<TypeLayout>>& layouts) {
+			Bytes max{ 1 };
+			for (const auto& layout: layouts) max = std::max(max, layout->getAlignment());
+			return max;
+		}
+
+		/**
+		 * @brief Get the permutation of where the component types land in a layout based on their
+		 * offsets. Indices corresponding to empty components are omitted.
+		 * For example, for a tuple type (i32, (), f64), the offsets might be [0, -, 8], and the
+		 * resulting permutation would be [0, 2].
 		 * @param offsets The offsets of the component types.
 		 * @return How the component types are permuted.
 		 */
-		std::vector<usize> offsetsToPermutation(const std::vector<Bytes>& offsets) {
+		std::vector<usize> offsetsToPermutation(const std::vector<base::Optional<Bytes>>& offsets) {
 			std::vector<std::pair<Bytes, usize>> offsets_with_idxs;
 			std::vector<usize>                   result;
 			offsets_with_idxs.reserve(offsets.size());
 			result.reserve(offsets.size());
 
 			for (usize component_idx = 0; component_idx < offsets.size(); component_idx++)
-				offsets_with_idxs.emplace_back(offsets[component_idx], component_idx);
+				if (auto offset = offsets[component_idx]; offset.has_value())
+					offsets_with_idxs.emplace_back(offset.value(), component_idx);
 			std::sort(offsets_with_idxs.begin(), offsets_with_idxs.end());
 
 			for (auto component_idx: offsets_with_idxs | std::views::values)
 				result.push_back(component_idx);
 
 			return result;
+		}
+
+		Bits offsetsToTotalSize(
+			const std::vector<base::Optional<Bytes>>& offsets,
+			const std::vector<CRef<TypeLayout>>&      layouts
+		) {
+			Bytes total_size{ 0 };
+			for (usize component_idx = 0; component_idx < offsets.size(); component_idx++)
+				if (auto offset = offsets[component_idx]; offset.has_value()) {
+					const auto layout_size = layouts[component_idx]->getSize();
+					const auto layout_end  = offset.value() + base::bits2bytesRoundUp(layout_size);
+					total_size             = std::max(total_size, layout_end);
+				}
+			return bytes2bits(total_size);
 		}
 
 		/**
@@ -128,7 +176,8 @@ namespace compiler::tsl {
 		 * layout.
 		 */
 		std::vector<compiler::helios::SymID> getLayoutIndicesToSymIDs(
-			const std::vector<tsh::InterfaceElement>& fields, const std::vector<Bytes>& offsets
+			const std::vector<tsh::InterfaceElement>& fields,
+			const std::vector<base::Optional<Bytes>>& offsets
 		) {
 			CORE_ASSERT(fields.size() == offsets.size(), "Input vectors must have the same size.");
 			std::vector<usize>                   permutation = offsetsToPermutation(offsets);
@@ -146,6 +195,15 @@ namespace compiler::tsl {
 		const Bits size, const tsh::SymbolType<> source_type, query::Context& ctx
 	):
 		  size(size),
+		  alignment(computeDefaultAlignment(size)),
+		  source_type(source_type),
+		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
+
+	TypeLayoutABC::TypeLayoutABC(
+		Bits size, Bytes alignment, tsh::SymbolType<> source_type, query::Context& ctx
+	):
+		  size(size),
+		  alignment(alignment),
 		  source_type(source_type),
 		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
 
@@ -154,6 +212,7 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(
 			  POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3,
+			  /*alignment=*/POINTER_SIZE_BYTES,
 			  tsh::SymbolType<>::withDefaults(dynamic_array_type),
 			  ctx
 		  ),
@@ -182,6 +241,7 @@ namespace compiler::tsl {
 		  TypeLayoutABC(
 			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getSize()
 				  * static_array_type.getSize(),
+			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getAlignment(),
 			  tsh::SymbolType<>::withDefaults(static_array_type),
 			  ctx
 		  ),
@@ -271,13 +331,15 @@ namespace compiler::tsl {
 		std::vector<CRef<TypeLayout>> component_layouts;
 		/**
 		 * The offsets of the components in the abstract tuple type.
+		 * If the component has empty layout, then the optional is empty.
 		 * Note, the offsets are not necessarily increasing.
 		 */
-		std::vector<Bytes> component_offsets;
+		std::vector<base::Optional<Bytes>> component_offsets;
 		/**
 		 * Mapping from the order of appearance of sub-objects in the layout
 		 * to the index of the component in the abstract tuple type.
-		 * @note This is effectively a permutation represented by an integer vector.
+		 * @note Empty layouts are not included in the tuple layout, so this mapping may be
+		 * shorter than `component_layouts`. Otherwise, this is effectively a permutation.
 		 */
 		std::vector<usize> layout_idx_to_component_idx;
 		/**
@@ -293,12 +355,8 @@ namespace compiler::tsl {
 			  component_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
 			  component_offsets(alignOffsetsForLayoutVector(component_layouts)),
 			  layout_idx_to_component_idx(offsetsToPermutation(component_offsets)),
-			  total_size(
-				  component_layouts.empty()
-					  ? Bits(0)
-					  : bytes2bits(component_offsets.back()) + component_layouts.back()->getSize()
-			  ) {
-			layout_idx_to_component_layout.reserve(component_layouts.size());
+			  total_size(offsetsToTotalSize(component_offsets, component_layouts)) {
+			layout_idx_to_component_layout.reserve(layout_idx_to_component_idx.size());
 			for (const auto component_idx: layout_idx_to_component_idx)
 				layout_idx_to_component_layout.push_back(component_layouts.at(component_idx));
 		}
@@ -309,12 +367,12 @@ namespace compiler::tsl {
 
 	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(helper.total_size, tsh::SymbolType<>::withDefaults(helper.tuple_type), ctx),
-		  num_components(helper.component_layouts.size()),
+		  num_sub_layouts(helper.layout_idx_to_component_idx.size()),
 		  component_offsets(std::move(helper).component_offsets),
 		  layout_idx_to_component_idx(std::move(helper).layout_idx_to_component_idx),
 		  layout_idx_to_layout(std::move(helper).layout_idx_to_component_layout) {
-		component_idx_to_layout_idx.resize(num_components);
-		for (u32 i = 0; i < num_components; i++)
+		component_idx_to_layout_idx.resize(helper.component_layouts.size());
+		for (u32 i = 0; i < num_sub_layouts; i++)
 			component_idx_to_layout_idx.at(layout_idx_to_component_idx.at(i)) = i;
 	}
 
@@ -327,15 +385,16 @@ namespace compiler::tsl {
 		// Display the tuple header and components
 		ss << getIndent(indent) << "tuple {\n";
 		for (const auto component_idx: layout_idx_to_component_idx) {
-			const Bytes             component_offset = getOffsetOfComponentIndex(component_idx);
-			const tsh::SymbolType<> component_type   = tuple_type.getComponents().at(component_idx);
+			const base::Optional<Bytes> component_offset = getOffsetOfComponentIndex(component_idx);
+			const tsh::SymbolType<> component_type = tuple_type.getComponents().at(component_idx);
 			auto component_layout = ctx.query<QuerySymbolTypeLayout>(component_type);
 			if (recursive)
 				ss << component_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else
 				ss << getIndent(indent + 1) << component_layout->toStringIdentification();
 			// Display the offset
-			ss << " @ " << base::toString(component_offset) << "\n";
+			ss << " @ " << (component_offset ? base::toString(component_offset.value()) : "nowhere")
+			   << "\n";
 		}
 
 		// Display the total size
@@ -355,10 +414,10 @@ namespace compiler::tsl {
 		 */
 		std::vector<CRef<TypeLayout>> field_layouts;
 		/**
-		 * The offsets of the fields, in declaration order.
+		 * The offsets of the fields, in declaration order, if not empty.
 		 * Note, the offsets are not necessarily increasing.
 		 */
-		std::vector<Bytes> field_offsets;
+		std::vector<base::Optional<Bytes>> field_offsets;
 		/**
 		 * Mapping from the order of appearance of sub-objects
 		 * in the layout to the declaration index of the field.
@@ -370,6 +429,11 @@ namespace compiler::tsl {
 		 */
 		std::vector<compiler::helios::SymID> layout_idx_to_sym_id;
 		Bits                                 total_size;
+		/**
+		 * The alignment of the class type, equal to the maximum alignment of its members.
+		 * An empty class has alignment 1.
+		 */
+		Bytes max_alignment;
 
 		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(CRef<tsh::TypeInterface>
 		                                                                   interface) {
@@ -401,32 +465,46 @@ namespace compiler::tsl {
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
-			  total_size(
-				  field_layouts.empty()
-					  ? Bits(0)
-					  : bytes2bits(field_offsets.back()) + field_layouts.back()->getSize()
-			  ) {}
+			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
+			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
 	};
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx), ctx) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
-		  TypeLayoutABC(helper.total_size, tsh::SymbolType<>::withDefaults(helper.class_type), ctx),
-		  num_fields(helper.field_layouts.size()),
+		  TypeLayoutABC(
+			  helper.total_size,
+			  helper.max_alignment,
+			  tsh::SymbolType<>::withDefaults(helper.class_type),
+			  ctx
+		  ),
+		  num_sub_layouts(helper.layout_idx_to_field_idx.size()),
 		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
-		for (u32 i = 0; i < num_fields; i++) {
-			// Fill out the map based on the subsequent field symbols and their offsets.
+		// Fill out the sym_id_to_offset map based on the subsequent field symbols and their offsets.
+		for (u32 i = 0; i < num_sub_layouts; i++) {
 			sym_id_to_offset.put(
-				helper.field_elements.at(i).getSymbol(), helper.field_offsets.at(i)
+				layout_idx_to_sym_id.at(i),
+				helper.field_offsets.at(helper.layout_idx_to_field_idx.at(i))
 			);
 		}
-		for (u32 i = 0; i < num_fields; i++) {
-			// Fill out the map as the inverse of layout_idx_to_sym_id.
+		for (const auto& ie: helper.field_elements) {
+			// Fill the holes left by empty elements.
+			if (const auto sym_id = ie.getSymbol(); !sym_id_to_offset.contains(sym_id))
+				sym_id_to_offset.put(sym_id, {});
+		}
+		// Fill out the sym_id_to_layout_idx map as the inverse of layout_idx_to_sym_id.
+		for (u32 i = 0; i < num_sub_layouts; i++) {
+			// Fill out what we know.
 			sym_id_to_layout_idx.put(layout_idx_to_sym_id.at(i), i);
 		}
-		layout_idx_to_layout.reserve(num_fields);
-		for (u32 i = 0; i < num_fields; i++) {
+		for (const auto& ie: helper.field_elements) {
+			// Fill the holes left by empty elements.
+			if (const auto sym_id = ie.getSymbol(); !sym_id_to_layout_idx.contains(sym_id))
+				sym_id_to_layout_idx.put(sym_id, {});
+		}
+		layout_idx_to_layout.reserve(num_sub_layouts);
+		for (u32 i = 0; i < num_sub_layouts; i++) {
 			// Fill out the map based on the field layouts of subsequent layout components.
 			layout_idx_to_layout.push_back(
 				helper.field_layouts.at(helper.layout_idx_to_field_idx.at(i))
@@ -443,8 +521,8 @@ namespace compiler::tsl {
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
-			const Bytes             field_offset = getOffsetOfFieldSymbol(field_sym_id);
-			const tsh::SymbolType<> field_type
+			const base::Optional<Bytes> field_offset = getOffsetOfFieldSymbol(field_sym_id);
+			const tsh::SymbolType<>     field_type
 				= class_type.getType().getMemberType(field_sym_id, ctx);
 			const auto field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)
@@ -452,7 +530,8 @@ namespace compiler::tsl {
 			else
 				ss << getIndent(indent + 1) << field_layout->toStringIdentification();
 			// Display the offset
-			ss << " @ " << base::toString(field_offset) << "\n";
+			ss << " @ " << (field_offset ? base::toString(field_offset.value()) : "nowhere")
+			   << "\n";
 		}
 
 		// Display the total size
@@ -478,6 +557,8 @@ namespace compiler::tsl {
 	}
 
 	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }
+
+	Bytes TypeLayout::getAlignment() const { return VISIT(variant, l, return l.getAlignment()); }
 
 	tsh::SymbolType<> TypeLayout::getSourceType() const {
 		return VISIT(variant, l, return l.getSourceType());

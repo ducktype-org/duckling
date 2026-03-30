@@ -23,11 +23,8 @@
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/errors/errors.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/errors.hpp>
-#include <helios_private/hout_code_generation/class_constructors.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -436,7 +433,7 @@ private:
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
 		const auto& first_ctor
-			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
 				  first_class_abstract_type
 			)
 		          ->valueOrPanic();
@@ -468,7 +465,7 @@ private:
 		ASSERT_EQUAL(1, class_with_member_info.methods.size());
 
 		const auto& class_with_members_ctor
-			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
 				  class_with_member_abstract_type
 			)
 		          ->valueOrPanic();
@@ -781,7 +778,8 @@ private:
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
 		});
 	}
 
@@ -947,6 +945,8 @@ private:
 
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
+
+		(void) query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
 		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -1196,7 +1196,8 @@ private:
 
 		// debug print test just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
 		});
 	}
 
@@ -1742,7 +1743,8 @@ private:
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
 		});
 	}
 
@@ -2589,7 +2591,7 @@ private:
 	void testDefaultInitializers() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
-		using namespace compiler::helios::houtgen;
+		using namespace compiler::helios::defgen;
 
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/default_constructors")));
 
@@ -2987,7 +2989,7 @@ private:
 		check_function_origin(base::StrID("a"));
 		check_function_origin(base::StrID("b"));
 
-		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
+		query::utils::withContextDo([&](query::Context& ctx) { hout.debugPrint(ctx, std::cout); });
 	}
 
 	void testScopeParentsAndDepth() {

@@ -111,12 +111,7 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		constexpr bool isInvalid() const {
-			variant_match(storage) {
-				variant_case_novalue(InvalidCoercion) return true;
-				variant_case_novalue(TypeNotTriviallyCopyable) return true;
-				variant_case_novalue(Coercion) return true;
-				variant_default CORE_UNREACHABLE();
-			}
+			return !isValid();
 		}
 
 		[[nodiscard]]
