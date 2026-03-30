@@ -7,6 +7,9 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/concurrency/synchronization_primitives.hpp>
+#include <vm/core/process/proc_io.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/vmthread.hpp>

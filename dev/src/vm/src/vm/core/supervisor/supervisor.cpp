@@ -1,5 +1,6 @@
 #include "supervisor.hpp"
 
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/vmprocess.hpp>
 
 #include <mutex>
@@ -19,7 +20,7 @@ namespace vm {
 	std::expected<PID, api::ApiError> Supervisor::newProcess() {
 		std::unique_lock lock(rw_process_table);
 		PID              pid = next++;
-		process_table.emplace(pid, makeBox<VMProcess>(pid));
+		process_table.emplace(pid, Box<VMProcess>::fromPointer(new SafeVMProcess(pid)));
 		return pid;
 	}
 
