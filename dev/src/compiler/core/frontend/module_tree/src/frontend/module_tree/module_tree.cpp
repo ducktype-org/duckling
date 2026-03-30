@@ -236,6 +236,18 @@ namespace compiler::frontend {
 		// If a Module has a main source file
 		hashing::addToHash(partial, hasMainSourceFile());
 
+		// REPL metadata affects module semantics and therefore must affect module hash.
+		hashing::addToHash(partial, m_repl_data.has_value());
+
+		if (m_repl_data.has_value()) {
+			hashing::addToHash(partial, m_repl_data->m_repl_module_parent.has_value());
+			if (m_repl_data->m_repl_module_parent.has_value()) {
+				auto repl_parent = m_repl_data->m_repl_module_parent.value();
+
+				hashing::addToHash(partial, ModuleTree::getModuleHash(repl_parent));
+			}
+		}
+
 		// We do not need to add source files count or submodule count here,
 		// Because there is a separate SideInput for that
 		// And there is no other way to get those counts
@@ -896,6 +908,7 @@ namespace compiler::frontend {
 	 **********************/
 	struct IMPLEMENT_QUERY(QueryIsReplModule, bool) {
 		static auto provide(Context&, QKey key) -> PResult {
+			// @TODO: #1389 verify Functor correctness.
 			return GetModuleID_Functor::get(key)->isReplModule();
 		}
 
@@ -909,6 +922,7 @@ namespace compiler::frontend {
 	 ***************************/
 	struct IMPLEMENT_QUERY(QueryReplModuleParent, base::Optional<ModuleID>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// @TODO: #1389 verify Functor correctness.
 			auto module_tree = GetModuleID_Functor::get(key);
 			if (!module_tree->isReplModule()) return {};
 			auto repl_parent = module_tree->getReplModuleParent();

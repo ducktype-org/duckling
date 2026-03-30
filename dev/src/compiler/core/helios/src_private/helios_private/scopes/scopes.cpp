@@ -741,7 +741,7 @@ namespace compiler::helios {
 					= ctx.query<frontend::QueryIsReplModule>(current_module_id);
 				auto repl_parent_opt
 					= ctx.query<frontend::QueryReplModuleParent>(current_module_id);
-
+				// Helper variable isn't used for any logic, only for more telling logs.
 				static u32 repl_parent_depth = 0;
 
 				CORE_DEV_LOG(
@@ -788,6 +788,7 @@ namespace compiler::helios {
 						"\n"
 					);
 
+					// Helper variable no logic other than logs.
 					--repl_parent_depth;
 
 					return parent_result;
