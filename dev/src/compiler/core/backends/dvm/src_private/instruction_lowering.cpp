@@ -195,23 +195,6 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		return program_context.lowerAndKeepTslType(place.layout);
 	});
 
-	if (lir_instruction.operation == lir::Operation::AddressOf) {
-		// TODOP: This should probably be a DVMOperation
-		auto     src_place = lir_instruction.arguments[0].get<lir::LIRPlace>();
-		DVMValue value     = lowerLirValue(src_place);
-		DVMPlace output    = resolveLirPlace(lir_instruction.output.value());
-
-		// Create a temp for the address.
-		// TODOP: Opt that.
-		auto addr_temp = pushTempLocal(
-			program_context.lowerAndKeepTslType(lir_instruction.output->layout), "addr_of"
-		);
-
-		pushInstruction({ OpKind::ref, addr_temp.asArgument(), value.asAnyArgument() });
-		storeResult(output, { addr_temp, DVMPlace::AccessKind::Direct }, maybe_output_type.value());
-		return;
-	}
-
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
 	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
@@ -276,6 +259,26 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		handleCall(
 			FunctionCallInfo::fromLirFunction(called_function, program_context), args, maybe_output
 		);
+	} else if (operation == OpKind::ref) {
+		CORE_ASSERT(args.size() == 1, "Invalid AddressOf operation argument count");
+
+		// Create a temp for the address.
+		auto addr_temp = pushTempLocal(
+			program_context.lowerAndKeepTslType(lir_instruction.output->layout), "addr_of"
+		);
+
+		pushInstruction({ OpKind::ref, addr_temp.asArgument(), args[0].asAnyArgument() });
+
+		if (maybe_output.has_value()) {
+			storeResult(
+				maybe_output.value(),
+				{ addr_temp, DVMPlace::AccessKind::Direct },
+				maybe_output_type.value()
+			);
+		}
+		return;
+
+
 	} else if (isUnaryOperation(operation)) {
 		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
 		auto output = maybe_output.value();

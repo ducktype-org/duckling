@@ -1,6 +1,5 @@
 #include "cast_operation_lowering.hpp"
 
-#include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 

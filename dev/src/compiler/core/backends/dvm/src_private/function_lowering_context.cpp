@@ -6,6 +6,9 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
+#include "base/collections/optional.hpp"
+#include "base/except/exceptions.hpp"
+
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -86,21 +89,37 @@ void FunctionLoweringContext::storeResult(
 		pushInstruction(
 			{ vm::code::builders::OpKind::mov, dest_place.asArgument(), src_value.asArgument() }
 		);
-	} else {  //  Otherwise, we store the result in the memory pointed by the pointer.
-		// If the src_value is immediate we have to store it in a temp first, as store requires a
-		// place as source.
-		DVMValue safe_src = src_value;
-		if (src_value.is<DVMImmediate>()) {
-			auto tmp = pushTempLocal(type, "store_tmp");
-			pushInstruction(
-				{ vm::code::builders::OpKind::mov, tmp.asArgument(), src_value.asArgument() }
-			);
-			safe_src = { tmp, DVMPlace::AccessKind::Direct };
-		}
-		pushInstruction(
-			{ vm::code::builders::OpKind::store, dest_place.asArgument(), safe_src.asAnyArgument() }
-		);
+		return;
 	}
+
+	// Otherwise, we store the result in the memory pointed by the pointer.
+	// If the src_value is immediate we have to store it in a temp first, as store requires a
+	// place as source.
+	base::Optional<DVMLocal> temp_local;
+	DVMValue                 src_arg = [&]() -> DVMValue {
+        if (src_value.is<DVMImmediate>()) {
+            temp_local = pushTempLocal(type, "store_tmp");
+            pushInstruction({ vm::code::builders::OpKind::mov,
+                              temp_local->asArgument(),
+                              src_value.asArgument() });
+
+            return { temp_local.value(), DVMPlace::AccessKind::Direct };
+        } else {
+            CORE_ASSERT(
+                !(src_value.is<DVMPlace>() && !src_value.get<DVMPlace>().isDirect()),
+                "Indirect DVMValue in storeResult"
+            );
+            return src_value;
+        }
+	}();
+
+	// Store the value in memory.
+	pushInstruction(
+		{ vm::code::builders::OpKind::store, dest_place.asArgument(), src_arg.asAnyArgument() }
+	);
+
+	// Remove the created temporary if needed.
+	if (temp_local.has_value()) pushInstruction({ vm::code::instructions::Op_deinit() });
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
