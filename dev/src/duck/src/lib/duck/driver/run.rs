@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     DuckCtx, QuackResult, QuackResultContext,
-    duck::driver::subcommands::run_script::{self, possible_script_path_subcmd},
+    duck::driver::subcommands::run_script::{possible_script_path_subcmd, run_script_knowing_path},
     qp_bail,
     util_common::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
 };
@@ -47,17 +47,11 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     }
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
-    if let Some(path) = possible_script_path_subcmd(&args) {
-        debug!("assuming user wants to run a script at {}", path);
-        let args = run_script::get_parser().try_get_matches_from(vec!["run-script", path])?;
-        run_script::execute(ctx, &args)
-    } else {
-        debug!(
-            "after expanding everything we have the subcommand: `{:#?}`",
-            args.subcommand_name()
-        );
-        run_subcmd(ctx, args, &external)
-    }
+    debug!(
+        "after expanding everything we have the subcommand: `{:#?}`",
+        args.subcommand_name()
+    );
+    run_subcmd(ctx, args, &external)
 }
 
 /// Get [`GlobalOptions`] from the CLI arguments.
@@ -120,22 +114,39 @@ fn run_subcmd(
             .print(cli().render_help().ansi().to_string().trim_end());
         return Ok(());
     };
-    match (exec_for(sub_cmd), external.get(sub_cmd)) {
-        (Some(exec_fn), Some(_)) => {
+    match (
+        exec_for(sub_cmd),
+        external.get(sub_cmd),
+        possible_script_path_subcmd(&args),
+    ) {
+        (Some(exec_fn), Some(_), _) => {
             ctx.error_console().warning(format!(
                 "builtin subcommand `{sub_cmd}` shadows an external subcommand"
             ));
             exec_fn(ctx, sub_args)
         }
-        (Some(exec_fn), None) => exec_fn(ctx, sub_args),
-        (None, Some(exec_path)) => {
+        (Some(exec_fn), None, _) => exec_fn(ctx, sub_args),
+        (None, Some(exec_path), Some(_)) => {
+            ctx.console()
+                .note(format!("executing external subcommand `{sub_cmd}`"));
+            ctx.console().hint(format!(
+                "If you would like to run a script with that name, type `duck ./{sub_cmd}`"
+            ));
             drop(ctx.console().flush());
             drop(ctx.error_console().flush());
             let args = external_cli_args(sub_args);
             execute_external_subcmd(exec_path, args)
                 .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
         }
-        (None, None) => qp_bail!("No such command: `{sub_cmd}`"),
+        (None, Some(exec_path), None) => {
+            drop(ctx.console().flush());
+            drop(ctx.error_console().flush());
+            let args = external_cli_args(sub_args);
+            execute_external_subcmd(exec_path, args)
+                .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
+        }
+        (None, None, Some(path)) => run_script_knowing_path(ctx, Path::new(path), &args),
+        (None, None, None) => qp_bail!("No such command: `{sub_cmd}`"),
     }
 }
 

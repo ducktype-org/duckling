@@ -2,8 +2,8 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
 use crate::{
-    DuckCtx, QuackResult, duck::driver::subcommands::run_script::possible_script_path_subcmd,
-    qp_bail,
+    DuckCtx, QuackResult,
+    duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd, qp_bail,
 };
 use clap::ArgMatches;
 use itertools::Itertools;
@@ -35,11 +35,6 @@ pub fn fix_typos(
         return Ok(args);
     }
 
-    if possible_script_path_subcmd(&args).is_some() {
-        // If we assume the user meant to pass a path to run a script, we do not try to fix typos.
-        return Ok(args);
-    }
-
     let targets = possible_targets(ctx, external_cmds)?;
     debug!(
         "Testing levenshtein of `{name}` against `{}`",
@@ -65,7 +60,8 @@ pub fn fix_typos(
 /// - builtin subcommands,
 /// - builtin aliases,
 /// - user-defined aliases,
-/// - external subcommands.
+/// - external subcommands,
+/// - anything that resembles a path to a script.
 fn is_valid_subcmd(
     ctx: &DuckCtx,
     name: &str,
@@ -74,7 +70,8 @@ fn is_valid_subcmd(
     Ok(is_builtin_subcommand(name)
         || get_builtin_alias_expansion(name).is_some()
         || ctx.duck_cfg().alias_for(name)?.is_some()
-        || external_cmds.contains_key(name))
+        || external_cmds.contains_key(name)
+        || is_name_possible_script_path_subcmd(name))
 }
 
 /// Get all known and valid subcommands.

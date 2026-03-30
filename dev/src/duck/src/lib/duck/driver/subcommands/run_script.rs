@@ -59,7 +59,16 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
         .context_internal("Path argument is required")?;
     let path: PathBuf = path.into();
     let path = ctx.cwd().join(path);
-    check_is_script(&path)?;
+    run_script_knowing_path(ctx, &path, matches)
+}
+
+/// A common interface for running a script.
+pub fn run_script_knowing_path(
+    ctx: &DuckCtx,
+    path: &Path,
+    matches: &ArgMatches,
+) -> QuackResult<()> {
+    check_is_script(path)?;
     let script_name = path
         .file_name()
         .context_internal("we assured that the path points to a file")?;
@@ -80,12 +89,15 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
 }
 
 /// Check if `path` points to a valid Duckling script.
-fn check_is_script(path: &Path) -> QuackResult<()> {
+pub fn check_is_script(path: &Path) -> QuackResult<()> {
     if !path.exists() {
         qp_bail!("the script path `{}` does not exist", path.display());
     }
     if !path.is_file() {
-        qp_bail!("the script path `{}` does not point to a file", path.display());
+        qp_bail!(
+            "the script path `{}` does not point to a file",
+            path.display()
+        );
     }
     if path.extension() != Some(OsStr::new(DUCKLING_SCRIPT_EXT)) {
         qp_bail!(
@@ -105,10 +117,15 @@ fn check_is_script(path: &Path) -> QuackResult<()> {
 /// Guess whether the user meant to provide a path to a script to run.
 pub fn possible_script_path_subcmd(args: &ArgMatches) -> Option<&str> {
     let sub_cmd = args.subcommand_name()?;
-    let path = Path::new(sub_cmd);
-    if path.extension().is_some() || path.components().count() > 1 {
+    if is_name_possible_script_path_subcmd(sub_cmd) {
         Some(sub_cmd)
     } else {
         None
     }
+}
+
+/// Guess whether name could be a path to a script to run.
+pub fn is_name_possible_script_path_subcmd(name: &str) -> bool {
+    let path = Path::new(name);
+    path.extension().is_some() || path.components().count() > 1
 }
