@@ -156,7 +156,7 @@ namespace vm {
 			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-			frame->local_stack_head     = shared_stack_space_size;
+			frame->local_stack_head      = shared_stack_space_size;
 			frame->block_ref_stack_count = shared_blocks_count;
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in

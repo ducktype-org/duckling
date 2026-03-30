@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vm/core/thread/low_program/micro_instruction_args.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
@@ -9,6 +10,8 @@
 namespace vm::loader::compiler {
 	namespace detail {
 		class MicroBytecodeBuilder;
+		template<typename ToType>
+		struct LowerArgumentImpl;
 	}
 
 	/**
@@ -22,6 +25,8 @@ namespace vm::loader::compiler {
 	 */
 	class Compiler {
 		friend class detail::MicroBytecodeBuilder;
+		template<typename ToType>
+		friend struct detail::LowerArgumentImpl;
 
 	public:
 		Compiler() = default;
@@ -181,7 +186,8 @@ namespace vm::loader::compiler {
 		 * @param opcode_arg The symbolic argument to translate.
 		 * @return The 64-bit numeric value of the argument.
 		 */
-		u64 lowerArgument(FunctionCompilationContext& local_ctx, const opargs::OpCodeArg& opcode_arg);
+		template<opargs::ArgumentType FromType, low::opargs::ArgumentType ToType>
+		u64 lowerArgument(FunctionCompilationContext& local_ctx, const FromType& opcode_arg);
 	};
 
 }

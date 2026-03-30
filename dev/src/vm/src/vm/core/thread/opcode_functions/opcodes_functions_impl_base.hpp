@@ -567,7 +567,7 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_lany_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_blany_type)(FUNCTION_ARGS) {
 		{ performInit(instr, local_stack, frame, thread, TypeID(instr->arg1)); }
 		FUNCTION_CONT(1);
 	}
@@ -666,7 +666,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_blany)(FUNCTION_ARGS) {
 		{
 			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       block   = Ref(frame->block_ref_stack[instr->arg1]);
@@ -697,7 +697,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_lopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blopq_blopq)(FUNCTION_ARGS) {
 		{
 			auto dst_block = Ref(frame->block_ref_stack[instr->arg0]);
 			auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
@@ -708,7 +708,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_lopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_blopq)(FUNCTION_ARGS) {
 		{
 			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
 			std::memcpy(
@@ -720,7 +720,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_gopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blopq_gopq)(FUNCTION_ARGS) {
 		{
 			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
 			auto dst_block = Ref(frame->block_ref_stack[instr->arg0]);
@@ -731,7 +731,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_imm)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blopq_imm)(FUNCTION_ARGS) {
 		{
 			// @TODO: #1728 remove this evil instruction
 			const void* value = safeReadObjectBytes<void*>(instr->arg1);
@@ -740,7 +740,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lste_lste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blste_blste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = Ref(frame->block_ref_stack[instr->arg0]);
 			auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
@@ -762,7 +762,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lste_gste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blste_gste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = Ref(frame->block_ref_stack[instr->arg0]);
 			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
@@ -773,7 +773,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_lste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_blste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
 			auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
@@ -818,7 +818,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lvnt_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_blvnt_type)(FUNCTION_ARGS) {
 		{
 			auto variant_block   = Ref(frame->block_ref_stack[instr->arg0]);
 			auto alt_type_id     = TypeID(instr->arg1);
@@ -828,7 +828,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lvnt)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_blvnt)(FUNCTION_ARGS) {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block   = Ref(frame->block_ref_stack[instr->arg1]);
@@ -903,7 +903,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_blany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto src_block   = Ref(frame->block_ref_stack[instr->arg1]);
@@ -916,7 +916,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(load_blany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -943,7 +943,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_blany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
@@ -959,7 +959,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_lany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_blany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -975,7 +975,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_blste)(FUNCTION_ARGS) {
 		{
 			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
@@ -988,7 +988,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lste_lany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_blste_blany)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -1006,7 +1006,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_lany_lste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_blany_blste)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -1056,7 +1056,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_lptr_lany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_lptr_blany)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
@@ -1072,7 +1072,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_lany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_blany)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
@@ -1088,7 +1088,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_lany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_blany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -1104,7 +1104,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_lany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_blany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);

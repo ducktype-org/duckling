@@ -27,91 +27,118 @@
 #include <ranges>
 
 namespace vm::loader::compiler {
-	u64 Compiler::lowerArgument(
-		FunctionCompilationContext& ctx, const opargs::OpCodeArg& opcode_arg
-	) {
-		variant_match(opcode_arg) {
-			variant_case(vm::opargs::Immediate, imm) return imm.value;
+	namespace detail {
 
-			// 			// Every used local variable is guaranteed to exist by static verification.
-			// #define HANDLE_LOCAL(TYPE)                                                      \
-// 	variant_case(vm::opargs::TYPE, local_type) {                                \
-// 		return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset); \
-// 	}
-			break;
-			variant_case(vm::opargs::StackLocal8, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
-			}
-			variant_case(vm::opargs::StackLocal16, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
-			}
-			variant_case(vm::opargs::StackLocal32, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
-			}
-			variant_case(vm::opargs::StackLocal64, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
-			}
-			variant_case(vm::opargs::StackLocalAny, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).block_idx);
-			}
-			variant_case(vm::opargs::StackLocalPtr, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).offset);
-			}
-			variant_case(vm::opargs::StackLocalVnt, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).block_idx);
-			}
-			variant_case(vm::opargs::StackLocalOpq, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).block_idx);
-			}
-			variant_case(vm::opargs::StackLocalStructure, local_type) {
-				return static_cast<u64>(ctx.locals_map.at(local_type.var_name).block_idx);
-			}
-			// #undef HANDLE_LOCAL
-
-#define HANDLE_GLOBAL(TYPE)                                     \
-	variant_case(vm::opargs::TYPE, global_data) {               \
-		auto name = global_data.global_data_name;               \
-		return u64(usize(*low_program.global_data.idOf(name))); \
+#define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...) \
+	template<FAMILY_CONCEPT ToType>                                \
+	struct LowerArgumentImpl<ToType> {                             \
+		template<opargs::ArgumentType FromType>                    \
+		static u64 lower(                                          \
+			Compiler&                             compiler,        \
+			Compiler::FunctionCompilationContext& ctx,             \
+			const FromType&                       opcode_arg       \
+		) {                                                        \
+			(void) compiler;                                       \
+			(void) ctx;                                            \
+			__VA_ARGS__                                            \
+		}                                                          \
 	}
-			FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
-#undef HANDLE_GLOBAL
 
-			variant_case(vm::opargs::Type, type_arg) {
-				auto type_obj = low_program.types->at(type_arg.type_name);
-				return static_cast<u64>(static_cast<u64>(type_obj->getID()));
-			}
-			variant_case(vm::opargs::Field, field_arg) {
-				auto type_obj     = low_program.types->at(field_arg.type_name);
-				auto field_offset = *type_obj->getFieldOffsetByName(field_arg.field_name);
-				return static_cast<u64>(field_offset);
-			}
-			variant_case(vm::opargs::FunctionName, func) {
-				return u64(*program_ctx.function_forward_declarations.idOf(func.function_name));
-			}
-			variant_case(vm::opargs::BuiltinFunctionName, func) {
-				auto func_id = *builtins::getBuiltinFunctionID(func.function_name);
-				return base::safeIntConv<u64>(
-					static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
-				);
-			}
-			variant_case(vm::opargs::ExtCFunctionName, func) {
-				return u64(*program_ctx.ext_c_functions.idOf(func.function_name));
-			}
-			variant_case(vm::opargs::MethodName, method) {
-				return base::safeIntConv<u64>(program_ctx.method_name_to_id[method.method_name]);
-			}
-			variant_case(vm::opargs::Label, label) {
-				// Lower the label names into temporary label IDs.
-				// A label ID is some number, used later by `linkLabelArguments`
-				// to generate actual offsets once we know where each label
-				// lands after lowering.
-				if (!ctx.label_id_map.contains(label.label_name))
-					ctx.label_id_map.put(label.label_name, ctx.label_id_map.size());
-				return ctx.label_id_map.at(label.label_name);
-			}
-			variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
-		}
-		CORE_UNREACHABLE();
+#define DEFINE_LOWER_ARGUMENT_IMPL(LOW_TO_TYPE, HIGH_FROM_TYPE, ...) \
+	template<>                                                       \
+	struct LowerArgumentImpl<LOW_TO_TYPE> {                          \
+		static u64 lower(                                            \
+			Compiler&                             compiler,          \
+			Compiler::FunctionCompilationContext& ctx,               \
+			const HIGH_FROM_TYPE&                 opcode_arg         \
+		) {                                                          \
+			(void) compiler;                                         \
+			(void) ctx;                                              \
+			__VA_ARGS__                                              \
+		}                                                            \
+	}
+		// clang-format off
+
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			low::opargs::LocalStackArgumentType,
+			return static_cast<u64>(ctx.locals_map.at(opcode_arg.var_name).offset);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			low::opargs::GlobalArgumentType,
+			return u64(usize(*compiler.low_program.getGlobals().idOf(opcode_arg.global_data_name)));
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			low::opargs::LocalBlockStackArgumentType,
+			return static_cast<u64>(ctx.locals_map.at(opcode_arg.var_name).block_idx);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::Type,
+			opargs::Type,
+			return static_cast<u64>(compiler.low_program.getTypes().at(opcode_arg.type_name)->getID());
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::Field,
+			opargs::Field,
+			return static_cast<u64>(*compiler.low_program.getTypes()
+		                                 .at(opcode_arg.type_name)
+		                                 ->getFieldOffsetByName(opcode_arg.field_name));
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::FunctionName,
+		    opargs::FunctionName,
+		    return u64(*compiler.program_ctx.function_forward_declarations.idOf(opcode_arg.function_name)););
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::BuiltinFunctionName,
+			opargs::BuiltinFunctionName,
+			auto func_id = *builtins::getBuiltinFunctionID(opcode_arg.function_name);
+			return base::safeIntConv<u64>(
+				static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
+			);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::ExtCFunctionName,
+			opargs::ExtCFunctionName,
+			return u64(*compiler.program_ctx.ext_c_functions.idOf(opcode_arg.function_name));
+		);
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::MethodName,
+			opargs::MethodName,
+			return base::safeIntConv<u64>(compiler.program_ctx.method_name_to_id[opcode_arg.method_name]);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::Immediate,
+			opargs::Immediate,
+			return opcode_arg.value;
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::Label,
+			opargs::Label,
+			// Lower the label names into temporary label IDs.
+			// A label ID is some number, used later by `linkLabelArguments`
+			// to generate actual offsets once we know where each label
+			// lands after lowering.
+			if (!ctx.label_id_map.contains(opcode_arg.label_name))
+				ctx.label_id_map.put(opcode_arg.label_name, ctx.label_id_map.size());
+			return ctx.label_id_map.at(opcode_arg.label_name);
+		);
+		// clang-format on
+
+#undef DEFINE_LOWER_ARGUMENT_IMPL
+#undef DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY
+	}  // namespace detail
+
+	template<opargs::ArgumentType FromType, low::opargs::ArgumentType ToType>
+	u64 Compiler::lowerArgument(FunctionCompilationContext& ctx, const FromType& opcode_arg) {
+		return detail::LowerArgumentImpl<ToType>::lower(*this, ctx, opcode_arg);
 	}
 
 	void Compiler::linkLabelArguments(
@@ -157,9 +184,7 @@ namespace vm::loader::compiler {
 			auto type_ref = low_program.types->at(type.type_name);
 			result.put(
 				local.var_name,
-				{ .offset    = curr_stack_size,
-			      .block_idx = type_size_stack.size(),
-			      .type      = type_ref }
+				{ .offset = curr_stack_size, .block_idx = type_size_stack.size(), .type = type_ref }
 			);
 			auto type_size = type_ref->getSize().asInt();
 			if (type.type_name == "void") return;
