@@ -711,10 +711,9 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_blopq)(FUNCTION_ARGS) {
 		{
 			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
-			std::memcpy(
-				thread.process_memory.getBlockViewUnsafe(dst_block).getBegin(),
-				local_stack + instr->arg1,
-				thread.process_memory.getBlockType(dst_block)->getSize().asInt()
+			auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
 			);
 		}
 		FUNCTION_CONT(1);
@@ -734,8 +733,10 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blopq_imm)(FUNCTION_ARGS) {
 		{
 			// @TODO: #1728 remove this evil instruction
-			const void* value = safeReadObjectBytes<void*>(instr->arg1);
-			writeToStack(local_stack, instr->arg0, value);
+			const void* value     = safeReadObjectBytes<void*>(instr->arg1);
+			auto        dst_block = Ref(frame->block_ref_stack[instr->arg0]);
+			auto        dst_view  = thread.process_memory.getBlockViewUnsafe(dst_block);
+			std::memcpy(dst_view.getBegin(), &value, sizeof(value));
 		}
 		FUNCTION_CONT(1);
 	}

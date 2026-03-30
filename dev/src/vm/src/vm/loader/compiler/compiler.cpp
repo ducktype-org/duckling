@@ -170,6 +170,7 @@ namespace vm::loader::compiler {
 		std::vector<usize>       type_size_stack;
 		usize                    curr_stack_size = 0;
 		usize                    max_stack_size  = 0;
+		usize                    max_block_count = 0;
 
 		auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
 			if_opt_some(result.atMaybe(local.var_name), entry) {
@@ -190,7 +191,8 @@ namespace vm::loader::compiler {
 			if (type.type_name == "void") return;
 			type_size_stack.push_back(type_size);
 			curr_stack_size += type_size;
-			max_stack_size = std::max(max_stack_size, curr_stack_size);
+			max_stack_size  = std::max(max_stack_size, curr_stack_size);
+			max_block_count = std::max(max_block_count, type_size_stack.size());
 		};
 
 		auto pop = [&]() {
@@ -311,8 +313,9 @@ namespace vm::loader::compiler {
 			}
 		}
 
-		ctx.locals_map       = std::move(result);
-		ctx.local_stack_size = max_stack_size;
+		ctx.locals_map        = std::move(result);
+		ctx.local_stack_size  = max_stack_size;
+		ctx.local_block_count = max_block_count;
 	}
 
 	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
@@ -339,10 +342,11 @@ namespace vm::loader::compiler {
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name             = function.name,
-			                      .bc               = std::move(bytecode),
-			                      .local_stack_size = ctx.local_stack_size,
-			                      .arg_size         = parameters_size,
+				low::LowFuncData{ .name              = function.name,
+			                      .bc                = std::move(bytecode),
+			                      .local_stack_size  = ctx.local_stack_size,
+			                      .local_block_count = ctx.local_block_count,
+			                      .arg_size          = parameters_size,
 			                      .ret_size
 			                      = low_program.types->at(signature.result_type)->getSize().asInt(),
 			                      .parameters  = std::move(parameters),

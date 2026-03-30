@@ -1,10 +1,10 @@
 #pragma once
 
-#include "vm/core/thread/low_program/micro_instruction_args.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/thread/low_program/micro_instruction_args.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::loader::compiler {
@@ -102,7 +102,8 @@ namespace vm::loader::compiler {
 			/// and type.
 			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
-			usize local_stack_size = 0;
+			usize local_stack_size  = 0;
+			usize local_block_count = 0;
 		};
 
 		/**
