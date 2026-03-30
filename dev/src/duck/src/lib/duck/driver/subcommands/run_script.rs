@@ -1,6 +1,5 @@
 use std::{
-    env::current_dir,
-    ffi::OsString,
+    ffi::{OsStr, OsString},
     path::{Path, PathBuf},
 };
 
@@ -59,7 +58,7 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
         .try_get_one::<PathBuf>("path")?
         .context_internal("Path argument is required")?;
     let path: PathBuf = path.into();
-    let path = current_dir()?.join(path);
+    let path = ctx.cwd().join(path);
     check_is_script(&path)?;
     let script_name = path
         .file_name()
@@ -84,9 +83,11 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
 fn check_is_script(path: &Path) -> QuackResult<()> {
     if !path.exists() {
         qp_bail!("the path {} does not exist", path.display());
-    } else if !path.is_file() {
+    }
+    if !path.is_file() {
         qp_bail!("the path {} does not point to a file", path.display());
-    } else if path.extension() != Some(&OsString::from(DUCKLING_SCRIPT_EXT)) {
+    }
+    if path.extension() != Some(OsStr::new(DUCKLING_SCRIPT_EXT)) {
         qp_bail!(
             QuackError::hint(format!(
                 "the extension of Duckling scripts is `.{}`",
@@ -99,4 +100,15 @@ fn check_is_script(path: &Path) -> QuackResult<()> {
         );
     }
     Ok(())
+}
+
+/// Guess whether the user meant to provide a path to a script to run.
+pub fn possible_script_path_subcmd(args: &ArgMatches) -> Option<&str> {
+    let sub_cmd = args.subcommand_name()?;
+    let path = Path::new(sub_cmd);
+    if path.extension().is_some() || path.components().count() > 1 {
+        Some(sub_cmd)
+    } else {
+        None
+    }
 }

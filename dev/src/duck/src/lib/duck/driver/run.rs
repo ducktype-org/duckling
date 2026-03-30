@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     DuckCtx, QuackResult, QuackResultContext,
-    duck::driver::subcommands::run_script,
+    duck::driver::subcommands::run_script::{self, possible_script_path_subcmd},
     qp_bail,
     util_common::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
 };
@@ -47,7 +47,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     }
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
-    if let Some(path) = possible_path_subcmd(&args) {
+    if let Some(path) = possible_script_path_subcmd(&args) {
         debug!("assuming user wants to run a script at {}", path);
         let args = run_script::get_parser().try_get_matches_from(vec!["run-script", path])?;
         run_script::execute(ctx, &args)
@@ -157,15 +157,4 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);
     command.exec_replace().map(|_| ())
-}
-
-/// Guess whether the user meant to provide a file.
-pub fn possible_path_subcmd(args: &ArgMatches) -> Option<&str> {
-    let sub_cmd = args.subcommand_name()?;
-    let path = Path::new(sub_cmd);
-    if path.extension().is_some() || path.components().count() > 1 {
-        Some(sub_cmd)
-    } else {
-        None
-    }
 }
