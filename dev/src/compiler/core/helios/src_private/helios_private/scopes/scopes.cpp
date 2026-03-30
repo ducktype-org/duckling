@@ -741,8 +741,6 @@ namespace compiler::helios {
 					= ctx.query<frontend::QueryIsReplModule>(current_module_id);
 				auto repl_parent_opt
 					= ctx.query<frontend::QueryReplModuleParent>(current_module_id);
-				// Helper variable isn't used for any logic, only for more telling logs.
-				static u32 repl_parent_depth = 0;
 
 				CORE_DEV_LOG(
 					REPL,
@@ -756,21 +754,10 @@ namespace compiler::helios {
 				);
 
 				if (is_repl_module && repl_parent_opt.has_value()) {
-					++repl_parent_depth;
-
 					// Query the parent REPL module's TopLevel scope.
 					auto parent_module_id = repl_parent_opt.value();
 					auto parent_toplevel_scope
 						= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
-
-					CORE_DEV_LOG(
-						REPL,
-						"Recursively searching parent module #",
-						parent_module_id.queryUnstablePerfectHash(),
-						" TopLevel scope, depth=",
-						repl_parent_depth,
-						"\n"
-					);
 
 					UNPACK_QRESULT_CREF(
 						LookupResult parent_result =,
@@ -780,16 +767,6 @@ namespace compiler::helios {
 					);
 
 					parent_result.merge(std::move(result));
-
-					CORE_DEV_LOG(
-						REPL,
-						"LookupInScopeAndParents: total REPL parent depth traversed = ",
-						repl_parent_depth,
-						"\n"
-					);
-
-					// Helper variable no logic other than logs.
-					--repl_parent_depth;
 
 					return parent_result;
 				}
