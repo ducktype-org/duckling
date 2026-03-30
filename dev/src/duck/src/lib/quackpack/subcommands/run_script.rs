@@ -31,8 +31,7 @@ pub struct RunScriptOptions<'duck> {
 pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()> {
     let package = match rs_options.venv_id {
         Some(venv_id) => {
-            // Should be guarded by the parser.
-            debug_assert!(!rs_options.global);
+            debug_assert!(!rs_options.global, "should be guarded by the parser");
             PackageLoader::find_venv_by_name(rs_options.ctx, venv_id)?
         }
         None => {
