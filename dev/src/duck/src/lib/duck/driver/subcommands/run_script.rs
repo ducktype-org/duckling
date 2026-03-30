@@ -82,10 +82,10 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
 /// Check if `path` points to a valid Duckling script.
 fn check_is_script(path: &Path) -> QuackResult<()> {
     if !path.exists() {
-        qp_bail!("the path {} does not exist", path.display());
+        qp_bail!("the script path `{}` does not exist", path.display());
     }
     if !path.is_file() {
-        qp_bail!("the path {} does not point to a file", path.display());
+        qp_bail!("the script path `{}` does not point to a file", path.display());
     }
     if path.extension() != Some(OsStr::new(DUCKLING_SCRIPT_EXT)) {
         qp_bail!(
