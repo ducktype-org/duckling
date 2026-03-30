@@ -171,6 +171,6 @@ fn check_is_subcmd_file(args: &ArgMatches) -> bool {
     let Some(sub_cmd) = args.subcommand_name() else {
         return false;
     };
-    let path = PathBuf::new().join(sub_cmd);
+    let path = Path::new(sub_cmd);
     path.extension().is_some() || path.components().count() > 1
 }

@@ -18,7 +18,7 @@ pub const DUCKLING_SCRIPT_EXT: &str = "ds";
 
 /// Creates parser for the `run_script` subcommand.
 pub fn get_parser() -> Command {
-    subcommand("run_script")
+    subcommand("run-script")
         .about("Run a Duckling script from the given path")
         .add_profile()
         .add_release()
@@ -90,7 +90,7 @@ fn check_is_script(path: &Path) -> QuackResult<()> {
                 DUCKLING_SCRIPT_EXT
             ))
             .context(format!(
-                "the file at {} is not a Duckling script",
+                "the file at `{}` is not a Duckling script",
                 path.display()
             ))
         );

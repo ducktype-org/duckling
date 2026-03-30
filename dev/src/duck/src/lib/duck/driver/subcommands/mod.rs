@@ -56,7 +56,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "publish" => publish::execute,
         "remove" => remove::execute,
         "run" => run::execute,
-        "run_script" => run_script::execute,
+        "run-script" => run_script::execute,
         "search" => search::execute,
         "sync" => sync::execute,
         "tree" => tree::execute,
