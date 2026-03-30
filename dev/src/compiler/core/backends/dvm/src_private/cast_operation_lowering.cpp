@@ -147,11 +147,5 @@ namespace compiler::backend_vm::internal {
 				output, { *dst_temp, DVMPlace::AccessKind::Direct }, target_type
 			);
 		}
-
-		// ---- Cleanup ----
-		if (src_temp.has_value())
-			function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
-		if (dst_temp.has_value())
-			function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
 	}
 }

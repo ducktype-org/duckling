@@ -6,9 +6,6 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
-
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -117,9 +114,6 @@ void FunctionLoweringContext::storeResult(
 	pushInstruction(
 		{ vm::code::builders::OpKind::store, dest_place.asArgument(), src_arg.asAnyArgument() }
 	);
-
-	// Remove the created temporary if needed.
-	if (temp_local.has_value()) pushInstruction({ vm::code::instructions::Op_deinit() });
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
@@ -307,7 +301,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	auto dvm_local = insertLirLocal(lir_local);
 	pushInstruction({
 		vm::code::builders::OpKind::init,
-		vm::opargs::StackLocalAny(dvm_local.name),
+		dvm_local.asAnyArgument(),
 		vm::opargs::Type(typeName(dvm_local.type)),
 	});
 }

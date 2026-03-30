@@ -11,4 +11,11 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-        
+  comp_time_references:
+    Cases:
+      # @TODO: #1849 Add a DVM case when this is fixed.
+      llvm:
+        backend: llvm
+        Output:
+          String: "124\n"
+        ExitCode: 0

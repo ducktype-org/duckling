@@ -145,6 +145,25 @@ namespace {
 	}
 }
 
+namespace compiler::backend_vm::internal {
+	/**
+	 * @brief RAII helper used to deinitialize all temporaries initialized by creation of the
+	 * current instruction.
+	 */
+	struct TemporaryDeinitGuard {
+		FunctionLoweringContext& ctx;
+
+		explicit TemporaryDeinitGuard(FunctionLoweringContext& ctx): ctx(ctx) {}
+
+		TemporaryDeinitGuard(const TemporaryDeinitGuard&)            = delete;
+		TemporaryDeinitGuard& operator=(const TemporaryDeinitGuard&) = delete;
+
+		~TemporaryDeinitGuard() { ctx.cleanupInstructionTemps(); }
+	};
+
+	// TODOP: Defer???
+}
+
 void FunctionLoweringContext::handleCall(
 	const FunctionCallInfo&     call_info,
 	const std::deque<DVMValue>& func_args,
@@ -168,7 +187,7 @@ void FunctionLoweringContext::handleCall(
 		CORE_DEV_LOG(Backend, "Initializing: ", typeName(arg_type), '\n');
 
 		auto arg_name = base::strConcat("call", "_arg", arg_idx, "_");
-		auto temp_arg = pushTempLocal(arg_type, arg_name.c_str());
+		auto temp_arg = pushTempLocalUntracked(arg_type, arg_name.c_str());
 		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 	}
 
@@ -181,11 +200,11 @@ void FunctionLoweringContext::handleCall(
 			{ call_result_storage.value(), DVMPlace::AccessKind::Direct },
 			call_info.return_type.value()
 		);
-
-	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
+	TemporaryDeinitGuard guard{ *this };
+
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_instruction.metadata.position, pos) {
 			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
@@ -298,7 +317,6 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
 			pushInstruction({ operation, tmp.asArgument() });
 			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, maybe_output_type.value());
-			pushInstruction({ vm::code::instructions::Op_deinit() });
 		}
 	} else if (args.size() == 2) {
 		// In this case we assume we have a very general quadruple of the form:
@@ -317,7 +335,6 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
 			pushInstruction({ operation, tmp.asArgument(), args[1].asArgument() });
 			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, maybe_output_type.value());
-			pushInstruction({ vm::code::instructions::Op_deinit() });
 		}
 		return;
 	} else {
@@ -340,6 +357,8 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 		auto bool_arg    = lowerLirValue(lir_terminator.arguments.at(0));
 		auto true_block  = lowerLirValue(lir_terminator.arguments.at(1));
 		auto false_block = lowerLirValue(lir_terminator.arguments.at(2));
+
+		cleanupInstructionTemps();
 
 		variant_match(lir_terminator.arguments.at(0).getVariant()) {
 			variant_case(lir::LIRConstant, constant) {
@@ -376,6 +395,7 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 			getFunctionReturnValueLocal().asArgument(),
 			lowerLirValue(lir_terminator.arguments.at(0)),
 		});
+		cleanupInstructionTemps();
 		pushInstruction({ OpKind::ret });
 	} else {
 		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
@@ -385,6 +405,13 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 	const vm::code::TypeOfData& type, base::Optional<const char*> name_hint
 ) {
+	current_temp_count++;
+	return pushTempLocalUntracked(type, name_hint);
+}
+
+DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocalUntracked(
+	const vm::code::TypeOfData& type, base::Optional<const char*> name_hint
+) {
 	auto name       = base::strConcat(name_hint.copyValueOr("temp"), next_temp_id++);
 	auto temp_local = DVMLocal{
 		.name = base::StrID(name.c_str()),
@@ -392,8 +419,14 @@ DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 	};
 	pushInstruction({
 		OpKind::init,
-		vm::opargs::StackLocalAny(temp_local.name),
+		temp_local.asAnyArgument(),
 		vm::opargs::Type(typeName(type)),
 	});
 	return temp_local;
+}
+
+void FunctionLoweringContext::cleanupInstructionTemps() {
+	for (usize i{ 0 }; i < current_temp_count; i++)
+		pushInstruction({ vm::code::instructions::Op_deinit() });
+	current_temp_count = 0;
 }

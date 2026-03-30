@@ -175,7 +175,6 @@ namespace compiler::backend_vm::internal {
 
 		template<class T>
 		[[nodiscard]] T get() const {
-			return std::get<T>(stored_value);
 			using Tp = std::decay_t<T>;
 			// Simple forward to check if the DVMValue stores a DVMPlace and it's a DVMLocal/DVMGlobal.
 			if constexpr (base::IsOneOf<Tp, DVMLocal, DVMGlobal>) {

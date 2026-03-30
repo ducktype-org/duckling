@@ -19,6 +19,7 @@ namespace compiler::backend_vm::internal {
 
 	class FunctionLoweringContext {
 	public:
+		friend struct TemporaryDeinitGuard;
 		friend class MetaOperationLowerer;
 		friend class CastOperationLowerer;
 
@@ -112,6 +113,12 @@ namespace compiler::backend_vm::internal {
 
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
 
+		/**
+		 * @brief Removes all temporaries added by the current instruction, e.g. temps created when
+		 * lowering LIRPlace, temps created for comparison operations, etc.
+		 */
+		void cleanupInstructionTemps();
+
 		void handleCall(
 			const FunctionCallInfo&     call_info,
 			const std::deque<DVMValue>& func_args,
@@ -120,6 +127,9 @@ namespace compiler::backend_vm::internal {
 
 		usize    next_temp_id = 0;
 		DVMLocal pushTempLocal(
+			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
+		);
+		DVMLocal pushTempLocalUntracked(
 			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
 		);
 
@@ -134,6 +144,12 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::TypeOfData>  function_parameter_types;
 		base::StrID                        function_name;
 		std::vector<vm::code::Instruction> function_body;
+
+		/**
+		 * @brief Number of temporaries created by the currently lowered instruction.
+		 * Should be cleared after each call of `pushInstruction`.
+		 */
+		usize current_temp_count{ 0 };
 
 		/**
 		 * @brief Optional debug info builder for the function.
