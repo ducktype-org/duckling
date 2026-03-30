@@ -1,7 +1,7 @@
 include(FetchContent)
 
 # Set it to true, to link ICU statically and force building it from source
-set (BUILD_STATIC_ICU true)
+# set (BUILD_STATIC_ICU true)
 
 set(ICU_VERSION_REQUIRED "74.1")
 set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
