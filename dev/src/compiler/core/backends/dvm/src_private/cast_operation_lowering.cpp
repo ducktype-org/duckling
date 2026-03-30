@@ -1,10 +1,7 @@
 #include "cast_operation_lowering.hpp"
 
-#include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
-
-#include "base/str/str_utils.hpp"
 
 namespace compiler::backend_vm::internal {
 
@@ -87,10 +84,10 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void CastOperationLowerer::lowerCastOperation(
-		const CastOperation&     cast_operation,
-		std::deque<DVMValue>&    args,
-		const DVMPlace&          output,
-		FunctionLoweringContext& function_context
+		const CastOperation&        cast_operation,
+		const std::deque<DVMValue>& args,
+		const DVMPlace&             output,
+		FunctionLoweringContext&    function_context
 	) {
 		// Operation in form a = OP b (like mov)
 		CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");

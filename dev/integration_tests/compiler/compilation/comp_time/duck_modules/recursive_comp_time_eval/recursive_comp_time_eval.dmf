@@ -14,5 +14,3 @@ fun main() -> i64 = {
     var b: getTypeFromCondition(true) = 0;
     return 0;
 }
-
-# TODOP: Add pointers in comptime

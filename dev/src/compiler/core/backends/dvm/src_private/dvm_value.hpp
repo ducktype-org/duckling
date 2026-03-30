@@ -188,5 +188,4 @@ namespace compiler::backend_vm::internal {
 			}
 		}
 	};
-
 }
