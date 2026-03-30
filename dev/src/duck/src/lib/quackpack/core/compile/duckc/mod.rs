@@ -12,6 +12,8 @@
 mod compilation_type;
 mod process_builder;
 
+use std::convert::Infallible;
+
 pub use compilation_type::CompilationType;
 
 use super::BuildContext;
@@ -34,6 +36,20 @@ impl Duckc {
         Self {
             program_name: "duckc".into(),
         }
+    }
+
+    /// A helper for starting a REPL session from [`DuckCtx`].
+    pub fn start_repl_with(ctx: &DuckCtx) -> QuackResult<Infallible> {
+        let this = Self::new(ctx);
+        this.start_repl()
+    }
+
+    /// Start a REPL session.
+    pub fn start_repl(&self) -> QuackResult<Infallible> {
+        process_builder::DuckcProcessBuilder::new(self)
+            .set_subcommand(process_builder::DuckcSubcommand::Repl)
+            .execute_and_replace()
+            .context("failed to start a REPL session")
     }
 
     /// Compile the `graph` with the given `compilation_type` and `bcx`.
@@ -82,7 +98,7 @@ impl Duckc {
             .ctx()
             .console()
             .info_verbose(format!("Running `{}`", builder));
-        builder.execute(this.as_freeze_dep())?;
+        builder.execute(|| format!("failed to compile package `{}`", this.as_freeze_dep()))?;
         Ok(())
     }
 }

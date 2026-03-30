@@ -9,6 +9,7 @@ use crate::{
         Package,
         compile::profiles::{OptLevel, Profile},
     },
+    util_common::command_ext::CommandExt,
 };
 
 use super::Duckc;
@@ -18,12 +19,14 @@ use super::Duckc;
 /// Supported subcommands passed to the duckc.
 pub enum DuckcSubcommand {
     CompilePackage,
+    Repl,
 }
 
 impl DuckcSubcommand {
     fn as_argument(&self) -> &'static str {
         match self {
             Self::CompilePackage => "compile_package",
+            Self::Repl => "repl",
         }
     }
 }
@@ -112,12 +115,21 @@ impl DuckcProcessBuilder {
     }
 
     /// Execute the built command.
-    pub fn execute(&mut self, package_name: impl fmt::Display) -> QuackResult<()> {
+    pub fn execute<F, T>(&mut self, on_error_message: F) -> QuackResult<()>
+    where
+        T: fmt::Display,
+        F: FnOnce() -> T,
+    {
         let code = self.inner.status().context("failed to spawn duckc")?;
         if !code.success() {
-            qp_bail!("failed to compile package `{package_name}`")
+            qp_bail!("{}", on_error_message())
         }
         Ok(())
+    }
+
+    /// Execute the built command by replacing current process.
+    pub fn execute_and_replace(&mut self) -> QuackResult<Infallible> {
+        self.inner.exec_replace().context("failed to spawn duckc")
     }
 }
 

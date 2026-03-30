@@ -10,6 +10,7 @@ mod init;
 mod list;
 mod publish;
 mod remove;
+mod repl;
 mod run;
 mod search;
 mod sync;
@@ -25,6 +26,7 @@ pub fn subcommands() -> Vec<Command> {
         generate::get_parser(),
         info::get_parser(),
         init::get_parser(),
+        repl::get_parser(),
         list::get_parser(),
         publish::get_parser(),
         remove::get_parser(),
@@ -53,6 +55,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "list" => list::execute,
         "publish" => publish::execute,
         "remove" => remove::execute,
+        "repl" => repl::execute,
         "run" => run::execute,
         "search" => search::execute,
         "sync" => sync::execute,
