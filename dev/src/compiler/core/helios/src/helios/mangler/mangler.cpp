@@ -8,13 +8,11 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/queries/queries.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/types.hpp>
@@ -282,23 +280,23 @@ namespace compiler::helios::mangler {
 						// `shouldMangle` check in `provide()`
 						CORE_UNREACHABLE();
 					}
-					variant_case(houtgen::GeneratedSymbolData, gen_data) {
+					variant_case(defgen::GeneratedSymbolData, gen_data) {
 						// If the symbol is generated, it has no path.
 						variant_match(gen_data.data) {
-							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
+							variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
 								const auto ctor_suffix   = "Hic" + func(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
-								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor
+								defgen::GeneratedSymbolData::DefaultClassConstructor, ctor
 							) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
 								const auto ctor_suffix   = "Hdc" + func(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
-								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
+								defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 							) {
 								return "Hds"
 								     + ctx.query<QueryMangledType>(
@@ -309,12 +307,12 @@ namespace compiler::helios::mangler {
 								     + "E";
 							}
 							variant_case(
-								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
+								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
 							) {
 								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
 							}
 							variant_case(
-								houtgen::GeneratedSymbolData::ReplInstructionWrapper,
+								defgen::GeneratedSymbolData::ReplInstructionWrapper,
 								repl_instr_wrapper
 							) {
 								return base::strConcat(

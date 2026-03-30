@@ -12,7 +12,7 @@
 
 #include <query_framework/standard_query/query_impl.hpp>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
