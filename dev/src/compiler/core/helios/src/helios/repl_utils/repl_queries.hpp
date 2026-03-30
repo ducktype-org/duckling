@@ -1,14 +1,10 @@
 #pragma once
 
-#include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 
 #include <query_framework/query_int.hpp>
-
-#include <vm/core/process/interface_types.hpp>
 
 namespace compiler::repl {
 
