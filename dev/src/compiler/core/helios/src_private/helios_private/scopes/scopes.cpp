@@ -498,10 +498,10 @@ namespace compiler::helios {
 				for (auto params: *meth->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
-				out.emplace_back(ctx.query<houtgen::QueryGeneratedSymbol>({
+				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::SelfParameter{
+					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameter{
 						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
 						.scope         = key } },
 				}));
@@ -633,7 +633,18 @@ namespace compiler::helios {
 			auto scope_data = getScopeRef(key.scope);
 			if (scope_data->is_root) {
 				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
-				return builtin::lookupGlobalBuiltins(ctx, key.name);
+
+				auto       module_id      = scope_data->parent_module;
+				const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(module_id);
+				const bool repl_has_parent
+					= is_repl_module
+				   && ctx.query<frontend::QueryReplModuleParent>(module_id).has_value();
+
+				if (!repl_has_parent) return builtin::lookupGlobalBuiltins(ctx, key.name);
+
+				// For REPL modules with parents, skip duplicating builtins here.
+				// They will be resolved via the parent chain in QueryLookupInScopeAndParents.
+				return LookupResult{};
 			}
 
 			LookupResult result{ .leaves = {}, .children = {} };
@@ -725,50 +736,43 @@ namespace compiler::helios {
 				return parent_result;
 			} else {
 				// At root scope - check if this is a REPL module with a parent
-				auto current_module_id = key.scope.ref->parent_module;
-				auto current_module    = frontend::GetModuleID_Functor::get(current_module_id);
+				auto       current_module_id = key.scope.ref->parent_module;
+				const bool is_repl_module
+					= ctx.query<frontend::QueryIsReplModule>(current_module_id);
+				auto repl_parent_opt
+					= ctx.query<frontend::QueryReplModuleParent>(current_module_id);
 
 				CORE_DEV_LOG(
 					REPL,
 					"At root scope, module #",
 					current_module_id.queryUnstablePerfectHash(),
 					", isRepl=",
-					current_module->isReplModule(),
+					is_repl_module,
 					", hasParent=",
-					current_module->getReplModuleParent().has_value(),
+					repl_parent_opt.has_value(),
 					"\n"
 				);
 
-				if (current_module->isReplModule()) {
-					auto repl_parent_opt = current_module->getReplModuleParent();
-					if (repl_parent_opt.has_value()) {
-						// Query the parent REPL module's TopLevel scope.
-						auto parent_module_id = repl_parent_opt.value();
-						auto parent_toplevel_scope
-							= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
+				if (is_repl_module && repl_parent_opt.has_value()) {
+					// Query the parent REPL module's TopLevel scope.
+					auto parent_module_id = repl_parent_opt.value();
+					auto parent_toplevel_scope
+						= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
 
-						CORE_DEV_LOG(
-							REPL,
-							"Recursively searching parent module #",
-							parent_module_id.queryUnstablePerfectHash(),
-							" TopLevel scope\n"
-						);
+					UNPACK_QRESULT_CREF(
+						LookupResult parent_result =,
+						ctx.query<QueryLookupInScopeAndParents>(
+							{ parent_toplevel_scope, key.name, key.with_wildcards }
+						)
+					);
 
-						// Recursively lookup in parent REPL module's TopLevel scope.
-						UNPACK_QRESULT_CREF(
-							LookupResult parent_result =,
-							ctx.query<QueryLookupInScopeAndParents>(
-								{ parent_toplevel_scope, key.name, key.with_wildcards }
-							)
-						);
+					parent_result.merge(std::move(result));
 
-						parent_result.merge(std::move(result));
-						return parent_result;
-					}
+					return parent_result;
 				}
-
-				return result;
 			}
+
+			return result;
 		}
 
 		QUERY_AUTO_CACHE_CREF

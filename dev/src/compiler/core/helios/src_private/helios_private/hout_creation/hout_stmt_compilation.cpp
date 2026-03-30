@@ -14,8 +14,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
 #include <typesystem/higher/queries/types.hpp>
@@ -27,7 +27,7 @@
 
 #include <query_framework/query_errors.hpp>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios {
 
 	// Forward declaration for processBlock so HoutStmtMaker can call it.
 	static code::CodeBlock processBlock(
@@ -300,9 +300,8 @@ namespace compiler::helios::houtgen {
 					return;
 				}
 
-				auto initial_value = houtgen::getDefaultInitializerExpr(
-					ctx, symbol_type, stmt->getSourcePosition()
-				);
+				auto initial_value
+					= defgen::getDefaultInitializerExpr(ctx, symbol_type, stmt->getSourcePosition());
 				if (initial_value.hasFailed()) {
 					is_failed = true;
 					return;
@@ -447,4 +446,4 @@ namespace compiler::helios::houtgen {
 		return block;
 	}
 
-}  // namespace compiler::helios::houtgen
+}
