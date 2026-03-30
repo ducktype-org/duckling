@@ -30,7 +30,7 @@
         "commands": [
             {
                 "command": "duckling.restartServer",
-                "title": "DucklingLS: Restart language server"
+                "title": "Duckling: Restart language server"
             }
         ],
         "languages": [
@@ -60,19 +60,19 @@
             "type": "object",
             "title": "Duckling Language Configuration",
             "properties": {
-                "DucklingLanguageServer.maxNumberOfProblems": {
+                "DucklingLanguageSupport.maxNumberOfProblems": {
                     "scope": "resource",
                     "type": "number",
                     "default": 100,
                     "description": "Controls the maximum number of problems produced by the server."
                 },
-                "DucklingLanguageServer.executablePath": {
+                "DucklingLanguageSupport.executablePath": {
                     "scope": "machine",
                     "type": "string",
                     "default": "~/.local/bin/duck_ls",
                     "markdownDescription": "Path to the `duck_ls` binary. Supports `~` for the home directory. Defaults to `~/.local/bin/duck_ls`. Run `comp-copy.py` to install the binary there, or set this to a custom path if you installed it elsewhere."
                 },
-                "DucklingLanguageServer.trace.server": {
+                "DucklingLanguageSupport.trace.server": {
                     "scope": "window",
                     "type": "string",
                     "enum": [
