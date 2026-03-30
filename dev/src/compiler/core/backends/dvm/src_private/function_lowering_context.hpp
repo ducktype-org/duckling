@@ -99,9 +99,9 @@ namespace compiler::backend_vm::internal {
 		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
 
 		/**
-		 * @brief Stores a given @p src_value in @p dest_place. Depending on the place type,
-		 * performs a `mov_X_X` or a `store_X_X`.
-		 * TODOP: Write why type is needed. Maybe it should be a part od DVMValue.
+		 * @brief Stores a given @p src_value in @p dest_place.
+		 * Depending on the place type, performs a `mov_X_X` or a `store_X_X`.
+		 * Loads immediates to temporaries if needed.
 		 */
 		void storeResult(
 			const DVMPlace& dest_place, const DVMValue& src_value, const vm::code::TypeOfData& type
