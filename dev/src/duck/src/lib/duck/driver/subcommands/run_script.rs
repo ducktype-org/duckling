@@ -10,7 +10,7 @@ use crate::{
     qp_bail,
     quackpack::subcommands::run_script::{RunScriptOptions, run_script},
 };
-use clap::{Arg, ArgMatches, Command, value_parser};
+use clap::{Arg, ArgMatches, Command, builder::ValueParser, value_parser};
 
 use crate::duck::driver::cli_ext::{CommandExt, multi, subcommand};
 
@@ -40,7 +40,12 @@ pub fn get_parser() -> Command {
             "external-errors",
             "Halt computation after encountering errors in foreign manifests",
         ))
-        .arg(Arg::new("path").help("Path to the Duckling script to run"))
+        .arg(
+            Arg::new("path")
+                .help("Path to the Duckling script to run")
+                .value_parser(ValueParser::path_buf())
+                .required(true),
+        )
         .arg(
             multi("args", "Arguments passed to the script")
                 .trailing_var_arg(true)
@@ -51,10 +56,8 @@ pub fn get_parser() -> Command {
 /// Logic for executing the `run_script` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
-        .try_get_raw("path")?
-        .context("please specify the path to the script to run")?
-        .next()
-        .context_internal("we assured that path was specified")?;
+        .try_get_one::<PathBuf>("path")?
+        .context_internal("Path argument is required")?;
     let path: PathBuf = path.into();
     let path = current_dir()?.join(path);
     check_is_script(&path)?;
