@@ -20,6 +20,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <hashing/hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -33,31 +34,23 @@
  */
 namespace compiler::helios::mangler {
 
-	constexpr auto KeyOf_MangledSymbol::operator==(const KeyOf_MangledSymbol& other) const {
-		return std::tie(symbol_key, kind, mangling_scheme_version, additional_metadata)
-		    == std::tie(
-				   other.symbol_key,
-				   other.kind,
-				   other.mangling_scheme_version,
-				   other.additional_metadata
-			);
+	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
+		addToHash(h, k.symbol_key.index());
+		if (k.symbol_key.index() == 0)
+			addToHash(h, std::get<0>(k.symbol_key));
+		else if (k.symbol_key.index() == 1)
+			addToHash(h, std::get<1>(k.symbol_key));
+		else
+			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+
+		addToHash(h, k.kind);
+		addToHash(h, k.mangling_scheme_version);
+		addToHash(h, k.additional_metadata.has_value());
+		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
 	}
 
-	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
-		static concurrent::ConHashMap<KeyOf_MangledSymbol, u64> hashes{};
-		static std::atomic<u64>                                 next
-			= 1;  // start from 1, so that 0 can be used as an "empty value"
-
-		u64 result = 0;
-
-		hashes.maybePutAndUpdate(*this, 0u, [&result](Ref<u64> existing) {
-			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
-			result = *existing;
-		});
-
-		CORE_ASSERT(result != 0, "Hash value not set!");
-
-		return result;
+	base::Bit256 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
+		return hashing::justHash<hashing::SHA256>(*this);
 	}
 
 	namespace internal {
@@ -648,18 +641,4 @@ namespace compiler::helios::mangler {
 		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
 			.symbol_key = sym_id, .kind = ManglingSymbolKind::GlobalVariableDestructor });
 	}
-}
-
-std::size_t std::hash<compiler::helios::mangler::KeyOf_MangledSymbol>::operator()(
-	const compiler::helios::mangler::KeyOf_MangledSymbol& key
-) const {
-	// this does not need to be perfect, just good enough to avoid often collisions in the hash map.
-	variant_match(key.symbol_key) {
-		variant_case(compiler::helios::SymID, sym_id) { return sym_id.queryUnstablePerfectHash(); }
-		variant_case(compiler::helios::mangler::special_symbol_keys::LIRModuleID, mod_id) {
-			return mod_id.id.getInnerID().asInt();
-		}
-		variant_default { CORE_UNREACHABLE(); }
-	}
-	CORE_UNREACHABLE();
 }
