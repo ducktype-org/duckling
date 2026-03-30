@@ -9,7 +9,7 @@ use crate::{
         PackageCtx,
         storage::{paths::Storage, venv::Venv},
     },
-    util_common::path_ops_ext::PathOpsExt,
+    util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -116,9 +116,11 @@ impl PackageLoader {
     ) -> QuackResult<PackageCtx<'duck>> {
         let storage_loc = ctx.default_storage_root();
         let storage = Storage::new(storage_loc);
+        let data_lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
         let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
             qp_bail!("Could not find venv {} in the main storage", venv_id);
         };
+        drop(data_lock);
         let parent = venv
             .data()
             .last_location()

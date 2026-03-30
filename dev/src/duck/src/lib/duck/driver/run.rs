@@ -45,16 +45,9 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
         })?;
         ctx.reload_cwd()?;
     }
-    let args = if !check_is_subcmd_file(&matches) {
-        fix_typos(matches, ctx, &external)?
-    } else {
-        matches
-    };
+    let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
-    if check_is_subcmd_file(&args) {
-        let path = args
-            .subcommand_name()
-            .context_internal("checked that user supplied path-like subcmd")?;
+    if let Some(path) = possible_path_subcmd(&args) {
         debug!("assuming user wants to run a script at {}", path);
         let args = run_script::get_parser().try_get_matches_from(vec!["run_script", path])?;
         run_script::execute(ctx, &args)
@@ -167,10 +160,12 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
 }
 
 /// Guess whether the user meant to provide a file.
-fn check_is_subcmd_file(args: &ArgMatches) -> bool {
-    let Some(sub_cmd) = args.subcommand_name() else {
-        return false;
-    };
+pub fn possible_path_subcmd(args: &ArgMatches) -> Option<&str> {
+    let sub_cmd = args.subcommand_name()?;
     let path = Path::new(sub_cmd);
-    path.extension().is_some() || path.components().count() > 1
+    if path.extension().is_some() || path.components().count() > 1 {
+        Some(sub_cmd)
+    } else {
+        None
+    }
 }

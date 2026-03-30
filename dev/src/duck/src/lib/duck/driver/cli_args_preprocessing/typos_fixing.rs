@@ -1,7 +1,7 @@
 //! Try to (wisely) fix user typos.
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use crate::{DuckCtx, QuackResult, qp_bail};
+use crate::{DuckCtx, QuackResult, duck::driver::run::possible_path_subcmd, qp_bail};
 use clap::ArgMatches;
 use itertools::Itertools;
 use tracing::debug;
@@ -29,6 +29,11 @@ pub fn fix_typos(
     };
 
     if is_valid_subcmd(ctx, name, external_cmds)? {
+        return Ok(args);
+    }
+
+    if possible_path_subcmd(&args).is_some() {
+        // If we assume the user meant to pass a path to run a script, we do not try to fix typos.
         return Ok(args);
     }
 
