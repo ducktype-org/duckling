@@ -176,11 +176,7 @@ void FunctionLoweringContext::handleCall(
 	                  VISIT(call_info.call_target, callable, return callable.asArgument()) });
 
 	if (output)
-		storeResult(
-			output.value(),
-			{ call_result_storage.value(), DVMPlace::AccessKind::Direct },
-			call_info.return_type.value()
-		);
+		storeResult(output.value(), { call_result_storage.value(), DVMPlace::AccessKind::Direct });
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
@@ -230,11 +226,15 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
 				auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
 				auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
-				return { DVMImmediate(
-					compTimeEvaluateComparison(operation, lhs_value, rhs_value) ? 1 : 0
+				return { DVMImmediate::i8(
+					compTimeEvaluateComparison(operation, lhs_value, rhs_value) ? u8(1) : u8(0)
 				) };
 			} else {
 				// Force globals into locals if needed.
+				auto lhs = forceToLocal(args[0], args[0].getType(), "lhs_temp");
+				auto rhs = forceToLocal(args[1], args[1].getType(), "rhs_temp");
+
+
 				for (usize i: { 0u, 1u }) {
 					if (args[i].is<DVMGlobal>()) {
 						auto global = args[i].get<DVMGlobal>();
@@ -257,13 +257,17 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 				auto tmp_res
 					= pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
 				pushInstruction({ operation, args[0], args[1] });
-				pushInstruction({ OpKind::mov, tmp_res.asArgument(), DVMImmediate(0).asArgument() });
-				pushInstruction({ OpKind::cmov, tmp_res.asArgument(), DVMValue(1).asArgument() });
+				pushInstruction(
+					{ OpKind::mov, tmp_res.asArgument(), DVMImmediate::i8(u8(0)).asArgument() }
+				);
+				pushInstruction(
+					{ OpKind::cmov, tmp_res.asArgument(), DVMImmediate::i8(u8(1)).asArgument() }
+				);
 				return { tmp_res, DVMPlace::AccessKind::Direct };
 			}
 		}();
 
-		storeResult(output, result_val, maybe_output_type.value());
+		storeResult(output, result_val);
 	} else if (operation == OpKind::call) {
 		auto called_function = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 		args.pop_front();
@@ -280,13 +284,8 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 
 		pushInstruction({ OpKind::ref, addr_temp.asArgument(), args[0].asAnyArgument() });
 
-		if (maybe_output.has_value()) {
-			storeResult(
-				maybe_output.value(),
-				{ addr_temp, DVMPlace::AccessKind::Direct },
-				maybe_output_type.value()
-			);
-		}
+		if (maybe_output.has_value())
+			storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
 		return;
 
 
@@ -300,7 +299,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 
 		if (output.isDirect() && output.is<DVMLocal>()) {
 			// If output is a direct place we just use it.
-			storeResult(output, args[0], maybe_output_type.value());
+			storeResult(output, args[0]);
 			pushInstruction({ operation, output.asArgument() });
 		} else {
 			// Force globals into locals if needed.
@@ -317,7 +316,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			auto tmp = pushTempLocal(maybe_output_type.value(), "unary_tmp");
 			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
 			pushInstruction({ operation, tmp.asArgument() });
-			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, maybe_output_type.value());
+			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
 		}
 	} else if (args.size() == 2) {
 		// In this case we assume we have a very general quadruple of the form:
@@ -329,7 +328,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			// we transform it to:
 			// a = b;
 			// a = a OP c;
-			storeResult(output, args[0], maybe_output_type.value());
+			storeResult(output, args[0]);
 			pushInstruction({ operation, output.asArgument(), args[1].asArgument() });
 		} else {
 			// Force globals into locals if needed.
@@ -344,11 +343,11 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			auto tmp = pushTempLocal(maybe_output_type.value(), "binary_tmp");
 			pushInstruction({ OpKind::mov, tmp.asArgument(), args[0].asArgument() });
 			pushInstruction({ operation, tmp.asArgument(), args[1].asArgument() });
-			storeResult(output, { tmp, DVMPlace::AccessKind::Direct }, maybe_output_type.value());
+			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
 		}
 		return;
 	} else {
-		storeResult(maybe_output.value(), args[0], maybe_output_type.value());
+		storeResult(maybe_output.value(), args[0]);
 	}
 }
 

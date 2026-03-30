@@ -98,15 +98,18 @@ namespace compiler::backend_vm::internal {
 
 		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
 
+		DVMLocal forceToLocal(
+			const DVMValue&             value,
+			const vm::code::TypeOfData& type,
+			base::Optional<const char*> name_hint = {}
+		);
+
 		/**
 		 * @brief Stores a given @p src_value in @p dest_place.
 		 * Depending on the place type, performs a `mov_X_X` or a `store_X_X`.
 		 * Loads immediates to temporaries if needed.
 		 */
-		void storeResult(
-			const DVMPlace& dest_place, const DVMValue& src_value, const vm::code::TypeOfData& type
-		);
-
+		void storeResult(const DVMPlace& dest_place, const DVMValue& src_value);
 
 		void pushInstruction(const vm::code::Instruction& instruction);
 

@@ -142,10 +142,7 @@ namespace compiler::backend_vm::internal {
 		function_context.pushInstruction({ operation, dst_arg.asArgument(), src_arg.asArgument() });
 
 		// ---- Move to final destination if needed ----
-		if (dst_temp.has_value()) {
-			function_context.storeResult(
-				output, { *dst_temp, DVMPlace::AccessKind::Direct }, target_type
-			);
-		}
+		if (dst_temp.has_value())
+			function_context.storeResult(output, { *dst_temp, DVMPlace::AccessKind::Direct });
 	}
 }

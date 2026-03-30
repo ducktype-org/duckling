@@ -55,20 +55,38 @@ base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 }
 
 namespace {
-	constexpr DVMImmediate lirConstantToImmediate(const compiler::lir::LIRConstant& constant) {
+	template<class T>
+	u64 translateToU64(T value) {
+		if constexpr (sizeof(T) == 8)
+			return vm::safeReadObjectBytes<u64>(value);
+		else if constexpr (sizeof(T) == 4)
+			return vm::safeReadObjectBytes<u32>(value);
+		else if constexpr (sizeof(T) == 2)
+			return vm::safeReadObjectBytes<u16>(value);
+		else if constexpr (sizeof(T) == 1)
+			return static_cast<u64>(vm::safeReadObjectBytes<u8>(value));
+		else
+			CORE_PANIC("Unsupported immediate size: ", sizeof(T));
+	}
+
+	constexpr DVMImmediate lirConstantToImmediate(
+		const compiler::lir::LIRConstant& constant, const vm::code::TypeOfData& type
+	) {
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				return std::visit(
-					[&](auto&& val) -> DVMImmediate { return DVMImmediate{ val }; },
+					[&](auto&& val) -> DVMImmediate {
+						return DVMImmediate{ translateToU64(val), type };
+					},
 					numeric.getStorage()
 				);
 			}
-			variant_case(char, value) { return DVMImmediate{ value }; }
-			variant_case(bool, value) { return DVMImmediate{ value }; }
+			variant_case(char, value) { return DVMImmediate{ translateToU64(value), type }; }
+			variant_case(bool, value) { return DVMImmediate{ translateToU64(value), type }; }
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				// @TODO: #1728 remove this evil bit_cast
 				// Representation of a meta type in DVM is a pointer to the symbol type.
-				return DVMImmediate{ std::bit_cast<u64>(&type_val) };
+				return DVMImmediate{ std::bit_cast<u64>(&type_val), type };
 			}
 			variant_default {
 				CORE_PANIC("Unsupported CompileTimeValue type for a VM constant operand");
@@ -78,9 +96,17 @@ namespace {
 	}
 }
 
-void FunctionLoweringContext::storeResult(
-	const DVMPlace& dest_place, const DVMValue& src_value, const vm::code::TypeOfData& type
+DVMLocal FunctionLoweringContext::forceToLocal(
+	const DVMValue& value, const vm::code::TypeOfData& type, base::Optional<const char*> name_hint
 ) {
+	if (value.is<DVMLocal>()) return value.get<DVMLocal>();
+
+	DVMLocal temp = pushTempLocal(type, name_hint);
+	pushInstruction({ vm::code::builders::OpKind::mov, temp.asArgument(), value.asArgument() });
+	return temp;
+}
+
+void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMValue& src_value) {
 	// If a place is direct we just move the value into it.
 	if (dest_place.isDirect()) {
 		pushInstruction(
@@ -94,7 +120,7 @@ void FunctionLoweringContext::storeResult(
 	// place as source.
 	DVMValue src_arg = [&]() -> DVMValue {
 		if (src_value.is<DVMImmediate>()) {
-			DVMLocal temp_local = pushTempLocal(type, "store_tmp");
+			DVMLocal temp_local = pushTempLocal(src_value.getType(), "store_tmp");
 			pushInstruction(
 				{ vm::code::builders::OpKind::mov, temp_local.asArgument(), src_value.asArgument() }
 			);
@@ -174,7 +200,10 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) {
 	variant_match(lir_value.getVariant()) {
-		variant_case(lir::LIRConstant, value) { return { lirConstantToImmediate(value) }; }
+		variant_case(lir::LIRConstant, value) {
+			auto dvm_type = program_context.lowerAndKeepTslType(value.layout);
+			return { lirConstantToImmediate(value, dvm_type) };
+		}
 		variant_case(lir::LIRPlace, place) {
 			DVMPlace resolved = resolveLirPlace(place);
 			if (resolved.isDirect()) {

@@ -59,6 +59,10 @@ using namespace compiler::backend_vm::internal;
 	}
 }
 
+[[nodiscard]] vm::code::TypeOfData DVMPlace::getType() const {
+	return VISIT(stored_place, place, return place.type);
+}
+
 [[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asArgument() const {
 	return VISIT(stored_place, place, return place.asArgument());
 }
@@ -87,21 +91,41 @@ namespace {
 	}
 }
 
-DVMImmediate::DVMImmediate(u64 value): value(translateToU64(value)) {}
+DVMImmediate::DVMImmediate(u64 value, vm::code::TypeOfData type):
+	  value(value),
+	  type(std::move(type)) {}
 
-DVMImmediate::DVMImmediate(i64 value): value(translateToU64(value)) {}
+DVMImmediate DVMImmediate::i8(u8 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), 1) };
+}
 
-DVMImmediate::DVMImmediate(bool value): value(translateToU64(value)) {}
+DVMImmediate DVMImmediate::i16(u16 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i16"), 2) };
+}
 
-DVMImmediate::DVMImmediate(float value): value(translateToU64(value)) {}
+DVMImmediate DVMImmediate::i32(u32 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i32"), 4) };
+}
 
-DVMImmediate::DVMImmediate(double value): value(translateToU64(value)) {}
+DVMImmediate DVMImmediate::i64(u64 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i64"), 8) };
+}
 
-DVMImmediate::DVMImmediate(i32 value): value(translateToU64(value)) {}
+DVMImmediate DVMImmediate::f32(::f32 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("f32"), 4) };
+}
 
-DVMImmediate::DVMImmediate(u32 value): value(translateToU64(value)) {}
+DVMImmediate DVMImmediate::f64(::f64 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("f64"), 8) };
+}
 
-DVMImmediate::DVMImmediate(char value): value(translateToU64(value)) {}
+DVMImmediate DVMImmediate::boolean(bool value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), 1) };
+}
+
+DVMImmediate DVMImmediate::character(char value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), 1) };
+}
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMLabel::asArgument() const {
 	return vm::opargs::Label{ name };
@@ -119,3 +143,11 @@ DVMImmediate::DVMImmediate(char value): value(translateToU64(value)) {}
 }
 
 DVMValue::operator vm::opargs::OpCodeArg() const { return asArgument(); }
+
+[[nodiscard]] vm::code::TypeOfData DVMValue::getType() const {
+	variant_match(stored_value) {
+		variant_case(DVMPlace, place) return place.getType();
+		variant_case(DVMImmediate, imm) return imm.type;
+		variant_default CORE_PANIC("Tried to get type of label or function literal");
+	}
+}

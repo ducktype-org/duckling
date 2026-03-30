@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/types/floats.hpp>
+
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
@@ -29,18 +31,21 @@ namespace compiler::backend_vm::internal {
 	};
 
 	struct DVMImmediate {
-		DVMImmediate(u64 value);
-		DVMImmediate(i64 value);
-		DVMImmediate(i32 value);
-		DVMImmediate(u32 value);
-		DVMImmediate(char value);
-		DVMImmediate(bool value);
-		DVMImmediate(float value);
-		DVMImmediate(double value);
+		DVMImmediate(u64 value, vm::code::TypeOfData type);
+
+		static DVMImmediate i8(u8 value);
+		static DVMImmediate i16(u16 value);
+		static DVMImmediate i32(u32 value);
+		static DVMImmediate i64(u64 value);
+		static DVMImmediate f32(f32 value);
+		static DVMImmediate f64(f64 value);
+		static DVMImmediate boolean(bool value);
+		static DVMImmediate character(char value);
 
 		// All values are represented as u64, so e.g. a float is bit-casted to u64.
-		u64  value{};
-		bool operator==(const DVMImmediate& other) const = default;
+		u64                  value{};
+		vm::code::TypeOfData type;
+		bool                 operator==(const DVMImmediate& other) const = default;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
@@ -106,6 +111,8 @@ namespace compiler::backend_vm::internal {
 
 		[[nodiscard]] bool isDirect() const { return access_kind == AccessKind::Direct; }
 
+		[[nodiscard]] vm::code::TypeOfData getType() const;
+
 		void setAccessKind(AccessKind kind) { access_kind = kind; }
 
 		template<class T>
@@ -144,6 +151,8 @@ namespace compiler::backend_vm::internal {
 		bool operator==(const DVMValue& other) const = default;
 
 		operator vm::opargs::OpCodeArg() const;
+
+		[[nodiscard]] vm::code::TypeOfData getType() const;
 
 		/**
 		 * @brief Converts the DVMValue into it's typed argument representation.

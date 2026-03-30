@@ -114,7 +114,7 @@ namespace compiler::backend_vm::internal {
 		);
 
 		func_ctx.pushInstruction(
-			{ OpKind::cmov, output.value().asArgument(), DVMValue(1).asArgument() }
+			{ OpKind::cmov, output.value().asArgument(), DVMImmediate::i8(u8(1)).asArgument() }
 		);
 	}
 
@@ -130,7 +130,7 @@ namespace compiler::backend_vm::internal {
 			output
 		);
 		func_ctx.pushInstruction(
-			{ OpKind::cmov, output.value().asArgument(), DVMValue(1).asArgument() }
+			{ OpKind::cmov, output.value().asArgument(), DVMImmediate::i8(u8(1)).asArgument() }
 		);
 	}
 
