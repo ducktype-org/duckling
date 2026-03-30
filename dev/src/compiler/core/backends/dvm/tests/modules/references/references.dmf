@@ -12,7 +12,7 @@ fun max(a: ref i32, b: ref i32) -> ref i32 = {
     }
 }
 
-fun main() -> i64 = {
+fun localsTest() -> () = {
     # ===== Basic =====
     var a: i32 = 10;
     var r_a = &a;
@@ -73,6 +73,9 @@ fun main() -> i64 = {
     
     builtin_output_i64(g);      # 300
     builtin_output_i64(r_h);    # 500
+}
 
+fun main() -> i64 = {
+    localsTest();
     return 0;
 }

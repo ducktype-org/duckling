@@ -119,7 +119,9 @@ private:
 
 	void builtinFuncsTest() { runTest("modules/builtin_funcs", "9", "81\n82\n", {}, 82); }
 
-	void globalVariablesTest() { runTest("modules/globals", {}, {}, {}, 48); }
+	void globalVariablesTest() {
+		runTest("modules/globals", {}, "10\n42\n99\n99\n42\n99\n43\n-42\n-41\n41\n777\n", {}, 0);
+	}
 
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
