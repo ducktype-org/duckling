@@ -1,13 +1,12 @@
 include(FetchContent)
 
+# Set it to true, to link ICU statically and force building it from source
 set (BUILD_STATIC_ICU true)
-set (FindOrBuildICU_URL https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz)
-# set (FindOrBuildICU_URL https://github.com/unicode-org/icu/archive/refs/tags/release-74-1.tar.gz)
-
-
 
 set(ICU_VERSION_REQUIRED "74.1")
 set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
+set (FindOrBuildICU_URL ${ICU_RELEASE})
+
 set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b71d146812f5e66db95f044e8aaa11b94e99edd4a48ab1aa8efbe3d72a73870cd56b564c2")
 
 # Based on: https://github.com/meta-toolkit/meta-cmake/blob/master/FindOrBuildICU.cmake
@@ -56,12 +55,6 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 		include(ProcessorCount)
 		ProcessorCount(CORES)
 		if (NOT CORES EQUAL 0)
-			# limit the number of cores to 4 on travis
-			if (CORES GREATER 4)
-				if ($ENV{TRAVIS})
-					set(CORES 4)
-				endif()
-			endif()
 			set(ICU_MAKE_EXTRA_FLAGS "-j${CORES}")
 		endif()
 
@@ -106,58 +99,42 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 
 		file(MAKE_DIRECTORY ${ICU_INCLUDE_DIRS})
 
-		add_library(icudata IMPORTED STATIC GLOBAL)
-		set_target_properties(icudata PROPERTIES IMPORTED_LOCATION
+		add_library(ICU::data IMPORTED STATIC GLOBAL)
+		set_target_properties(ICU::data PROPERTIES IMPORTED_LOCATION
 			${ICU_EP_LIBICUDATA})
-		add_dependencies(icudata ExternalICU)
-		target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
+		add_dependencies(ICU::data ExternalICU)
+		target_include_directories(ICU::data INTERFACE ${ICU_INCLUDE_DIRS})
 
-		add_library(icui18n IMPORTED STATIC GLOBAL)
-		set_target_properties(icui18n PROPERTIES IMPORTED_LOCATION
+		add_library(ICU::i18n IMPORTED STATIC GLOBAL)
+		set_target_properties(ICU::i18n PROPERTIES IMPORTED_LOCATION
 			${ICU_EP_LIBICUI18N})
-		add_dependencies(icui18n ExternalICU)
-		target_include_directories(icui18n INTERFACE ${ICU_INCLUDE_DIRS})
+		add_dependencies(ICU::i18n ExternalICU)
+		target_include_directories(ICU::i18n INTERFACE ${ICU_INCLUDE_DIRS})
 
-		add_library(icuuc IMPORTED STATIC GLOBAL)
-		set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION
+		add_library(ICU::uc IMPORTED STATIC GLOBAL)
+		set_target_properties(ICU::uc PROPERTIES IMPORTED_LOCATION
 			${ICU_EP_LIBICUUC})
-		add_dependencies(icuuc ExternalICU)
-		target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
+		add_dependencies(ICU::uc ExternalICU)
+		target_include_directories(ICU::uc INTERFACE ${ICU_INCLUDE_DIRS})
 
-		add_library(icuio IMPORTED STATIC GLOBAL)
-		set_target_properties(icuio PROPERTIES IMPORTED_LOCATION
+		add_library(ICU::io IMPORTED STATIC GLOBAL)
+		set_target_properties(ICU::io PROPERTIES IMPORTED_LOCATION
 			${ICU_EP_LIBICUIO})
-		add_dependencies(icuio ExternalICU)
-		target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
+		add_dependencies(ICU::io ExternalICU)
+		target_include_directories(ICU::io INTERFACE ${ICU_INCLUDE_DIRS})
 		set(ICU_IS_EXTERNAL TRUE PARENT_SCOPE)
 	else()
 		message(FATAL_ERROR "-- ICU building not supported for this platform")
 	endif()
 else()
 	message("-- Using local ICU")
-
-	add_library(icudata IMPORTED SHARED GLOBAL)
-	set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
-	target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
-
-	add_library(icu18n IMPORTED SHARED GLOBAL)
-	set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
-	target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
-
-	add_library(icuuc IMPORTED SHARED GLOBAL)
-	set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
-	target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
-
-	add_library(icuio IMPORTED SHARED GLOBAL)
-	set_target_properties(icuio PROPERTIES IMPORTED_LOCATION ${ICU_IO_LIBRARY})
-	target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
+	# Note that in this branch the ICU::i18n ICU::uc ICU::data ICU::io
+	# targets are provided by find_package(ICU).
 
 endif()
 
 add_library(unicode INTERFACE)
-# target_link_libraries(unicode INTERFACE ICU::i18n ICU::uc ICU::io ICU::data)
-target_link_libraries(unicode INTERFACE icui18n icuuc icuio icudata)
-set(ICU_LIBRARIES icui18n icuuc icuio icudata)
+target_link_libraries(unicode INTERFACE ICU::i18n ICU::uc ICU::io ICU::data)
 
 message("-- ICU version: ${ICU_VERSION}")
 message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
