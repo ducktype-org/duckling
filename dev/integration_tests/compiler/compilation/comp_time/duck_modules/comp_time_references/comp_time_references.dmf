@@ -1,0 +1,28 @@
+fun foo(condition: i64) -> i64 = {
+    var a: i64 = 123;
+    var ref_a = &a;
+    
+    if (condition) {
+        ref_a = ref_a + 1;
+    } 
+    # else {
+    #     ref_a = ref_a + 2;
+    # }
+    return ref_a;
+}
+
+# fun getType(cond: bool) -> type = {
+#     if (cond) {
+#         return i64; 
+#     } else {
+#         return i32; 
+#     }
+# }
+
+fun main() -> i64 = {
+    # const A: getType(true) = foo(123);
+    const A: i64 = foo(123);
+    builtin_output_i64(A);
+    return 0;
+}
+

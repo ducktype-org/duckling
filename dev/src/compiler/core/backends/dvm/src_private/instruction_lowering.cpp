@@ -193,6 +193,9 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
 		}
 	}
+	const auto maybe_output_type = lir_instruction.output.map([&](const auto& place) {
+		return program_context.lowerAndKeepTslType(place.layout);
+	});
 
 	if (lir_instruction.operation == lir::Operation::AddressOf) {
 		// TODOP: This should probably be a DVMOperation
@@ -207,9 +210,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		);
 
 		pushInstruction({ OpKind::ref, addr_temp.asArgument(), value.asAnyArgument() });
-		storeResult(
-			output, { addr_temp, DVMPlace::AccessKind::Direct }, lir_instruction.output->layout
-		);
+		storeResult(output, { addr_temp, DVMPlace::AccessKind::Direct }, maybe_output_type.value());
 		return;
 	}
 
@@ -229,7 +230,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			return;
 		}
 		variant_case(CastOperation, operation) {
-			CastOperationLowerer::lowerCastOperation(operation, args, maybe_output, *this);
+			CastOperationLowerer::lowerCastOperation(operation, args, maybe_output.value(), *this);
 			return;
 		}
 		variant_case_novalue(NoOpOperation) { return; }
@@ -269,7 +270,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			pushInstruction({ OpKind::cmov, tmp_res.asArgument(), DVMValue(1).asArgument() });
 			result_val = { tmp_res, DVMPlace::AccessKind::Direct };
 		}
-		storeResult(output, result_val, lir_instruction.output->layout);
+		storeResult(output, result_val, maybe_output_type.value());
 	} else if (operation == OpKind::call) {
 		auto called_function = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 		args.pop_front();
@@ -286,7 +287,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 
 		if (output.isDirect()) {
 			// If output is a direct place we just use it.
-			storeResult(output, args[0], lir_instruction.output->layout);
+			storeResult(output, args[0], maybe_output_type.value());
 			pushInstruction({ operation, output.asArgument() });
 		} else {
 			// Otherwise we perform the operations on the
@@ -308,7 +309,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			// we transform it to:
 			// a = b;
 			// a = a OP c;
-			storeResult(output, args[0], lir_instruction.output->layout);
+			storeResult(output, args[0], maybe_output_type.value());
 			pushInstruction({ operation, output.asArgument(), args[1].asArgument() });
 		} else {
 			auto type = program_context.lowerAndKeepTslType(lir_instruction.output->layout);
@@ -320,7 +321,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 		return;
 	} else {
-		storeResult(maybe_output.value(), args[0], lir_instruction.output->layout);
+		storeResult(maybe_output.value(), args[0], maybe_output_type.value());
 	}
 }
 

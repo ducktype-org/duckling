@@ -22,14 +22,14 @@ namespace compiler::backend_vm::internal {
 		 *
 		 * @param cast_operation The cast operation to lower.
 		 * @param args The arguments of the cast operation.
-		 * @param maybe_output The optional output place to store the result.
+		 * @param output The optional output place to store the result.
 		 * @param function_context The function lowering context to use.I
 		 */
 		static void lowerCastOperation(
-			const CastOperation&            cast_operation,
-			std::deque<DVMValue>&           args,
-			const base::Optional<DVMPlace>& maybe_output,
-			FunctionLoweringContext&        program_context
+			const CastOperation&     cast_operation,
+			std::deque<DVMValue>&    args,
+			const DVMPlace&          output,
+			FunctionLoweringContext& program_context
 		);
 	};
 }

@@ -7,6 +7,7 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "vm/bytecode/serializer/serializer.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
@@ -229,6 +230,11 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
+
+
+	std::cout << "======= Produced bytecode =======\n";
+	vm::code::serializeCode(collection, std::cout);
+	std::cout << "\n=============================\n";
 
 	try {
 		auto valid = vm::code::ValidProgram::withBuiltins();

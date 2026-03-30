@@ -80,33 +80,6 @@ namespace {
 	}
 }
 
-// TODOP: Potentially move type of data into DVMValue.
-void FunctionLoweringContext::storeResult(
-	const DVMPlace& dest_place, const DVMValue& src_value, CRef<tsl::TypeLayout> layout
-) {
-	// If a place is direct we just move the value into it.
-	if (dest_place.isDirect()) {
-		pushInstruction(
-			{ vm::code::builders::OpKind::mov, dest_place.asArgument(), src_value.asArgument() }
-		);
-	} else {  //  Otherwise, we store the result in the memory pointed by the pointer.
-		// If the src_value is immediate we have to store it in a temp first, as store requires a
-		// place as source.
-		DVMValue safe_src = src_value;
-		if (src_value.is<DVMImmediate>()) {
-			auto type = program_context.lowerAndKeepTslType(layout);
-			auto tmp  = pushTempLocal(type, "store_tmp");
-			pushInstruction(
-				{ vm::code::builders::OpKind::mov, tmp.asArgument(), src_value.asArgument() }
-			);
-			safe_src = { tmp, DVMPlace::AccessKind::Direct };
-		}
-		pushInstruction(
-			{ vm::code::builders::OpKind::store, dest_place.asArgument(), safe_src.asAnyArgument() }
-		);
-	}
-}
-
 void FunctionLoweringContext::storeResult(
 	const DVMPlace& dest_place, const DVMValue& src_value, const vm::code::TypeOfData& type
 ) {

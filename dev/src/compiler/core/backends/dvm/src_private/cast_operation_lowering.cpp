@@ -87,15 +87,13 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void CastOperationLowerer::lowerCastOperation(
-		const CastOperation&  cast_operation,
-		std::deque<DVMValue>& args,
-		const base::Optional<DVMPlace>&
-			maybe_output,  // TODOP: This is strange, it should not taken an opt.
+		const CastOperation&     cast_operation,
+		std::deque<DVMValue>&    args,
+		const DVMPlace&          output,
 		FunctionLoweringContext& function_context
 	) {
 		// Operation in form a = OP b (like mov)
 		CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
-		CORE_ASSERT(maybe_output.has_value(), "Cast operations must have an output destination");
 		auto operation = getOpKindFromLIRLayouts(cast_operation.cast_params);
 
 		// The cast operations are only supported between local stack values.
@@ -126,7 +124,7 @@ namespace compiler::backend_vm::internal {
 		function_context.pushInstruction({ operation, dst_temp.asArgument(), src_arg });
 
 		function_context.storeResult(
-			*maybe_output, { dst_temp, DVMPlace::AccessKind::Direct }, target_type
+			output, { dst_temp, DVMPlace::AccessKind::Direct }, target_type
 		);
 
 		function_context.pushInstruction({ vm::code::instructions::Op_deinit() });

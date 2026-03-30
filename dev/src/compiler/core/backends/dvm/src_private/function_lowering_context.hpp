@@ -101,11 +101,8 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Stores a given @p src_value in @p dest_place. Depending on the place type,
 		 * performs a `mov_X_X` or a `store_X_X`.
-		 * TODOP: Remove one of those.
+		 * TODOP: Write why type is needed. Maybe it should be a part od DVMValue.
 		 */
-		void storeResult(
-			const DVMPlace& dest_place, const DVMValue& src_value, CRef<tsl::TypeLayout> layout
-		);
 		void storeResult(
 			const DVMPlace& dest_place, const DVMValue& src_value, const vm::code::TypeOfData& type
 		);
