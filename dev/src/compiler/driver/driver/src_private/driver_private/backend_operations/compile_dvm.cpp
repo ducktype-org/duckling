@@ -19,11 +19,7 @@ namespace compiler::driver {
 		for (const auto& global: data->globals)
 			module.insertLirGlobal(global.lir_global, global.global_ctor, global.global_dtor);
 
-		for (const auto& lir_function: data->functions) {
-			lir_function->debugPrint(query_ctx, std::cout);
-			std::cout << '\n';
-			module.insertLirFunction(lir_function);
-		}
+		for (const auto& lir_function: data->functions) module.insertLirFunction(lir_function);
 
 		auto code_collection = module.build();
 

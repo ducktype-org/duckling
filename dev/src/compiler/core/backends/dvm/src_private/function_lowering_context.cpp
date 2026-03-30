@@ -139,11 +139,10 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 	// place.
 	for (usize i{ 0 }; i < place.projection_chain.size(); i++) {
 		const auto& projection = place.projection_chain[i];
-		// Skip the last projection to not perform an unnecessary load if the last projection is a
+		// Skip the last projection to not perform an unnecessary load on the last projection is a
 		// dereference. DVMPlace now stores a pointer to the final place after all projections have
 		// been applied.
-		if (i == place.projection_chain.size() - 1
-		    && std::holds_alternative<lir::LIRPlace::DerefProjection>(projection.storage)) {
+		if (i == place.projection_chain.size() - 1) {
 			current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
 			break;
 		}

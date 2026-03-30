@@ -145,25 +145,6 @@ namespace {
 	}
 }
 
-namespace compiler::backend_vm::internal {
-	/**
-	 * @brief RAII helper used to deinitialize all temporaries initialized by creation of the
-	 * current instruction.
-	 */
-	struct TemporaryDeinitGuard {
-		FunctionLoweringContext& ctx;
-
-		explicit TemporaryDeinitGuard(FunctionLoweringContext& ctx): ctx(ctx) {}
-
-		TemporaryDeinitGuard(const TemporaryDeinitGuard&)            = delete;
-		TemporaryDeinitGuard& operator=(const TemporaryDeinitGuard&) = delete;
-
-		~TemporaryDeinitGuard() { ctx.cleanupInstructionTemps(); }
-	};
-
-	// TODOP: Defer???
-}
-
 void FunctionLoweringContext::handleCall(
 	const FunctionCallInfo&     call_info,
 	const std::deque<DVMValue>& func_args,
@@ -203,7 +184,8 @@ void FunctionLoweringContext::handleCall(
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
-	TemporaryDeinitGuard guard{ *this };
+	// Schedule cleaning of all temporaries created by `pushTempLocal` while lowering this instruction.
+	defer(cleanupInstructionTemps());
 
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_instruction.metadata.position, pos) {

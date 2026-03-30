@@ -14,7 +14,6 @@ fun doSomethingWithAType(typ: ref type) -> () = {
     typ = i64;
 }
 
-
 fun getType() -> type = {
     var a: type = i32;
     var reference_to_type_omg = &a;

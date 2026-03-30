@@ -19,7 +19,6 @@ namespace compiler::backend_vm::internal {
 
 	class FunctionLoweringContext {
 	public:
-		friend struct TemporaryDeinitGuard;
 		friend class MetaOperationLowerer;
 		friend class CastOperationLowerer;
 
@@ -125,10 +124,23 @@ namespace compiler::backend_vm::internal {
 			base::Optional<DVMPlace>    output
 		);
 
-		usize    next_temp_id = 0;
+		usize next_temp_id = 0;
+		/**
+		 * @brief Pushes a temporary local and saves it in the `current_temp_count`.
+		 * This temporary local will be automatically deinitialized after `pushInstruction` is
+		 * executed.
+		 */
 		DVMLocal pushTempLocal(
 			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
 		);
+
+		/**
+		 * @brief Pushes a temporary local and DOESN'T save it in the `current_temp_count`.
+		 * Used in special cases when we don't want the temporaries to be automatically
+		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
+		 *
+		 * @note UseOnlyWhenYouKnowWhatYouAreDoing
+		 */
 		DVMLocal pushTempLocalUntracked(
 			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
 		);
