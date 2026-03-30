@@ -1,7 +1,7 @@
 # Duckling Language Server
 
 The language support for Duckling programming language.
-
+It is the official extension provided by the Duckling team.
 
 ## Configuration
 
