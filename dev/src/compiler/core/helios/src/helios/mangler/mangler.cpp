@@ -47,6 +47,7 @@ namespace compiler::helios::mangler {
 
 		addToHash(h, k.kind);
 		addToHash(h, k.mangling_scheme_version);
+		addToHash(h, k.additional_metadata.has_value());
 		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
 	}
 
