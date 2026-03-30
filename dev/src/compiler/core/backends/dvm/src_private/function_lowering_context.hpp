@@ -159,7 +159,7 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief Number of temporaries created by the currently lowered instruction.
-		 * Should be cleared after each call of `pushInstruction`.
+		 * Gets cleared by `cleanupInstructionTemps()` after each call of `pushInstruction`.
 		 */
 		usize current_temp_count{ 0 };
 

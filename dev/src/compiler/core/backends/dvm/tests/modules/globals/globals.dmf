@@ -2,6 +2,7 @@ var g_a: i32 = 10;
 var g_b: i32 = 20;
 var g_c: i64 = 300;
 var g_f: f64 = 3.14;
+var g_bool: bool = false;
 
 fun modifyGlobal(r: ref i32, newValue: i32) -> () = {
     r = newValue;
@@ -46,6 +47,16 @@ fun testGlobals() -> () = {
     var r_local = &local_val;
     r_ga = r_local;
     builtin_output_i64(g_a);      		# 777
+    
+    g_bool = g_a > g_b;
+    builtin_output_i64(g_bool);      	# 1
+    
+    var r_gb = &g_b;
+    var r_gbool = &g_bool; 
+    r_gbool = r_ga < r_gb;
+    builtin_output_i64(r_gbool);      	# 0
+
+
 }
 
 fun main() -> i64 = {

@@ -92,22 +92,20 @@ void FunctionLoweringContext::storeResult(
 	// Otherwise, we store the result in the memory pointed by the pointer.
 	// If the src_value is immediate we have to store it in a temp first, as store requires a
 	// place as source.
-	base::Optional<DVMLocal> temp_local;
-	DVMValue                 src_arg = [&]() -> DVMValue {
-        if (src_value.is<DVMImmediate>()) {
-            temp_local = pushTempLocal(type, "store_tmp");
-            pushInstruction({ vm::code::builders::OpKind::mov,
-                              temp_local->asArgument(),
-                              src_value.asArgument() });
-
-            return { temp_local.value(), DVMPlace::AccessKind::Direct };
-        } else {
-            CORE_ASSERT(
-                !(src_value.is<DVMPlace>() && !src_value.get<DVMPlace>().isDirect()),
-                "Indirect DVMValue in storeResult"
-            );
-            return src_value;
-        }
+	DVMValue src_arg = [&]() -> DVMValue {
+		if (src_value.is<DVMImmediate>()) {
+			DVMLocal temp_local = pushTempLocal(type, "store_tmp");
+			pushInstruction(
+				{ vm::code::builders::OpKind::mov, temp_local.asArgument(), src_value.asArgument() }
+			);
+			return { temp_local, DVMPlace::AccessKind::Direct };
+		} else {
+			CORE_ASSERT(
+				!(src_value.is<DVMPlace>() && !src_value.get<DVMPlace>().isDirect()),
+				"Indirect DVMValue in storeResult"
+			);
+			return src_value;
+		}
 	}();
 
 	// Store the value in memory.
