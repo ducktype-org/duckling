@@ -58,9 +58,9 @@ jobs:
     # 1. Run on push or workflow_dispatch events (these are not related to PRs).
     # 2. Run on pull_request events only if the PR is not a draft, and either
     #    it is not a labeling event or it is a labeling event but the label is
-    #    "Override Coverage Check" (this allows to re-run the workflow on PRs
-    #    that were just labeled with "Override Coverage Check", which is useful for
-    #    re-running the workflow that need to bypass the coverage check).
+    #    "Override Coverage Check"/"Run All Workflows". This allows to re-run the workflow on PRs
+    #    that were just labeled with the above labels, which is useful for
+    #    re-running the workflow.
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch'
