@@ -111,7 +111,7 @@ namespace compiler::frontend {
 
 			parsed_pst.setAdditionalRootData(pst::AdditionalRootData{
 				.optional_macro_expansion_source = {},
-				.module_id = this->linked_module
+				.module_id = compiler::frontend::ModuleID{this->linked_module}
 			});
 
 			parse_tree.emplace(std::move(parsed_pst));

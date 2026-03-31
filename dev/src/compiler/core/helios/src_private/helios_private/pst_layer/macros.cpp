@@ -20,11 +20,18 @@ namespace compiler::helios {
 			auto value_holder = expand->getValue().unlock(ctx);
 			auto value = value_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 			if (value.has_value()) {
-				return pst::PST<pst::Stmt>::fromExpand(
+				auto pst = pst::PST<pst::Stmt>::fromExpand(
 					expand->getSourcePosition(),
 					value.value()->getValue().str(),
 					makeBox<pst::LangParserContext>(expand->getContext())
 				);
+
+				pst.setAdditionalRootData(pst::AdditionalRootData{
+					.optional_macro_expansion_source = expand,
+					.module_id = {}
+				});
+
+				return pst;
 			} else
 				CORE_PANIC("Expand argument is not exactly a single string.");
 		}

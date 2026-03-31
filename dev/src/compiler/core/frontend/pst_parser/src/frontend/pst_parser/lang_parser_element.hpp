@@ -239,6 +239,7 @@ namespace pst {
 		template<typename X>
 		friend class PSTAutomatic;
 
+		[[nodiscard]]
 		const AdditionalRootData& getAdditionalRootData() const {
 			CORE_ASSERT(additional_root_data.has_value(), "Element has no additional root data");
 			return additional_root_data.value();
