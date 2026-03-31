@@ -6,8 +6,8 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 namespace compiler::helios::code {

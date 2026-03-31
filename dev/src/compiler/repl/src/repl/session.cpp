@@ -188,7 +188,9 @@ namespace compiler::repl {
 			defer(m_lowering_context->invalidateContext());
 
 			try {
-				CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+				std::stringstream ss;
+				hout_unit.debugPrint(ctx, ss);
+				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
 
 				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
 				auto eval_module_id = getCurrentModuleID();
@@ -288,7 +290,9 @@ namespace compiler::repl {
 			defer(m_lowering_context->invalidateContext());
 
 			try {
-				CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+				std::stringstream ss;
+				hout_unit.debugPrint(ctx, ss);
+				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
 
 				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
 				auto eval_module_id = getCurrentModuleID();
@@ -354,7 +358,9 @@ namespace compiler::repl {
 				// statement.
 				auto stmt_kind = stmt.unlock(ctx)->getElementKind();
 				CORE_DEV_LOG(REPL, "Definition statement kind: ", static_cast<u32>(stmt_kind), "\n");
-				CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
+				std::stringstream ss;
+				hout_unit.debugPrint(ctx, ss);
+				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
 
 				auto module_name = getStatementModuleName(module_id);
 				auto load_result = compileAndLoad(
