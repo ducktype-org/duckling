@@ -19,6 +19,7 @@
 #include <helios_private/pst_layer/pst_walkers.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/pst_layer/for_all.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -321,45 +322,7 @@ namespace compiler::helios {
 			bool                 failed = false;
 		};
 
-		/**
-		 * @brief Gets scopes in a module.
-		 */
-		struct ScopeGrabPseudoVisitor final {
-			ScopeGrabPseudoVisitor(Ref<Output> out, Context& ctx): out(out), ctx(ctx) {}
-
-			Ref<Output> out;
-			Context&    ctx;
-
-			template<class T>
-			ScopeID scopeOf(pst::Access<T> element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>(element);
-			}
-
-			// @todo
-			// handling lambdas, expand statements, templates, etc. might be much more tricky and
-			// require a different approach
-			template<class T>
-			void visit(pst::Access<T> element) {
-				// @todo
-				// some elements don't have a well defined scope yet leading to a panic
-				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->scopes.emplace_back(scopeOf(element));
-
-				for (auto child: element->viewChildren()) {
-					auto child_unlocked = child.unlockOpt(ctx);
-
-					// Note: we might use out->failed here, when implementing
-					// custom logic for most common PST elements (it might improve performance)
-					CORE_ASSERT(
-						child_unlocked.has_value(),
-						"View children should only contain valid element (no null ptrs)"
-					);
-
-					this->visit(child_unlocked.value());
-				}
-			}
-		};
-
+		
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
 			auto root          = getFilePST(ctx, file)->getRootElement();
 			auto root_unlocked = root.unlockOpt(ctx);
@@ -369,8 +332,18 @@ namespace compiler::helios {
 				return;
 			}
 
-			ScopeGrabPseudoVisitor scope_grab(out, ctx);
-			scope_grab.visit(root_unlocked.value());
+			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
+				// handling lambdas, templates, etc. might be much more tricky and
+				// require a different approach
+				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
+					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
+			};
+
+			// ScopeGrabPseudoVisitor scope_grab(out, ctx);
+			// scope_grab.visit(root_unlocked.value());
+
+			pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
