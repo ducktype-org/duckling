@@ -13,6 +13,7 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/misc/anycast.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <lexer/token.hpp>
@@ -39,9 +40,9 @@ namespace pst {
 	// TODO: PR: this is not pretty, but still strictly better then root_element_file_back_map :) 
 	struct AdditionalRootData final {
 		/**
-			* 
-			*/
-		AccessInternalAnonymous<LangElement> optional_macro_expansion_source;
+		 * @brief Optional source for macro expansion.
+		 */
+		base::Optional<AccessLocked<LangElement>> optional_macro_expansion_source;
 
 		// PR: any? maybe we can include it here after all
 		base::Optional<std::any> module_id;
@@ -238,7 +239,7 @@ namespace pst {
 		template<typename X>
 		friend class PSTAutomatic;
 
-		const AdditionalRootData& getAdditionalRootData() {
+		const AdditionalRootData& getAdditionalRootData() const {
 			CORE_ASSERT(additional_root_data.has_value(), "Element has no additional root data");
 			return additional_root_data.value();
 		}

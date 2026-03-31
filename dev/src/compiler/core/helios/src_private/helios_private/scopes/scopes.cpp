@@ -234,10 +234,39 @@ namespace compiler::helios {
 				));
 			}
 
-			ScopeID parent = element->getParent().has_value()
+			ScopeID parent = [&]() {
+				auto maybe_element_parent = element->getParent();
+				if (maybe_element_parent.has_value()) {
+					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());
+				} else {
+					// if there is no parent, we inspect the additional root data:
+
+					const auto& additional_root_data = element->getAdditionalRootData();
+
+					// THIS IS A BIT FRAGILE, REVISIT IT ON SELF REVIEW:
+					
+					if (additional_root_data.optional_macro_expansion_source.has_value()) {
+						return ctx.query<QueryPrimaryCodeScopeFor>(
+							additional_root_data.optional_macro_expansion_source.value()
+						);
+					} else if (additional_root_data.module_id.has_value()) {
+						return ctx.query<QueryRootScopeOf>(
+							base::anyCast<frontend::ModuleID>(additional_root_data.module_id)
+						);
+					} else {
+						CORE_PANIC(
+							"Element has no parent and no additional root data, cannot determine scope parent."
+						);
+					}
+				}
+			}();
+			
+			
+			
+			element->getParent().has_value()
 			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent().value())
 			                   : ctx.query<QueryRootScopeOf>(
-									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
+									 base::anyCast<frontend::ModuleID>(element->getAdditionalRootData().module_id)
 								 );
 
 			// here we essentially return the same scope as the parent
