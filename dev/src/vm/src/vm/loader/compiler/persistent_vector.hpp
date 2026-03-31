@@ -13,6 +13,13 @@
 namespace persistent {
 	STRONG_TYPEDEF_INT(VectoStateID, u64);
 
+	/**
+	Class implementing a STL vector with time-persistency aka control version. You can modify any of
+	the previous instances of the vector, if you know its' `VectoStateID`. `VectoStateID` is
+	returned after each operation `pop`, `push`, `change`.
+	@note: Two instances may receive the same `VectoStateID` - this happens when via modification
+	vector returned to state that it was in previous instance. It allows for == comparison in O(1)
+	*/
 	template<typename VarT, typename VarH = std::hash<VarT>>
 	class Vector {
 		using VarNodeID = u64;
