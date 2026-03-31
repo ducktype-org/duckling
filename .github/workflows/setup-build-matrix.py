@@ -45,6 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Select tests workflow build matrix.")
     parser.add_argument("--event-name", required=True)
     parser.add_argument("--repo")
+    parser.add_argument("--branch", required=True)
     parser.add_argument("--pr-number", type=int)
     parser.add_argument("--github-token")
     return parser.parse_args()
@@ -67,7 +68,9 @@ def main():
     args = parse_args()
 
     matrix = FULL_MATRIX
-    if args.event_name == "pull_request":
+    if args.branch in ["main", "dev"]:
+        matrix = FULL_MATRIX
+    elif args.event_name == "pull_request":
         approved = False
         if args.repo and args.pr_number and args.github_token:
             approved = has_approval(args.repo, args.pr_number, args.github_token)

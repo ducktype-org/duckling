@@ -13,8 +13,6 @@ on:
     branches: [ "main", "dev" ]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
-  pull_request_review:
-    types: [submitted]
   workflow_dispatch:
 
 env:
@@ -46,6 +44,7 @@ jobs:
         run: |
           MATRIX=$(python3 .github/workflows/setup-build-matrix.py \
             --event-name "${{ github.event_name }}" \
+            --branch "${{ env.BRANCH_NAME }}" \
             --repo "${{ github.repository }}" \
             --pr-number "${{ github.event.pull_request.number || 0 }}" \
             --github-token "${{ secrets.QUACKER_PAT }}")
@@ -62,10 +61,6 @@ jobs:
     #    "Override Coverage Check" (this allows to re-run the workflow on PRs
     #    that were just labeled with "Override Coverage Check", which is useful for
     #    re-running the workflow that need to bypass the coverage check).
-    # 3. Run on pull_request_review events only if the PR is not a draft, and
-    #    the review state is "approved" (this allows to run the full matrix on
-    #    PRs that have been approved, which is useful for running the full matrix
-    #    before merging, without relying on the author to trigger it manually with workflow_dispatch).
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch'
@@ -73,13 +68,7 @@ jobs:
       (
         github.event.pull_request.draft == false &&
         github.event_name == 'pull_request' &&
-        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check')
-      )
-      ||
-      (
-        github.event.pull_request.draft == false &&
-        github.event_name == 'pull_request_review' &&
-        github.event.review.state == 'approved'
+        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check' || github.event.label.name == 'Run All Workflows')
       )
 
     strategy:
