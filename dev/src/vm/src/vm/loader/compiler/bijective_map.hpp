@@ -1,0 +1,75 @@
+#pragma once
+
+#include <base/collections/maps.hpp>
+
+#include <functional>
+#include <optional>
+#include <stdexcept>
+
+namespace persistent::detail {
+	template<typename L, typename R, typename HashL = std::hash<L>, typename HashR = std::hash<R>>
+	class BijectiveMap {
+	public:
+		base::Optional<R> atLeftOpt(L left) const {
+			auto it = left_right.find(left);
+			return (it == left_right.end()) ? std::nullopt : it->second;
+		}
+
+		base::Optional<L> atRightOpt(R rght) const {
+			auto it = right_left.find(rght);
+			return (it == right_left.end()) ? std::nullopt : it->second;
+		}
+
+		const R& atLeft(L left) { return left_right.at(left); }
+
+		const L& atRight(R rght) { return right_left.at(rght); }
+
+		size_t size() {
+			CORE_ASSERT(
+				left_right.size() == right_left.size(),
+				"bijection requires that both sets are equally big"
+			);
+			return left_right.size();
+		}
+
+		std::pair<bool, R> emplaceByLeft(L left, R rght) {
+			if (right_left.find(rght) != right_left.end())
+				throw std::invalid_argument("right element is already binded");
+
+			auto itl = left_right.find(left);
+			if (itl != left_right.end()) return { false, itl->second };
+
+			left_right.emplace(left, rght);
+			right_left.emplace(rght, left);
+
+			return { true, rght };
+		}
+
+		std::pair<bool, L> emplaceByRight(L left, R rght) {
+			if (left_right.find(left) != left_right.end())
+				throw std::invalid_argument("left element is already binded");
+
+			auto itr = right_left.find(rght);
+			if (itr != right_left.end()) return { false, itr->second };
+
+			left_right.emplace(left, rght);
+			right_left.emplace(rght, left);
+
+			return { true, left };
+		}
+
+		void clear() {
+			left_right.clear();
+			right_left.clear();
+		}
+
+		bool empty() { return (size() == 0); }
+
+		auto begin() const { return left_right.begin(); }
+		auto end() const { return left_right.end(); }
+
+	private:
+		base::HashMap<L, R, HashL> left_right;
+		base::HashMap<R, L, HashR> right_left;
+	};
+}
