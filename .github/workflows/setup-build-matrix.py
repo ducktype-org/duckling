@@ -63,12 +63,24 @@ def has_approval(repo: str, pr_number: int, github_token: str) -> bool:
         reviews = json.loads(response.read())
     return any(review.get("state") == "APPROVED" for review in reviews)
 
+def has_label(repo: str, pr_number: int, github_token: str, label_name: str) -> bool:
+    req = urllib.request.Request(
+        url=f"https://api.github.com/repos/{repo}/pulls/{pr_number}/labels?per_page=100",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {github_token}",
+        },
+    )
+    with urllib.request.urlopen(req) as response:
+        labels = json.loads(response.read())
+    return any(label.get("name") == label_name for label in labels)
+
 
 def main():
     args = parse_args()
 
     matrix = FULL_MATRIX
-    if args.branch in ["main", "dev"]:
+    if args.branch in ["main", "dev"] or has_label(args.repo, args.pr_number, args.github_token, "Run All Workflows"):
         matrix = FULL_MATRIX
     elif args.event_name == "pull_request":
         approved = False
