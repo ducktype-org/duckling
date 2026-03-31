@@ -5,6 +5,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/str/str_utils.hpp>  // IWYU pragma: export
 
+#include <ostream>
 #include <string_view>
 
 namespace logger {
@@ -75,7 +76,7 @@ namespace logger {
 	/**
 	 * @brief Sets output stream to the file pointed by path.
 	 */
-	void devLogOutputFile(const std::string& path);
+	void setDevLogOutputFile(const std::string& path);
 
 	/**
 	 * @brief Sets output stream to the file logs/log_<timestamp>.txt

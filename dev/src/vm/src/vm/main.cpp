@@ -44,6 +44,7 @@ clah::Clah getVmClah() {
 				logger::enable_dev_logs = true;
 				logger::enableDevCategory(logger::DevLogCategories::DVM);
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
+                logger::setDevLogOutputStreamCurrentDate();
 			}
 		})
 #endif
@@ -64,7 +65,6 @@ clah::Clah getVmClah() {
 	                       .addPositional(clah::FileParser::make("file"))
 	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
 	                       .setHandler([](const clah::ParsingResult& options) {
-                               logger::setDevLogOutputStreamCurrentDate();
 							   vm::Supervisor::get();
 							   auto                     file = options.getPositional<fs::File>(0);
 							   std::vector<std::string> args;

@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -19,8 +20,7 @@ namespace logger {
 		Ref<std::ostream>& getCurrentLoggingStream() {
 			static Ref<std::ostream> current_stream = &std::cout;
 			return current_stream;
-        }
-
+		}
 	}
 
 	bool isCategoryEnabled(DevLogCategories category) {
@@ -30,9 +30,7 @@ namespace logger {
 	}
 
 	namespace internal {
-		void logMessage(std::string_view message) {
-			(*getCurrentLoggingStream()) << message;
-		}
+		void logMessage(std::string_view message) { (*getCurrentLoggingStream()) << message; }
 	}
 
 	void enableDevCategory(DevLogCategories category) {
