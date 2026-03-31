@@ -398,7 +398,18 @@ namespace compiler::helios {
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 		) {
 			// note: this might become more complicated in the future:
-			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent().value());
+
+			auto unlocked = element.unlock(ctx);
+
+			// PR: make it better!
+			if (unlocked->getParent().has_value()) {
+				return ctx.query<QueryPrimaryCodeScopeFor>(unlocked->getParent().value());
+			}
+			else {
+				// we hit an expand!
+				return ctx.query<QueryPrimaryCodeScopeFor>(unlocked->getAdditionalRootData().optional_macro_expansion_source.value());
+			}
+
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

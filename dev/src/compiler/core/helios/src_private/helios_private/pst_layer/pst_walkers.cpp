@@ -4,10 +4,14 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
+
+#include <helios_private/pst_layer/macros.hpp>
 
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_errors.hpp>
+#include <query_framework/context/context.hpp>
 
 namespace compiler::helios {
 
@@ -92,6 +96,17 @@ namespace compiler::helios {
 		for (auto stmt: output) {
 			if (stmt.unlock(ctx)->getElementKind() == pst::ElementKind::Expand) {
 				// PR don't ignore this!
+				// Also add error handling!
+				auto expand_result = ctx.query<QueryMacroExpansion>(stmt.template dynamicCast<pst::Expand>()).valueOrPanic();
+				variant_match(expand_result) {
+					variant_case(pst::AccessLocked<pst::Stmt>, expand_statement) {
+						output_after_macro_expansion.emplace_back(expand_statement);
+					}
+					variant_case(ExpansionError<pst::Stmt>, error) {
+						// PR.. do something with this error?
+						CORE_PANIC("Macro expansion error in getStmtsFromStmtAggregate");
+					}
+				}
 			}
 			else {
 				output_after_macro_expansion.emplace_back(stmt);
