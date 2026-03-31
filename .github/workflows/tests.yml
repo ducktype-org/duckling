@@ -46,20 +46,26 @@ jobs:
             --event-name "${{ github.event_name }}" \
             --repo "${{ github.repository }}" \
             --pr-number "${{ github.event.pull_request.number || 0 }}" \
-            --github-token "${{ github.token }}")
+            --github-token "${{ secrets.QUACKER_PAT }}")
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   build:
     needs: [setup]
     if: >-
       github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.draft == false &&
-       github.event_name == 'pull_request' &&
-       (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check')) ||
-      (github.event.pull_request.draft == false &&
-       github.event_name == 'pull_request_review' &&
-       github.event.review.state == 'approved')
+      github.event_name == 'workflow_dispatch'
+      ||
+      (
+        github.event.pull_request.draft == false &&
+        github.event_name == 'pull_request' &&
+        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check')
+      )
+      ||
+      (
+        github.event.pull_request.draft == false &&
+        github.event_name == 'pull_request_review' &&
+        github.event.review.state == 'approved'
+      )
 
     strategy:
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}

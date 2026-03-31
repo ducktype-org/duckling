@@ -2,9 +2,10 @@
 import argparse
 import json
 import urllib.request
+from typing import Any
 
 
-FULL_MATRIX = {
+FULL_MATRIX: dict[str, list[Any]] = {
     "build-type": ["Dev", "DevOpt"],
     "compiler": [
         {
@@ -25,7 +26,7 @@ FULL_MATRIX = {
     ],
 }
 
-PR_MATRIX = {
+PR_MATRIX: dict[str, list[Any]] = {
     "build-type": ["Dev"],
     "compiler": [
         {
@@ -62,7 +63,7 @@ def has_approval(repo: str, pr_number: int, github_token: str) -> bool:
     return any(review.get("state") == "APPROVED" for review in reviews)
 
 
-def main() -> None:
+def main():
     args = parse_args()
 
     matrix = FULL_MATRIX
@@ -72,7 +73,7 @@ def main() -> None:
             approved = has_approval(args.repo, args.pr_number, args.github_token)
         matrix = FULL_MATRIX if approved else PR_MATRIX
 
-    print(json.dumps(matrix, separators=(",", ":")))
+    print(json.dumps(matrix))
 
 
 if __name__ == "__main__":
