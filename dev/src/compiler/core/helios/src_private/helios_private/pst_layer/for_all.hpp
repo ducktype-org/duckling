@@ -9,6 +9,11 @@ namespace compiler::helios {
      */
     template<typename ElementT, typename FunctionT>
     void pstForAll(query::Context& ctx, pst::Access<ElementT> element, FunctionT function) {
+
+        if (element->getElementKind() == pst::ElementKind::Expand) {
+            // PR...
+            return;
+        }
         
         // Run the function
         function(element); 

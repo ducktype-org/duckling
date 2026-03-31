@@ -59,37 +59,45 @@ namespace compiler::helios {
 
 		auto elem = elem_optional.value();
 
+		StmtList<> output;
+
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
-			StmtList<> out;
-			for (auto&& e: *code_block.value()) out.emplace_back(e);
-			return out;
+			for (auto&& e: *code_block.value()) output.emplace_back(e);
 		}
-		if (auto code_block_or_stmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
-			StmtList<> out;
+		else if (auto code_block_or_stmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
 			auto       code_block_or_stmt_val = code_block_or_stmt.value();
 			if (code_block_or_stmt_val->getType() == pst::CodeBlockOrStmt::Type::CodeBlock)
 				for (auto&& e: *code_block_or_stmt_val->getCodeBlock().unlock(ctx))
-					out.emplace_back(e);
+					output.emplace_back(e);
 			else
-				out.emplace_back(code_block_or_stmt_val->getStmt());
-			return out;
+				output.emplace_back(code_block_or_stmt_val->getStmt());
 		}
-		if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {
-			StmtList<> out;
-			for (auto e: top_level.value()->getStatements()) out.emplace_back(e);
-			return out;
+		else if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {
+			for (auto e: top_level.value()->getStatements()) output.emplace_back(e);
 		}
-		if (elem.dynamicCast<pst::ClassBlock>()) {
+		else if (elem.dynamicCast<pst::ClassBlock>()) {
 			auto       elements = internal::getChildStmtsOfClassBlock(ctx, elem);
-			StmtList<> out;
-			for (auto e: elements) out.emplace_back(e);
-			return out;
+			for (auto e: elements) output.emplace_back(e);
+		}
+		else {
+			const auto& element = *elem;
+			CORE_PANIC(base::strConcat(
+				"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
+			));
 		}
 
-		const auto& element = *elem;
-		CORE_PANIC(base::strConcat(
-			"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
-		));
+		// PR: expands:
+		StmtList<> output_after_macro_expansion;
+		for (auto stmt: output) {
+			if (stmt.unlock(ctx)->getElementKind() == pst::ElementKind::Expand) {
+				// PR don't ignore this!
+			}
+			else {
+				output_after_macro_expansion.emplace_back(stmt);
+			}
+		}
+
+		return output_after_macro_expansion;
 	}
 }
