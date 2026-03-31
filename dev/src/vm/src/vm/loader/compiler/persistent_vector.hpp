@@ -24,27 +24,27 @@ namespace persistent {
 	class Vector {
 		using VarNodeID = u64;
 
-		struct VarNode {
+		struct NodeChildren {
 			VarNodeID left;
 			VarNodeID rght;
 		};
 
-		using VarNodeH = decltype([](const VarNode& h) -> usize {
+		using VarNodeH = decltype([](const NodeChildren& h) -> usize {
 			return (std::hash<VarNodeID>{}(h.left) << 1) ^ std::hash<VarNodeID>{}(h.rght);
 		});
 
-		struct LeafVar {
+		struct LeafEntry {
 			usize idx;
 			VarT  var;
-			bool  operator==(const LeafVar&) const = default;
+			bool  operator==(const LeafEntry&) const = default;
 		};
 
-		using LeafVarH = decltype([](const LeafVar& h) -> usize {
+		using LeafEntryH = decltype([](const LeafEntry& h) -> usize {
 			return (std::hash<usize>{}(h.idx) << 1) ^ VarH {}(h.var);
 		});
 
-		detail::BijectiveMap<VarNode, VarNodeID, VarNodeH> var_entries{};
-		detail::BijectiveMap<LeafVar, VarNodeID, LeafVarH> leaf_values{};
+		detail::BijectiveMap<NodeChildren, VarNodeID, VarNodeH> var_entries{};
+		detail::BijectiveMap<LeafEntry, VarNodeID, LeafEntryH>  leaf_values{};
 
 		struct RootEntry {
 			usize height;
@@ -82,23 +82,23 @@ namespace persistent {
 			return ans;
 		}
 
-		VarNodeID varNodeFromChildren(VarNodeID left_child, VarNodeID rght_child) {
-			auto children       = VarNode{ .left = left_child, .rght = rght_child };
+		VarNodeID nodeFromChildren(VarNodeID left_child, VarNodeID rght_child) {
+			auto children       = NodeChildren{ .left = left_child, .rght = rght_child };
 			auto [is_new, node] = var_entries.emplaceByLeft(children, next_node_id);
 			next_node_id += (is_new ? 0 : 1);
 
 			return node;
 		}
 
-		VarNodeID varNodeFromIdxCons(usize idx, VarT var) {
-			auto leaf           = LeafVar{ .idx = idx, .var = std::move(var) };
+		VarNodeID nodeFromIdxVar(usize idx, VarT var) {
+			auto leaf           = LeafEntry{ .idx = idx, .var = std::move(var) };
 			auto [is_new, node] = leaf_values.emplaceByLeft(leaf, next_node_id);
 			next_node_id += (is_new ? 0 : 1);
 
 			return node;
 		}
 
-		VarNodeID getSon(VarNodeID node_id, Dir dir) const {
+		VarNodeID getChild(VarNodeID node_id, Dir dir) const {
 			auto& entry = var_entries.atLeft(node_id);
 			return (dir == L) ? entry.left : entry.rght;
 		}
@@ -112,7 +112,7 @@ namespace persistent {
 			auto prev_size = root_info[prev_var_root].size;
 			auto height    = root_info[prev_var_root].height;
 
-			auto var_node = varNodeFromIdxCons(prev_size + 1, std::move(var));
+			auto var_node = nodeFromIdxVar(prev_size + 1, std::move(var));
 
 			auto prev_path = getNodePath(prev_var_root, prev_size);
 			bool merged    = false;
@@ -127,16 +127,16 @@ namespace persistent {
 					rght = 0;  // equiv to entry.right
 				} else {
 					// when merged and (dir == R) or !merged and (dir == L)
-					left   = getSon(node_id, L);
+					left   = getChild(node_id, L);
 					rght   = var_node;
 					merged = true;
 				}
 
-				var_node = varNodeFromChildren(left, rght);
+				var_node = nodeFromChildren(left, rght);
 			}
 
 			if (!merged) {
-				var_node = varNodeFromChildren(prev_var_root, var_node);
+				var_node = nodeFromChildren(prev_var_root, var_node);
 				height++;
 			}
 
@@ -157,7 +157,7 @@ namespace persistent {
 				throw std::invalid_argument("received index out of range for given state");
 
 			auto prev_path = getNodePath(prev_var_root, idx);
-			auto var_node  = varNodeFromIdxCons(idx, std::move(var));
+			auto var_node  = nodeFromIdxVar(idx, std::move(var));
 
 			using namespace std::views;
 			for (auto [dir, node_id]: prev_path | reverse) {
@@ -165,13 +165,13 @@ namespace persistent {
 
 				if (dir == L) {
 					left = var_node;
-					rght = getSon(node_id, R);
+					rght = getChild(node_id, R);
 				} else {
-					left = getSon(node_id, L);
+					left = getChild(node_id, L);
 					rght = var_node;
 				}
 
-				var_node = varNodeFromChildren(left, rght);
+				var_node = nodeFromChildren(left, rght);
 			}
 
 			root_info.put(var_node, RootEntry{ .height = height, .size = size });
@@ -202,29 +202,29 @@ namespace persistent {
 			}
 
 			if (common.size() == 0) {
-				auto new_root = getSon(prev_var_root, L);
+				auto new_root = getChild(prev_var_root, L);
 				root_info.put(new_root, RootEntry{ .height = height - 1, .size = size - 1 });
 
 				return new_root;
 			}
 
 			auto [last_dir, node_id] = common.back();
-			VarNodeID lca            = getSon(node_id, last_dir);
+			VarNodeID lca            = getChild(node_id, last_dir);
 
-			auto var_node = varNodeFromChildren(getSon(lca, L), 0);
+			auto var_node = nodeFromChildren(getChild(lca, L), 0);
 
 			for (auto [dir, node_id]: common | reverse) {
 				VarNodeID left = 0, rght = 0;
 
 				if (dir == L) {
 					left = var_node;
-					rght = getSon(node_id, R);
+					rght = getChild(node_id, R);
 				} else {
-					left = getSon(node_id, L);
+					left = getChild(node_id, L);
 					rght = var_node;
 				}
 
-				var_node = varNodeFromChildren(left, rght);
+				var_node = nodeFromChildren(left, rght);
 			}
 
 			root_info.put(var_node, RootEntry{ .height = height, .size = size - 1 });
