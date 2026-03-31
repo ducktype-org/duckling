@@ -102,9 +102,9 @@ namespace compiler::helios {
 			// Builtin functions are implemented in C/C++ and use the C ABI.
 			variant_match(sym_ref->other) {
 				variant_case_novalue(builtin::BuiltinFunctionData) { return CAbi{}; }
-				variant_case(houtgen::GeneratedSymbolData, gen_data) {
+				variant_case(defgen::GeneratedSymbolData, gen_data) {
 					variant_match(gen_data.data) {
-						variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 							return CAbi{};
 						}
 					}

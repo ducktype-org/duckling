@@ -530,48 +530,47 @@ namespace compiler::helios {
 							tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 						);
 
-					std::array function_data = {
-						std::make_pair(
-							base::StrID("builtin_input_char"),
-							ctx.query<tsh::QueryFunctionType>({ {}, char_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_char"),
-							ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_input_i64"),
-							ctx.query<tsh::QueryFunctionType>({ {}, i64_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_i64"),
-							ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_input_u64"),
-							ctx.query<tsh::QueryFunctionType>({ {}, u64_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_u64"),
-							ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_input_f64"),
-							ctx.query<tsh::QueryFunctionType>({ {}, f64_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_f64"),
-							ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_input_string"),
-							ctx.query<tsh::QueryFunctionType>({ {}, str_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_string"),
-							ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
-						)
-					};
+					std::array function_data
+						= { std::make_pair(
+								base::StrID("builtin_input_char"),
+								ctx.query<tsh::QueryFunctionType>({ {}, char_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_char"),
+								ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_input_i64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, i64_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_i64"),
+								ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_input_u64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, u64_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_u64"),
+								ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_input_f64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, f64_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_f64"),
+								ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_input_string"),
+								ctx.query<tsh::QueryFunctionType>({ {}, str_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_string"),
+								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
+							) };
 
 					for (auto& [name, type]: function_data) {
 						auto sym_data

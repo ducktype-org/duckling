@@ -164,19 +164,19 @@ namespace compiler::helios::code {
 										  const base::StrID                     builtin_name
 									  ) -> void {
 				auto gen_data
-					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::BuiltinOperator{
+					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
 						ctx.query<tsh::QueryFunctionType>({
 							param_types,
 							return_type,
 						}),
 					} };
 				auto builtin = RegularBinaryBuiltin{
-					.symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name                  = name,
 						.generated_symbol_data = gen_data,
 					}),
 					.op
-					= RegularBinaryBuiltin::FunctionCall{ ctx.query<houtgen::QueryGeneratedSymbol>(
+					= RegularBinaryBuiltin::FunctionCall{ ctx.query<defgen::QueryGeneratedSymbol>(
 						{ .name = builtin_name, .generated_symbol_data = gen_data }
 					) },
 				};

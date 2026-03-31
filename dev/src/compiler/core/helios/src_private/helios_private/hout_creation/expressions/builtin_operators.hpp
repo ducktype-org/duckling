@@ -54,7 +54,7 @@ namespace compiler::helios::code {
 	 * @brief Get all builtin binary operators which are *not* numeric operators
 	 * for the purpose of lookup and overload resolution. This is a query for idiomatic parallelism.
 	 * @note: The symbols' implementation in
-	 * compiler::helios::houtgen::generateBuiltinOperatorExpression must be kept up-to-date with
+	 * compiler::helios::defgen::generateBuiltinOperatorExpression must be kept up-to-date with
 	 * this list.
 	 */
 	DECLARE_QUERY(

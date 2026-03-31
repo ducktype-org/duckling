@@ -80,6 +80,7 @@ public:
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testBuiltinFunctions);
@@ -1767,6 +1768,56 @@ private:
 				          .valueOrThrow();
 				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
+		}
+	}
+
+	void testStrings() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/strings")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function   = hout.functions.at(0);
+		auto& statements = function->body->statements;
+		using namespace compiler::helios::code;
+
+		{
+			// let ab = 'a' +: b;
+			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
+			const auto  prepended_expr
+				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.value().get());
+			const auto prepended_callee
+				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(prepended_callee->symbol),
+				base::StrID("builtin_string_prepended"),
+				"The prepended expression should call builtin_string_prepended"
+			);
+		}
+
+		{
+			// let bcd = b :+ 'c' :+ 'd';
+			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
+			const auto  appended_expr
+				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.value().get());
+			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(appended_callee->symbol),
+				base::StrID("builtin_string_appended"),
+				"The appended expression should call builtin_string_appended"
+			);
+		}
+
+		{
+			// let helloWorld = hello ++ world;
+			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
+			const auto  concatenated_expr
+				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.value().get());
+			const auto concatenated_callee
+				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(concatenated_callee->symbol),
+				base::StrID("builtin_string_concatenated"),
+				"The prepended expression should call builtin_string_concatenated"
+			);
 		}
 	}
 
