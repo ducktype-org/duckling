@@ -10,6 +10,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <token_source/source.hpp>
+#include <any>
 
 namespace pst {
 	// Used to not include full state definition
@@ -64,14 +65,52 @@ namespace pst {
 		using PSTContext = std::variant<PSTType, Box<LangParserContext>>;
 
 	private:
-		/** Token source backing this PST (tokenized file or virtual input). */
+		// TODO: PR: this is not pretty, but still strictly better then root_element_file_back_map :) 
+		struct AdditionalData final {
+			/**
+			 * 
+			 */
+			AccessInternalAnonymous<LangElement> optional_macro_expansion_source;
+
+			// PR: any? maybe we can include it here after all
+			base::Optional<std::any> module_id;
+		};
+
+		/****************\
+		|    PST DATA    |
+		\****************/
+		
+		/** 
+		 * Token source backing this PST (tokenized file or virtual input).
+		 */
 		Box<tokenizer::TokenSource> file;
-		/** Root element access wrapper for the parsed element tree. */
+		
+		/**
+		 * Root element access wrapper for the parsed element tree.
+		 */
 		AccessInternalAnonymous<Element> element;
-		/** Import entries collected during parsing. */
+		
+		/** 
+		 * Import entries collected during parsing.
+		 */
 		std::vector<ImportType> imports;
-		/** Contextual component path/hash of this PST for hierarchical naming. */
+		
+		/**
+		 * Contextual component path/hash of this PST for hierarchical naming.
+		 */
 		hashing::ComponentHash hash_ctx_info;
+
+		/**
+		 * Additional data, that can be used for storing some extra information related to the PST,
+		 * in a way that does not require to include half ot the other compiler (PR TODO)
+		 * We only set it when PST is created in the full compilation context
+		 */
+		base::Optional<AdditionalData> additional_data;
+		
+
+		/***********************\
+		|    PRIVATE METHODS    |
+		\***********************/
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
@@ -183,6 +222,11 @@ namespace pst {
 		}
 
 	public:
+		
+		/**********************\
+		|    PUBLIC METHODS    |
+		\**********************/
+
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
@@ -281,6 +325,11 @@ namespace pst {
 			  element(std::move(other.element)),
 			  imports(std::move(other.imports)),
 			  hash_ctx_info(std::move(other.hash_ctx_info)) {}
+
+		void setAdditionalData(AdditionalData data) {
+			CORE_ASSERT(!additional_data.has_value(), "Additional data already set");
+			this->additional_data = std::move(data);
+		}
 
 		void dprint(std::ostream& out) const { nullAwareDprint(element, out); }
 	};

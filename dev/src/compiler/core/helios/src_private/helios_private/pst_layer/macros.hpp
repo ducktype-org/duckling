@@ -5,7 +5,7 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
-namespace helios {
+namespace compiler::helios {
 
 	template<typename Element>
 	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia_int::Logger>>;

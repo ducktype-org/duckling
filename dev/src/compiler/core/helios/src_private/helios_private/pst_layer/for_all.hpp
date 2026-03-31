@@ -1,4 +1,8 @@
 #include <frontend/pst_parser/pst.hpp>
+#include <helios_private/pst_layer/macros.hpp>
+#include <query_framework/context/context.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 
 
 namespace compiler::helios {
@@ -11,7 +15,18 @@ namespace compiler::helios {
     void pstForAll(query::Context& ctx, pst::Access<ElementT> element, FunctionT function) {
 
         if (element->getElementKind() == pst::ElementKind::Expand) {
-            // PR...
+            auto expansion_result = ctx.query<QueryMacroExpansion>({ 
+                element.template dynamicCast<pst::Expand>().value(),
+             });
+            // PR error handling TODO...
+            variant_match(expansion_result.valueOrPanic()) {
+                variant_case (pst::AccessLocked<pst::Stmt>, expanded_stmt) {
+                    pstForAll(ctx, expanded_stmt.unlock(ctx), function);
+                }
+                variant_case (ExpansionError<pst::Stmt>, error) {
+                    CORE_PANIC("aa");
+                }
+            }
             return;
         }
         

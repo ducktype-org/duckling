@@ -8,7 +8,7 @@
 
 #include <query_framework/standard_query/query_impl.hpp>
 
-namespace helios {
+namespace compiler::helios {
 
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
