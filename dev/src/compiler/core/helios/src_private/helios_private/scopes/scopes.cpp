@@ -19,7 +19,7 @@
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
+#include <helios_private/pst_layer/pst_walkers.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
