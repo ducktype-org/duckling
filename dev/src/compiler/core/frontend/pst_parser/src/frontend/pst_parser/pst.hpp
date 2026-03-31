@@ -137,6 +137,7 @@ namespace pst {
 			// handling it differently.
 			calcElementPathHash();
 			calcHashes();
+			putInPSTHashHashMap();
 		}
 
 		static Box<LangParserContext> makeParserContext(PSTContext&& pst_ctx) {
@@ -199,6 +200,10 @@ namespace pst {
 		 */
 		void calcHashes() {
 			if (auto ref = element.internalMut()) ref->calcHashRecursive();
+		}
+
+		void putInPSTHashHashMap() {
+			if (auto ref = element.internalMut()) ref->putInPSTHashHashMapRecursive();
 		}
 
 		/**
@@ -286,6 +291,9 @@ namespace pst {
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
 			out.signGenerated();
+			
+			// we call it again after signing, because signing changes the hash:
+			out.putInPSTHashHashMap();
 			return out;
 		}
 

@@ -93,9 +93,26 @@ namespace pst {
 		auto partial_hash = calcStableHash();
 		addToHash(partial_hash, context_hash);
 		hash = calcStableHash().finalize();
-		pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+
+		// PR:
+		// pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
+	}
+
+	void LangElement::putInPSTHashHashMapRecursive() {
+		putInPSTHashHashMap();
+		for (auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) { el->putInPSTHashHashMapRecursive(); }
+				variant_case(InternalNamedChild, el) { el.element->putInPSTHashHashMapRecursive(); }
+			}
+		}
+	}
+
+	void LangElement::putInPSTHashHashMap() {
+		pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
 	}
 
 	HashAlg LangElement::calcStableHash() const {

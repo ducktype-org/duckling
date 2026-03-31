@@ -377,6 +377,16 @@ namespace pst {
 		void calcHash();
 
 		/**
+		 * @brief Puts the element in the global hash map, should be called at the end of hash calculation. Separated from `calcHash` to allow for different hash calculation strategies.
+		 */
+		void putInPSTHashHashMap();
+
+		/**
+		 * @brief Calls `putInPSTHashHashMap` recursively for this element and all children.
+		 */
+		void putInPSTHashHashMapRecursive();
+
+		/**
 		 * @brief Calculates the whole hash for the element including common parts like path and
 		 * element type. Can be overriden for specific parent elements that add common information.
 		 */
