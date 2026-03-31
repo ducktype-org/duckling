@@ -12,6 +12,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <lexer/token.hpp>
@@ -20,6 +21,7 @@
 
 #include <ranges>
 #include <variant>
+#include <any>
 
 namespace pst {
 	class Import;
@@ -32,6 +34,21 @@ namespace pst {
 	class StablePosition;
 
 	class LangParserState;
+
+
+	// TODO: PR: this is not pretty, but still strictly better then root_element_file_back_map :) 
+	struct AdditionalRootData final {
+		/**
+			* 
+			*/
+		AccessInternalAnonymous<LangElement> optional_macro_expansion_source;
+
+		// PR: any? maybe we can include it here after all
+		base::Optional<std::any> module_id;
+
+		// AdditionalRootData(const AdditionalRootData&) = default;
+		// AdditionalRootData(AdditionalRootData&&)      = default;
+	};
 
 	/**
 	 * @brief Base Element for all of the PST elements.
@@ -221,6 +238,11 @@ namespace pst {
 		template<typename X>
 		friend class PSTAutomatic;
 
+		const AdditionalRootData& getAdditionalRootData() {
+			CORE_ASSERT(additional_root_data.has_value(), "Element has no additional root data");
+			return additional_root_data.value();
+		}
+
 	protected:
 		/**
 		 * @brief Map from stable hash to lang element for all created elements.
@@ -237,20 +259,39 @@ namespace pst {
 
 		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
 
+		/************************\
+		|   LANG ELEMENT DATA    |
+		\************************/
+
 		dia::SourcePosition source_position;
 		HashType            context_hash;
-		std::vector<InternalSubElement>
-			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
-		base::Optional<AccessLocked<LangElement>>
-			parent;        ///< Parent element in PST if element is not root.
-		base::Optional<hashing::ComponentHash>
-			element_path_hash;  ///< The Path that uniquely identifies the
-		                        ///< element and allows to conserve some
-		                        ///< information between compilations. Has
-		                        ///< no value if it's incalculable.
-		base::Optional<HashType>
-			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
-		           ///< information between compilations. Has no value if it's incalculable.
+
+		/**
+		 * All of the children elements meant for generic analysis of the tree.
+		 */
+		std::vector<InternalSubElement> sub_elements;
+		
+		/**
+		 * Parent element in PST if element is not root.
+		 */
+		base::Optional<AccessLocked<LangElement>> parent;
+
+		/**
+		 * The Path that uniquely identifies the
+		 * element and allows to conserve some
+		 * information between compilations. Has
+		 * no value if it's incalculable.
+		 */
+		base::Optional<hashing::ComponentHash> element_path_hash;  
+		
+		/**
+		 * The Hash that encodes the element path and data and allows to conserve some
+		 * information between compilations. Has no value if it's incalculable.
+		 */
+		base::Optional<HashType> hash;  
+
+		// PR-TODO: We should have a RootElement that stores this information instead of storing it in each element, but for now it is easier to keep it here.
+		base::Optional<AdditionalRootData> additional_root_data;
 
 		/**
 		 * @brief Kind of the element.
@@ -406,6 +447,12 @@ namespace pst {
 		void setFirstToken(dia::SourcePosition pos);
 
 		void setParent(Ref<LangElement> parent) { this->parent = { parent }; }
+
+		void setAdditionalRootData(AdditionalRootData data) {
+			CORE_ASSERT(!additional_root_data.has_value(), "Additional root data already set");
+			CORE_ASSERT(!parent.has_value(), "Only root elements can have additional root data");
+			additional_root_data.emplace(std::move(data));
+		}
 
 	private:
 		PstID id = PstID::next();
