@@ -1,11 +1,12 @@
 
-#include <query_framework/standard_query/query_impl.hpp>
-#include <frontend/pst_parser/pst.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
+#include "macros.hpp"
+
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
- 
-#include "macros.hpp"
+#include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
+#include <frontend/pst_parser/pst.hpp>
+
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace helios {
 

@@ -1,20 +1,20 @@
 #pragma once
 
+#include <frontend/pst_parser/generic_query_key.hpp>
+
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
-#include <frontend/pst_parser/generic_query_key.hpp>
 
 namespace helios {
 
-		template<typename Element>
+	template<typename Element>
 	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia_int::Logger>>;
 	template<typename Element>
 	using ExpansionResult
 		= query::QResult<std::variant<pst::AccessLocked<Element>, ExpansionError<Element>>>;
 
 
-
-    	/**
+	/**
 	 * @brief Query the expansion of an expand statement.
 	 *
 	 * @note This will have some issues for now. The potential errors from parsed subexpression
