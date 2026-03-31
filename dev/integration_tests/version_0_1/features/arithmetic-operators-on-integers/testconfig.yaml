@@ -1,0 +1,17 @@
+# Test configuration for arithmetic-operators-on-integers
+# Tests +, -, *, /, %, unary negation, precedence, and operations on various integer types
+
+Tests:
+  arithmetic-operators-test:
+    Description: Tests for arithmetic operators on integers.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "30\n10\n200\n2\n0\n15\n15\n30\n5\n2\n-50\n50\n14\n20\n8\n2\n8\n2\n15\n1\n2\n130\n70\n10\n25\n24\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "30\n10\n200\n2\n0\n15\n15\n30\n5\n2\n-50\n50\n14\n20\n8\n2\n8\n2\n15\n1\n2\n130\n70\n10\n25\n24\n"
+        ExitCode: 0

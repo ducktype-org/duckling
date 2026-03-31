@@ -1,0 +1,17 @@
+# Test configuration for io-builtins
+# Tests builtin output functions and print function
+
+Tests:
+  io-builtins-output:
+    Description: printing number types and strings.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\nNewline:\nEnd:\n15\n42\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\nNewline:\nEnd:\n15\n42\n"
+        ExitCode: 0

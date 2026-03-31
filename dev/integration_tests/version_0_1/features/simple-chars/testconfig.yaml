@@ -1,0 +1,30 @@
+# Test configuration for simple-chars
+# Tests char type, escape sequences, char-to-integer conversion, and char comparisons
+
+Tests:
+  simple-chars-test:
+    Description: Tests for char type.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "65\n90\n48\n57\n1\n2\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "65\n90\n48\n57\n1\n2\n"
+        ExitCode: 0
+
+  char-escapes-test:
+    Description: Tests for char escape sequences.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "10\n9\n13\n92\n39\n34\n1\n2\n32\n3\n4\n"
+        ExitCode: 0      dvm:
+        backend: dvm
+        Output:
+          String: "10\n9\n13\n92\n39\n34\n1\n2\n32\n3\n4\n"
+        ExitCode: 0
