@@ -177,7 +177,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			usize       bytes = bits / 8;
 			std::string name  = "i" + std::to_string(bits);
 
-			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::FloatTypeLayout) {
 			auto bits = usize(layout->getSize());
@@ -187,7 +187,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			usize       bytes = bits / 8;
 			std::string name  = "f" + std::to_string(bits);
 
-			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::MetaTypeLayout) {
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);

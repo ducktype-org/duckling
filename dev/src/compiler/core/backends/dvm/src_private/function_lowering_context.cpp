@@ -84,7 +84,7 @@ namespace {
 }
 
 DVMLocal FunctionLoweringContext::forceToLocal(
-	const DVMValue& value, base::Optional<const char*> name_hint
+	const DVMValue& value, base::Optional<std::string_view> name_hint
 ) {
 	if (value.is<DVMLocal>()) return value.get<DVMLocal>();
 
