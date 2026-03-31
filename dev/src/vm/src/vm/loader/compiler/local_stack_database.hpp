@@ -1,226 +1,324 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <string_id/string_id.hpp>
+#include <ranges>
 
-#include <vm/core/process/type_metadata/definitions.hpp>
-#include <vm/core/process/type_metadata/type.hpp>
+namespace persistent {
+	template<typename VarT, typename ValT>
+	class LocalStackDbBuilder;
 
-namespace vm::loader::compiler {
+	template<typename VarT, typename ValT>
+	class LocalStackDatabase;
 
-	namespace detail {
-		class LocalStackDbBuilder;
-	};
+	STRONG_TYPEDEF_INT(StackStateID, u64);
 
+	template<typename VarT, typename ValT>
 	class LocalStackDatabase {
-		friend detail::LocalStackDbBuilder;
+		friend LocalStackDbBuilder<VarT, ValT>;
 
-	public:
-		struct Entry {
-			base::StrID var_name;
-			TypeRef     type;
-			usize       offset = 0;
-		};
+		//// Vals - immutable parts (usually decltype info)
+		using ValNodeID = u64;
 
-	private:
 		struct Lifetime {
 			usize deinit_idx                         = 0;
 			usize init_idx                           = 0;
 			auto  operator<=>(const Lifetime&) const = default;
 		};
 
-		struct DatabaseEntry {
-			Entry    entry;
-			Lifetime lifetime;
-			usize    prev = 0;
+		struct ValNode {
+			Lifetime  lifetime{};
+			ValNodeID prev = 0;
+			usize     size = 0;
+			ValT      info{};
 		};
 
-		base::HashMap<base::StrID, std::map<Lifetime, usize>> name_lifetime_bind;
-		base::HashMap<usize, DatabaseEntry>                   database;
-		usize                                                 max_size    = 0;
-		usize                                                 stack_state = 0;
+		using ValsMap = std::map<Lifetime, ValNodeID>;
+
+		// Vars - values which can be changed in
+		using VarNodeID = u64;
+
+		struct VarNode {
+			VarNodeID left;
+			VarNodeID rght;
+		};
+
+		using VarNodeH = decltype([](const VarNode& h) -> usize {
+			return (std::hash<VarNodeID>{}(h.left) << 1) ^ std::hash<VarNodeID>{}(h.rght);
+		});
+
+		struct StackState {
+			ValNodeID val_state;
+			VarNodeID var_state;
+		};
+
+		using StackStateH = decltype([](const StackState& s) -> usize {
+			return (std::hash<ValNodeID>{}(s.val_state) << 1) ^ std::hash<VarNodeID>{}(s.var_state);
+		});
+
+		base::HashMap<ValNodeID, ValNode>   val_entries;
+		base::HashMap<base::StrID, ValsMap> name_to_decl_info;
+
+		base::HashMap<VarNodeID, VarNode> var_entries;
+		base::HashMap<VarNodeID, usize>   root_heights;
+		base::HashMap<VarNodeID, VarT>    leaf_values;
+
+		base::HashMap<StackStateID, StackState> states;
 
 		LocalStackDatabase(
-			decltype(name_lifetime_bind) lifetimes, decltype(database) db, usize max_size
+			decltype(val_entries)       values_entry,
+			decltype(name_to_decl_info) name_to_decl_info,
+			decltype(var_entries)       var_entries,
+			decltype(root_heights)      root_height,
+			decltype(leaf_values)       leaf_values,
+			decltype(states)            states
 		):
-			  name_lifetime_bind(std::move(lifetimes)),
-			  database(std::move(db)),
-			  max_size(max_size) {}
+			  val_entries(std::move(values_entry)),
+			  name_to_decl_info(std::move(name_to_decl_info)),
+			  var_entries(std::move(var_entries)),
+			  root_heights(std::move(root_height)),
+			  leaf_values(std::move(leaf_values)),
+			  states(std::move(states)) {}
 
 	public:
 		LocalStackDatabase() = default;
+	};
 
-		void changeState(usize new_state) { stack_state = new_state; }
+	template<typename VarT, typename ValT>
+	class LocalStackDbBuilder {
+		using Prod = LocalStackDatabase<VarT, ValT>;
 
-		std::vector<Entry> getFullStack() const {
-			if (!database.contains(stack_state)) return {};
+		using ValNodeID = Prod::ValNodeID;
+		using Lifetime  = Prod::Lifetime;
+		using ValNode   = Prod::ValNode;
+		using ValsMap   = Prod::ValsMap;
 
-			std::vector<Entry> res              = {};
-			usize              curr_stack_state = stack_state;
+		using VarNodeID  = Prod::VarNodeID;
+		using VarNode    = Prod::VarNode;
+		using StackState = Prod::StackState;
 
-			do {
-				auto& el = **database.atMaybe(curr_stack_state);
-				res.push_back(el.entry);
-				curr_stack_state = el.prev;
-			} while (curr_stack_state != 0);
+		using ValEntries   = decltype(Prod::val_entries);
+		using NameDeclInfo = decltype(Prod::name_to_decl_info);
+		using VarEntries   = decltype(Prod::var_entries);
+		using RootHeights  = decltype(Prod::root_heights);
+		using LeafValues   = decltype(Prod::leaf_values);
+		using States       = decltype(Prod::states);
 
-			return res;
-		}
+		using VarNodeH    = Prod::VarNodeH;
+		using StackStateH = Prod::StackStateH;
 
-		base::Optional<Entry> atMaybe(const base::StrID var_name) const {
-			if (!database.contains(stack_state)) [[unlikely]]
-				return std::nullopt;
+		ValEntries   val_entries;
+		NameDeclInfo name_to_decl_info;
+		VarEntries   var_entries;
+		RootHeights  root_heights;
+		LeafValues   leaf_values;
+		States       states;
 
-			if (!name_lifetime_bind.contains(var_name)) [[unlikely]]
-				return std::nullopt;
+		struct NameVal {
+			base::StrID name;
+			ValT        val;
+		};
 
-			auto& lifetime     = (*database.atMaybe(stack_state))->lifetime;
-			auto& varname_info = name_lifetime_bind.at(var_name);
-			auto  it           = varname_info.lower_bound(lifetime);
+		using NameValH = decltype([](const NameVal& h) -> usize {
+			return (std::hash<base::StrID>{}(h.name) << 1) ^ (std::hash<ValT>{}(h.val));
+		});
 
-			if (it == varname_info.end()) [[unlikely]]
-				return std::nullopt;
+		using ValChildren = base::HashMap<NameVal, ValNodeID, NameValH>;
 
-			auto& found_lifetime = it->first;
+		base::HashMap<ValNodeID, ValChildren>                children;
+		base::HashMap<VarNode, VarNodeID, VarNodeH>          children_to_node;
+		base::HashMap<usize, base::HashMap<VarT, VarNodeID>> prev_vars;
+		base::HashMap<StackState, StackStateID, StackStateH> state_to_id;
 
-			if (found_lifetime.init_idx > lifetime.deinit_idx
-			    || found_lifetime.deinit_idx < lifetime.init_idx) [[unlikely]] {
-				return std::nullopt;
+		enum Dir { L, R };
+
+		std::vector<std::pair<Dir, VarNodeID>> getNodePath(VarNodeID root, usize idx) {
+			if (root == 0) return {};
+
+			std::vector<std::pair<Dir, VarNodeID>> ans    = {};
+			Dir                                    dir    = L;
+			auto                                   height = root_heights[root];
+
+			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
+				auto& entry = var_entries[root];
+				auto  orig  = root;
+				if (idx & max_bit) {
+					dir  = R;
+					root = entry.rght;
+				} else {
+					dir  = L;
+					root = entry.left;
+				}
+				ans.emplace_back(dir, orig);
 			}
 
-			usize found_stack_state = it->second;
-
-			return (*database.atMaybe(found_stack_state))->entry;
+			return ans;
 		}
 
-		usize maxSize() { return max_size; }
-	};
-}
+		VarNodeID varNodeFromChildren(VarNodeID left, VarNodeID rght) {
+			auto children = VarNode{ .left = left, .rght = rght };
+			auto [_, it]  = children_to_node.put(children, var_entries.size());
 
-namespace vm::loader::compiler::detail {
+			auto var_node = it->second;
+			var_entries.put(var_node, children);
 
-	class LocalStackDbBuilder {
-		using Prod    = LocalStackDatabase;
-		usize id      = 0;
-		usize next_id = 1;
+			return var_node;
+		}
+
+		VarNodeID varNodeFromIdxCons(usize idx, VarT var) {
+			prev_vars.put(idx, {});
+			auto [_, var_it] = prev_vars[idx].put(var, var_entries.size());
+
+			return var_it->second;
+		}
+
+		ValNodeID valNodeFromPrevAndCons(ValNodeID prev, base::StrID name, ValT val) {
+			auto prev_size = val_entries[prev].size;
+			auto nameval   = NameVal{ .name = std::move(name), .val = std::move(val) };
+
+			children.put(prev, {});
+			auto [_, val_it] = children[prev].put(nameval, val_entries.size());
+
+			ValNodeID val_node = val_it->second;
+			val_entries.put(val_node, ValNode{ .info = val, .prev = prev, .size = prev_size + 1 });
+
+			return val_node;
+		}
+
+		StackStateID getStateID(VarNodeID var_node, ValNodeID val_node) {
+			auto new_state            = StackState{ .var_state = var_node, .val_state = val_node };
+			auto [_, new_state_id_it] = state_to_id.emplace(new_state, states.size());
+
+			return new_state_id_it->second;
+		}
+
+		VarNodeID getSon(VarNodeID node_id, Dir dir) const {
+			auto& entry = var_entries[node_id];
+			return (dir == L) ? entry.left : entry.rght;
+		}
 
 	public:
-		LocalStackDbBuilder(base::StrID root_name, TypeRef root_type) {
-			states.put(
-				0,
-				BuilderEntry{
-					.entry = Prod::Entry{ .var_name = root_name, .type = root_type, .offset = 0 },
-					.next  = {},
-					.stack_idx = 0,
-					.prev_idx  = 0,
+		StackStateID push(StackStateID state_id, base::StrID name, ValT val, VarT var) {
+			if (!states.contains(state_id))
+				throw std::invalid_argument("LocalStackDbBuilder got invalid state");
+
+			auto& state         = states[state_id];
+			auto  prev_var_root = state.var_state;
+			auto  prev_val_node = state.val_state;
+			auto  prev_size     = val_entries[prev_val_node].size;
+
+			ValNodeID val_node
+				= valNodeFromPrevAndCons(prev_val_node, std::move(name), std::move(val));
+
+			auto var_node = varNodeFromIdxCons(prev_size + 1, std::move(var));
+
+			auto prev_path = getNodePath(prev_var_root, prev_size);
+			bool merged    = false;
+
+			using namespace std::views;
+			for (auto [dir, node_id]: prev_path | reverse) {
+				VarNodeID left, rght = 0;
+
+				if (merged == (dir == L)) {
+					// when !merged and (dir == R) or merged and (dir == L)
+					left = var_node;
+					rght = 0;  // equiv to entry.right
+				} else {
+					// when merged and (dir == R) or !merged and (dir == L)
+					left   = getSon(node_id, L);
+					rght   = var_node;
+					merged = true;
 				}
-			);
-		}
 
-		void changeState(usize new_state) {
-			CORE_ASSERT(states.contains(new_state), "Trying to use non-existant state");
-			id = new_state;
-		}
-
-		usize push(base::StrID var_name, TypeRef var_type) {
-			auto desc = std::make_pair(var_name, var_type);
-
-			if (states[id].next.contains(desc)) {
-				id = states[id].next[desc];
-				return id;
+				var_node = varNodeFromChildren(left, rght);
 			}
 
-			states[id].next.put(desc, next_id);
-			states.put(
-				next_id,
-				BuilderEntry{
-					.entry     = Prod::Entry{ .var_name = var_name, .type = var_type, .offset = 0 },
-					.next      = {},
-					.stack_idx = next_id,
-					.prev_idx  = id,
+			if (!merged) var_node = varNodeFromChildren(prev_var_root, var_node);
+
+			return getStateID(var_node, val_node);
+		}
+
+		StackStateID change(StackStateID state_id, usize idx, VarT var) {
+			if (!states.contains(state_id))
+				throw std::invalid_argument("LocalStackDbBuilder got invalid state");
+
+			auto& state         = states[state_id];
+			auto  prev_var_root = state.var_state;
+			auto  val_node      = state.val_state;
+			auto  size          = val_entries[val_node].size;
+
+			if (idx == 0 || idx > size)
+				throw std::invalid_argument("received index out of range for given state");
+
+			auto prev_path = getNodePath(prev_var_root, idx);
+			auto var_node  = varNodeFromIdxCons(idx, std::move(var));
+
+			using namespace std::views;
+			for (auto [dir, node_id]: prev_path | reverse) {
+				VarNodeID left, rght;
+
+				if (dir == L) {
+					left = var_node;
+					rght = getSon(node_id, R);
+				} else {
+					left = getSon(node_id, L);
+					rght = var_node;
 				}
-			);
 
-			id = next_id;
-			next_id++;
-
-			return id;
-		}
-
-		usize pop() {
-			CORE_ASSERT(id != 0, "Tried to pop the root");
-			auto new_id = states[id].prev_idx;
-			id          = new_id;
-
-			return id;
-		}
-
-		Prod finishBuilding(usize offset = 0) {
-			base::HashMap<usize, Prod::Lifetime> lifetime;
-			states[0].entry.offset = offset;
-
-			if (states[0].entry.type->getName() != "void")
-				offset += states[0].entry.type->getSize().asInt();
-
-			usize order    = 0;
-			usize max_size = offset;
-			auto  dfs      = [&](auto&& self, usize node, usize curr_offset) -> void {
-                lifetime.put(node, Prod::Lifetime{});
-                lifetime[node].init_idx = order;
-                order++;
-                max_size = std::max(max_size, offset);
-
-                auto& neighs = states[node].next;
-                for (auto& [_, val]: neighs) states[val].entry.offset = curr_offset;
-
-                for (auto& [key, val]: neighs)
-                    self(self, val, curr_offset + key.second->getSize().asInt());
-
-                lifetime[node].deinit_idx = order++;
-			};
-
-			dfs(dfs, 0, offset);
-
-			decltype(Prod::name_lifetime_bind) lifetime_mangling{};
-			decltype(Prod::database)           db;
-
-			for (auto& [id, bd_entry]: states) {
-				auto& var_name     = states[id].entry.var_name;
-				auto& var_lifetime = lifetime[id];
-
-				lifetime_mangling.put(var_name, {});
-
-				lifetime_mangling[var_name].emplace(var_lifetime, id);
-
-				db.put(
-					id,
-					Prod::DatabaseEntry{
-						.entry    = states[id].entry,
-						.lifetime = var_lifetime,
-						.prev     = states[id].prev_idx,
-					}
-				);
+				var_node = varNodeFromChildren(left, rght);
 			}
 
-			return Prod{ lifetime_mangling, db, max_size };
+			return getStateID(var_node, val_node);
 		}
 
-	private:
-		struct nameTypeHasher {
-			static std::size_t operator()(const std::pair<base::StrID, TypeRef>& val) {
-				return std::hash<base::StrID>{}(val.first)
-				     + std::hash<base::StrID>{}(val.second->getName());
+		StackStateID pop(StackStateID state_id) {
+			if (!states.contains(state_id))
+				throw std::invalid_argument("LocalStackDbBuilder got invalid state");
+
+			auto& state         = states[state_id];
+			auto  prev_var_root = state.var_state;
+			auto  val_node      = state.val_state;
+			auto  size          = val_entries[val_node].size;
+			auto  prev_val_node = val_entries[val_node].prev;
+
+			if (size == 0)
+				throw std::invalid_argument("stack at given state is empty - cannot pop from it");
+
+			auto prev_path = getNodePath(prev_var_root, size - 1);
+			auto last_path = getNodePath(prev_var_root, size);
+
+			std::vector<std::pair<Dir, VarNodeID>> common = {};
+
+			using namespace std::views;
+			for (auto& [f, s]: zip(prev_path, last_path)) {
+				if (f != s) break;
+				common.emplace_back(f);
 			}
-		};
 
-		struct BuilderEntry {
-			Prod::Entry                                                           entry;
-			base::HashMap<std::pair<base::StrID, TypeRef>, usize, nameTypeHasher> next;
-			usize                                                                 stack_idx;
-			usize                                                                 prev_idx;
-		};
+			if (common.size() == 0) return getSon(prev_var_root, L);
 
-		base::HashMap<usize, BuilderEntry> states;
+			auto [last_dir, node_id] = common.back();
+			VarNodeID lca            = getSon(node_id, last_dir);
+
+			auto var_node = varNodeFromChildren(getSon(lca, L), 0);
+
+			for (auto [dir, node_id]: common | reverse) {
+				VarNodeID left, rght;
+
+				if (dir == L) {
+					left = var_node;
+					rght = getSon(node_id, R);
+				} else {
+					left = getSon(node_id, L);
+					rght = var_node;
+				}
+
+				var_node = varNodeFromChildren(left, rght);
+			}
+
+			return getStateID(var_node, prev_val_node);
+		}
 	};
 }
