@@ -142,10 +142,10 @@ namespace compiler::helios::code {
 										const RegularBinaryBuiltin::HOUTRepresentation op
 									) -> void {
 				auto builtin = RegularBinaryBuiltin{
-					.symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name = name,
 						.generated_symbol_data
-						= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::BuiltinOperator{
+						= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
 							ctx.query<tsh::QueryFunctionType>({
 								std::move(param_types),
 								return_type,

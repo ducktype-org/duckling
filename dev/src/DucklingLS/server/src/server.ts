@@ -103,7 +103,7 @@ connection.onInitialized(() => {
 
 		// Resolve the duck_ls binary path from configuration, falling back to the default.
 		let executablePath = path.join(os.homedir(), '.local', 'bin', 'duck_ls');
-		const config = await connection.workspace.getConfiguration('DucklingLanguageServer');
+		const config = await connection.workspace.getConfiguration('DucklingLanguageSupport');
 		const rawPath: string = config?.executablePath;
 		if (rawPath) {
 			// Expand leading ~ to the home directory
@@ -156,7 +156,7 @@ connection.onDidChangeConfiguration(async change => {
 		documentSettings.clear();
 	} else {
 		globalSettings = <ExampleSettings>(
-			(change.settings.DucklingLanguageServer || defaultSettings)
+			(change.settings.DucklingLanguageSupport || defaultSettings)
 		);
 	}
 	// Revalidate all open text documents
@@ -171,7 +171,7 @@ export function getDocumentSettings(resource: string): Thenable<ExampleSettings>
 	if (!result) {
 		result = connection.workspace.getConfiguration({
 			scopeUri: resource,
-			section: "DucklingLanguageServer"
+			section: "DucklingLanguageSupport"
 		});
 		documentSettings.set(resource, result);
 	}

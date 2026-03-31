@@ -11,7 +11,7 @@
 
 #include <variant>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios::defgen {
 	/**
 	 * Represents any data associated with a compiler-generated symbol. See the inner classes.
 	 */
