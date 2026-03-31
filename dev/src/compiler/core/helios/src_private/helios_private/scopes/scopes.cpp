@@ -178,6 +178,11 @@ namespace compiler::helios {
 		case pst::ElementKind::ParamList:
 			return ElementScopeKind::Transparent;
 
+		case pst::ElementKind::Expand:
+			// This is a bit of a special case, we treat it as transparent, since it is
+			// basically just a wrapper around the expanded element.
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::KindNotSet:
 			CORE_UNREACHABLE();
 
@@ -255,6 +260,7 @@ namespace compiler::helios {
 						);
 					} else if (additional_root_data.module_id.has_value()) {
 						auto module_id_any = additional_root_data.module_id.value();
+
 						auto module_id = base::anyCast<frontend::ModuleID>(module_id_any);
 
 						return ctx.query<QueryRootScopeOf>(
@@ -268,13 +274,6 @@ namespace compiler::helios {
 				}
 			}();
 			
-			
-			
-			element->getParent().has_value()
-			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent().value())
-			                   : ctx.query<QueryRootScopeOf>(
-									 base::anyCast<frontend::ModuleID>(element->getAdditionalRootData().module_id)
-								 );
 
 			// here we essentially return the same scope as the parent
 			// scope, with the same unstable hash, but we still create a new ScopeData object
