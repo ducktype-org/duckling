@@ -10,7 +10,7 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/deductions.hpp>
 #include <typesystem/higher/queries/types.hpp>
@@ -175,7 +175,7 @@ namespace compiler::helios {
 						builtin_data.type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 					);
 				}
-				variant_case(houtgen::GeneratedSymbolData, generated_data) {
+				variant_case(defgen::GeneratedSymbolData, generated_data) {
 					return generated_data.getType(ctx);
 				}
 				variant_default { CORE_PANIC("Unknown symbol data type"); }

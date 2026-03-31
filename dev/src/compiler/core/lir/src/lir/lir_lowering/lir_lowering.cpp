@@ -335,11 +335,31 @@ namespace compiler::lir {
 			 * maps MIR locals to LIR local refs.
 			 */
 			void makeLocals() {
+				// Mapping of MIR parameters to LIR parameters, accounting for empty param layouts.
+				std::vector<base::Optional<usize>> mir_to_lir_parameter_indices;
+				{
+					usize lir_param_index = 0;
+					for (const auto& mir_param_type: key.function->parameter_types)
+						if (!mir_param_type.getType().carriesInformation(ctx))
+							mir_to_lir_parameter_indices.emplace_back();
+						else
+							mir_to_lir_parameter_indices.emplace_back(lir_param_index++);
+				}
+
 				for (const auto& mir_local: key.function->local_list) {
 					// Discard data-less variables.
 					if (!mir_local.carriesInformation(ctx)) continue;
 
-					auto lir_local = LIRLocal::fromMIR(ctx, &mir_local);
+					auto lir_local = LIRLocal::fromMIR(
+						ctx,
+						&mir_local,
+						mir_local.parameter_index.flatMap(
+							[&mir_to_lir_parameter_indices](const usize mir_index) {
+								return mir_to_lir_parameter_indices[mir_index];
+							}
+						)
+					);
+
 					locals.pushBack(lir_local);
 					auto local_index = locals.lastIndex();
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
