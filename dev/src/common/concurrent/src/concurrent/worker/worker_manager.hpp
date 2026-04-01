@@ -6,10 +6,6 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
-#include <concepts>
-#include <memory>
-#include <type_traits>
-
 namespace concurrent::worker {
 
 	/**
@@ -54,18 +50,21 @@ namespace concurrent::worker {
 		[[nodiscard]] std::vector<WRef> getFreeWorkers(usize max_count) const;
 
 		/**
+		 * @brief Waits until all workers are free at the same time.
+		 * @param sleep_duration Delay between repeated snapshots when at least one worker is busy.
+		 * @warning This cannot be called from a worker thread, as it will cause a deadlock.
+		 */
+		void waitForAllWorkersFree(
+			std::chrono::milliseconds sleep_duration = std::chrono::milliseconds(1)
+		) const;
+
+		/**
 		 * @brief Schedules a task on any worker, while preferring free workers.
 		 * If no free worker is available, the task is scheduled on a random worker.
 		 * @param task The task to be executed.
 		 * @return The reference of the worker the task was scheduled on.
 		 */
 		WRef scheduleTaskOnAnyWorker(Task&& task);
-
-		template<typename F>
-		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, Task>)
-		WRef scheduleTaskOnAnyWorker(F&& task) {
-			return scheduleTaskOnAnyWorker(Task(std::forward<F>(task)));
-		}
 
 		/**
 		 * @brief Checks if a worker is free.
@@ -89,34 +88,10 @@ namespace concurrent::worker {
 		 */
 		void setNoTasksCallback(WRef worker, NoTasksCallback&& callback);
 
-		template<typename F>
-		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, NoTasksCallback>)
-		void setNoTasksCallback(WRef worker, F&& callback) {
-			setNoTasksCallback(worker, NoTasksCallback(std::forward<F>(callback)));
-		}
-
 		/**
 		 * @brief Same as above, but sets the same callback for all workers sequentially.
 		 */
-		void setNoTasksCallback(NoTasksCallback&& callback) {
-			auto callback_ptr = std::make_shared<NoTasksCallback>(std::move(callback));
-			for (auto& worker: getAllWorkers()) {
-				worker->setNoTasksCallback([callback_ptr](WRef worker_ref) {
-					(*callback_ptr)(worker_ref);
-				});
-			}
-		}
-
-		template<typename F>
-		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, NoTasksCallback>)
-		void setNoTasksCallback(F&& callback) {
-			auto callback_ptr = std::make_shared<NoTasksCallback>(std::forward<F>(callback));
-			for (auto& worker: getAllWorkers()) {
-				worker->setNoTasksCallback([callback_ptr](WRef worker_ref) {
-					(*callback_ptr)(worker_ref);
-				});
-			}
-		}
+		void setNoTasksCallback(NoTasksCallback&& callback);
 
 	private:
 		WorkerManager();

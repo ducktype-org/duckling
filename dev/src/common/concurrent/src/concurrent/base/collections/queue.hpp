@@ -45,8 +45,12 @@ namespace concurrent {
 		}
 
 		/**
-		 * @brief Finds and removes the first element matching @param pred.
+		 * @brief Finds and removes the first element matching @p pred.
 		 * @return Extracted element when found, otherwise empty optional.
+		 * @note Contract: once @p pred evaluates to true for an element in this call,
+		 * that same element is extracted and returned before releasing the queue lock.
+		 * It cannot be removed concurrently by another thread between match and extraction.
+		 * Parts of the compiler implementation rely on this guarantee.
 		 */
 		template<typename Predicate>
 		[[nodiscard]]
@@ -134,19 +138,16 @@ namespace concurrent {
 
 			LockedIterator(
 				std::shared_ptr<WithLock<AtomicFlagSpinlock>> lock_guard,
-				internal_iterator_type                        iter,
-				const ConQueue*                               owner
+				internal_iterator_type                        iter
 			) noexcept:
 				  lock_guard(std::move(lock_guard)),
-				  internal_iterator(iter),
-				  owner(owner) {}
+				  internal_iterator(iter) {}
 
 			friend class ConQueue;
 
 		private:
 			std::shared_ptr<WithLock<AtomicFlagSpinlock>> lock_guard;
 			internal_iterator_type                        internal_iterator;
-			const ConQueue*                               owner = nullptr;
 		};
 
 		using Iterator      = LockedIterator<false>;
@@ -163,7 +164,7 @@ namespace concurrent {
 		 */
 		Iterator begin() {
 			auto lock_guard = std::make_shared<WithLock<AtomicFlagSpinlock>>(&lock);
-			return Iterator(lock_guard, queue.begin(), this);
+			return Iterator(lock_guard, queue.begin());
 		}
 
 		/**
@@ -171,24 +172,23 @@ namespace concurrent {
 		 */
 		ConstIterator begin() const {
 			auto lock_guard = std::make_shared<WithLock<AtomicFlagSpinlock>>(&lock);
-			return ConstIterator(lock_guard, queue.cbegin(), this);
+			return ConstIterator(lock_guard, queue.cbegin());
 		}
 
 		/**
 		 * @brief Returns an iterator sentinel that does not own the lock.
 		 */
-		Iterator end() { return Iterator(nullptr, queue.end(), this); }
+		Iterator end() { return Iterator(nullptr, queue.end()); }
 
 		/**
 		 * @brief Returns a const iterator sentinel that does not own the lock.
 		 */
-		ConstIterator end() const { return ConstIterator(nullptr, queue.cend(), this); }
+		ConstIterator end() const { return ConstIterator(nullptr, queue.cend()); }
 
 		/**
 		 * @brief Erases the element pointed by @param it and returns next iterator.
 		 */
 		Iterator erase(Iterator it) {
-			CORE_ASSERT(it.owner == this, "Erasing with iterator from different queue");
 			CORE_ASSERT(it.lock_guard != nullptr, "Erasing requires a locked iterator");
 			CORE_ASSERT(it.internal_iterator != queue.end(), "Erasing end iterator is not allowed");
 			auto internal_it     = it.internal_iterator;

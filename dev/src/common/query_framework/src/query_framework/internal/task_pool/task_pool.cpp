@@ -6,6 +6,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
+#include "concurrent/worker/worker_manager.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -27,14 +28,19 @@ namespace query::internal {
 		std::ranges::fill(is_worker_free, true);
 
 		u64 worker_index = 0;
-		std::ranges::for_each(worker_manager.getAllWorkers(), [&worker_index](auto worker) {
-			CORE_ASSERT(
-				worker_index++ == worker->getID(), "Worker IDs must be sequential starting from 0"
-			);
-		});
+        for(auto worker: worker_manager.getAllWorkers()) {  
+            CORE_ASSERT(  
+                worker_index++ == worker->getID(), "Worker IDs must be sequential starting from 0"  
+            );  
+        }
 	}
 
-	TaskPool::~TaskPool() { flushWorkers(); }
+	TaskPool::~TaskPool() { 
+		// We need to make sure, that no worker is executing a task from this pool before we destroy it, otherwise we might have
+		// a use-after-free. We can ensure this by waiting for all workers to be free, which means that they are not executing any task from this pool.
+		// This will also wait for finishing the taks not sheduled by TaskPool but there is no other way to do that
+		concurrent::worker::WorkerManager::get().waitForAllWorkersFree(std::chrono::milliseconds(10));
+	}
 
 	void TaskPool::addTask(Task&& task) {
 		auto free_worker_opt = getFreeWorker();
@@ -260,27 +266,5 @@ namespace query::internal {
 			return worker_manager.getAllWorkers()[index];
 		}
 		return {};
-	}
-
-	void TaskPool::flushWorkers() {
-		auto                                           workers = worker_manager.getAllWorkers();
-		std::vector<std::shared_ptr<std::atomic_bool>> flags;
-
-		for (auto& w: workers) {
-			auto flag = std::make_shared<std::atomic_bool>(false);
-			flags.push_back(flag);
-			worker_manager.setNoTasksCallback(w, [flag](concurrent::worker::WRef) {
-				flag->store(true);
-			});
-		}
-
-		for (auto wref: workers) {
-			wref->scheduleTask([](concurrent::worker::WRef) {
-				// empty task
-			});
-		}
-
-		for (auto& flag: flags)
-			while (!flag->load()) std::this_thread::yield();
 	}
 }

@@ -10,6 +10,8 @@ namespace concurrent::worker {
 		thread_local base::Optional<WRef> current_worker = std::nullopt;
 	}
 
+	constinit u64 Worker::next_id = 0;
+
 	void Worker::scheduleTask(Task&& task) {
 		const bool can_schedule = loop_run_flag.load(std::memory_order_relaxed);
 		CORE_ASSERT(can_schedule, "Cannot push task to stopped worker");
@@ -81,9 +83,13 @@ namespace concurrent::worker {
 
 	void Worker::setNoTasksCallback(NoTasksCallback&& callback) {
 		auto callback_ptr = std::make_shared<NoTasksCallback>(std::move(callback));
+		setNoTasksCallback(std::move(callback_ptr));
+	}
+
+	void Worker::setNoTasksCallback(std::shared_ptr<NoTasksCallback> callback) {
 		{
 			std::unique_lock lock(mut);
-			no_tasks_callback = callback_ptr;
+			no_tasks_callback = callback;
 
 			if (!is_free) return;
 
@@ -93,7 +99,7 @@ namespace concurrent::worker {
 
 			// Schedule this callback as a task, if the worker was free we have a guarantee
 			// that the callback will be called first
-			task_queue.emplace([callback_ptr](WRef ref) { (*callback_ptr)(ref); });
+			task_queue.emplace([callback](WRef ref) { (*callback)(ref); });
 
 			// wake up the worker to call the scheduled callback
 		}
@@ -107,6 +113,8 @@ namespace concurrent::worker {
 			CORE_PANIC("Accessing the thread-local current worker reference that is empty");
 		return current_worker.value();
 	}
+
+	bool Worker::isCurrentThreadWorker() { return current_worker.has_value(); }
 
 	u64 Worker::getID() const { return id; }
 }

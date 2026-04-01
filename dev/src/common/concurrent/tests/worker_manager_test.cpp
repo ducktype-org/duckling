@@ -101,6 +101,14 @@ private:
 
 		ASSERT_EQUAL(task_finished_counter.load(std::memory_order_relaxed), getWorkerCount());
 
+		// After all tasks are done, all workers should be free.
+		concurrent::runOrTimeout(
+			[&](const std::stop_token&) {
+				worker_manager.waitForAllWorkersFree(std::chrono::milliseconds(10));
+			},
+			[&] { fail("Timeout while waiting for all workers to be free"); }
+		);
+
 		free_workers = worker_manager.getFreeWorkers(getWorkerCount());
 		ASSERT_EQUAL(free_workers.size(), getWorkerCount());
 	}
@@ -227,6 +235,14 @@ private:
 			a        = b;
 			b        = next;
 		}
+
+		// After all tasks are done, all workers should be free.
+		concurrent::runOrTimeout(
+			[&](const std::stop_token&) {
+				worker_manager.waitForAllWorkersFree(std::chrono::milliseconds(10));
+			},
+			[&] { fail("Timeout while waiting for all workers to be free"); }
+		);
 	}
 };
 

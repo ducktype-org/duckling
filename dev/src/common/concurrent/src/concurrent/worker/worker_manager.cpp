@@ -4,6 +4,7 @@
 
 #include <mutex>
 #include <ranges>
+#include "base/except/exceptions.hpp"
 
 namespace concurrent::worker {
 
@@ -27,6 +28,25 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
+	void WorkerManager::waitForAllWorkersFree(std::chrono::milliseconds sleep_duration) const {
+		CORE_ASSERT(!Worker::isCurrentThreadWorker(), "Cannot call waitForAllWorkersFree from a worker thread");
+		while (true) {
+			auto lock_and_check_all = [&](auto&& self, usize index) -> bool {
+				if (index >= workers.size()) return true;
+
+				auto& worker = workers.at(index);
+				std::scoped_lock lock(worker->mut);
+				if (!worker->is_free.load(std::memory_order_seq_cst)) return false;
+
+				return self(self, index + 1);
+			};
+
+			if (lock_and_check_all(lock_and_check_all, 0)) return;
+
+			std::this_thread::sleep_for(sleep_duration);
+		}
+	}
+
 	WRef WorkerManager::scheduleTaskOnAnyWorker(Task&& task) {
 		for (auto& worker: workers)
 			if (worker->scheduleTaskIfFree(std::move(task))) return worker.get();
@@ -43,6 +63,13 @@ namespace concurrent::worker {
 
 	void WorkerManager::setNoTasksCallback(WRef worker, NoTasksCallback&& callback) {
 		worker->setNoTasksCallback(std::move(callback));
+	}
+
+	void WorkerManager::setNoTasksCallback(NoTasksCallback&& callback) {
+		auto callback_ptr = std::make_shared<NoTasksCallback>(std::move(callback));
+		for (auto& worker: getAllWorkers()) {
+			worker->setNoTasksCallback(callback_ptr);
+		}
 	}
 
 	WorkerManager& WorkerManager::get() {

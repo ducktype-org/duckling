@@ -36,7 +36,7 @@ namespace query::internal {
 	 */
 	struct Task final {
 		NodeID                   id;
-		concurrent::worker::Work work;
+		concurrent::worker::Task work;
 
 		template<typename F>
 		requires(std::invocable<std::decay_t<F>&, concurrent::worker::WRef>)
@@ -200,14 +200,6 @@ namespace query::internal {
 		 * @return Optional reference to a free worker.
 		 */
 		base::Optional<WRef> getFreeWorker();
-
-
-		/**
-		 * @brief Waits until the `no_tasks_callback` has exited on all workers
-		 * to ensure that the workers are not executing any method of the TaskPool
-		 * object to safely destroy it.
-		 */
-		void flushWorkers();
 
 		/// Reference to the WorkerManager.
 		concurrent::worker::WorkerManager& worker_manager;
