@@ -46,12 +46,15 @@ namespace vm {
 		FlagData flags{};
 
 		/**
-		 * @brief Stack of block IDs used by the function created with init_type
+		 * @brief Base of the stack of block IDs used by the function created with init_type
 		 * and destroyed with deinit.
 		 */
-		Block** block_ref_stack;
+		Block** block_ref_stack_base = nullptr;
 
-		u64 block_ref_stack_count = 0;
+		/**
+		 * @brief The pointer to the first free position on the block stack.
+		 */
+		Block** block_ref_stack_end = nullptr;
 
 		/**
 		 * @brief First free byte in the local stack.

@@ -232,14 +232,16 @@ namespace vm {
 				// Program return value is fixes to return `i64`.
 				MAKE_BYTECODE_INSTRUCTION(
 					init_blany_type, 0, i64_type_id
-				),  // [0, 8) program ret_val
+				),  // stack [0, 8), block idx 0 program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
 					init_blany_type, 1, argv_ptr_type_id
-				),  // [8, 24) *argv_internal
+				),  // stack [8, 24) block idx 1 *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(
 					init_blany_type, 2, i64_type_id
-				),  // [24, 32) argc_internal
-				MAKE_BYTECODE_INSTRUCTION(init_blany_type, 3, i64_type_id),  // [32, 40) ix
+				),  // stack  [24, 32) block idx 2 argc_internal
+				MAKE_BYTECODE_INSTRUCTION(
+					init_blany_type, 3, i64_type_id
+				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_l64_imm, 24, args.size()
 				),  // argc_internal := args.size()
@@ -258,10 +260,10 @@ namespace vm {
 					{
 						MAKE_BYTECODE_INSTRUCTION(
 							init_blany_type, 4, str_ptr_type_id
-						),  // [40, 56) ptr_tmp_store
+						),  // stack [40, 56) block idx 4 ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
 							init_blany_type, 5, byte_type_id
-						),  // [56, 57) char_tmp_store
+						),  // stack [56, 57) block idx 5 char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_l64_imm, 24, arg.size() + 1
 						),  // argc_internal := arg.size() + 1 (for the \0 character)
@@ -391,8 +393,9 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		frame->current_function = &start_function;
-		frame->block_ref_stack  = runtime_data.block_ref_stack_base;
+		frame->current_function     = &start_function;
+		frame->block_ref_stack_base = runtime_data.block_ref_stack_base;
+		frame->block_ref_stack_end  = runtime_data.block_ref_stack_base;
 
 		const auto* instr = start_function.bc.data();
 
@@ -424,11 +427,11 @@ namespace vm {
 	End:
 #endif
 		// @note: The return value is the only block left on the block stack.
-		auto block = Ref(frame->block_ref_stack[frame->block_ref_stack_count - 1]);
 		CORE_ASSERT(
-			frame->block_ref_stack_count == 1,
+			frame->block_ref_stack_end - frame->block_ref_stack_base == 1,
 			"After function execution, there should be exactly one block on the block stack."
 		);
+		auto block         = Ref(frame->block_ref_stack_base[0]);
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);

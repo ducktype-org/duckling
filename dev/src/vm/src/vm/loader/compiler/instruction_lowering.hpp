@@ -178,10 +178,14 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_mov_lptr_gptr, i) { addLow<Op_mov_lptr_gptr>(i.dst, i.src); }
 			instr_case(high::Op_mov_lptr_lptr, i) { addLow<Op_mov_lptr_lptr>(i.dst, i.src); }
 			instr_case(high::Op_setNull_lptr, i) { addLow<Op_setNull_lptr>(i.dst); }
-			instr_case(high::Op_mov_lopq_lopq, i) { addLow<Op_mov_blopq_blopq>(i.dst, i.src); }
-			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_blopq_gopq>(i.dst, i.src); }
-			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_blopq_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_gopq_blopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lopq_lopq, i) {
+				auto type_size = ctx.locals_map.at(i.src.var_name).type->getSize().asInt();
+				addLow<Op_mov_lopq_lopq>(i.dst, i.src);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
+			}
+			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_lopq_gopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_lopq_imm>(i.dst, i.src); }
+			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_gopq_lopq>(i.dst, i.src); }
 			instr_case(high::Op_mov_lste_lste, i) { addLow<Op_mov_blste_blste>(i.dst, i.src); }
 			instr_case(high::Op_mov_lste_gste, i) { addLow<Op_mov_blste_gste>(i.dst, i.src); }
 			instr_case(high::Op_mov_gste_lste, i) { addLow<Op_mov_gste_blste>(i.dst, i.src); }

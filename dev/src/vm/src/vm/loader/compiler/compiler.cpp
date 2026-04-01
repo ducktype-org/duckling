@@ -29,33 +29,29 @@
 namespace vm::loader::compiler {
 	namespace detail {
 
-#define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...) \
-	template<FAMILY_CONCEPT ToType>                                \
-	struct LowerArgumentImpl<ToType> {                             \
-		template<opargs::ArgumentType FromType>                    \
-		static u64 lower(                                          \
-			Compiler&                             compiler,        \
-			Compiler::FunctionCompilationContext& ctx,             \
-			const FromType&                       opcode_arg       \
-		) {                                                        \
-			(void) compiler;                                       \
-			(void) ctx;                                            \
-			__VA_ARGS__                                            \
-		}                                                          \
+#define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)            \
+	template<FAMILY_CONCEPT ToType>                                           \
+	struct LowerArgumentImpl<ToType> {                                        \
+		template<opargs::ArgumentType FromType>                               \
+		static u64 lower(                                                     \
+			[[maybe_unused]] Compiler&                             compiler,  \
+			[[maybe_unused]] Compiler::FunctionCompilationContext& ctx,       \
+			const FromType&                                        opcode_arg \
+		) {                                                                   \
+			__VA_ARGS__                                                       \
+		}                                                                     \
 	}
 
-#define DEFINE_LOWER_ARGUMENT_IMPL(LOW_TO_TYPE, HIGH_FROM_TYPE, ...) \
-	template<>                                                       \
-	struct LowerArgumentImpl<LOW_TO_TYPE> {                          \
-		static u64 lower(                                            \
-			Compiler&                             compiler,          \
-			Compiler::FunctionCompilationContext& ctx,               \
-			const HIGH_FROM_TYPE&                 opcode_arg         \
-		) {                                                          \
-			(void) compiler;                                         \
-			(void) ctx;                                              \
-			__VA_ARGS__                                              \
-		}                                                            \
+#define DEFINE_LOWER_ARGUMENT_IMPL(LOW_TO_TYPE, HIGH_FROM_TYPE, ...)          \
+	template<>                                                                \
+	struct LowerArgumentImpl<LOW_TO_TYPE> {                                   \
+		static u64 lower(                                                     \
+			[[maybe_unused]] Compiler&                             compiler,  \
+			[[maybe_unused]] Compiler::FunctionCompilationContext& ctx,       \
+			const HIGH_FROM_TYPE&                                  opcode_arg \
+		) {                                                                   \
+			__VA_ARGS__                                                       \
+		}                                                                     \
 	}
 		// clang-format off
 
@@ -91,7 +87,8 @@ namespace vm::loader::compiler {
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::FunctionName,
 		    opargs::FunctionName,
-		    return u64(*compiler.program_ctx.function_forward_declarations.idOf(opcode_arg.function_name)););
+		    return u64(*compiler.program_ctx.function_forward_declarations.idOf(opcode_arg.function_name));
+		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::BuiltinFunctionName,

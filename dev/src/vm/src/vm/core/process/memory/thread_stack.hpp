@@ -24,7 +24,10 @@ namespace vm {
 
 		static constexpr u64 STACK_LENGTH = FRAMES_LENGTH * BYTES_PER_FRAME;
 
-		static constexpr u64 BLOCKS_PER_FRAME = 32;
+		/**
+		 * Also some heuristic limit on the number of blocks.
+		 */
+		static constexpr u64 BLOCKS_PER_FRAME = BYTES_PER_FRAME / 8;
 
 		static constexpr u64 BLOCK_REF_STACK_LENGTH = FRAMES_LENGTH * BLOCKS_PER_FRAME;
 

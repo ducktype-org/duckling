@@ -79,21 +79,21 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_STACK_LOCAL(64, "l64", vm::opargs::StackLocal64);
 	/** @brief Stores byte offset of local Pointer value on the frame local stack. */
 	DEFINE_MICRO_STACK_LOCAL(Ptr, "lptr", vm::opargs::StackLocalPtr);
+	/** @brief Stores byte offset of local opaque value on the frame local stack. */
+	DEFINE_MICRO_STACK_LOCAL(Opq, "lopq", vm::opargs::StackLocalOpq);
 
 #define VM_MICRO_INSTR_ARG_LOCAL_STACK_TYPES \
-	StackLocal8, StackLocal16, StackLocal32, StackLocal64, StackLocalPtr
+	StackLocal8, StackLocal16, StackLocal32, StackLocal64, StackLocalPtr, StackLocalOpq
 
-	/** @brief Stores byte offset of type-erased local data on the frame local block reference stack. */
+	/** @brief Stores index of type-erased local data in the frame local block reference stack. */
 	DEFINE_MICRO_ARG_TYPE(BlockStackLocalAny, "blany", vm::opargs::StackLocalAny);
-	/** @brief Stores byte offset of local opaque value on the frame local block reference stack. */
-	DEFINE_MICRO_ARG_TYPE(BlockStackLocalOpq, "blopq", vm::opargs::StackLocalOpq);
-	/** @brief Stores the offset of local struct storage on the frame local block reference stack. */
+	/** @brief Stores index of local struct storage in Frame::block_ref_stack (not a byte offset). */
 	DEFINE_MICRO_ARG_TYPE(BlockStackLocalStructure, "blste", vm::opargs::StackLocalStructure);
-	/** @brief Stores byte offset of local variant storage on the frame local block reference stack. */
+	/** @brief Stores index of local variant storage in Frame::block_ref_stack (not a byte offset). */
 	DEFINE_MICRO_ARG_TYPE(BlockStackLocalVariant, "blvnt", vm::opargs::StackLocalVnt);
 
 #define VM_MICRO_INSTR_ARG_LOCAL_BLOCK_STACK_TYPES \
-	BlockStackLocalAny, BlockStackLocalOpq, BlockStackLocalStructure, BlockStackLocalVariant
+	BlockStackLocalAny, BlockStackLocalStructure, BlockStackLocalVariant
 
 	/** @brief Stores ID/index of 8-bit global variable in LowVMProgram globals map. */
 	DEFINE_MICRO_GLOBAL(8, "g8", vm::opargs::Global8);

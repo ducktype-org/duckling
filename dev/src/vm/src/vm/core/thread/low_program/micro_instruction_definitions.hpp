@@ -121,12 +121,10 @@ DEF_MICRO_INSTR(mov_lptr_lptr, vm::low::opargs::StackLocalPtr, vm::low::opargs::
 // sets pointer to null
 DEF_MICRO_INSTR(setNull_lptr, vm::low::opargs::StackLocalPtr)
 
-DEF_MICRO_INSTR(
-	mov_blopq_blopq, vm::low::opargs::BlockStackLocalOpq, vm::low::opargs::BlockStackLocalOpq
-)
-DEF_MICRO_INSTR(mov_gopq_blopq, vm::low::opargs::GlobalOpq, vm::low::opargs::BlockStackLocalOpq)
-DEF_MICRO_INSTR(mov_blopq_gopq, vm::low::opargs::BlockStackLocalOpq, vm::low::opargs::GlobalOpq)
-DEF_MICRO_INSTR(mov_blopq_imm, vm::low::opargs::BlockStackLocalOpq, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(mov_lopq_lopq, vm::low::opargs::StackLocalOpq, vm::low::opargs::StackLocalOpq)
+DEF_MICRO_INSTR(mov_gopq_lopq, vm::low::opargs::GlobalOpq, vm::low::opargs::StackLocalOpq)
+DEF_MICRO_INSTR(mov_lopq_gopq, vm::low::opargs::StackLocalOpq, vm::low::opargs::GlobalOpq)
+DEF_MICRO_INSTR(mov_lopq_imm, vm::low::opargs::StackLocalOpq, vm::low::opargs::Immediate)
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 DEF_MICRO_INSTR(add_l64_l64, vm::low::opargs::StackLocal64, vm::low::opargs::StackLocal64)
@@ -677,6 +675,7 @@ DEF_MICRO_INSTR(fpext_l64_l32, vm::low::opargs::StackLocal64, vm::low::opargs::S
 
 // passes additional argument to preceding instruction
 DEF_MICRO_INSTR(ext_l64, vm::low::opargs::StackLocal64)
+DEF_MICRO_INSTR(ext_imm, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(ext_type, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_field, vm::low::opargs::Field)
 DEF_MICRO_INSTR(ext_type_field, vm::low::opargs::Type, vm::low::opargs::Field)

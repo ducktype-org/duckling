@@ -91,7 +91,12 @@ namespace vm {
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) {
-		{ CORE_ASSERT(frame->block_ref_stack_count == 1, "Invalid start function."); }
+		{
+			CORE_ASSERT(
+				frame->block_ref_stack_end - frame->block_ref_stack_base == 1,
+				"Invalid start function."
+			);
+		}
 		IF_TC(return;)
 	}
 
@@ -409,13 +414,15 @@ namespace vm {
 			auto arg_count          = function_signature->parameters.size();
 
 			std::vector<Box<VmValue>> args;
-			u64                       first_arg_idx = frame->block_ref_stack_count - arg_count;
+			auto                      block_ref_stack_count
+				= usize(frame->block_ref_stack_end - frame->block_ref_stack_base);
+			u64 first_arg_idx = block_ref_stack_count - arg_count;
 
 			// Create VmValue objects from local arguments.
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_signature->parameters[i];
 				TypeCRef          real_type = thread.executing_program->getTypes().at(arg_type);
-				auto              block     = Ref(frame->block_ref_stack[first_arg_idx + i]);
+				auto              block     = Ref(frame->block_ref_stack_base[first_arg_idx + i]);
 				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
@@ -429,7 +436,7 @@ namespace vm {
 
 			if (return_value.has_value()) {
 				auto value = std::move(return_value.value());
-				value->exportData(Pointer(Ref(frame->block_ref_stack[first_arg_idx - 1]), 0));
+				value->exportData(Pointer(Ref(frame->block_ref_stack_base[first_arg_idx - 1]), 0));
 				value->freeData();
 			}
 			for (auto& vm_value: args) vm_value->freeData();
@@ -465,10 +472,12 @@ namespace vm {
 				// 		arg1
 				// 		...
 				// 		argN
-				u64 result_value_idx = frame->block_ref_stack_count - arg_count - (is_void ? 0 : 1);
+				u64 block_ref_stack_count
+					= u64(frame->block_ref_stack_end - frame->block_ref_stack_base);
+				u64 result_value_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
 
 
-				auto ext_result_destination = Ref(frame->block_ref_stack[result_value_idx]);
+				auto ext_result_destination = Ref(frame->block_ref_stack_base[result_value_idx]);
 				auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
 
 				// Prepare arguments and call the function.
@@ -544,18 +553,19 @@ namespace vm {
 			// call stack frame.
 			frame--;  // This is now the caller's frame.
 
-			while (callee_frame->block_ref_stack_count > 0) {
-				auto block
-					= Ref(callee_frame->block_ref_stack[callee_frame->block_ref_stack_count - 1]);
+			while (callee_frame->block_ref_stack_end > callee_frame->block_ref_stack_base) {
+				auto block = Ref(callee_frame->block_ref_stack_end[-1]);
+				u64  block_ref_count
+					= u64(callee_frame->block_ref_stack_end - callee_frame->block_ref_stack_base);
 
 				// We're returning from a non-void function, so the last block on the stack is the
 				// return value. It's being used by the caller so we don't free it.
-				if (void_func || callee_frame->block_ref_stack_count != 1) {
+				if (void_func || block_ref_count != 1) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);
 				}
 
-				callee_frame->block_ref_stack_count--;
+				callee_frame->block_ref_stack_end--;
 			}
 			callee_frame->resetFrameData();
 
@@ -626,6 +636,10 @@ namespace vm {
 		CORE_PANIC("ext_l64 not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_imm)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_l64 not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_type not consumed by previous instruction");
 	}
@@ -669,7 +683,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_blany)(FUNCTION_ARGS) {
 		{
 			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       block   = Ref(frame->block_ref_stack[instr->arg1]);
+			auto       block   = Ref(frame->block_ref_stack_base[instr->arg1]);
 			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
@@ -697,54 +711,51 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blopq_blopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_lopq)(FUNCTION_ARGS) {
 		{
-			auto dst_block = Ref(frame->block_ref_stack[instr->arg0]);
-			auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
-			thread.process_memory.copyPointedData(
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
-			);
+			const auto type_size = instr[1].arg0;
+			std::memcpy(local_stack + instr->arg0, local_stack + instr->arg1, type_size);
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_blopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_lopq)(FUNCTION_ARGS) {
 		{
 			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
-			auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
-			thread.process_memory.copyPointedData(
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			std::memcpy(
+				thread.process_memory.getBlockViewUnsafe(dst_block).getBegin(),
+				local_stack + instr->arg1,
+				thread.process_memory.getBlockType(dst_block)->getSize().asInt()
 			);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blopq_gopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_gopq)(FUNCTION_ARGS) {
 		{
 			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
-			auto dst_block = Ref(frame->block_ref_stack[instr->arg0]);
-			thread.process_memory.copyPointedData(
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			std::memcpy(
+				local_stack + instr->arg0,
+				thread.process_memory.getBlockViewUnsafe(src_block).getBegin(),
+				thread.process_memory.getBlockType(src_block)->getSize().asInt()
 			);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blopq_imm)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_imm)(FUNCTION_ARGS) {
 		{
 			// @TODO: #1728 remove this evil instruction
-			const void* value     = safeReadObjectBytes<void*>(instr->arg1);
-			auto        dst_block = Ref(frame->block_ref_stack[instr->arg0]);
-			auto        dst_view  = thread.process_memory.getBlockViewUnsafe(dst_block);
-			std::memcpy(dst_view.getBegin(), &value, sizeof(value));
+			const void* value = safeReadObjectBytes<void*>(instr->arg1);
+			writeToStack(local_stack, instr->arg0, value);
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blste_blste)(FUNCTION_ARGS) {
 		{
-			auto dst_block = Ref(frame->block_ref_stack[instr->arg0]);
-			auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
+			auto dst_block = Ref(frame->block_ref_stack_base[instr->arg0]);
+			auto src_block = Ref(frame->block_ref_stack_base[instr->arg1]);
 			thread.process_memory.copyPointedData(
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
 			);
@@ -765,7 +776,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blste_gste)(FUNCTION_ARGS) {
 		{
-			auto dst_block = Ref(frame->block_ref_stack[instr->arg0]);
+			auto dst_block = Ref(frame->block_ref_stack_base[instr->arg0]);
 			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
 			thread.process_memory.copyPointedData(
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
@@ -777,7 +788,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_blste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
-			auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
+			auto src_block = Ref(frame->block_ref_stack_base[instr->arg1]);
 			thread.process_memory.copyPointedData(
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
 			);
@@ -821,7 +832,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_blvnt_type)(FUNCTION_ARGS) {
 		{
-			auto variant_block   = Ref(frame->block_ref_stack[instr->arg0]);
+			auto variant_block   = Ref(frame->block_ref_stack_base[instr->arg0]);
 			auto alt_type_id     = TypeID(instr->arg1);
 			auto variant_type_id = TypeID(instr[1].arg0);
 			OpFuns::setVariantType(thread, Pointer(variant_block, 0), alt_type_id, variant_type_id);
@@ -832,7 +843,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_blvnt)(FUNCTION_ARGS) {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       variant_block   = Ref(frame->block_ref_stack[instr->arg1]);
+			auto       variant_block   = Ref(frame->block_ref_stack_base[instr->arg1]);
 			auto       alt_type_id     = TypeID(instr[1].arg0);
 			auto       variant_type_id = TypeID(instr[1].arg1);
 
@@ -907,7 +918,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_blany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto src_block   = Ref(frame->block_ref_stack[instr->arg1]);
+			auto src_block   = Ref(frame->block_ref_stack_base[instr->arg1]);
 			auto src_pointer = Pointer(src_block, 0);
 
 			auto type = Memory::getBlockType(src_block);
@@ -919,7 +930,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(load_blany_lptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
+			auto dst_block   = Ref(frame->block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
 
 			auto src_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -950,7 +961,7 @@ namespace vm {
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
-			auto src_block   = Ref(frame->block_ref_stack[instr->arg1]);
+			auto src_block   = Ref(frame->block_ref_stack_base[instr->arg1]);
 			auto src_pointer = Pointer(src_block, 0);
 
 			auto type = Memory::getBlockType(src_block);
@@ -962,7 +973,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_blany_lptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
+			auto dst_block   = Ref(frame->block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
 
 			auto src_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -979,7 +990,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_blste)(FUNCTION_ARGS) {
 		{
 			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
-			const auto src_block = Ref(frame->block_ref_stack[instr->arg1]);
+			const auto src_block = Ref(frame->block_ref_stack_base[instr->arg1]);
 			auto       offset    = static_cast<usize>(instr[1].arg0);
 
 			const Pointer new_dst
@@ -991,13 +1002,13 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_blste_blany)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
+			auto dst_block   = Ref(frame->block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
 
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
-			auto src_block   = Ref(frame->block_ref_stack[instr->arg1]);
+			auto src_block   = Ref(frame->block_ref_stack_base[instr->arg1]);
 			auto src_pointer = Pointer(src_block, 0);
 
 			auto type = Memory::getBlockType(src_block);
@@ -1009,10 +1020,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_blany_blste)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
+			auto dst_block   = Ref(frame->block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
 
-			auto src_block   = Ref(frame->block_ref_stack[instr->arg1]);
+			auto src_block   = Ref(frame->block_ref_stack_base[instr->arg1]);
 			auto src_pointer = Pointer(src_block, 0);
 
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
@@ -1065,7 +1076,7 @@ namespace vm {
 			auto data_offset  = index * static_cast<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
-			auto src_block   = Ref(frame->block_ref_stack[instr->arg1]);
+			auto src_block   = Ref(frame->block_ref_stack_base[instr->arg1]);
 			auto src_pointer = Pointer{ src_block, 0 };
 
 			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
@@ -1081,7 +1092,7 @@ namespace vm {
 			auto data_offset  = index * static_cast<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
-			auto src_block   = Ref(frame->block_ref_stack[instr->arg1]);
+			auto src_block   = Ref(frame->block_ref_stack_base[instr->arg1]);
 			auto src_pointer = Pointer(src_block, 0);
 
 			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
@@ -1091,7 +1102,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_blany_lptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
+			auto dst_block   = Ref(frame->block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
 
 			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -1107,7 +1118,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_blany_lptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->block_ref_stack[instr->arg0]);
+			auto dst_block   = Ref(frame->block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
 
 			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -1298,8 +1309,7 @@ namespace vm {
 		{
 			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
 			performInit(instr, local_stack, frame, thread, vm_value.type->getID());
-			vm_value.exportData({ Ref(frame->block_ref_stack[frame->block_ref_stack_count - 1]), 0 }
-			);
+			vm_value.exportData({ Ref(frame->block_ref_stack_end[-1]), 0 });
 		}
 		FUNCTION_CONT(1);
 	}
