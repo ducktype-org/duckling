@@ -14,7 +14,7 @@ use crate::{
         core::{BranchOrTag, Git, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
     },
-    util::path_ops_ext::PathOpsExt,
+    util::{error::MessageError, path_ops_ext::PathOpsExt},
 };
 
 use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
@@ -34,24 +34,23 @@ pub(crate) fn parse(
             return Ok(Source::Registry(Registry::new(ctx.registry_url()?)));
         }
         scope.pop();
-        return Err(
-            QuackError::hint("provide one of the `version` or the `source` fields").context(
-                format!(
-                    "couldn't determine the source of the dependency `{}`",
-                    scope.format()
-                ),
-            ),
-        );
+        return Err(QuackError::hint(
+            "provide one of the `version` or the `source` fields",
+        ))
+        .context(format!(
+            "couldn't determine the source of the dependency `{}`",
+            scope.format()
+        ));
     };
     if schema.version.is_some() && source.has_local() {
         scope.pop();
         let formatted = scope.format();
         return Err(QuackError::hint(format!(
             "remove one of the fields `{formatted}.version` or `{formatted}.source.path`"
-        ))
+        )))
         .context(format!(
             "couldn't determine the type of the dependency `{formatted}`"
-        )));
+        ));
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
@@ -80,11 +79,11 @@ pub(crate) fn parse(
                 scope.pop();
                 return Err(QuackError::hint(
                     "provide one of the fields `version` or the `source`",
-                )
+                ))
                 .context(format!(
                     "couldn't determine the source of the dependency `{}`",
                     scope.format()
-                )));
+                ));
             }
         }
         (Some(registry_url), None, None) => {
@@ -166,9 +165,12 @@ fn make_could_not_determine_error<const N: usize>(
             source[0], source[1], source[2]
         )
     };
-    QuackError::hint(hint_text).context(format!(
-        "couldn't determine the source of the dependency `{}`",
-        scope.format()
+    QuackError::hint(hint_text).context(MessageError(
+        format!(
+            "couldn't determine the source of the dependency `{}`",
+            scope.format()
+        )
+        .into(),
     ))
 }
 
@@ -293,6 +295,5 @@ fn parse_git_url(manifest_git_url: &str, package_root: &Path, ctx: &DuckCtx) -> 
         ));
         err = err.add_note("git dependency points to a file on the disk");
     }
-    err = err.context(format!("`{manifest_git_url}` is not a valid URL"));
-    Err(err)
+    Err(err).context(format!("`{manifest_git_url}` is not a valid URL"))
 }

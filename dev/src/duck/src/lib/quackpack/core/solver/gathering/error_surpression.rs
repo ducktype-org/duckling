@@ -1,4 +1,5 @@
-use crate::{QuackError, QuackResult, util::error::QuackMessage};
+use crate::{QuackError, QuackResult};
+use std::error::Error;
 
 /// Represents a type with a list of surpressed errors, which occured during some computation.
 #[derive(Debug)]
@@ -21,8 +22,8 @@ impl<T> GathererComputation<T> {
         Self(res, vec![])
     }
 
-    pub fn context<C: QuackMessage + Sized + 'static>(mut self, ctx: C) -> Self {
-        self.1.push(QuackError::error(ctx));
+    pub fn context<C: Error + Send + Sync + 'static>(mut self, ctx: C) -> Self {
+        self.1.push(QuackError::new(ctx));
         self
     }
 
