@@ -11,7 +11,7 @@ namespace vm::api {
 
 	struct Paused {};
 
-	struct WaitingForInput {};
+	struct Sleeping {};
 
 	struct NotStarted {};
 
@@ -29,23 +29,14 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, error_message);
 	};
 
-	struct ExecutionNotStarted {};
-
-	struct Parsing {};
-
-	struct TypeAnalysis {};
-
 	using ProcStatus = std::variant<
+		NotStarted,
 		Running,
 		Paused,
-		WaitingForInput,
-		NotStarted,
+		Sleeping,
 		ExecutionCompleted,
 		ExecutionStopped,
-		ExecutionPanicked,
-		ExecutionNotStarted,
-		Parsing,
-		TypeAnalysis>;
+		ExecutionPanicked>;
 
 	constexpr bool isStatusTerminal(const ProcStatus& status) {
 		return std::holds_alternative<ExecutionCompleted>(status)
@@ -53,24 +44,25 @@ namespace vm::api {
 		    || std::holds_alternative<ExecutionPanicked>(status);
 	}
 
-	constexpr bool executingStarted(const ProcStatus& status) {
-		return !(
-			std::holds_alternative<ExecutionNotStarted>(status)
-			|| std::holds_alternative<Parsing>(status)
-			|| std::holds_alternative<TypeAnalysis>(status)
-		);
+	constexpr bool hasExecutionStarted(const ProcStatus& status) {
+		return !(std::holds_alternative<NotStarted>(status));
 	}
 
 	constexpr bool isExecuting(const ProcStatus& status) {
-		return !isStatusTerminal(status) && executingStarted(status);
+		// @note This function is equivalent to the following:
+		// return !isStatusTerminal(status) && hasExecutionStarted(status);
+		return std::holds_alternative<Running>(status) || std::holds_alternative<Paused>(status)
+		    || std::holds_alternative<Sleeping>(status);
+	}
+
+	constexpr bool canRespond(const ProcStatus& status) {
+		return std::holds_alternative<NotStarted>(status) || std::holds_alternative<Paused>(status)
+		    || isStatusTerminal(status);
 	}
 }
 
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionNotStarted, "ExecutionNotStarted")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::Parsing, "Parsing")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::TypeAnalysis, "TypeAnalysis")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::WaitingForInput, "WaitingForInput")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Sleeping, "WaitingForInput")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")

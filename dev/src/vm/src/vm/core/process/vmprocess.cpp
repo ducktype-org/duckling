@@ -6,19 +6,19 @@
 
 namespace vm {
 
-	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid), status(api::ExecutionNotStarted{}) {}
+	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid), status(api::NotStarted{}) {}
 
-	ProcIO& VMProcess::getIO() { return io; }
+	ProcIO& IVMProcess::getIO() { return io; }
 
-	GIL& VMProcess::getGIL() { return gil; }
+	GIL& IVMProcess::getGIL() { return gil; }
 
-	SynchronizationPrimitives& VMProcess::getSynchronizationPrimitives() {
+	SynchronizationPrimitives& IVMProcess::getSynchronizationPrimitives() {
 		return synchronization_primitives;
 	}
 
-	PID VMProcess::getPID() const { return my_pid; }
+	PID IVMProcess::getPID() const { return my_pid; }
 
-	std::expected<api::Response, api::ApiError> VMProcess::doRequest(
+	std::expected<api::Response, api::ApiError> IVMProcess::doRequest(
 		const api::RequestVariant& request
 	) {
 		variant_match(request) {
@@ -124,7 +124,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::attach(
+	std::expected<api::Response, api::ApiError> IVMProcess::attach(
 		std::istream& istream, std::ostream& ostream
 	) {
 		// @TODO: Flush the ostream from ProcIO to new ostream.
@@ -135,13 +135,13 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::detach() {
+	std::expected<api::Response, api::ApiError> IVMProcess::detach() {
 		if (!io_redirecter) return std::unexpected(api::ApiError{ api::AttachDetachError{} });
 		io_redirecter.reset();
 		return api::Response(api::response::Empty());
 	}
 
-	void VMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
+	void IVMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			status = new_status;
@@ -149,12 +149,12 @@ namespace vm {
 		status_cv.notify_all();
 	}
 
-	api::ProcStatus VMProcess::getStatus() {
+	api::ProcStatus IVMProcess::getStatus() {
 		std::shared_lock lock(rw_status);
 		return status;
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::input(const api::request::Input& request
+	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request
 	) {
 		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
@@ -163,7 +163,7 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::output() {
+	std::expected<api::Response, api::ApiError> IVMProcess::output() {
 		auto lock = io.lock();
 		// @TODO: #2342 Cannot read output from api when IO is being redirected
 		if (io_redirecter)

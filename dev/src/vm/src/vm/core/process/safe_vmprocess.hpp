@@ -10,7 +10,7 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <deque>
@@ -27,7 +27,7 @@ namespace vm {
 	 * @note Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class SafeVMProcess final: public VMProcess {
+	class SafeVMProcess final: public IVMProcess {
 		friend class VmValue;
 		friend class VMValueRef;
 
@@ -41,7 +41,7 @@ namespace vm {
 		loader::Loader loader{};
 		/**
 		 * @brief The program being executed by this process.
-		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module.
+		 * Holds a constant and stable reference.
 		 */
 		CRef<low::ILowVMProgram> loaded_program;
 
@@ -57,24 +57,24 @@ namespace vm {
 		std::vector<Box<VmValue>> owned_vm_values;
 
 		// @TODO: #2342 Improve this....
-		std::deque<VMThread> vm_threads;
+		std::deque<SafeVMThread> vm_threads;
 
 		/**
 		 * @brief Returns first thread in thread queue.
 		 */
-		VMThread& getMainVMThread();
+		SafeVMThread& getMainVMThread();
 
 		/**
 		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
 		 * then it returns main thread
 		 */
-		VMThread& getVMThreadByID(api::ThreadID thread_id);
+		SafeVMThread& getVMThreadByID(api::ThreadID thread_id);
 
 		/**
 		 * @brief Returns reference to either existing empty thread or
 		 * creates new thread without worker and returns it
 		 */
-		VMThread& getEmptyThread();
+		SafeVMThread& getEmptyThread();
 
 		base::Optional<api::ApiError> assertProcessCanRespond();
 
@@ -141,5 +141,7 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type) override;
 
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
+
+		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 	};
 }
