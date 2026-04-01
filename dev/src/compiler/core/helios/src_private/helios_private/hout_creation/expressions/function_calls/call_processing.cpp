@@ -1,5 +1,3 @@
-#include "helios_private/hout_creation/expressions/hout_of_subexpr.hpp"
-
 #include <diagnostic_interactive/message.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
@@ -16,6 +14,7 @@
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/symbol_type.hpp>
