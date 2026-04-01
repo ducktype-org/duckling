@@ -200,7 +200,6 @@ jobs:
               -D CMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
-              -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               -D STRIP_SYMBOL_INFORMATION=ON \
               ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
