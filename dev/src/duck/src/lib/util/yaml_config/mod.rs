@@ -11,7 +11,7 @@ use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
 
 use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 use super::DescriptionWithAnArticle;

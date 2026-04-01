@@ -13,11 +13,11 @@
 //! More information can be found in [`readme.md`]s.
 pub mod duck;
 pub mod quackpack;
-pub mod util_common;
+pub mod util;
 
 pub use duck::{main, util::duck_ctx::DuckCtx};
 pub use quackpack::util::{qp_ctx::QpCtx, str_id::*};
-pub use util_common::error::{QuackError, QuackResultContext};
+pub use util::error::{QuackError, QuackResultContext};
 
 /// A common [`Result`] type used widely throughout the project.
 pub type QuackResult<T> = Result<T, QuackError>;

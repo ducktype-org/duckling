@@ -31,7 +31,7 @@ use std::{
 
 use crate::{
     QuackResult, qp_bail_internal, quackpack::core::storage::venv_id::VenvId,
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 use super::package_id::PackageId;

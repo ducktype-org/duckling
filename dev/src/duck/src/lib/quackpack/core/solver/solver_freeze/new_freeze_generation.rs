@@ -188,7 +188,7 @@ mod test {
                 DependencyEdge, ExpandedLocation, ExpandedPackage, InternedExpandedLocation,
             },
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {

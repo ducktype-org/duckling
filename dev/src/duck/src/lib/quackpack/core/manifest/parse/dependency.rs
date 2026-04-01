@@ -19,7 +19,7 @@ use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 use crate::quackpack::schemas::manifest::DependencyCondition as ConditionSchema;
 use crate::quackpack::schemas::manifest::DependencyFeature as FeatureSchema;
 use crate::quackpack::schemas::manifest::DependencySource;
-use crate::util_common::error::QuackResultContext;
+use crate::util::error::QuackResultContext;
 
 use crate::{QuackResult, quackpack::core::Dependencies};
 

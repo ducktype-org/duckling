@@ -5,7 +5,7 @@ use std::{fs::File, io::Write, path::Path};
 use curl::easy::Handler;
 use serde::Deserialize;
 
-use crate::{QuackResult, util_common::path_ops_ext::PathOpsExt};
+use crate::{QuackResult, util::path_ops_ext::PathOpsExt};
 
 #[derive(Clone, Debug, Default)]
 /// A basic collector which saves the entire HTTP response as a vector of `u8`.

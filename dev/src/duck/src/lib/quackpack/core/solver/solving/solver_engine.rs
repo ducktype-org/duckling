@@ -341,7 +341,7 @@ mod test {
             parse_manifest,
             types_common::{ExpandedLocation, Location},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     use super::*;
