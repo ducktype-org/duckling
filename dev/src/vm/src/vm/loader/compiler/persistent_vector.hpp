@@ -11,13 +11,13 @@
 #include <ranges>
 
 namespace persistent {
-	STRONG_TYPEDEF_INT(VectoStateID, u64);
+	STRONG_TYPEDEF_INT(VectorStateID, u64);
 
 	/**
 	Class implementing a STL vector with time-persistency aka control version. You can modify any of
-	the previous instances of the vector, if you know its' `VectoStateID`. `VectoStateID` is
+	the previous instances of the vector, if you know its `VectorStateID`. `VectorStateID` is
 	returned after each operation `pop`, `push`, `change`.
-	@note: Two instances may receive the same `VectoStateID` - this happens when via modification
+	@note: Two instances may receive the same `VectorStateID` - this happens when via modification
 	vector returned to state that it was in previous instance. It allows for == comparison in O(1)
 	*/
 	template<typename VarT, typename VarH = std::hash<VarT>>
@@ -27,6 +27,8 @@ namespace persistent {
 		struct NodeChildren {
 			VarNodeID left;
 			VarNodeID rght;
+
+			bool operator==(const NodeChildren&) const = default;
 		};
 
 		using VarNodeH = decltype([](const NodeChildren& h) -> usize {
@@ -67,7 +69,7 @@ namespace persistent {
 			if (height == 0) return {};
 
 			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
-				auto& entry = var_entries[root];
+				auto& entry = var_entries.atRight(root);
 				auto  orig  = root;
 				if (idx & max_bit) {
 					dir  = R;
@@ -85,7 +87,7 @@ namespace persistent {
 		VarNodeID nodeFromChildren(VarNodeID left_child, VarNodeID rght_child) {
 			auto children       = NodeChildren{ .left = left_child, .rght = rght_child };
 			auto [is_new, node] = var_entries.emplaceByLeft(children, next_node_id);
-			next_node_id += (is_new ? 0 : 1);
+			next_node_id += (is_new ? 1 : 0);
 
 			return node;
 		}
@@ -93,24 +95,51 @@ namespace persistent {
 		VarNodeID nodeFromIdxVar(usize idx, VarT var) {
 			auto leaf           = LeafEntry{ .idx = idx, .var = std::move(var) };
 			auto [is_new, node] = leaf_values.emplaceByLeft(leaf, next_node_id);
-			next_node_id += (is_new ? 0 : 1);
+			next_node_id += (is_new ? 1 : 0);
 
 			return node;
 		}
 
 		VarNodeID getChild(VarNodeID node_id, Dir dir) const {
-			auto& entry = var_entries.atLeft(node_id);
+			auto& entry = var_entries.atRight(node_id);
 			return (dir == L) ? entry.left : entry.rght;
 		}
 
-	public:
-		VectoStateID push(VectoStateID state_id, VarT var) {
-			VarNodeID prev_var_root = u64(state_id);
-			if (!root_info.contains(prev_var_root))
-				throw std::invalid_argument("LocalStackDbBuilder got invalid state");
+		auto getRootInfo(VectorStateID state_id) const {
+			auto node = VarNodeID{ u64(state_id) };
+			if (!root_info.contains(node))
+				throw std::invalid_argument("PersistentVector got invalid state");
 
-			auto prev_size = root_info[prev_var_root].size;
-			auto height    = root_info[prev_var_root].height;
+			auto& entry = root_info[node];
+
+			return std::make_tuple(VarNodeID{ u64(state_id) }, entry.size, entry.height);
+		}
+
+	public:
+		const VarT& access(VectorStateID state_id, usize idx) const {
+			auto [node, size, height] = getRootInfo(state_id);
+
+			if (idx == 0 || idx > size)
+				throw std::invalid_argument("received index out of range for given state");
+			CORE_ASSERT(height > 0, "Root of non-empty vector should always have non-zero height");
+
+			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
+				auto& entry = var_entries.atRight(node);
+				node        = (idx & max_bit) ? entry.rght : entry.left;
+			}
+
+			return leaf_values.atRight(node).var;
+		}
+
+		[[nodiscard]]
+		usize size(VectorStateID state_id) const {
+			auto [__, size, _] = getRootInfo(state_id);
+
+			return size;
+		}
+
+		VectorStateID push(VectorStateID state_id, VarT var) {
+			auto [prev_var_root, prev_size, height] = getRootInfo(state_id);
 
 			auto var_node = nodeFromIdxVar(prev_size + 1, std::move(var));
 
@@ -142,16 +171,11 @@ namespace persistent {
 
 			root_info.put(var_node, RootEntry{ .height = height, .size = prev_size + 1 });
 
-			return VectoStateID{ u64(var_node) };
+			return VectorStateID{ u64(var_node) };
 		}
 
-		VectoStateID change(VectoStateID state_id, usize idx, VarT var) {
-			VarNodeID prev_var_root = u64(state_id);
-			if (!root_info.contains(prev_var_root))
-				throw std::invalid_argument("LocalStackDbBuilder got invalid state");
-
-			auto size   = root_info[prev_var_root].size;
-			auto height = root_info[prev_var_root].height;
+		VectorStateID change(VectorStateID state_id, usize idx, VarT var) {
+			auto [prev_var_root, size, height] = getRootInfo(state_id);
 
 			if (idx == 0 || idx > size)
 				throw std::invalid_argument("received index out of range for given state");
@@ -176,16 +200,11 @@ namespace persistent {
 
 			root_info.put(var_node, RootEntry{ .height = height, .size = size });
 
-			return VectoStateID{ u64(var_node) };
+			return VectorStateID{ u64(var_node) };
 		}
 
-		VectoStateID pop(VectoStateID state_id) {
-			VarNodeID prev_var_root = u64(state_id);
-			if (!root_info.contains(prev_var_root))
-				throw std::invalid_argument("LocalStackDbBuilder got invalid state");
-
-			auto size   = root_info[prev_var_root].size;
-			auto height = root_info[prev_var_root].height;
+		VectorStateID pop(VectorStateID state_id) {
+			auto [prev_var_root, size, height] = getRootInfo(state_id);
 
 			if (size == 0)
 				throw std::invalid_argument("stack at given state is empty - cannot pop from it");
@@ -229,7 +248,7 @@ namespace persistent {
 
 			root_info.put(var_node, RootEntry{ .height = height, .size = size - 1 });
 
-			return var_node;
+			return VectorStateID{ u64(var_node) };
 		}
 	};
 }

@@ -20,9 +20,9 @@ namespace persistent::detail {
 			return (it == right_left.end()) ? std::nullopt : it->second;
 		}
 
-		const R& atLeft(L left) { return left_right.at(left); }
+		const R& atLeft(const L& left) const { return left_right.at(left); }
 
-		const L& atRight(R rght) { return right_left.at(rght); }
+		const L& atRight(const R& rght) const { return right_left.at(rght); }
 
 		size_t size() {
 			CORE_ASSERT(
@@ -34,7 +34,7 @@ namespace persistent::detail {
 
 		std::pair<bool, R> emplaceByLeft(L left, R rght) {
 			if (right_left.find(rght) != right_left.end())
-				throw std::invalid_argument("right element is already binded");
+				throw std::invalid_argument("right element is already bound");
 
 			auto itl = left_right.find(left);
 			if (itl != left_right.end()) return { false, itl->second };
@@ -47,7 +47,7 @@ namespace persistent::detail {
 
 		std::pair<bool, L> emplaceByRight(L left, R rght) {
 			if (left_right.find(left) != left_right.end())
-				throw std::invalid_argument("left element is already binded");
+				throw std::invalid_argument("left element is already bound");
 
 			auto itr = right_left.find(rght);
 			if (itr != right_left.end()) return { false, itr->second };
@@ -66,6 +66,7 @@ namespace persistent::detail {
 		bool empty() { return (size() == 0); }
 
 		auto begin() const { return left_right.begin(); }
+
 		auto end() const { return left_right.end(); }
 
 	private:
