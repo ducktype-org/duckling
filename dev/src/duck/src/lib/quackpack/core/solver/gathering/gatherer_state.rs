@@ -1,19 +1,17 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::gathering::{
-    error_surpression::{GathererComputation, GathererResult},
-    fetch_types::{
-        FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
-        NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
-    },
+use crate::quackpack::core::gathering::error_surpression::{GathererComputation, GathererResult};
+use crate::quackpack::core::gathering::fetch_types::{
+    FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
+    NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
 };
-use crate::quackpack::core::solver::types_common::{
+use crate::quackpack::core::types_common::{
     ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{FeatureName, Manifest, Version};
-use crate::util_common::error::MessageError;
+use crate::util::error::MessageError;
 use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
 };

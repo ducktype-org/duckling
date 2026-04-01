@@ -1,5 +1,5 @@
 use crate::duck::util::indent::indent;
-use crate::util_common::error::{DisplayPlace, ErrorExt, ErrorType};
+use crate::util::error::{DisplayPlace, ErrorExt, ErrorType};
 use crate::{DuckCtx, duck::util::terminal::Terminal};
 use crate::{QuackError, QuackResult, qp_bail_internal};
 use tracing::debug;

@@ -1,5 +1,5 @@
 //! A [`Deserializer`](serde::Deserializer) support for [`YamlConfig`].
-use crate::{QuackError, util_common::error::MessageError};
+use crate::{QuackError, util::error::MessageError};
 
 use super::YamlConfig;
 use std::fmt;

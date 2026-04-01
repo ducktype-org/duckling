@@ -265,7 +265,7 @@ macro_rules! qp_err {
     ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
-            $crate::QuackError::new($crate::util_common::error::MessageError(::std::borrow::Cow::from(static_msg)))
+            $crate::QuackError::new($crate::util::error::MessageError(::std::borrow::Cow::from(static_msg)))
         } else {
             $crate::QuackError::message(format!($msg))
         }
@@ -284,16 +284,16 @@ macro_rules! qp_internal {
     ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
-            $crate::QuackError::from($crate::util_common::error::InternalError(::std::borrow::Cow::from(static_msg)))
+            $crate::QuackError::from($crate::util::error::InternalError(::std::borrow::Cow::from(static_msg)))
         } else {
-            $crate::QuackError::from($crate::util_common::error::InternalError(::std::borrow::Cow::from(format!($msg))))
+            $crate::QuackError::from($crate::util::error::InternalError(::std::borrow::Cow::from(format!($msg))))
         }
     }};
     ($err:expr $(,)?) => {
         $crate::QuackError::from($err)
     };
     ($fmt:expr, $($args:tt)*) => {
-         $crate::QuackError::from($crate::util_common::error::InternalError(::std::borrow::Cow::from(format!($fmt, $($args)*))))
+         $crate::QuackError::from($crate::util::error::InternalError(::std::borrow::Cow::from(format!($fmt, $($args)*))))
     };
 }
 

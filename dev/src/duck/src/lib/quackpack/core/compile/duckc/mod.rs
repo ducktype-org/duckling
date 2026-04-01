@@ -18,7 +18,7 @@ use super::BuildContext;
 use super::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::compiler_dag::CompilerDag;
 use crate::quackpack::core::storage::freeze::FreezeDep;
-use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
+use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 #[derive(Debug)]

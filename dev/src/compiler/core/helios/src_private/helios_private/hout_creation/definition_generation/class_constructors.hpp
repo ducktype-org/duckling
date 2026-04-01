@@ -6,7 +6,7 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios::defgen {
 	/**
 	 * @brief Get the compiler-generated HOUT representation of the implicit constructor for a class.
 	 *

@@ -104,7 +104,7 @@ namespace compiler::helios {
 		({ .uses_qresult = false })
 	);
 
-	namespace houtgen {
+	namespace defgen {
 		struct KeyFor_QueryGeneratedSymbol {
 			base::StrID         name;
 			GeneratedSymbolData generated_symbol_data;

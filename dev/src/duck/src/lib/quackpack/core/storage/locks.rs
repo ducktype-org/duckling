@@ -81,9 +81,9 @@ use crate::QuackResult;
 use crate::QuackResultContext;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::util_common::path_ops_ext::FileLockGuard;
-use crate::util_common::path_ops_ext::PathOpsExt;
-use crate::util_common::path_ops_ext::ShouldBlock;
+use crate::util::path_ops_ext::FileLockGuard;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops_ext::ShouldBlock;
 
 #[derive(Debug)]
 /// A lock that guarantees no virtual environment data mutations are in progress.

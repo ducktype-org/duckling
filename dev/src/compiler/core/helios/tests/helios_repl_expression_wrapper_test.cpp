@@ -78,11 +78,11 @@ private:
 			});
 
 			auto sym_ref  = helios::getSymRef(wrapper.declaration->original_symbol);
-			auto gen_data = std::get_if<helios::houtgen::GeneratedSymbolData>(&sym_ref->other);
+			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
 			assertTrue(gen_data != nullptr, "Expected generated symbol data");
 
 			auto repl_data
-				= std::get_if<helios::houtgen::GeneratedSymbolData::ReplExpressionWrapper>(
+				= std::get_if<helios::defgen::GeneratedSymbolData::ReplExpressionWrapper>(
 					&gen_data->data
 				);
 			assertTrue(repl_data != nullptr, "Expected ReplExpressionWrapper generated symbol");
