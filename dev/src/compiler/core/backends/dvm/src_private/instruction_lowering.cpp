@@ -168,7 +168,7 @@ void FunctionLoweringContext::handleCall(
 		CORE_DEV_LOG(Backend, "Initializing: ", typeName(arg_type), '\n');
 
 		auto arg_name = base::strConcat("call", "_arg", arg_idx, "_");
-		auto temp_arg = pushTempLocalUntracked(arg_type, arg_name.c_str());
+		auto temp_arg = pushTempLocal(arg_type, arg_name, false);
 		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 	}
 
@@ -385,20 +385,15 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 }
 
 DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
-	const vm::code::TypeOfData& type, base::Optional<const char*> name_hint
-) {
-	current_temp_count++;
-	return pushTempLocalUntracked(type, name_hint);
-}
-
-DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocalUntracked(
-	const vm::code::TypeOfData& type, base::Optional<const char*> name_hint
+	const vm::code::TypeOfData& type, base::Optional<std::string_view> name_hint, bool tracked
 ) {
 	auto name       = base::strConcat(name_hint.copyValueOr("temp"), next_temp_id++);
 	auto temp_local = DVMLocal{
-		.name = base::StrID(name.c_str()),
+		.name = base::StrID(name),
 		.type = type,
 	};
+	if (tracked) current_temp_count++;
+
 	pushInstruction({
 		OpKind::init,
 		temp_local.asAnyArgument(),

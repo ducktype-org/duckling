@@ -98,7 +98,7 @@ namespace compiler::backend_vm::internal {
 
 		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
 
-		DVMLocal forceToLocal(const DVMValue& value, base::Optional<const char*> name_hint = {});
+		DVMLocal forceToLocal(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
 
 		/**
 		 * @brief Stores a given @p src_value in @p dest_place.
@@ -125,23 +125,17 @@ namespace compiler::backend_vm::internal {
 
 		usize next_temp_id = 0;
 		/**
-		 * @brief Pushes a temporary local and saves it in the `current_temp_count`.
-		 * This temporary local will be automatically deinitialized after `pushInstruction` is
-		 * executed.
+		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
+		 * `current_temp_count`. This temporary local will be automatically deinitialized after
+		 * `pushInstruction` is executed.
+		 *
+		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
+		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
 		 */
 		DVMLocal pushTempLocal(
-			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
-		);
-
-		/**
-		 * @brief Pushes a temporary local and DOESN'T save it in the `current_temp_count`.
-		 * Used in special cases when we don't want the temporaries to be automatically
-		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
-		 *
-		 * @note UseOnlyWhenYouKnowWhatYouAreDoing
-		 */
-		DVMLocal pushTempLocalUntracked(
-			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
+			const vm::code::TypeOfData&      type,
+			base::Optional<std::string_view> name_hint = {},
+			bool                             tracked   = true
 		);
 
 		[[nodiscard]] usize instructionsCount() const;
