@@ -47,7 +47,10 @@ impl<'duck> RunScriptOptions<'duck> {
         let folder_path = path
             .parent()
             .context_internal("we assured that the path points to a file")?;
-        let venv_id = matches.try_get_one::<String>("venv")?.map(StrId::new);
+        let venv_id = matches
+            .try_get_one::<String>("venv")
+            .context_internal("misuse of clap")?
+            .map(StrId::new);
         let args: Vec<OsString> = matches
             .try_get_many::<OsString>("args")?
             .map(|values| values.cloned().collect())

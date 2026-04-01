@@ -55,8 +55,8 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     } else {
         PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
-    let features = features_from_matches(matches, package.package())?;
-    let profile = profile_from_matches(matches)?;
+    let features = features_from_matches(matches, package.package());
+    let profile = profile_from_matches(matches);
     let opts = BuildOptions {
         package,
         used_features: features,

@@ -1,6 +1,6 @@
 use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser};
 
-use crate::{QuackResult, StrId, quackpack::core::Package};
+use crate::{StrId, quackpack::core::Package};
 
 const DEFAULT_PROFILE: &str = "dev";
 
@@ -148,29 +148,28 @@ pub fn subcommand(name: &'static str) -> Command {
 }
 
 /// Get selected profile from `args`.
-pub fn profile_from_matches(args: &ArgMatches) -> QuackResult<StrId> {
+pub fn profile_from_matches(args: &ArgMatches) -> StrId {
     if args.get_flag("release") {
-        Ok("release".into())
-    } else if let Some(profile) = args.try_get_one::<String>("profile")? {
-        Ok(profile.into())
+        "release".into()
+    } else if let Some(profile) = args.get_one::<String>("profile") {
+        profile.into()
     } else {
-        Ok(DEFAULT_PROFILE.into())
+        DEFAULT_PROFILE.into()
     }
 }
 
 /// Get enabled features from `args` for package `pkg`.
-pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> QuackResult<Vec<StrId>> {
+pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
     if args.get_flag("all-features") {
-        Ok(pkg
-            .manifest()
+        pkg.manifest()
             .features()
             .all_features()
             .keys()
             .copied()
-            .collect())
-    } else if let Some(cli_features) = args.try_get_many::<String>("features")? {
-        Ok(cli_features.map(StrId::from).collect())
+            .collect()
+    } else if let Some(cli_features) = args.get_many::<String>("features") {
+        cli_features.map(StrId::from).collect()
     } else {
-        Ok(vec![])
+        vec![]
     }
 }
