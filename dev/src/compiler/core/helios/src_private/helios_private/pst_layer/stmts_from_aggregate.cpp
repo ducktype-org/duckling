@@ -5,13 +5,12 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
-
 #include <helios_private/pst_layer/macros.hpp>
 
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/query_errors.hpp>
 #include <query_framework/context/context.hpp>
+#include <query_framework/query_errors.hpp>
 
 namespace compiler::helios {
 
@@ -68,23 +67,19 @@ namespace compiler::helios {
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
 			for (auto&& e: *code_block.value()) output.emplace_back(e);
-		}
-		else if (auto code_block_or_stmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
-			auto       code_block_or_stmt_val = code_block_or_stmt.value();
+		} else if (auto code_block_or_stmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
+			auto code_block_or_stmt_val = code_block_or_stmt.value();
 			if (code_block_or_stmt_val->getType() == pst::CodeBlockOrStmt::Type::CodeBlock)
 				for (auto&& e: *code_block_or_stmt_val->getCodeBlock().unlock(ctx))
 					output.emplace_back(e);
 			else
 				output.emplace_back(code_block_or_stmt_val->getStmt());
-		}
-		else if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {
+		} else if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {
 			for (auto e: top_level.value()->getStatements()) output.emplace_back(e);
-		}
-		else if (elem.dynamicCast<pst::ClassBlock>()) {
-			auto       elements = internal::getChildStmtsOfClassBlock(ctx, elem);
+		} else if (elem.dynamicCast<pst::ClassBlock>()) {
+			auto elements = internal::getChildStmtsOfClassBlock(ctx, elem);
 			for (auto e: elements) output.emplace_back(e);
-		}
-		else {
+		} else {
 			const auto& element = *elem;
 			CORE_PANIC(base::strConcat(
 				"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
@@ -97,7 +92,9 @@ namespace compiler::helios {
 			if (stmt.unlock(ctx)->getElementKind() == pst::ElementKind::Expand) {
 				// PR don't ignore this!
 				// Also add error handling!
-				auto expand_result = ctx.query<QueryMacroExpansion>(stmt.template dynamicCast<pst::Expand>()).valueOrPanic();
+				auto expand_result
+					= ctx.query<QueryMacroExpansion>(stmt.template dynamicCast<pst::Expand>())
+				          .valueOrPanic();
 				variant_match(expand_result) {
 					variant_case(pst::AccessLocked<pst::Stmt>, expand_statement) {
 						output_after_macro_expansion.emplace_back(expand_statement);
@@ -107,8 +104,7 @@ namespace compiler::helios {
 						CORE_PANIC("Macro expansion error in getStmtsFromStmtAggregate");
 					}
 				}
-			}
-			else {
+			} else {
 				output_after_macro_expansion.emplace_back(stmt);
 			}
 		}

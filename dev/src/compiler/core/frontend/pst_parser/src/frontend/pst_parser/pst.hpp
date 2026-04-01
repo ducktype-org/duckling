@@ -10,6 +10,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <token_source/source.hpp>
+
 #include <any>
 
 namespace pst {
@@ -64,30 +65,27 @@ namespace pst {
 		 */
 		using PSTContext = std::variant<PSTType, Box<LangParserContext>>;
 
-		
 
 	private:
-		
-
 		/****************\
 		|    PST DATA    |
 		\****************/
-		
-		/** 
+
+		/**
 		 * Token source backing this PST (tokenized file or virtual input).
 		 */
 		Box<tokenizer::TokenSource> file;
-		
+
 		/**
 		 * Root element access wrapper for the parsed element tree.
 		 */
 		AccessInternalAnonymous<Element> element;
-		
-		/** 
+
+		/**
 		 * Import entries collected during parsing.
 		 */
 		std::vector<ImportType> imports;
-		
+
 		/**
 		 * Contextual component path/hash of this PST for hierarchical naming.
 		 */
@@ -99,7 +97,7 @@ namespace pst {
 		//  * We only set it when PST is created in the full compilation context
 		//  */
 		// base::Optional<AdditionalData> additional_data;
-		
+
 
 		/***********************\
 		|    PRIVATE METHODS    |
@@ -220,7 +218,6 @@ namespace pst {
 		}
 
 	public:
-		
 		/**********************\
 		|    PUBLIC METHODS    |
 		\**********************/
@@ -291,7 +288,7 @@ namespace pst {
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
 			out.signGenerated();
-			
+
 			// we call it again after signing, because signing changes the hash:
 			out.putInPSTHashHashMap();
 			return out;

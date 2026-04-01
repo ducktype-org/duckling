@@ -16,10 +16,10 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/pst_layer/for_all.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -253,7 +253,8 @@ namespace compiler::helios {
 					if (additional_root_data.optional_macro_expansion_source.has_value()) {
 						CORE_ASSERT(
 							not additional_root_data.module_id.has_value(),
-							"Element cannot have both macro expansion source and module id in additional root data."
+							"Element cannot have both macro expansion source and module id in "
+						    "additional root data."
 						);
 						return ctx.query<QueryPrimaryCodeScopeFor>(
 							additional_root_data.optional_macro_expansion_source.value()
@@ -263,17 +264,16 @@ namespace compiler::helios {
 
 						auto module_id = base::anyCast<frontend::ModuleID>(module_id_any);
 
-						return ctx.query<QueryRootScopeOf>(
-							module_id
-						);
+						return ctx.query<QueryRootScopeOf>(module_id);
 					} else {
 						CORE_PANIC(
-							"Element has no parent and no additional root data, cannot determine scope parent."
+							"Element has no parent and no additional root data, cannot determine "
+						    "scope parent."
 						);
 					}
 				}
 			}();
-			
+
 
 			// here we essentially return the same scope as the parent
 			// scope, with the same unstable hash, but we still create a new ScopeData object
@@ -357,7 +357,6 @@ namespace compiler::helios {
 			bool                 failed = false;
 		};
 
-		
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
 			auto root          = getFilePST(ctx, file)->getRootElement();
 			auto root_unlocked = root.unlockOpt(ctx);
@@ -378,7 +377,6 @@ namespace compiler::helios {
 			// scope_grab.visit(root_unlocked.value());
 
 			pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
-
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

@@ -27,9 +27,7 @@ namespace compiler::helios {
 				);
 
 				pst.setAdditionalRootData(pst::AdditionalRootData{
-					.optional_macro_expansion_source = expand,
-					.module_id = {}
-				});
+					.optional_macro_expansion_source = expand, .module_id = {} });
 
 				return pst;
 			} else

@@ -9,20 +9,20 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/except/exceptions.hpp>
-#include <base/misc/anycast.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 
+#include <any>
 #include <ranges>
 #include <variant>
-#include <any>
 
 namespace pst {
 	class Import;
@@ -36,8 +36,7 @@ namespace pst {
 
 	class LangParserState;
 
-
-	// TODO: PR: this is not pretty, but still strictly better then root_element_file_back_map :) 
+	// TODO: PR: this is not pretty, but still strictly better then root_element_file_back_map :)
 	struct AdditionalRootData final {
 		/**
 		 * @brief Optional source for macro expansion.
@@ -272,7 +271,7 @@ namespace pst {
 		 * All of the children elements meant for generic analysis of the tree.
 		 */
 		std::vector<InternalSubElement> sub_elements;
-		
+
 		/**
 		 * Parent element in PST if element is not root.
 		 */
@@ -284,15 +283,16 @@ namespace pst {
 		 * information between compilations. Has
 		 * no value if it's incalculable.
 		 */
-		base::Optional<hashing::ComponentHash> element_path_hash;  
-		
+		base::Optional<hashing::ComponentHash> element_path_hash;
+
 		/**
 		 * The Hash that encodes the element path and data and allows to conserve some
 		 * information between compilations. Has no value if it's incalculable.
 		 */
-		base::Optional<HashType> hash;  
+		base::Optional<HashType> hash;
 
-		// PR-TODO: We should have a RootElement that stores this information instead of storing it in each element, but for now it is easier to keep it here.
+		// PR-TODO: We should have a RootElement that stores this information instead of storing it
+		// in each element, but for now it is easier to keep it here.
 		base::Optional<AdditionalRootData> additional_root_data;
 
 		/**
@@ -377,7 +377,8 @@ namespace pst {
 		void calcHash();
 
 		/**
-		 * @brief Puts the element in the global hash map, should be called at the end of hash calculation. Separated from `calcHash` to allow for different hash calculation strategies.
+		 * @brief Puts the element in the global hash map, should be called at the end of hash
+		 * calculation. Separated from `calcHash` to allow for different hash calculation strategies.
 		 */
 		void putInPSTHashHashMap();
 

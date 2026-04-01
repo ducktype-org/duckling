@@ -404,12 +404,12 @@ namespace compiler::helios {
 			// PR: make it better!
 			if (unlocked->getParent().has_value()) {
 				return ctx.query<QueryPrimaryCodeScopeFor>(unlocked->getParent().value());
-			}
-			else {
+			} else {
 				// we hit an expand!
-				return ctx.query<QueryPrimaryCodeScopeFor>(unlocked->getAdditionalRootData().optional_macro_expansion_source.value());
+				return ctx.query<QueryPrimaryCodeScopeFor>(
+					unlocked->getAdditionalRootData().optional_macro_expansion_source.value()
+				);
 			}
-
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

@@ -105,14 +105,13 @@ namespace compiler::frontend {
 		} else {
 			// @TODO: #1879 Program chosen as default type for non_REPL
 			auto pst_type = getModuleRef(linked_module)->isReplModule() ? pst::PSTType::Script
-			   										 : pst::PSTType::Program;
+			                                                            : pst::PSTType::Program;
 
 			auto parsed_pst = pst::PST(file, pst_type, getComponentHash());
 
 			parsed_pst.setAdditionalRootData(pst::AdditionalRootData{
 				.optional_macro_expansion_source = {},
-				.module_id = compiler::frontend::ModuleID{this->linked_module}
-			});
+				.module_id = compiler::frontend::ModuleID{ this->linked_module } });
 
 			parse_tree.emplace(std::move(parsed_pst));
 
