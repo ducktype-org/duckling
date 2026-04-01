@@ -1,5 +1,7 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
+use serde::{Deserialize, de};
+
 use crate::{DuckCtx, QuackResult, qp_bail};
 use clap::ArgMatches;
 use itertools::chain;
@@ -9,6 +11,40 @@ use crate::duck::driver::{
     cli,
     cli_args_preprocessing::builtin::{get_builtin_alias_expansion, is_builtin_subcommand},
 };
+
+/// A single configuration alias.
+/// Can be a string ("build --release"), or a list (["build", "--release"]).
+#[derive(Debug)]
+pub enum Alias {
+    ToSplit(String),
+    Splitted(Vec<String>),
+}
+
+impl Alias {
+    pub fn split(&self) -> Vec<String> {
+        match self {
+            Self::ToSplit(joined) => joined.split(' ').map(String::from).collect(),
+            Self::Splitted(splitted) => splitted.clone(),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for Alias {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        serde_untagged::UntaggedEnumVisitor::new()
+            .expecting("a string or a list of strings")
+            .string(|alias| Ok(Self::ToSplit(alias.into())))
+            .seq(|seq| seq.deserialize().map(Self::Splitted))
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(transparent)]
+pub struct Aliases(pub HashMap<String, Alias>);
 
 /// Recursively replace current subcommand with an expanded user alias.
 ///
@@ -99,11 +135,11 @@ fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatc
 fn expand_single_alias(
     alias: &str,
     alias_args: &ArgMatches,
-    alias_expansion: &str,
+    alias_expansion: &Alias,
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
     let new_cli_args = args_from_alias(alias_expansion, alias_args);
-    debug!("replaced the alias `{alias}` with `{alias_expansion}`");
+    debug!("replaced the alias `{alias}` with `{alias_expansion:?}`");
     let parsed = parse_alias_args(new_cli_args)?;
     let Some(new_subcmd) = parsed.subcommand_name() else {
         qp_bail!("user-defined alias `{alias}` does not have a subcommand")
@@ -117,8 +153,8 @@ fn expand_single_alias(
 ///
 /// For example, for alias `foo = "bar -1"`, and command `duck foo a -b`, you should pass
 /// `alias = "bar -1"`, and args for `foo a -b`, and get `"bar", "-1", "a", "-b"` in return.
-fn args_from_alias(alias: &str, subcmd_args: &ArgMatches) -> impl Iterator<Item = OsString> {
-    let split = alias.split(' ').map(OsString::from);
+fn args_from_alias(alias: &Alias, subcmd_args: &ArgMatches) -> impl Iterator<Item = OsString> {
+    let split = alias.split().into_iter().map(OsString::from);
     chain(
         split,
         subcmd_args
