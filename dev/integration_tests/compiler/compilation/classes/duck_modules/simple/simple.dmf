@@ -1,0 +1,11 @@
+class RecordClass {
+    a: i64;
+    b: i64;
+}
+
+fun main() -> i64 = {
+    var struct: RecordClass;
+    builtin_output_i64(struct.a);
+
+    return 0;
+}

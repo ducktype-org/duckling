@@ -192,7 +192,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				const auto field_vm_type = program_context.lowerAndKeepTslType(field_layout);
 				// TODOP: This may not be true. This may not be inserted into the context.
 				const auto ptr_to_field_type = vm::code::PointerType(
-					base::StrID(base::strConcat("ptr_", vm::code::typeName(field_vm_type)).c_str()),
+					base::StrID(base::strConcat("ptr_", vm::code::typeName(field_vm_type))),
 					vm::code::typeName(field_vm_type)
 				);
 

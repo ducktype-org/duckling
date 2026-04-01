@@ -5,6 +5,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 
+#include <iostream>
 #include <sstream>
 #include <unordered_map>
 
@@ -50,6 +51,8 @@ namespace vm::code::builders {
 	vm::code::Instruction makeInstructionFromArgs(
 		base::StrID name, const std::vector<opargs::OpCodeArg>& args
 	) {
+		std::cout << args.size() << '\n';
+
 #define HANDLE_INSTR(opcode) \
 	std::make_pair(base::StrID(#opcode), fromArgs<VM_INSTR_FROM_NAME(opcode)>),
 		static std::unordered_map name_to_factory{
