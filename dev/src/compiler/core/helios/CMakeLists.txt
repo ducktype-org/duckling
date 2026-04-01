@@ -4,7 +4,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/symbols/symbols.cpp
 	src_private/helios_private/scopes/scopes.cpp
 	src_private/helios_private/scopes/scope_data.cpp
-	src_private/helios_private/pst_layer/pst_walkers.cpp
+	src_private/helios_private/pst_layer/stmts_from_aggregate.cpp
 	src_private/helios_private/pst_layer/macros.cpp
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp

@@ -1,5 +1,5 @@
 /**
- * @file pst_walkers.hpp
+ * @file stmts_from_aggregate.hpp
  * @brief Functions that perform some walks over PST
  */
 

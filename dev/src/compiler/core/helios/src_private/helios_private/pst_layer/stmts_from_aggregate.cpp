@@ -1,4 +1,4 @@
-#include "pst_walkers.hpp"
+#include "stmts_from_aggregate.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/class_specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
