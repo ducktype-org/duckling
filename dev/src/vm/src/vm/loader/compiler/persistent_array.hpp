@@ -173,6 +173,7 @@ namespace persistent {
 			return ArrayID{ u64(prev_root) };
 		}
 
+		[[nodiscard]]
 		ArrayID getEmpty() const { return ArrayID{ 1 }; }
 
 		Array(usize root_height = 16): height(root_height), next_node_id(2) {
