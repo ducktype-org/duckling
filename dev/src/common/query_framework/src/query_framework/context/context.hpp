@@ -17,11 +17,18 @@
 #include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 
+#include <concepts>
+
 namespace query {
 
 	namespace internal {
 		struct ContextAccess;
 	}
+
+	template<typename T>
+	concept HasDebugInfo = requires(const T t) {
+		{t.debugString() } -> std::same_as<std::string>;
+	};
 
 	/**
 	 * We expose the TaskHandle type here, as it is used in the Context interface,
@@ -173,6 +180,10 @@ namespace query {
 
 			this->active = false;
 			defer({ this->active = true; });
+
+			if constexpr (HasDebugInfo<typename OthQuery::QKey>) {
+				dep_id.setDebugString(key.debugString());
+			}
 
 			if constexpr (OthQuery::QUERY_DATA.isInputQuery()) {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);

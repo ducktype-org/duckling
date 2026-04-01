@@ -5,6 +5,7 @@
 #include <frontend/pst_parser/access.hpp>
 
 #include <base/pointers/ref.hpp>
+#include <base/str/str_utils.hpp>
 
 namespace pst {
 	/**
@@ -39,5 +40,9 @@ namespace pst {
 			}
 			return element.illegalAccess().value()->getHash();
 		}
+
+		std::string debugString() const {
+			return "\"" + base::escapeString(element.illegalAccess().value()->getSourcePosition().content())  + "\"";
+ 		}
 	};
 }

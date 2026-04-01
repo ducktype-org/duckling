@@ -15,6 +15,8 @@ namespace pst::internal {
 		query::QueryStableHash queryStablePerfectHash() const {
 			return hash;
 		}
+
+		[[nodiscard]] std::string debugString() const;
 	};
 
 	/**

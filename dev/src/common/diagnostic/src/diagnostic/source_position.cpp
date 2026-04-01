@@ -183,4 +183,9 @@ namespace dia {
 		return getLocation() == other.getLocation() && getStart() == other.getStart()
 		    && getEnd() == other.getEnd();
 	}
+
+	std::string SourcePosition::content() const {
+		auto source = getSource();
+		return std::string(source->getContent().view().stringView().substr(getStart(), getEnd() - getStart() + 1));
+	}
 }

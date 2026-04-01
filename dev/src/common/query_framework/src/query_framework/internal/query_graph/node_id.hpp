@@ -5,6 +5,7 @@
 #pragma once
 
 #include <base/types/bit256.hpp>
+#include <base/collections/optional.hpp>
 
 #include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
 
@@ -39,6 +40,10 @@ namespace query::internal {
 			if (this->q_id.asInt() == r.q_id.asInt()) return this->hash.val < r.hash.val;
 			return this->q_id.asInt() < r.q_id.asInt();
 		}
+
+		[[nodiscard]] base::Optional<std::string_view> debugString() const;
+
+		void setDebugString(std::string str) const;
 	};
 }
 

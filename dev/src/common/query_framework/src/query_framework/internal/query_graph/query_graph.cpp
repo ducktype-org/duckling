@@ -6,6 +6,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/module_flags/module_flags.hpp>
 
@@ -114,8 +115,13 @@ namespace query::internal {
 		std::map<NodeID, u64> index;
 		u64                   id = 0;
 		for (auto& [k, _]: *node_deps) {
-			index[k] = id++;
-			out << id << " " << k.q_id.getData().name << "\n";
+			index[k] = id;
+			out << id  << " " << k.q_id.getData().name;
+			if(k.debugString()) {
+				out << " " << k.debugString().value();
+			}
+			out << "\n";
+			id++;
 		}
 
 		for (auto& [k, v]: *node_deps) {

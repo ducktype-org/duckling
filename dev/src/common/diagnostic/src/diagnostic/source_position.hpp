@@ -134,6 +134,8 @@ namespace dia {
 
 		void printToJson(std::ostream&) const;
 
+		std::string content() const;
+
 	private:
 		usize          source_start;   ///< Start of the range of characters in the file.
 		usize          source_end;     ///< End of the range of characters in the file.
