@@ -77,20 +77,26 @@ def has_label(repo: str, pr_number: int, github_token: str, label_name: str) -> 
     return any(label.get("name") == label_name for label in labels)
 
 
+def should_use_pr_matrix(args: argparse.Namespace) -> bool:
+    if args.branch in ["main", "dev"]:
+        return False
+
+    if args.event_name != "pull_request":
+        return False
+
+    if not args.github_token:
+        return True
+
+    if has_label(args.repo, args.pr_number, args.github_token, "Run All Workflows"):
+        return False
+
+    return not has_approval(args.repo, args.pr_number, args.github_token)
+
+
 def main():
     args = parse_args()
 
-    matrix = FULL_MATRIX
-    is_non_main_branch = args.branch not in ["main", "dev"]
-    is_pull_request = args.event_name == "pull_request"
-    has_auth = bool(args.github_token)
-
-    if is_non_main_branch and is_pull_request:
-        if not has_auth:
-            matrix = PR_MATRIX
-        elif not has_label(args.repo, args.pr_number, args.github_token, "Run All Workflows"):
-            if not has_approval(args.repo, args.pr_number, args.github_token):
-                matrix = PR_MATRIX
+    matrix = PR_MATRIX if should_use_pr_matrix(args) else FULL_MATRIX
 
     print(json.dumps(matrix))
 
