@@ -84,7 +84,8 @@ def main():
     if args.branch in ["main", "dev"] or has_label(
         args.repo, args.pr_number, args.github_token, "Run All Workflows"
     ):
-        matrix = FULL_MATRIX
+        # This is intended, so that `elif` condition is less complex
+        pass
     elif args.event_name == "pull_request":
         approved = False
         if args.repo and args.pr_number and args.github_token:
