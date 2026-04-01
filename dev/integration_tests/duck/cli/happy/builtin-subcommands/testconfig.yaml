@@ -19,6 +19,16 @@ Tests:
         ExitCode: 1
         Err:
           Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+      runs-user-alias-as-an-array:
+        test_cmd: my-custom-build-alias-array
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+      runs-user-alias-as-an-array:
+        test_cmd: my-custom-build-alias-array
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
       autofix-success:
         test_cmd: buil
         ExitCode: 1

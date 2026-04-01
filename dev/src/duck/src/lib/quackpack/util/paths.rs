@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     QuackResult,
-    util_common::{env::Env, path_ops_ext::PathOpsExt},
+    util::{env::Env, path_ops_ext::PathOpsExt},
 };
 
 /// Environmental variable overriding duck home root.

@@ -91,7 +91,7 @@ mod test {
             },
             util::get_possible_realizations,
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
