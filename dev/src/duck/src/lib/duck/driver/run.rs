@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     DuckCtx, QuackResult, QuackResultContext, qp_bail,
-    util_common::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
+    util::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
 };
 use clap::ArgMatches;
 use tracing::debug;
