@@ -17,7 +17,11 @@ pub struct DuckCfg {
 }
 
 // !TODO: Use `from_hours(24)`, after bumping rust's version in CI to 1.91.0.
+/// The default lifetime of a temporary venv in a storage.
 const DEFAULT_STORAGE_LIFETIME: Duration = Duration::from_secs(24 * 60 * 60);
+
+/// The default radius in which we'll attempt to autofix a subcommand.
+const DEFAULT_MAXIMAL_AUTOFIX_DISTANCE: u64 = 3;
 
 impl DuckCfg {
     /// Create a new [`DuckCfg`] using config file from the given [`DuckHome`].
@@ -42,7 +46,7 @@ impl DuckCfg {
             .inner
             .get_u64("security.typos.max_distance")
             .context("when trying to check the maximum typos fixing distance")?
-            .unwrap_or(3))
+            .unwrap_or(DEFAULT_MAXIMAL_AUTOFIX_DISTANCE))
     }
 
     /// Get all known aliases.
