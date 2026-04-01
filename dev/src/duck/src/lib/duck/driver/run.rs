@@ -7,8 +7,9 @@ use std::{
 
 use crate::{
     DuckCtx, QuackResult, QuackResultContext,
-    duck::driver::subcommands::run_script::{possible_script_path_subcmd, run_script_knowing_path},
+    duck::driver::subcommands::run_script::{check_is_script, possible_script_path_subcmd},
     qp_bail,
+    quackpack::subcommands::run_script::{RunScriptOptions, run_script},
     util_common::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
 };
 use clap::ArgMatches;
@@ -127,8 +128,9 @@ fn run_subcmd(
         }
         (Some(exec_fn), None, _) => exec_fn(ctx, sub_args),
         (None, Some(exec_path), Some(_)) => {
-            ctx.console()
-                .note(format!("executing external subcommand `{sub_cmd}`"));
+            ctx.console().note(format!(
+                "external subcommand {sub_cmd} possibly shadows a script"
+            ));
             ctx.console().hint(format!(
                 "If you would like to run a script with that name, type `duck ./{sub_cmd}`"
             ));
@@ -145,7 +147,14 @@ fn run_subcmd(
             execute_external_subcmd(exec_path, args)
                 .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
         }
-        (None, None, Some(path)) => run_script_knowing_path(ctx, Path::new(path), &args),
+        (None, None, Some(path)) => {
+            let path = ctx.cwd().join(path);
+            check_is_script(&path)?;
+            let args = external_cli_args(sub_args);
+            run_script(RunScriptOptions::from_path_and_args_with_defaults(
+                ctx, &path, args,
+            )?)
+        }
         (None, None, None) => qp_bail!("No such command: `{sub_cmd}`"),
     }
 }

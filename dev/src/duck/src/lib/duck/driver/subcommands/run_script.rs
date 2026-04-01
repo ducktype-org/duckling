@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    DuckCtx, QuackError, QuackResult, QuackResultContext, StrId,
+    DuckCtx, QuackError, QuackResult, QuackResultContext,
     duck::driver::cli_ext::flag,
     qp_bail,
     quackpack::subcommands::run_script::{RunScriptOptions, run_script},
@@ -48,6 +48,7 @@ pub fn get_parser() -> Command {
         .arg(
             multi("args", "Arguments passed to the script")
                 .trailing_var_arg(true)
+                //.action(ArgAction::Append)
                 .value_parser(value_parser!(OsString)),
         )
 }
@@ -57,35 +58,11 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
         .try_get_one::<PathBuf>("path")?
         .context_internal("Path argument is required")?;
-    let path: PathBuf = path.into();
     let path = ctx.cwd().join(path);
-    run_script_knowing_path(ctx, &path, matches)
-}
-
-/// A common interface for running a script.
-pub fn run_script_knowing_path(
-    ctx: &DuckCtx,
-    path: &Path,
-    matches: &ArgMatches,
-) -> QuackResult<()> {
-    check_is_script(path)?;
-    let script_name = path
-        .file_name()
-        .context_internal("we assured that the path points to a file")?;
-    let folder_path = path
-        .parent()
-        .context_internal("we assured that the path points to a file")?;
-    let venv_id = matches.try_get_one::<String>("venv")?.map(StrId::new);
-    run_script(RunScriptOptions {
-        ctx,
-        script_name,
-        folder_path,
-        venv_id,
-        global: matches.get_flag("global"),
-        overwrite: matches.get_flag("overwrite"),
-        frozen: matches.get_flag("frozen"),
-        strict_errors: matches.get_flag("external-errors"),
-    })
+    check_is_script(&path)?;
+    run_script(RunScriptOptions::from_path_and_matches(
+        ctx, &path, matches,
+    )?)
 }
 
 /// Check if `path` points to a valid Duckling script.

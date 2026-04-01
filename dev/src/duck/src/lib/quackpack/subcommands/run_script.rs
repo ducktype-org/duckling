@@ -1,7 +1,12 @@
-use std::{ffi::OsStr, path::Path};
+use std::{
+    ffi::{OsStr, OsString},
+    path::Path,
+};
+
+use clap::ArgMatches;
 
 use crate::{
-    DuckCtx, QuackResult, StrId, qp_bail_internal,
+    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
     quackpack::core::{
         AllowGlobalPackage, PackageLoader,
         storage::{StorageSyncOptions, sync},
@@ -25,6 +30,66 @@ pub struct RunScriptOptions<'duck> {
     pub frozen: bool,
     /// Artefact from [`StorageSyncOptions`].
     pub strict_errors: bool,
+    /// Arguments to the script.
+    pub args: Vec<OsString>,
+}
+
+impl<'duck> RunScriptOptions<'duck> {
+    /// Create [`RunScriptOptions`] from a given [`Path`] and [`ArgMatches`].
+    pub fn from_path_and_matches(
+        ctx: &'duck DuckCtx,
+        path: &'duck Path,
+        matches: &ArgMatches,
+    ) -> QuackResult<Self> {
+        let script_name = path
+            .file_name()
+            .context_internal("we assured that the path points to a file")?;
+        let folder_path = path
+            .parent()
+            .context_internal("we assured that the path points to a file")?;
+        let venv_id = matches.try_get_one::<String>("venv")?.map(StrId::new);
+        let args: Vec<OsString> = matches
+            .try_get_many::<OsString>("args")?
+            .map(|values| values.cloned().collect())
+            .unwrap_or_default();
+        Ok(Self {
+            ctx,
+            script_name,
+            folder_path,
+            venv_id,
+            global: matches.get_flag("global"),
+            overwrite: matches.get_flag("overwrite"),
+            frozen: matches.get_flag("frozen"),
+            strict_errors: matches.get_flag("external-errors"),
+            args,
+        })
+    }
+
+    /// Create [`RunScriptOptions`] from a given [`Path`] and a list of arguments to pass to the script.
+    /// Supplies default values for other fields.
+    pub fn from_path_and_args_with_defaults(
+        ctx: &'duck DuckCtx,
+        path: &'duck Path,
+        args: Vec<OsString>,
+    ) -> QuackResult<Self> {
+        let script_name = path
+            .file_name()
+            .context_internal("we assured that the path points to a file")?;
+        let folder_path = path
+            .parent()
+            .context_internal("we assured that the path points to a file")?;
+        Ok(Self {
+            ctx,
+            script_name,
+            folder_path,
+            venv_id: None,
+            global: false,
+            overwrite: false,
+            frozen: false,
+            strict_errors: false,
+            args,
+        })
+    }
 }
 
 /// Run script given options.
