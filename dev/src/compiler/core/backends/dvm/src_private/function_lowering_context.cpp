@@ -133,7 +133,7 @@ void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMV
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 	// First get the base place.
-	DVMPlace base_place = [&]() -> DVMPlace {
+	DVMPlace current_place = [&]() -> DVMPlace {
 		variant_match(place.base) {
 			variant_case(lir::LIRLocalRef, lir_local) {
 				return { getLirLocal(lir_local), DVMPlace::AccessKind::Direct };
@@ -146,24 +146,40 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 	}();
 
 	// If a place has no projections we access the global/local directly, not through a pointer.
-	if (not place.hasProjections()) return base_place;
+	if (not place.hasProjections()) return current_place;
+
+	// If a place is global, we load a pointer to it to a local.
+	if (place.hasProjections() && current_place.is<DVMGlobal>()) {
+		auto global = current_place.get<DVMGlobal>();
+		// TODOP: Make that inserted in the module.
+		auto ptr_to_global_type = vm::code::PointerType(
+			base::StrID(base::strConcat("ptr_", vm::code::typeName(global.type))),
+			vm::code::typeName(global.type)
+		);
+		program_context.insertType(ptr_to_global_type);
+
+		auto addr_tmp = pushTempLocal(ptr_to_global_type, "global_addr_ref");
+		pushInstruction({ vm::code::builders::OpKind::ref, addr_tmp, current_place.asAnyArgument() }
+		);
+		current_place = { addr_tmp, DVMPlace::AccessKind::Pointer };
+	}
 
 	CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
-	DVMPlace              current_place  = base_place;
 	// Go through all the projections and perform appropriate loads to get to the final destination
 	// place.
 	for (usize i{ 0 }; i < place.projection_chain.size(); i++) {
 		const auto& projection = place.projection_chain[i];
-		// Skip the last projection to not perform an unnecessary load on the last projection is a
-		// dereference. DVMPlace now stores a pointer to the final place after all projections have
-		// been applied.
-		if (i == place.projection_chain.size() - 1) {
-			current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
-			break;
-		}
 
 		variant_match(projection.storage) {
 			variant_case(lir::LIRPlace::DerefProjection, deref) {
+				// Skip the last projection to not perform an unnecessary load on the last
+				// projection is a dereference. DVMPlace now stores a pointer to the final place
+				// after all projections have been applied.
+				if (i == place.projection_chain.size() - 1) {
+					current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
+					break;
+				}
+
 				// Update types after the projection has been applied.
 				const auto& current_pointer_layout
 					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
@@ -183,6 +199,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// Prepare field name for access.
 				const auto& class_layout
 					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+				const auto  vm_class_type = program_context.lowerAndKeepTslType(current_layout);
 				const usize field_index
 					= class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
 				auto vm_field_name = base::strConcat("_", field_index + 1);
@@ -195,20 +212,18 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					base::StrID(base::strConcat("ptr_", vm::code::typeName(field_vm_type))),
 					vm::code::typeName(field_vm_type)
 				);
+				program_context.insertType(ptr_to_field_type);
 
 				auto field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
 
 				pushInstruction({ vm::code::builders::OpKind::structLea,
 				                  field_ptr_tmp,
 				                  current_place,
-				                  vm::opargs::Field{ typeName(field_vm_type),
+				                  vm::opargs::Field{ typeName(vm_class_type),
 				                                     base::StrID(vm_field_name) } });
 
 				current_place  = { field_ptr_tmp, DVMPlace::AccessKind::Pointer };
 				current_layout = field_layout;
-
-				// @TODO: #1560 handle access into fields.
-				throw base::NotYetImplemented("Field Projection in DVM backend");
 			}
 			variant_case(lir::LIRPlace::IndexProjection, index) {
 				throw base::NotYetImplemented("Index Projection in DVM backend");

@@ -170,6 +170,8 @@ void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunc
 	extern_c_functions.put(extern_func.name.str, extern_func);
 }
 
+void ProgramLoweringContext::insertType(const vm::code::TypeOfData& type) { types.push_back(type); }
+
 vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::TypeLayout> layout) {
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) {
@@ -249,9 +251,28 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		global_name_to_dvm_data | std::views::values
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
-	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
+	std::ranges::sort(
+		collection.global_data,
+		[](const vm::code::GlobalData& lhs, const vm::code::GlobalData& rhs) {
+			return lhs.name.str < rhs.name.str;
+		}
+	);
+
+	base::Map<base::StrID, vm::code::TypeOfData> unique_types_map;
+
+	for (const auto& [_, type]: tsl_type_to_dvm)
+		unique_types_map.put(vm::code::typeName(type), type);
+
+	for (const auto& type: types) unique_types_map.put(vm::code::typeName(type), type);
+
+	collection.types = std::ranges::to<std::vector>(unique_types_map | std::views::values);
+
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
+
+	std::cout << "======= Produced Code Collection =======\n";
+	vm::code::serializeCode(collection, std::cout);
+	std::cout << "\n======================================\n";
 
 	try {
 		auto valid = vm::code::ValidProgram::withBuiltins();

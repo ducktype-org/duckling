@@ -8,6 +8,11 @@ Tests:
         Output:
           String: "101\n105\n109\n"
         ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "101\n105\n109\n"
+        ExitCode: 0
   named_arguments_overloading:
     Cases:
       llvm:
@@ -31,6 +36,11 @@ Tests:
     Cases:
       llvm:
         backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+      dvm:
+        backend: dvm
         Output:
           String: ""
         ExitCode: 0
@@ -65,7 +75,8 @@ Tests:
         Output:
           String: "1\n2\n"
         ExitCode: 0
-
-
-
-
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0

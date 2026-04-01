@@ -102,6 +102,11 @@ namespace compiler::backend_vm::internal {
 		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
 
 		/**
+		 * @brief Inserts an extern C function into the program context.
+		 */
+		void insertType(const vm::code::TypeOfData& type);
+
+		/**
 		 * @brief Insert raw bytecode into program context.
 		 */
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
@@ -129,6 +134,8 @@ namespace compiler::backend_vm::internal {
 		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
 
 		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
+		// TODOP: Think about that
+		std::vector<vm::code::TypeOfData> types;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
