@@ -1,4 +1,8 @@
-use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser};
+use std::any::Any;
+
+use clap::{
+    Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser, parser::ValuesRef,
+};
 
 use crate::{StrId, quackpack::core::Package};
 
@@ -132,5 +136,37 @@ pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
         cli_features.map(StrId::from).collect()
     } else {
         vec![]
+    }
+}
+
+pub trait ArgMatchesExt {
+    /// Safe wrapper around [`get_flag`](ArgMatches::get_flag), with a fallback.
+    fn safe_get_flag(&self, name: &str) -> bool;
+    /// Safe wrapper around [`try_get_one`](ArgMatches::try_get_one), with a fallback.
+    fn safe_get_one<T: Any + Send + Sync + Clone + Default + 'static>(&self, id: &str) -> T;
+}
+
+impl ArgMatchesExt for ArgMatches {
+    fn safe_get_flag(&self, name: &str) -> bool {
+        ignore_clap_errors(self.try_get_one::<bool>(name))
+            .copied()
+            .unwrap_or_default()
+    }
+
+    fn safe_get_one<T: Any + Send + Sync + Clone + Default + 'static>(&self, id: &str) -> T {
+        ignore_clap_errors(self.try_get_one(id))
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+
+#[track_caller]
+/// Ignore [`UnknownArgument`](clap::parser::MatchesError::UnknownArgument), returning the default value,
+/// and panic on other errors.
+fn ignore_clap_errors<T: Default>(result: Result<T, clap::parser::MatchesError>) -> T {
+    match result {
+        Ok(val) => val,
+        Err(clap::parser::MatchesError::UnknownArgument { .. }) => T::default(),
+        Err(e) => panic!("cli flag used incorrectly: {}", e),
     }
 }

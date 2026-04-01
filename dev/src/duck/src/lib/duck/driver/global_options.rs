@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{QuackResult, qp_bail, qp_internal};
+use crate::{QuackResult, duck::driver::cli_ext::ArgMatchesExt, qp_bail, qp_internal};
 use clap::ArgMatches;
 
 use crate::{DuckCtx, duck::util::terminal::Verbosity};
@@ -34,13 +34,10 @@ impl GlobalOptions {
 
     /// Update this [`GlobalOptions`] with global flags gathered inside a subcommand.
     pub fn update_with_subcommand_matches(&mut self, matches: &ArgMatches) {
-        self.quiet |= matches.get_flag("quiet");
-        self.verbose |= matches.get_flag("verbose");
-        self.offline |= matches.get_flag("offline");
-        if let Some(color) = matches
-            .get_one::<String>("color")
-            .map(|color| color.parse().expect("guarded by the parser"))
-        {
+        self.quiet |= matches.safe_get_flag("quiet");
+        self.verbose |= matches.safe_get_flag("verbose");
+        self.offline |= matches.safe_get_flag("offline");
+        if let Ok(color) = matches.safe_get_one::<String>("color").parse() {
             self.color = color;
         }
     }
