@@ -33,7 +33,7 @@ namespace compiler::helios {
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
 
-	namespace houtgen {
+	namespace defgen {
 		struct ImplementationOf_QueryImplicitClassConstructor;
 		struct ImplementationOf_QueryDefaultClassConstructor;
 		struct ImplementationOf_QueryDefaultStaticArrayConstructor;
@@ -103,10 +103,10 @@ namespace compiler::helios {
 			const std::shared_ptr<const code::CodeBlock>& body
 		);
 		friend struct ImplementationOf_QueryCodeOfFun;
-		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
-		friend houtgen::ImplementationOf_QueryTuplePackConstructor;
-		friend houtgen::ImplementationOf_QueryDefaultClassConstructor;
-		friend houtgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
+		friend defgen::ImplementationOf_QueryImplicitClassConstructor;
+		friend defgen::ImplementationOf_QueryTuplePackConstructor;
+		friend defgen::ImplementationOf_QueryDefaultClassConstructor;
+		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
 

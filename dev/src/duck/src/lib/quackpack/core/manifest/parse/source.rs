@@ -14,7 +14,7 @@ use crate::{
         core::{BranchOrTag, Git, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
     },
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 use crate::quackpack::schemas::manifest::Dependency as DependencySchema;

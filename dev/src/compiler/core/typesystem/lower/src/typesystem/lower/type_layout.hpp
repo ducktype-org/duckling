@@ -31,6 +31,16 @@ namespace compiler::tsl {
 		Bits size;
 
 		/**
+		 * @brief The alignment requirement of this type, in bytes.
+		 *
+		 * For most types this equals the minimum of 8 and the type's byte size.
+		 * For array types this equals the element alignment so that the struct
+		 * offsets computed here match what LLVM produces.
+		 * For struct types this equals the maximum alignment of their fields, etc.
+		 */
+		Bytes alignment;
+
+		/**
 		 * @brief The source type of a memory layout.
 		 *
 		 * @note Most layouts are created from abstract type wrapped with default values. But
@@ -65,6 +75,15 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		Bits getSize() const {
 			return size;
+		}
+
+		/**
+		 * @brief Get the alignment requirement of a layout, in bytes.
+		 * @return The alignment of the layout, in bytes.
+		 */
+		[[nodiscard]]
+		Bytes getAlignment() const {
+			return alignment;
 		}
 
 		/**
@@ -111,11 +130,34 @@ namespace compiler::tsl {
 		virtual ~TypeLayoutABC() = default;
 
 	protected:
-		TypeLayoutABC(const Bits size, const tsh::SymbolType<> source_type, query::Context& ctx);
+		TypeLayoutABC(Bits size, tsh::SymbolType<> source_type, query::Context& ctx);
+
+		/**
+		 * @brief Constructor with an explicit alignment override.
+		 *
+		 * Use this when the natural alignment of a type differs from the
+		 * alignment implied by its total size (e.g. static arrays).
+		 */
+		TypeLayoutABC(Bits size, Bytes alignment, tsh::SymbolType<> source_type, query::Context& ctx);
 
 		[[nodiscard]]
 		static auto getIndent(const u32 indent) {
 			return std::string(indent, '\t');
+		}
+
+	private:
+		/**
+		 * @brief Compute the default alignment for a type from its size in bits.
+		 *
+		 * This mirrors the alignment rules used by LLVM for scalar types:
+		 * types larger than 4 bytes align to 8, larger than 2 to 4, etc.
+		 */
+		static Bytes computeDefaultAlignment(const Bits size_in_bits) {
+			const Bytes size_in_bytes = base::bits2bytesRoundUp(size_in_bits);
+			if (size_in_bytes > Bytes(4)) return Bytes(8);
+			if (size_in_bytes > Bytes(2)) return Bytes(4);
+			if (size_in_bytes > Bytes(1)) return Bytes(2);
+			return Bytes(1);
 		}
 	};
 
@@ -230,6 +272,7 @@ namespace compiler::tsl {
 		explicit StringTypeLayout(const tsh::StringAbstractType string_type, query::Context& ctx):
 			  TypeLayoutABC(
 				  POINTER_SIZE + base::bytes2bits(METADATA_SIZE) * 3,
+				  /*alignment=*/POINTER_SIZE_BYTES,
 				  tsh::SymbolType<>::withDefaults(string_type),
 				  ctx
 			  ) {}
@@ -446,20 +489,20 @@ namespace compiler::tsl {
 	 */
 	class ClassTypeLayout final: public TypeLayoutABC {
 		/**
-		 * @brief The number of fields in the class layout.
+		 * @brief The number of sub-layouts in the class layout.
 		 */
-		usize num_fields;
+		usize num_sub_layouts;
 
 		/**
 		 * @brief A mapping of the order of appearance in the layout to the offsets of the fields,
 		 * in bytes.
 		 */
-		std::vector<Bytes> layout_idx_to_offset;
+		base::Map<compiler::helios::SymID, base::Optional<Bytes>> sym_id_to_offset;
 
 		/**
 		 * @brief The layout indices of the fields.
 		 */
-		base::Map<compiler::helios::SymID, usize> sym_id_to_layout_idx;
+		base::Map<compiler::helios::SymID, base::Optional<usize>> sym_id_to_layout_idx;
 
 		/**
 		 * @brief A mapping of the order of appearance in the layout to the symbol of the field.
@@ -484,12 +527,12 @@ namespace compiler::tsl {
 
 	public:
 		/**
-		 * @brief Get the number of fields in the class layout.
-		 * @return The number of fields in the class layout.
+		 * @brief Get the number of sub-layouts in the class layout.
+		 * @return The number of sub-layouts in the class layout.
 		 */
 		[[nodiscard]]
-		usize getNumFields() const {
-			return num_fields;
+		usize getNumSubLayouts() const {
+			return num_sub_layouts;
 		}
 
 		/**
@@ -498,8 +541,8 @@ namespace compiler::tsl {
 		 * @return The offset of the field corresponding to the to the given layout index.
 		 */
 		[[nodiscard]]
-		Bytes getOffsetOfLayoutIndex(const usize layout_index) const {
-			return layout_idx_to_offset.at(layout_index);
+		base::Optional<Bytes> getOffsetOfFieldSymbol(const compiler::helios::SymID symbol) const {
+			return sym_id_to_offset.at(symbol);
 		}
 
 		/**
@@ -508,7 +551,8 @@ namespace compiler::tsl {
 		 * @return The index of the layout component corresponding to the given symbol.
 		 */
 		[[nodiscard]]
-		usize getLayoutIndexOfFieldSymbol(const compiler::helios::SymID symbol) const {
+		base::Optional<usize> getLayoutIndexOfFieldSymbol(const compiler::helios::SymID symbol
+		) const {
 			return sym_id_to_layout_idx.at(symbol);
 		}
 
@@ -673,6 +717,13 @@ namespace compiler::tsl {
 		 */
 		[[nodiscard]]
 		Bits getSize() const;
+
+		/**
+		 * @brief Get the alignment requirement of a layout, in bytes.
+		 * @return The alignment of the layout, in bytes.
+		 */
+		[[nodiscard]]
+		Bytes getAlignment() const;
 
 		/**
 		 * @brief Get the source type of a layout.

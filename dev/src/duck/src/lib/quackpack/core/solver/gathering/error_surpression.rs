@@ -1,4 +1,4 @@
-use crate::{QuackError, QuackResult, util_common::error::QuackMessage};
+use crate::{QuackError, QuackResult, util::error::QuackMessage};
 
 /// Represents a type with a list of surpressed errors, which occured during some computation.
 #[derive(Debug)]

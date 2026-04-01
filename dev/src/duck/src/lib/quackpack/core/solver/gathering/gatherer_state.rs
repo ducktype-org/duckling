@@ -16,7 +16,7 @@ use crate::{
         },
         version::CompatibilityCheck,
     },
-    util_common::error::QuackMessage,
+    util::error::QuackMessage,
 };
 
 /// Gathered information about a particular package.

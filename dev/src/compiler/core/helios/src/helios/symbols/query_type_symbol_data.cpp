@@ -106,12 +106,12 @@ namespace compiler::helios {
 			tuple_info.members.reserve(components.size());
 			u32 order = 0;
 			for (const auto& component: components) {
-				tuple_info.members.push_back(ctx.query<houtgen::QueryGeneratedSymbol>(
+				tuple_info.members.push_back(ctx.query<defgen::QueryGeneratedSymbol>(
 					{ // Tuple field names are _1, _2, ...
 				      // Starting from 1, not 0!
 				      .name = base::StrID{ base::strConcat("_", order + 1) },
 				      .generated_symbol_data
-				      = houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::Field{
+				      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
 						  .parent_type = key, .field_type = component, .index = order } } }
 				));
 				order++;

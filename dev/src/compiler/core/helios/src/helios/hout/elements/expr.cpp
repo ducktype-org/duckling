@@ -539,11 +539,11 @@ namespace compiler::helios::code {
 			  origin
 		  ),
 		  elements(std::move(elements)),
-		  tuple_ctor_symbol(ctx.query<houtgen::QueryGeneratedSymbol>(
+		  tuple_ctor_symbol(ctx.query<defgen::QueryGeneratedSymbol>(
 			  { .name = ctx.query<mangler::QueryMangledType>(expression_type.getSymbolType())
 	                        ->valueOrThrow(),
 	            .generated_symbol_data
-	            = houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::ImplicitConstructor{
+	            = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ImplicitConstructor{
 					expression_type.getType() } } }
 		  )) {}
 

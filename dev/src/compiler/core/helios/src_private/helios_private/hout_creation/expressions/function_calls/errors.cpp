@@ -15,7 +15,6 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios::code {
 	using namespace dia_int;

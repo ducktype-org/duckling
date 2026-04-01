@@ -13,8 +13,8 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/expressions/builtin_operators.hpp>
-#include <helios_private/expressions/chain_expr.hpp>
+#include <helios_private/hout_creation/expressions/builtin_operators.hpp>
+#include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <typesystem/higher/queries.hpp>

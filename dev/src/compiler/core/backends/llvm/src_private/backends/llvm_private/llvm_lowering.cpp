@@ -328,10 +328,10 @@ namespace compiler::backend_llvm {
 				// - First, create an opaque type.
 				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
 				// - Then, collect the member types.
-				const usize              num_fields = class_layout.getNumFields();
+				const usize              num_sub_layouts = class_layout.getNumSubLayouts();
 				std::vector<llvm::Type*> member_types;
-				member_types.reserve(num_fields);
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+				member_types.reserve(num_sub_layouts);
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
 					const CRef<tsl::TypeLayout> field_layout
 						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					member_types.push_back(typeFromLayout(module, field_layout));
@@ -345,28 +345,29 @@ namespace compiler::backend_llvm {
 				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
 
 				// - Then, check each field's offset.
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
 					[[maybe_unused]] const Bytes expected_offset
-						= class_layout.getOffsetOfLayoutIndex(layout_idx);
+						= class_layout
+					          .getOffsetOfFieldSymbol(
+								  class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
+							  )
+					          .value();
 					[[maybe_unused]] const auto actual_offset = Bytes(
 						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
 					);
-					// @TODO: #2163 This was tactically commented to make default constructors
-					// testable although the issue is not solved. Make it come back.
-
-					// CORE_ASSERT(
-					// 	expected_offset == actual_offset,
-					// 	base::strConcat(
-					// 		"LLVM struct layout mismatch for class '",
-					// 		class_name,
-					// 		"' at field index ",
-					// 		base::toString(layout_idx),
-					// 		": expected offset ",
-					// 		base::toString(expected_offset),
-					// 		", got ",
-					// 		base::toString(actual_offset)
-					// 	)
-					// );
+					CORE_ASSERT(
+						expected_offset == actual_offset,
+						base::strConcat(
+							"LLVM struct layout mismatch for class '",
+							class_name,
+							"' at field index ",
+							base::toString(layout_idx),
+							": expected offset ",
+							base::toString(expected_offset),
+							", got ",
+							base::toString(actual_offset)
+						)
+					);
 				}
 
 				// Finally, return the struct type.
@@ -713,7 +714,8 @@ namespace compiler::backend_llvm {
 						const auto& current_class_layout
 							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
 						const auto layout_idx
-							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id)
+						          .value();
 
 						gep_indices.push_back(
 							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
