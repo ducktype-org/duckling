@@ -44,10 +44,10 @@ PR_MATRIX: dict[str, list[Any]] = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Select tests workflow build matrix.")
     parser.add_argument("--event-name", required=True)
-    parser.add_argument("--repo")
+    parser.add_argument("--repo", required=True)
     parser.add_argument("--branch", required=True)
-    parser.add_argument("--pr-number", type=int)
-    parser.add_argument("--github-token")
+    parser.add_argument("--pr-number", type=int, required=True)
+    parser.add_argument("--github-token", required=True)
     return parser.parse_args()
 
 
@@ -81,16 +81,16 @@ def main():
     args = parse_args()
 
     matrix = FULL_MATRIX
-    if args.branch in ["main", "dev"] or has_label(
-        args.repo, args.pr_number, args.github_token, "Run All Workflows"
-    ):
-        # This is intended, so that `elif` condition is less complex
-        pass
-    elif args.event_name == "pull_request":
-        approved = False
-        if args.repo and args.pr_number and args.github_token:
-            approved = has_approval(args.repo, args.pr_number, args.github_token)
-        matrix = FULL_MATRIX if approved else PR_MATRIX
+    is_non_main_branch = args.branch not in ["main", "dev"]
+    is_pull_request = args.event_name == "pull_request"
+    has_auth = bool(args.github_token)
+
+    if is_non_main_branch and is_pull_request:
+        if not has_auth:
+            matrix = PR_MATRIX
+        elif not has_label(args.repo, args.pr_number, args.github_token, "Run All Workflows"):
+            if not has_approval(args.repo, args.pr_number, args.github_token):
+                matrix = PR_MATRIX
 
     print(json.dumps(matrix))
 
