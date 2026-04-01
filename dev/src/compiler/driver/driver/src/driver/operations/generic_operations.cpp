@@ -19,6 +19,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
+#include <global_state/script_context.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
@@ -397,11 +398,10 @@ namespace compiler::driver {
 			return script_main;
 		}
 
-		std::expected<vm::code::CodeCollection, std::string> compileScriptToDVMCollection(
-			const CompilerModeOfOperationAndOptions::ScriptMode& mode
-		) {
-			auto script_source = mode.script_file.getContent().view().stdString();
-			auto split_result  = repl::splitInputIntoStatements(script_source);
+		std::expected<vm::code::CodeCollection, std::string> compileScriptToDVMCollection() {
+			auto& script_context = global_state::getScriptContext();
+			auto  script_source  = script_context.script_file.getContent().view().stdString();
+			auto  split_result   = repl::splitInputIntoStatements(script_source);
 			if (!split_result.has_value())
 				return std::unexpected(
 					base::strConcat("Script parsing failed: ", split_result.error())
@@ -535,16 +535,17 @@ namespace compiler::driver {
 			return base::BAD;
 		}
 
-		auto compiled_script = compileScriptToDVMCollection(mode);
+		auto compiled_script = compileScriptToDVMCollection();
 		if (!compiled_script.has_value()) {
 			CORE_USER_LOG(compiled_script.error(), "\n");
 			return base::BAD;
 		}
 
-		auto output_dir = mode.compilation_artifacts.artifacts_path.getPath();
+		auto& script_context = global_state::getScriptContext();
+		auto  output_dir     = mode.compilation_artifacts.artifacts_path.getPath();
 		std::filesystem::create_directories(output_dir);
 
-		auto          output_path = output_dir / (mode.script_file.stem() + std::string(".dbc"));
+		auto output_path = output_dir / (script_context.script_file.stem() + std::string(".dbc"));
 		std::ofstream output_file(output_path, std::ios::binary);
 		if (!output_file.is_open()) {
 			CORE_USER_LOG(
@@ -560,10 +561,8 @@ namespace compiler::driver {
 		return base::OK;
 	}
 
-	std::expected<RunOutput, std::string> runScriptOnDVM(
-		const CompilerModeOfOperationAndOptions::ScriptMode& mode
-	) {
-		auto compiled_script = compileScriptToDVMCollection(mode);
+	std::expected<RunOutput, std::string> runScriptOnDVM() {
+		auto compiled_script = compileScriptToDVMCollection();
 		if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
 
 		vm::PID pid{};

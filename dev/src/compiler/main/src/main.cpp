@@ -575,12 +575,9 @@ clah::Clah getClahForMain() {
 					return result.isOk() ? 0 : 1;
 				})
 		)
-	    // For now run works only for DVM backend, but it will be extended to also support running
-	    // LLVM-compiled executables in the future when compilation to executable will be added to
-	    // compile_script command.
+	    // For now run works only for DVM backend.
 	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
 	                       .addPositional(clah::FileParser::make("script"))
-	                       .add(getLlvmOptLevelParam())
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                                .addShortName('w')
 	                                .addLongName("workers")
@@ -603,7 +600,7 @@ clah::Clah getClahForMain() {
 
 							   auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
 						.script_file     = script_file,
-						.backend_options = getBackendOptionsFromClap(options),
+						.backend_options = {}, // only dvm for now.
 						.compilation_artifacts = {
 							.artifacts_path = run_temp_artifacts_path,
 						},
@@ -619,7 +616,7 @@ clah::Clah getClahForMain() {
 								   return 1;
 							   }
 
-							   auto run_result = driver::runScriptOnDVM(mode);
+							   auto run_result = driver::runScriptOnDVM();
 
 							   compiler::driver::exit();
 							   if (!run_result.has_value()) {

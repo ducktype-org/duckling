@@ -49,13 +49,16 @@ namespace compiler::driver {
 	/**
 	 * @brief Compile a Duckling script (.ds file) into a single artifact.
 	 *
-	 * Reads the script source, splits it into individual statements, creates a chain of
-	 * REPL-style modules (each with a parent link to the previous), compiles each one,
-	 * and combines the results into a single output file:
+	 * Reads the script source from global_state::ScriptContext, splits it into individual
+	 * statements, creates a chain of REPL-style modules (each with a parent link to the previous),
+	 * compiles each one, and combines the results into a single output file:
 	 *   - DVM backend  -> .dbc bytecode file
 	 *   - LLVM backend -> native executable (linked with linking_options)
 	 *
-	 * @param mode             All script compilation options (file, backend, output path).
+	 * The script file must be set in global_state via init before calling this function.
+	 * Other config (artifacts, backend options) is passed via mode parameter.
+	 *
+	 * @param mode             Script configuration (artifacts path, backend options, etc).
 	 * @param backend_type     Whether to use DVM or LLVM backend.
 	 * @param linking_options  Linker configuration (ignored for DVM backend).
 	 */
@@ -67,10 +70,9 @@ namespace compiler::driver {
 
 	/**
 	 * Compile a Duckling script to DVM bytecode in-memory and execute it.
+	 * The script file must be set in global_state via init before calling this function.
 	 */
-	std::expected<RunOutput, std::string> runScriptOnDVM(
-		const CompilerModeOfOperationAndOptions::ScriptMode& mode
-	);
+	std::expected<RunOutput, std::string> runScriptOnDVM();
 
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;
