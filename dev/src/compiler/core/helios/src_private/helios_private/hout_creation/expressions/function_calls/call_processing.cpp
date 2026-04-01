@@ -1,3 +1,5 @@
+#include "helios_private/hout_creation/expressions/hout_of_subexpr.hpp"
+
 #include <diagnostic_interactive/message.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
@@ -619,8 +621,8 @@ namespace compiler::helios::code {
 
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr_result
-				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			UNPACK_QRESULT_CREF_TO_BOX(auto arg_expr =, arg_expr_result);
+				= subExprFromPST(ctx, arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
+			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
@@ -633,7 +635,7 @@ namespace compiler::helios::code {
 						return query::Failed();
 					}
 				}
-				named_arguments.emplace_back(arg_name, arg_expr->clone());
+				named_arguments.emplace_back(arg_name, std::move(arg_expr));
 			} else {
 				if (!named_arguments.empty()) {
 					auto error = PositionalAfterNamedArgument{ arg_index };
@@ -643,7 +645,7 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 
-				positional_arguments.emplace_back(arg_expr->clone());
+				positional_arguments.emplace_back(std::move(arg_expr));
 			}
 			arg_index++;
 		}
