@@ -2,9 +2,10 @@
 
 #include <concurrent/worker/worker.hpp>
 
+#include "base/except/exceptions.hpp"
+
 #include <mutex>
 #include <ranges>
-#include "base/except/exceptions.hpp"
 
 namespace concurrent::worker {
 
@@ -29,12 +30,15 @@ namespace concurrent::worker {
 	}
 
 	void WorkerManager::waitForAllWorkersFree(std::chrono::milliseconds sleep_duration) const {
-		CORE_ASSERT(!Worker::isCurrentThreadWorker(), "Cannot call waitForAllWorkersFree from a worker thread");
+		CORE_ASSERT(
+			!Worker::isCurrentThreadWorker(),
+			"Cannot call waitForAllWorkersFree from a worker thread"
+		);
 		while (true) {
 			auto lock_and_check_all = [&](auto&& self, usize index) -> bool {
 				if (index >= workers.size()) return true;
 
-				auto& worker = workers.at(index);
+				auto&            worker = workers.at(index);
 				std::scoped_lock lock(worker->mut);
 				if (!worker->is_free.load(std::memory_order_seq_cst)) return false;
 
@@ -67,9 +71,7 @@ namespace concurrent::worker {
 
 	void WorkerManager::setNoTasksCallback(NoTasksCallback&& callback) {
 		auto callback_ptr = std::make_shared<NoTasksCallback>(std::move(callback));
-		for (auto& worker: getAllWorkers()) {
-			worker->setNoTasksCallback(callback_ptr);
-		}
+		for (auto& worker: getAllWorkers()) worker->setNoTasksCallback(callback_ptr);
 	}
 
 	WorkerManager& WorkerManager::get() {

@@ -1,12 +1,13 @@
 #include "task_pool.hpp"
 
+#include "concurrent/worker/worker_manager.hpp"
+
 #include <concurrent/worker/worker.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
-#include "concurrent/worker/worker_manager.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -28,18 +29,20 @@ namespace query::internal {
 		std::ranges::fill(is_worker_free, true);
 
 		u64 worker_index = 0;
-        for(auto worker: worker_manager.getAllWorkers()) {  
-            CORE_ASSERT(  
-                worker_index++ == worker->getID(), "Worker IDs must be sequential starting from 0"  
-            );  
-        }
+		for (auto worker: worker_manager.getAllWorkers()) {
+			CORE_ASSERT(
+				worker_index++ == worker->getID(), "Worker IDs must be sequential starting from 0"
+			);
+		}
 	}
 
-	TaskPool::~TaskPool() { 
-		// We need to make sure, that no worker is executing a task from this pool before we destroy it, otherwise we might have
-		// a use-after-free. We can ensure this by waiting for all workers to be free, which means that they are not executing any task from this pool.
-		// This will also wait for finishing the taks not sheduled by TaskPool but there is no other way to do that
-		concurrent::worker::WorkerManager::get().waitForAllWorkersFree(std::chrono::milliseconds(10));
+	TaskPool::~TaskPool() {
+		// We need to make sure, that no worker is executing a task from this pool before we destroy
+		// it, otherwise we might have a use-after-free. We can ensure this by waiting for all workers
+		// to be free, which means that they are not executing any task from this pool. This will also
+		// wait for finishing the taks not sheduled by TaskPool but there is no other way to do that
+		concurrent::worker::WorkerManager::get().waitForAllWorkersFree(std::chrono::milliseconds(10)
+		);
 	}
 
 	void TaskPool::addTask(Task&& task) {

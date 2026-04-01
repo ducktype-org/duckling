@@ -141,17 +141,15 @@ private:
 	void stableHashMapMaybePutAndUpdateTest() {
 		base::StableHashMap<std::string, i32> map;
 
-		auto inserted = map.maybePutAndUpdate(
-			std::string("key"), 10, [](Ref<i32> value) { *value += 5; }
-		);
+		auto inserted
+			= map.maybePutAndUpdate(std::string("key"), 10, [](Ref<i32> value) { *value += 5; });
 
 		assertTrue(inserted != nullptr, "Expected insertion for missing key");
 		ASSERT_EQUAL(1, map.size());
 		ASSERT_EQUAL(15, map["key"]);
 
-		auto not_inserted = map.maybePutAndUpdate(
-			std::string("key"), 999, [](Ref<i32> value) { *value += 2; }
-		);
+		auto not_inserted
+			= map.maybePutAndUpdate(std::string("key"), 999, [](Ref<i32> value) { *value += 2; });
 
 		assertTrue(not_inserted == nullptr, "Expected no insertion for existing key");
 		ASSERT_EQUAL(1, map.size());

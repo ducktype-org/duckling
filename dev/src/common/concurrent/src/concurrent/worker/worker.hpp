@@ -89,7 +89,7 @@ namespace concurrent::worker {
 
 		/// Type-erased destructor for the object stored in callable_data.
 		/// Needed to destroy the correct concrete callable type during move/reset/destruction.
-		void (*destroy_fn)(void*)      = nullptr;
+		void (*destroy_fn)(void*) = nullptr;
 	};
 
 	/**
@@ -211,8 +211,9 @@ namespace concurrent::worker {
 		std::atomic_bool is_free       = true;
 		std::atomic_bool loop_run_flag = true;  /// Controls the main loop of the worker thread.
 
-		std::shared_ptr<NoTasksCallback> no_tasks_callback /// Callback when there are no tasks.
-			= std::make_shared<NoTasksCallback>([](WRef) {});  /// Shared with worker loop and setter so the callback can be replaced safely.
+		std::shared_ptr<NoTasksCallback> no_tasks_callback  /// Callback when there are no tasks.
+			= std::make_shared<NoTasksCallback>([](WRef) {}
+		    );  /// Shared with worker loop and setter so the callback can be replaced safely.
 
 		std::queue<Task> task_queue;
 
@@ -223,7 +224,7 @@ namespace concurrent::worker {
 		std::jthread real_thread;
 
 		static constinit u64 next_id;
-		u64                         id      = next_id++;  /// Unique u64 ID for the worker
+		u64                  id = next_id++;  /// Unique u64 ID for the worker
 	};
 }
 

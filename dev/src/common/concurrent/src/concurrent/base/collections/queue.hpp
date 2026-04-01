@@ -137,8 +137,7 @@ namespace concurrent {
 			LockedIterator() noexcept = default;
 
 			LockedIterator(
-				std::shared_ptr<WithLock<AtomicFlagSpinlock>> lock_guard,
-				internal_iterator_type                        iter
+				std::shared_ptr<WithLock<AtomicFlagSpinlock>> lock_guard, internal_iterator_type iter
 			) noexcept:
 				  lock_guard(std::move(lock_guard)),
 				  internal_iterator(iter) {}
