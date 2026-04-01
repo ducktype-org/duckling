@@ -1,6 +1,7 @@
 use crate::{DuckCtx, QuackResult};
 use clap::{ArgMatches, Command};
 
+// @TODO: #1650 Restore removed subcommands once they are implemented.
 mod build;
 #[cfg(feature = "shell-completion")]
 mod generate;
