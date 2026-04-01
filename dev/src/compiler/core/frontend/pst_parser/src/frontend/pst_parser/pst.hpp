@@ -335,10 +335,6 @@ namespace pst {
 			this->element.internalMut()->setAdditionalRootData(std::move(data));
 		}
 
-		// const base::Optional<AdditionalData>& getAdditionalData() const {
-		// 	return additional_data;
-		// }
-
 		void dprint(std::ostream& out) const { nullAwareDprint(element, out); }
 	};
 }
