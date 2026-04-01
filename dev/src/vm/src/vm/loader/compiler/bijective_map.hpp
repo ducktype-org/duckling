@@ -9,6 +9,9 @@
 namespace persistent::detail {
 	template<typename L, typename R, typename HashL = std::hash<L>, typename HashR = std::hash<R>>
 	class BijectiveMap {
+		base::HashMap<L, R, HashL> left_right;
+		base::HashMap<R, L, HashR> right_left;
+
 	public:
 		base::Optional<R> atLeftOpt(L left) const {
 			auto it = left_right.find(left);
@@ -58,6 +61,10 @@ namespace persistent::detail {
 			return { true, left };
 		}
 
+		auto leftToRight() const { return left_right; }
+
+		auto rightToLeft() const { return right_left; }
+
 		void clear() {
 			left_right.clear();
 			right_left.clear();
@@ -68,9 +75,5 @@ namespace persistent::detail {
 		auto begin() const { return left_right.begin(); }
 
 		auto end() const { return left_right.end(); }
-
-	private:
-		base::HashMap<L, R, HashL> left_right;
-		base::HashMap<R, L, HashR> right_left;
 	};
 }
