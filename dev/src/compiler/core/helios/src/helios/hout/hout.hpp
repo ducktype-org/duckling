@@ -18,6 +18,7 @@
 #include <string_id/string_id.hpp>
 
 #include <memory>
+#include <ostream>
 #include <variant>
 #include <vector>
 
@@ -32,7 +33,7 @@ namespace compiler::helios {
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
 
-	namespace houtgen {
+	namespace defgen {
 		struct ImplementationOf_QueryImplicitClassConstructor;
 		struct ImplementationOf_QueryDefaultClassConstructor;
 		struct ImplementationOf_QueryDefaultStaticArrayConstructor;
@@ -75,8 +76,7 @@ namespace compiler::helios {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		[[nodiscard]]
-		std::string debugPrint() const;
+		void debugPrint(std::ostream& out) const;
 
 	private:
 		HOUTFunctionDeclaration(
@@ -102,9 +102,9 @@ namespace compiler::helios {
 			const std::shared_ptr<const code::CodeBlock>& body
 		);
 		friend struct ImplementationOf_QueryCodeOfFun;
-		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
-		friend houtgen::ImplementationOf_QueryDefaultClassConstructor;
-		friend houtgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
+		friend defgen::ImplementationOf_QueryImplicitClassConstructor;
+		friend defgen::ImplementationOf_QueryDefaultClassConstructor;
+		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
 
@@ -131,8 +131,7 @@ namespace compiler::helios {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		[[nodiscard]]
-		std::string debugPrint() const;
+		void debugPrint(std::ostream& out) const;
 	};
 
 	enum class HOUTGlobalDataType { Constant, Variable };
@@ -183,8 +182,7 @@ namespace compiler::helios {
 		// so we can continue compiling module even if the global value has not compiled
 		explicit HOUTGlobalData(query::Context& ctx, SymID symbol, HOUTGlobalDataType data_type);
 
-		[[nodiscard]]
-		std::string debugPrint(query::Context& ctx) const;
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
 	/**
@@ -203,8 +201,7 @@ namespace compiler::helios {
 
 		std::vector<CRef<HOUTFunction>> functions;
 
-		[[nodiscard]]
-		std::string debugPrint(query::Context& ctx) const;
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 
 		HOUTUnit()                          = default;
 		HOUTUnit(const HOUTUnit&)           = delete;

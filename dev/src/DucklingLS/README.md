@@ -1,7 +1,7 @@
 # Duckling Language Server
 
 The language support for Duckling programming language.
-
+This is the official extension provided by the Duckling team.
 
 ## Configuration
 
@@ -11,12 +11,12 @@ To use a different path, open VS Code Settings (`Ctrl+,`), search for **Duckling
 
 | Setting | Description | Default |
 |---|---|---|
-| `DucklingLanguageServer.executablePath` | Path to the `duck_ls` binary. Supports `~`. | `~/.local/bin/duck_ls` |
+| `DucklingLanguageSupport.executablePath` | Path to the `duck_ls` binary. Supports `~`. | `~/.local/bin/duck_ls` |
 
 Or add this to your `settings.json`:
 
 ```json
 {
-    "DucklingLanguageServer.executablePath": "/custom/path/to/duck_ls"
+    "DucklingLanguageSupport.executablePath": "/custom/path/to/duck_ls"
 }
 ```

@@ -1,6 +1,7 @@
 #include "builtin_operators.hpp"
 
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/types.hpp>
@@ -131,19 +132,20 @@ namespace compiler::helios::code {
 			};
 			using enum BuiltinBinary;
 
-			// The result map and a helper function to populate it.
-			auto       result_ops = RegularBinaryBuiltinSymbolMap{};
+			// The result map and a helper functions to populate it.
+			auto result_ops = RegularBinaryBuiltinSymbolMap{};
+			// - Helper function to register a builtin operation that results in a BuiltinBinary.
 			const auto builtin_op = [&ctx, &result_ops](
-										const base::StrID              name,
-										std::vector<tsh::SymbolType<>> param_types,
-										const tsh::SymbolType<>        return_type,
-										const BuiltinBinary            op
+										const base::StrID                              name,
+										std::vector<tsh::SymbolType<>>                 param_types,
+										const tsh::SymbolType<>                        return_type,
+										const RegularBinaryBuiltin::HOUTRepresentation op
 									) -> void {
 				auto builtin = RegularBinaryBuiltin{
-					.symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name = name,
 						.generated_symbol_data
-						= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::BuiltinOperator{
+						= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
 							ctx.query<tsh::QueryFunctionType>({
 								std::move(param_types),
 								return_type,
@@ -151,6 +153,32 @@ namespace compiler::helios::code {
 						} },
 					}),
 					.op     = op,
+				};
+				result_ops.put(builtin.symbol, builtin);
+			};
+			// - Helper function to register a builtin operation that results in a function call.
+			const auto builtin_call = [&ctx, &result_ops](
+										  const base::StrID                     name,
+										  const std::vector<tsh::SymbolType<>>& param_types,
+										  const tsh::SymbolType<>               return_type,
+										  const base::StrID                     builtin_name
+									  ) -> void {
+				auto gen_data
+					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
+						ctx.query<tsh::QueryFunctionType>({
+							param_types,
+							return_type,
+						}),
+					} };
+				auto builtin = RegularBinaryBuiltin{
+					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
+						.name                  = name,
+						.generated_symbol_data = gen_data,
+					}),
+					.op
+					= RegularBinaryBuiltin::FunctionCall{ ctx.query<defgen::QueryGeneratedSymbol>(
+						{ .name = builtin_name, .generated_symbol_data = gen_data }
+					) },
 				};
 				result_ops.put(builtin.symbol, builtin);
 			};
@@ -192,6 +220,25 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("-"), { char_t, char_t }, u8_t, IntegerSub);
 			builtin_op(base::StrID("+"), { u8_t, char_t }, char_t, IntegerAdd);
 			builtin_op(base::StrID("+"), { char_t, u8_t }, char_t, IntegerAdd);
+
+			/// String operators ///
+			const auto str_t = tsh::SymbolType<>{
+				tsh::getStringType(),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable,
+			};
+			builtin_call(
+				base::StrID("+:"), { char_t, str_t }, str_t, base::StrID("builtin_string_prepended")
+			);
+			builtin_call(
+				base::StrID(":+"), { str_t, char_t }, str_t, base::StrID("builtin_string_appended")
+			);
+			builtin_call(
+				base::StrID("++"),
+				{ str_t, str_t },
+				str_t,
+				base::StrID("builtin_string_concatenated")
+			);
 
 			// Return
 			return result_ops;

@@ -163,7 +163,7 @@ Tests:
         Input:
           String: "Test"
         Output:
-          String: "Test\nHello, world!\n"
+          String: "Test\nHello, world!\nab\nbcd\nHello, world!\n"
 
   chars:
     Cases:
