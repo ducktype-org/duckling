@@ -109,10 +109,14 @@ namespace compiler::frontend {
 
 			auto parsed_pst = pst::PST(file, pst_type, getComponentHash());
 
-			parsed_pst.setAdditionalRootData(pst::AdditionalRootData{
-				.optional_macro_expansion_source = {},
-				.module_id = compiler::frontend::ModuleID{ this->linked_module } });
-
+			// Illegal access is fine here because we are outside of any query and the PST is only being created.
+			if (parsed_pst.getRootElement().illegalAccess().has_value()) {
+				// @TODO: #2397 we could change it, such that root element is never null.
+				// Set additional root data only if the root element is not null:
+				parsed_pst.setAdditionalRootData(pst::AdditionalRootData{
+					.optional_macro_expansion_source = {},
+					.module_id = compiler::frontend::ModuleID{ this->linked_module } });
+			}
 			parse_tree.emplace(std::move(parsed_pst));
 
 			return &parse_tree.value();

@@ -323,8 +323,15 @@ namespace pst {
 			  element(std::move(other.element)),
 			  imports(std::move(other.imports)),
 			  hash_ctx_info(std::move(other.hash_ctx_info)) {}
-
+		
+		/**
+		 * @TODO: #2397 Additional root data should just be passed during construction. 
+		 */
 		void setAdditionalRootData(AdditionalRootData data) {
+			CORE_ASSERT(
+				element.internalMut().toOpt().has_value(),
+				"Attempted to set additional root data on PST with null root element"
+			);
 			this->element.internalMut()->setAdditionalRootData(std::move(data));
 		}
 

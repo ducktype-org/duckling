@@ -26,8 +26,10 @@ namespace compiler::helios {
 					makeBox<pst::LangParserContext>(expand->getContext())
 				);
 
-				pst.setAdditionalRootData(pst::AdditionalRootData{
-					.optional_macro_expansion_source = expand, .module_id = {} });
+				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
+					pst.setAdditionalRootData(pst::AdditionalRootData{
+						.optional_macro_expansion_source = expand, .module_id = {} });
+				}
 
 				return pst;
 			} else
