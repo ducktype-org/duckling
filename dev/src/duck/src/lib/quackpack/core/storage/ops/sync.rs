@@ -28,7 +28,7 @@ use crate::{
         },
         subcommands::sync::SyncOptions,
     },
-    util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
+    util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
 
 use crate::quackpack::core::storage;
