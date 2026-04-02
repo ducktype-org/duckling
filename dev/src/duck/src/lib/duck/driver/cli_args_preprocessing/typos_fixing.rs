@@ -179,40 +179,41 @@ mod tests {
 
     #[test]
     fn test_fixes() {
-        let args_matches = cli().try_get_matches_from(["duck", "searcg"]).unwrap();
+        let args_matches = cli().try_get_matches_from(["duck", "buil"]).unwrap();
         let mut ctx = DuckCtx::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(1);
         let external_cmds = HashMap::new();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
-        assert_eq!(result.subcommand_name(), Some("search"));
+        assert_eq!(result.subcommand_name(), Some("build"));
     }
 
-    #[test]
-    fn test_multiple_targets() {
-        let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
-        ctx.duck_cfg_mut().set_fixes_enabled(true);
-        ctx.duck_cfg_mut().set_max_fix_dist(100);
-        let external_cmds = HashMap::new();
-        let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
-            "There are two equally distant targets (`info` and `init`), so fixing should fail.",
-        );
-        assert_eq!(
-            result.to_string(),
-            "No such command as `inaa`. Did you mean:\n- `info`\n- `init`?"
-        );
-    }
+    // !TODO: Reenable after enabling more subcommands.
+    // #[test]
+    // fn test_multiple_targets() {
+    //     let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
+    //     let mut ctx = DuckCtx::new().unwrap();
+    //     ctx.duck_cfg_mut().set_fixes_enabled(true);
+    //     ctx.duck_cfg_mut().set_max_fix_dist(100);
+    //     let external_cmds = HashMap::new();
+    //     let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
+    //         "There are two equally distant targets (`info` and `init`), so fixing should fail.",
+    //     );
+    //     assert_eq!(
+    //         result.to_string(),
+    //         "No such command as `inaa`. Did you mean:\n- `info`\n- `init`?"
+    //     );
+    // }
 
     #[test]
     fn test_single_closest_target() {
-        let args_matches = cli().try_get_matches_from(["duck", "searcg"]).unwrap();
+        let args_matches = cli().try_get_matches_from(["duck", "ini"]).unwrap();
         let mut ctx = DuckCtx::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(100);
         let external_cmds = HashMap::new();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
-        assert_eq!(result.subcommand_name(), Some("search"));
+        assert_eq!(result.subcommand_name(), Some("init"));
     }
 
     #[test]
