@@ -393,19 +393,21 @@ namespace compiler::helios {
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
 		 * @note This has to be consistent with QuerySymbolsInScope
+		 * @TODO: #2407 this could take unlocked Access
 		 */
 		static ScopeID getPSTElementParentScope(
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 		) {
-			// note: this might become more complicated in the future:
+			// Note: This has to be consistent with QuerySymbolsInScope logic.
+			// @TODO: #2397 maybe move it into a single place 
 
 			auto unlocked = element.unlock(ctx);
 
-			// PR: make it better!
 			if (unlocked->getParent().has_value()) {
 				return ctx.query<QueryPrimaryCodeScopeFor>(unlocked->getParent().value());
 			} else {
 				// we hit an expand!
+				// note that here, we should never hit an element without parent that is not an expand
 				return ctx.query<QueryPrimaryCodeScopeFor>(
 					unlocked->getAdditionalRootData().optional_macro_expansion_source.value()
 				);

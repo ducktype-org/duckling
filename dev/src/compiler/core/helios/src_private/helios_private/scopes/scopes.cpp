@@ -244,11 +244,11 @@ namespace compiler::helios {
 				if (maybe_element_parent.has_value()) {
 					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());
 				} else {
-					// if there is no parent, we inspect the additional root data:
+					// If there is no parent, we inspect the additional root data, 
+					// as we might be in a macro expansion. 
+					// @TODO: #2397 revisit and adjust this logic, we could perhaps move it into PST layer.
 
 					const auto& additional_root_data = element->getAdditionalRootData();
-
-					// THIS IS A BIT FRAGILE, REVISIT IT ON SELF REVIEW:
 
 					if (additional_root_data.optional_macro_expansion_source.has_value()) {
 						CORE_ASSERT(
