@@ -56,7 +56,6 @@ pub fn get_parser() -> Command {
 /// Logic for executing the `run_script` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
-    let path = matches
         .get_one::<PathBuf>("path")
         .expect("guarded by the parser");
     let path = ctx.cwd().join(path);
