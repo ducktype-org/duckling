@@ -1,7 +1,10 @@
 //! A cross-platform trait extension for replacing the current process with an another.
 
 use std::convert::Infallible;
+use std::fmt;
 use std::process::Command;
+
+use itertools::Itertools;
 
 use crate::QuackResult;
 use crate::QuackResultContext;
@@ -15,25 +18,19 @@ pub trait CommandExt {
     /// [`Err`](crate::QuackError) variant means, that spawning new command failed.
     /// Otherwise this function shall never return.
     fn exec_replace(&mut self) -> QuackResult<Infallible>;
+
+    fn display(&self) -> impl fmt::Display;
 }
 
 impl CommandExt for Command {
+    fn display(&self) -> impl fmt::Display {
+        CommandDisplay { command: self }
+    }
+
     #[cfg(unix)]
     fn exec_replace(&mut self) -> QuackResult<Infallible> {
         use std::os::unix::process::CommandExt;
-        Err(self.exec()).with_context(|| {
-            use itertools::Itertools;
-
-            let name = self.get_program().display();
-            let args = self.get_args().map(|arg| arg.display()).join(" ");
-            let has_args = self.get_args().next().is_some();
-            let command = if has_args {
-                format!("{name} {args}")
-            } else {
-                name.to_string()
-            };
-            format!("failed to execute `{command}`")
-        })
+        Err(self.exec()).with_context(|| format!("failed to execute `{}`", self.display()))
     }
 
     #[cfg(windows)]
@@ -58,5 +55,80 @@ impl CommandExt for Command {
         use crate::qp_bail_internal;
 
         qp_bail_internal!("implement `exec_replace`")
+    }
+}
+
+struct CommandDisplay<'a> {
+    command: &'a Command,
+}
+
+impl fmt::Display for CommandDisplay<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut has_envs = false;
+        let mut has_args = false;
+        let envs = self
+            .command
+            .get_envs()
+            .filter_map(|(k, v)| v.map(|v| (k, v)))
+            .map(|(k, v)| {
+                has_envs = true;
+                format!("{}={}", k.display(), v.display())
+            })
+            .join(" ");
+        let name = self.command.get_program().display();
+        let args = self
+            .command
+            .get_args()
+            .filter(|arg| !arg.is_empty())
+            .map(|arg| {
+                has_args = true;
+                arg.display()
+            })
+            .join(" ");
+        if has_envs {
+            write!(f, "{envs} ")?;
+        }
+        write!(f, "{name}")?;
+        if has_args {
+            write!(f, " {args}")?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_basic() {
+        let mut command = Command::new("x");
+        command.arg("--help").arg("foo");
+        assert_eq!(command.display().to_string(), "x --help foo");
+
+        let command = Command::new("x");
+        assert_eq!(command.display().to_string(), "x");
+
+        let mut command = Command::new("x");
+        command.env("KEY", "VALUE").env("KEY2", "VALUE2");
+        assert_eq!(command.display().to_string(), "KEY=VALUE KEY2=VALUE2 x");
+
+        let mut command = Command::new("x");
+        command
+            .env("KEY", "VALUE")
+            .env("KEY2", "VALUE2")
+            .arg("--help")
+            .arg("foo");
+        assert_eq!(
+            command.display().to_string(),
+            "KEY=VALUE KEY2=VALUE2 x --help foo"
+        );
+    }
+
+    #[test]
+    fn display_ignores_empty_args() {
+        let mut command = Command::new("x");
+        command.arg("");
+        assert_eq!(command.display().to_string(), "x");
     }
 }
