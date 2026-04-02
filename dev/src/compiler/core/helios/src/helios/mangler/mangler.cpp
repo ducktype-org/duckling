@@ -1,6 +1,7 @@
 #include "mangler.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -122,19 +123,31 @@ namespace compiler::helios::mangler {
 		 * @brief Returns package/module/script prefix for the symbol
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string pathPrefix(SymID symbol_id) {
-			auto enclosing_scope  = scope(symbol_id);
-			auto enclosing_module = module(enclosing_scope);
+		std::string pathPrefix(query::Context& ctx, SymID symbol_id) {
+			// @future
+			// currently package_id is a random string
+			// package name should be added when we start using it
+			// auto package = curr->getPackageID().strView();
 
-			// note: only the enclosing module is used for mangling. This is intentional,
-			// as modules are supposed to be self-contained and this would make moving them
-			// a more breaking (ABI-wise) change than it should be
-
-			// "M" <module-name>                                 // standalone module
+			// "M" <module-name>+                                // standalone module
 			// @future: templated modules
 			if (/* standalone module */ true) {
-				auto module_identifier = identifier(frontend::moduleName(enclosing_module).str());
-				return base::strConcat("M", module_identifier);
+				auto enclosing_scope = scope(symbol_id);
+
+				std::vector<std::string> modules;
+				auto                     curr = frontend::getModuleRef(module(enclosing_scope));
+				modules.emplace_back(curr->getName().str());
+
+				while (auto parent = curr->getParentModule()) {
+					curr = frontend::getModuleRef(parent->unlock(ctx).getID());
+					modules.emplace_back(curr->getName().str());
+				}
+
+				std::stringstream ret;
+				ret << "M";
+				for (auto& mod: modules | std::views::reverse) ret << identifier(std::move(mod));
+
+				return ret.str();
 			}
 
 			// @future: add support for packages & scripts when they are implemented
@@ -217,7 +230,8 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
-			return base::strConcat(pathPrefix(symbol_id), symbolName(ctx, symbol_id));
+			auto prefix = pathPrefix(ctx, symbol_id);
+			return base::strConcat(std::move(prefix), symbolName(ctx, symbol_id));
 		}
 
 		/**
