@@ -7,7 +7,7 @@ use crate::quackpack::core::storage;
 use crate::QuackResult;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
+use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
 use storage::paths;
 
 /// Get a snapshot of all virtual environments' states.

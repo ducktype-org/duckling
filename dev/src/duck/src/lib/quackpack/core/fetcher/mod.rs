@@ -18,7 +18,7 @@ use crate::{
         },
         schemas::registry,
     },
-    util_common::path_ops_ext::{MkdirOptions, PathOpsExt},
+    util::path_ops_ext::{MkdirOptions, PathOpsExt},
 };
 
 pub mod cache;

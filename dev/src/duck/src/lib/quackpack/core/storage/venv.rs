@@ -66,7 +66,7 @@ use crate::{
         paths::Storage,
         venv_id::VenvId,
     },
-    util_common::{
+    util::{
         hash,
         path_ops_ext::{MkdirOptions, PathOpsExt},
     },

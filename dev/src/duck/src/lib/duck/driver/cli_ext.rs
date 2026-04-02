@@ -7,38 +7,10 @@ const DEFAULT_PROFILE: &str = "dev";
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;
 
-    /// Add the `--global` flag, which uses a global venv.
-    fn add_global_venv(self) -> Self {
-        self._arg_impl(flag("global", "Add packages to the global venv"))
-    }
-
-    /// Adds `--venv` flag.
-    fn add_venv(self) -> Self {
-        self._arg_impl(
-            optional("venv", "Select the venv to run the script in").conflicts_with("global"),
-        )
-    }
-
-    /// Add the optional `-F`/`--features` flag which collects all features.
-    fn add_features(self, help: &'static str) -> Self {
-        self._arg_impl(multi("features", help).short('F'))
-    }
-
     /// Same as [`add_features`](Self::add_features), but `-F`/`--features` flag conflicts with
     /// `with`.
     fn add_features_conflicting(self, help: &'static str, with: &'static str) -> Self {
         self._arg_impl(multi("features", help).short('F').conflicts_with(with))
-    }
-
-    /// Adds `--packages` flag, which collects names of packages.
-    fn add_packages(self, help: &'static str) -> Self {
-        self._arg_impl(multi("packages", help))
-    }
-
-    /// Adds conflicting `--local`, `--git` flags.
-    fn add_local_git_deps(self, local_help: &'static str, git_help: &'static str) -> Self {
-        self._arg_impl(flag("local", local_help).conflicts_with("git"))
-            ._arg_impl(flag("git", git_help).conflicts_with("local"))
     }
 
     /// Adds `--profile` flag, conflicting with `--release`.
@@ -110,11 +82,6 @@ pub trait CommandExt: Sized {
             .value_name("N")
             .value_parser(1..),
         )
-    }
-
-    /// Adds `--dev` flag.
-    fn add_dev(self, dev_help: &'static str) -> Self {
-        self._arg_impl(flag("dev", dev_help))
     }
 }
 

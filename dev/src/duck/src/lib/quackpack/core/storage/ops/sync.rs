@@ -25,7 +25,7 @@ use crate::{
         },
         types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
     },
-    util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
+    util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
 
 use crate::quackpack::core::storage;
