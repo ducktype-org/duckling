@@ -27,7 +27,8 @@ namespace persistent::detail {
 
 		const L& atRight(const R& rght) const { return right_left.at(rght); }
 
-		size_t size() {
+		[[nodiscard]]
+		size_t size() const {
 			CORE_ASSERT(
 				left_right.size() == right_left.size(),
 				"bijection requires that both sets are equally big"
@@ -70,7 +71,10 @@ namespace persistent::detail {
 			right_left.clear();
 		}
 
-		bool empty() { return (size() == 0); }
+		[[nodiscard]]
+		bool empty() const {
+			return (size() == 0);
+		}
 
 		auto begin() const { return left_right.begin(); }
 

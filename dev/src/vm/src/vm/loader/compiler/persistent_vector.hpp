@@ -1,6 +1,5 @@
 #pragma once
 
-#include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
@@ -9,6 +8,8 @@
 #include <vm/loader/compiler/bijective_map.hpp>
 
 #include <ranges>
+#include <utility>
+#include <vector>
 
 namespace persistent {
 	STRONG_TYPEDEF_INT(VectorStateID, u64);
@@ -22,17 +23,17 @@ namespace persistent {
 	*/
 	template<typename VarT, typename VarH = std::hash<VarT>>
 	class Vector {
-		using VarNodeID = u64;
+		using NodeID = u64;
 
 		struct NodeEntry {
-			VarNodeID left;
-			VarNodeID rght;
+			NodeID left;
+			NodeID rght;
 
 			bool operator==(const NodeEntry&) const = default;
 		};
 
 		using NodeEntryH = decltype([](const NodeEntry& h) -> usize {
-			return (std::hash<VarNodeID>{}(h.left) << 1) ^ std::hash<VarNodeID>{}(h.rght);
+			return (std::hash<NodeID>{}(h.left) << 1) ^ std::hash<NodeID>{}(h.rght);
 		});
 
 		struct LeafEntry {
@@ -51,41 +52,43 @@ namespace persistent {
 			usize size;
 		};
 
-		enum Dir { L, R };
-		using Path = std::vector<std::pair<Dir, VarNodeID>>;
+		enum class Dir { Left, Right };
 
-		detail::BijectiveMap<NodeEntry, VarNodeID, NodeEntryH> node_entries{};
-		detail::BijectiveMap<LeafEntry, VarNodeID, LeafEntryH> leaf_entries{};
-		detail::BijectiveMap<VarT, usize, VarH>                held_values{};
+		using Path = std::vector<std::pair<Dir, NodeID>>;
 
-		base::HashMap<VarNodeID, RootEntry> root_info{};
-		VarNodeID                           next_node_id = 1;
+		detail::BijectiveMap<NodeEntry, NodeID, NodeEntryH> node_entries{};
+		detail::BijectiveMap<LeafEntry, NodeID, LeafEntryH> leaf_entries{};
+		detail::BijectiveMap<VarT, usize, VarH>             held_values{};
 
-		Path getNodePath(VarNodeID root, usize idx) {
+		base::HashMap<NodeID, RootEntry> root_info{};
+		NodeID                           next_node_id = 1;
+
+		Path getNodePath(NodeID root, usize idx) {
 			Path ans    = {};
-			Dir  dir    = L;
+			Dir  dir    = Dir::Left;
 			auto height = root_info[root].height;
 
 			CORE_ASSERT(idx <= root_info[root].size, "The idx was out of bounds!");
 			if (height == 0) return {};
 
-			auto  node  = root;
+			auto node = root;
 			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
 				auto& entry = node_entries.atRight(node);
+				auto  orig  = node;
 				if (idx & max_bit) {
-					dir  = R;
+					dir  = Dir::Right;
 					node = entry.rght;
 				} else {
-					dir  = L;
+					dir  = Dir::Left;
 					node = entry.left;
 				}
-				ans.emplace_back(dir, node);
+				ans.emplace_back(dir, orig);
 			}
 
 			return ans;
 		}
 
-		VarNodeID nodeFromChildren(VarNodeID left, VarNodeID rght) {
+		NodeID nodeFromChildren(NodeID left, NodeID rght) {
 			auto children       = NodeEntry{ .left = left, .rght = rght };
 			auto [is_new, node] = node_entries.emplaceByLeft(children, next_node_id);
 			next_node_id += (is_new ? 1 : 0);
@@ -93,7 +96,7 @@ namespace persistent {
 			return node;
 		}
 
-		VarNodeID nodeFromIdxVar(usize idx, const VarT& var) {
+		NodeID nodeFromIdxVar(usize idx, const VarT& var) {
 			auto [_, var_id]    = held_values.emplaceByLeft(var, held_values.size());
 			auto leaf           = LeafEntry{ .idx = idx, .var_id = var_id };
 			auto [is_new, node] = leaf_entries.emplaceByLeft(leaf, next_node_id);
@@ -102,19 +105,19 @@ namespace persistent {
 			return node;
 		}
 
-		VarNodeID getChild(VarNodeID node_id, Dir dir) const {
+		NodeID getChild(NodeID node_id, Dir dir) const {
 			auto& entry = node_entries.atRight(node_id);
-			return (dir == L) ? entry.left : entry.rght;
+			return (dir == Dir::Left) ? entry.left : entry.rght;
 		}
 
 		auto getRootInfo(VectorStateID state_id) const {
-			auto node_id = VarNodeID{ u64(state_id) };
+			auto node_id = NodeID{ u64(state_id) };
 			if (!root_info.contains(node_id))
 				throw std::invalid_argument("PersistentVector got invalid state");
 
 			auto& entry = root_info[node_id];
 
-			return std::make_tuple(VarNodeID{ u64(state_id) }, entry.size, entry.height);
+			return std::make_tuple(NodeID{ u64(state_id) }, entry.size, entry.height);
 		}
 
 	public:
@@ -152,15 +155,15 @@ namespace persistent {
 
 			using namespace std::views;
 			for (auto [dir, node_id]: prev_path | reverse) {
-				VarNodeID left = 0, rght = 0;
+				NodeID left = 0, rght = 0;
 
-				if (merged == (dir == L)) {
+				if (merged == (dir == Dir::Left)) {
 					// when !merged and (dir == R) or merged and (dir == L)
 					left = node;
 					rght = 0;  // equiv to entry.right
 				} else {
 					// when merged and (dir == R) or !merged and (dir == L)
-					left   = getChild(node_id, L);
+					left   = getChild(node_id, Dir::Left);
 					rght   = node;
 					merged = true;
 				}
@@ -185,17 +188,17 @@ namespace persistent {
 				throw std::invalid_argument("received index out of range for given state");
 
 			auto prev_path = getNodePath(prev_root, idx);
-			auto node  = nodeFromIdxVar(idx, var);
+			auto node      = nodeFromIdxVar(idx, var);
 
 			using namespace std::views;
 			for (auto [dir, node_id]: prev_path | reverse) {
-				VarNodeID left = 0, rght = 0;
+				NodeID left = 0, rght = 0;
 
-				if (dir == L) {
+				if (dir == Dir::Left) {
 					left = node;
-					rght = getChild(node_id, R);
+					rght = getChild(node_id, Dir::Right);
 				} else {
-					left = getChild(node_id, L);
+					left = getChild(node_id, Dir::Left);
 					rght = node;
 				}
 
@@ -216,7 +219,7 @@ namespace persistent {
 			auto prev_path = getNodePath(prev_var_root, size - 1);
 			auto last_path = getNodePath(prev_var_root, size);
 
-			std::vector<std::pair<Dir, VarNodeID>> common = {};
+			std::vector<std::pair<Dir, NodeID>> common = {};
 
 			using namespace std::views;
 			for (auto& [f, s]: zip(prev_path, last_path)) {
@@ -225,25 +228,25 @@ namespace persistent {
 			}
 
 			if (common.size() == 0) {
-				auto new_root = getChild(prev_var_root, L);
+				auto new_root = getChild(prev_var_root, Dir::Left);
 				root_info.put(new_root, RootEntry{ .height = height - 1, .size = size - 1 });
 
 				return new_root;
 			}
 
 			auto [last_dir, node_id] = common.back();
-			VarNodeID lca            = getChild(node_id, last_dir);
+			NodeID lca               = getChild(node_id, last_dir);
 
-			auto node = nodeFromChildren(getChild(lca, L), 0);
+			auto node = nodeFromChildren(getChild(lca, Dir::Left), 0);
 
 			for (auto [dir, node_id]: common | reverse) {
-				VarNodeID left = 0, rght = 0;
+				NodeID left = 0, rght = 0;
 
-				if (dir == L) {
+				if (dir == Dir::Left) {
 					left = node;
-					rght = getChild(node_id, R);
+					rght = getChild(node_id, Dir::Right);
 				} else {
-					left = getChild(node_id, L);
+					left = getChild(node_id, Dir::Left);
 					rght = node;
 				}
 
@@ -253,6 +256,16 @@ namespace persistent {
 			root_info.put(node, RootEntry{ .height = height, .size = size - 1 });
 
 			return VectorStateID{ u64(node) };
+		}
+
+		[[nodiscard]]
+		VectorStateID getEmpty() const {
+			return VectorStateID{ 0 };
+		}
+
+		Vector() {
+			auto node = NodeID(0);
+			root_info.put(node, RootEntry{ .height = 0, .size = 0 });
 		}
 	};
 }

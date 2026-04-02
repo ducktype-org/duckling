@@ -1,17 +1,13 @@
 #pragma once
 
-#include "base/types/ints.hpp"
+#include <base/types/ints.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
-#include "vm/loader/compiler/persistent_vector.hpp"
 #include <vm/loader/compiler/bijective_map.hpp>
 #include <vm/loader/compiler/persistent_array.hpp>
 
-#include <ranges>
-#include <unordered_set>
-
 namespace persistent {
-	STRONG_TYPEDEF_INT(HashMapID, u64);
+	STRONG_TYPEDEF_INT(HashMapStateID, u64);
 
 	template<
 		typename KeyT,
@@ -30,27 +26,45 @@ namespace persistent {
 		}
 
 	public:
-		const ValT& access(HashMapID state_id, usize idx) const {}
+		const ValT& access(HashMapStateID state_id, const KeyT& key) const {
+			auto inner     = ArrayStateID{ u64(state_id) };
+			auto idx       = getIdxOfkey(key);
+			auto new_state = buffer.access(inner, idx);
 
-		HashMapID insert(HashMapID state_id, const KeyT& key, const ValT& var) {
-			auto inner     = VectorStateID{ u64(state_id) };
+			return HashMapStateID{ u64{ new_state } };
+		}
+
+		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
+			auto inner     = ArrayStateID{ u64(state_id) };
 			auto idx       = getIdxOfkey(key);
 			auto new_state = buffer.insert(inner, idx, var);
 
-			return HashMapID{ u64{ new_state } };
+			return HashMapStateID{ u64{ new_state } };
 		}
 
-		HashMapID erase(HashMapID state_id, const KeyT& key, const ValT& var) {
-			auto inner     = VectorStateID{ u64(state_id) };
+		HashMapStateID erase(HashMapStateID state_id, const KeyT& key, const ValT& var) {
+			auto inner     = ArrayStateID{ u64(state_id) };
 			auto idx       = getIdxOfkey(key);
 			auto new_state = buffer.erase(inner, idx, var);
 
-			return HashMapID{ u64{ new_state } };
+			return HashMapStateID{ u64{ new_state } };
+		}
+
+		std::pair<bool, HashMapStateID> emplace(
+			HashMapStateID state_id, const KeyT& key, const ValT& var
+		) {
+			auto inner     = ArrayStateID{ u64(state_id) };
+			auto idx       = getIdxOfkey(key);
+			auto [is_new, new_state] = buffer.emplace(inner, idx, var);
+
+			return {is_new, HashMapStateID{ u64{ new_state } }};
 		}
 
 		[[nodiscard]]
-		HashMapID getEmpty() const { return HashMapID{ 1 }; }
+		HashMapStateID getEmpty() const {
+			return HashMapStateID{ 1 };
+		}
 
-		HashMap(usize buffer_init) : buffer{buffer_init} {}
+		HashMap(usize buffer_init): buffer{ buffer_init } {}
 	};
 }

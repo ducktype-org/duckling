@@ -5,14 +5,24 @@
 #include <vm/loader/compiler/bijective_map.hpp>
 
 #include <ranges>
+#include <stdexcept>
 #include <unordered_set>
 
 namespace persistent {
-	STRONG_TYPEDEF_INT(ArrayID, u64);
+	STRONG_TYPEDEF_INT(ArrayStateID, u64);
 
+	/**
+	A persistent data structure, which simulates array. I can store up to 2^{root_height} elements.
+	Implementation based od persistent segment tree. Supports operation `access`, `change`
+	@note Held values are constructed only once, and nodes hold their id's. This is to allow for quick
+	construction of leaf elements and to avoid any assumptions about the hash function of values.
+	*/
 	template<typename VarT, typename VarH = std::hash<VarT>>
 	class Array {
 		using NodeID = u64;
+
+		static constexpr auto SENTINEL  = NodeID{ 0 };
+		static constexpr auto ORIG_ROOT = NodeID{ 1 };
 
 		struct NodeEntry {
 			NodeID left = 0;
@@ -36,7 +46,7 @@ namespace persistent {
 			return (std::hash<usize>{}(h.idx) << 1) ^ std::hash<usize>{}(h.val_id);
 		});
 
-		enum Dir { L, R };
+		enum class Dir { Left, Right };
 
 		using Path = std::vector<std::pair<Dir, NodeID>>;
 
@@ -50,7 +60,7 @@ namespace persistent {
 
 		Path getNodePath(NodeID root, usize idx) {
 			Path ans = {};
-			Dir  dir = L;
+			Dir  dir = Dir::Left;
 
 			if (height == 0) return {};
 
@@ -58,10 +68,10 @@ namespace persistent {
 			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
 				auto& entry = node_entries.atRight(node);
 				if (idx & max_bit) {
-					dir  = R;
+					dir  = Dir::Right;
 					node = entry.rght;
 				} else {
-					dir  = L;
+					dir  = Dir::Left;
 					node = entry.left;
 				}
 				ans.emplace_back(dir, node);
@@ -89,11 +99,10 @@ namespace persistent {
 
 		NodeID getChild(NodeID node_id, Dir dir) const {
 			auto& entry = node_entries.atRight(node_id);
-			return (dir == L) ? entry.left : entry.rght;
+			return (dir == Dir::Left) ? entry.left : entry.rght;
 		}
 
-	public:
-		const VarT& access(ArrayID state_id, usize idx) const {
+		NodeID getRootAndValidateIdx(ArrayStateID state_id, usize idx) {
 			auto node = NodeID{ u64(state_id) };
 
 			if (!roots.contains(node))
@@ -102,21 +111,40 @@ namespace persistent {
 			if (idx > (1 << height))
 				throw std::invalid_argument("received index out of range for given state");
 
+			return node;
+		}
+
+		NodeID getNodeAt(NodeID root, usize idx) {
+			auto node = root;
 			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
 				auto& entry = node_entries.atRight(node);
 				node        = (idx & max_bit) ? entry.rght : entry.left;
 			}
+			return node;
+		}
+
+	public:
+		bool active(ArrayStateID state_id, usize idx) {
+			auto root = getRootAndValidateIdx(state_id, idx);
+			auto node = getNodeAt(root, idx);
+
+			return (node != SENTINEL);
+		}
+
+		const VarT& access(ArrayStateID state_id, usize idx) const {
+			auto root = getRootAndValidateIdx(state_id, idx);
+			auto node = getNodeAt(root, idx);
+
+			if (node == SENTINEL)
+				throw std::invalid_argument("At given position, there is no value");
 
 			auto val_id = leaf_entries.atRight(node).val_id;
 
 			return held_values.atRight(val_id);
 		}
 
-		ArrayID insert(ArrayID state_id, usize idx, const VarT& var) {
-			auto prev_root = NodeID{ u64(state_id) };
-
-			if (!roots.contains(prev_root))
-				throw std::invalid_argument("PersistentVector got invalid state");
+		ArrayStateID insert(ArrayStateID state_id, usize idx, const VarT& var) {
+			auto prev_root = getRootAndValidateIdx(state_id, idx);
 
 			auto prev_path = getNodePath(prev_root, idx);
 			auto node      = nodeFromIdxVar(idx, var);
@@ -125,11 +153,11 @@ namespace persistent {
 			for (auto [dir, node_id]: prev_path | reverse) {
 				NodeID left = 0, rght = 0;
 
-				if (dir == L) {
+				if (dir == Dir::Left) {
 					left = node;
-					rght = getChild(node_id, R);
+					rght = getChild(node_id, Dir::Right);
 				} else {
-					left = getChild(node_id, L);
+					left = getChild(node_id, Dir::Left);
 					rght = node;
 				}
 
@@ -138,30 +166,57 @@ namespace persistent {
 
 			roots.insert(node);
 
-			return ArrayID{ u64(prev_root) };
+			return ArrayStateID{ u64(prev_root) };
 		}
 
-		ArrayID erase(ArrayID state_id, usize idx) {
-			auto prev_root = NodeID{ u64(state_id) };
+		std::pair<bool, ArrayStateID> emplace(ArrayStateID state_id, usize idx, const VarT& var) {
+			auto prev_root = getRootAndValidateIdx(state_id, idx);
 
-			if (!roots.contains(prev_root))
-				throw std::invalid_argument("PersistentVector got invalid state");
+			auto prev_path      = getNodePath(prev_root, idx);
+			auto [dir, node_id] = prev_path.back();
+			auto prev_node      = getChild(node_id, dir);
+
+			if (prev_node != SENTINEL) return { false, state_id };
+
+			auto node = nodeFromIdxVar(idx, var);
+			using namespace std::views;
+			for (auto [dir, node_id]: prev_path | reverse) {
+				NodeID left = 0, rght = 0;
+
+				if (dir == Dir::Left) {
+					left = node;
+					rght = getChild(node_id, Dir::Right);
+				} else {
+					left = getChild(node_id, Dir::Left);
+					rght = node;
+				}
+
+				node = nodeFromChildren(left, rght);
+			}
+
+			roots.insert(node);
+
+			return { true, ArrayStateID{ u64(node) } };
+		}
+
+		ArrayStateID erase(ArrayStateID state_id, usize idx) {
+			auto prev_root = getRootAndValidateIdx(state_id, idx);
 
 			auto prev_path      = getNodePath(prev_root, idx);
 			auto [dir, node_id] = prev_path.back();
 			auto node           = getChild(node_id, dir);
 
-			if (node == 0) return state_id;
+			if (node == SENTINEL) return state_id;
 
 			using namespace std::views;
 			for (auto [dir, node_id]: prev_path | reverse) {
 				NodeID left = 0, rght = 0;
 
-				if (dir == L) {
+				if (dir == Dir::Left) {
 					left = node;
-					rght = getChild(node_id, R);
+					rght = getChild(node_id, Dir::Right);
 				} else {
-					left = getChild(node_id, L);
+					left = getChild(node_id, Dir::Left);
 					rght = node;
 				}
 
@@ -170,19 +225,18 @@ namespace persistent {
 
 			roots.insert(node);
 
-			return ArrayID{ u64(prev_root) };
+			return ArrayStateID{ u64(prev_root) };
 		}
 
 		[[nodiscard]]
-		ArrayID getEmpty() const { return ArrayID{ 1 }; }
+		ArrayStateID getEmpty() const {
+			return ArrayStateID{ u64(ORIG_ROOT) };
+		}
 
 		Array(usize root_height = 16): height(root_height), next_node_id(2) {
-			auto sentinel = NodeID{ 0 };
-			auto root     = NodeID{ 1 };
-
-			node_entries.emplaceByLeft(NodeEntry{ .left = sentinel, .rght = sentinel }, sentinel);
-			node_entries.emplaceByLeft(NodeEntry{ .left = sentinel, .rght = sentinel }, root);
-			roots.emplace(root);
+			node_entries.emplaceByLeft(NodeEntry{ .left = SENTINEL, .rght = SENTINEL }, SENTINEL);
+			node_entries.emplaceByLeft(NodeEntry{ .left = SENTINEL, .rght = SENTINEL }, ORIG_ROOT);
+			roots.emplace(ORIG_ROOT);
 		}
 	};
 }
