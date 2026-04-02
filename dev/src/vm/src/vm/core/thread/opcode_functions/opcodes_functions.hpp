@@ -155,10 +155,10 @@ namespace vm {
 			                            + (prev_frame_block_ref_count - shared_blocks_count);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
+			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
 			if (frame->block_ref_stack_base + called_func.local_block_count
-			    > runtime_data.block_ref_stack_end)
+			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
 
 			frame->local_stack_head    = shared_stack_space_size;
