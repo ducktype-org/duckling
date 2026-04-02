@@ -47,7 +47,7 @@ namespace pst {
 		base::Optional<AccessLocked<LangElement>> optional_macro_expansion_source;
 
 		/**
-		 * @brief Optional frontend::ModuleID the PST was generated from. 
+		 * @brief Optional frontend::ModuleID the PST was generated from.
 		 */
 		base::Optional<std::any> module_id;
 	};

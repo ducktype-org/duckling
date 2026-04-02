@@ -244,9 +244,10 @@ namespace compiler::helios {
 				if (maybe_element_parent.has_value()) {
 					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());
 				} else {
-					// If there is no parent, we inspect the additional root data, 
-					// as we might be in a macro expansion. 
-					// @TODO: #2397 revisit and adjust this logic, we could perhaps move it into PST layer.
+					// If there is no parent, we inspect the additional root data,
+					// as we might be in a macro expansion.
+					// @TODO: #2397 revisit and adjust this logic, we could perhaps move it into PST
+					// layer.
 
 					const auto& additional_root_data = element->getAdditionalRootData();
 
@@ -254,7 +255,7 @@ namespace compiler::helios {
 						CORE_ASSERT(
 							not additional_root_data.module_id.has_value(),
 							"Element cannot have both macro expansion source and module id in "
-						    "additional root data."
+							"additional root data."
 						);
 						return ctx.query<QueryPrimaryCodeScopeFor>(
 							additional_root_data.optional_macro_expansion_source.value()
@@ -268,7 +269,7 @@ namespace compiler::helios {
 					} else {
 						CORE_PANIC(
 							"Element has no parent and no additional root data, cannot determine "
-						    "scope parent."
+							"scope parent."
 						);
 					}
 				}

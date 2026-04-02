@@ -399,7 +399,7 @@ namespace compiler::helios {
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 		) {
 			// Note: This has to be consistent with QuerySymbolsInScope logic.
-			// @TODO: #2397 maybe move it into a single place 
+			// @TODO: #2397 maybe move it into a single place
 
 			auto unlocked = element.unlock(ctx);
 

@@ -109,7 +109,8 @@ namespace compiler::frontend {
 
 			auto parsed_pst = pst::PST(file, pst_type, getComponentHash());
 
-			// Illegal access is fine here because we are outside of any query and the PST is only being created.
+			// Illegal access is fine here because we are outside of any query and the PST is only
+			// being created.
 			if (parsed_pst.getRootElement().illegalAccess().has_value()) {
 				// @TODO: #2397 we could change it, such that root element is never null.
 				// Set additional root data only if the root element is not null:

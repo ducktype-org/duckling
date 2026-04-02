@@ -89,7 +89,6 @@ namespace pst {
 		 */
 		hashing::ComponentHash hash_ctx_info;
 
-
 		/***********************\
 		|    PRIVATE METHODS    |
 		\***********************/
@@ -279,7 +278,9 @@ namespace pst {
 			auto out = PST(
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
-			// @TODO: #2404 Both signing and hashing should be performed in the parse function, it should receive some kind of "options/PSTContext" struct simillar to the LangParserContext that will define whether the PST is generated, etc.
+			// @TODO: #2404 Both signing and hashing should be performed in the parse function, it
+			// should receive some kind of "options/PSTContext" struct simillar to the
+			// LangParserContext that will define whether the PST is generated, etc.
 
 			out.signGenerated();
 
@@ -317,9 +318,9 @@ namespace pst {
 			  element(std::move(other.element)),
 			  imports(std::move(other.imports)),
 			  hash_ctx_info(std::move(other.hash_ctx_info)) {}
-		
+
 		/**
-		 * @TODO: #2397 Additional root data should just be passed during construction. 
+		 * @TODO: #2397 Additional root data should just be passed during construction.
 		 */
 		void setAdditionalRootData(AdditionalRootData data) {
 			CORE_ASSERT(
