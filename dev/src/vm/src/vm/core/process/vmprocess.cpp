@@ -178,5 +178,4 @@ namespace vm {
 		io.outputStream().clear();
 		return api::Response(api::response::Output{ content });
 	}
-
 }
