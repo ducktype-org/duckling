@@ -121,7 +121,8 @@ DEF_MICRO_INSTR(mov_lptr_lptr, vm::low::opargs::StackLocalPtr, vm::low::opargs::
 // sets pointer to null
 DEF_MICRO_INSTR(setNull_lptr, vm::low::opargs::StackLocalPtr)
 
-// It requires a `ext_imm` after this instruction as third argument, defining the size of the opaque type in bytes.
+// It requires a `ext_imm` after this instruction as third argument, defining the size of the opaque
+// type in bytes.
 DEF_MICRO_INSTR(mov_lopq_lopq, vm::low::opargs::StackLocalOpq, vm::low::opargs::StackLocalOpq)
 DEF_MICRO_INSTR(mov_gopq_lopq, vm::low::opargs::GlobalOpq, vm::low::opargs::StackLocalOpq)
 DEF_MICRO_INSTR(mov_lopq_gopq, vm::low::opargs::StackLocalOpq, vm::low::opargs::GlobalOpq)

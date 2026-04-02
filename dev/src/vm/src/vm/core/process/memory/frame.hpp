@@ -49,12 +49,12 @@ namespace vm {
 		 * @brief Base of the stack of block IDs used by the function created with init_type
 		 * and destroyed with deinit.
 		 */
-		Block** block_ref_stack_base = nullptr;
+		Block** local_block_ref_stack_base = nullptr;
 
 		/**
 		 * @brief The pointer to the first free position on the block stack.
 		 */
-		Block** block_ref_stack_end = nullptr;
+		Block** local_block_ref_stack_end = nullptr;
 
 		/**
 		 * @brief First free byte in the local stack.

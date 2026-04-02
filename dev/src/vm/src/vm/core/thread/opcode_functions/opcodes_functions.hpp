@@ -131,7 +131,7 @@ namespace vm {
 			auto arg_count           = called_func.parameters.size();
 			auto shared_blocks_count = arg_count + !called_rets_void;
 			u64  prev_frame_block_ref_count
-				= u64(frame->block_ref_stack_end - frame->block_ref_stack_base);
+				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 			// Save current registers and flow.
 			frame->instr       = instr + 1;
@@ -151,24 +151,24 @@ namespace vm {
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
 			// up to this point) - the size of ret_val and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
-			frame->block_ref_stack_base = prev_frame->block_ref_stack_base
-			                            + (prev_frame_block_ref_count - shared_blocks_count);
+			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
+			                                  + (prev_frame_block_ref_count - shared_blocks_count);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
-			if (frame->block_ref_stack_base + called_func.local_block_count
+			if (frame->local_block_ref_stack_base + called_func.local_block_count
 			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-			frame->local_stack_head    = shared_stack_space_size;
-			frame->block_ref_stack_end = prev_frame->block_ref_stack_end;
+			frame->local_stack_head          = shared_stack_space_size;
+			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
 			// the block stack.
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
-			prev_frame->block_ref_stack_end -= arg_count;
+			prev_frame->local_block_ref_stack_end -= arg_count;
 			prev_frame->local_stack_head -= called_func.arg_size;
 		}
 
@@ -191,8 +191,8 @@ namespace vm {
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
-			*frame->block_ref_stack_end = block.get();
-			frame->block_ref_stack_end += 1;
+			*frame->local_block_ref_stack_end = block.get();
+			frame->local_block_ref_stack_end += 1;
 			frame->local_stack_head += type->getSize().asInt();
 		}
 
@@ -202,13 +202,13 @@ namespace vm {
 #endif
 			void
 			performDeinit(Frame*& frame, VMThread& thread) {
-			auto block = frame->block_ref_stack_end[-1];
+			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
 			frame->local_stack_head -= type->getSize().asInt();
-			frame->block_ref_stack_end -= 1;
+			frame->local_block_ref_stack_end -= 1;
 		}
 
 		static

@@ -393,9 +393,9 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		frame->current_function     = &start_function;
-		frame->block_ref_stack_base = runtime_data.block_ref_stack_base;
-		frame->block_ref_stack_end  = runtime_data.block_ref_stack_base;
+		frame->current_function           = &start_function;
+		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
+		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
 
 		const auto* instr = start_function.bc.data();
 
@@ -428,10 +428,10 @@ namespace vm {
 #endif
 		// @note: The return value is the only block left on the block stack.
 		CORE_ASSERT(
-			frame->block_ref_stack_end - frame->block_ref_stack_base == 1,
+			frame->local_block_ref_stack_end - frame->local_block_ref_stack_base == 1,
 			"After function execution, there should be exactly one block on the block stack."
 		);
-		auto block         = Ref(frame->block_ref_stack_base[0]);
+		auto block         = Ref(frame->local_block_ref_stack_base[0]);
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
