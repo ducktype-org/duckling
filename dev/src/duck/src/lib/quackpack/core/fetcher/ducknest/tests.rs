@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::quackpack::core::fetcher::types;
-use crate::util_common::path_ops_ext::PathOpsExt;
+use crate::util::path_ops_ext::PathOpsExt;
 
 use super::*;
 use crate::quackpack::core::Version;

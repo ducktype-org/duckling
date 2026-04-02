@@ -7,7 +7,7 @@ use crate::{
     QuackResult, QuackResultContext,
     duck::util::{duck_cfg::DuckCfg, duck_home::DuckHome, terminal::Terminal},
     quackpack::util::paths::duck_home_path,
-    util_common::env::Env,
+    util::env::Env,
 };
 
 #[derive(Debug)]

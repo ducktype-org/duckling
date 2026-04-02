@@ -8,7 +8,7 @@ use crate::{
         Package,
         compile::profiles::{OptLevel, Profile},
     },
-    util_common::command_ext::CommandExt,
+    util::command_ext::CommandExt,
 };
 
 use super::Duckc;
