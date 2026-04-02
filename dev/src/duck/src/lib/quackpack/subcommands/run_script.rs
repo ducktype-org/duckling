@@ -48,11 +48,12 @@ impl<'duck> RunScriptOptions<'duck> {
             .parent()
             .context_internal("we assured that the path points to a file")?;
         let venv_id = matches
-            .try_get_one::<String>("venv")
-            .context_internal("misuse of clap")?
+            .get_one::<String>("venv")
+            .except("guarded by the parser")
             .map(StrId::new);
         let args: Vec<OsString> = matches
-            .try_get_many::<OsString>("args")?
+            .get_many::<OsString>("args")
+            .except("guarded by the parser")
             .map(|values| values.cloned().collect())
             .unwrap_or_default();
         Ok(Self {
