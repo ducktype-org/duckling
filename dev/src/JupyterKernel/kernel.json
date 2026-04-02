@@ -1,7 +1,7 @@
 {
     "argv": [
-        "PATH_TO_PYTHON_BINARY",
-        "PATH/duckling-zpp-4.4/dev/src/compiler/repl/kernel/ret_duck_kernel.py",
+        "REPLACE_THIS_WITH_THE_PATH_TO_YOUR_PYTHON_BINARY",
+        "REPLACE_THIS_WITH_YOUR_PATH_TO_THIS_FILE/duck_kernel.py",
         "-f",
         "{connection_file}"
     ],

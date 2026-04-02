@@ -24,7 +24,7 @@ class MyLanguageKernel(Kernel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        bin_path = "PATH/ZPP/duckling-zpp-4.4/dev/build/bin"
+        bin_path = "REPLACE_THIS_WITH_YOUR_PATH_TO_THIS/dev/build/bin"
 
         exec_name = os.path.join(bin_path, "duckc")
 
