@@ -94,9 +94,6 @@ namespace pst {
 		addToHash(partial_hash, context_hash);
 		hash = calcStableHash().finalize();
 
-		// PR:
-		// pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
-
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
 	}

@@ -36,18 +36,20 @@ namespace pst {
 
 	class LangParserState;
 
-	// TODO: PR: this is not pretty, but still strictly better then root_element_file_back_map :)
+	/**
+	 * @brief Additional data optionally stored in root elements of the PST.
+	 * @TODO: #2397 probably move or remove it.
+	 */
 	struct AdditionalRootData final {
 		/**
-		 * @brief Optional source for macro expansion.
+		 * @brief Optional source element of macro expansion the PST was generated from.
 		 */
 		base::Optional<AccessLocked<LangElement>> optional_macro_expansion_source;
 
-		// PR: any? maybe we can include it here after all
+		/**
+		 * @brief Optional frontend::ModuleID the PST was generated from. 
+		 */
 		base::Optional<std::any> module_id;
-
-		// AdditionalRootData(const AdditionalRootData&) = default;
-		// AdditionalRootData(AdditionalRootData&&)      = default;
 	};
 
 	/**

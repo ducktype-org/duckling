@@ -18,8 +18,9 @@ namespace compiler::helios {
 			auto expansion_result = ctx.query<QueryMacroExpansion>({
 				element.template dynamicCast<pst::Expand>().value(),
 			});
-			// PR error handling TODO...
-			variant_match(expansion_result.valueOrPanic()) {
+
+			// note: valueOrThrow might be suboptimal here.
+			variant_match(expansion_result.valueOrThrow()) {
 				variant_case(pst::AccessLocked<pst::Stmt>, expanded_stmt) {
 					pstForAll(ctx, expanded_stmt.unlock(ctx), function);
 				}
@@ -35,9 +36,7 @@ namespace compiler::helios {
 			// handle macros here!
 			auto child_unlocked = child.unlockOpt(ctx);
 
-			// Note: filterring nullptrs is done on the level of PST children collection,
-			// we still we might use out->failed here, when implementing
-			// custom logic for most common PST elements (it might improve performance)
+			// Note: filterring nullptrs is done on the level of PST children collection
 			CORE_ASSERT(
 				child_unlocked.has_value(),
 				"View children should only contain valid element (no null ptrs)"
@@ -46,6 +45,4 @@ namespace compiler::helios {
 			pstForAll(ctx, child_unlocked.value(), function);
 		}
 	}
-
-
 }

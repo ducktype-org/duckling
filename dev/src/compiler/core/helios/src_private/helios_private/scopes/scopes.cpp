@@ -373,9 +373,6 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			// ScopeGrabPseudoVisitor scope_grab(out, ctx);
-			// scope_grab.visit(root_unlocked.value());
-
 			pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
 		}
 

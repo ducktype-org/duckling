@@ -11,8 +11,6 @@
 
 #include <token_source/source.hpp>
 
-#include <any>
-
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
@@ -91,13 +89,6 @@ namespace pst {
 		 */
 		hashing::ComponentHash hash_ctx_info;
 
-		// /**
-		//  * Additional data, that can be used for storing some extra information related to the PST,
-		//  * in a way that does not require to include half ot the other compiler (PR TODO)
-		//  * We only set it when PST is created in the full compilation context
-		//  */
-		// base::Optional<AdditionalData> additional_data;
-
 
 		/***********************\
 		|    PRIVATE METHODS    |
@@ -127,7 +118,6 @@ namespace pst {
 			internal::finalizeParsing(state_box.refMut());
 			imports = internal::extractState(std::move(state_box));
 
-
 			// Note: hash calculation should work even on errors in PST.
 			// We let it be calculated to don't worry about hash beeing unavailable during the
 			// compiler initialization phase, but we generally stop the compilation when there are
@@ -135,6 +125,8 @@ namespace pst {
 			// handling it differently.
 			calcElementPathHash();
 			calcHashes();
+
+			// @TODO: #2404 prevent putInPSTHashHashMap before the generated PST is signed
 			putInPSTHashHashMap();
 		}
 
@@ -287,6 +279,8 @@ namespace pst {
 			auto out = PST(
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
+			// @TODO: #2404 Both signing and hashing should be performed in the parse function, it should receive some kind of "options/PSTContext" struct simillar to the LangParserContext that will define whether the PST is generated, etc.
+
 			out.signGenerated();
 
 			// we call it again after signing, because signing changes the hash:

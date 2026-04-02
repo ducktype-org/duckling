@@ -10,7 +10,6 @@
 
 namespace compiler::helios {
 
-
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
 		static inline concurrent::ConHashMap<KHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
 
@@ -58,6 +57,4 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);
-
-
 }

@@ -23,9 +23,9 @@ namespace compiler::helios {
 	 *    Including onces in access blocks
 	 *  * For other it panics
 	 *
+	 * @note It expands and handles macros.
+	 *
 	 * @return StmtList
 	 */
 	StmtList<> getStmtsFromStmtAggregate(query::Context&, pst::AccessLocked<pst::LangElement>);
-
-
 }

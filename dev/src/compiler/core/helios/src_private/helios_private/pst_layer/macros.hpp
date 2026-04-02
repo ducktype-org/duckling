@@ -20,6 +20,8 @@ namespace compiler::helios {
 	 * @note This will have some issues for now. The potential errors from parsed subexpression
 	 * aren't available for now. There needs to be a small rework of errors and position first.
 	 *
+	 * @note Ideally, this query should not be used outside of HELIOS PST-layer directory.
+	 *
 	 * \parallel owns its cache; creates PST via \ref pst::fromExpand (PST creation thread-safe)
 	 * \query_not_thread_safe
 	 */

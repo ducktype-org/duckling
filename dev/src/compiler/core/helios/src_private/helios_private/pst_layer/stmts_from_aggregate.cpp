@@ -86,12 +86,11 @@ namespace compiler::helios {
 			));
 		}
 
-		// PR: expands:
+		// Now expand macros in the output.
+
 		StmtList<> output_after_macro_expansion;
 		for (auto stmt: output) {
 			if (stmt.unlock(ctx)->getElementKind() == pst::ElementKind::Expand) {
-				// PR don't ignore this!
-				// Also add error handling!
 				auto expand_result
 					= ctx.query<QueryMacroExpansion>(stmt.template dynamicCast<pst::Expand>())
 				          .valueOrPanic();
@@ -100,7 +99,7 @@ namespace compiler::helios {
 						output_after_macro_expansion.emplace_back(expand_statement);
 					}
 					variant_case(ExpansionError<pst::Stmt>, error) {
-						// PR.. do something with this error?
+						// @TODO: #2406 change this panic into failed state propagation
 						CORE_PANIC("Macro expansion error in getStmtsFromStmtAggregate");
 					}
 				}
