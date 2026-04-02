@@ -388,7 +388,7 @@ namespace compiler::driver {
 		    .transform([](vm::api::ExitValue exit_values) {
 				CORE_ASSERT(
 					exit_values.size() == 1,
-					"Support for multtiple retvals in compiler not implemented"
+					"Support for multiple return values in compiler not implemented"
 				);
 				return RunOutput{ .exit_code
 				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };

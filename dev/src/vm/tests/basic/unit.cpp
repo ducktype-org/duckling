@@ -128,21 +128,9 @@ private:
 
 	void invalidPrimitiveTypes() {
 		loadInvalidDbc(
-			"void_instantiation.dbc",
-			{
-				vm::code::UnknownTypeError::ERR_MSG,
-			}
-		);
-		loadInvalidDbc(
 			"size_zero_primitive.dbc",
 			{
 				vm::code::InvalidPrimitiveSizeError::ERR_MSG,
-			}
-		);
-		loadInvalidDbc(
-			"void_arg.dbc",
-			{
-				vm::code::UnknownTypeError::ERR_MSG,
 			}
 		);
 	}

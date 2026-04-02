@@ -16,15 +16,21 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), std::vector<TypeCRef> vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+		base::Optional<Box<VmValue>> callUnpackArgsImpl(
+			Ret (*function)(VMThread&, FunArgs...),
+			const std::vector<TypeCRef>&     vm_return_type,
+			VMProcess&                       process,
+			VMThread&                        thread,
+			const std::vector<Box<VmValue>>& args,
+			std::index_sequence<Is...>
+		) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
 			} else {
 				CORE_ASSERT(
 					vm_return_type.size() == 1,
-					"not imeplemented support for builtins with multiple ret-vals"
+					"Builtin Function with multiple more than 1 return value"
 				);
 				auto value = function(thread, args[Is]->template readBytes<FunArgs>()...);
 				CORE_ASSERT(
@@ -59,7 +65,7 @@ namespace vm::builtins {
 		template<class Ret, class... FunArgs>
 		base::Optional<Box<VmValue>> callUnpackArgs(
 			Ret (*function)(VMThread&, FunArgs...),
-			std::vector<TypeCRef>            vm_return_type,
+			const std::vector<TypeCRef>&     vm_return_types,
 			VMProcess&                       process,
 			VMThread&                        thread,
 			const std::vector<Box<VmValue>>& args
@@ -69,7 +75,7 @@ namespace vm::builtins {
 				"Wrong number of arguments passed to the builtin function"
 			);
 			return callUnpackArgsImpl(
-				function, vm_return_type, process, thread, args, std::index_sequence_for<FunArgs...>{}
+				function, vm_return_types, process, thread, args, std::index_sequence_for<FunArgs...>{}
 			);
 		}
 	}
@@ -228,67 +234,69 @@ namespace vm::builtins {
 	auto getBuiltinFunctions()
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
 		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
-			map{ {
-					 BuiltinFunctionID::InputI64,
-					 { base::StrID("builtin_input_i64"),
-			           code::FuncSignature({ base::StrID("i64") }, {}) },
-				 },
-			     {
-					 BuiltinFunctionID::OutputI64,
-					 { base::StrID("builtin_output_i64"),
-			           code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
-				 },
-			     {
-					 BuiltinFunctionID::OutputString,
-					 { base::StrID("builtin_strOutput_lptr"),
-			           code::FuncSignature({}, { base::StrID("ptr_string") }) },
-				 },
-			     {
-					 BuiltinFunctionID::Stoi,
-					 {
-						 base::StrID("builtin_stoi_lptr"),
-						 code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
-					 },
-				 },
-			     {
-					 BuiltinFunctionID::StartThread,
-					 { base::StrID("builtin_start_thread"),
-			           code::FuncSignature({ base::StrID("i64") }, {}) },
-				 },
-			     {
-					 BuiltinFunctionID::JoinThread,
-					 { base::StrID("builtin_join_thread"),
-			           code::FuncSignature({}, { base::StrID("i64") }) },
-				 },
-			     { BuiltinFunctionID::CreateMutex,
-			       { base::StrID("builtin_create_mutex"),
-			         code::FuncSignature({ base::StrID("mutex") }, {}) } },
-			     { BuiltinFunctionID::LockMutex,
-			       { base::StrID("builtin_lock_mutex"),
-			         code::FuncSignature({}, { base::StrID("mutex") }) } },
-			     { BuiltinFunctionID::UnlockMutex,
-			       { base::StrID("builtin_unlock_mutex"),
-			         code::FuncSignature({}, { base::StrID("mutex") }) } },
-			     { BuiltinFunctionID::DestroyMutex,
-			       { base::StrID("builtin_destroy_mutex"),
-			         code::FuncSignature({}, { base::StrID("mutex") }) } },
-			     { BuiltinFunctionID::CreateCV,
-			       { base::StrID("builtin_create_cv"),
-			         code::FuncSignature({ base::StrID("condition_variable") }, {}) } },
-			     { BuiltinFunctionID::WaitCV,
-			       { base::StrID("builtin_wait_cv"),
-			         code::FuncSignature(
-						 {}, { base::StrID("condition_variable"), base::StrID("mutex") }
-					 ) } },
-			     { BuiltinFunctionID::NotifyCV,
-			       { base::StrID("builtin_notify_cv"),
-			         code::FuncSignature({}, { base::StrID("condition_variable") }) } },
-			     { BuiltinFunctionID::NotifyAllCV,
-			       { base::StrID("builtin_notify_all_cv"),
-			         code::FuncSignature({}, { base::StrID("condition_variable") }) } },
-			     { BuiltinFunctionID::DestroyCV,
-			       { base::StrID("builtin_destroy_cv"),
-			         code::FuncSignature({}, { base::StrID("condition_variable") }) } } };
+			map{
+				{
+					BuiltinFunctionID::InputI64,
+					{ base::StrID("builtin_input_i64"),
+			          code::FuncSignature({ base::StrID("i64") }, {}) },
+				},
+				{
+					BuiltinFunctionID::OutputI64,
+					{ base::StrID("builtin_output_i64"),
+			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+				},
+				{
+					BuiltinFunctionID::OutputString,
+					{ base::StrID("builtin_strOutput_lptr"),
+			          code::FuncSignature({}, { base::StrID("ptr_string") }) },
+				},
+				{
+					BuiltinFunctionID::Stoi,
+					{
+						base::StrID("builtin_stoi_lptr"),
+						code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
+					},
+				},
+				{
+					BuiltinFunctionID::StartThread,
+					{ base::StrID("builtin_start_thread"),
+			          code::FuncSignature({ base::StrID("i64") }, {}) },
+				},
+				{
+					BuiltinFunctionID::JoinThread,
+					{ base::StrID("builtin_join_thread"),
+			          code::FuncSignature({}, { base::StrID("i64") }) },
+				},
+				{ BuiltinFunctionID::CreateMutex,
+			      { base::StrID("builtin_create_mutex"),
+			        code::FuncSignature({ base::StrID("mutex") }, {}) } },
+				{ BuiltinFunctionID::LockMutex,
+			      { base::StrID("builtin_lock_mutex"),
+			        code::FuncSignature({}, { base::StrID("mutex") }) } },
+				{ BuiltinFunctionID::UnlockMutex,
+			      { base::StrID("builtin_unlock_mutex"),
+			        code::FuncSignature({}, { base::StrID("mutex") }) } },
+				{ BuiltinFunctionID::DestroyMutex,
+			      { base::StrID("builtin_destroy_mutex"),
+			        code::FuncSignature({}, { base::StrID("mutex") }) } },
+				{ BuiltinFunctionID::CreateCV,
+			      { base::StrID("builtin_create_cv"),
+			        code::FuncSignature({ base::StrID("condition_variable") }, {}) } },
+				{ BuiltinFunctionID::WaitCV,
+			      { base::StrID("builtin_wait_cv"),
+			        code::FuncSignature(
+						{}, { base::StrID("condition_variable"), base::StrID("mutex") }
+					) } },
+				{ BuiltinFunctionID::NotifyCV,
+			      { base::StrID("builtin_notify_cv"),
+			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+				{ BuiltinFunctionID::NotifyAllCV,
+			      { base::StrID("builtin_notify_all_cv"),
+			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+				{ BuiltinFunctionID::DestroyCV,
+			      { base::StrID("builtin_destroy_cv"),
+			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+			};
 
 		return &map;
 	}

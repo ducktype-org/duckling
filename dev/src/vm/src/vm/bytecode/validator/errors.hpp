@@ -54,17 +54,6 @@ namespace vm::code {
 			  func_name(func_name) {}
 	};
 
-	class VoidTypeArgumentError: public ValidationError {
-	public:
-		constexpr static std::string_view ERR_MSG
-			= "Void type cannot be used as argument in function: ";
-		const base::StrID func_name;
-
-		VoidTypeArgumentError(base::StrID func_name):
-			  ValidationError(base::strConcat(ERR_MSG, func_name)),
-			  func_name(func_name) {}
-	};
-
 	/**
 	 * @brief position-less error for function definitions.
 	 * For function name arguments, like in call instructions, use UnknownFunctionError.
@@ -416,5 +405,4 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		OpaqueTypeMismatchError, "The opaque type does not match the expected type."
 	);
-	DEFINE_INSTRUCTION_ERROR(VoidRetValAssignmentError, "Cannot assign to 'ret_val' of type void.");
 }

@@ -288,10 +288,10 @@ namespace vm::loader::compiler {
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
 			u64                   ret_type_sum = 0;
-			std::vector<TypeCRef> result_types = {};
+			std::vector<TypeCRef> result_type = {};
 			for (auto& ret: signature.result_type) {
 				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
-				result_types.emplace_back(low_program.types->at(ret));
+				result_type.emplace_back(low_program.types->at(ret));
 			}
 
 			low_program.functions.insert(
@@ -301,7 +301,7 @@ namespace vm::loader::compiler {
 			                      .arg_size         = parameters_size,
 			                      .ret_size         = ret_type_sum,
 			                      .parameters       = std::move(parameters),
-			                      .result_type      = std::move(result_types) },
+			                      .result_type      = std::move(result_type) },
 				function.name
 
 			);

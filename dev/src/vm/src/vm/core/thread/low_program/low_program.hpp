@@ -27,6 +27,7 @@ namespace vm::low {
 		MicroBytecode         bc;
 		usize                 local_stack_size;
 		usize                 arg_size;
+		// total summed size of all return values
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_type;

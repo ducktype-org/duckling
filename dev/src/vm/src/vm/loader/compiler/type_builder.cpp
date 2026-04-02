@@ -132,15 +132,17 @@ namespace {
 					type_at_metadata->defineVariant(data.type_tag_size, variants);
 				}
 				variant_case(vm::code::valid_type::finalized::Function, data) {
-					std::vector<vm::TypeCRef> parameters;
-					parameters.reserve(data.parameters.size());
-					for (auto& param: data.parameters)
-						parameters.emplace_back(type_metadata->at(vm::TypeID(param.asInt())));
-					std::vector<vm::TypeCRef> result_types;
-					result_types.reserve(data.result.size());
-					for (auto& res: data.result)
-						result_types.emplace_back(type_metadata->at(vm::TypeID(res.asInt())));
-					type_at_metadata->defineFunction(parameters, result_types);
+					std::vector<vm::TypeCRef> parameters
+						= data.parameters | std::views::transform([&](auto& param) -> vm::TypeCRef {
+							  return type_metadata->at(vm::TypeID(param.asInt()));
+						  })
+					    | std::ranges::to<std::vector>();
+					std::vector<vm::TypeCRef> result_type
+						= data.result | std::views::transform([&](auto& res) -> vm::TypeCRef {
+							  return type_metadata->at(vm::TypeID(res.asInt()));
+						  })
+					    | std::ranges::to<std::vector>();
+					type_at_metadata->defineFunction(parameters, result_type);
 				}
 				variant_case(vm::code::valid_type::finalized::Opaque, opaque) {
 					type_at_metadata->defineOpaque(opaque.size);

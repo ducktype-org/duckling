@@ -296,10 +296,12 @@ namespace vm {
 	}
 
 	base::Optional<TypeCRef> Type::getNthResultType(u64 parameter_id) const {
-		return get<kind::Function>().flatMap([parameter_id](CRef<kind::Function> function) {
-			if (parameter_id >= function->result.size()) return base::Optional<TypeCRef>();
-			return base::Optional<TypeCRef>(function->result[parameter_id]);
-		});
+		return get<kind::Function>().flatMap(
+			[parameter_id](CRef<kind::Function> function) -> base::Optional<TypeCRef> {
+				if (parameter_id >= function->result.size()) return std::nullopt;
+				return base::Optional<TypeCRef>(function->result[parameter_id]);
+			}
+		);
 	}
 
 	base::Optional<Bytes> Type::getTypeTagSizeBytes() const {

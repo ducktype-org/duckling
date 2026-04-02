@@ -182,7 +182,7 @@ namespace vm::code {
 					out << param.strView();
 					first = false;
 				}
-				out << " } -> {";
+				out << " } -> { ";
 				first = true;
 				for (const auto& reslts: fun.result) {
 					if (first)

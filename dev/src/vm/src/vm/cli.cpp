@@ -43,7 +43,7 @@ int cli(const fs::File& filepath, const std::vector<std::string>& args) {
 	          .and_then([&] { return vm::api::getExitValue(pid); })
 	          .transform([&](vm::api::ExitValue vm_values) {
 				  CORE_ASSERT(
-					  vm_values.size() == 1, "Not implemented support for returning multiple retvals"
+					  vm_values.size() == 1, "Programn returned more than one return value"
 				  );
 				  auto& vm_value = vm_values.at(0);
 				  CORE_ASSERT(

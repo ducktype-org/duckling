@@ -13,6 +13,8 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 
+#include <ranges>
+
 using namespace compiler::backend_vm::internal;
 
 #define INVALID_CASE(tp, reason)                                                    \
@@ -196,11 +198,13 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	}
 
 	auto dvm_local = insertLirLocal(lir_local);
-	pushInstruction({
-		vm::code::builders::OpKind::init,
-		vm::opargs::StackLocalAny(dvm_local.name),
-		vm::opargs::Type(typeName(dvm_local.type)),
-	});
+	pushInstruction(
+		{
+			vm::code::builders::OpKind::init,
+			vm::opargs::StackLocalAny(dvm_local.name),
+			vm::opargs::Type(typeName(dvm_local.type)),
+		}
+	);
 }
 
 FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
@@ -232,9 +236,11 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 ) {
 	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
 
-	std::vector<vm::code::TypeOfData> called_result_type = {};
-	for (auto reslt: ext_func.signature.result_type)
-		called_result_type.emplace_back(*vm::code::getBuiltinTypeByName(reslt));
+	std::vector<vm::code::TypeOfData> called_result_type
+		= ext_func.signature.result_type | std::views::transform([&](const auto& reslt) {
+			  return vm::code::getBuiltinTypeByName(reslt).value();
+		  })
+	    | std::ranges::to<std::vector>();
 
 	std::vector<vm::code::TypeOfData> param_types
 		= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {

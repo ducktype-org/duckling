@@ -983,14 +983,14 @@ namespace vm::loader::parser {
 			out << param.value.strView();
 			first = false;
 		}
-		out << "} -> {";
+		out << "} -> { ";
 		first = true;
 		for (const auto& param: result_type) {
 			if (!first) out << ", ";
 			out << param.value.strView();
 			first = false;
 		}
-		out << "} {\n";
+		out << " } {\n";
 		code->dprint(out);
 		out << "}\n";
 	}

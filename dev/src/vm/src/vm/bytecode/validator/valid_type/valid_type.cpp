@@ -447,7 +447,9 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 	// This method assumes all dependent types are already finalized, so we can query their
 	// instantiability.
 	variant_match(getKind()) {
-		variant_case(finalized::Primitive, primitive) {}
+		variant_case_novalue(finalized::Primitive) {
+			is_instantiable = true;
+		}
 		variant_case(finalized::Pointer, pointer) {
 			// Any pointer is instantiable.
 			is_instantiable = true;
