@@ -28,7 +28,7 @@ namespace vm::low {
 
 		/// The maximum size of the local variables on stack required by the function frame.
 		usize local_stack_size;
-		/// The maximum count of blocks required by the fuction frame.
+		/// The maximum count of blocks required by the function frame.
 		usize local_block_count;
 
 		usize                 arg_size;
