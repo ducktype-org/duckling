@@ -34,17 +34,6 @@ namespace vm {
 		virtual ~IVMThread() = default;
 
 		/**
-		 * @brief Run a single function with given parameters.
-		 */
-		virtual void run(const std::string& func_name, const RunArguments& run_arguments) = 0;
-
-		/**
-		 * @brief Calls `run` within safe try-catch block, to catch any exceptions thrown by the
-		 * running code and respond to the process with the panicked status.
-		 */
-		virtual void safeRun(const std::string& func_name, const RunArguments& run_arguments);
-
-		/**
 		 * @brief Creates a new thread that runs the code.
 		 * Blocks until the thread is not running.
 		 *
@@ -157,6 +146,17 @@ namespace vm {
 		BlockingQueue<api::ProcStatus> execution_response_queue;
 
 		IVMProcess& my_process;
+
+		/**
+		 * @brief Run a single function with given parameters.
+		 */
+		virtual void run(const std::string& func_name, const RunArguments& run_arguments) = 0;
+
+		/**
+		 * @brief Calls `run` within safe try-catch block, to catch any exceptions thrown by the
+		 * running code and respond to the process with the panicked status.
+		 */
+		virtual void safeRun(const std::string& func_name, const RunArguments& run_arguments);
 
 		virtual bool waitForPausedResponse();
 
