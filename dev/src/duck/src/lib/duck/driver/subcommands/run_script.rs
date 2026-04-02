@@ -56,9 +56,9 @@ pub fn get_parser() -> Command {
 /// Logic for executing the `run_script` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
-        .try_get_one::<PathBuf>("path")
-        .context_internal("misuse of clap")?
-        .context_internal("Path argument is required")?;
+    let path = matches
+        .get_one::<PathBuf>("path")
+        .expect("guarded by the parser");
     let path = ctx.cwd().join(path);
     check_is_script(&path)?;
     run_script(RunScriptOptions::from_path_and_matches(
