@@ -12,9 +12,9 @@ var gvMOne: i64 = -1;
 
 fun main() -> i32 = {
     # @TODO: #1666 Support const statements in function bodies
-    # const lcZero: i64 = 0;
-    # const lcOne: i64 = 1;
-    # const lcMOne: i64 = -1;
+    const lcZero: i64 = 0;
+    const lcOne: i64 = 1;
+    const lcMOne: i64 = -1;
 
     let llZero: i64 = 0;
     let llOne: i64 = 1;
@@ -37,9 +37,9 @@ fun main() -> i32 = {
     builtin_output_i64(gvMOne);
 
     # @TODO: #1666 Support const statements in function bodies
-    # builtin_output_i64(lcZero);
-    # builtin_output_i64(lcOne);
-    # builtin_output_i64(lcMOne);
+    builtin_output_i64(lcZero);
+    builtin_output_i64(lcOne);
+    builtin_output_i64(lcMOne);
 
     builtin_output_i64(llZero);
     builtin_output_i64(llOne);

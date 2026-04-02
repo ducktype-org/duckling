@@ -42,8 +42,8 @@ SubDirs:
 #################################
 #         WORKING FULLY
 #################################
-  # - arithmetic-operators-on-integers
-  # - comparison-operators-on-integers
+  - comparison-operators-on-integers
+  - float-literals
 #################################
 #         ONLY LLVM WORKING
 #################################
@@ -60,6 +60,8 @@ SubDirs:
 #         NOT WORKING
 # this is mainly due to the features not being implemented yet
 #################################
+  # - arithmetic-operators-on-integers
+  # - overloading
   # - primitive-integers
   # - function-call
   # - type-deduction

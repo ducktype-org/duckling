@@ -1,0 +1,51 @@
+# Test class methods definition and execution
+
+class Point {
+    x: i64 = 0;                 # I dont know if i need to say that 0 is default, i though 0 was default for integer types
+    y: i64 = 0;
+    z: i64 = 0;
+
+    fun norm_squared() -> i64 = {
+        return x**2 + y**2 + z**2;
+    }
+
+    fun step_forward() = {
+        x = x+1;
+        builtin_output_i64(x);
+        return;                 # Do i even have to write this return statement?
+    }
+
+    fun lunge_backwards(how_much: i64) = {
+        x = x-how_much;
+        step_forward();
+        return;                 # Do i even have to write this return statement?
+    }
+}
+
+
+class Backpack {
+    point1: Point;
+    point2: Point = Point(100, 200, 300);
+
+    fun do_something(what: i64) -> Point = {
+        point1.lunge_backwards(what);
+        point2.step_forward();
+        return Point(point2.x-point1.x, point2.y-point1.y, point2.z-point1.z);
+    }
+}
+
+fun main() -> i64 = {
+    # Test function taking class as parameter
+    var p1 = Point(3, 4, 5);
+    var b1: Backpack;
+    var b2 = Backpack(Point(-1, -1, -1), p1)
+
+    var p3 = b2.do_something(10);                       # -10\n2
+    builtin_output_i64(b2.point1.norm_squared());       # 102
+    b2.point1.step_forward();                           # 9
+    b2.point2.lunge_backwards(3);                       # 0
+    builtin_output_i64(p3.z);                           # 6
+
+
+    return 0;
+}

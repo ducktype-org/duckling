@@ -8,12 +8,12 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n10\n2\n40\n2\n"
+          String: "1\n10\n2\n40\n2\n67\n77\n9\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "1\n10\n2\n40\n2\n"
+          String: "1\n10\n2\n40\n2\n67\n77\n9\n"
         ExitCode: 0
   using-test:
     Description: Tests for using declarations to import symbols from namespaces.
@@ -21,10 +21,10 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "10\n12\n9\n3\n11\n9\n8\n"
+          String: "10\n12\n9\n3\n11\n9\n8\n2\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "10\n12\n9\n3\n11\n9\n8\n"
+          String: "10\n12\n9\n3\n11\n9\n8\n2\n"
         ExitCode: 0

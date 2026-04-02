@@ -35,5 +35,14 @@ fun main() -> i64 = {
     let result = double(square(2));   # double(4) = 8
     builtin_output_i64(result);       # 8
 
+    class A {
+        firstarg: i32;
+        secondarg: f64;
+    }
+
+    var a: A(2, 3);
+    using a.*;
+    builtin_output_i64(x);            # 2
+
     return 0;
 }

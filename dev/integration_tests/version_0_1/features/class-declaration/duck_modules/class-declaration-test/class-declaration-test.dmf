@@ -51,9 +51,9 @@ fun main() -> i64 = {
     builtin_output_i64(rect.area);         # 12
 
     # Test nested class
-    var box = Box();
-    builtin_output_i64(box.top_left.x);    # 0
-    builtin_output_i64(box.bottom_right.x);# 10
+    var boxx = Box();
+    builtin_output_i64(boxx.top_left.x);    # 0
+    builtin_output_i64(boxx.bottom_right.x);# 10
 
     return 0;
 }

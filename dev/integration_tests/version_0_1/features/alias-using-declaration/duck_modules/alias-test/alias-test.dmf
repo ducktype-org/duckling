@@ -17,10 +17,23 @@ namespace outer {
     }
 }
 
+class Example {
+    var class_member_a: i64 = 67;
+    fun class_member_b() = { builtin_output_i64(9); }
+}
+
+class Example_wrapper {
+    var wrapped_example: Example;
+    alias class_print = wrapped_example.class_member_b;
+}
+
 # Alias to a function in nested namespace
 alias f = outer.inner.core.veryLongFunctionName;
 alias add = outer.inner.core.addNumbers;
 alias cnt = outer.inner.core.counter;
+
+var e = Example();
+alias mema = e.class_member_a;
 
 fun main() -> i64 = {
     # Call function via alias
@@ -37,6 +50,13 @@ fun main() -> i64 = {
 
     # Access variable through alias (read)
     builtin_output_i64(cnt);     # 2 (counter was incremented twice)
+
+    builtin_output_i64(mema);    # 67 (default value taken from empty constructor)
+    mema = mema + 10;
+    builtin_output_i64(mema);    # 77 (should be mutable so should be 67 + 10)
+
+    let wrap: Example_wrapper = Example_wrapper();
+    wrap.class_print();          # 9
 
     return 0;
 }

@@ -58,8 +58,8 @@ fun main() -> i64 = {
     # Test with unsigned
     var u1: u64 = 100u64;
     var u2: u64 = 30u64;
-    builtin_output_i64(i64(u1 + u2));    # 130
-    builtin_output_i64(i64(u1 - u2));    # 70
+    builtin_output_u64(u1 + u2);         # 130
+    builtin_output_u64(u1 - u2);         # 70
 
     # Test chained operations
     builtin_output_i64(1 + 2 + 3 + 4);   # 10

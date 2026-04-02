@@ -28,3 +28,16 @@ Tests:
         Output:
           String: "25\n25\n4\n6\n6\n9\n10\n20\n8\n12\n32\n169\n"
         ExitCode: 0
+  class-methods-test:
+    Description: Tests for methods defined within classes.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "-10\n2\n102\n9\n0\n6\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "-10\n2\n102\n9\n0\n6\n"
+        ExitCode: 0
