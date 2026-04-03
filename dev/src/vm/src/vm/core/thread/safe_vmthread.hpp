@@ -79,7 +79,7 @@ namespace vm {
 		/**
 		 * @brief Link to parent process.
 		 */
-		SafeVMProcess& process;
+		SafeVMProcess& safe_process;
 
 		/**
 		 * @brief Parent process'es memory.

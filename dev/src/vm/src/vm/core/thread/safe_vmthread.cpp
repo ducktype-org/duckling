@@ -34,7 +34,7 @@ namespace vm {
 	SafeVMThread::SafeVMThread(SafeVMProcess& process, api::ThreadID thread_id):
 		  IVMThread(process, thread_id),
 		  runtime_data(process.getMemory().initializeFrameStack()),
-		  process(process),
+		  safe_process(process),
 		  process_memory(process.getMemory()),
 		  process_program(process.getLoadedProgram()) {}
 
@@ -100,15 +100,17 @@ namespace vm {
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+			throw exceptions::VMRuntimeException(
+				base::strConcat(
+					"Function '",
+					func.name.str(),
+					"' expects ",
+					func.parameters.size(),
+					" arguments, but ",
+					func_args.size(),
+					" were provided."
+				)
+			);
 		}
 
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
@@ -132,23 +134,25 @@ namespace vm {
 			const auto& arg_value = func_args[i];
 			auto        arg_type  = func.parameters[i];
 
-			if (arg_value->getPID() != process.getPID()) {
+			if (arg_value->getPID() != safe_process.getPID()) {
 				throw exceptions::VMRuntimeException(
 					base::strConcat("VMValue for argument ", i, " comes from a different process")
 				);
 			}
 
 			if (arg_value->type != arg_type) {
-				throw exceptions::VMRuntimeException(base::strConcat(
-					"Type mismatch for argument ",
-					i,
-					" of function '",
-					func.name.str(),
-					"': expected ",
-					arg_type->getName().str(),
-					", got ",
-					arg_value->type->getName().str()
-				));
+				throw exceptions::VMRuntimeException(
+					base::strConcat(
+						"Type mismatch for argument ",
+						i,
+						" of function '",
+						func.name.str(),
+						"': expected ",
+						arg_type->getName().str(),
+						", got ",
+						arg_value->type->getName().str()
+					)
+				);
 			}
 
 			start_function.bc.push_back(
@@ -432,7 +436,7 @@ namespace vm {
 			"After function execution, there should be exactly one block on the block stack."
 		);
 		auto block         = Ref(frame->local_block_ref_stack_base[0]);
-		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
+		exit_value_storage = safe_process.createVmValue(func.result_type, Pointer(block, 0));
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
@@ -477,8 +481,10 @@ namespace vm {
 			const auto& maybe_func
 				= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
 			if (!maybe_func.has_value()) {
-				respondExecutionRequest(api::ExecutionPanicked{
-					base::strConcat("Called function '", func_name, "' does not exist.") });
+				respondExecutionRequest(
+					api::ExecutionPanicked{
+						base::strConcat("Called function '", func_name, "' does not exist.") }
+				);
 				return;
 			}
 			const auto& func = *maybe_func.value();
@@ -507,12 +513,12 @@ namespace vm {
 		for (const auto& [global, id, name]: executing_program->getGlobals().allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->dtor_name.value()))
-					                        .expect(
-												"Called function does not exist: "
-												+ global->dtor_name.value().str()
-											);
+					const auto&      func = *executing_program->getFunctions()
+					                             .atMaybe(base::StrID(global->dtor_name.value()))
+					                             .expect(
+													 "Called function does not exist: "
+													 + global->dtor_name.value().str()
+												 );
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -531,15 +537,20 @@ namespace vm {
 				for (const auto& [idx, func]:
 				     std::views::enumerate(process_program->getFunctions())) {
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(idx),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id
+								= static_cast<u64>(idx),  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();
@@ -550,7 +561,7 @@ namespace vm {
 			// Check if you can hold it longer - releasing policy
 			// If you can't hold it longer then
 			// 1. say
-			if (!process.getGIL().shouldRelease()) return;
+			if (!safe_process.getGIL().shouldRelease()) return;
 			// 2. release gil
 			releaseGil();
 			// 3. yield - to not reacquire instantly
@@ -563,12 +574,12 @@ namespace vm {
 	void SafeVMThread::releaseGil() {
 		CORE_ASSERT(has_gil, "Cannot release GIL without acquiring it first");
 		has_gil = false;
-		process.getGIL().release();
+		safe_process.getGIL().release();
 	}
 
 	void SafeVMThread::acquireGil() {
 		CORE_ASSERT(!has_gil, "Cannot acquire GIL twice");
-		process.getGIL().acquire();
+		safe_process.getGIL().acquire();
 		has_gil = true;
 	}
 

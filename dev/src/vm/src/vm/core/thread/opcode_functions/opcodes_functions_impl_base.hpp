@@ -423,13 +423,13 @@ namespace vm {
 				const base::StrID arg_type  = function_signature->parameters[i];
 				TypeCRef          real_type = thread.process_program->getTypes().at(arg_type);
 				auto              block = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
-				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
+				args.push_back(thread.safe_process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id,
 				thread.process_program->getTypes().at(function_signature->result_type),
-				thread.process,
+				thread.safe_process,
 				thread,
 				args
 			);
@@ -560,9 +560,9 @@ namespace vm {
 			       > callee_frame->local_block_ref_stack_base) {
 				auto block           = Ref(callee_frame->local_block_ref_stack_end[-1]);
 				u64  block_ref_count = u64(
-                    callee_frame->local_block_ref_stack_end
-                    - callee_frame->local_block_ref_stack_base
-                );
+					callee_frame->local_block_ref_stack_end
+					- callee_frame->local_block_ref_stack_base
+				);
 
 				// We're returning from a non-void function, so the last block on the stack is the
 				// return value. It's being used by the caller so we don't free it.
@@ -596,7 +596,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::Sleeping{});
-			i64 io_value = thread.process.getIO().getInput<i64>(thread);
+			i64 io_value = thread.safe_process.getIO().getInput<i64>(thread);
 			writeToStack<i64>(local_stack, instr->arg0, io_value);
 			thread.setProcessStatus(api::Running{});
 		}
@@ -604,14 +604,14 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(output_l64)(FUNCTION_ARGS) {
-		{ thread.process.getIO().writeOutput(readFromStack<u64>(local_stack, instr->arg0)); }
+		{ thread.safe_process.getIO().writeOutput(readFromStack<u64>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::Sleeping{});
-			i32 io_value = thread.process.getIO().getInput<i32>(thread);
+			i32 io_value = thread.safe_process.getIO().getInput<i32>(thread);
 			writeToStack<i32>(local_stack, instr->arg0, io_value);
 			thread.setProcessStatus(api::Running{});
 		}
@@ -619,7 +619,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(output_l32)(FUNCTION_ARGS) {
-		{ thread.process.getIO().writeOutput(readFromStack<u32>(local_stack, instr->arg0)); }
+		{ thread.safe_process.getIO().writeOutput(readFromStack<u32>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
@@ -631,7 +631,7 @@ namespace vm {
 			auto block_id   = thread.process_memory.requestBlockID(block);
 			auto block_data = thread.process_memory.requestBlockData(block_id);
 			auto str_data   = block_data.stdString();
-			thread.process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1));
+			thread.safe_process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -815,9 +815,9 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto type
-				= thread.process_program->getTypes().at(TypeID(base::safeIntConv<usize>(instr->arg1)
-			    ));
+			auto type    = thread.process_program->getTypes().at(
+				TypeID(base::safeIntConv<usize>(instr->arg1))
+			);
 
 			// Objects hold vtable pointer as their first field.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
