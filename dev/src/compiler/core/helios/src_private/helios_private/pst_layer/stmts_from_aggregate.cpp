@@ -88,6 +88,9 @@ namespace compiler::helios {
 
 		// Now expand macros in the output.
 
+		// @TODO: #2407 we do a lot of unlocks here, maybe we could return
+		// the vector of unlocked elements from this function.
+
 		StmtList<> output_after_macro_expansion;
 		for (auto stmt: output) {
 			if (stmt.unlock(ctx)->getElementKind() == pst::ElementKind::Expand) {
