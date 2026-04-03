@@ -214,8 +214,12 @@ namespace vm::opargs {
 		Label>;
 	using OpCodeArgCRef      = base::CRefifyParams<OpCodeArg>;
 	using OpCodeLocalArg     = std::variant<VM_OPARG_LOCAL_TYPES>;
+	using OpCodeGlobalArg    = std::variant<VM_OPARG_GLOBAL_TYPES>;
 	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
 	using OpCodePrimitiveArg = std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;
+
+	template<typename T>
+	concept ArgumentType = base::IsVariantMember<T, OpCodeArg>;
 }
 
 #undef DEFINE_STR_ARG_TYPE
