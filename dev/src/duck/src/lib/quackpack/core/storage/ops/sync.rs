@@ -1,6 +1,6 @@
 //! Synchronize a given venv.
 //! This includes: creating a venv, resolving dependencies, downloading them.
-use std::{fs::File, path::PathBuf, time::SystemTime};
+use std::{fs::File, io, path::PathBuf, time::SystemTime};
 
 use flate2::read::GzDecoder;
 use tar::Archive;
@@ -28,7 +28,7 @@ use crate::{
         },
         subcommands::sync::SyncOptions,
     },
-    util_common::path_ops_ext::{PathOpsExt, ShouldBlock},
+    util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
 
 use crate::quackpack::core::storage;
@@ -115,39 +115,37 @@ fn check_if_overwrites(
     id: StrId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pkg_ctx.package().manifest_path() != venv.data().last_location()
-        && venv.data().last_location().exists()
+    if pkg_ctx.package().manifest_path() == venv.data().last_location()
+        || !venv.data().last_location().exists()
     {
-        let venv_dir = venv.data().last_location().parent().ok_or_else(|| {
-            qp_err!(
-                "last location of venv `{}` (`{}`) doesn't have a parent",
-                venv.id(),
-                venv.data().last_location().display()
-            )
-        })?;
-        let package = PackageLoader::find_at_exact_directory(venv_dir, pkg_ctx.ctx());
-
-        // let replaces = PackageLoader::find_at_exact_directory(
-        //     venv.data().last_location().parent().unwrap(),
-        //     pkg_ctx.ctx(),
-        // )
-        // .map(|pkg| pkg.package().manifest().name() == id)
-        // .unwrap_or(false);
-        let replaces = match package {
-            Ok(package) => package.package().manifest().name() == id,
-            Err(e) => {
-                // TODO: Replace with context_aware_downcast_ref, after errors are merged.
-                panic!()
+        return Ok(());
+    }
+    let last_package_dir = venv.data().last_location().parent().ok_or_else(|| {
+        qp_err!(
+            "last location of venv `{}` (`{}`) doesn't have a parent",
+            venv.id(),
+            venv.data().last_location().display()
+        )
+    })?;
+    let package = PackageLoader::find_at_exact_directory(last_package_dir, pkg_ctx.ctx());
+    let replaces = match package {
+        Ok(package) => package.package().manifest().name() == id,
+        Err(e) => {
+            if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
+                // Maybe we missed something, check, if package has been moved.
+                [io::ErrorKind::NotFound, io::ErrorKind::NotADirectory].contains(&io_error.kind())
+            } else {
+                // Other error, maybe we failed to deserialize?
+                // Safely assume, that package still exists.
+                true
             }
-        };
-        if replaces {
-            Err(
-                qp_err!("tried to overwrite an existing virtual environment from another location")
-                    .add_hint("use `--overwrite` to force an overwrite"),
-            )
-        } else {
-            Ok(())
         }
+    };
+    if replaces {
+        Err(
+            qp_err!("tried to overwrite an existing virtual environment from another location")
+                .add_hint("use `--overwrite` to force an overwrite"),
+        )
     } else {
         Ok(())
     }

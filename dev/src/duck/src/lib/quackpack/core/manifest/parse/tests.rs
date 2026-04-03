@@ -6,7 +6,7 @@ use super::parse_manifest;
 use crate::{
     DuckCtx, QpCtx, StrId,
     quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version},
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {

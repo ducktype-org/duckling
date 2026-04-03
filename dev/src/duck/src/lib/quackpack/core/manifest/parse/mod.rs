@@ -6,7 +6,7 @@ use serde::Deserialize;
 use tracing::{Level, debug, span};
 
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util_common::path_ops_ext::PathOpsExt;
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckCtx, QuackResultContext, StrId, qp_internal};
 use crate::{QuackResult, quackpack::core::Package};
 

@@ -7,7 +7,8 @@ use std::{
 
 use crate::{
     DuckCtx, QuackResult, QuackResultContext, qp_bail,
-    util_common::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
+    quackpack::core::compile::duckc::Duckc,
+    util::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
 };
 use clap::ArgMatches;
 use tracing::debug;
@@ -106,11 +107,8 @@ fn run_subcmd(
     external: &HashMap<String, PathBuf>,
 ) -> QuackResult<()> {
     let Some((sub_cmd, sub_args)) = args.subcommand() else {
-        // No subcommand provided.
-        ctx.console()
-            // clap adds a trailing newline.
-            .print(cli().render_help().ansi().to_string().trim_end());
-        return Ok(());
+        // No subcommand provided, start REPL.
+        return Duckc::start_repl_with(ctx).map(|_| ());
     };
     match (exec_for(sub_cmd), external.get(sub_cmd)) {
         (Some(exec_fn), Some(_)) => {

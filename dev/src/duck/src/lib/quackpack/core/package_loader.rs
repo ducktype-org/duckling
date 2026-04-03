@@ -5,7 +5,7 @@ use tracing::{debug, trace};
 
 use crate::{
     DuckCtx, QuackResult, qp_bail, qp_err, qp_internal, quackpack::core::PackageCtx,
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -37,7 +37,7 @@ pub struct PackageLoader(PhantomData<()>);
 impl PackageLoader {
     pub const MANIFEST_NAME: &str = "quackconfig.yml";
     pub const FREEZE_NAME: &str = "quackfreeze.json";
-    pub const VENV_CONFIG_NAME: &str = "venvconfig.toml";
+    pub const VENV_CONFIG_NAME: &str = "venvconfig.yaml";
 
     /// Get the global package.
     pub fn global_package<'duck>(_ctx: &'duck DuckCtx) -> QuackResult<PackageCtx<'duck>> {
@@ -55,7 +55,8 @@ impl PackageLoader {
     ) -> QuackResult<PackageCtx<'duck>> {
         let start = start.expand_user()?.resolve()?;
         if !start.is_dir() {
-            qp_bail!("the path `{}` is not a directory", start.display())
+            let err = qp_err!("the path `{}` is not a directory", start.display());
+            return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
         }
         let mut current: &Path = start.as_ref();
         for potential_location in start.ancestors() {
@@ -115,7 +116,7 @@ mod tests {
     use crate::{
         DuckCtx,
         quackpack::core::PackageLoader,
-        util_common::path_ops_ext::{MkdirOptions, PathOpsExt},
+        util::path_ops_ext::{MkdirOptions, PathOpsExt},
     };
 
     const BASIC_MANIFEST: &str = r"

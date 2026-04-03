@@ -125,7 +125,7 @@ namespace vm {
 
 		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
-		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, result_type_id));
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_blany_type, 0, result_type_id));
 
 		start_function.local_stack_size += func.result_type->getSize().asInt();
 
@@ -204,13 +204,14 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                             .bc               = {},
-			                             .local_stack_size = 72,
-			                             .arg_size         = 0,
-			                             .ret_size         = main_return_type->getSize().asInt(),
-			                             .parameters       = {},
-			                             .result_type      = func.result_type };
+		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
+			                             .bc                = {},
+			                             .local_stack_size  = 72,
+			                             .local_block_count = 7,
+			                             .arg_size          = 0,
+			                             .ret_size          = main_return_type->getSize().asInt(),
+			                             .parameters        = {},
+			                             .result_type       = func.result_type };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_id     = argv_type->getID().asInt();
@@ -230,14 +231,18 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				// Program return value is fixes to return `i64`.
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, i64_type_id),  // [0, 8) program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
-					init_lany_type, 8, argv_ptr_type_id
-				),  // [8, 24) *argv_internal
+					init_blany_type, 0, i64_type_id
+				),  // stack [0, 8), block idx 0 program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
-					init_lany_type, 24, i64_type_id
-				),  // [24, 32) argc_internal
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 32, i64_type_id),  // [32, 40) ix
+					init_blany_type, 1, argv_ptr_type_id
+				),  // stack [8, 24) block idx 1 *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(
+					init_blany_type, 2, i64_type_id
+				),  // stack  [24, 32) block idx 2 argc_internal
+				MAKE_BYTECODE_INSTRUCTION(
+					init_blany_type, 3, i64_type_id
+				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_l64_imm, 24, args.size()
 				),  // argc_internal := args.size()
@@ -255,11 +260,11 @@ namespace vm {
 					start_function.bc.end(),
 					{
 						MAKE_BYTECODE_INSTRUCTION(
-							init_lany_type, 40, str_ptr_type_id
-						),  // [40, 56) ptr_tmp_store
+							init_blany_type, 4, str_ptr_type_id
+						),  // stack [40, 56) block idx 4 ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
-							init_lany_type, 56, byte_type_id
-						),  // [56, 57) char_tmp_store
+							init_blany_type, 5, byte_type_id
+						),  // stack [56, 57) block idx 5 char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_l64_imm, 24, arg.size() + 1
 						),  // argc_internal := arg.size() + 1 (for the \0 character)
@@ -277,7 +282,7 @@ namespace vm {
 							  mov_l8_imm, 56, static_cast<u64>(c)
 						  ),  // char_tmp_store := c
 					      MAKE_BYTECODE_INSTRUCTION(
-							  dynTableStore_lptr_lany, 40, 56
+							  dynTableStore_lptr_blany, 40, 5
 						  ),  // ptr_tmp_store[ix] := char_tmp_store
 					      MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 					      MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1) }
@@ -289,14 +294,14 @@ namespace vm {
 						// At this point ix == arg.size().
 						MAKE_BYTECODE_INSTRUCTION(mov_l8_imm, 56, 0),  // char_tmp_store := \0
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableStore_lptr_lany, 40, 56
+							dynTableStore_lptr_blany, 40, 5
 						),  // ptr_tmp_store[ix] := char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
 						),  // ix := argv_index
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableStore_lptr_lany, 8, 40
+							dynTableStore_lptr_blany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
@@ -309,7 +314,7 @@ namespace vm {
 
 		// Now actually prepare to call 'main'.
 		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_lany_type, 40, i64_type_id)  // [40, 48) main ret_val
+			MAKE_BYTECODE_INSTRUCTION(init_blany_type, 4, i64_type_id)  // [40, 48) main ret_val
 		);
 
 		// Pass the command line arguments only if main signature specifies it.
@@ -317,9 +322,9 @@ namespace vm {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
-					MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),  // [48, 56) argc
+					MAKE_BYTECODE_INSTRUCTION(init_blany_type, 5, i64_type_id),  // [48, 56) argc
 					MAKE_BYTECODE_INSTRUCTION(
-						init_lany_type, 56, argv_ptr_type_id
+						init_blany_type, 6, argv_ptr_type_id
 					),                                                        // [56, 72) *argv
 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
 					MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),  // argv := argv_internal
@@ -335,7 +340,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
-					init_lany_type, 48, str_ptr_type_id
+					init_blany_type, 5, str_ptr_type_id
 				),  // [48, 64) ptr_tmp_store
 			}
 		);
@@ -346,7 +351,7 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(
-						dynTableLoad_lany_lptr, 48, 8
+						dynTableLoad_blany_lptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 					MAKE_BYTECODE_INSTRUCTION(free_lptr, 48, 0),    // free ptr_tmp_store
@@ -389,7 +394,9 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		frame->current_function = &start_function;
+		frame->current_function           = &start_function;
+		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
+		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
 
 		const auto* instr = start_function.bc.data();
 
@@ -421,7 +428,11 @@ namespace vm {
 	End:
 #endif
 		// @note: The return value is the only block left on the block stack.
-		auto block         = frame->block_stack.back();
+		CORE_ASSERT(
+			frame->local_block_ref_stack_end - frame->local_block_ref_stack_base == 1,
+			"After function execution, there should be exactly one block on the block stack."
+		);
+		auto block         = Ref(frame->local_block_ref_stack_base[0]);
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
