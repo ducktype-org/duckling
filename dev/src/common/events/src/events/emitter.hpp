@@ -7,7 +7,7 @@
 namespace events {
 
 	/**
-	 * @brief A wrapper to function that is executed on emittion
+	 * @brief A wrapper to function that is executed on emission
 	 *
 	 * @tparam Event Argument of the function
 	 */
@@ -36,7 +36,7 @@ namespace events {
 	};
 
 	/**
-	 * @brief Simple class to propagate events using Listenrs
+	 * @brief Simple class to propagate events using Listeners
 	 *
 	 * @tparam Event Argument of the functions
 	 */
@@ -73,7 +73,7 @@ namespace events {
 		void detachListener(Listener<Event>& listener) { detachListener(&listener); }
 
 		/**
-		 * @brief
+		 * @brief Emit event to all attached Listeners
 		 */
 		void emitEvent(Event event) const {
 			for (const auto& listener: listeners) listener->handler(event);
