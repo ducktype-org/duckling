@@ -156,20 +156,19 @@ namespace vm::code {
 	class InvalidMainReturnType: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG
-			= "It's required for the `main` function to return a value of type `i64`";
+			= "It's required for the `main` function to return a single value of type `i64`";
 		const code::FuncSignature main_signature;
 
-		InvalidMainReturnType(code::FuncSignature main_signature):
+		usize res_index;
+
+		InvalidMainReturnType(code::FuncSignature main_signature, usize res_index = 0):
 			  ValidationError(ERR_MSG.data()),
-			  main_signature(std::move(main_signature)) {}
+			  main_signature(std::move(main_signature)),
+			  res_index(res_index) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			CORE_ASSERT(
-				main_signature.result_types.size() <= 1,
-				"No support for main returning multiple variables"
-			);
-			if (main_signature.result_types.size() != 1) return std::nullopt;
-			return static_cast<CRef<ElementBase>>(&main_signature.result_types[0]);
+			if (main_signature.result_types.size() == 0) return std::nullopt;
+			return static_cast<CRef<ElementBase>>(&main_signature.result_types[res_index]);
 		}
 	};
 

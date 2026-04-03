@@ -211,8 +211,7 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 ) {
 	std::vector<vm::code::TypeOfData> called_result_type = {};
-	// @todo: #966 add support to compiler about multiple return values
-	if (func_literal.return_type_layout->getSize() != Bits{ 0 })
+	if (!func_literal.return_type_layout->is<tsl::EmptyTypeLayout>())
 		called_result_type.emplace_back(
 			program_context.lowerAndKeepTslType(func_literal.return_type_layout)
 		);

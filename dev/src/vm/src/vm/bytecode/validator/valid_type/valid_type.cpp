@@ -450,7 +450,7 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 		variant_case_novalue(finalized::Primitive) {
 			is_instantiable = true;
 		}
-		variant_case(finalized::Pointer, pointer) {
+		variant_case_novalue(finalized::Pointer) {
 			// Any pointer is instantiable.
 			is_instantiable = true;
 		}

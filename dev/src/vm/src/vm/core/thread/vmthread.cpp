@@ -443,9 +443,9 @@ namespace vm {
 		    "return vals"
 		);
 
-		exit_value_storage        = {};
+		exit_value_storage = { std::vector<Ref<VmValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
-			exit_value_storage.emplace_back(process.createVmValue(
+			exit_value_storage.value().emplace_back(process.createVmValue(
 				func.result_types[idx],
 				Pointer(
 					frame->block_stack[orig_block_stack_size + idx],
@@ -461,7 +461,7 @@ namespace vm {
 		*orig_frame_ptr = orig_frame_cpy;
 		releaseGil();
 
-		return exit_value_storage;
+		return exit_value_storage.value();
 	}
 
 	// executeFunction end

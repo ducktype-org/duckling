@@ -147,11 +147,11 @@ public:
 
 	usize size() const { return stack_state.size(); }
 
-	const LocalStackEntry& back(long long i = 0) const {
-		return stack_state.at(stack_state.size() - 1 - (usize) (i));
+	const LocalStackEntry& back(usize i = 0) const {
+		return stack_state.at(stack_state.size() - 1 - i);
 	}
 
-	const LocalStackEntry& front(long long i = 0) const { return stack_state.at((usize) (i)); }
+	const LocalStackEntry& front(usize i = 0) const { return stack_state.at(i); }
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
 		auto  local_name = VISIT(local, l, return l.var_name);
@@ -1642,12 +1642,11 @@ class FunctionValidator {
 	}
 
 	void validateSignature() {
-		if (function.name.str == base::StrID("main")
-		    && !(
-				function.signature.result_types.size() == 1
-				&& function.signature.result_types[0].str == base::StrID("i64")
-			)) {
-			throw InvalidMainReturnType(function.signature);
+		if (function.name.str == base::StrID("main")) {
+			if (function.signature.result_types.size() != 1)
+				throw InvalidMainReturnType(function.signature, 1);
+			if (function.signature.result_types[0].str != base::StrID("i64"))
+				throw InvalidMainReturnType(function.signature, 0);
 		}
 		for (const auto& param_type: function.signature.parameters)
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
