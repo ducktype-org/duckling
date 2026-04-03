@@ -23,3 +23,15 @@ Tests:
         Output:
           String: "2\n2\n"
         ExitCode: 0
+  simple_expand_3:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0
