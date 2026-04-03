@@ -6,18 +6,58 @@ class Simple {
     fun getField() = {
         return exampleField;
     }
+
+    fun setField(x:i64) = {
+        exampleField = x;
+    }
 }
 
 class Wrapper {
     inner: Simple = Simple(0);
 
+    fun getInner() = {
+        return inner;
+    }
+
+    fun setInner(x:Simple) = {
+        inner = x;
+    }
+
     fun getFromInner() = {
         return self.inner.getField()
+    }
+
+    fun setInInner(x:i64) = {
+        return self.inner.setField(x);
+    }
+
+    fun hello() = {
+        builtin_output_i64(inner.exampleField);
+    }
+
+    fun wrapper() = {
+        hello();
     }
 }
 
 fun main() -> i64 = {
+    var obj1 = Simple();
+    builtin_output_i64(obj1.exampleField);
+
+    obj1.exampleField = 6;
+    builtin_output_i64(obj1.getField());
+
+    obj1.setField(5);
+    builtin_output_i64(obj1.getField());
+
     var obj2 = Wrapper();
     builtin_output_i64(obj2.getFromInner());
+
+    obj2.setInInner(4);
+    builtin_output_i64(obj2.inner.exampleField);
+
+    obj2.setInner(obj1);
+    builtin_output_i64(obj2.getInner().getField());
+
     return 0;
 }

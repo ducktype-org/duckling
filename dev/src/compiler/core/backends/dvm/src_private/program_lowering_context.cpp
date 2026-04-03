@@ -119,6 +119,9 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	CRef<lir::Function> lir_function
 ) {
+	std::cout << "0000000000000000000000000000\n";
+	std::cout << "0     " << lir_function->mangled_name.strView() << "     0\n";
+	std::cout << "0000000000000000000000000000\n";
 	if (auto maybe_lowered = lir_function_to_dvm.atMaybe(lir_function)) return **maybe_lowered;
 
 	auto func_result_type = lowerAndKeepTslType(lir_function->return_type_layout);

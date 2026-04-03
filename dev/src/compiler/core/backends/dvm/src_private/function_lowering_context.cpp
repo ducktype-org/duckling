@@ -132,6 +132,9 @@ void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMV
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
+	std::cout << "Resolve LIRPlace\n";
+
+
 	// First get the base place.
 	DVMPlace current_place = [&]() -> DVMPlace {
 		variant_match(place.base) {
@@ -150,12 +153,12 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 	// If a place is global, we load a pointer to it to a local.
 	if (place.hasProjections() && current_place.is<DVMGlobal>()) {
-		auto global = current_place.get<DVMGlobal>();
-		// TODOP: Make that inserted in the module.
+		auto global             = current_place.get<DVMGlobal>();
 		auto ptr_to_global_type = vm::code::PointerType(
 			base::StrID(base::strConcat("ptr_", vm::code::typeName(global.type))),
 			vm::code::typeName(global.type)
 		);
+		// TODOP: Make a better abstraction for that.
 		program_context.insertType(ptr_to_global_type);
 
 		auto addr_tmp = pushTempLocal(ptr_to_global_type, "global_addr_ref");
@@ -179,18 +182,29 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
 					break;
 				}
-
-				// Update types after the projection has been applied.
 				const auto& current_pointer_layout
 					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-				auto pointee_type
-					= program_context.lowerAndKeepTslType(current_pointer_layout.getPointee());
-				auto next_ptr = pushTempLocal(pointee_type, "deref_tmp_");
-				pushInstruction({ vm::code::builders::OpKind::load,
-				                  next_ptr.asAnyArgument(),
-				                  current_place.asArgument() });
-				current_place  = { next_ptr, DVMPlace::AccessKind::Pointer };
-				current_layout = current_pointer_layout.getPointee();
+				auto pointee_layout = current_pointer_layout.getPointee();
+
+				if (pointee_layout->is<tsl::ClassTypeLayout>()) {
+					current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
+				} else {
+					auto pointee_type = program_context.lowerAndKeepTslType(pointee_layout);
+					auto next_ptr     = pushTempLocal(pointee_type, "deref_tmp_");
+					pushInstruction({ vm::code::builders::OpKind::load,
+					                  next_ptr.asAnyArgument(),
+					                  current_place.asArgument() });
+					current_place = { next_ptr, DVMPlace::AccessKind::Pointer };
+				}
+				current_layout = pointee_layout;
+
+				// // Update types after the projection has been applied.
+				// auto next_ptr = pushTempLocal(pointee_type, "deref_tmp_");
+				// pushInstruction({ vm::code::builders::OpKind::load,
+				//                   next_ptr.asAnyArgument(),
+				//                   current_place.asArgument() });
+				// current_place  = { next_ptr, DVMPlace::AccessKind::Pointer };
+				// current_layout = current_pointer_layout.getPointee();
 			}
 			variant_case(lir::LIRPlace::FieldProjection, field) {
 				CORE_ASSERT(

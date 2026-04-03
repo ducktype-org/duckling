@@ -5,8 +5,12 @@
 #include "function_lowering_context.hpp"
 #include "meta_operation_lowering.hpp"
 
+#include <asio/ip/address.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <program_lowering_context.hpp>
+
+#include "base/except/exceptions.hpp"
+#include "base/str/str_utils.hpp"
 
 #include <logger/logger.hpp>
 
@@ -180,6 +184,9 @@ void FunctionLoweringContext::handleCall(
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
+	std::cout << "=========================Pushing next instruction====================\n";
+	std::cout << base::enumToStr(lir_instruction.operation) << '\n';
+
 	// Schedule cleaning of all temporaries created by `pushTempLocal` while lowering this instruction.
 	defer(cleanupInstructionTemps());
 
@@ -188,6 +195,37 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
 		}
 	}
+
+	if (lir_instruction.operation == lir::Operation::AddressOf) {
+		std::cout << "++++++++++++AddressOf++++++++++++++++=\n";
+		CORE_ASSERT(lir_instruction.arguments.size() == 1, "Invalid ref args");
+		CORE_ASSERT(lir_instruction.arguments[0].is<lir::LIRPlace>(), "AddressOf on non place");
+		const auto& lir_place = lir_instruction.arguments[0].get<lir::LIRPlace>();
+
+		DVMPlace resolved_src = resolveLirPlace(lir_place);
+		auto     maybe_output
+			= lir_instruction.output.map([&](auto& place) { return resolveLirPlace(place); });
+
+		auto addr_temp = pushTempLocal(
+			program_context.lowerAndKeepTslType(lir_instruction.output->layout), "addr_of"
+		);
+
+		if (resolved_src.isDirect()) {
+			// If access to the variable is direct, we take it's address.
+			pushInstruction({ OpKind::ref, addr_temp.asArgument(), resolved_src.asAnyArgument() });
+		} else {
+			// Otherwise, if the resolved source is a pointer, than we have the address in hand. We
+			// just move it.
+			pushInstruction({ OpKind::mov, addr_temp.asArgument(), resolved_src.asArgument() });
+		}
+
+
+		if (maybe_output.has_value())
+			storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
+		return;
+	}
+
+
 	const auto maybe_output_type = lir_instruction.output.map([&](const auto& place) {
 		return program_context.lowerAndKeepTslType(place.layout);
 	});
