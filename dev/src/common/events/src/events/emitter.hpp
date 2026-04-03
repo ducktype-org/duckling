@@ -16,7 +16,6 @@ namespace events {
 
 	template<class Event>
 	class Listener {
-		friend class Emitter<Event>;
 		using Handler = std::function<void(Event)>;
 
 		Handler              handler;
@@ -26,11 +25,42 @@ namespace events {
 		explicit Listener(Handler&& handler): handler(std::move(handler)) {}
 
 		/**
+		 * @brief Returns true if Listener is attached to any Emitter
+		 */
+		bool isAttached() { return emitter; }
+
+		/**
 		 * @brief If Listener is attached to some Emitter then detaches from it
 		 */
 		void detach() {
-			if (emitter) emitter->detachListener(Ref(this));
+			if (emitter) {
+				auto copy = emitter;
+				emitter   = nullptr;
+				copy->detachListener(this);
+			}
 		}
+
+		/**
+		 * @brief Attach Listener to the Emitter
+		 */
+		void attach(Ref<Emitter<Event>> emitter) {
+			if (isAttached() && this->emitter != emitter)
+				throw std::runtime_error("Listener already attached");
+			if (!isAttached()) {
+				this->emitter = emitter;
+				emitter->attachListener(this);
+			}
+		}
+
+		/**
+		 * @brief Attach Listener to the Emitter
+		 */
+		void attach(Emitter<Event>& emitter) { attach(&emitter); }
+
+		/**
+		 * @brief Execute the wrapped function
+		 */
+		void handle(const Event& event) { handler(event); }
 
 		~Listener() { detach(); }
 	};
@@ -49,9 +79,8 @@ namespace events {
 		 * @brief Attach Listener to the Emitter
 		 */
 		void attachListener(Ref<Listener<Event>> listener) {
-			listener->detach();
 			listeners.insert(listener);
-			listener->emitter = this;
+			listener->attach(this);
 		}
 
 		/**
@@ -64,7 +93,7 @@ namespace events {
 		 */
 		void detachListener(Ref<Listener<Event>> listener) {
 			listeners.erase(listener);
-			listener->emitter = nullptr;
+			listener->detach();
 		}
 
 		/**
@@ -77,7 +106,7 @@ namespace events {
 		 */
 		void emitEvent(const Event& event) const {
 			auto copy = listeners;
-			for (const auto& listener: copy) listener->handler(event);
+			for (const auto& listener: copy) listener->handle(event);
 		}
 
 		~Emitter() {

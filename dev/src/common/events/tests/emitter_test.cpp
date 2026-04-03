@@ -81,6 +81,12 @@ private:
 		emitter1.emitEvent({ 42 });
 		ASSERT_EQUAL_PRINT(42, some_number);
 
+		assertThrows<std::runtime_error>(
+			[&]() { emitter2.attachListener(listener); }, "Reatach should have thrown"
+		);
+
+		listener.detach();
+
 		emitter2.attachListener(listener);
 
 		emitter2.emitEvent({ 8 });
@@ -102,11 +108,11 @@ private:
 
 		emitter.attachListener(listener);
 
-		emitter.emitEvent({42});
+		emitter.emitEvent({ 42 });
 
 		ASSERT_EQUAL_PRINT(42, some_number);
 
-		emitter.emitEvent({8});
+		emitter.emitEvent({ 8 });
 
 		ASSERT_EQUAL_PRINT(42, some_number);
 	}
