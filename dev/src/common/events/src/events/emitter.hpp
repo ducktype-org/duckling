@@ -2,6 +2,7 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <mutex>
 #include <set>
 
 namespace events {
@@ -74,12 +75,16 @@ namespace events {
 	class Emitter {
 		std::set<Ref<Listener<Event>>> listeners;
 
+		std::mutex listeners_mutex;
+
 	public:
 		/**
 		 * @brief Attach Listener to the Emitter
 		 */
 		void attachListener(Ref<Listener<Event>> listener) {
+			listeners_mutex.lock();
 			listeners.insert(listener);
+			listeners_mutex.unlock();
 			listener->attach(this);
 		}
 
@@ -92,7 +97,9 @@ namespace events {
 		 * @brief Detach Listener from the Emitter
 		 */
 		void detachListener(Ref<Listener<Event>> listener) {
+			listeners_mutex.lock();
 			listeners.erase(listener);
+			listeners_mutex.unlock();
 			listener->detach();
 		}
 
@@ -104,13 +111,17 @@ namespace events {
 		/**
 		 * @brief Emit event to all attached Listeners
 		 */
-		void emitEvent(const Event& event) const {
+		void emitEvent(const Event& event) {
+			listeners_mutex.lock();
 			auto copy = listeners;
+			listeners_mutex.unlock();
 			for (const auto& listener: copy) listener->handle(event);
 		}
 
 		~Emitter() {
+			listeners_mutex.lock();
 			auto copy = listeners;
+			listeners_mutex.unlock();
 			for (const auto& listener: copy) listener->detach();
 		}
 	};
