@@ -1,5 +1,5 @@
 type pointer: pointer_Child Child
-type fun: method_child_void {pointer_Child} void
+type fun: method_child_void {pointer_Child} {}
 
 type class: Child {
     virtual_methods: { 
@@ -10,11 +10,11 @@ type class: Child {
     };
 }
 
-function Child_cry_impl_type {pointer_Child} -> void {
+function Child_cry_impl_type {pointer_Child} -> {} {
     init_lany_type res, i64; mov_l64_imm res, 55; output_l64 res; deinit; deinit; ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type fake_child, ptr_i64;
     init_lany_type actual_child, pointer_Child;
     alloc_lptr_type actual_child, Child;

@@ -20,7 +20,7 @@ global_data consumed_total i64 {};
 global_data finished_producers i64 {};
 global_data finished_consumers i64 {};
 
-function producer {} -> void {
+function producer {} -> {} {
 	init_lany_type              to_produce, i64;
 	mov_l64_imm                 to_produce, 10000;
 
@@ -100,7 +100,7 @@ function producer {} -> void {
 	ret;
 }
 
-function consumer {} -> void {
+function consumer {} -> {} {
 	init_lany_type              to_consume, i64;
 	mov_l64_imm                 to_consume, 10000;
 
@@ -178,7 +178,7 @@ function consumer {} -> void {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 
 	init_lany_type              m_init, mutex;
 	call_builtinfunc            builtin_create_mutex;

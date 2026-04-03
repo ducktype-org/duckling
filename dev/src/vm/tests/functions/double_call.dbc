@@ -2,7 +2,7 @@
 # input = "a b c d"
 # output = a + b + c + d
 
-function foo { i64, i64 } -> i64 {
+function foo { i64, i64 } -> { i64 } {
 	mov_l64_l64     ret_val_0, arg0;
 	add_l64_l64     ret_val_0, arg1;
 	deinit; # arg1
@@ -10,7 +10,7 @@ function foo { i64, i64 } -> i64 {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv

@@ -1,6 +1,6 @@
 global_data global_x i32 {};
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv

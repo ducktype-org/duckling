@@ -1,7 +1,7 @@
 type dynamic_table: dtablei64 i64
 type pointer: dptr_i64 dtablei64
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 
     init_lany_type iter, i64;
     init_lany_type val, i64;

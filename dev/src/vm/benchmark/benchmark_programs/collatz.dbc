@@ -7,7 +7,7 @@
 # collatz(3) -> [3, 10, 5, 16, 8, 4, 2, 1], max is 16.
 # Thus, the program should output 16.
 
-type fun: collatz { i64 } i64
+type fun: collatz { i64 } { i64 }
 
 function collatz {
 	# ret_val_0 - 0
@@ -75,7 +75,7 @@ function collatz {
 }
 
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	# [0, 8) -> main ret_val_0
     # [8, 16) -> argc
     # [16, 32) -> *argv

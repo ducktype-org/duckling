@@ -492,29 +492,30 @@ namespace vm::loader::parser {
 			return nullptr;
 		}
 
-		if (state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.goDown();
-			while (state.notEmpty()) {
-				tpc::Identifier field_type;
-				state.parse().one(&field_type);
-				out->result_types.emplace_back(field_type);
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Expected `{` after here `->`.", state.getPosition(-1)
+			));
+			return nullptr;
+		}
 
-				if (state.empty()) break;
-				if (state[0].is(lang_def::Special::Comma)) {
-					state.parse().one(lang_def::Special::Comma);
-				} else {
-					state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Expected comma or `}` after here.", state.getPosition()
-					));
-					state.tokens().skip();
-				}
-			}
-			state.goUpAndSkip();
-		} else {
+		state.goDown();
+		while (state.notEmpty()) {
 			tpc::Identifier field_type;
 			state.parse().one(&field_type);
-			if (field_type.value != "void") out->result_types.emplace_back(field_type);
+			out->result_types.emplace_back(field_type);
+
+			if (state.empty()) break;
+			if (state[0].is(lang_def::Special::Comma)) {
+				state.parse().one(lang_def::Special::Comma);
+			} else {
+				state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Expected comma or `}` after here.", state.getPosition()
+				));
+				state.tokens().skip();
+			}
 		}
+		state.goUpAndSkip();
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -704,30 +705,31 @@ namespace vm::loader::parser {
 			}
 			state.goUpAndSkip();
 
-			std::vector<base::StrID> returned;
-			if (state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.goDown();
-				while (state.notEmpty()) {
-					tpc::Identifier field_type;
-					state.parse().one(&field_type);
-					returned.emplace_back(field_type.value);
-
-					if (state.empty()) break;
-					if (state[0].is(lang_def::Special::Comma)) {
-						state.parse().one(lang_def::Special::Comma);
-					} else {
-						state.logInt(makeBox<dia_int::PlaceholderCodeError>(
-							"Expected comma or `}` after here.", state.getPosition()
-						));
-						state.tokens().skip();
-					}
-				}
-				state.goUpAndSkip();
-			} else {
-				tpc::Identifier result;
-				state.parse().one(&result);
-				if (result.value != "void") returned.emplace_back(result.value);
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Expected `{` after here.", state.getPosition(-1)
+				));
+				return nullptr;
 			}
+
+			std::vector<base::StrID> returned;
+			state.goDown();
+			while (state.notEmpty()) {
+				tpc::Identifier field_type;
+				state.parse().one(&field_type);
+				returned.emplace_back(field_type.value);
+
+				if (state.empty()) break;
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
+				} else {
+					state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Expected comma or `}` after here.", state.getPosition()
+					));
+					state.tokens().skip();
+				}
+			}
+			state.goUpAndSkip();
 
 			auto tp         = FunctionType{ name, arguments, returned };
 			tp.bytecode_pos = out->position;

@@ -1,4 +1,4 @@
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	jmpIf_label different_init;
 	init_lany_type x, i64;
 	jmp_label variable_usage;

@@ -2,9 +2,9 @@ type pointer: pointer_I1 I1
 type pointer: pointer_Parent Parent
 type pointer: pointer_Child Child
 
-type fun: method_I1_void {pointer_I1} void
-type fun: method_parent_void {pointer_Parent} void
-type fun: method_child_void {pointer_Child} void
+type fun: method_I1_void {pointer_I1} {}
+type fun: method_parent_void {pointer_Parent} {}
+type fun: method_child_void {pointer_Child} {}
 
 type interface: I1 {
     virtual_methods: { 
@@ -40,23 +40,23 @@ type class: Child {
 }
 
 # ============ METHODS IMPLEMENTATION ============ 
-function I1_foo_default_impl_type {pointer_I1} -> void {
+function I1_foo_default_impl_type {pointer_I1} -> {} {
     init_lany_type res, i64; mov_l64_imm res, 11; output_l64 res; deinit; deinit; ret;
 }
-function Child_I1_bar_impl_type {pointer_Child} -> void {
+function Child_I1_bar_impl_type {pointer_Child} -> {} {
     init_lany_type res, i64; mov_l64_imm res, 22; output_l64 res; deinit; deinit; ret;
 }
-function Parent_getAge_impl_type {pointer_Parent} -> void {
+function Parent_getAge_impl_type {pointer_Parent} -> {} {
     init_lany_type res, i64; mov_l64_imm res, 33; output_l64 res; deinit; ret;
 }
-function Child_getAge_impl_type {pointer_Child} -> void {
+function Child_getAge_impl_type {pointer_Child} -> {} {
     init_lany_type res, i64; mov_l64_imm res, 44; output_l64 res; deinit; deinit; ret;
 }
-function Child_cry_impl_type {pointer_Child} -> void {
+function Child_cry_impl_type {pointer_Child} -> {} {
     init_lany_type res, i64; mov_l64_imm res, 55; output_l64 res; deinit; deinit; ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type ptr_i1, pointer_I1;
     init_lany_type ptr_parent, pointer_Parent;
     init_lany_type ptr_child, pointer_Child;

@@ -3,16 +3,16 @@ global_data g i64 {
     destructor: g_dtor
 };
 
-function g_ctor {} -> void {
+function g_ctor {} -> {} {
     mov_g64_imm            g,       5;
     ret;
 }
 
-function g_dtor {} -> void {
+function g_dtor {} -> {} {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     mov_l64_g64 ret_val_0, g;
     ret;
 }

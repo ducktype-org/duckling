@@ -1,4 +1,4 @@
-type fun: run_every_opcode {} void
+type fun: run_every_opcode {} {}
 
 function run_every_opcode {
     init_type i64; # [0, 8) tmp1
@@ -37,7 +37,7 @@ function run_every_opcode {
 }
 
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # [0, 8) main ret_val_0
     # [8, 16) argc
     # [16, 32) *argv

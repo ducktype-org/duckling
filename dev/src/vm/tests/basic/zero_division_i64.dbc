@@ -1,4 +1,4 @@
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type a, i64;
     init_lany_type b, i64;
     mov_l64_imm a, 13;

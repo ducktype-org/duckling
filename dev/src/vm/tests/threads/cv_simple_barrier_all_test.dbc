@@ -22,7 +22,7 @@ global_data notify_count i64 {};
 global_data lock mutex {};
 global_data cv condition_variable {};
 
-function worker {} -> void {
+function worker {} -> {} {
 	init_lany_type          lock_enter, mutex;
 	mov_lopq_gopq           lock_enter, lock;
 	call_builtinfunc        builtin_lock_mutex;
@@ -106,7 +106,7 @@ function worker {} -> void {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_lany_type          m, mutex;
 	call_builtinfunc        builtin_create_mutex;
 	mov_gopq_lopq           lock, m;

@@ -1,6 +1,6 @@
 type pointer: pointer_A A
-type fun: method_foo_void_A {pointer_A} void
-type fun: method_foo_void_impl_A {pointer_A} void
+type fun: method_foo_void_A {pointer_A} {}
+type fun: method_foo_void_impl_A {pointer_A} {}
 
 type class: A {
     virtual_methods: {
@@ -11,7 +11,7 @@ type class: A {
     };
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type a_obj, pointer_A;
     alloc_lptr_type a_obj, A;
     setVTable_lptr_type a_obj, A;

@@ -1,7 +1,7 @@
 type pointer: pointer_A A
-type fun: method_foo_void_A {pointer_A} void
+type fun: method_foo_void_A {pointer_A} {}
 
-function method_foo_void_impl_A {pointer_A} -> void {
+function method_foo_void_impl_A {pointer_A} -> {} {
     init_lany_type x, i64;
     mov_l64_imm x, 421;
     output_l64 x;
@@ -22,7 +22,7 @@ type class: A {
     };
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type a_obj, pointer_A;
     alloc_lptr_type a_obj, A;
     setVTable_lptr_type a_obj, A;

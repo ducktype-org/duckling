@@ -9,7 +9,7 @@ type data: VariantStruct {
 type pointer: ptr_vs VariantStruct
 type pointer: ptr_variant simple_variant
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # let a = VariantStruct();
     init_lany_type a, VariantStruct;
 

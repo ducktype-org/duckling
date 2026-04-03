@@ -1,4 +1,4 @@
-function main {} -> i32 {
+function main {} -> { i32 } {
 	init_lany_type x, i32;
 	deinit; # x
 	ret;

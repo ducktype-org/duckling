@@ -1,4 +1,4 @@
-function summer {} -> void {
+function summer {} -> {} {
 	init_lany_type  x, i64; # [0, 8)
 	mov_l64_imm     x, 700;
 	add_l64_imm     x, 30;

@@ -1,4 +1,4 @@
-function foo {} -> i64 {
+function foo {} -> { i64 } {
     mov_l64_imm ret_val_0, 120;
     output_l64 ret_val_0;
     add_l64_imm ret_val_0, 3;

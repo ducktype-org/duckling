@@ -3,7 +3,7 @@ type primitive: ui64 8
 global_data global_x i64 {};
 global_data global_y ui64 {};
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv

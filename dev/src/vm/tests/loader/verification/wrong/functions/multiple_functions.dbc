@@ -1,14 +1,14 @@
-function inner_func {} -> i64 {
+function inner_func {} -> { i64 } {
 	mov_l64_imm    	ret_val_0, 45;
 	ret;
 }
 
-function inner_func {} -> i64 {
+function inner_func {} -> { i64 } {
 	mov_l64_imm     ret_val_0, 42;
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_lany_type      x, i64;
 	call_func           inner_func;
 	deinit;

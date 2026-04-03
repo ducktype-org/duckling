@@ -2,13 +2,13 @@
 # Also if the stacks are seperate.
 # output = input + 1110
 
-function add1000 { i64 } -> i64 {
+function add1000 { i64 } -> { i64 } {
 	mov_l64_imm    ret_val_0, 1000;
 	add_l64_l64    ret_val_0, arg0;
 	ret;
 }
 
-function add1100 { i64 } -> i64 {
+function add1100 { i64 } -> { i64 } {
 	mov_l64_imm    		ret_val_0, 100;
 
 	init_lany_type 			add1000_ret_val, i64; # [16, 24) add1000 ret_val_0
@@ -20,7 +20,7 @@ function add1100 { i64 } -> i64 {
 	ret;
 }
 
-function add1110 { i64 } -> i64 {
+function add1110 { i64 } -> { i64 } {
 	mov_l64_imm    		ret_val_0, 10;
 
 	init_lany_type 			add1100_ret_val, i64;
@@ -36,7 +36,7 @@ function add1110 { i64 } -> i64 {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv

@@ -3,7 +3,7 @@
 type dynamic_table: dtablei64 i64
 type pointer: ptr_dtablei64 dtablei64
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv

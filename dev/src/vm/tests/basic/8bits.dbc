@@ -1,4 +1,4 @@
-function integers {} -> i32 {
+function integers {} -> { i32 } {
 	init_lany_type	a, i8;
 	init_lany_type	b, i8;
 	init_lany_type	c, i8;
@@ -112,7 +112,7 @@ function integers {} -> i32 {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_lany_type 	test_ret_val, i32;
 
 	call_func 	integers;

@@ -14,17 +14,17 @@ global_data g i64 {
     constructor: g_ctor
 };
 
-function f_ctor {} -> void {
+function f_ctor {} -> {} {
     mov_g64_imm f, 7;
     ret;
 }
 
-function g_ctor {} -> void {
+function g_ctor {} -> {} {
     mov_g64_imm g, 5;
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     mov_g64_g64 g, f;
     mov_l64_g64 ret_val_0, g;
     ret;

@@ -16,7 +16,7 @@ type pointer: MyStructPtr MyStruct
 type pointer: MyVariantPtr MyVariant
 type pointer: ptr_ptr_i64 ptr_i64
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 
     init_lany_type int_ptr_ptr, ptr_ptr_i64;
     init_lany_type table, MyTable;

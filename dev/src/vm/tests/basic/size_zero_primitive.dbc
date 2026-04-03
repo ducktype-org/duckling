@@ -1,5 +1,5 @@
 type primitive: empty 0
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     ret;
 }

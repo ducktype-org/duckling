@@ -1,4 +1,4 @@
-function check {} -> void {
+function check {} -> {} {
 	init_lany_type      x, i64;
 	mov_l64_imm x, 735;
 	deinit; # x

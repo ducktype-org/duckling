@@ -2,7 +2,7 @@
 # input = "a b c"
 # output = a * c
 
-function check { i64, i32, i64 } -> void {
+function check { i64, i32, i64 } -> {} {
 
 	init_lany_type 		acc, i64;
 	mov_l64_imm			acc, 1; 	# acc := 1
@@ -18,7 +18,7 @@ function check { i64, i32, i64 } -> void {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv

@@ -1,4 +1,4 @@
-function globaler_reader {} -> void {
+function globaler_reader {} -> {} {
 	init_lany_type  x, i64;
 	mov_l64_g64     x, counter;
 	output_l64      x;

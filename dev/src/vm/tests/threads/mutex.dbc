@@ -1,7 +1,7 @@
 global_data counter i64 {};
 global_data lock mutex {};
 
-function inc {} -> void {
+function inc {} -> {} {
     init_lany_type			temp, i64;
 	init_lany_type			i, i64;
 	mov_l64_imm				i, 10000;
@@ -29,7 +29,7 @@ function inc {} -> void {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type			lock1, mutex;
 	call_builtinfunc		builtin_create_mutex;
 	mov_gopq_lopq			lock, lock1;

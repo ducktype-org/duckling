@@ -3,26 +3,26 @@ type pointer: pointer_A A
 type pointer: pointer_B B
 type pointer: pointer_C C
 
-type fun: method_foo {pointer_A} void
-type fun: method_bar {pointer_A} void
-type fun: method_goo {pointer_B} void
-type fun: method_gaa {pointer_C} void
+type fun: method_foo {pointer_A} {}
+type fun: method_bar {pointer_A} {}
+type fun: method_goo {pointer_B} {}
+type fun: method_gaa {pointer_C} {}
 
-function method_foo_impl_A {pointer_A} -> void {
+function method_foo_impl_A {pointer_A} -> {} {
     ret;
 }
 
-function method_foo_impl_B {pointer_B} -> void {
+function method_foo_impl_B {pointer_B} -> {} {
     ret;
 }
 
-type fun: method_bar_impl_B {pointer_B} void
+type fun: method_bar_impl_B {pointer_B} {}
 
-function method_goo_impl_C {pointer_C} -> void {
+function method_goo_impl_C {pointer_C} -> {} {
     ret;
 }
 
-function method_gaa_impl_C {pointer_C} -> void {
+function method_gaa_impl_C {pointer_C} -> {} {
     ret;
 }
 

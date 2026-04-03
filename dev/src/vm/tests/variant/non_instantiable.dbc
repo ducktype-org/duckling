@@ -4,7 +4,7 @@ type class: A {
 
 type variant: simple_variant { i64, A, i32 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # let v0: variant<i64, A, i32>;
     init_lany_type v0, simple_variant;
 

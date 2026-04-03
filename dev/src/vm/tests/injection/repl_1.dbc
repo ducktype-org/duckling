@@ -1,4 +1,4 @@
-function spring { i64, i64 } -> i64 {
+function spring { i64, i64 } -> { i64 } {
 	# [0, 8) ret_val_0
 	# [8, 16) arg0
 	# [16, 24) arg1

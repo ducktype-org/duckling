@@ -3,7 +3,7 @@ type pointer: inner_ptr_dtable dtable_i64
 type dynamic_table: dtable_ptr inner_ptr_dtable
 type pointer: outer_ptr_dtable dtable_ptr
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type size, i64;
     init_lany_type val, i64;
     init_lany_type inner_ptr, inner_ptr_dtable;

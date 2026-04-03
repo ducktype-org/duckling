@@ -1,5 +1,5 @@
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type arg, i64;
     mov_l64_imm arg, 456;
     call_cfunc void_tester;

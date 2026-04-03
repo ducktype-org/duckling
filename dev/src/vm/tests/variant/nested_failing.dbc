@@ -3,7 +3,7 @@ type variant: simple_variant { i64, i8 }
 type variant: nested { simple_variant, i64 }
 type pointer: ptr_sv simple_variant
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # let v0: variant<variant<i64, i8>, i64>;
     init_lany_type v0, nested;
 

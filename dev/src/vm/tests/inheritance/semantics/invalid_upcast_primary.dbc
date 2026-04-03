@@ -2,7 +2,7 @@ type class: Cat {}
 
 type pointer: CatPtr Cat
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # ptr: ptr<i32>
 	init_lany_type ptr, ptr_i32;
 	# cat: ptr<Cat>

@@ -1,7 +1,7 @@
 type fixed_size_table: tablei64 i64 2
 type pointer: ptr_tablei64 tablei64
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv

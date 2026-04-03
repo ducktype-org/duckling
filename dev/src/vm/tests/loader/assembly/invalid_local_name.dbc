@@ -1,3 +1,3 @@
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	mov_l64_imm 10, 10;
 }

@@ -8,7 +8,7 @@ type pointer: big_variant_ptr big_variant
 type pointer: i64_i8_ptr i64_i8
 type pointer: i64_ptr i64
 
-function main { i64, ptr_argv} -> i64 {
+function main { i64, ptr_argv} -> { i64 } {
 	# Create big_big_variant, set its value to big_variant->i64_i8->i64.
 	init_lany_type v0, big_big_variant;
 	variantSetInner_lvnt_type v0, big_variant;

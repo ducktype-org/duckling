@@ -1,4 +1,4 @@
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	label foo;
 	output_l64 ret_val_0;
 	jmp_label foo;

@@ -2,7 +2,7 @@ global_data counter i64 {};
 
 global_data global_ptr ptr_i64 {};
 
-function for_coverage {} -> void {
+function for_coverage {} -> {} {
 	init_lany_type ptr, ptr_i64;
 	alloc_lptr_type ptr, i64;
 	mov_gptr_lptr global_ptr, ptr;
@@ -20,7 +20,7 @@ function for_coverage {} -> void {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	mov_g64_imm counter, 5;
 	mov_l64_g64 ret_val_0, counter;
 	output_l64 ret_val_0;

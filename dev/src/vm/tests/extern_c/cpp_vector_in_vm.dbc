@@ -1,4 +1,4 @@
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_lany_type vec_ptr, opaque_ptr;
     init_lany_type vec_ptr2, opaque_ptr;
     call_cfunc vecSpawn;

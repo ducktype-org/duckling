@@ -1,4 +1,4 @@
-type fun: ackermann { i64, i64 } i64
+type fun: ackermann { i64, i64 } { i64 }
 
 function ackermann {
     # [0, 8) -> ret_val_0
@@ -80,7 +80,7 @@ function ackermann {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # [0, 8) -> main ret_val_0
     # [8, 16) -> argc
     # [16, 32) -> *argv

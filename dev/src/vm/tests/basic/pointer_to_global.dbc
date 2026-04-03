@@ -1,7 +1,7 @@
 global_data global_data_val i64 {};
 global_data global_data_ptr ptr_i64 {};
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_lany_type l_ptr_to_global, ptr_i64;
 	init_lany_type local_val, i64;
 	init_lany_type verifier_val, i64;

@@ -5,7 +5,7 @@ type data: Node {
     tail: LinkedList
 }
 
-function cons { i64, LinkedList } -> LinkedList {
+function cons { i64, LinkedList } -> { LinkedList } {
     # ret_val_0: result
     # arg0: head
     # arg1: tail
@@ -23,13 +23,13 @@ function cons { i64, LinkedList } -> LinkedList {
 }
 
 # OPTIMISED!!!
-function tail {} -> LinkedList {
+function tail {} -> { LinkedList } {
     structLoad_lany_lptr_field ret_val_0, ret_val_0, Node.tail;
 
     ret;
 }
 
-function print_list {LinkedList} -> void {
+function print_list {LinkedList} -> {} {
     # arg0: LinkedList
 
     cmpNull_lptr arg0;
@@ -50,7 +50,7 @@ label non_empty;
     ret_tailcall_func print_list;
 }
 
-function free_list {LinkedList} -> void {
+function free_list {LinkedList} -> {} {
     # arg0: LinkedList
 
     cmpNull_lptr arg0;
@@ -68,7 +68,7 @@ label non_empty;
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # INPUT: n - list_length
     #        x1 x2 ... xn - list elements
     # OUTPUT: Inverted and concatenated elements
