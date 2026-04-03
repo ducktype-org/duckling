@@ -5,12 +5,8 @@
 #include "function_lowering_context.hpp"
 #include "meta_operation_lowering.hpp"
 
-#include <asio/ip/address.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <program_lowering_context.hpp>
-
-#include "base/except/exceptions.hpp"
-#include "base/str/str_utils.hpp"
 
 #include <logger/logger.hpp>
 
@@ -184,9 +180,6 @@ void FunctionLoweringContext::handleCall(
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
-	std::cout << "=========================Pushing next instruction====================\n";
-	std::cout << base::enumToStr(lir_instruction.operation) << '\n';
-
 	// Schedule cleaning of all temporaries created by `pushTempLocal` while lowering this instruction.
 	defer(cleanupInstructionTemps());
 
@@ -196,8 +189,8 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 	}
 
+	// TODOP: Figure this out
 	if (lir_instruction.operation == lir::Operation::AddressOf) {
-		std::cout << "++++++++++++AddressOf++++++++++++++++=\n";
 		CORE_ASSERT(lir_instruction.arguments.size() == 1, "Invalid ref args");
 		CORE_ASSERT(lir_instruction.arguments[0].is<lir::LIRPlace>(), "AddressOf on non place");
 		const auto& lir_place = lir_instruction.arguments[0].get<lir::LIRPlace>();

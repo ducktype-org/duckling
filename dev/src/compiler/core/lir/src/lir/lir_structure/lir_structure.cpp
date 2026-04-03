@@ -11,6 +11,8 @@
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "query_framework/context/context.hpp"
+
 #include <iomanip>
 #include <set>
 
@@ -177,54 +179,29 @@ namespace compiler::lir {
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
 	struct LIRPrinter {
-		std::ostream& output;
+		query::Context& ctx;
+		std::ostream&   output;
 
 		base::Map<LIRLocalRef, usize> local_id;
 		base::Map<BlockRef, usize>    block_id;
 
-		LIRPrinter(query::Context&, std::ostream& output): output(output) {}
-
-		LIRPrinter(std::ostream& output): output(output) {}
+		LIRPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
 
 		void printLocalDesc(LIRLocalRef local) {
-			if (local_id.contains(local)) {
-				output << "  Local(" << local_id[local] << ")";
-				if (local->helios_id.has_value())
-					output << ", helios_name: " << name(local->helios_id.value()).strView();
-				if (local->parameter_index.has_value())
-					output << ", parameter_index: " << local->parameter_index.value();
-				output << "\n";
-				output << "    LAYOUT:" << local->layout->toStringIdentification() << "\n";
-				return;
-			}
-
-			if (local->metadata.source_code_name.has_value())
-				output << "  Local(" << local->metadata.source_code_name->strView() << ")";
-			else
-				output << "  Local( GENERATED )";
-
-
+			output << "  Local(" << local_id[local] << ")";
 			if (local->helios_id.has_value())
 				output << ", helios_name: " << name(local->helios_id.value()).strView();
 			if (local->parameter_index.has_value())
 				output << ", parameter_index: " << local->parameter_index.value();
 			output << "\n";
-			output << "    LAYOUT:" << local->layout->toStringIdentification() << "\n";
+			output << "    LAYOUT:" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
 		}
 
 		/**
 		 * @note Custom output, so we can align when printing instruction
 		 */
 		void printLocal(LIRLocalRef local, std::ostream& loc_output) const {
-			if (local_id.contains(local)) {
-				loc_output << "  Local(" << local_id[local] << ")";
-				return;
-			}
-
-			if (local->metadata.source_code_name.has_value())
-				loc_output << "  Local(" << local->metadata.source_code_name->strView() << ")";
-			else
-				loc_output << "  Local( GENERATED )";
+			loc_output << "  Local(" << local_id[local] << ")";
 		}
 
 		void printGlobal(const LIRGlobal& global, std::ostream& loc_output) const {
@@ -346,10 +323,6 @@ namespace compiler::lir {
 		LIRPrinter{ ctx, output }.debugPrint(*this);
 	}
 
-	void LIRPlace::debugPrint(std::ostream& output) const {
-		LIRPrinter{ output }.printOutput(*this, std::cout);
-	}
-
 	FunctionLiteral FunctionLiteral::fromFunction(const Function& function) {
 		return FunctionLiteral{
 			.mangled_name = function.mangled_name,
@@ -359,5 +332,4 @@ namespace compiler::lir {
 			.return_type_layout = function.return_type_layout
 		};
 	}
-
 }

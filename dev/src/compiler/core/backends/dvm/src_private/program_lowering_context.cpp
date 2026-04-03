@@ -7,11 +7,6 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include "base/str/str_utils.hpp"
-
-#include "string_id/string_id.hpp"
-
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
@@ -119,9 +114,6 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	CRef<lir::Function> lir_function
 ) {
-	std::cout << "0000000000000000000000000000\n";
-	std::cout << "0     " << lir_function->mangled_name.strView() << "     0\n";
-	std::cout << "0000000000000000000000000000\n";
 	if (auto maybe_lowered = lir_function_to_dvm.atMaybe(lir_function)) return **maybe_lowered;
 
 	auto func_result_type = lowerAndKeepTslType(lir_function->return_type_layout);
@@ -272,10 +264,6 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
-
-	std::cout << "======= Produced Code Collection =======\n";
-	vm::code::serializeCode(collection, std::cout);
-	std::cout << "\n======================================\n";
 
 	try {
 		auto valid = vm::code::ValidProgram::withBuiltins();

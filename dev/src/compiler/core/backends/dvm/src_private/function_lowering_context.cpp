@@ -4,12 +4,8 @@
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
-#include "typesystem/lower/type_layout.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
-
-#include "base/except/exceptions.hpp"
-#include "base/str/str_utils.hpp"
 
 #include <string_id/string_id.hpp>
 
@@ -132,10 +128,6 @@ void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMV
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
-	std::cout << "Resolve LIRPlace:\n";
-	place.debugPrint(std::cout);
-	std::cout << '\n';
-
 	// First get the base place.
 	DVMPlace current_place = [&]() -> DVMPlace {
 		variant_match(place.base) {
@@ -173,17 +165,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 	// place.
 	for (usize i{ 0 }; i < place.projection_chain.size(); i++) {
 		const auto& projection = place.projection_chain[i];
-
-		std::cout << "======= Projection =======\n";
-		std::cout << "Current layout: " << current_layout->toStringIdentification() << '\n';
-		current_place.debugPrint(std::cout);
-		std::cout << "======= ========== =======\n";
-
-
 		variant_match(projection.storage) {
 			variant_case(lir::LIRPlace::DerefProjection, deref) {
-				std::cout << "DEREF PROJECTION\n";
-
 				CORE_ASSERT(
 					current_layout->is<tsl::PointerTypeLayout>(),
 					"DerefProjection performed on a non pointer layout"
@@ -214,7 +197,6 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				current_layout = pointee_layout;
 			}
 			variant_case(lir::LIRPlace::FieldProjection, field) {
-				std::cout << "FIELD PROJECTION\n";
 				CORE_ASSERT(
 					current_layout->is<tsl::ClassTypeLayout>(), "FieldProjection on non-class layout"
 				);

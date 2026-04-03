@@ -29,7 +29,6 @@ namespace compiler::driver {
 				CRef mir_function
 					= &ctx.query<mir::LowerToMIRFunction>({ hout_function })->valueOrThrow();
 				auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
-				lir_function->debugPrint(ctx, std::cout);
 				functions.push_back(lir_function);
 			}
 
