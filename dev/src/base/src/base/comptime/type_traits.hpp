@@ -117,7 +117,7 @@ namespace base {
 	 * @tparam VariantT The `std::variant` type.
 	 */
 	template<typename T, typename VariantT>
-	struct is_variant_member;
+	struct is_variant_member: std::false_type {};
 
 	template<typename T, typename... Types>
 	struct is_variant_member<T, std::variant<Types...>>:
