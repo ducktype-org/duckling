@@ -1,16 +1,16 @@
-# class Point { x: i64; y: i64; }
-# class Wrapper { p: Point; }
+class Point { x: i64; y: i64; }
+class Wrapper { p: Point; }
 
-# fun records1() -> () = {
-#     var w = Wrapper(Point(1, 2));
-#     let ref_w = &w;
+fun records1() -> () = {
+    var w = Wrapper(Point(1, 2));
+    let ref_w = &w;
 
-#     # Auto deref should get inserted.
-#     builtin_output_i64(ref_w.p.x); # 1
+    # Auto deref should get inserted.
+    builtin_output_i64(ref_w.p.x); # 1
 
-#     ref_w.p.y = 42;
-#     builtin_output_i64(w.p.y); # 42
-# }
+    ref_w.p.y = 42;
+    builtin_output_i64(w.p.y); # 42
+}
 
 class RefPoint { x: ref i64; y: ref i64; }
 class RefWrapper { p: ref RefPoint; }
@@ -23,37 +23,37 @@ fun records2() -> () = {
     var ref_point = &point;
     
     builtin_output_i64(ref_point.x);
-    # builtin_output_i64(ref_point.y);
+    builtin_output_i64(ref_point.y);
     
-    # var wrapper = RefWrapper(&point);
-    # var ref_wrapper = &wrapper;
+    var wrapper = RefWrapper(&point);
+    var ref_wrapper = &wrapper;
     
-    # ref_wrapper.p.x = 0;
-    # ref_wrapper.p.y = 1;
-    # builtin_output_i64(ref_wrapper.p.x);
-    # builtin_output_i64(ref_wrapper.p.y);
+    ref_wrapper.p.x = 0;
+    ref_wrapper.p.y = 1;
+    builtin_output_i64(ref_wrapper.p.x);
+    builtin_output_i64(ref_wrapper.p.y);
 }
 
-# fun point_by_ref(p: ref Point) -> () = {
-#     p.x = 777;
-#     p.y = 888;
-# }
+fun point_by_ref(p: ref Point) -> () = {
+    p.x = 777;
+    p.y = 888;
+}
 
-# fun records3() -> () = {
-#     var my_point = Point(10, 20);
-#     builtin_output_i64(my_point.x); # 10
-#     builtin_output_i64(my_point.y); # 20
+fun records3() -> () = {
+    var my_point = Point(10, 20);
+    builtin_output_i64(my_point.x); # 10
+    builtin_output_i64(my_point.y); # 20
 
-#     point_by_ref(&my_point);
+    point_by_ref(&my_point);
 
-#     builtin_output_i64(my_point.x); # 777
-#     builtin_output_i64(my_point.y); # 888
-# }
+    builtin_output_i64(my_point.x); # 777
+    builtin_output_i64(my_point.y); # 888
+}
 
 fun main() -> i64 = {
-    # records1();
+    records1();
     records2();
-    # records3();
+    records3();
 
     return 0;
 }

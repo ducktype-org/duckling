@@ -7,6 +7,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
+#include <ostream>
 #include <utility>
 
 namespace compiler::backend_vm::internal {
@@ -131,6 +132,8 @@ namespace compiler::backend_vm::internal {
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
+
+		void debugPrint(std::ostream& out) const;
 
 	private:
 		StoredValueVariant stored_place;

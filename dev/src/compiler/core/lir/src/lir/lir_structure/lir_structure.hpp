@@ -381,6 +381,8 @@ namespace compiler::lir {
 		bool hasProjections() const {
 			return !projection_chain.empty();
 		}
+
+		void debugPrint(std::ostream& output) const;
 	};
 
 	/**

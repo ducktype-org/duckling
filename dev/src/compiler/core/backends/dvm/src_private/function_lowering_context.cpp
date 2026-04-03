@@ -132,8 +132,9 @@ void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMV
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
-	std::cout << "Resolve LIRPlace\n";
-
+	std::cout << "Resolve LIRPlace:\n";
+	place.debugPrint(std::cout);
+	std::cout << '\n';
 
 	// First get the base place.
 	DVMPlace current_place = [&]() -> DVMPlace {
@@ -173,69 +174,82 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 	for (usize i{ 0 }; i < place.projection_chain.size(); i++) {
 		const auto& projection = place.projection_chain[i];
 
+		std::cout << "======= Projection =======\n";
+		std::cout << "Current layout: " << current_layout->toStringIdentification() << '\n';
+		current_place.debugPrint(std::cout);
+		std::cout << "======= ========== =======\n";
+
+
 		variant_match(projection.storage) {
 			variant_case(lir::LIRPlace::DerefProjection, deref) {
-				// Skip the last projection to not perform an unnecessary load on the last
-				// projection is a dereference. DVMPlace now stores a pointer to the final place
-				// after all projections have been applied.
-				if (i == place.projection_chain.size() - 1) {
-					current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
-					break;
-				}
+				std::cout << "DEREF PROJECTION\n";
+
+				CORE_ASSERT(
+					current_layout->is<tsl::PointerTypeLayout>(),
+					"DerefProjection performed on a non pointer layout"
+				);
 				const auto& current_pointer_layout
 					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
 				auto pointee_layout = current_pointer_layout.getPointee();
 
-				if (pointee_layout->is<tsl::ClassTypeLayout>()) {
+
+				if (current_place.isDirect()) {
+					// In this case we have a direct stack variable which stores a pointer.
+					// Dereferencing means we now treat the local as a pointer.
 					current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
 				} else {
-					auto pointee_type = program_context.lowerAndKeepTslType(pointee_layout);
-					auto next_ptr     = pushTempLocal(pointee_type, "deref_tmp_");
-					pushInstruction({ vm::code::builders::OpKind::load,
-					                  next_ptr.asAnyArgument(),
-					                  current_place.asArgument() });
-					current_place = { next_ptr, DVMPlace::AccessKind::Pointer };
-				}
-				current_layout = pointee_layout;
+					auto vm_loaded_type = program_context.lowerAndKeepTslType(current_layout);
 
-				// // Update types after the projection has been applied.
-				// auto next_ptr = pushTempLocal(pointee_type, "deref_tmp_");
-				// pushInstruction({ vm::code::builders::OpKind::load,
-				//                   next_ptr.asAnyArgument(),
-				//                   current_place.asArgument() });
-				// current_place  = { next_ptr, DVMPlace::AccessKind::Pointer };
-				// current_layout = current_pointer_layout.getPointee();
+					auto loaded_val_tmp = pushTempLocal(vm_loaded_type, "deref_tmp");
+
+					// Emit the load instruction.
+					pushInstruction({ vm::code::builders::OpKind::load,
+					                  loaded_val_tmp.asAnyArgument(),
+					                  current_place });
+
+					// Update types after the projection has been applied.
+					current_place = { loaded_val_tmp, DVMPlace::AccessKind::Pointer };
+				}
+
+				current_layout = pointee_layout;
 			}
 			variant_case(lir::LIRPlace::FieldProjection, field) {
+				std::cout << "FIELD PROJECTION\n";
 				CORE_ASSERT(
 					current_layout->is<tsl::ClassTypeLayout>(), "FieldProjection on non-class layout"
 				);
-				// Prepare field name for access.
+				// Prepare the class type.
 				const auto& class_layout
 					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
-				const auto  vm_class_type = program_context.lowerAndKeepTslType(current_layout);
-				const usize field_index
-					= class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
-				auto vm_field_name = base::strConcat("_", field_index + 1);
+				const auto vm_class_type = program_context.lowerAndKeepTslType(current_layout);
 
 				// Prepare the pointer to field type.
+				const usize field_index
+					= class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
 				const auto field_layout  = class_layout.getFieldLayoutOfLayoutIndex(field_index);
-				const auto field_vm_type = program_context.lowerAndKeepTslType(field_layout);
-				// TODOP: This may not be true. This may not be inserted into the context.
-				const auto ptr_to_field_type = vm::code::PointerType(
-					base::StrID(base::strConcat("ptr_", vm::code::typeName(field_vm_type))),
-					vm::code::typeName(field_vm_type)
-				);
-				program_context.insertType(ptr_to_field_type);
+				const auto vm_field_type = program_context.lowerAndKeepTslType(field_layout);
 
+				auto vm_field_name = base::strConcat("_", field_index + 1);
+
+				const auto ptr_to_field_type = vm::code::PointerType(
+					base::StrID(base::strConcat("ptr_", vm::code::typeName(vm_field_type))),
+					vm::code::typeName(vm_field_type)
+				);
+				program_context.insertType(ptr_to_field_type
+				);  // TODOP: Better abstraction for that.
+
+				// TODOP: Create a temporary to the field
 				auto field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
 
+				// Emit the pointer move instruction. Based on the `current_place` type,
+				// `structLea_lptr_lptr_field` or `structLea_lptr_lste_field` will be picked.
 				pushInstruction({ vm::code::builders::OpKind::structLea,
 				                  field_ptr_tmp,
 				                  current_place,
 				                  vm::opargs::Field{ typeName(vm_class_type),
 				                                     base::StrID(vm_field_name) } });
 
+				// `field_ptr_tmp` now holds a pointer to the appropriate struct field.
 				current_place  = { field_ptr_tmp, DVMPlace::AccessKind::Pointer };
 				current_layout = field_layout;
 			}

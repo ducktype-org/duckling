@@ -2,10 +2,14 @@
 
 #include "common.hpp"
 
+#include "base/extend_cpp/variant_match.hpp"
+
 #include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
+
+#include <iostream>
 
 using namespace compiler::backend_vm::internal;
 
@@ -80,6 +84,23 @@ DVMGlobal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asAnyArgument() const {
 	return VISIT(stored_place, place, return place.asAnyArgument());
+}
+
+void DVMPlace::debugPrint(std::ostream& out) const {
+	out << "DVMPlace: {\n";
+	variant_match(stored_place) {
+		variant_case(DVMLocal, local) {
+			out << "    LOCAL: " << local.name.strView() << " : "
+				<< vm::code::typeName(local.type).strView() << '\n';
+		}
+		variant_case(DVMGlobal, global) {
+			out << "    GLOBAL: " << global.name.strView() << " : "
+				<< vm::code::typeName(global.type).strView() << '\n';
+		}
+	}
+	auto acc_str = access_kind == AccessKind::Direct ? "[Direct]" : "[Pointer]";
+	out << "    Access Kind: " << acc_str << '\n';
+	out << "}\n";
 }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMImmediate::asArgument() const {
