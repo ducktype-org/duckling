@@ -1,6 +1,7 @@
 //! The home of [`QuackError`] struct and [`QuackResultContext`] trait, which are building blocks
 //! of error handling in duck and quackpack.
 
+use std::backtrace::Backtrace;
 // NOTE: In this file, we avoid generics as much as possible.
 //
 // On the first sight, `create_messages_errors!` could produce `$name<M>(pub M)`, and
@@ -58,6 +59,7 @@ pub struct QuackError {
 
 impl QuackError {
     /// Creates a [`QuackError`] with a single error message.
+    #[inline]
     pub fn new<T>(err: T) -> Self
     where
         T: Error + Send + Sync + 'static,
@@ -77,11 +79,13 @@ impl QuackError {
     }
 
     /// Create a [`QuackError`] from a message.
+    #[inline]
     pub fn message<M: fmt::Display>(m: M) -> Self {
         Self::new(MessageError(m.to_string().into()))
     }
 
     /// Add a context to this [`QuackError`].
+    #[inline]
     pub fn context<C: Error + Send + Sync + 'static>(self, context: C) -> Self {
         let context = ContextError {
             context: Box::new(context),
@@ -135,21 +139,25 @@ impl QuackError {
     }
 
     /// Add a note on top of this errors' chain.
+    #[inline]
     pub fn add_note<C: Into<Cow<'static, str>>>(self, note: C) -> Self {
         self.context(NoteMessage::new(note))
     }
 
     /// Add a hint on top of this errors' chain.
+    #[inline]
     pub fn add_hint<C: Into<Cow<'static, str>>>(self, hint: C) -> Self {
         self.context(HintMessage::new(hint))
     }
 
     /// Create a new note [`QuackError`].
+    #[inline]
     pub fn note<C: Into<Cow<'static, str>>>(note: C) -> Self {
         NoteMessage::new(note).into()
     }
 
     /// Create a new hint [`QuackError`].
+    #[inline]
     pub fn hint<C: Into<Cow<'static, str>>>(hint: C) -> Self {
         HintMessage::new(hint).into()
     }
@@ -163,7 +171,7 @@ macro_rules! create_messages_errors {
             pub struct $name(pub Cow<'static, str>);
 
             impl $name {
-                #[doc = concat!("Create a new `[", stringify!($name), "]` from a message.")]
+                #[doc = concat!("Create a new [`", stringify!($name), "`] from a message.")]
                 pub fn new(message: impl Into<Cow<'static, str>>) -> Self {
                     Self(message.into())
                 }
@@ -186,7 +194,43 @@ macro_rules! create_messages_errors {
     };
 }
 
-create_messages_errors!(MessageError NoteMessage HintMessage InternalError BareMessage);
+create_messages_errors!(MessageError NoteMessage HintMessage BareMessage);
+
+/// A message wrapped in an [`Error`]-like struct, which captures backtraces.
+pub struct InternalError {
+    message: Cow<'static, str>,
+    backtrace: Backtrace,
+}
+
+impl InternalError {
+    #[inline(always)] // Try not to mess up the backtrace.
+    /// Create a new [`InternalError`].
+    pub fn new(message: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            message: message.into(),
+            backtrace: Backtrace::force_capture(),
+        }
+    }
+
+    /// Get the captured [`Backtrace`] when creating this error.
+    pub fn backtrace(&self) -> &Backtrace {
+        &self.backtrace
+    }
+}
+
+impl fmt::Debug for InternalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.message, f)
+    }
+}
+
+impl fmt::Display for InternalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.message, f)
+    }
+}
+
+impl Error for InternalError {}
 
 #[derive(Debug)]
 /// A context with an error.
@@ -333,6 +377,7 @@ impl<T, E> QuackResultContext<T, E> for Result<T, E>
 where
     E: Into<QuackError>,
 {
+    #[inline]
     fn context<C>(self, ctx: C) -> QuackResult<T>
     where
         C: fmt::Display,
@@ -340,6 +385,7 @@ where
         self.map_err(|e| e.into().context(MessageError::new(ctx.to_string())))
     }
 
+    #[inline]
     fn context_internal<C>(self, ctx: C) -> QuackResult<T>
     where
         C: fmt::Display,
@@ -347,6 +393,7 @@ where
         self.map_err(|e| e.into().context(InternalError::new(ctx.to_string())))
     }
 
+    #[inline]
     fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: fmt::Display,
@@ -355,6 +402,7 @@ where
         self.map_err(|e| e.into().context(MessageError::new(ctx().to_string())))
     }
 
+    #[inline]
     fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: fmt::Display,
@@ -365,6 +413,7 @@ where
 }
 
 impl<T> QuackResultContext<T, QuackError> for Option<T> {
+    #[inline]
     fn context<C>(self, ctx: C) -> QuackResult<T>
     where
         C: fmt::Display,
@@ -372,6 +421,7 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
         self.ok_or_else(|| QuackError::message(ctx.to_string()))
     }
 
+    #[inline]
     fn context_internal<C>(self, ctx: C) -> QuackResult<T>
     where
         C: fmt::Display,
@@ -379,6 +429,7 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
         self.ok_or_else(|| InternalError::new(ctx.to_string()).into())
     }
 
+    #[inline]
     fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: fmt::Display,
@@ -387,6 +438,7 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
         self.ok_or_else(|| QuackError::message(ctx().to_string()))
     }
 
+    #[inline]
     fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: fmt::Display,
