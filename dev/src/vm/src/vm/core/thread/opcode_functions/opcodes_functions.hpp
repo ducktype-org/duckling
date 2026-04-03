@@ -142,16 +142,16 @@ namespace vm {
 			// Update values passed as arguments.
 			instr = called_func.bc.data();
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
-			// up to this point) - the size of ret_val and arguments passed to callee.
+			// up to this point) - the size of ret_vals and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 
-			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
+			// Assumes that local_stack_size = ret_vals + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
 
 			// Move shared blocks into callee's block stack and block_local_offset map.
 			// This is the id of the first shared block in the caller's block_stack. If the called
-			// function is non-void we also count the ret_val block.
+			// function is non-void we also count the ret_vals blocks.
 			u64 arg_count              = called_func.parameters.size();
 			u64 ret_count              = called_func.result_types.size();
 			u64 shared_block_count     = arg_count + ret_count;

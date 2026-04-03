@@ -4,7 +4,7 @@ type dynamic_table: dtablei64 i64
 type pointer: ptr_dtablei64 dtablei64
 
 function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv
 
@@ -13,36 +13,36 @@ function main { i64, ptr_argv } -> i64 {
 	init_lany_type res_arr_ptr, ptr_dtablei64;
 	dynTableReAlloc_lptr_type_l64 res_arr_ptr, dtablei64, arg0;
 	init_lany_type stoi_ret_val, i64;
-	mov_l64_imm ret_val, 0;
-	#output_l64 ret_val;
+	mov_l64_imm ret_val_0, 0;
+	#output_l64 ret_val_0;
 
 	label ConvLoop;
-		cmpEq_l64_l64 ret_val, arg0;
+		cmpEq_l64_l64 ret_val_0, arg0;
 		jmpIf_label EndConvLoop;
 		init_lany_type stoi_arg, ptr_string;
-		dynTableLoad_lany_lptr_l64 stoi_arg, arg1, ret_val;
+		dynTableLoad_lany_lptr_l64 stoi_arg, arg1, ret_val_0;
 		call_builtinfunc builtin_stoi_lptr;
-		dynTableStore_lptr_lany_l64 res_arr_ptr, stoi_ret_val, ret_val;
-		add_l64_imm ret_val, 1;
+		dynTableStore_lptr_lany_l64 res_arr_ptr, stoi_ret_val, ret_val_0;
+		add_l64_imm ret_val_0, 1;
 		jmp_label ConvLoop;
 
 
 	label EndConvLoop;
-		mov_l64_imm ret_val, 0;
+		mov_l64_imm ret_val_0, 0;
 
 	label Loop;
-		cmpEq_l64_l64       ret_val, arg0;  # i == argc
+		cmpEq_l64_l64       ret_val_0, arg0;  # i == argc
 		jmpIf_label         End;
 		# temp := argv[i]
-		dynTableLoad_lany_lptr_l64   temp, res_arr_ptr, ret_val;
+		dynTableLoad_lany_lptr_l64   temp, res_arr_ptr, ret_val_0;
 
 		add_l64_l64         sum, temp;      # sum += temp
-		add_l64_imm         ret_val, 1;     # i++
+		add_l64_imm         ret_val_0, 1;     # i++
 		jmp_label           Loop;
 	label End;
 
 	output_l64 sum;
-	mov_l64_imm ret_val, 0;
+	mov_l64_imm ret_val_0, 0;
 
 	free_lptr res_arr_ptr;
 	deinit; # stoi_ret_val

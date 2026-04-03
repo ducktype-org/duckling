@@ -169,15 +169,10 @@ namespace vm::loader::compiler {
 		}
 
 		code::FuncSignature func_signature = ctx.function.signature;
-		if (func_signature.result_types.size()) {
-			push(base::StrID("ret_val"), func_signature.result_types[0].str);
-
-			for (auto [idx, ret_type]:
-			     std::views::enumerate(func_signature.result_types) | std::views::drop(1)) {
-				push(base::StrID(base::strConcat("ret_val", idx).c_str()), ret_type.str);
-			}
-		}
-		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
+		using namespace std::views;
+		for (auto [idx, ret_type]: enumerate(func_signature.result_types))
+			push(base::StrID(base::strConcat("ret_val_", idx).c_str()), ret_type.str);
+		for (auto [idx, param_type]: enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
 		std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{

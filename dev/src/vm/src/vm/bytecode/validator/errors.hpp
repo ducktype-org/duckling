@@ -367,7 +367,7 @@ namespace vm::code {
 	);
 	DEFINE_ARGUMENT_ERROR(
 		InvalidTailcallArgumentsError,
-		"Invalid tailcall arguments. The stack should contain exactly ret_val and arguments for "
+		"Invalid tailcall arguments. The stack should contain exactly return values and arguments for "
 		"calling: "
 	);
 	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot instantiate a value of type: ");

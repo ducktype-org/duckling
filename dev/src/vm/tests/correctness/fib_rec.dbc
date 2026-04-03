@@ -1,7 +1,7 @@
 function fib { i64 } -> i64 {
 	# arg0 -> n
 
-	mov_l64_l64         ret_val, arg0;
+	mov_l64_l64         ret_val_0, arg0;
 
 	# if !(n > 1): end
 	cmpGt_l64_imm        arg0, 1;
@@ -14,7 +14,7 @@ function fib { i64 } -> i64 {
 	sub_l64_imm         n1, 1;
 	call_func           fib;
 
-	mov_l64_l64         ret_val, rec_result;
+	mov_l64_l64         ret_val_0, rec_result;
 
 	# fib(n - 2)
 	init_lany_type      n2, i64;
@@ -25,8 +25,8 @@ function fib { i64 } -> i64 {
 
 
 	# (fib(n - 1) + fib(n - 2)) % mod
-	add_l64_l64         ret_val, rec_result;
-	mod_l64_imm         ret_val, 8388449;
+	add_l64_l64         ret_val_0, rec_result;
+	mod_l64_imm         ret_val_0, 8388449;
 
 	deinit;  # rec_result
 	label               End;
@@ -36,7 +36,7 @@ function fib { i64 } -> i64 {
 }
 
 function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv
 

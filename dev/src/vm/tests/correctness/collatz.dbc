@@ -59,7 +59,7 @@ function collatz { i64 } -> i64 {
 	label End;
 
 	# return max
-	mov_l64_l64 	ret_val, max; # ret_val := max
+	mov_l64_l64 	ret_val_0, max; # ret_val_0 := max
 
 	deinit; # tmp
 	deinit; # max
@@ -69,7 +69,7 @@ function collatz { i64 } -> i64 {
 
 
 function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv
 
@@ -90,7 +90,7 @@ function main { i64, ptr_argv } -> i64 {
 	# do-for (i < x; i++)
 	label Loop;
 		# tmp := collatz(i)
-		init_lany_type 			col_ret_val, i64; 	# collatz(i) ret_val
+		init_lany_type 			col_ret_val, i64; 	# collatz(i) ret_val_0
 		init_lany_type 			col_arg0, i64; 		# collatz(i) arg0
 
 		mov_l64_l64 		col_arg0, i;		# arg0 := i

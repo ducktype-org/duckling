@@ -2,5 +2,5 @@ type primitive: int64 8
 type fixed_size_table: int64 i64 4
 
 function main { i64, ptr_argv } -> i64 {
-	mov_l64_imm ret_val, 5;
+	mov_l64_imm ret_val_0, 5;
 }

@@ -3,7 +3,7 @@ type fun: fib { i64 } i64
 function fib {
     # n := argument
 
-    # [0, 8) ret_val
+    # [0, 8) ret_val_0
     # [8, 16) arg0
 
     mov_l64_l64         0, 8;
@@ -13,7 +13,7 @@ function fib {
     jmpIfNot_label   End;
 
     # fib(n - 1)
-    init_type i64; # [16, 24) fib(n-1) ret_val
+    init_type i64; # [16, 24) fib(n-1) ret_val_0
     init_type i64; # [24, 32) fib(n-1) arg0
     mov_l64_l64         24, 8;
     sub_l64_imm         24, 1;
@@ -33,7 +33,7 @@ function fib {
     add_l64_l64         0, 16;
     mod_l64_imm         0, 8388449;
 
-    deinit; # fib() ret_val
+    deinit; # fib() ret_val_0
     label               End;
 
     deinit; # arg0
@@ -41,12 +41,12 @@ function fib {
 }
 
 function main { i64, ptr_argv } -> i64 {
-    # [0, 8) main ret_val
+    # [0, 8) main ret_val_0
     # [8, 16) -> argc
     # [16, 32) -> *argv
 
     # n := argument
-    init_type   i64; # [32, 40) fib() ret_val
+    init_type   i64; # [32, 40) fib() ret_val_0
     init_type   i64; # [40, 48) fib() arg0
     input_l64   40;
 
@@ -54,7 +54,7 @@ function main { i64, ptr_argv } -> i64 {
 
     output_l64  32;
 
-    deinit; # fib() ret_val
+    deinit; # fib() ret_val_0
     deinit;       # *argv
     deinit;       # argc
     ret;

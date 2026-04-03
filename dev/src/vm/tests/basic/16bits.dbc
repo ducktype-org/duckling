@@ -103,17 +103,17 @@ function integers {} -> i32 {
 	ucmpLe_l16_imm	b, 10;		# MAX_U32 <= 10
 	jmpIf_label		fail;
 
-	mov_l32_imm 	ret_val, 1;
+	mov_l32_imm 	ret_val_0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm 	ret_val, 1234;
+	mov_l32_imm 	ret_val_0, 1234;
 
 	ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
-    # ret_val -> main ret_val
+    # ret_val_0 -> main ret_val_0
     # arg0 -> argc
     # arg1 -> *argv
 

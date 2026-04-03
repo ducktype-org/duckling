@@ -2,7 +2,7 @@ type fixed_size_table: stable64 i64 4
 type pointer: stable64_ptr stable64
 
 function main { i64, ptr_argv } -> i64 {
-    # ret_val
+    # ret_val_0
     # argc
     # *argv
     init_lany_type test_val, i64;

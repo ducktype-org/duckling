@@ -1,5 +1,5 @@
-# Tests if it's possible to take pointer to ret_val/argument passed to a function, thus
-# it tests whether ret_val and arg0 blocks exist in the called function block stack or only
+# Tests if it's possible to take pointer to ret_val_0/argument passed to a function, thus
+# it tests whether ret_val_0 and arg0 blocks exist in the called function block stack or only
 # on the local stack
 
 function check { i64 } -> i64 {
@@ -8,8 +8,8 @@ function check { i64 } -> i64 {
 	# This will panic if arg0 block doesn't exist in the block stack.
 	ref_lptr_lany       p, arg0;
 
-	# This will panic if ret_val block doesn't exist in the block stack.
-	ref_lptr_lany       p, ret_val;
+	# This will panic if ret_val_0 block doesn't exist in the block stack.
+	ref_lptr_lany       p, ret_val_0;
 
 	init_lany_type      x, i64;
 	mov_l64_imm         x, 42;
@@ -18,7 +18,7 @@ function check { i64 } -> i64 {
 
 	init_lany_type      x, i64;
 	load_lany_lptr   	x, p;
-	mov_l64_l64         ret_val, x;
+	mov_l64_l64         ret_val_0, x;
 
 	deinit; # arg0
 	deinit; # x
@@ -27,7 +27,7 @@ function check { i64 } -> i64 {
 }
 
 function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv
 

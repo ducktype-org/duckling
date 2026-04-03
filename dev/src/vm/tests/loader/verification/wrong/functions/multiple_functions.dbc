@@ -1,10 +1,10 @@
 function inner_func {} -> i64 {
-	mov_l64_imm    	ret_val, 45;
+	mov_l64_imm    	ret_val_0, 45;
 	ret;
 }
 
 function inner_func {} -> i64 {
-	mov_l64_imm     ret_val, 42;
+	mov_l64_imm     ret_val_0, 42;
 	ret;
 }
 

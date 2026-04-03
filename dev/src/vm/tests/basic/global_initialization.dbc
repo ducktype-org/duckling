@@ -16,6 +16,6 @@ function _Q_M22globals_initializationG1ggc {  } -> void {
 function main { i64, ptr_argv } -> i64 {
     label                   label_0;
     # Terminator: ReturnValue
-    mov_l64_g64             ret_val,_Q_M22globals_initializationG1g;
+    mov_l64_g64             ret_val_0,_Q_M22globals_initializationG1g;
     ret;
 }

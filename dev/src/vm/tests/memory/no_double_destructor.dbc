@@ -7,7 +7,7 @@
 #     field1: ptr_i64 | i64
 # }
 # table = MyStruct[3];
-# table[0].field1 = &ret_val;
+# table[0].field1 = &ret_val_0;
 
 type variant: MyVariant { ptr_i64, i64 }
 
@@ -24,8 +24,8 @@ type pointer: ptr_ptr_i64 ptr_i64
 
 function main { i64, ptr_argv } -> i64 {
     init_lany_type int_ptr, ptr_i64;
-    ref_lptr_lany int_ptr, ret_val;
-    # int_ptr = &ret_val;
+    ref_lptr_lany int_ptr, ret_val_0;
+    # int_ptr = &ret_val_0;
 
     init_lany_type int_ptr_ptr, ptr_ptr_i64;
     init_lany_type table, MyTable;
@@ -36,7 +36,7 @@ function main { i64, ptr_argv } -> i64 {
     # table_ptr = &MyStruct[0];
 
     init_lany_type struct_ptr, MyStructPtr;
-    fixedSizeTableLea_lptr_lptr_l64 struct_ptr, table_ptr, ret_val;  # ret_val == 0
+    fixedSizeTableLea_lptr_lptr_l64 struct_ptr, table_ptr, ret_val_0;  # ret_val_0 == 0
     # struct_ptr = &MyStruct[0];
 
     init_lany_type variant_ptr, MyVariantPtr;

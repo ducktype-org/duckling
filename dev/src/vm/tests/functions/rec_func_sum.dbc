@@ -14,10 +14,10 @@ function sum { i64 } -> i64 {
 
 		call_func           sum;
 
-		mov_l64_l64         ret_val, total;
-		add_l64_l64         ret_val,  arg0;
+		mov_l64_l64         ret_val_0, total;
+		add_l64_l64         ret_val_0,  arg0;
 
-		deinit; # sum() ret_val. arg0 was deinitialized by the call.
+		deinit; # sum() ret_val_0. arg0 was deinitialized by the call.
 	label ret_label;
 
 	deinit; # arg0
@@ -25,7 +25,7 @@ function sum { i64 } -> i64 {
 }
 
 function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv
 
@@ -37,7 +37,7 @@ function main { i64, ptr_argv } -> i64 {
 
 	output_l64          sum_ret_val;
 
-	deinit; # sum ret_val, sum arg0 is deinitialized by the call
+	deinit; # sum ret_val_0, sum arg0 is deinitialized by the call
 	deinit; # *argv
 	deinit; # argc
 	ret;

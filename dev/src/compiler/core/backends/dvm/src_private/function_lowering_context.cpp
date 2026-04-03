@@ -177,7 +177,7 @@ DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
 		);
 	}
 	return DVMLocal{
-		.name = base::StrID("ret_val"),
+		.name = base::StrID("ret_val_0"),
 		.type = function_return_type,
 	};
 }

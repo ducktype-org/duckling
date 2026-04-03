@@ -3,15 +3,15 @@
 # output = a + b + c + d
 
 function foo { i64, i64 } -> i64 {
-	mov_l64_l64     ret_val, arg0;
-	add_l64_l64     ret_val, arg1;
+	mov_l64_l64     ret_val_0, arg0;
+	add_l64_l64     ret_val_0, arg1;
 	deinit; # arg1
 	deinit; # arg0
 	ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv
 
@@ -39,7 +39,7 @@ function main { i64, ptr_argv } -> i64 {
 
 	output_l64      acc;
 
-	deinit; # foo ret_val
+	deinit; # foo ret_val_0
 	deinit; # accumulator
 	deinit; # *argv
 	deinit; # argc

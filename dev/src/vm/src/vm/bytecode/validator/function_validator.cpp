@@ -109,15 +109,11 @@ public:
 	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
 		  types_ctx(&types_ctx),
 		  number_of_ret_vals(signature.result_types.size()) {
-		if (signature.result_types.size()) {
-			push(base::StrID("ret_val"), signature.result_types[0].str);
-
-			for (auto [idx, ret]:
-			     std::views::enumerate(signature.result_types) | std::views::drop(1)) {
-				push(base::StrID(base::strConcat("ret_val", idx).c_str()), ret.str);
-			}
-		}
-		for (auto [idx, param]: std::views::enumerate(signature.parameters))
+		using namespace std::views;
+		for (auto [idx, ret]: enumerate(signature.result_types))
+			push(base::StrID(base::strConcat("ret_val_", idx).c_str()), ret.str);
+	
+		for (auto [idx, param]: enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
 	}
 

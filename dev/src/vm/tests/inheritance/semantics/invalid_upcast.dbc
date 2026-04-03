@@ -12,7 +12,7 @@ type pointer: DogPtr Dog
 type pointer: CatPtr Cat
 
 function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+	# ret_val_0 -> main ret_val_0
 	# arg0 -> argc
 	# arg1 -> *argv
 	init_lany_type dog, DogPtr;
