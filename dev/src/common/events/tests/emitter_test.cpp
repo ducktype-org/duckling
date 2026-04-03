@@ -12,6 +12,7 @@ public:
 		TESTER_ADD_TEST(detachTest);
 		TESTER_ADD_TEST(multipleListenersTest);
 		TESTER_ADD_TEST(multipleEmittersTest);
+		TESTER_ADD_TEST(selfDetachTest);
 	}
 
 private:
@@ -87,6 +88,27 @@ private:
 
 		emitter1.emitEvent({ 42 });
 		ASSERT_EQUAL_PRINT(8, some_number);
+	}
+
+	void selfDetachTest() {
+		events::Emitter<IntEvent> emitter;
+
+		int some_number = 7;
+
+		events::Listener<IntEvent> listener([&](IntEvent event) {
+			some_number = event.value;
+			emitter.detachListener(listener);
+		});
+
+		emitter.attachListener(listener);
+
+		emitter.emitEvent({42});
+
+		ASSERT_EQUAL_PRINT(42, some_number);
+
+		emitter.emitEvent({8});
+
+		ASSERT_EQUAL_PRINT(42, some_number);
 	}
 };
 
