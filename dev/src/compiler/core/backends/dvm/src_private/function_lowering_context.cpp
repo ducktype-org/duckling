@@ -160,17 +160,34 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 		variant_match(projection.storage) {
 			variant_case(lir::LIRPlace::DerefProjection, deref) {
-				// Update types after the projection has been applied.
+				CORE_ASSERT(
+					current_layout->is<tsl::PointerTypeLayout>(),
+					"DerefProjection performed on a non pointer layout"
+				);
 				const auto& current_pointer_layout
 					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-				auto pointee_type
-					= program_context.lowerAndKeepTslType(current_pointer_layout.getPointee());
-				auto next_ptr = pushTempLocal(pointee_type, "deref_tmp_");
-				pushInstruction({ vm::code::builders::OpKind::load,
-				                  next_ptr.asAnyArgument(),
-				                  current_place.asArgument() });
-				current_place  = { next_ptr, DVMPlace::AccessKind::Pointer };
-				current_layout = current_pointer_layout.getPointee();
+				auto pointee_layout = current_pointer_layout.getPointee();
+
+
+				if (current_place.isDirect()) {
+					// In this case we have a direct stack variable which stores a pointer.
+					// Dereferencing means we now treat the local as a pointer.
+					current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
+				} else {
+					auto vm_loaded_type = program_context.lowerAndKeepTslType(current_layout);
+
+					auto loaded_val_tmp = pushTempLocal(vm_loaded_type, "deref_tmp");
+
+					// Emit the load instruction.
+					pushInstruction({ vm::code::builders::OpKind::load,
+					                  loaded_val_tmp.asAnyArgument(),
+					                  current_place });
+
+					// Update types after the projection has been applied.
+					current_place = { loaded_val_tmp, DVMPlace::AccessKind::Pointer };
+				}
+
+				current_layout = pointee_layout;
 			}
 			variant_case(lir::LIRPlace::FieldProjection, field) {
 				// @TODO: #1560 handle access into fields.
