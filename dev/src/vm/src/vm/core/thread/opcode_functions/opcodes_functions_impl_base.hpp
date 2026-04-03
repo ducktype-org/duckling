@@ -417,13 +417,13 @@ namespace vm {
 			}
 
 			std::vector<TypeCRef> ret_types = {};
-			if (function_signature->result_type.size()) {
+			if (function_signature->result_types.size()) {
 				CORE_ASSERT(
-					function_signature->result_type.size() == 1,
+					function_signature->result_types.size() == 1,
 					"No support for returning multiple types"
 				);
 				ret_types.emplace_back(
-					thread.executing_program->getTypes().at(function_signature->result_type.at(0))
+					thread.executing_program->getTypes().at(function_signature->result_types.at(0))
 				);
 			}
 
@@ -451,9 +451,9 @@ namespace vm {
 			auto ext_func    = thread.executing_program->getExternCFunctions().at(ext_func_id);
 
 			auto arg_count = ext_func->parameters.size();
-			bool is_void   = ext_func->result_type.size() == 0;
+			bool is_void   = ext_func->result_types.size() == 0;
 			CORE_ASSERT(
-				ext_func->result_type.size() <= 1, "C function cannot return more than 1 type"
+				ext_func->result_types.size() <= 1, "C function cannot return more than 1 type"
 			);
 
 			if (arg_count == 0 && is_void) {
@@ -480,7 +480,7 @@ namespace vm {
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
 				byte* args_pointer   = result_pointer
-				                   + (is_void ? 0 : ext_func->result_type.at(0)->getSize().asInt());
+				                   + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
@@ -540,7 +540,7 @@ namespace vm {
 		{
 			// Frame of the function we're returning from.
 			auto* callee_frame = frame;
-			u64   ret_count    = frame->current_function->result_type.size();
+			u64   ret_count    = frame->current_function->result_types.size();
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.

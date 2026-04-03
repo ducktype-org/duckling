@@ -153,7 +153,7 @@ namespace vm {
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
 			u64 arg_count              = called_func.parameters.size();
-			u64 ret_count              = called_func.result_type.size();
+			u64 ret_count              = called_func.result_types.size();
 			u64 shared_block_count     = arg_count + ret_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 

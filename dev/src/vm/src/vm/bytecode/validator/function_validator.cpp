@@ -108,12 +108,12 @@ public:
 
 	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
 		  types_ctx(&types_ctx),
-		  number_of_ret_vals(signature.result_type.size()) {
-		if (signature.result_type.size()) {
-			push(base::StrID("ret_val"), signature.result_type[0].str);
+		  number_of_ret_vals(signature.result_types.size()) {
+		if (signature.result_types.size()) {
+			push(base::StrID("ret_val"), signature.result_types[0].str);
 
 			for (auto [idx, ret]:
-			     std::views::enumerate(signature.result_type) | std::views::drop(1)) {
+			     std::views::enumerate(signature.result_types) | std::views::drop(1)) {
 				push(base::StrID(base::strConcat("ret_val", idx).c_str()), ret.str);
 			}
 		}
@@ -199,7 +199,7 @@ class FunctionValidator {
 		}();
 
 		auto& params = signature->parameters;
-		auto& reslts = signature->result_type;
+		auto& reslts = signature->result_types;
 
 		if (params.size() + reslts.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
@@ -247,7 +247,7 @@ class FunctionValidator {
 		auto generic_arg = opargs::OpCodeArg{ instr.method };
 
 		auto& params = method_signature->parameters;
-		auto& reslts = method_signature->result;
+		auto& reslts = method_signature->result_types;
 
 		// Too many parameters.
 		if (params.size() + reslts.size() > local_stack.size())
@@ -287,12 +287,12 @@ class FunctionValidator {
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
 		auto signature   = signatures.at(fun_name);
 
-		if (!(signature.result_type == current_signature.result_type
+		if (!(signature.result_types == current_signature.result_types
 		      && signature.parameters == current_signature.parameters))
 			throw InvalidTailcallSignatureError(generic_arg);
 
 		auto& params = signature.parameters;
-		auto& reslts = signature.result_type;
+		auto& reslts = signature.result_types;
 
 		if (params.size() + reslts.size() != local_stack.size())
 			throw InvalidTailcallArgumentsError(generic_arg);
@@ -1644,15 +1644,15 @@ class FunctionValidator {
 	void validateSignature() {
 		if (function.name.str == base::StrID("main")
 		    && !(
-				function.signature.result_type.size() == 1
-				&& function.signature.result_type[0].str == base::StrID("i64")
+				function.signature.result_types.size() == 1
+				&& function.signature.result_types[0].str == base::StrID("i64")
 			)) {
 			throw InvalidMainReturnType(function.signature);
 		}
 		for (const auto& param_type: function.signature.parameters)
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 
-		for (const auto& reslts: function.signature.result_type)
+		for (const auto& reslts: function.signature.result_types)
 			if (!types_ctx.contains(reslts)) throw UnknownTypeError(opargs::Type{ reslts });
 	}
 

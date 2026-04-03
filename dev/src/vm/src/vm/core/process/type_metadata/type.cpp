@@ -140,7 +140,7 @@ namespace vm {
 
 		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
-		kind = kind::Function{ .parameters = std::move(parameters), .result = std::move(result) };
+		kind = kind::Function{ .parameters = std::move(parameters), .result_types = std::move(result) };
 	}
 
 	void Type::defineOpaque(TypeSize pass_size) {
@@ -283,14 +283,14 @@ namespace vm {
 
 	base::Optional<u64> Type::getResultTypeCount() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
-			return function->result.size();
+			return function->result_types.size();
 		});
 	}
 
 	base::Optional<Bytes> Type::getResultTypeSize() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
 			Bytes size(0);
-			for (const auto& reslt: function->result) size += reslt->getSize();
+			for (const auto& reslt: function->result_types) size += reslt->getSize();
 			return size;
 		});
 	}
@@ -298,8 +298,8 @@ namespace vm {
 	base::Optional<TypeCRef> Type::getNthResultType(u64 parameter_id) const {
 		return get<kind::Function>().flatMap(
 			[parameter_id](CRef<kind::Function> function) -> base::Optional<TypeCRef> {
-				if (parameter_id >= function->result.size()) return std::nullopt;
-				return base::Optional<TypeCRef>(function->result[parameter_id]);
+				if (parameter_id >= function->result_types.size()) return std::nullopt;
+				return base::Optional<TypeCRef>(function->result_types[parameter_id]);
 			}
 		);
 	}

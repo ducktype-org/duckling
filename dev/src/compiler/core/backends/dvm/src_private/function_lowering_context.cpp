@@ -158,9 +158,9 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)
 		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
-	function.signature.result_type = {};
+	function.signature.result_types = {};
 	if (auto type_name = vm::code::typeName(function_return_type); type_name != "void")
-		function.signature.result_type.emplace_back(type_name);
+		function.signature.result_types.emplace_back(type_name);
 	function.body = std::move(function_body);
 
 	if_opt_some(fun_di_builder_opt, builder) { builder.end(); }
@@ -237,7 +237,7 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
 
 	std::vector<vm::code::TypeOfData> called_result_type
-		= ext_func.signature.result_type | std::views::transform([&](const auto& reslt) {
+		= ext_func.signature.result_types | std::views::transform([&](const auto& reslt) {
 			  return vm::code::getBuiltinTypeByName(reslt).value();
 		  })
 	    | std::ranges::to<std::vector>();

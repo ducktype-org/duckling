@@ -497,7 +497,7 @@ namespace vm::loader::parser {
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
 				state.parse().one(&field_type);
-				out->result_type.emplace_back(field_type);
+				out->result_types.emplace_back(field_type);
 
 				if (state.empty()) break;
 				if (state[0].is(lang_def::Special::Comma)) {
@@ -513,7 +513,7 @@ namespace vm::loader::parser {
 		} else {
 			tpc::Identifier field_type;
 			state.parse().one(&field_type);
-			if (field_type.value != "void") out->result_type.emplace_back(field_type);
+			if (field_type.value != "void") out->result_types.emplace_back(field_type);
 		}
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
@@ -985,7 +985,7 @@ namespace vm::loader::parser {
 		}
 		out << "} -> { ";
 		first = true;
-		for (const auto& param: result_type) {
+		for (const auto& param: result_types) {
 			if (!first) out << ", ";
 			out << param.value.strView();
 			first = false;

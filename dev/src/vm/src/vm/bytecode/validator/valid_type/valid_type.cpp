@@ -151,12 +151,12 @@ void valid_type::ValidType::defineVariant(const std::vector<ValidTypeID>& varian
 }
 
 void valid_type::ValidType::defineFunction(
-	const std::vector<ValidTypeID>& parameters, const std::vector<ValidTypeID>& result
+	const std::vector<ValidTypeID>& parameters, const std::vector<ValidTypeID>& results
 ) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
 			state = Defined{ .kind = defined::DefinedFunction{ .parameters = parameters,
-				                                               .result     = result } };
+				                                               .result_types     = results } };
 		}
 		variant_default { CORE_PANIC("Bad type define: type already defined or finalized"); }
 	}
@@ -372,7 +372,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind
                                = finalized::Function{ .parameters = std::move(function.parameters),
-				                                                            .result     = std::move(function.result) } };
+				                                                            .result_types     = std::move(function.result_types) } };
 		}
 		variant_case(defined::DefinedVariant, variant) {
 			CORE_ASSERT(

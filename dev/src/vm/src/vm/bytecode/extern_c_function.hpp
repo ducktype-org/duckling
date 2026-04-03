@@ -167,9 +167,9 @@ namespace vm::detail {
 			}                                                                                           \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_PLACE_VALIDATION, __VA_ARGS__);                        \
 			vm::code::FuncSignature signature;                                                          \
-			signature.result_type = {};                                                                 \
+			signature.result_types = {};                                                                \
 			if (base::StrID(VM_EXT_C_VM_TYPE_NAME(ResVmType)) != "void")                                \
-				signature.result_type.emplace_back(VM_EXT_C_VM_TYPE_NAME(ResVmType));                   \
+				signature.result_types.emplace_back(VM_EXT_C_VM_TYPE_NAME(ResVmType));                  \
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \
@@ -242,9 +242,19 @@ namespace vm {
 			const std::string& vm_type,
 			const usize        vm_type_size
 		):
-			  ExtCFuncError(base::strConcat(
-				  ERR_MSG, cpp_type, "(", cpp_type_size, ") vs. ", vm_type, "(", vm_type_size, ")"
-			  )) {}
+			  ExtCFuncError(
+				  base::strConcat(
+					  ERR_MSG,
+					  cpp_type,
+					  "(",
+					  cpp_type_size,
+					  ") vs. ",
+					  vm_type,
+					  "(",
+					  vm_type_size,
+					  ")"
+				  )
+			  ) {}
 	};
 
 	class ExtCVmTypeNotExists: public ExtCFuncError {

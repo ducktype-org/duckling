@@ -169,11 +169,11 @@ namespace vm::loader::compiler {
 		}
 
 		code::FuncSignature func_signature = ctx.function.signature;
-		if (func_signature.result_type.size()) {
-			push(base::StrID("ret_val"), func_signature.result_type[0].str);
+		if (func_signature.result_types.size()) {
+			push(base::StrID("ret_val"), func_signature.result_types[0].str);
 
 			for (auto [idx, ret_type]:
-			     std::views::enumerate(func_signature.result_type) | std::views::drop(1)) {
+			     std::views::enumerate(func_signature.result_types) | std::views::drop(1)) {
 				push(base::StrID(base::strConcat("ret_val", idx).c_str()), ret_type.str);
 			}
 		}
@@ -288,10 +288,10 @@ namespace vm::loader::compiler {
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
 			u64                   ret_type_sum = 0;
-			std::vector<TypeCRef> result_type = {};
-			for (auto& ret: signature.result_type) {
+			std::vector<TypeCRef> result_types = {};
+			for (auto& ret: signature.result_types) {
 				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
-				result_type.emplace_back(low_program.types->at(ret));
+				result_types.emplace_back(low_program.types->at(ret));
 			}
 
 			low_program.functions.insert(
@@ -301,7 +301,7 @@ namespace vm::loader::compiler {
 			                      .arg_size         = parameters_size,
 			                      .ret_size         = ret_type_sum,
 			                      .parameters       = std::move(parameters),
-			                      .result_type      = std::move(result_type) },
+			                      .result_types      = std::move(result_types) },
 				function.name
 
 			);
@@ -363,7 +363,7 @@ namespace vm::loader::compiler {
 				std::plus()
 			);
 
-			std::vector<TypeCRef> rets = new_func.signature.result_type
+			std::vector<TypeCRef> rets = new_func.signature.result_types
 			                           | std::views::transform([this](const auto& param_name) {
 											 return low_program.types->at(param_name);
 										 })
@@ -375,7 +375,7 @@ namespace vm::loader::compiler {
 					.function_pointer   = new_func.function_pointer,
 					.parameter_size_sum = param_size_sum,
 					.parameters         = std::move(params),
-					.result_type        = std::move(rets),
+					.result_types        = std::move(rets),
 				},
 				new_func.name
 			);

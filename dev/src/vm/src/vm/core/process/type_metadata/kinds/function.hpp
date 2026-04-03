@@ -7,6 +7,6 @@
 namespace vm::kind {
 	struct Function {
 		std::vector<TypeCRef> parameters;
-		std::vector<TypeCRef> result;
+		std::vector<TypeCRef> result_types;
 	};
 }

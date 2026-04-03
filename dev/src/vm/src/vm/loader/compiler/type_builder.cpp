@@ -137,12 +137,12 @@ namespace {
 							  return type_metadata->at(vm::TypeID(param.asInt()));
 						  })
 					    | std::ranges::to<std::vector>();
-					std::vector<vm::TypeCRef> result_type
-						= data.result | std::views::transform([&](auto& res) -> vm::TypeCRef {
+					std::vector<vm::TypeCRef> result_types
+						= data.result_types | std::views::transform([&](auto& res) -> vm::TypeCRef {
 							  return type_metadata->at(vm::TypeID(res.asInt()));
 						  })
 					    | std::ranges::to<std::vector>();
-					type_at_metadata->defineFunction(parameters, result_type);
+					type_at_metadata->defineFunction(parameters, result_types);
 				}
 				variant_case(vm::code::valid_type::finalized::Opaque, opaque) {
 					type_at_metadata->defineOpaque(opaque.size);

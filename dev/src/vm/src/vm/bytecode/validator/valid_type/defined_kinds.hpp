@@ -120,7 +120,7 @@ namespace vm::code::valid_type {
 		 */
 		struct DefinedFunction final {
 			std::vector<ValidTypeID> parameters;
-			std::vector<ValidTypeID> result;
+			std::vector<ValidTypeID> result_types;
 		};
 
 		/**

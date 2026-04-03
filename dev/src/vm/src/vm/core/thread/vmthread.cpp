@@ -118,11 +118,11 @@ namespace vm {
 			                             .arg_size         = 0,
 			                             .ret_size         = func.ret_size,
 			                             .parameters       = {},
-			                             .result_type      = func.result_type };
+			                             .result_types      = func.result_types };
 
 		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
 		u64       offset             = 0;
-		for (auto& res: func.result_type) {
+		for (auto& res: func.result_types) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
 			// exit_code = 0.
@@ -201,7 +201,7 @@ namespace vm {
 		// during code loading.
 
 		// @note: Main return type should always be single i64
-		auto        main_return_type = func.result_type;
+		auto        main_return_type = func.result_types;
 		const auto& types            = executing_program->getTypes();
 		auto        argv_type        = types.at(base::StrID("argv"));
 		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
@@ -216,7 +216,7 @@ namespace vm {
 			                             .arg_size         = 0,
 			                             .ret_size         = func.ret_size,
 			                             .parameters       = {},
-			                             .result_type      = func.result_type };
+			                             .result_types      = func.result_types };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_id     = argv_type->getID().asInt();
@@ -438,15 +438,15 @@ namespace vm {
 		);
 
 		CORE_ASSERT(
-			frame->block_stack.size() >= orig_block_stack_size + func.result_type.size(),
+			frame->block_stack.size() >= orig_block_stack_size + func.result_types.size(),
 			"after finishing execution, number of local variables is increased by the number of "
 		    "return vals"
 		);
 
 		exit_value_storage        = {};
-		for (u64 idx = 0; idx < func.result_type.size(); idx++) {
+		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
 			exit_value_storage.emplace_back(process.createVmValue(
-				func.result_type[idx],
+				func.result_types[idx],
 				Pointer(
 					frame->block_stack[orig_block_stack_size + idx],
 					frame->block_idx_to_local_offset[orig_block_stack_size + idx]

@@ -18,7 +18,7 @@ namespace vm::builtins {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<Box<VmValue>> callUnpackArgsImpl(
 			Ret (*function)(VMThread&, FunArgs...),
-			const std::vector<TypeCRef>&     vm_return_type,
+			const std::vector<TypeCRef>&     vm_return_types,
 			VMProcess&                       process,
 			VMThread&                        thread,
 			const std::vector<Box<VmValue>>& args,
@@ -29,16 +29,16 @@ namespace vm::builtins {
 				return {};
 			} else {
 				CORE_ASSERT(
-					vm_return_type.size() == 1,
+					vm_return_types.size() == 1,
 					"Builtin Function with multiple more than 1 return value"
 				);
 				auto value = function(thread, args[Is]->template readBytes<FunArgs>()...);
 				CORE_ASSERT(
-					sizeof(value) == vm_return_type.at(0)->getSize().asInt(),
+					sizeof(value) == vm_return_types.at(0)->getSize().asInt(),
 					"Type sizes do not match"
 				);
 
-				auto vm_value = process.createOwnedVmValue(vm_return_type.at(0));
+				auto vm_value = process.createOwnedVmValue(vm_return_types.at(0));
 
 				vm_value->writeBytes<Ret>(value);
 				return vm_value;
@@ -193,7 +193,7 @@ namespace vm::builtins {
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		std::vector<TypeCRef>            result_type,
+		std::vector<TypeCRef>            result_types,
 		VMProcess&                       process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
@@ -202,7 +202,7 @@ namespace vm::builtins {
 #define CASE_FUNC(ID_NAME)                                                              \
 	case BuiltinFunctionID::ID_NAME: {                                                  \
 		return callUnpackArgs(                                                          \
-			FunctionHandlers::builtin##ID_NAME, result_type, process, thread, arguments \
+			FunctionHandlers::builtin##ID_NAME, result_types, process, thread, arguments \
 		);                                                                              \
 	}
 

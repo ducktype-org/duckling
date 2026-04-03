@@ -77,11 +77,11 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 						function.signature.parameters.emplace_back(param_id);
 					}
 
-					for (const auto& reslt: func->result_type) {
+					for (const auto& reslt: func->result_types) {
 						code::Identifier result_type_id;
 						result_type_id.str          = reslt.value;
 						result_type_id.bytecode_pos = reslt.position;
-						function.signature.result_type.emplace_back(result_type_id);
+						function.signature.result_types.emplace_back(result_type_id);
 					}
 
 					for (const auto& instr: func->code->opcodes)

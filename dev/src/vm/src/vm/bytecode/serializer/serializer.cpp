@@ -115,7 +115,7 @@ namespace vm::code {
 			}
 			out << " } -> { ";
 			first = true;
-			for (const auto& param: function.signature.result_type) {
+			for (const auto& param: function.signature.result_types) {
 				if (!first) out << ", ";
 				out << param.str.strView();
 				first = false;
