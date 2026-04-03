@@ -75,7 +75,7 @@ namespace events {
 		/**
 		 * @brief Emit event to all attached Listeners
 		 */
-		void emitEvent(Event event) const {
+		void emitEvent(const Event& event) const {
 			auto copy = listeners;
 			for (const auto& listener: copy) listener->handler(event);
 		}
