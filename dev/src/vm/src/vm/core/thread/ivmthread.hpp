@@ -130,6 +130,10 @@ namespace vm {
 
 		[[nodiscard]] const IVMProcess& getMyProcess() const { return my_process; }
 
+		/**
+		 * @brief Returns the value of the execution_request_pending_flag atomic boolean.
+		 * @note This is meant to be periodically check e.g. in the execution loop.
+		 */
 		[[nodiscard]] const std::atomic<bool>& getExecutionRequestPendingFlag() const {
 			return execution_request_pending_flag;
 		}
