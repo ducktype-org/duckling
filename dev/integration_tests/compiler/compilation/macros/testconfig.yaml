@@ -1,0 +1,25 @@
+Tests:
+  simple_expand_1:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "2\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "2\n"
+        ExitCode: 0
+  simple_expand_2:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "2\n2\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "2\n2\n"
+        ExitCode: 0

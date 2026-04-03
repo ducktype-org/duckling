@@ -70,4 +70,5 @@ SubDirs:
   - references
   - boxes
   - imports
+  - macros
   - diagnostics
