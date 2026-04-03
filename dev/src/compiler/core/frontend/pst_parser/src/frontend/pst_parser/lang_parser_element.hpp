@@ -293,8 +293,8 @@ namespace pst {
 		 */
 		base::Optional<HashType> hash;
 
-		// @TODO: #2404 We should have a RootElement that stores this information instead of storing it
-		// in each element, but for now it is easier to keep it here.
+		// @TODO: #2404 We should have a RootElement that stores this information instead of storing
+		// it in each element, but for now it is easier to keep it here.
 		base::Optional<AdditionalRootData> additional_root_data;
 
 		/**
