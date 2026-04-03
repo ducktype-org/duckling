@@ -204,13 +204,14 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                             .bc               = {},
-			                             .local_stack_size = 72,
-			                             .arg_size         = 0,
-			                             .ret_size         = main_return_type->getSize().asInt(),
-			                             .parameters       = {},
-			                             .result_type      = func.result_type };
+		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
+			                             .bc                = {},
+			                             .local_stack_size  = 72,
+			                             .local_block_count = 7,
+			                             .arg_size          = 0,
+			                             .ret_size          = main_return_type->getSize().asInt(),
+			                             .parameters        = {},
+			                             .result_type       = func.result_type };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_id     = argv_type->getID().asInt();
