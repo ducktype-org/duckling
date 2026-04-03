@@ -250,8 +250,12 @@ namespace vm {
 				Frame& frame = thread.getStackFrame(frame_index);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (auto& [offset, block_idx]: frame.local_offset_to_block_idx) {
-					Ref<Block> block = frame.block_stack[block_idx];
+				for (Block* block_ptr:
+				     std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end)) {
+					Ref<Block> block  = Ref(block_ptr);
+					u64        offset = base::safeIntConv<u64>(
+                        memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
+                    );
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = offset,
 						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
