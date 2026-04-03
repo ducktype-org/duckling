@@ -136,22 +136,22 @@ impl QuackError {
 
     /// Add a note on top of this errors' chain.
     pub fn add_note<C: Into<Cow<'static, str>>>(self, note: C) -> Self {
-        self.context(NoteMessage(note.into()))
+        self.context(NoteMessage::new(note))
     }
 
     /// Add a hint on top of this errors' chain.
     pub fn add_hint<C: Into<Cow<'static, str>>>(self, hint: C) -> Self {
-        self.context(HintMessage(hint.into()))
+        self.context(HintMessage::new(hint))
     }
 
     /// Create a new note [`QuackError`].
     pub fn note<C: Into<Cow<'static, str>>>(note: C) -> Self {
-        NoteMessage(note.into()).into()
+        NoteMessage::new(note).into()
     }
 
     /// Create a new hint [`QuackError`].
     pub fn hint<C: Into<Cow<'static, str>>>(hint: C) -> Self {
-        HintMessage(hint.into()).into()
+        HintMessage::new(hint).into()
     }
 }
 
@@ -161,6 +161,13 @@ macro_rules! create_messages_errors {
             #[derive(PartialEq, Eq)]
             /// A message wrapped in an [`Error`]-like struct.
             pub struct $name(pub Cow<'static, str>);
+
+            impl $name {
+                #[doc = concat!("Create a new `[", stringify!($name), "]` from a message.")]
+                pub fn new(message: impl Into<Cow<'static, str>>) -> Self {
+                    Self(message.into())
+                }
+            }
 
             impl fmt::Debug for $name {
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -265,7 +272,7 @@ macro_rules! qp_err {
     ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
-            $crate::QuackError::new($crate::util::error::MessageError(::std::borrow::Cow::from(static_msg)))
+            $crate::QuackError::new($crate::util::error::MessageError::new(static_msg))
         } else {
             $crate::QuackError::message(format!($msg))
         }
@@ -284,16 +291,16 @@ macro_rules! qp_internal {
     ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
-            $crate::QuackError::from($crate::util::error::InternalError(::std::borrow::Cow::from(static_msg)))
+            $crate::QuackError::from($crate::util::error::InternalError::new(static_msg))
         } else {
-            $crate::QuackError::from($crate::util::error::InternalError(::std::borrow::Cow::from(format!($msg))))
+            $crate::QuackError::from($crate::util::error::InternalError::new(format!($msg)))
         }
     }};
     ($err:expr $(,)?) => {
         $crate::QuackError::from($err)
     };
     ($fmt:expr, $($args:tt)*) => {
-         $crate::QuackError::from($crate::util::error::InternalError(::std::borrow::Cow::from(format!($fmt, $($args)*))))
+         $crate::QuackError::from($crate::util::error::InternalError::new(format!($fmt, $($args)*)))
     };
 }
 
@@ -330,14 +337,14 @@ where
     where
         C: fmt::Display,
     {
-        self.map_err(|e| e.into().context(MessageError(ctx.to_string().into())))
+        self.map_err(|e| e.into().context(MessageError::new(ctx.to_string())))
     }
 
     fn context_internal<C>(self, ctx: C) -> QuackResult<T>
     where
         C: fmt::Display,
     {
-        self.map_err(|e| e.into().context(InternalError(ctx.to_string().into())))
+        self.map_err(|e| e.into().context(InternalError::new(ctx.to_string())))
     }
 
     fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
@@ -345,7 +352,7 @@ where
         C: fmt::Display,
         F: FnOnce() -> C,
     {
-        self.map_err(|e| e.into().context(MessageError(ctx().to_string().into())))
+        self.map_err(|e| e.into().context(MessageError::new(ctx().to_string())))
     }
 
     fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
@@ -353,7 +360,7 @@ where
         C: fmt::Display,
         F: FnOnce() -> C,
     {
-        self.map_err(|e| e.into().context(InternalError(ctx().to_string().into())))
+        self.map_err(|e| e.into().context(InternalError::new(ctx().to_string())))
     }
 }
 
@@ -369,7 +376,7 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
     where
         C: fmt::Display,
     {
-        self.ok_or_else(|| InternalError(ctx.to_string().into()).into())
+        self.ok_or_else(|| InternalError::new(ctx.to_string()).into())
     }
 
     fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
@@ -385,7 +392,7 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
         C: fmt::Display,
         F: FnOnce() -> C,
     {
-        self.ok_or_else(|| InternalError(ctx().to_string().into()).into())
+        self.ok_or_else(|| InternalError::new(ctx().to_string()).into())
     }
 }
 
