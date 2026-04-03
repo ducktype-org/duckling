@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, quackpack::core::PackageLoader,
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 /// Options for initializing a new project.
