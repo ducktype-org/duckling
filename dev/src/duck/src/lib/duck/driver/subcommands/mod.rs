@@ -6,9 +6,9 @@ mod build;
 #[cfg(feature = "shell-completion")]
 mod generate;
 mod init;
+mod repl;
 pub mod run_script;
 mod sync;
-mod repl;
 
 /// Get parsers for all the builtin subcommands.
 pub fn subcommands() -> Vec<Command> {

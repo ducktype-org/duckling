@@ -9,8 +9,8 @@ use crate::{
     DuckCtx, QuackResult, QuackResultContext,
     duck::driver::subcommands::run_script::{check_is_script, possible_script_path_subcmd},
     qp_bail,
-    quackpack::subcommands::run_script::{RunScriptOptions, run_script},
     quackpack::core::compile::duckc::Duckc,
+    quackpack::subcommands::run_script::{RunScriptOptions, run_script},
     util::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
 };
 use clap::ArgMatches;

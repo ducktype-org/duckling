@@ -47,13 +47,9 @@ impl<'duck> RunScriptOptions<'duck> {
         let folder_path = path
             .parent()
             .context_internal("we assured that the path points to a file")?;
-        let venv_id = matches
-            .get_one::<String>("venv")
-            .except("guarded by the parser")
-            .map(StrId::new);
+        let venv_id = matches.get_one::<String>("venv").map(StrId::new);
         let args: Vec<OsString> = matches
             .get_many::<OsString>("args")
-            .except("guarded by the parser")
             .map(|values| values.cloned().collect())
             .unwrap_or_default();
         Ok(Self {

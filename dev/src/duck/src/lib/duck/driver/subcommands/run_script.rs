@@ -4,10 +4,11 @@ use std::{
 };
 
 use crate::{
-    DuckCtx, QuackError, QuackResult, QuackResultContext,
-    duck::driver::cli_ext::flag,
+    DuckCtx, QuackError, QuackResult,
+    duck::driver::cli_ext::{flag, optional},
     qp_bail,
     quackpack::subcommands::run_script::{RunScriptOptions, run_script},
+    util::error::MessageError,
 };
 use clap::{Arg, ArgMatches, Command, builder::ValueParser, value_parser};
 
@@ -22,7 +23,7 @@ pub fn get_parser() -> Command {
         .add_profile()
         .add_release()
         .add_jobs()
-        .add_venv()
+        .arg(optional("venv", "Select the venv to run the script in").conflicts_with("global"))
         .arg(flag("frozen", "Don't update the freezefile"))
         .arg(
             flag(
@@ -82,9 +83,8 @@ pub fn check_is_script(path: &Path) -> QuackResult<()> {
                 "the extension of Duckling scripts is `.{}`",
                 DUCKLING_SCRIPT_EXT
             ))
-            .context(format!(
-                "the file at `{}` is not a Duckling script",
-                path.display()
+            .context(MessageError(
+                format!("the file at `{}` is not a Duckling script", path.display()).into()
             ))
         );
     }
