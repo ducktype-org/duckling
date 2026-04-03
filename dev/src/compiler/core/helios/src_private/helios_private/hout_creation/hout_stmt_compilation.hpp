@@ -10,7 +10,7 @@
 
 #include <memory>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios {
 
 	/**
 	 * @brief Compile a PST function/method body into a shared HOUT CodeBlock.
@@ -57,4 +57,4 @@ namespace compiler::helios::houtgen {
 		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, tsh::SymbolType<> return_type
 	);
 
-}  // namespace compiler::helios::houtgen
+}

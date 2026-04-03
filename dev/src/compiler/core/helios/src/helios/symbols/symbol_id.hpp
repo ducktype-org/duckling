@@ -11,7 +11,7 @@ namespace compiler::helios {
 	// Forwards:
 	struct SymbolData;
 
-	namespace houtgen {
+	namespace defgen {
 		struct ImplementationOf_QueryGeneratedSymbol;
 	}
 
@@ -35,7 +35,7 @@ namespace compiler::helios {
 		SymID(const CRef<SymbolData> ref): ref(ref) {}
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
-		friend struct houtgen::ImplementationOf_QueryGeneratedSymbol;
+		friend struct defgen::ImplementationOf_QueryGeneratedSymbol;
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;

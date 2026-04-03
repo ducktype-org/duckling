@@ -53,6 +53,31 @@ namespace vm::low {
 		std::vector<TypeCRef> result_types;
 	};
 
+	class ILowVMProgram {
+	public:
+		[[nodiscard]]
+		virtual const TypeMetadata& getTypes() const
+			= 0;
+
+		[[nodiscard]]
+		virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const
+			= 0;
+
+		[[nodiscard]]
+		virtual const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+			= 0;
+
+		[[nodiscard]]
+		virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const
+			= 0;
+
+		[[nodiscard]]
+		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
+			= 0;
+
+		virtual ~ILowVMProgram() = default;
+	};
+
 	/**
 	 * @brief Representation of the micro bytecode program which the VM runs.
 	 * This is the final form of bytecode produced by the loader module which is executable by
@@ -67,21 +92,23 @@ namespace vm::low {
 	 * (used internally in `ObjIdNameMap`). Similar holds for `ObjIdNameMap<LowGlobalData,
 	 * GlobalDataID>` - global data.
 	 */
-	class LowVMProgram final {
+	class LowVMProgram final: public ILowVMProgram {
 	public:
 		friend class vm::loader::compiler::Compiler;
 
-		const TypeMetadata& getTypes() const { return *types; }
+		const TypeMetadata& getTypes() const override { return *types; }
 
-		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const { return functions; }
+		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const {
+		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return extern_c_functions;
 		}
 
-		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const { return global_data; }
+		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const override {
+			return global_data;
+		}
 
-		const base::HashMap<u64, base::StrID>& getMethodNamePool() const {
+		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
 			return method_name_pool;
 		}
 
@@ -96,4 +123,72 @@ namespace vm::low {
 		base::HashMap<u64, base::StrID> method_name_pool{};
 	};
 
+	/**
+	 * @brief Overlay over `LowVMProgram` with its own and therefore modifiable copy of functions.
+	 *
+	 * @note Needs updating via `selfUpdate()` to make new functions visible.
+	 * @note Program with current everything except functions is still a valid program.
+	 *
+	 * @note Lookup in `getMethodNamePool()` may give false-positive if program is not updated.
+	 */
+	class LowVMProgramCopy final: public ILowVMProgram {
+		CRef<LowVMProgram>               original_program;
+		ObjIdNameMap<LowFuncData, usize> functions{};
+
+	public:
+		const TypeMetadata& getTypes() const override { return original_program->getTypes(); }
+
+		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
+
+		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+			return original_program->getExternCFunctions();
+		}
+
+		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const override {
+			return original_program->getGlobals();
+		}
+
+		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
+			return original_program->getMethodNamePool();
+		}
+
+		CRef<LowVMProgram> getOriginalProgram() const { return original_program; }
+
+		LowVMProgramCopy(CRef<LowVMProgram> original_program): original_program(original_program) {}
+
+		/**
+		 * @brief Updates itself to reflect original `LowVMProgram` state
+		 */
+		LowVMProgramCopy& selfUpdate() {
+			auto to_add = std::views::drop(
+				original_program->getFunctions().allData(), static_cast<ssize_t>(functions.size())
+			);
+
+			for (auto& [low_func_data, oid, sid]: to_add)
+				functions.insert(*low_func_data.get(), sid);
+
+			return *this;
+		}
+
+		/**
+		 * @brief Replaces opcode in provided function at provided index with provided opcode.
+		 * @returns Original opcode from provided location on success and `nullopt` if location does
+		 * not exist.
+		 */
+		base::Optional<MicroOpcode> replaceOpcode(
+			usize function_id, usize instruction_index, MicroOpcode opcode
+		) {
+			if (!functions.contains(function_id)) return std::nullopt;
+
+			auto& microbytecode = functions[function_id].bc;
+			if (microbytecode.size() <= instruction_index) return std::nullopt;
+
+			auto&       instruction     = microbytecode[instruction_index];
+			MicroOpcode original_opcode = getInstructionOpcode(instruction);
+
+			instruction = makeLowInstruction(opcode, instruction.arg0, instruction.arg1);
+
+			return original_opcode;
+		}
+	};
 }
