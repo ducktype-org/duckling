@@ -23,7 +23,7 @@ namespace events {
 		MRef<Emitter<Event>> emitter;
 
 	public:
-		Listener(Handler&& handler): handler(std::move(handler)) {}
+		explicit Listener(Handler&& handler): handler(std::move(handler)) {}
 
 		/**
 		 * @brief If Listener is attached to some Emitter then detaches from it
@@ -76,7 +76,13 @@ namespace events {
 		 * @brief Emit event to all attached Listeners
 		 */
 		void emitEvent(Event event) const {
-			for (const auto& listener: listeners) listener->handler(event);
+			auto copy = listeners;
+			for (const auto& listener: copy) listener->handler(event);
+		}
+
+		~Emitter() {
+			auto copy = listeners;
+			for (const auto& listener: copy) listener->detach();
 		}
 	};
 }
