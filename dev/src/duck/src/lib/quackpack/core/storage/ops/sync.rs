@@ -133,7 +133,7 @@ fn check_if_overwrites(
         Err(e) => {
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
-                [io::ErrorKind::NotFound, io::ErrorKind::NotADirectory].contains(&io_error.kind())
+                ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory].contains(&io_error.kind())
             } else {
                 // Other error, maybe we failed to deserialize?
                 // Safely assume, that package still exists.
