@@ -21,8 +21,10 @@
 #include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/module_flags/module_flags.hpp>
+#include <vm/utils/interpret.hpp>
 
 #include <iostream>
 #include <mutex>
@@ -101,31 +103,36 @@ namespace vm {
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+			throw exceptions::VMRuntimeException(
+				base::strConcat(
+					"Function '",
+					func.name.str(),
+					"' expects ",
+					func.parameters.size(),
+					" arguments, but ",
+					func_args.size(),
+					" were provided."
+				)
+			);
 		}
 
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
 			                             .bc               = {},
 			                             .local_stack_size = 0,
-			                             .arg_size         = 0,
-			                             .ret_size         = func.result_type->getSize().asInt(),
-			                             .parameters       = {},
-			                             .result_type      = func.result_type };
+			                             .local_block_count
+			                             = (func.result_type->getName() == "void" ? 0 : 1)
+			                             + func.parameters.size(),
+			                             .arg_size    = 0,
+			                             .ret_size    = func.result_type->getSize().asInt(),
+			                             .parameters  = {},
+			                             .result_type = func.result_type };
 
-		u64       result_type_id     = func.result_type->getID().asInt();
-		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
+		u64                    result_type_arg = safeReadObjectBytes<u64>(func.result_type);
+		CRef<low::LowFuncData> called_function = executing_program->getFunctions().at(func.name);
 
 		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
-		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_blany_type, 0, result_type_id));
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_blany_type, 0, result_type_arg));
 
 		start_function.local_stack_size += func.result_type->getSize().asInt();
 
@@ -140,16 +147,18 @@ namespace vm {
 			}
 
 			if (arg_value->type != arg_type) {
-				throw exceptions::VMRuntimeException(base::strConcat(
-					"Type mismatch for argument ",
-					i,
-					" of function '",
-					func.name.str(),
-					"': expected ",
-					arg_type->getName().str(),
-					", got ",
-					arg_value->type->getName().str()
-				));
+				throw exceptions::VMRuntimeException(
+					base::strConcat(
+						"Type mismatch for argument ",
+						i,
+						" of function '",
+						func.name.str(),
+						"': expected ",
+						arg_type->getName().str(),
+						", got ",
+						arg_value->type->getName().str()
+					)
+				);
 			}
 
 			start_function.bc.push_back(
@@ -165,7 +174,7 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
+				MAKE_BYTECODE_INSTRUCTION(call_func, safeReadObjectBytes<u64>(called_function), 0),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
 		        // value/exit_code.
@@ -214,15 +223,15 @@ namespace vm {
 			                             .result_type       = func.result_type };
 
 		// TypeIDs to pass to opcodes.
-		u64 argv_type_id     = argv_type->getID().asInt();
-		u64 argv_ptr_type_id = argv_ptr_type->getID().asInt();
-		u64 i64_type_id      = i64_type->getID().asInt();
-		u64 str_type_id      = str_type->getID().asInt();
-		u64 str_ptr_type_id  = str_ptr_type->getID().asInt();
-		u64 byte_type_id     = byte_type->getID().asInt();
+		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
+		u64 argv_ptr_type_arg = safeReadObjectBytes<u64>(argv_ptr_type);
+		u64 i64_type_arg      = safeReadObjectBytes<u64>(i64_type);
+		u64 str_type_arg      = safeReadObjectBytes<u64>(str_type);
+		u64 str_ptr_type_arg  = safeReadObjectBytes<u64>(str_ptr_type);
+		u64 byte_type_arg     = safeReadObjectBytes<u64>(byte_type);
 
-		const u64  called_function_id = executing_program->getFunctions().idOf(func.name).value();
-		const bool main_has_args      = !func.parameters.empty();
+		CRef<low::LowFuncData> called_function = executing_program->getFunctions().at(func.name);
+		const bool             main_has_args   = !func.parameters.empty();
 
 		// Initialize the needed data first - argc and argv dynamic table.
 		// Note that `argv` and `argc` are always initialized even if `main` takes no arguments.
@@ -232,22 +241,22 @@ namespace vm {
 			{
 				// Program return value is fixes to return `i64`.
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 0, i64_type_id
+					init_blany_type, 0, i64_type_arg
 				),  // stack [0, 8), block idx 0 program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 1, argv_ptr_type_id
+					init_blany_type, 1, argv_ptr_type_arg
 				),  // stack [8, 24) block idx 1 *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 2, i64_type_id
+					init_blany_type, 2, i64_type_arg
 				),  // stack  [24, 32) block idx 2 argc_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 3, i64_type_id
+					init_blany_type, 3, i64_type_arg
 				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_l64_imm, 24, args.size()
 				),  // argc_internal := args.size()
 				MAKE_BYTECODE_INSTRUCTION(
-					dynTableReAlloc_lptr_type, 8, argv_type_id
+					dynTableReAlloc_lptr_type, 8, argv_type_arg
 				),  // alloc *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 			}
@@ -260,16 +269,16 @@ namespace vm {
 					start_function.bc.end(),
 					{
 						MAKE_BYTECODE_INSTRUCTION(
-							init_blany_type, 4, str_ptr_type_id
+							init_blany_type, 4, str_ptr_type_arg
 						),  // stack [40, 56) block idx 4 ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
-							init_blany_type, 5, byte_type_id
+							init_blany_type, 5, byte_type_arg
 						),  // stack [56, 57) block idx 5 char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_l64_imm, 24, arg.size() + 1
 						),  // argc_internal := arg.size() + 1 (for the \0 character)
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableReAlloc_lptr_type, 40, str_type_id
+							dynTableReAlloc_lptr_type, 40, str_type_arg
 						),                                              // alloc ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 						MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
@@ -314,7 +323,7 @@ namespace vm {
 
 		// Now actually prepare to call 'main'.
 		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_blany_type, 4, i64_type_id)  // [40, 48) main ret_val
+			MAKE_BYTECODE_INSTRUCTION(init_blany_type, 4, i64_type_arg)  // [40, 48) main ret_val
 		);
 
 		// Pass the command line arguments only if main signature specifies it.
@@ -322,9 +331,9 @@ namespace vm {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
-					MAKE_BYTECODE_INSTRUCTION(init_blany_type, 5, i64_type_id),  // [48, 56) argc
+					MAKE_BYTECODE_INSTRUCTION(init_blany_type, 5, i64_type_arg),  // [48, 56) argc
 					MAKE_BYTECODE_INSTRUCTION(
-						init_blany_type, 6, argv_ptr_type_id
+						init_blany_type, 6, argv_ptr_type_arg
 					),                                                        // [56, 72) *argv
 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
 					MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),  // argv := argv_internal
@@ -336,11 +345,13 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
+				MAKE_BYTECODE_INSTRUCTION(
+					call_func, safeReadObjectBytes<u64>(called_function), 0
+				),                                              // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 5, str_ptr_type_id
+					init_blany_type, 5, str_ptr_type_arg
 				),  // [48, 64) ptr_tmp_store
 			}
 		);
@@ -535,9 +546,9 @@ namespace vm {
 			if (process_memory.tryInsertGlobalData(id, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(global->ctor_name.value())
-					                        .value();
+					const auto&      func           = *executing_program->getFunctions()
+					                                       .atMaybe(global->ctor_name.value())
+					                                       .value();
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -550,8 +561,10 @@ namespace vm {
 			const auto& maybe_func
 				= executing_program->getFunctions().atMaybe(base::StrID(func_name.data()));
 			if (!maybe_func.has_value()) {
-				respondExecutionRequest(api::ExecutionPanicked{
-					base::strConcat("Called function '", func_name, "' does not exist.") });
+				respondExecutionRequest(
+					api::ExecutionPanicked{
+						base::strConcat("Called function '", func_name, "' does not exist.") }
+				);
 				return;
 			}
 			const auto& func = *maybe_func.value();
@@ -580,12 +593,12 @@ namespace vm {
 		for (const auto& [global, id, name]: executing_program->getGlobals().allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->dtor_name.value()))
-					                        .expect(
-												"Called function does not exist: "
-												+ global->dtor_name.value().str()
-											);
+					const auto&      func = *executing_program->getFunctions()
+					                             .atMaybe(base::StrID(global->dtor_name.value()))
+					                             .expect(
+													 "Called function does not exist: "
+													 + global->dtor_name.value().str()
+												 );
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -651,15 +664,19 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = index,  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id  = index,  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();

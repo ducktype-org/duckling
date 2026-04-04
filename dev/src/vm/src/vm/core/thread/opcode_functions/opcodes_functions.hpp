@@ -109,26 +109,24 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void
-			performFunctionCall(
+			void performFunctionCall(
 				const MicroInstruction*& instr,
 				std::byte*&              local_stack,
 				Frame*&                  frame,
 				VMThread&                thread,
-				usize                    function_id
+				CRef<low::LowFuncData>   called_func
 			) {
 			auto&      runtime_data     = thread.runtime_data;
-			auto&      called_func      = thread.executing_program->getFunctions()[function_id];
-			const bool called_rets_void = called_func.result_type->getName() == "void";
+			const bool called_rets_void = called_func->result_type->getName() == "void";
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
-				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
+				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func->name.str());
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size
-				= called_func.arg_size + !called_rets_void * called_func.ret_size;
+				= called_func->arg_size + !called_rets_void * called_func->ret_size;
 
-			auto arg_count           = called_func.parameters.size();
+			auto arg_count           = called_func->parameters.size();
 			auto shared_blocks_count = arg_count + !called_rets_void;
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
@@ -141,13 +139,13 @@ namespace vm {
 			auto* prev_frame = frame;
 
 			frame++;
-			frame->current_function = &called_func;
+			frame->current_function = called_func;
 
 			if (frame + 1 >= runtime_data.frame_stack_end)
 				throw exceptions::VMStackOverflowException();
 
 			// Update values passed as arguments.
-			instr = called_func.bc.data();
+			instr = called_func->bc.data();
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
 			// up to this point) - the size of ret_val and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
@@ -155,9 +153,9 @@ namespace vm {
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
+			if (local_stack + called_func->local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
-			if (frame->local_block_ref_stack_base + called_func.local_block_count
+			if (frame->local_block_ref_stack_base + called_func->local_block_count
 			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
 
@@ -169,26 +167,25 @@ namespace vm {
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
 			prev_frame->local_block_ref_stack_end -= arg_count;
-			prev_frame->local_stack_head -= called_func.arg_size;
+			prev_frame->local_stack_head -= called_func->arg_size;
 		}
 
 		static
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void
-			performInit(
+			void performInit(
 				[[maybe_unused]] const MicroInstruction*& instr,
 				std::byte*&                               local_stack,
 				Frame*&                                   frame,
 				VMThread&                                 thread,
-				TypeID                                    type_id
+				TypeCRef                                  type
 			) {
-			auto type     = thread.executing_program->getTypes().at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
-			thread.process_memory.increaseBlockRefcount(block
+			thread.process_memory.increaseBlockRefcount(
+				block
 			);  // so that nobody can delete our block
 
 			*frame->local_block_ref_stack_end = block.get();
@@ -200,8 +197,7 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void
-			performDeinit(Frame*& frame, VMThread& thread) {
+			void performDeinit(Frame*& frame, VMThread& thread) {
 			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
 
@@ -215,17 +211,9 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void
-			setVariantType(
-				VMThread& thread,
-				Pointer   variant_pointer,
-				TypeID    wanted_type_id,
-				TypeID    variant_type_id
+			void setVariantType(
+				VMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
 			) {
-
-			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
-			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
-
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block
@@ -237,7 +225,7 @@ namespace vm {
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
 			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt->getID() == wanted_type_id) alternative_index = static_cast<usize>(idx);
+				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -270,15 +258,9 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			Pointer
-			getVariantPtr(
-				VMThread& thread,
-				Pointer   variant_pointer,
-				TypeID    wanted_type_id,
-				TypeID    variant_type_id
+			Pointer getVariantPtr(
+				VMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
 			) {
-			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
-			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
 				variant_pointer.movedPointer(static_cast<i64>(*variant_type->getTypeTagSizeBytes())),
