@@ -1,7 +1,7 @@
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <typesystem/higher/queries.hpp>
-#include <typesystem/higher/type_interface.hpp>
-#include <typesystem/lower/all.hpp>
+#include <tsh/queries.hpp>
+#include <tsh/type_interface.hpp>
+#include <tsl/all.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -550,4 +550,4 @@ public:
 	~LowerTypeSystemSimpleTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/src/compiler/core/typesystem/lower/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/tsl/tests/")

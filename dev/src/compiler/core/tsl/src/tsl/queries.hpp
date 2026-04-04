@@ -1,7 +1,7 @@
 #pragma once
 
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsh/abstract_type.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <query_framework/query_int.hpp>
 

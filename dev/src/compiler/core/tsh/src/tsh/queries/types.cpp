@@ -1,7 +1,7 @@
 #include "types.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
-#include <typesystem/higher/abstract_type_impl.hpp>
+#include <tsh/abstract_type_impl.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 

@@ -3,7 +3,7 @@
 #include "queries.hpp"
 
 #include <helios/mangler/mangler.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <tsh/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
