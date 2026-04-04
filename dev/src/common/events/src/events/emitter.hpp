@@ -80,7 +80,7 @@ namespace events {
 	 */
 	template<class Event>
 	class Emitter {
-		std::set<Ref<Listener<Event>>> listeners;
+		std::set<Ref<Listener<Event>>> listeners{};
 
 		std::recursive_mutex listeners_mutex;
 
