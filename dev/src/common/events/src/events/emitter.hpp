@@ -2,10 +2,15 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <functional>
 #include <mutex>
 #include <set>
 
 namespace events {
+
+
+	template<class Event>
+	class Emitter;
 
 	/**
 	 * @brief A wrapper to function that is executed on emission
@@ -13,17 +18,20 @@ namespace events {
 	 * @tparam Event Argument of the function
 	 */
 	template<class Event>
-	class Emitter;
-
-	template<class Event>
 	class Listener {
-		using Handler = std::function<void(Event)>;
+		using Handler = std::function<void(const Event&)>;
 
 		Handler              handler;
 		MRef<Emitter<Event>> emitter;
 
 	public:
 		explicit Listener(Handler&& handler): handler(std::move(handler)) {}
+
+		// Disallow copy and move since Emitter stores raw pointers to Listeners
+		Listener(const Listener&)            = delete;
+		Listener& operator=(const Listener&) = delete;
+		Listener(Listener&&)                 = delete;
+		Listener& operator=(Listener&&)      = delete;
 
 		/**
 		 * @brief Returns true if Listener is attached to any Emitter
@@ -45,8 +53,7 @@ namespace events {
 		 * @brief Attach Listener to the Emitter
 		 */
 		void attach(Ref<Emitter<Event>> emitter) {
-			if (isAttached() && this->emitter != emitter)
-				throw std::runtime_error("Listener already attached");
+			CORE_ASSERT(!isAttached() || this->emitter == emitter, "Tried to reattach listener");
 			if (!isAttached()) {
 				this->emitter = emitter;
 				emitter->attachListener(this);
@@ -75,16 +82,23 @@ namespace events {
 	class Emitter {
 		std::set<Ref<Listener<Event>>> listeners;
 
-		std::mutex listeners_mutex;
+		std::recursive_mutex listeners_mutex;
 
 	public:
+		// Disallow copy and move since Listener stores raw pointer to Emitter
+		Emitter() {}
+
+		Emitter(const Emitter&)            = delete;
+		Emitter& operator=(const Emitter&) = delete;
+		Emitter(Emitter&&)                 = delete;
+		Emitter& operator=(Emitter&&)      = delete;
+
 		/**
 		 * @brief Attach Listener to the Emitter
 		 */
 		void attachListener(Ref<Listener<Event>> listener) {
-			listeners_mutex.lock();
+			std::lock_guard<std::recursive_mutex> lock(listeners_mutex);
 			listeners.insert(listener);
-			listeners_mutex.unlock();
 			listener->attach(this);
 		}
 
@@ -97,9 +111,8 @@ namespace events {
 		 * @brief Detach Listener from the Emitter
 		 */
 		void detachListener(Ref<Listener<Event>> listener) {
-			listeners_mutex.lock();
+			std::lock_guard<std::recursive_mutex> lock(listeners_mutex);
 			listeners.erase(listener);
-			listeners_mutex.unlock();
 			listener->detach();
 		}
 
@@ -112,16 +125,16 @@ namespace events {
 		 * @brief Emit event to all attached Listeners
 		 */
 		void emitEvent(const Event& event) {
-			listeners_mutex.lock();
+			std::lock_guard<std::recursive_mutex> lock(listeners_mutex);
+			// We copy here to prevent invalidating iterators, when handling an event detaches
 			auto copy = listeners;
-			listeners_mutex.unlock();
 			for (const auto& listener: copy) listener->handle(event);
 		}
 
 		~Emitter() {
-			listeners_mutex.lock();
+			std::lock_guard<std::recursive_mutex> lock(listeners_mutex);
+			// We copy here to not invalidate the iterators when detaching listeners.
 			auto copy = listeners;
-			listeners_mutex.unlock();
 			for (const auto& listener: copy) listener->detach();
 		}
 	};

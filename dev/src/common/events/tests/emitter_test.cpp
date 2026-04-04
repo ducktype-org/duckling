@@ -81,7 +81,7 @@ private:
 		emitter1.emitEvent({ 42 });
 		ASSERT_EQUAL_PRINT(42, some_number);
 
-		assertThrows<std::runtime_error>(
+		assertThrows<base::Panic>(
 			[&]() { emitter2.attachListener(listener); }, "Reatach should have thrown"
 		);
 
