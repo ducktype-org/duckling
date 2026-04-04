@@ -1,13 +1,15 @@
+#Issue: #2431 Enable DVM on this test
+
 fun pickAType(n: i64, t: type) -> type = {
     if (n == 1) {
         return bool;
     } else {
-        return t;
+        return ref t;
     }
 }
 
 fun main() -> i64 = {
     var a: i64 = 42;
-    var strange_variable: pickAType(2, i64) = a;
-    return 0;
+    var strange_variable: pickAType(2, i64) = &a;
+    return strange_variable;
 }
