@@ -172,23 +172,17 @@ namespace vm::code {
 			void operator()(const FunctionType& fun) const {
 				// type fun: main {} int64
 				out << "type fun: ";
-				out << fun.name.strView() << " {";
+				out << fun.name.strView() << " { ";
 				bool first = true;
 				for (const auto& param: fun.parameters) {
-					if (first)
-						out << " ";
-					else
-						out << ", ";
+					if (!first) out << ", ";
 					out << param.strView();
 					first = false;
 				}
 				out << " } -> { ";
 				first = true;
 				for (const auto& reslts: fun.result) {
-					if (first)
-						out << " ";
-					else
-						out << ", ";
+					if (!first) out << ", ";
 					out << reslts.strView();
 					first = false;
 				}
