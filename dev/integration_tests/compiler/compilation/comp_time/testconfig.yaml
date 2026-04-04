@@ -11,4 +11,15 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-        
+  type_evaluation:
+    Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0      
