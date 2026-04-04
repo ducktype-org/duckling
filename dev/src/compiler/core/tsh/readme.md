@@ -14,4 +14,4 @@ Importantly, the Higher Type System should provide all necessary information abo
 
 The Higher Type System cares greatly to deduplicate its data because precise type identification is required.
 
-\todo More details about the components (TypeInfo, ValueCategory, etc.) in other pages.
+@TODO: #2428 More details about the components (TypeInfo, ValueCategory, etc.) in other pages.

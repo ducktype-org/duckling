@@ -13,4 +13,4 @@ The Lower Type System depends on the Higher Type System (present as part of HELI
 
 It is not crucial for the Lower Type System to deduplicate its data. However, it is important for the same layouts to be generated for the same types. In other words, the Lower Type System does not have to deduplicate its data, but the generated data must be consistent and, in a sense, confluent.
 
-\todo More details about components (names unknown) in other pages.
+@TODO: #2428 More details about components (names unknown) in other pages.
