@@ -24,6 +24,10 @@ namespace compiler::helios {
 			return { array_type.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::ToStringMethod::queryUnstablePerfectHash() const {
+			return owner_type.queryUnstablePerfectHash();
+		}
+
 		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
 			return { operator_type.queryUnstablePerfectHash() };
 		}
@@ -108,10 +112,8 @@ namespace compiler::helios {
 						tsh::Mutability::Mutable,
 					};
 
-					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
-						{},
-						return_type,
-					});
+					const auto ctor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
 
 					return tsh::SymbolType<>{
 						ctor_abstract_type,
@@ -126,13 +128,27 @@ namespace compiler::helios {
 						tsh::Mutability::Mutable,
 					};
 
-					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
-						{},
-						return_type,
-					});
+					const auto ctor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
 
 					return tsh::SymbolType<>{
 						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(ToStringMethod, to_string) {
+					const tsh::SymbolType<> return_type{
+						to_string.owner_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto to_string_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
+
+					return tsh::SymbolType<>{
+						to_string_abstract_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
