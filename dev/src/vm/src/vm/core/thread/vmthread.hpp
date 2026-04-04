@@ -35,7 +35,7 @@ namespace vm {
 	}
 
 
-	class VMProcess;
+	class SafeVMProcess;
 
 	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
 
@@ -65,13 +65,19 @@ namespace vm {
 		Frame* frame_stack_current;   /// Pointer to the current frame - used only when debugging.
 		std::byte* local_stack_base;  /// Pointer to the start of `local_stack_reserved`.
 		std::byte* local_stack_end;   /// Pointer to the first value not allocated.
+		Block**    block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
+		Block**    block_ref_stack_end;   /// Pointer to the first value not allocated.
 
 		RuntimeData(Ref<ThreadStack> stack):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
-			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()) {}
+			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()),
+			  block_ref_stack_base(stack->getBlockRefStack()->data()),
+			  block_ref_stack_end(
+				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
+			  ) {}
 	};
 
 	/**
@@ -94,7 +100,7 @@ namespace vm {
 		/**
 		 * @brief Link to parent process.
 		 */
-		VMProcess& process;
+		SafeVMProcess& process;
 
 		/**
 		 * @brief Parent process'es memory.
@@ -128,7 +134,7 @@ namespace vm {
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
 		 * nullptr if no code was loaded.
 		 */
-		MCRef<low::LowVMProgram> executing_program = nullptr;
+		MCRef<low::ILowVMProgram> executing_program = nullptr;
 
 		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
@@ -199,13 +205,13 @@ namespace vm {
 		 * running code and respond to the process with the panicked status.
 		 */
 		void safeRun(
-			CRef<low::LowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			CRef<low::ILowVMProgram> program,
+			const std::string&       func_name,
+			const RunArguments&      run_arguments
 		);
 
 	public:
-		VMThread(VMProcess& process);
+		VMThread(SafeVMProcess& process);
 
 		void breakActiveExecution();
 
@@ -224,9 +230,9 @@ namespace vm {
 		 * there is already a thread running.
 		 */
 		bool spawnThreadAndRun(
-			CRef<low::LowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			CRef<low::ILowVMProgram> program,
+			const std::string&       func_name,
+			const RunArguments&      run_arguments
 		);
 
 
@@ -237,9 +243,9 @@ namespace vm {
 		 * otherwise.
 		 */
 		void runNoSpawn(
-			CRef<low::LowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			CRef<low::ILowVMProgram> program,
+			const std::string&       func_name,
+			const RunArguments&      run_arguments
 		);
 
 		/**
@@ -278,16 +284,16 @@ namespace vm {
 		 * @brief Run a single function with given parameters.
 		 */
 		void run(
-			CRef<low::LowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			CRef<low::ILowVMProgram> program,
+			const std::string&       func_name,
+			const RunArguments&      run_arguments
 		);
 
 		/**
 		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
 		 * destructor functions.
 		 */
-		void execGlobalDestructors(CRef<low::LowVMProgram> program);
+		void execGlobalDestructors(CRef<low::ILowVMProgram> program);
 
 		std::expected<api::Response, api::ApiError> getCurrentPosition();
 
@@ -304,20 +310,29 @@ namespace vm {
 
 		bool isTerminateRequested();
 
-		friend class VMProcess;
+		friend class SafeVMProcess;
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
 
 		/**
-		 * @brief Called only on instruction execution.
-		 * Checks if thread has GIL and if not then acquires it.
+		 * @brief Runs GIL logic. Should be called periodically to allow GIL release.
+		 *
+		 * If thread does not have GIL then acquires it.
+		 * If thread already has GIL:
+		 *   -> if the GIL should be released, releases it
+		 *   -> otherwise does nothing.
 		 */
-		void keepOrAcquireGil();
+		void stepGil();
 
 		/**
 		 * @brief Releases GIL.
 		 */
 		void releaseGil();
+
+		/**
+		 * @brief Acquires GIL.
+		 */
+		void acquireGil();
 
 		/**
 		 * @brief Sets name of the function that will be used in builtin spawn thread.

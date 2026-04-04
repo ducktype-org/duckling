@@ -60,6 +60,9 @@ extern "C" {
 	int64_t builtin_output_string(str s);
 	str     builtin_input_string();
 	void    builtin_free_string(str s);
+	str     builtin_string_prepended(char c, str s);
+	str     builtin_string_appended(str s, char c);
+	str     builtin_string_concatenated(str s, str t);
 
 	// Runtime Allocators
 	void* builtin_alloc(uint64_t size);
@@ -155,6 +158,50 @@ void builtin_free_string(str s) {
 		s.memory_begin_offset = 0;
 		s.memory_end_offset   = 0;
 	}
+}
+
+str builtin_string_appended(str s, char c) {
+	char* new_data = (char*) malloc(s.length + 1);
+	if (!new_data) exit(1);
+	memcpy(new_data, s.data, s.length);
+	new_data[s.length] = c;
+
+	return str{
+		.data                = new_data,
+		.length              = s.length + 1,
+		.memory_begin_offset = 0,
+		.memory_end_offset   = s.length + 1,
+	};
+}
+
+str builtin_string_prepended(char c, str s) {
+	char* new_data = (char*) malloc(s.length + 1);
+	if (!new_data) exit(1);
+	new_data[0] = c;
+	memcpy(new_data + 1, s.data, s.length);
+
+	return str{
+		.data                = new_data,
+		.length              = s.length + 1,
+		.memory_begin_offset = 0,
+		.memory_end_offset   = s.length + 1,
+	};
+}
+
+str builtin_string_concatenated(str s, str t) {
+	uint64_t new_length = s.length + t.length;
+	char*    new_data   = (char*) malloc(new_length);
+	if (!new_data) exit(1);
+
+	memcpy(new_data, s.data, s.length);
+	memcpy(new_data + s.length, t.data, t.length);
+
+	return str{
+		.data                = new_data,
+		.length              = new_length,
+		.memory_begin_offset = 0,
+		.memory_end_offset   = new_length,
+	};
 }
 
 // This is an intended abstraction over the allocation. In the future, different allocators for

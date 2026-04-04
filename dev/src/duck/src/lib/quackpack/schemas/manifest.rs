@@ -11,6 +11,7 @@ use serde_untagged::UntaggedEnumVisitor;
 pub type Dependencies = HashMap<String, Dependency>;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// Schema of the [`quackconfig.yml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
 pub struct Manifest {
     /// `metadata:` root field.
@@ -26,6 +27,7 @@ pub struct Manifest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
     /// Version of the package.
@@ -41,6 +43,7 @@ pub struct Metadata {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// Single dependency of the package.
 pub struct Dependency {
     /// Dependency's version.
@@ -157,6 +160,7 @@ impl<'de> de::Deserialize<'de> for DependencySource {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// A detailed source of a dependency.
 pub struct DetailedSource {
     /// Overridden registry url.
@@ -193,6 +197,7 @@ impl DetailedSource {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// Conditions, from which any has to be true, in order to enable this dependency.
 pub struct DependencyCondition {
     /// Enable this dependency/feature if we build the root package with at least one of the
@@ -201,7 +206,7 @@ pub struct DependencyCondition {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(transparent)]
+#[serde(rename_all = "kebab-case", transparent)]
 /// A feature + its conditions.
 pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
 
@@ -228,11 +233,18 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+/// A single compilation profile.
 pub struct Profile {
+    /// Optimization level.
     pub opt_level: Option<OptLevel>,
+    /// Whether should we emit DVM bytecode.
     pub dvm_bytecode: Option<bool>,
+    /// Whether to use incremental compilation.
     pub incremental: Option<bool>,
+    /// Whether to link C STD.
     pub c_std: Option<bool>,
+    /// Whether this profile inherits other profile.
     pub inherits: Option<String>,
 }
 

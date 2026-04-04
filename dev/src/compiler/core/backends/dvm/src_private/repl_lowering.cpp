@@ -10,7 +10,7 @@ namespace compiler::backend_vm {
 	 *
 	 */
 	Box<internal::ProgramLoweringContext> createReplLoweringContext(query::Context& query_ctx) {
-		return makeBox<internal::ProgramLoweringContext>(query_ctx);
+		return makeBox<internal::ProgramLoweringContext>(query_ctx, false);
 	}
 
 	ReplLoweringContext::ReplLoweringContext(query::Context& query_ctx):

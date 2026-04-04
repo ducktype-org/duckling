@@ -48,7 +48,7 @@ namespace {
 namespace compiler::frontend {
 
 	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
-		  state_lock(base::makeBox<concurrent::AtomicFlagSpinlock>()),
+		  state_lock(base::makeBox<std::recursive_mutex>()),
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
@@ -83,7 +83,7 @@ namespace compiler::frontend {
 	}
 
 	void SourceFile::update() {
-		std::lock_guard lock(*state_lock);
+		std::scoped_lock lock(*state_lock);
 
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 
@@ -98,6 +98,7 @@ namespace compiler::frontend {
 	}
 
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
+		std::scoped_lock lock(*state_lock);
 		if (!component_hash.has_value()) {
 			auto m_path_component_hash = ModuleTree::getPathComponentHash(linked_module);
 			component_hash = hashing::ComponentHash(m_path_component_hash, lang_file_name);
@@ -106,7 +107,7 @@ namespace compiler::frontend {
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
-		std::lock_guard lock(*state_lock);
+		std::scoped_lock lock(*state_lock);
 
 		// If component hash changed, reset parse tree
 		if (parse_tree && component_hash.has_value()) {
@@ -160,7 +161,10 @@ namespace compiler::frontend {
 		return *path_registry.at(abs_path)->content;
 	}
 
-	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
+	void SourceFile::invalidateComponentHash() {
+		std::scoped_lock lock(*state_lock);
+		component_hash.reset();
+	}
 
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();

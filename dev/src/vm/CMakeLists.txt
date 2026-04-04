@@ -86,6 +86,9 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
         ${jit_dependency}
     )
     make_module(JitDep USES llvm_helpers Base Diagnostic)
+    target_compile_options(JitDep PRIVATE
+        --embed-dir=${CMAKE_BINARY_DIR}
+    )
     target_include_directories(JitDep PRIVATE ${LLVM_INCLUDE_DIRS})
 
     target_include_directories(MainVM PRIVATE $<TARGET_PROPERTY:JitDep,INTERFACE_INCLUDE_DIRECTORIES>)
@@ -129,6 +132,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND ${JIT_LLVM_LINKER}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
+                $<TARGET_OBJECTS:cp-stencils_bc>
                 ${vm_dep_objects_bc}
                 -o ${common_bc}.tmp
             COMMAND ${JIT_LLVM_OPT}
@@ -140,13 +144,17 @@ function(add_vm_variant suffix compile_def)
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
             BYPRODUCTS ${common_bc}.tmp
-            DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc ${vm_dep_bc_targets}
+            DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc cp-stencils_bc ${vm_dep_bc_targets}
             COMMENT "Full O3 + LTO + Aggressive Inline for ${suffix}"
         )
 
         # JitDep depends to both bc files (it can embed both of them), but is NOT config dependent.
         add_custom_target(CommonVMBitcode_${suffix} DEPENDS ${common_bc})
         add_dependencies(JitDep CommonVMBitcode_${suffix})
+        set_target_properties(CommonVMBitcode_${suffix}
+            PROPERTIES
+                VM_COMMON_BC ${common_bc}
+        )
 
         add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
         

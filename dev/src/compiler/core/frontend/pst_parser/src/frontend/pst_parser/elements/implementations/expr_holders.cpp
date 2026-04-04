@@ -35,6 +35,10 @@ namespace pst {
 		    || internal::Conditions::isBlockGroup(state, fwd);
 	}
 
+	bool ExprParserHelper::untilUniversalAllowCommaAndBlockEnd(const TokenStream& state, i64 fwd) {
+		return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd);
+	}
+
 	bool ExprParserHelper::untilSemicolon(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon);
 	}

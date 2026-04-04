@@ -9,6 +9,7 @@
 #include "../backend_type.hpp"
 #include "../options.hpp"
 
+#include <debug_info/debug_info.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
@@ -67,12 +68,18 @@ namespace compiler::driver {
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;
 		BackendType        backend_type;
+		bool               build_debug_info;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
 
 		[[nodiscard]]
 		base::Bit256 queryStablePerfectHash() const;
+	};
+
+	struct CompileModuleResult {
+		artifacts::FileArtifact               object_art;
+		base::Optional<debug_info::DebugInfo> debug_info;
 	};
 
 	/**
@@ -89,7 +96,7 @@ namespace compiler::driver {
 	DECLARE_QUERY(
 		CompileModule,
 		KeyOf_CompileModule,
-		query::QResult<artifacts::FileArtifact>,
+		CRef<query::QResult<CompileModuleResult>>,
 		({
 			.used_hashes             = query::UsedHashes::StableHash,
 			.can_be_loaded_from_disk = true,

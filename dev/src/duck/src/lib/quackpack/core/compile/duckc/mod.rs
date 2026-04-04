@@ -12,13 +12,15 @@
 mod compilation_type;
 mod process_builder;
 
+use std::convert::Infallible;
+
 pub use compilation_type::CompilationType;
 
 use super::BuildContext;
 use super::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::compiler_dag::CompilerDag;
 use crate::quackpack::core::storage::freeze::FreezeDep;
-use crate::util_common::path_ops_ext::{PathOpsExt, ShouldBlock};
+use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 #[derive(Debug)]
@@ -34,6 +36,20 @@ impl Duckc {
         Self {
             program_name: "duckc".into(),
         }
+    }
+
+    /// A helper for starting a REPL session from [`DuckCtx`].
+    pub fn start_repl_with(ctx: &DuckCtx) -> QuackResult<Infallible> {
+        let this = Self::new(ctx);
+        this.start_repl()
+    }
+
+    /// Start a REPL session.
+    pub fn start_repl(&self) -> QuackResult<Infallible> {
+        process_builder::DuckcProcessBuilder::new(self)
+            .set_subcommand(process_builder::DuckcSubcommand::Repl)
+            .execute_and_replace()
+            .context("failed to start a REPL session")
     }
 
     /// Compile the `graph` with the given `compilation_type` and `bcx`.
@@ -72,14 +88,17 @@ impl Duckc {
                 source_dir.display()
             )
         }
-        builder.set_src_dir(this).set_package_artifacts_dir(this);
+        builder
+            .set_src_dir(this)
+            .set_package_artifacts_dir(this)
+            .update_with_profile(&bcx.profile);
         // We need to lock a file, we can't lock a directory.
         let _lock = this.artifacts_directory().join(".duck_lock").lock(ShouldBlock::Yes).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
         bcx.package
             .ctx()
             .console()
             .info_verbose(format!("Running `{}`", builder));
-        builder.execute(this.as_freeze_dep())?;
+        builder.execute(|| format!("failed to compile package `{}`", this.as_freeze_dep()))?;
         Ok(())
     }
 }
@@ -98,7 +117,7 @@ fn bail_if_has_explicit_aliases(package: &CompilerPackage) -> QuackResult<()> {
     if manifest
         .dependencies()
         .all_dependencies()
-        .values()
+        .iter()
         .any(|dep| dep.is_aliased())
     {
         let desc = package.package().as_freeze_dep();

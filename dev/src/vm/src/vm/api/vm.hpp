@@ -187,4 +187,20 @@ namespace vm::api {
 	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
 	 */
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
+
+	/**
+	 * @brief Get the number of current stack frames.
+	 * @return The response containing the number of stack frames or an API error.
+	 */
+	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
+		PID pid, ThreadID thread_id
+	);
+
+	/**
+	 * @brief Get the variables of a stack frame with a given index.
+	 * @return The response containing the variables of the stack frame or an API error.
+	 */
+	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
+		PID pid, ThreadID thread_id, u64 stack_frame_number
+	);
 }

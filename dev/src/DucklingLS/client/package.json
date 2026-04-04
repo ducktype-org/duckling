@@ -1,7 +1,7 @@
 {
 	"name": "duckling-client",
 	"description": "DucklingLS client",
-	"author": "zpp-2.1",
+	"author": "DuckType",
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.75.0"

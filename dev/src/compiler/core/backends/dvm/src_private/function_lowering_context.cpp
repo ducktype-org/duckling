@@ -1,5 +1,6 @@
 #include "function_lowering_context.hpp"
 
+#include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
 
@@ -27,10 +28,11 @@ using namespace compiler::backend_vm::internal;
 	}
 
 FunctionLoweringContext::FunctionLoweringContext(
-	ProgramLoweringContext&                   program_context,
-	base::StrID                               name,
-	CRef<tsl::TypeLayout>                     return_type,
-	const std::vector<CRef<tsl::TypeLayout>>& parameter_types
+	ProgramLoweringContext&                     program_context,
+	base::StrID                                 name,
+	CRef<tsl::TypeLayout>                       return_type,
+	const std::vector<CRef<tsl::TypeLayout>>&   parameter_types,
+	base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 ):
 	  program_context(program_context),
 	  function_return_type(program_context.lowerAndKeepTslType(return_type)),
@@ -40,7 +42,8 @@ FunctionLoweringContext::FunctionLoweringContext(
 		  })
 		  | std::ranges::to<std::vector>()
 	  ),
-	  function_name(name) {}
+	  function_name(name),
+	  fun_di_builder_opt(std::move(fun_di_builder_opt)) {}
 
 base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 	if (!block_to_label.contains(block)) {
@@ -121,6 +124,15 @@ void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionPa
 	lir::LIRLocalRef lir_func_param
 ) {
 	createLirLocalToDVMMapping(lir_func_param);
+	if_opt_some(fun_di_builder_opt, builder) {
+		if_opt_some(lir_func_param->metadata.source_code_name, param_name) {
+			builder.addParameter(
+				lir_func_param->parameter_index.value(),
+				param_name.str(),
+				lir_func_param->metadata.position.map(mapDIPosition)
+			);
+		}
+	}
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::beginBlock(lir::BlockRef block) {
@@ -146,6 +158,9 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
 	function.signature.result_type = vm::code::Identifier(vm::code::typeName(function_return_type));
 	function.body                  = std::move(function_body);
+
+	if_opt_some(fun_di_builder_opt, builder) { builder.end(); }
+
 	return function;
 }
 
@@ -170,6 +185,14 @@ DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRLocalRef lir_local) {
+	if_opt_some(fun_di_builder_opt, builder) {
+		if_opt_some(lir_local->metadata.source_code_name, var_name) {
+			builder.addVariableInit(
+				instructionsCount(), var_name.str(), lir_local->metadata.position.map(mapDIPosition)
+			);
+		}
+	}
+
 	auto dvm_local = insertLirLocal(lir_local);
 	pushInstruction({
 		vm::code::builders::OpKind::init,
@@ -220,4 +243,8 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 		.param_types = param_types,
 		.is_extern_c = true,
 	};
+}
+
+usize compiler::backend_vm::internal::FunctionLoweringContext::instructionsCount() const {
+	return function_body.size();
 }

@@ -2,7 +2,7 @@
 
 Tests:
   conditional: # if, if-else
-    Cases: 
+    Cases:
       llvm:
         backend: llvm
         ExitCode: 99
@@ -21,6 +21,15 @@ Tests:
         # @TODO: #1849 the global initial value is not working in VM
         # Output:
         #   String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
+        ExitCode: 0
+  default_initialization:
+    Cases:
+      # @TODO: #1916 When arrays are handled in DVM, add a DVM case.
+      # @TODO: #1560 When records are handled in DVM, add a DVM case.
+      llvm:
+        backend: llvm
+        Output:
+          String: "=================\n0\n0\n0\nA0\n3\n+++++\n0\n0\n0\nA0\n3\n+++++\n1\n1\n1\nACkajak\n+++++\n=================\n0\n1\n0\n=================\n1\n1\n0\n=================\n999\n0\n999\n999\n=================\n1\n=================\n1\n123\n"
         ExitCode: 0
   loops-performance: # while
     Cases:

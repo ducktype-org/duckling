@@ -5,6 +5,8 @@
 
 #include "generic_operations.hpp"
 
+#include <debug_info/debug_info_io.hpp>
+#include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
@@ -38,19 +40,22 @@
 
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
-		return { module_id.queryUnstablePerfectHash(), std::to_underlying(backend_type) };
+		return { module_id.queryUnstablePerfectHash(),
+			     std::to_underlying(backend_type),
+			     build_debug_info };
 	}
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
 		auto component_hash = compiler::frontend::ModuleTree::getPathComponentHash(module_id);
 		auto partial        = component_hash.partial;
 		hashing::addToHash(partial, std::to_underlying(backend_type));
+		hashing::addToHash(partial, build_debug_info);
 		return partial.finalize();
 	}
 
-	struct IMPLEMENT_QUERY(CompileModule, query::QResult<artifacts::FileArtifact>) {
+	struct IMPLEMENT_QUERY(CompileModule, query::QResult<CompileModuleResult>) {
 		QUERY_ARTIFACTS_MACROS
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CREF
 
 		/** Helper variable for printing user logs, change freely if needed */
 		constinit static inline std::atomic<u64> total_module_count = 0;
@@ -116,8 +121,20 @@ namespace compiler::driver {
 			}
 		}
 
-		static std::string getModuleOutputName(const QKey& key) {
-			return key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+		struct ModuleOutputNames {
+			std::string                 object_file;
+			base::Optional<std::string> debug_info_file;
+		};
+
+		static ModuleOutputNames getModuleOutputName(const QKey& key) {
+			ModuleOutputNames names;
+			names.object_file
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			if (key.build_debug_info && key.backend_type == BackendType::DVM) {
+				names.debug_info_file
+					= key.queryStablePerfectHash().toStringHex().append(DEBUG_INFO_STABLE_EXTENSION);
+			}
+			return names;
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
@@ -130,10 +147,13 @@ namespace compiler::driver {
 			}
 			CRef lir_data = &lir_data_result->valueOrThrow();
 
-			auto output_name = getModuleOutputName(key);
-			auto output
-				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
-			    ));
+			auto output_names = getModuleOutputName(key);
+			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
+                base::StrID(output_names.object_file.c_str())
+            );
+
+			base::Optional<debug_info::DebugInfo>   debug_info_output;
+			base::Optional<artifacts::FileArtifact> debug_info_artifact;
 
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
@@ -144,7 +164,7 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
-						output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
+						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 
@@ -163,18 +183,46 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
-				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
-				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
-				vm::code::serialize(dvm_code_collection, dvm_file);
-				dvm_file.close();
+				if_opt_some(output_names.debug_info_file, di_file) {
+					debug_info_artifact.emplace(getQueryArtifactsCollection()->fileArtifactAtOrNew(
+						base::StrID(di_file.c_str())
+					));
+				}
+
+				auto serialize_to_artifact = [&](artifacts::FileArtifact& art,
+				                                 auto&                    source,
+				                                 auto                     serialize_fn) {
+					std::ofstream output_file(art.file.getFilePath().getPath(), std::ios::binary);
+					if (!output_file.is_open()) CORE_PANIC("Failed to open file for writing");
+					serialize_fn(source, output_file);
+					output_file.close();
+				};
+
+				auto dvm_module_data = compileLIRModuleToDVM(lir_data, ctx, key.build_debug_info);
+
+				serialize_to_artifact(code_output, dvm_module_data.code, vm::code::serializeCode);
+
+				if (key.build_debug_info) {
+					dvm_module_data.debug_info.value().module_path
+						= code_output.file.getFilePath().string();
+
+					serialize_to_artifact(
+						debug_info_artifact.value(),
+						dvm_module_data.debug_info.value(),
+						debug_info::saveToStream
+					);
+
+					debug_info_output = std::move(dvm_module_data.debug_info);
+				}
+
 				break;
 			}
 			default:
 				CORE_PANIC("bad backend type");
 			}
 
-			return output;
+			return CompileModuleResult{ .object_art = std::move(code_output),
+				                        .debug_info = std::move(debug_info_output) };
 		}
 
 		/**
@@ -184,18 +232,47 @@ namespace compiler::driver {
 		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
 			auto output_name = getModuleOutputName(key);
 
-			auto collection   = getQueryArtifactsCollection();
-			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
+			auto collection = getQueryArtifactsCollection();
+			auto output_maybe
+				= collection->fileArtifactAtMaybe(base::StrID(output_name.object_file.c_str()));
 
 			if (!output_maybe.has_value()) {
 				moduleLog(key, "artifact not found in artifacts collection");
 				return {};
 			}
 
-			auto output = *output_maybe.value();
+
+			CompileModuleResult result{ .object_art = *output_maybe.value(), .debug_info = {} };
+
+			if_opt_some(output_name.debug_info_file, di_file) {
+				auto debug_info_maybe
+					= collection->fileArtifactAtMaybe(base::StrID(di_file.c_str()));
+
+				if (!debug_info_maybe.has_value()) {
+					moduleLog(key, "debug info artifact not found in artifacts collection");
+					return {};
+				}
+
+				std::ifstream input_file(
+					debug_info_maybe.value()->file.getFilePath().getPath(), std::ios::binary
+				);
+				if (!input_file.is_open()) {
+					moduleLog(key, "Failed to open debug info artifact file");
+					return {};
+				}
+
+				auto debug_info_or_error = debug_info::loadFromStream(input_file);
+				if (!debug_info_or_error.has_value()) {
+					CORE_USER_LOG(
+						"Failed to parse debug-info artifact: ", debug_info_or_error.error(), "\n"
+					);
+					return {};
+				}
+				result.debug_info.emplace(std::move(debug_info_or_error.value()));
+			}
 
 			moduleLog(key, "Cached, loading artifact from disk");
-			return output;
+			return result;
 		}
 
 		static auto deleteFromDisc(const QKey& key) -> bool {
@@ -203,7 +280,14 @@ namespace compiler::driver {
 
 			auto collection = getQueryArtifactsCollection();
 			moduleLog(key, "Deleting artifact from disk");
-			return collection->deleteFileArtifact(base::StrID(output_name.c_str()));
+			bool deleted
+				= collection->deleteFileArtifact(base::StrID(output_name.object_file.c_str()));
+			if_opt_some(output_name.debug_info_file, di_file) {
+				bool artifact_deleted
+					= collection->deleteFileArtifact(base::StrID(di_file.c_str()));
+				deleted = deleted && artifact_deleted;
+			}
+			return deleted;
 		}
 	};
 
@@ -246,12 +330,17 @@ namespace compiler::driver {
 
 		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
 
+		// @TODO: #2354 This is temporary.
+		const bool build_debug_info = backend == BackendType::DVM;
+
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
-			auto module_result = query::entryPoint<CompileModule>({ module_id, backend });
-			if (module_result.hasValue())
-				objects.emplace_back(module_result.valueOrPanic());
-			else
+			auto module_result
+				= query::entryPoint<CompileModule>({ module_id, backend, build_debug_info });
+			if (module_result->hasValue()) {
+				objects.emplace_back(module_result->valueOrPanic().object_art);
+				if (build_debug_info) query::entryPoint<DebugInfoForModule>({ module_id, backend });
+			} else
 				result = base::BAD;
 		};
 		for (const auto& module_id: modules_to_compile) handle_module(module_id);
@@ -281,7 +370,7 @@ namespace compiler::driver {
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
 		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
+		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx, false);
 
 		vm::PID pid{};
 
@@ -290,7 +379,7 @@ namespace compiler::driver {
 				pid = process.pid;
 				return std::expected<void, vm::api::ApiError>{};
 			})
-		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection }); })
+		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection.code }); })
 		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 		    .and_then([&] { return vm::api::run(pid); })
 		    .and_then([&] { return vm::api::join(pid); })

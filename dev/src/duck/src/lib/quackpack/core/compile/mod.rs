@@ -7,9 +7,10 @@
 use tracing::debug;
 
 use crate::{
-    QuackResult, StrId,
+    QuackResult,
     quackpack::core::{
         FeatureName, PackageCtx,
+        compile::profiles::Profile,
         storage::{freeze::VenvFreeze, paths::Storage},
     },
 };
@@ -28,7 +29,7 @@ pub struct BuildContext<'duck, 'ctx> {
     pub freeze: VenvFreeze,
     pub storage: Storage,
     pub used_features: Vec<FeatureName>,
-    pub profile: StrId,
+    pub profile: Profile,
 }
 
 /// Compile project inside the [`BuildContext`].

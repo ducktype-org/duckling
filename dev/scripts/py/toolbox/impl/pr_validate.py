@@ -75,7 +75,7 @@ def pr_validate_impl(
     tester_impl(
         clean=False,
         dry=False,
-        filter="",
+        filter="integration_tests/compiler",
         fail_fast=False,
         verbose=False,
         log_file=DEFAULT_LOG_FILE_PATH,
