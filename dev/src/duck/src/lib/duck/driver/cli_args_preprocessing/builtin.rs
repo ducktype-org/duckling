@@ -6,7 +6,7 @@ use crate::duck::driver::subcommands::exec_for;
 // Format is `(alias, command)`. Current code assumes only „simple” aliases,
 // f.e. `("t", "test")` is fine, but not `("foo", "build --help")`.
 // It's guarded by `driver::no_aliases_in_parser()` test.
-const BUILTIN_ALIASES: [(&str, &str); 2] = [("b", "build"), ("r", "run")];
+const BUILTIN_ALIASES: [(&str, &str); 3] = [("b", "build"), ("r", "run"), ("rs", "run-script")];
 
 /// Get expanded command for the alias `name`.
 pub fn get_builtin_alias_expansion(name: &str) -> Option<&'static str> {

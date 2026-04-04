@@ -2,7 +2,7 @@
 
 #include <backends/dvm/dvm_backend.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/types.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>

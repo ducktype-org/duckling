@@ -23,9 +23,14 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
-		base::StrID           name;
-		MicroBytecode         bc;
-		usize                 local_stack_size;
+		base::StrID   name;
+		MicroBytecode bc;
+
+		/// The maximum size of the local variables on stack required by the function frame.
+		usize local_stack_size;
+		/// The maximum count of blocks required by the function frame.
+		usize local_block_count;
+
 		usize                 arg_size;
 		// total summed size of all return values
 		usize                 ret_size;
