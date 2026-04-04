@@ -11,7 +11,7 @@
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <base/str/str_utils.hpp>
 

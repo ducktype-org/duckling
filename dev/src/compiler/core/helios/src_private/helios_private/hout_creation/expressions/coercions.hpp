@@ -3,7 +3,7 @@
 #include <diagnostic_interactive/message.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <tsh/symbol_type.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>

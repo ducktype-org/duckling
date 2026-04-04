@@ -6,8 +6,8 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/symbols/query_class_symbol_data.hpp>
-#include <typesystem/higher/queries/implicit_coercibility.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/queries/implicit_coercibility.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
 

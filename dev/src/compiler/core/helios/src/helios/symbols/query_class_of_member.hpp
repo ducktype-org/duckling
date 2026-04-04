@@ -2,7 +2,7 @@
 
 #include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/types.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
