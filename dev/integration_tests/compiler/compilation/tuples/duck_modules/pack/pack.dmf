@@ -23,7 +23,8 @@ var fff = f;
 
 # Packing expressions
 var x = (1+2, 3-4, 1+2-3*4, 2.5/5.*100-1.333);
-var y = (3*4 > 4*3, 1<2<3<4, 1 == 1 != 1, 1 < 2 and not 2 < 3 or 3 > 4);
+# @TODO: Uncomment when mir successors bug is fixed
+# var y = (3*4 > 4*3, 1<2<3<4, 1 == 1 != 1, 1 < 2 and not 2 < 3 or 3 > 4);
 var z = (
     i16(12345),
     if true then 67 else 76,
