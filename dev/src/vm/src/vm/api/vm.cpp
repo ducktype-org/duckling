@@ -1,5 +1,7 @@
 #include "vm.hpp"
 
+#include <events/emitter.hpp>
+
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/core/process/interface_types.hpp>
@@ -208,5 +210,11 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::DeinitAndValidate{}))
 		    .and_then(mapOrWrongResponse<response::Boolean>);
+	}
+
+	std::expected<void, ApiError> attachListener(PID pid, events::Listener<ProcStatus>& listener) {
+		return Supervisor::get()
+			.doRequest(SupervisorRequest(pid, request::AttachListener{.listener = &listener}))
+		    .transform(ignoreResponse);
 	}
 }

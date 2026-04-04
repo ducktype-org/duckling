@@ -6,6 +6,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <events/emitter.hpp>
+
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
@@ -51,6 +53,8 @@ namespace vm {
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
+
+		events::Emitter<api::ProcStatus> onStatusChange;
 
 		VMProcess(PID my_pid);
 

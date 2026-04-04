@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <events/emitter.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/response.hpp>
@@ -203,4 +204,10 @@ namespace vm::api {
 	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
 		PID pid, ThreadID thread_id, u64 stack_frame_number
 	);
+
+	/**
+	 * @brief Attaches Listener to the onStatusChange Emitter
+	 * @return Nothing if attached succesfully
+	 */
+	std::expected<void, ApiError> attachListener(PID pid, events::Listener<ProcStatus>& listener);
 }
