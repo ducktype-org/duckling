@@ -21,8 +21,8 @@ namespace events {
 	class Listener {
 		using Handler = std::function<void(const Event&)>;
 
-		Handler              handler;
-		MRef<Emitter<Event>> emitter;
+		Handler                    handler;
+		base::MRef<Emitter<Event>> emitter;
 
 	public:
 		explicit Listener(Handler&& handler): handler(std::move(handler)) {}
@@ -85,9 +85,8 @@ namespace events {
 		std::recursive_mutex listeners_mutex;
 
 	public:
+		Emitter() = default;
 		// Disallow copy and move since Listener stores raw pointer to Emitter
-		Emitter() {}
-
 		Emitter(const Emitter&)            = delete;
 		Emitter& operator=(const Emitter&) = delete;
 		Emitter(Emitter&&)                 = delete;
