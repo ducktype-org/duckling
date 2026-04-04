@@ -2,9 +2,9 @@
 
 #include "size_constants.hpp"
 
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/abstract_type.hpp>
+#include <tsh/symbol_type.hpp>
+#include <tsh/types.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>

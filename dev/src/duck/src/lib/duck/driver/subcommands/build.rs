@@ -35,8 +35,11 @@ pub fn get_parser() -> Command {
             .conflicts_with("global"),
         )
         .arg(
-            flag("global", "Synchronize the global virtual environment")
-                .conflicts_with("overwrite"),
+            flag(
+                "global",
+                "Build the package in the global virtual environment",
+            )
+            .conflicts_with("overwrite"),
         )
         .arg(flag(
             "external-errors",
@@ -58,7 +61,6 @@ pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
         package,
         used_features: features,
         profile,
-        global,
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
         strict_errors: matches.get_flag("external-errors"),

@@ -8,7 +8,7 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 
