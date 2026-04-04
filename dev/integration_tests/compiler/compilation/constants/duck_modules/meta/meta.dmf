@@ -1,3 +1,6 @@
+# This test tests the compile time evaluation of meta types. 
+# Note that for more complex types we create bool constants 
+# to assert their correctness, since some of them are not implemented.
 fun createUnit() -> type = ();
 fun createBox(t: type) -> type = box t;
 fun createRef(t: type) -> type = ref t;
@@ -39,6 +42,52 @@ const CMP8_NOT_EQUAL_FALSE = BOX_I32 != createBox(i32);
 const CMP9_VIA_FUNCTION_TRUE = typesEqual(TUPLE_A, TUPLE_B);
 const CMP10_VIA_FUNCTION_TRUE = typesEqual(MEGA_TYPE_I128, MEGA_TYPE_MANUAL);
 const CMP11_VIA_FUNCTION_FALSE = typesEqual(MEGA_TYPE_I128, MEGA_TYPE_DIFFERENT);
+
+class T {}
+class U {}
+
+fun getT() -> type = T;
+fun getU() -> type = U;
+
+const T_TYPE = T;
+const U_TYPE = U;
+const T2_TYPE = getT();
+
+const CMP12 = T == T;
+const CMP13 = T_TYPE == T2_TYPE;
+const CMP14 = T != U;
+const CMP15 = T != i32;
+
+const T_ARRAY = getT()[5];      # T[5]
+const T_LIST = List[getT()];    # List[T]
+const CMP16 = T_ARRAY == T[5];
+const CMP17 = T_LIST == List[T];
+
+fun getTuple(order: i32, a: type, b: type) -> type = {
+    if (order == 1) {
+        return (a, b, createRef(a));
+    } else {
+        return (a, b, createRef(b));
+    }
+}
+
+fun getVariant(order: i32, a: type, b: type) -> type = {
+    if (order == 1) {
+        return a | b | createRef(a);
+    } else {
+        return a | b | createRef(b);
+    }
+}
+
+const T_IN_TUPLE = (i32, T, T, U);
+const T_IN_TUPLE_MANUAL: type = (i32, getT(), getT(), getU());
+const CMP18 = T_IN_TUPLE == T_IN_TUPLE_MANUAL;
+const CMP19 = T_IN_TUPLE == createTuple(i32, T, T, U);
+const CMP20 = (T, U, ref T) == getTuple(1, T, U);
+const CMP21 = (T, U, ref U) == getTuple(0, T, U);
+const CMP21 = (T, U, ref U) == getTuple(0, T, U);
+const CMP22 = T | U | ref T == getVariant(0, T, U);
+const CMP23 = T | U | ref U == getVariant(1, T, U);
 
 fun main() -> i64 = {
     if (CMP1_IDENTICAL) {
@@ -83,6 +132,54 @@ fun main() -> i64 = {
 
     if (not CMP11_VIA_FUNCTION_FALSE) {
         builtin_output_i64(11);
+    }
+
+    if(CMP12) {
+        builtin_output_i64(12);
+    }
+
+    if(CMP13) {
+        builtin_output_i64(13);
+    }
+    
+    if(CMP14) {
+        builtin_output_i64(14);
+    }
+
+    if(CMP15) {
+        builtin_output_i64(15);
+    }
+    
+    if(CMP16) {
+        builtin_output_i64(16);
+    }
+
+    if(CMP17) {
+        builtin_output_i64(17);
+    }
+
+    if(CMP18) {
+        builtin_output_i64(18);
+    }
+
+    if(CMP19) {
+        builtin_output_i64(19);
+    }
+
+    if(CMP20) {
+        builtin_output_i64(20);
+    }
+
+    if(CMP21) {
+        builtin_output_i64(21);
+    }
+
+    if(CMP22) {
+        builtin_output_i64(22);
+    }
+
+    if(CMP23) {
+        builtin_output_i64(23);
     }
 
     let sum: createInt() = 2147483647;
