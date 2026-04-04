@@ -13,7 +13,7 @@ use crate::{
         },
         types_common::{ExpandedLocation, InternedExpandedLocation},
     },
-    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
+    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 use tempfile::TempDir;
 use url::Url;
@@ -34,7 +34,7 @@ mod concurrent;
 
 fn registry_url_hash() -> StrId {
     let url: Url = Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap();
-    crate::util_common::hash::sha256_string(url.host_str().unwrap())
+    crate::util::hash::sha256_string(url.host_str().unwrap())
 }
 
 /// This function creates mock storage with following contents:

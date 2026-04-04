@@ -1,6 +1,4 @@
 use std::{
-    error::Error,
-    fmt::Display,
     fs::{
         File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
         read_to_string, remove_dir, remove_file, rename, write,
@@ -47,35 +45,6 @@ impl DerefMut for FileLockGuard {
     }
 }
 
-#[derive(Debug)]
-/// Helper for keeping an [`io::Error`] in [`QuackResult`] stack, with an extra message.
-pub struct IoErrorWithMsg {
-    msg: String,
-    source: io::Error,
-}
-
-impl IoErrorWithMsg {
-    pub fn source(&self) -> &io::Error {
-        &self.source
-    }
-
-    pub fn msg(&self) -> &str {
-        &self.msg
-    }
-}
-
-impl Display for IoErrorWithMsg {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.msg.fmt(f)
-    }
-}
-
-impl Error for IoErrorWithMsg {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(&self.source)
-    }
-}
-
 /// Options for controlling the [`PathOpsExt::mkdir`]
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub enum MkdirOptions {
@@ -99,7 +68,7 @@ pub trait PathOpsExt {
     /// ## Returns
     /// [`Ok(File)`](std::fs::File) if created successfully, otherwise an error, as reported by
     /// the [`PathOpsExt::mkdir`] or the [`OpenOptions::open`].
-    fn touch(&self) -> Result<File, IoErrorWithMsg>;
+    fn touch(&self) -> QuackResult<File>;
 
     /// Create directories at given [`Path`].
     ///
@@ -109,12 +78,12 @@ pub trait PathOpsExt {
     ///
     /// Note that this function will return `Ok(())`, if [`create_dir`] returns `Err` with kind
     /// [`ErrorKind::AlreadyExists`](io::ErrorKind::AlreadyExists).
-    fn mkdir(&self, opts: MkdirOptions) -> Result<(), IoErrorWithMsg>;
+    fn mkdir(&self, opts: MkdirOptions) -> QuackResult<()>;
 
     /// Locks exclusively `self`, creating a file if needed.
     ///
     /// This is essentially [`self.touch()?`](PathOpsExt::touch) followed by [`File::lock`]/[`File::try_lock`], with RAII bloat.
-    fn lock(&self, should_block: ShouldBlock) -> Result<FileLockGuard, IoErrorWithMsg>;
+    fn lock(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard>;
 
     /// Locks shared `self`, creating a file if needed.
     ///
@@ -122,7 +91,7 @@ pub trait PathOpsExt {
     ///
     /// ## Returns
     /// [`Ok(FileLockGuard)`](FileLockGuard) on a success.
-    fn lock_shared(&self, should_block: ShouldBlock) -> Result<FileLockGuard, IoErrorWithMsg>;
+    fn lock_shared(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard>;
 
     /// Resolve `self` fully, as best as possible.
     ///
@@ -175,7 +144,7 @@ pub trait PathOpsExt {
     fn read(&self) -> QuackResult<Vec<u8>>;
 
     /// A wrapper around [`std::fs::read_to_string`].
-    fn read_to_string(&self) -> Result<String, IoErrorWithMsg>;
+    fn read_to_string(&self) -> QuackResult<String>;
 
     /// A wrapper around [`std::fs::rename`].
     fn rename_to(&self, to: impl AsRef<Path>) -> QuackResult<()>;
@@ -243,7 +212,7 @@ impl PathOpsExt for Path {
         }
     }
 
-    fn touch(&self) -> Result<File, IoErrorWithMsg> {
+    fn touch(&self) -> QuackResult<File> {
         if let Some(parent) = self.parent() {
             parent.mkdir(MkdirOptions::WithParents)?;
         }
@@ -259,13 +228,11 @@ impl PathOpsExt for Path {
                 opts.mode(permissions & MASK);
             }
         }
-        opts.open(self).map_err(|err| IoErrorWithMsg {
-            msg: format!("failed to create file `{}`", self.display()),
-            source: err,
-        })
+        opts.open(self)
+            .with_context(|| format!("failed to create file `{}`", self.display()))
     }
 
-    fn mkdir(&self, opts: MkdirOptions) -> Result<(), IoErrorWithMsg> {
+    fn mkdir(&self, opts: MkdirOptions) -> QuackResult<()> {
         let result = match opts {
             MkdirOptions::WithoutParents => create_dir(self),
             MkdirOptions::WithParents => create_dir_all(self),
@@ -278,13 +245,10 @@ impl PathOpsExt for Path {
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Ok(()),
             _ => result,
         }
-        .map_err(|err| IoErrorWithMsg {
-            msg: format!("failed to create {text} `{}`", self.display()),
-            source: err,
-        })
+        .with_context(|| format!("failed to create {text} `{}`", self.display()))
     }
 
-    fn lock(&self, should_block: ShouldBlock) -> Result<FileLockGuard, IoErrorWithMsg> {
+    fn lock(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard> {
         let file = self.touch()?;
         let result = if matches!(should_block, ShouldBlock::Yes) {
             file.lock()
@@ -294,18 +258,15 @@ impl PathOpsExt for Path {
                 std::fs::TryLockError::WouldBlock => io::Error::from(io::ErrorKind::WouldBlock),
             })
         };
-        result
-            .map(|_| FileLockGuard { file })
-            .map_err(|err| IoErrorWithMsg {
-                msg: format!(
-                    "failed to acquire an exclusive lock on `{}`",
-                    self.display()
-                ),
-                source: err,
-            })
+        result.map(|_| FileLockGuard { file }).with_context(|| {
+            format!(
+                "failed to acquire an exclusive lock on `{}`",
+                self.display()
+            )
+        })
     }
 
-    fn lock_shared(&self, should_block: ShouldBlock) -> Result<FileLockGuard, IoErrorWithMsg> {
+    fn lock_shared(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard> {
         let file = self.touch()?;
         let result = if matches!(should_block, ShouldBlock::Yes) {
             file.lock_shared()
@@ -317,10 +278,7 @@ impl PathOpsExt for Path {
         };
         result
             .map(|_| FileLockGuard { file })
-            .map_err(|err| IoErrorWithMsg {
-                msg: format!("failed to acquire a shared lock on `{}`", self.display()),
-                source: err,
-            })
+            .with_context(|| format!("failed to acquire a shared lock on `{}`", self.display()))
     }
 
     #[cfg(unix)]
@@ -368,11 +326,8 @@ impl PathOpsExt for Path {
         read(self).with_context(|| format!("failed to read `{}`", self.display()))
     }
 
-    fn read_to_string(&self) -> Result<String, IoErrorWithMsg> {
-        read_to_string(self).map_err(|err| IoErrorWithMsg {
-            msg: format!("failed to read `{}`", self.display()),
-            source: err,
-        })
+    fn read_to_string(&self) -> QuackResult<String> {
+        read_to_string(self).with_context(|| format!("failed to read `{}`", self.display()))
     }
 
     fn rename_to(&self, to: impl AsRef<Path>) -> QuackResult<()> {

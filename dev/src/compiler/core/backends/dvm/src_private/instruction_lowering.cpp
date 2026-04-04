@@ -189,9 +189,12 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 	}
 
-	// TODOP: Figure this out
+	// This is an edge case where LIRValues should no be lowered to DVMValue as this creates a copy
+	// of the value we try to reference on the stack. We have to lower it to a place and if it's
+	// direct, take a pointer to it, but if it's now, the resulting address is the pointer returned
+	// by `resolveLirPlace`.
 	if (lir_instruction.operation == lir::Operation::AddressOf) {
-		CORE_ASSERT(lir_instruction.arguments.size() == 1, "Invalid ref args");
+		CORE_ASSERT(lir_instruction.arguments.size() == 1, "Invalid ref args count");
 		CORE_ASSERT(lir_instruction.arguments[0].is<lir::LIRPlace>(), "AddressOf on non place");
 		const auto& lir_place = lir_instruction.arguments[0].get<lir::LIRPlace>();
 
@@ -212,16 +215,10 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			pushInstruction({ OpKind::mov, addr_temp.asArgument(), resolved_src.asArgument() });
 		}
 
-
 		if (maybe_output.has_value())
 			storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
 		return;
 	}
-
-
-	const auto maybe_output_type = lir_instruction.output.map([&](const auto& place) {
-		return program_context.lowerAndKeepTslType(place.layout);
-	});
 
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
@@ -292,21 +289,6 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		handleCall(
 			FunctionCallInfo::fromLirFunction(called_function, program_context), args, maybe_output
 		);
-	} else if (operation == OpKind::ref) {
-		CORE_ASSERT(args.size() == 1, "Invalid AddressOf operation argument count");
-
-		// Create a temp for the address.
-		auto addr_temp = pushTempLocal(
-			program_context.lowerAndKeepTslType(lir_instruction.output->layout), "addr_of"
-		);
-
-		pushInstruction({ OpKind::ref, addr_temp.asArgument(), args[0].asAnyArgument() });
-
-		if (maybe_output.has_value())
-			storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
-		return;
-
-
 	} else if (isUnaryOperation(operation)) {
 		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
 		auto output = maybe_output.value();

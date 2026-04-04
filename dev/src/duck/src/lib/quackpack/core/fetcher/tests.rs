@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
-use crate::{quackpack::core::Version, util_common::test_utils::setup_test};
+use crate::{quackpack::core::Version, util::test_utils::setup_test};
 
 use super::*;
 

@@ -101,8 +101,8 @@ namespace vm::loader::compiler::detail {
 			if constexpr (std::constructible_from<u64, HighArg>) {
 				return u64(arg);
 			} else {
-				return compiler.lowerArgument(
-					ctx, vm::opargs::OpCodeArg{ std::forward<HighArg>(arg) }
+				return compiler.template lowerArgument<std::remove_cvref_t<HighArg>, LowArg>(
+					ctx, arg
 				);
 			}
 		}
@@ -127,7 +127,7 @@ namespace vm::loader::compiler::detail {
 		}
 
 		void addLabel(opargs::Label label) {
-			usize lid = compiler.lowerArgument(ctx, label);
+			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(ctx, label);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
 	};
@@ -178,13 +178,17 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_mov_lptr_gptr, i) { addLow<Op_mov_lptr_gptr>(i.dst, i.src); }
 			instr_case(high::Op_mov_lptr_lptr, i) { addLow<Op_mov_lptr_lptr>(i.dst, i.src); }
 			instr_case(high::Op_setNull_lptr, i) { addLow<Op_setNull_lptr>(i.dst); }
-			instr_case(high::Op_mov_lopq_lopq, i) { addLow<Op_mov_lopq_lopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lopq_lopq, i) {
+				auto type_size = ctx.locals_map.at(i.src.var_name).type->getSize().asInt();
+				addLow<Op_mov_lopq_lopq>(i.dst, i.src);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
+			}
 			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_lopq_gopq>(i.dst, i.src); }
 			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_lopq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_gopq_lopq>(i.dst, i.src); }
-			instr_case(high::Op_mov_lste_lste, i) { addLow<Op_mov_lste_lste>(i.dst, i.src); }
-			instr_case(high::Op_mov_lste_gste, i) { addLow<Op_mov_lste_gste>(i.dst, i.src); }
-			instr_case(high::Op_mov_gste_lste, i) { addLow<Op_mov_gste_lste>(i.dst, i.src); }
+			instr_case(high::Op_mov_lste_lste, i) { addLow<Op_mov_blste_blste>(i.dst, i.src); }
+			instr_case(high::Op_mov_lste_gste, i) { addLow<Op_mov_blste_gste>(i.dst, i.src); }
+			instr_case(high::Op_mov_gste_lste, i) { addLow<Op_mov_gste_blste>(i.dst, i.src); }
 			instr_case(high::Op_mov_gste_gste, i) { addLow<Op_mov_gste_gste>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_l64, i) { addLow<Op_add_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_imm, i) { addLow<Op_add_l64_imm>(i.dst, i.src); }
@@ -385,12 +389,12 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_fcmpLe_l32_imm, i) { addLow<Op_fcmpLe_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNull_lptr, i) { addLow<Op_cmpNull_lptr>(i.ptr); }
 			instr_case(high::Op_variantSetInner_lvnt_type, i) {
-				addLow<Op_variantSetInner_lvnt_type>(i.variant, i.inner_type);
+				addLow<Op_variantSetInner_blvnt_type>(i.variant, i.inner_type);
 				opargs::Type variant_type = ctx.locals_map.at(i.variant.var_name).type->getName();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_lptr_lvnt_type, i) {
-				addLow<Op_variantGetInner_lptr_lvnt>(i.dst_ptr, i.variant);
+				addLow<Op_variantGetInner_lptr_blvnt>(i.dst_ptr, i.variant);
 				opargs::Type variant_type = ctx.locals_map.at(i.variant.var_name).type->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
@@ -426,7 +430,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
-			instr_case(high::Op_init_lany_type, i) { addLow<Op_init_lany_type>(i.var, i.type); }
+			instr_case(high::Op_init_lany_type, i) { addLow<Op_init_blany_type>(i.var, i.type); }
 			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
 			instr_case(high::Op_input_l64, i) { addLow<Op_input_l64>(i.dst); }
 			instr_case(high::Op_output_l64, i) { addLow<Op_output_l64>(i.src); }
@@ -449,33 +453,33 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_alloc_lptr_type, i) { addLow<Op_alloc_lptr_type>(i.ptr, i.type); }
 			instr_case(high::Op_free_lptr, i) { addLow<Op_free_lptr>(i.ptr); }
 			instr_case(high::Op_store_lptr_lany, i) {
-				addLow<Op_store_lptr_lany>(i.dst_ptr, i.src);
+				addLow<Op_store_lptr_blany>(i.dst_ptr, i.src);
 			}
-			instr_case(high::Op_load_lany_lptr, i) { addLow<Op_load_lany_lptr>(i.dst, i.src_ptr); }
-			instr_case(high::Op_ref_lptr_lany, i) { addLow<Op_ref_lptr_lany>(i.dst_ptr, i.src); }
+			instr_case(high::Op_load_lany_lptr, i) { addLow<Op_load_blany_lptr>(i.dst, i.src_ptr); }
+			instr_case(high::Op_ref_lptr_lany, i) { addLow<Op_ref_lptr_blany>(i.dst_ptr, i.src); }
 			instr_case(high::Op_ref_lptr_gany, i) { addLow<Op_ref_lptr_gany>(i.dst_ptr, i.src); }
 			instr_case(high::Op_structLea_lptr_lptr_field, i) {
 				addLow<Op_structLea_lptr_lptr>(i.dst_ptr, i.src_data_ptr);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structLoad_lany_lptr_field, i) {
-				addLow<Op_structLoad_lany_lptr>(i.dst, i.src_data_ptr);
+				addLow<Op_structLoad_blany_lptr>(i.dst, i.src_data_ptr);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structStore_lptr_lany_field, i) {
-				addLow<Op_structStore_lptr_lany>(i.dst_data_ptr, i.src);
+				addLow<Op_structStore_lptr_blany>(i.dst_data_ptr, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structLea_lptr_lste_field, i) {
-				addLow<Op_structLea_lptr_lste>(i.dst_ptr, i.src_data_struct);
+				addLow<Op_structLea_lptr_blste>(i.dst_ptr, i.src_data_struct);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structLoad_lany_lste_field, i) {
-				addLow<Op_structLoad_lany_lste>(i.dst, i.src_data_struct);
+				addLow<Op_structLoad_blany_blste>(i.dst, i.src_data_struct);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structStore_lste_lany_field, i) {
-				addLow<Op_structStore_lste_lany>(i.dst_data_struct, i.src);
+				addLow<Op_structStore_blste_blany>(i.dst_data_struct, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_fixedSizeTableLea_lptr_lptr_l64, i) {
@@ -483,11 +487,11 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_fixedSizeTableLoad_lany_lptr_l64, i) {
-				addLow<Op_fixedSizeTableLoad_lany_lptr>(i.dst, i.src_table_ptr);
+				addLow<Op_fixedSizeTableLoad_blany_lptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_fixedSizeTableStore_lptr_lany_l64, i) {
-				addLow<Op_fixedSizeTableStore_lptr_lany>(i.dst_table_ptr, i.src);
+				addLow<Op_fixedSizeTableStore_lptr_blany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_dynTableLea_lptr_lptr_l64, i) {
@@ -495,11 +499,11 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_dynTableLoad_lany_lptr_l64, i) {
-				addLow<Op_dynTableLoad_lany_lptr>(i.dst, i.src_table_ptr);
+				addLow<Op_dynTableLoad_blany_lptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_dynTableStore_lptr_lany_l64, i) {
-				addLow<Op_dynTableStore_lptr_lany>(i.dst_table_ptr, i.src);
+				addLow<Op_dynTableStore_lptr_blany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_dynTableReAlloc_lptr_type_l64, i) {
