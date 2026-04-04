@@ -7,6 +7,8 @@ mod build;
 mod generate;
 mod init;
 mod repl;
+pub mod run_script;
+mod sync;
 
 /// Get parsers for all the builtin subcommands.
 pub fn subcommands() -> Vec<Command> {
@@ -15,6 +17,8 @@ pub fn subcommands() -> Vec<Command> {
         #[cfg(feature = "shell-completion")]
         generate::get_parser(),
         init::get_parser(),
+        run_script::get_parser(),
+        sync::get_parser(),
         repl::get_parser(),
     ]
 }
@@ -31,6 +35,8 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         #[cfg(feature = "shell-completion")]
         "generate" => generate::execute,
         "init" => init::execute,
+        "run-script" => run_script::execute,
+        "sync" => sync::execute,
         "repl" => repl::execute,
         _ => return None,
     };

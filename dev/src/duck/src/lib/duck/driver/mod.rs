@@ -13,6 +13,10 @@ use crate::duck::driver::styles::get_styles;
 
 /// Create main cli parser.
 fn cli() -> Command {
+    let style = *styles::get_styles().get_literal();
+    let after_help = format!(
+        "To run a script you can also use syntax `{style}duck [OPTIONS] <path-to-script>{style:#}`"
+    );
     Command::new(crate_name!())
         .version(crate_version!())
         .add_verbose()
@@ -23,6 +27,7 @@ fn cli() -> Command {
         .allow_external_subcommands(true)
         .subcommands(subcommands::subcommands())
         .styles(get_styles())
+        .after_help(after_help)
 }
 
 /// Same as [`cli`], but ignores any errors and `help`/`--help` early exits.
