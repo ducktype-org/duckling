@@ -8,7 +8,6 @@ namespace vm::debugger {
 	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
 		  main_args(main_args),
 		  updater([&](vm::api::ProcStatus status) { statuses.push(status); }) {
-		
 		const auto process_pid_response = vm::api::spawn();
 		CORE_ASSERT(process_pid_response.has_value(), "Failed to spawn VM process for debugger");
 		pid = process_pid_response->pid;
@@ -28,13 +27,13 @@ namespace vm::debugger {
 			const auto join_response = vm::api::join(pid);
 			CORE_ASSERT(join_response.has_value(), "Failed to join VM process for debugger");
 		}
-		const auto run_response = vm::api::run(pid)
+		const auto run_response = vm::api::run(pid);
 		CORE_ASSERT(run_response.has_value(), "Failed to run VM");
 	}
 
 	vm::api::ProcStatus Debugger::getStatus() const {
 		auto response = vm::api::getExecutionStatus(pid);
-		CORE_ASSERT(response.has_value(),"Failed to get execution status for debugger");
+		CORE_ASSERT(response.has_value(), "Failed to get execution status for debugger");
 		return response.value();
 	}
 
