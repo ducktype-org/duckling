@@ -22,6 +22,8 @@ public:
 		TESTER_ADD_TEST(check16BitsInstructions);
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(check64BitsInstructions);
+		TESTER_ADD_TEST(checkMultipleRetVals);
+		TESTER_ADD_TEST(checkVoidTypeValid);
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);
@@ -54,6 +56,10 @@ private:
 	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "11", {}); }
 
 	void check64BitsInstructions() { runTestOnVm("64bits.dbc", "", "11", {}); }
+
+	void checkMultipleRetVals() { runTestOnVm("multiple_retvals.dbc", "", "21373315", {}); }
+
+	void checkVoidTypeValid() { runTestOnVm("valid_void_type.dbc", "", "2", {}); }
 
 	void pointerTest() {
 		for (auto filename:

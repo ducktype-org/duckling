@@ -1,0 +1,73 @@
+function foo {} -> { i64, i64 } {
+	mov_l64_imm 		ret_val_0, 21;
+	mov_l64_imm 		ret_val_1, 37;
+
+	ret;
+}
+
+function safe_div{ i64, i64 } -> { i8, i64 } {
+	mov_l8_imm		ret_val_0, 0;
+	mov_l64_l64		ret_val_1, arg1;
+	
+	cmpEq_l64_imm	arg0, 0;
+	jmpIf_label 	got_zero;
+
+	div_l64_l64 		ret_val_1, arg0;
+	ret;
+
+	label got_zero;
+	mov_l8_imm		ret_val_0, 1;
+	ret;
+}
+
+function unsafe_div { i64, i64 } -> { i64, i64 } {
+	mov_l64_l64			ret_val_0, arg1;
+	mov_l64_l64			ret_val_1, arg1;
+	
+	div_l64_l64 		ret_val_0, arg0;
+	mod_l64_l64 		ret_val_1, arg0;
+
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_lany_type 	foo_ret_val_0, i64;
+	init_lany_type 	foo_ret_val_1, i64;
+
+	call_func 	foo;
+	output_l64 	foo_ret_val_0;
+	output_l64 	foo_ret_val_1;
+	deinit;
+	deinit;
+
+	init_lany_type 	div_ret_val_0, i64;
+	init_lany_type 	div_ret_val_1, i64;
+	
+	init_lany_type 	div_arg_0, i64;
+	init_lany_type 	div_arg_1, i64;
+
+	mov_l64_imm		div_arg_0, 4;
+	mov_l64_imm		div_arg_1, 15;
+
+	call_func	unsafe_div;
+	output_l64 	div_ret_val_0;
+	output_l64 	div_ret_val_1;
+	deinit;
+	deinit;
+
+	init_lany_type 	sdiv_ret_val_0, i8;
+	init_lany_type 	sdiv_ret_val_1, i64;
+	
+	init_lany_type 	sdiv_arg_0, i64;
+	init_lany_type 	sdiv_arg_1, i64;
+
+	mov_l64_imm		sdiv_arg_0, 0;
+	mov_l64_imm		sdiv_arg_1, 15;
+
+	call_func	safe_div;
+	output_l64 	sdiv_ret_val_1;
+	deinit;
+	deinit;
+
+	ret;
+}
