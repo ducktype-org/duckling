@@ -82,7 +82,7 @@ private:
 		ASSERT_EQUAL_PRINT(42, some_number);
 
 		assertThrows<base::Panic>(
-			[&]() { emitter2.attachListener(listener); }, "Reatach should have thrown"
+			[&]() { emitter2.attachListener(listener); }, "Reattach should have thrown"
 		);
 
 		listener.detach();
