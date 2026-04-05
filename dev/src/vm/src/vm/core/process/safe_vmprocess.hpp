@@ -3,6 +3,7 @@
 #include "interface_types.hpp"
 #include "vmprocess.hpp"
 
+#include <base/collections/object_pool.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 
@@ -56,8 +57,7 @@ namespace vm {
 		 */
 		std::vector<Box<VmValue>> owned_vm_values;
 
-		// @TODO: #2342 Improve this....
-		std::deque<SafeVMThread> vm_threads;
+		base::StableObjectPool<SafeVMThread, api::ThreadID> vm_threads;
 
 		/**
 		 * @brief Returns first thread in thread queue.

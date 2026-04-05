@@ -80,8 +80,8 @@ namespace vm::builtins {
 		static i64  builtinOutputI64(SafeVMThread& process, i64 arg);
 		static void builtinOutputString(SafeVMThread& process, Pointer ptr);
 		static i64  builtinStoi(SafeVMThread& process, Pointer ptr);
-		static i64  builtinStartThread(SafeVMThread& process);
-		static void builtinJoinThread(SafeVMThread& process, i64 thread_id);
+		static u64  builtinStartThread(SafeVMThread& process);
+		static void builtinJoinThread(SafeVMThread& process, u64 thread_id);
 		static u64  builtinCreateMutex(SafeVMThread& process);
 		static void builtinLockMutex(SafeVMThread& process, u64 mutex_id);
 		static void builtinUnlockMutex(SafeVMThread& process, u64 mutex_id);

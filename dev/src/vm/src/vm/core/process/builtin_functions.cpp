@@ -19,14 +19,8 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>> callUnpackArgsImpl(
-			Ret (*function)(SafeVMThread&, FunArgs...),
-			TypeCRef                         vm_return_type,
-			IVMProcess&                      process,
-			SafeVMThread&                    thread,
-			const std::vector<Box<VmValue>>& args,
-			std::index_sequence<Is...>
-		) {
+		base::Optional<Box<VmValue>>
+			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), TypeCRef vm_return_type, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -111,13 +105,13 @@ namespace vm::builtins {
 		return std::stoll(str_data);
 	}
 
-	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
-		return i64{
+	u64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
+		return u64{
 			vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx()).value()
 		};
 	}
 
-	void FunctionHandlers::builtinJoinThread(SafeVMThread& thread, i64 thread_id) {
+	void FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
 		thread.releaseGil();
 		vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();

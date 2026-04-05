@@ -4,6 +4,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
 
+#include <functional>
 #include <queue>
 
 namespace base {
@@ -46,16 +47,36 @@ namespace base {
 		 */
 		static constexpr usize DEFAULT_MAX_OBJECTS = 1'000'000;
 
+		/**
+		 * @brief Default object constructor, which creates a default object of type T.
+		 */
+		std::function<T(ObjID)> object_constructor;
+
 	public:
 		/**
 		 * @brief Constructs an ObjectPool with a given maximum capacity.
 		 *
+		 * @param object_constructor Function to construct new objects, given their ObjID.
+		                               Defaults to a function that creates default objects of type T.
 		 * @param max_objects Maximum number of objects allowed in the pool.
 		 *                    Defaults to DEFAULT_MAX_OBJECTS.
 		 * @note Returned references are stable.
 		 */
-		explicit StableObjectPool(usize max_objects = DEFAULT_MAX_OBJECTS):
+		explicit StableObjectPool(
+			std::function<T(ObjID)> object_constructor = [](ObjID) { return T(); },
+			usize                   max_objects        = DEFAULT_MAX_OBJECTS
+		):
+			  object_constructor(object_constructor),
 			  max_objects(max_objects) {}
+
+		/**
+		 * @brief Sets the constructor function for new objects.
+		 *
+		 * @param new_constructor Function to construct new objects, given their ObjID.
+		 */
+		void setConstructor(std::function<T(ObjID)> new_constructor) {
+			object_constructor = new_constructor;
+		}
 
 		/**
 		 * @brief Attempts to retrieve an object by its ID.
@@ -92,23 +113,21 @@ namespace base {
 
 		/**
 		 * @brief Adds new object into pool.
-		 *
 		 * @return ObjID ID of the newly created object in the pool.
 		 */
-		template<class... Args>
-		ObjID add(Args&&... args) {
+		ObjID add() {
 			CORE_ASSERT(object_pool.size() < max_objects, "Too many objects in the pool");
 			if constexpr (SHOULD_RECYCLE) {
 				if (!free_ids.empty()) {
 					ObjID free_id = free_ids.front();
 					free_ids.pop();
-					object_pool[free_id]                 = T(std::forward<Args>(args)...);
+					object_pool[free_id]                 = object_constructor(free_id);
 					is_free[static_cast<usize>(free_id)] = false;
 					return free_id;
 				}
 			}
 			ObjID new_id(object_pool.size());
-			object_pool.emplace_back(std::forward<Args>(args)...);
+			object_pool.push_back(std::move(object_constructor(new_id)));
 			is_free.push_back(false);
 			return new_id;
 		}

@@ -9,6 +9,7 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/safe_vmthread.hpp>
@@ -68,10 +69,12 @@ namespace vm {
 		getMainVMThread().runNoSpawn(func_name, run_arguments);
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
-			variant_default return std::unexpected(api::StateError(
-				hasExecutionStarted(getStatus()) ? "Execution did not complete"
-												 : "Execution did not start"
-			));
+			variant_default return std::unexpected(
+				api::StateError(
+					hasExecutionStarted(getStatus()) ? "Execution did not complete"
+													 : "Execution did not start"
+				)
+			);
 		}
 		CORE_UNREACHABLE();
 	}
@@ -132,35 +135,42 @@ namespace vm {
 	SafeVMProcess::SafeVMProcess(const PID my_pid):
 		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
-		  loaded_program_copy(loader.getProgram()) {
-		vm_threads.emplace_back(*this, api::ThreadID{ 0 });
+		  loaded_program_copy(loader.getProgram()),
+		  vm_threads([this](api::ThreadID id) { return SafeVMThread(*this, id); }) {
+		vm_threads.add();
 	}
 
-	SafeVMThread& SafeVMProcess::getMainVMThread() { return vm_threads.front(); }
+	SafeVMThread& SafeVMProcess::getMainVMThread() { return *vm_threads.get(api::ThreadID{ 0 }); }
 
 	SafeVMThread& SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
-		if (thread_id == api::ThreadID{ 0 }) return getMainVMThread();
-		for (auto& thread: vm_threads)
-			if (thread.getThreadID() == thread_id) return thread;
-		return getMainVMThread();
+		match_optional(vm_threads.maybeGet(thread_id)) {
+			opt_some(thread) { return *thread; }
+			opt_none {
+				throw exceptions::VMRuntimeException(
+					"Thread with given ID does not exist: " + std::to_string(thread_id.asInt())
+				);
+			}
+			CORE_UNREACHABLE();
+		}
 	}
 
 	SafeVMThread& SafeVMProcess::getEmptyThread() {
 		for (auto& thread: vm_threads)
 			if (!api::isExecuting(thread.getStatus())) return thread;
 
-		vm_threads.emplace_back(*this, vm_threads.back().getThreadID() + api::ThreadID{ 1 });
-		return vm_threads.back();
+		return *vm_threads.get(vm_threads.add());
 	}
 
 	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
 		std::unique_lock lock(rw_global);
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
-			variant_default return std::unexpected(api::StateError(
-				hasExecutionStarted(getStatus()) ? "Execution did not complete"
-												 : "Execution did not start"
-			));
+			variant_default return std::unexpected(
+				api::StateError(
+					hasExecutionStarted(getStatus()) ? "Execution did not complete"
+													 : "Execution did not start"
+				)
+			);
 		}
 		CORE_UNREACHABLE();
 	}
@@ -228,8 +238,9 @@ namespace vm {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
 				u64 frames = getVMThreadByID(thread_id).getNumberOfCurrentStackFrames();
-				return api::Response(api::response::NumberOfCurrentStackFrames{
-					.number_of_stack_frames = frames });
+				return api::Response(
+					api::response::NumberOfCurrentStackFrames{ .number_of_stack_frames = frames }
+				);
 			}
 		}
 		CORE_UNREACHABLE();
@@ -245,8 +256,9 @@ namespace vm {
 				auto& thread = getVMThreadByID(thread_id);
 				u64   frames = thread.getNumberOfCurrentStackFrames();
 				if (frame_index >= frames)
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "Frame index out of bounds" } });
+					return std::unexpected(
+						api::ApiError{ api::OtherError{ "Frame index out of bounds" } }
+					);
 				Frame& frame = thread.getStackFrame(frame_index);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
@@ -254,16 +266,21 @@ namespace vm {
 				     std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end)) {
 					Ref<Block> block  = Ref(block_ptr);
 					u64        offset = base::safeIntConv<u64>(
-                        memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
-                    );
-					frame_vars.push_back(api::response::StackFrameData::FrameVar{
-						.offset = offset,
-						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
-					});
+						memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
+					);
+					frame_vars.push_back(
+						api::response::StackFrameData::FrameVar{
+							.offset = offset,
+							.value
+							= VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
+						}
+					);
 				}
 
-				return api::Response(api::response::StackFrameData{
-					.function_name = frame.current_function->name, .frame_vars = frame_vars });
+				return api::Response(
+					api::response::StackFrameData{ .function_name = frame.current_function->name,
+				                                   .frame_vars    = frame_vars }
+				);
 			}
 		}
 		CORE_UNREACHABLE();

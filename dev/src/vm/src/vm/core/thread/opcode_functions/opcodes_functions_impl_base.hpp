@@ -560,9 +560,9 @@ namespace vm {
 			       > callee_frame->local_block_ref_stack_base) {
 				auto block           = Ref(callee_frame->local_block_ref_stack_end[-1]);
 				u64  block_ref_count = u64(
-					callee_frame->local_block_ref_stack_end
-					- callee_frame->local_block_ref_stack_base
-				);
+                    callee_frame->local_block_ref_stack_end
+                    - callee_frame->local_block_ref_stack_base
+                );
 
 				// We're returning from a non-void function, so the last block on the stack is the
 				// return value. It's being used by the caller so we don't free it.
@@ -815,9 +815,9 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto type    = thread.process_program->getTypes().at(
-				TypeID(base::safeIntConv<usize>(instr->arg1))
-			);
+			auto type
+				= thread.process_program->getTypes().at(TypeID(base::safeIntConv<usize>(instr->arg1)
+			    ));
 
 			// Objects hold vtable pointer as their first field.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
