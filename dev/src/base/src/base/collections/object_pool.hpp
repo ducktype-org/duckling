@@ -5,7 +5,6 @@
 #include <base/misc/int_conv.hpp>
 #include <base/types/ints.hpp>
 
-#include <functional>
 #include <queue>
 #include <type_traits>
 #include <utility>
@@ -126,6 +125,7 @@ namespace base {
 	 *  - removing objects (freeing slots).
 	 *
 	 * Slots are reused using the free_ids queue.
+	 * @TODO: #2434 Add tests for StableObjectPool.
 	 */
 	template<
 		class T,
