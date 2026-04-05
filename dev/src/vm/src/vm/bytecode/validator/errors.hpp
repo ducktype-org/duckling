@@ -368,7 +368,7 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(
 		InvalidTailcallArgumentsError,
 		"Invalid tailcall arguments. The stack should contain exactly return values and arguments "
-	    "for "
+		"for "
 		"calling: "
 	);
 	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot instantiate a value of type: ");
