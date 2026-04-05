@@ -188,7 +188,7 @@ namespace vm {
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @return Mutable reference to a value returned by the program
+		 * @return Vector of mutable references to the values returned by the program
 		 */
 		std::vector<Ref<VmValue>> executeFunction(
 			const low::LowFuncData& start_function, const low::LowFuncData& func
