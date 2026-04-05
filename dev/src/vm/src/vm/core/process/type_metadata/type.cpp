@@ -140,7 +140,8 @@ namespace vm {
 
 		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
-		kind = kind::Function{ .parameters = std::move(parameters), .result_types = std::move(result) };
+		kind      = kind::Function{ .parameters   = std::move(parameters),
+			                        .result_types = std::move(result) };
 	}
 
 	void Type::defineOpaque(TypeSize pass_size) {

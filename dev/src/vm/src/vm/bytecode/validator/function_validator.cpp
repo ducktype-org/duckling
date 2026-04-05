@@ -112,7 +112,7 @@ public:
 		using namespace std::views;
 		for (auto [idx, ret]: enumerate(signature.result_types))
 			push(base::StrID(base::strConcat("ret_val_", idx).c_str()), ret.str);
-	
+
 		for (auto [idx, param]: enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
 	}

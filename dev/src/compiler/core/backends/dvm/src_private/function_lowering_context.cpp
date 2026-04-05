@@ -198,13 +198,11 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	}
 
 	auto dvm_local = insertLirLocal(lir_local);
-	pushInstruction(
-		{
-			vm::code::builders::OpKind::init,
-			vm::opargs::StackLocalAny(dvm_local.name),
-			vm::opargs::Type(typeName(dvm_local.type)),
-		}
-	);
+	pushInstruction({
+		vm::code::builders::OpKind::init,
+		vm::opargs::StackLocalAny(dvm_local.name),
+		vm::opargs::Type(typeName(dvm_local.type)),
+	});
 }
 
 FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromLirFunction(

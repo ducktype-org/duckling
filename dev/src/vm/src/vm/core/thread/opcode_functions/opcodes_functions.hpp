@@ -126,8 +126,8 @@ namespace vm {
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
 
-			auto arg_count = called_func.parameters.size();
-			auto ret_count = called_func.result_types.size();
+			auto arg_count           = called_func.parameters.size();
+			auto ret_count           = called_func.result_types.size();
 			auto shared_blocks_count = arg_count + ret_count;
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);

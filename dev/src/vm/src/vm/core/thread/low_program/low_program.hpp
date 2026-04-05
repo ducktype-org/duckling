@@ -31,7 +31,7 @@ namespace vm::low {
 		/// The maximum count of blocks required by the function frame.
 		usize local_block_count;
 
-		usize                 arg_size;
+		usize arg_size;
 		// total summed size of all return values
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;

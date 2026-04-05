@@ -19,14 +19,8 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>> callUnpackArgsImpl(
-			Ret (*function)(VMThread&, FunArgs...),
-			const std::vector<TypeCRef>&     vm_return_types,
-			VMProcess&                       process,
-			VMThread&                        thread,
-			const std::vector<Box<VmValue>>& args,
-			std::index_sequence<Is...>
-		) {
+		base::Optional<Box<VmValue>>
+			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -78,7 +72,12 @@ namespace vm::builtins {
 				"Wrong number of arguments passed to the builtin function"
 			);
 			return callUnpackArgsImpl(
-				function, vm_return_types, process, thread, args, std::index_sequence_for<FunArgs...>{}
+				function,
+				vm_return_types,
+				process,
+				thread,
+				args,
+				std::index_sequence_for<FunArgs...>{}
 			);
 		}
 	}
@@ -202,11 +201,11 @@ namespace vm::builtins {
 		const std::vector<Box<VmValue>>& arguments
 	) {
 		switch (id) {
-#define CASE_FUNC(ID_NAME)                                                              \
-	case BuiltinFunctionID::ID_NAME: {                                                  \
-		return callUnpackArgs(                                                          \
+#define CASE_FUNC(ID_NAME)                                                               \
+	case BuiltinFunctionID::ID_NAME: {                                                   \
+		return callUnpackArgs(                                                           \
 			FunctionHandlers::builtin##ID_NAME, result_types, process, thread, arguments \
-		);                                                                              \
+		);                                                                               \
 	}
 
 			FOR_EACH(

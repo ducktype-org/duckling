@@ -347,13 +347,13 @@ namespace vm::loader::compiler {
 			}
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name             = function.name,
-			                      .bc               = std::move(bytecode),
-			                      .local_stack_size = ctx.local_stack_size,
-								  .local_block_count = ctx.local_block_count,
-			                      .arg_size         = parameters_size,
-			                      .ret_size         = ret_type_sum,
-			                      .parameters       = std::move(parameters),
+				low::LowFuncData{ .name              = function.name,
+			                      .bc                = std::move(bytecode),
+			                      .local_stack_size  = ctx.local_stack_size,
+			                      .local_block_count = ctx.local_block_count,
+			                      .arg_size          = parameters_size,
+			                      .ret_size          = ret_type_sum,
+			                      .parameters        = std::move(parameters),
 			                      .result_types      = std::move(result_types) },
 				function.name
 			);
@@ -427,7 +427,7 @@ namespace vm::loader::compiler {
 					.function_pointer   = new_func.function_pointer,
 					.parameter_size_sum = param_size_sum,
 					.parameters         = std::move(params),
-					.result_types        = std::move(rets),
+					.result_types       = std::move(rets),
 				},
 				new_func.name
 			);

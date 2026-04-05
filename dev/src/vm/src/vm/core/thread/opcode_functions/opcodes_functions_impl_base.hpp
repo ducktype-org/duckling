@@ -486,8 +486,9 @@ namespace vm {
 
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
-				byte* args_pointer   = result_pointer
-				                   + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());
+				byte* args_pointer
+					= result_pointer
+				    + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 

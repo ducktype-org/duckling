@@ -155,8 +155,8 @@ void valid_type::ValidType::defineFunction(
 ) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
-			state = Defined{ .kind = defined::DefinedFunction{ .parameters = parameters,
-				                                               .result_types     = results } };
+			state = Defined{ .kind = defined::DefinedFunction{ .parameters   = parameters,
+				                                               .result_types = results } };
 		}
 		variant_default { CORE_PANIC("Bad type define: type already defined or finalized"); }
 	}
@@ -370,9 +370,9 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
-			state                       = Finalized{ .kind
-                               = finalized::Function{ .parameters = std::move(function.parameters),
-				                                                            .result_types     = std::move(function.result_types) } };
+			state                       = Finalized{ .kind = finalized::Function{
+														 .parameters   = std::move(function.parameters),
+														 .result_types = std::move(function.result_types) } };
 		}
 		variant_case(defined::DefinedVariant, variant) {
 			CORE_ASSERT(
@@ -447,9 +447,7 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 	// This method assumes all dependent types are already finalized, so we can query their
 	// instantiability.
 	variant_match(getKind()) {
-		variant_case_novalue(finalized::Primitive) {
-			is_instantiable = true;
-		}
+		variant_case_novalue(finalized::Primitive) { is_instantiable = true; }
 		variant_case_novalue(finalized::Pointer) {
 			// Any pointer is instantiable.
 			is_instantiable = true;
