@@ -165,7 +165,7 @@ i64 DuckVMRepl::runOnVm(const std::string& func_name, OwnedArgumentList& func_ar
 
 	auto exit_code_response = vm::api::getExitValue(pid);
 	if (!exit_code_response.has_value()) throw ReplEmptyExitCodeException();
-	CORE_ASSERT(exit_code_response.value().size() == 1, "REPL expects only one response value")
+	CORE_ASSERT(exit_code_response.value().size() == 1, "REPL expects only one response value");
 	// @TODO: Improve this to allow other types as well. This should change in #1132.
 	if (exit_code_response.value().at(0)->type->getName() != base::StrID("i64"))
 		throw ReplWrongReturnTypeException();
