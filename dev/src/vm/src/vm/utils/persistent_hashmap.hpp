@@ -3,8 +3,8 @@
 #include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/types/ints.hpp>
 
-#include <vm/loader/compiler/bijective_map.hpp>
-#include <vm/loader/compiler/persistent_array.hpp>
+#include <vm/utils/bijective_map.hpp>
+#include <vm/utils/persistent_array.hpp>
 
 namespace persistent {
 	STRONG_TYPEDEF_INT(HashMapStateID, u64);

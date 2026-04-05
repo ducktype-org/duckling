@@ -2,7 +2,7 @@
 
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
-#include <vm/loader/compiler/bijective_map.hpp>
+#include <vm/utils/bijective_map.hpp>
 
 #include <ranges>
 #include <stdexcept>
