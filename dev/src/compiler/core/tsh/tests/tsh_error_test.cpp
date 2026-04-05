@@ -1,5 +1,5 @@
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/abstract_type.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -78,4 +78,4 @@ public:
 	~HigherTypeSystemErrorTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/src/compiler/core/typesystem/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/tsh/tests/")

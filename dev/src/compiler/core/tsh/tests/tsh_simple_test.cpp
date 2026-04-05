@@ -1,8 +1,8 @@
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/expression_type.hpp>
-#include <typesystem/higher/queries/implicit_coercibility.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/abstract_type.hpp>
+#include <tsh/expression_type.hpp>
+#include <tsh/queries/implicit_coercibility.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/types.hpp>
 
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -1077,4 +1077,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/src/compiler/core/typesystem/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/tsh/tests/")
