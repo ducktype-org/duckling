@@ -15,12 +15,18 @@ namespace persistent {
 	STRONG_TYPEDEF_INT(VectorStateID, u64);
 
 	/**
-	Class implementing a STL vector with time-persistency aka control version. You can modify any of
-	the previous instances of the vector, if you know its `VectorStateID`. `VectorStateID` is
-	returned after each operation `pop`, `push`, `change`.
-	@note: Two instances may receive the same `VectorStateID` - this happens when via modification
-	vector returned to state that it was in previous instance. It allows for == comparison in O(1)
-	*/
+	 * @brief Class implementing a STL vector with time-persistency aka control version. You can
+	 * modify any of the previous instances of the vector, by using `VectorStateID` which is unique
+	 * to the state of the vector.
+	 *
+	 * @note Implementation based of persistent segment tree.
+	 * @note Held values are constructed only once, and nodes hold their id's. This is to allow for
+	 * quick construction of leaf elements and to avoid any assumptions about the hash function of
+	 * values.
+	 *
+	 * @tparam VarT type held in the vector
+	 * @tparam VarH hash object for VarT
+	 */
 	template<typename VarT, typename VarH = std::hash<VarT>>
 	class Vector {
 		using NodeID = u64;

@@ -12,11 +12,16 @@ namespace persistent {
 	STRONG_TYPEDEF_INT(ArrayStateID, u64);
 
 	/**
-	A persistent data structure, which simulates array. I can store up to 2^{root_height} elements.
-	Implementation based od persistent segment tree. Supports operation `access`, `change`
-	@note Held values are constructed only once, and nodes hold their id's. This is to allow for quick
-	construction of leaf elements and to avoid any assumptions about the hash function of values.
-	*/
+	 * @brief A persistent data structure, which simulates array. It can store up to 2^{root_height}
+	 * elements.
+	 * @note Implementation based of persistent segment tree.
+	 * @note Held values are constructed only once, and nodes hold their id's. This is to allow for
+	 * quick construction of leaf elements and to avoid any assumptions about the hash function of
+	 * values.
+	 *
+	 * @tparam VarT
+	 * @tparam VarH
+	 */
 	template<typename VarT, typename VarH = std::hash<VarT>>
 	class Array {
 		using NodeID = u64;

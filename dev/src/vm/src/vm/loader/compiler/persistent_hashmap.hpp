@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/types/ints.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/loader/compiler/bijective_map.hpp>
 #include <vm/loader/compiler/persistent_array.hpp>
@@ -9,6 +9,16 @@
 namespace persistent {
 	STRONG_TYPEDEF_INT(HashMapStateID, u64);
 
+	/**
+	 * @brief Persistent data structure which simulates STL hashmap
+	 *
+	 * @note currently a wrapper for persistant arrau and bijective map value~idx
+	 *
+	 * @tparam KeyT
+	 * @tparam ValT
+	 * @tparam KeyH
+	 * @tparam ValH
+	 */
 	template<
 		typename KeyT,
 		typename ValT,
@@ -53,11 +63,11 @@ namespace persistent {
 		std::pair<bool, HashMapStateID> emplace(
 			HashMapStateID state_id, const KeyT& key, const ValT& var
 		) {
-			auto inner     = ArrayStateID{ u64(state_id) };
-			auto idx       = getIdxOfkey(key);
+			auto inner               = ArrayStateID{ u64(state_id) };
+			auto idx                 = getIdxOfkey(key);
 			auto [is_new, new_state] = buffer.emplace(inner, idx, var);
 
-			return {is_new, HashMapStateID{ u64{ new_state } }};
+			return { is_new, HashMapStateID{ u64{ new_state } } };
 		}
 
 		[[nodiscard]]
