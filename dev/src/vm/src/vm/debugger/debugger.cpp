@@ -8,38 +8,33 @@ namespace vm::debugger {
 	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
 		  main_args(main_args),
 		  updater([&](vm::api::ProcStatus status) { statuses.push(status); }) {
+		
 		const auto process_pid_response = vm::api::spawn();
-
-		if (!process_pid_response.has_value())
-			throw std::runtime_error("Failed to spawn VM process for debugger");
+		CORE_ASSERT(process_pid_response.has_value(), "Failed to spawn VM process for debugger");
 		pid = process_pid_response->pid;
 
-		if (!vm::api::attachListener(pid, updater))
-			throw std::runtime_error("Failed to attach listener for debugger");
+		const auto attach_listener_response = vm::api::attachListener(pid, updater);
+		CORE_ASSERT(attach_listener_response.has_value(), "Failed to attach listener for debugger");
 
-		if (!vm::api::loadFiles(pid, { filepath }))
-			throw std::runtime_error("Failed to load file into debugger");
+		const auto load_files_response = vm::api::loadFiles(pid, { filepath });
+		CORE_ASSERT(load_files_response.has_value(), "Failed to load files to the VM for debugger");
 	}
 
 	void Debugger::runMain() {
 		auto status = vm::api::getExecutionStatus(pid);
-		if (!status.has_value())
-			throw std::runtime_error("Failed to get execution status for debugger");
+		CORE_ASSERT(status.has_value(), "Failed to get execution status for debugger");
+
 		if (std::holds_alternative<vm::api::ExecutionCompleted>(status.value())) {
-			throw std::runtime_error(
-				"Cannot run the process because it has already completed execution"
-			);
-			if (!vm::api::join(pid))
-				throw std::runtime_error("Failed to join VM process for debugger");
+			const auto join_response = vm::api::join(pid);
+			CORE_ASSERT(join_response.has_value(), "Failed to join VM process for debugger");
 		}
-		if (!vm::api::run(pid)) throw std::runtime_error("Failed to run VM");
+		const auto run_response = vm::api::run(pid)
+		CORE_ASSERT(run_response.has_value(), "Failed to run VM");
 	}
 
 	vm::api::ProcStatus Debugger::getStatus() const {
 		auto response = vm::api::getExecutionStatus(pid);
-		if (!response.has_value())
-			throw std::runtime_error("Failed to get execution status for debugger");
-
+		CORE_ASSERT(response.has_value(),"Failed to get execution status for debugger");
 		return response.value();
 	}
 
