@@ -57,7 +57,12 @@ namespace vm {
 		 */
 		std::vector<Box<VmValue>> owned_vm_values;
 
-		base::StableObjectPool<SafeVMThread, api::ThreadID> vm_threads;
+		/**
+		 * @brief Pool of threads in this process.
+		 * @note Thread with ID 0 is the main thread, it is created together with the process.
+		 * Not recycling, because SafeVMThread is not move-constructible.
+		 */
+		base::StableObjectPool<SafeVMThread, api::ThreadID, false, true> vm_threads;
 
 		/**
 		 * @brief Returns first thread in thread queue.

@@ -27,7 +27,7 @@ namespace vm {
 	 */
 	class IVMThread {
 	public:
-		constexpr explicit IVMThread(IVMProcess& my_process, api::ThreadID thread_id):
+		constexpr explicit IVMThread(api::ThreadID thread_id, IVMProcess& my_process):
 			  my_process(my_process),
 			  thread_id(thread_id) {}
 

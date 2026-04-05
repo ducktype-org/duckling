@@ -148,7 +148,7 @@ namespace vm {
 		void executeOneStep() override;
 
 	public:
-		SafeVMThread(SafeVMProcess& process, api::ThreadID thread_id);
+		SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process);
 
 		/**
 		 * @brief Run a single function with given parameters.

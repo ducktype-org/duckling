@@ -31,8 +31,8 @@ namespace vm {
 #define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
 	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
-	SafeVMThread::SafeVMThread(SafeVMProcess& process, api::ThreadID thread_id):
-		  IVMThread(process, thread_id),
+	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
+		  IVMThread(thread_id, process),
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  safe_process(process),
 		  process_memory(process.getMemory()),
