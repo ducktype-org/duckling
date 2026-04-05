@@ -49,7 +49,7 @@ private:
 		auto debugger = vm::debugger::Debugger(fs::File(path("vm_api_tests.dbc")));
 		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionNotStarted>(debugger.getStatus()));
 		expected_statuses = altIndexes(vm::api::Running, vm::api::ExecutionCompleted);
-		debugger.onVmStateChange.attachListener(listener);
+		debugger.on_vm_status_change.attachListener(listener);
 		debugger.runMain();
 		debuggerEventLoop(debugger, expected_statuses.size() + 1);
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), counter);
@@ -61,7 +61,7 @@ private:
 		expected_statuses = {
 			altIndex(vm::api::Running),
 		};
-		debugger.onVmStateChange.attachListener(listener);
+		debugger.on_vm_status_change.attachListener(listener);
 		debugger.runMain();
 		debuggerEventLoop(debugger, expected_statuses.size() + 1);
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), counter);
@@ -74,7 +74,7 @@ private:
 			altIndex(vm::api::Running),
 			altIndex(vm::api::Paused),
 		};
-		debugger.onVmStateChange.attachListener(listener);
+		debugger.on_vm_status_change.attachListener(listener);
 		debugger.runMain();
 		debuggerEventLoop(debugger, expected_statuses.size() + 1);
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), counter);

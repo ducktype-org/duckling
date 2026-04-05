@@ -40,7 +40,7 @@ namespace vm::debugger {
 	bool Debugger::isNewUpdate() const { return !statuses.empty(); }
 
 	void Debugger::updateStatus() {
-		if (isNewUpdate()) onVmStateChange.emitEvent(statuses.front());
+		if (isNewUpdate()) on_vm_status_change.emitEvent(statuses.front());
 		statuses.pop();
 	}
 }

@@ -32,7 +32,7 @@ namespace vm::debugger {
 		Debugger& operator=(Debugger&&)      = delete;
 
 		// Event handlers for the debugger:
-		events::Emitter<vm::api::ProcStatus> onVmStateChange;
+		events::Emitter<vm::api::ProcStatus> on_vm_status_change;
 
 		// Methods to control the debugging session:
 
@@ -45,12 +45,12 @@ namespace vm::debugger {
 		 * @brief Gets the current status of the VM.
 		 * @return The current status of the VM.
 		 */
-		vm::api::ProcStatus getStatus() const;
+		[[nodiscard]] vm::api::ProcStatus getStatus() const;
 
 		/**
 		 * @brief Returns true if there is new status to update
 		 */
-		bool isNewUpdate() const;
+		[[nodiscard]] bool isNewUpdate() const;
 
 		/**
 		 * @brief Update current status via Emitter

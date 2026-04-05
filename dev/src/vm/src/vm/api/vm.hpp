@@ -206,7 +206,7 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Attaches Listener to the onStatusChange Emitter
+	 * @brief Attaches Listener to the on_status_change Emitter
 	 * @return Nothing if attached succesfully
 	 */
 	std::expected<void, ApiError> attachListener(PID pid, events::Listener<ProcStatus>& listener);
