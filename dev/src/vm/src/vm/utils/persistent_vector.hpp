@@ -5,13 +5,13 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/loader/compiler/bijective_map.hpp>
+#include <vm/utils/bijective_map.hpp>
 
 #include <ranges>
 #include <utility>
 #include <vector>
 
-namespace persistent {
+namespace vm::persistent {
 	STRONG_TYPEDEF_INT(VectorStateID, u64);
 
 	/**

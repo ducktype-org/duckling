@@ -6,7 +6,7 @@
 #include <vm/utils/bijective_map.hpp>
 #include <vm/utils/persistent_array.hpp>
 
-namespace persistent {
+namespace vm::persistent {
 	STRONG_TYPEDEF_INT(HashMapStateID, u64);
 
 	/**

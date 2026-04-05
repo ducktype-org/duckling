@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
-namespace persistent {
+namespace vm::persistent {
 	STRONG_TYPEDEF_INT(ArrayStateID, u64);
 
 	/**

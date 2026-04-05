@@ -6,7 +6,7 @@
 #include <optional>
 #include <stdexcept>
 
-namespace persistent::detail {
+namespace vm::persistent::detail {
 	/**
 	 * @brief Helper structure to contain binding between values of type L and R. For pair (l1, r1)
 	 * there doesn't exist any pair (l2, r2) s.t. `l1 == l2` or `r1 == r2`
