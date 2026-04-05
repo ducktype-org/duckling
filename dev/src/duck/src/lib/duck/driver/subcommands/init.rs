@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::{
     DuckCtx, QuackResult, qp_bail_internal,
     quackpack::subcommands::init::{InitOptions, init},
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command, builder::ValueParser};
 

@@ -3,7 +3,7 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/expression_type.hpp>
+#include <tsh/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/shared_box.hpp>

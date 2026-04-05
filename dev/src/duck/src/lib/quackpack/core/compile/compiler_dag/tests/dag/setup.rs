@@ -13,7 +13,7 @@ use crate::{
         },
         types_common::{ExpandedLocation, InternedExpandedLocation},
     },
-    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
+    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
 pub fn setup_mock_storage() -> (DuckCtx, TempDir) {

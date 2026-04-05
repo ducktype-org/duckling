@@ -14,8 +14,8 @@
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/type_interface.hpp>
 
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
