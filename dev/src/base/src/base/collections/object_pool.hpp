@@ -2,6 +2,7 @@
 
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/misc/int_conv.hpp>
 #include <base/types/ints.hpp>
 
 #include <functional>
@@ -28,14 +29,15 @@ namespace base {
 		typename std::deque<T>::iterator end;
 		typename std::deque<T>::iterator begin;
 		const std::deque<bool>&          is_free;
+		usize                            index{ 0ULL };
 
 		/**
 		 * @brief Advances iterator to the next valid (non-free) object.
 		 */
 		void skipFreeObjects() {
 			while (current != end) {
-				usize index = std::distance(begin, current);
 				if (index < is_free.size() && !is_free[index]) break;
+				++index;
 				++current;
 			}
 		}
