@@ -1,8 +1,8 @@
+#include <events/emitter.hpp>
+
 #include <vm/api/vm.hpp>
 
 #include <queue>
-
-#include <events/emitter.hpp>
 
 namespace vm::debugger {
 	/**
@@ -53,7 +53,7 @@ namespace vm::debugger {
 		bool isNewUpdate() const;
 
 		/**
-		 * @brief Update current status via Emitter 
+		 * @brief Update current status via Emitter
 		 */
 		void updateStatus();
 	};

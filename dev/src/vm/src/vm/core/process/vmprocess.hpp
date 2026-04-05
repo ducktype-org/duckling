@@ -2,11 +2,11 @@
 
 #include "interface_types.hpp"
 
+#include <events/emitter.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-
-#include <events/emitter.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>

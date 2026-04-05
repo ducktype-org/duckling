@@ -6,7 +6,8 @@
 
 namespace vm::debugger {
 	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
-		  main_args(main_args), updater([&](vm::api::ProcStatus status){statuses.push(status);}) {
+		  main_args(main_args),
+		  updater([&](vm::api::ProcStatus status) { statuses.push(status); }) {
 		const auto process_pid_response = vm::api::spawn();
 
 		if (!process_pid_response.has_value())
@@ -14,7 +15,7 @@ namespace vm::debugger {
 		pid = process_pid_response->pid;
 
 		if (!vm::api::attachListener(pid, updater))
-			throw std::runtime_error("Failed to attach listener for debugger")
+			throw std::runtime_error("Failed to attach listener for debugger");
 
 		if (!vm::api::loadFiles(pid, { filepath }))
 			throw std::runtime_error("Failed to load file into debugger");
@@ -42,13 +43,10 @@ namespace vm::debugger {
 		return response.value();
 	}
 
-	bool Debugger::isNewUpdate() const {
-		return !statuses.empty();
-	}
+	bool Debugger::isNewUpdate() const { return !statuses.empty(); }
 
 	void Debugger::updateStatus() {
-		if (isNewUpdate())
-			onVmStateChange.emitEvent(statuses.front());
-			statuses.pop();
+		if (isNewUpdate()) onVmStateChange.emitEvent(statuses.front());
+		statuses.pop();
 	}
 }
