@@ -162,7 +162,7 @@ namespace compiler::helios::comptime_ops {
 
 	DEF_VM_EXT_C_FUNC(
 		bool,
-		"byte",
+		"i8",
 		comptime_types_not_equal,
 		(tsh::SymbolType<>*, "opaque_ptr", left),
 		(tsh::SymbolType<>*, "opaque_ptr", right)
