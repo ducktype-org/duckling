@@ -24,7 +24,7 @@ private:
 	}
 
 	void testTemplate(std::string_view path_name, const std::vector<usize>& expected_statuses) {
-		int counter = 0;
+		size_t counter = 0;
 
 		events::Listener<vm::api::ProcStatus> listener
 			= events::Listener<vm::api::ProcStatus>([&](const vm::api::ProcStatus& status) {
@@ -66,7 +66,7 @@ private:
 	}
 
 	void rerunTest() {
-		int counter = 0;
+		size_t counter = 0;
 
 		const std::vector<usize> expected_statuses = {
 			altIndex(vm::api::Running),
