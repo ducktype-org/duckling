@@ -2,10 +2,6 @@
 
 #include <vm/api/vm.hpp>
 
-#include <condition_variable>
-#include <mutex>
-#include <queue>
-
 namespace vm::debugger {
 	/**
 	 * @class Debugger
@@ -21,10 +17,6 @@ namespace vm::debugger {
 	private:
 		vm::PID                  pid;
 		std::vector<std::string> main_args;
-
-		std::queue<vm::api::ProcStatus> statuses;
-		std::mutex                      queue_m;
-		std::condition_variable         queue_cv;
 
 		events::Listener<vm::api::ProcStatus> updater;
 
@@ -50,15 +42,5 @@ namespace vm::debugger {
 		 * @return The current status of the VM.
 		 */
 		[[nodiscard]] vm::api::ProcStatus getStatus() const;
-
-		/**
-		 * @brief Returns true if there is new status to update
-		 */
-		[[nodiscard]] bool isNewUpdate() const;
-
-		/**
-		 * @brief Update current status via Emitter
-		 */
-		void updateStatus();
 	};
 }

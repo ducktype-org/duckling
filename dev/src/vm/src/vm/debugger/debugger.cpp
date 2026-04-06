@@ -7,11 +7,8 @@
 namespace vm::debugger {
 	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
 		  main_args(main_args),
-		  updater([&](const vm::api::ProcStatus& status) {
-			  std::lock_guard lk(queue_m);
-			  statuses.push(status);
-			  queue_cv.notify_one();
-		  }) {
+		  updater([&](const vm::api::ProcStatus& status) { on_vm_status_change.emitEvent(status); }
+	      ) {
 		const auto process_pid_response = vm::api::spawn();
 		CORE_ASSERT(process_pid_response.has_value(), "Failed to spawn VM process for debugger");
 		pid = process_pid_response->pid;
@@ -41,13 +38,4 @@ namespace vm::debugger {
 		return response.value();
 	}
 
-	bool Debugger::isNewUpdate() const { return !statuses.empty(); }
-
-	void Debugger::updateStatus() {
-		std::unique_lock lk(queue_m);
-		if (queue_cv.wait_for(lk, std::chrono::milliseconds(10), [&] { return isNewUpdate(); })) {
-			on_vm_status_change.emitEvent(statuses.front());
-			statuses.pop();
-		}
-	}
 }
