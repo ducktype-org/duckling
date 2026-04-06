@@ -1,8 +1,8 @@
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <tsh/abstract_type.hpp>
+#include <tsh/symbol_type.hpp>
 
 #include <hashing/hash_algorithm_utils.hpp>
 #include <query_framework/query_int.hpp>

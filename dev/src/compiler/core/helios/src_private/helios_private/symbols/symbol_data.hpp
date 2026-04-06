@@ -8,7 +8,7 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <tsh/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
 

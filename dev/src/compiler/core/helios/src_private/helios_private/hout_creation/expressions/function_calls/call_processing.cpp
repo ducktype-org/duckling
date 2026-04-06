@@ -16,7 +16,7 @@
 #include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <tsh/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

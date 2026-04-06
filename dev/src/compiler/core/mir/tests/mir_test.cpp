@@ -9,7 +9,7 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <typesystem/higher/queries.hpp>
+#include <tsh/queries.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>

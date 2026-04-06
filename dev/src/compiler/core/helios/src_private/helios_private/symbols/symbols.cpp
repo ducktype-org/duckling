@@ -18,8 +18,8 @@
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/abstract_type.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
