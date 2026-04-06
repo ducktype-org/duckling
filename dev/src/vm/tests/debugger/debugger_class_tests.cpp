@@ -25,8 +25,7 @@ private:
 		std::mutex              m;
 		std::condition_variable cv;
 
-		events::Listener<vm::api::ProcStatus> listener
-			= events::Listener<vm::api::ProcStatus>([&](const vm::api::ProcStatus& status) {
+		events::Listener<vm::api::ProcStatus> listener([&](const vm::api::ProcStatus& status) {
 				  ASSERT_TRUE(counter < expected_statuses.size());
 				  ASSERT_EQUAL_PRINT(expected_statuses[counter], status.index());
 				  counter++;
@@ -83,8 +82,7 @@ private:
 			altIndex(vm::api::ExecutionCompleted),
 		};
 
-		events::Listener<vm::api::ProcStatus> listener
-			= events::Listener<vm::api::ProcStatus>([&](const vm::api::ProcStatus& status) {
+		events::Listener<vm::api::ProcStatus> listener([&](const vm::api::ProcStatus& status) {
 				  ASSERT_TRUE(counter < expected_statuses.size());
 				  ASSERT_EQUAL_PRINT(expected_statuses[counter], status.index());
 				  counter++;
