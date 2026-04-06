@@ -120,6 +120,7 @@ namespace vm {
 
 			variant_case(api::request::AttachListener, request) {
 				on_status_change.attachListener(request.listener);
+				return api::Response(api::response::Empty());
 			}
 
 			variant_default { return api::Response(api::response::Empty()); }
