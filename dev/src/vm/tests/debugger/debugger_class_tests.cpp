@@ -26,11 +26,11 @@ private:
 		std::condition_variable cv;
 
 		events::Listener<vm::api::ProcStatus> listener([&](const vm::api::ProcStatus& status) {
-				  ASSERT_TRUE(counter < expected_statuses.size());
-				  ASSERT_EQUAL_PRINT(expected_statuses[counter], status.index());
-				  counter++;
-				  if (counter == expected_statuses.size()) cv.notify_one();
-			  });
+			ASSERT_TRUE(counter < expected_statuses.size());
+			ASSERT_EQUAL_PRINT(expected_statuses[counter], status.index());
+			counter++;
+			if (counter == expected_statuses.size()) cv.notify_one();
+		});
 
 		auto debugger = vm::debugger::Debugger(fs::File(path(std::string(path_name))));
 		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionNotStarted>(debugger.getStatus()));
@@ -83,11 +83,11 @@ private:
 		};
 
 		events::Listener<vm::api::ProcStatus> listener([&](const vm::api::ProcStatus& status) {
-				  ASSERT_TRUE(counter < expected_statuses.size());
-				  ASSERT_EQUAL_PRINT(expected_statuses[counter], status.index());
-				  counter++;
-				  if (counter == expected_statuses.size()) cv.notify_one();
-			  });
+			ASSERT_TRUE(counter < expected_statuses.size());
+			ASSERT_EQUAL_PRINT(expected_statuses[counter], status.index());
+			counter++;
+			if (counter == expected_statuses.size()) cv.notify_one();
+		});
 
 		auto debugger = vm::debugger::Debugger(fs::File(path("debugger_test.dbc")));
 		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionNotStarted>(debugger.getStatus()));
