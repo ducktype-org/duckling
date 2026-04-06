@@ -85,7 +85,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(MainFibQuery);
 
 int main(int argc, const char* argv[]) {
 	init::InitObject init;
-	concurrent::worker::setWorkerCount(8);
+	concurrent::worker::setWorkerCount(16);
 	query::track_reverse_graph = true;
 
 	std::ios::sync_with_stdio(false);
