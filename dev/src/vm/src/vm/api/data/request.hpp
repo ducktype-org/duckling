@@ -98,7 +98,7 @@ namespace vm::api {
 			u64      frame_index;
 		};
 
-		struct AttachListener {
+		struct AttachStatusListener {
 			Ref<events::Listener<ProcStatus>> listener;
 		};
 	}
@@ -127,7 +127,7 @@ namespace vm::api {
 		request::Detach,
 		request::ExitCodeRequest,
 		request::DeinitAndValidate,
-		request::AttachListener>;
+		request::AttachStatusListener>;
 
 	struct SupervisorRequest {
 		PID            pid;

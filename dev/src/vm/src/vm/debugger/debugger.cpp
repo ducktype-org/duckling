@@ -13,7 +13,7 @@ namespace vm::debugger {
 		CORE_ASSERT(process_pid_response.has_value(), "Failed to spawn VM process for debugger");
 		pid = process_pid_response->pid;
 
-		const auto attach_listener_response = vm::api::attachListener(pid, updater);
+		const auto attach_listener_response = vm::api::attachStatusListener(pid, updater);
 		CORE_ASSERT(attach_listener_response.has_value(), "Failed to attach listener for debugger");
 
 		const auto load_files_response = vm::api::loadFiles(pid, { filepath });

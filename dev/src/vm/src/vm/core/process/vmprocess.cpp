@@ -118,7 +118,7 @@ namespace vm {
 
 			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
 
-			variant_case(api::request::AttachListener, request) {
+			variant_case(api::request::AttachStatusListener, request) {
 				on_status_change.attachListener(request.listener);
 				return api::Response(api::response::Empty());
 			}
