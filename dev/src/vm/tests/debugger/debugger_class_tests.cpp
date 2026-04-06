@@ -92,15 +92,13 @@ private:
 
 		int loop = 3;
 
-		while (loop --> 0)
-		{
+		while (loop-- > 0) {
 			counter = 0;
 			debugger.runMain();
 			debuggerEventLoop(debugger, expected_statuses.size() + 1);
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), counter);
 		}
 	}
-
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/debugger/");

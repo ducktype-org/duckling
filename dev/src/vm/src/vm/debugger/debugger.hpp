@@ -23,8 +23,8 @@ namespace vm::debugger {
 		std::vector<std::string> main_args;
 
 		std::queue<vm::api::ProcStatus> statuses;
-		std::mutex queue_m;
-		std::condition_variable queue_cv; 
+		std::mutex                      queue_m;
+		std::condition_variable         queue_cv;
 
 		events::Listener<vm::api::ProcStatus> updater;
 
