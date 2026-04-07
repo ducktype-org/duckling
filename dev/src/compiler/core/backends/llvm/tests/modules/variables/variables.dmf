@@ -3,6 +3,5 @@ fun main() = {
   var b: bool = true;
   var c: f32 = 0f32;
   var d: f64 = 0f64;
-  var e: (i32, bool, f64) = (0, true, 3.14);
 	return;
 }

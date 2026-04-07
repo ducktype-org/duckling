@@ -2,8 +2,8 @@
 
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/symbol_type.hpp>
+#include <tsh/types.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>

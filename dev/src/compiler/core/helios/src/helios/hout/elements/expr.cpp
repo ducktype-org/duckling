@@ -14,7 +14,7 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries.hpp>
+#include <tsh/queries.hpp>
 
 #include <query_framework/context/context.hpp>
 

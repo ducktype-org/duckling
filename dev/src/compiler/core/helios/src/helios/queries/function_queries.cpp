@@ -27,10 +27,10 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
-#include <typesystem/higher/expression_type.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <tsh/expression_type.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/symbol_type.hpp>
+#include <tsh/type_interface.hpp>
 
 #include "base/collections/optional.hpp"
 #include <base/except/exceptions.hpp>
