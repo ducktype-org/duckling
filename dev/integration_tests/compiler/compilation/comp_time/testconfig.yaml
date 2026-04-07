@@ -27,7 +27,7 @@ Tests:
         ExitCode: 0
   type_evaluation:
     Cases:
-      #Issue: #2431 Enable DVM on this test
+      # @TODO: #2431 Enable DVM on this test
       llvm:
         backend: llvm
         Output:
