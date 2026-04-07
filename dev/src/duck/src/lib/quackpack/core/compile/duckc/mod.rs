@@ -18,7 +18,7 @@ pub use compilation_type::CompilationType;
 
 use super::BuildContext;
 use super::compiler_package::CompilerPackage;
-use crate::quackpack::core::compile::compiler_dag::CompilerDag;
+use crate::quackpack::core::compile::early_dag::EarlyDag;
 use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
@@ -55,7 +55,7 @@ impl Duckc {
     /// Compile the `graph` with the given `compilation_type` and `bcx`.
     pub fn compile(
         &self,
-        graph: &CompilerDag,
+        graph: &EarlyDag,
         compilation_type: CompilationType,
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<()> {
@@ -67,7 +67,7 @@ impl Duckc {
     /// Specific steps for compiling only the root package using [`process_builder`] backend.
     fn compile_root_package_only(
         &self,
-        graph: &CompilerDag,
+        graph: &EarlyDag,
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<()> {
         let this = graph.package(&graph.dag().root());

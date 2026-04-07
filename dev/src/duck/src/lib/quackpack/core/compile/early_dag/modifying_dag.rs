@@ -1,4 +1,4 @@
-//! Helpers for modifying an existing [`CompilerDag`] (and its members).
+//! Helpers for modifying an existing [`EarlyDag`] (and its members).
 
 use tracing::debug;
 
@@ -8,7 +8,7 @@ use super::*;
 
 impl DependencyDag {
     /// Same as [`CompilerDag::remove_disabled_dependencies`].
-    pub fn remove_disabled_dependencies(&mut self, packages: &AllPackages) {
+    pub fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
         for (k, v) in self.dag.iter_mut() {
             let mut to_remove = HashSet::new();
             let this = packages.package(k);
@@ -34,7 +34,7 @@ impl DependencyDag {
     }
 }
 
-impl CompilerDag {
+impl EarlyDag {
     /// Recursively populate enabled features, starting from the root of the graph.
     pub fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
         let root_package = self.package_mut(&self.dag.root());
@@ -43,7 +43,7 @@ impl CompilerDag {
         fn populate_impl(
             current: FreezeDep,
             dag: &HashMap<FreezeDep, DependencyNode>,
-            packages: &mut AllPackages,
+            packages: &mut PackagesSet,
         ) -> QuackResult<()> {
             let this = packages.package(&current);
             let this_features = this.enabled_features().clone();
@@ -71,7 +71,7 @@ impl CompilerDag {
             .topo_sort_order()
             .expect("we've verified that there are no cycles");
         for dep in order {
-            populate_impl(dep, &self.dag.dag, &mut self.all_packages)?;
+            populate_impl(dep, &self.dag.dag, &mut self.packages)?;
         }
         Ok(())
     }
@@ -83,6 +83,6 @@ impl CompilerDag {
     ///
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
     pub fn remove_disabled_dependencies(&mut self) {
-        self.dag.remove_disabled_dependencies(&self.all_packages)
+        self.dag.remove_disabled_dependencies(&self.packages)
     }
 }

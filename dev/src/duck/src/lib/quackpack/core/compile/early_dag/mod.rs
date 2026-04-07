@@ -29,30 +29,30 @@ mod tests;
 /// Dictionary [`FreezeDep`] -> [`CompilerPackage`].
 ///
 /// *Should* contain root and all dependencies listed in a freezefile.
-pub struct AllPackages {
-    packages: HashMap<FreezeDep, CompilerPackage>,
+pub struct PackagesSet {
+    inner: HashMap<FreezeDep, CompilerPackage>,
 }
 
-impl AllPackages {
+impl PackagesSet {
     /// Get [`CompilerPackage`] for the given `name`.
     pub fn package(&self, name: &FreezeDep) -> &CompilerPackage {
-        self.packages
+        self.inner
             .get(name)
             .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
     pub fn package_mut(&mut self, name: &FreezeDep) -> &mut CompilerPackage {
-        self.packages
+        self.inner
             .get_mut(name)
             .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
     }
 }
 
 #[derive(Debug)]
-/// Dependency DAG ([`DependencyDag`]) + packages cache ([`AllPackages`]).
-pub struct CompilerDag {
-    all_packages: AllPackages,
+/// Dependency DAG ([`DependencyDag`]) + packages cache ([`PackagesSet`]).
+pub struct EarlyDag {
+    packages: PackagesSet,
     dag: DependencyDag,
 }
 
@@ -142,15 +142,15 @@ impl DependencyNode {
     }
 }
 
-impl CompilerDag {
+impl EarlyDag {
     /// Get the [`CompilerPackage`] for the given `name`.
     pub fn package(&self, name: &FreezeDep) -> &CompilerPackage {
-        self.all_packages.package(name)
+        self.packages.package(name)
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
     pub fn package_mut(&mut self, name: &FreezeDep) -> &mut CompilerPackage {
-        self.all_packages.package_mut(name)
+        self.packages.package_mut(name)
     }
 
     /// Get the underlying [`DependencyDag`].

@@ -7,7 +7,7 @@ use crate::quackpack::core::{
     PackageLoader,
     compile::{
         BuildContext,
-        compiler_dag::{CompilerDag, DependencyNode},
+        early_dag::{DependencyNode, EarlyDag},
         profiles::Profile,
     },
     storage::paths::Storage,
@@ -26,7 +26,7 @@ fn creates_valid_initial_graph() {
         used_features: vec![],
         profile,
     };
-    let graph = CompilerDag::new_early(&bcx).unwrap();
+    let graph = EarlyDag::new_early(&bcx).unwrap();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
         graph.dag.dag,
@@ -64,7 +64,7 @@ fn expands_valid_features1() {
         used_features: vec!["use_foo_with_baz".into()],
         profile,
     };
-    let mut graph = CompilerDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
@@ -104,7 +104,7 @@ fn expands_valid_features2() {
         used_features: vec!["use_bar_with_baz".into()],
         profile,
     };
-    let mut graph = CompilerDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
@@ -144,7 +144,7 @@ fn expands_valid_features3() {
         used_features: vec!["full".into()],
         profile,
     };
-    let mut graph = CompilerDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
@@ -191,7 +191,7 @@ fn errors_with_nonexistent_features() {
         used_features: vec!["nonexistent".into()],
         profile,
     };
-    let mut graph = CompilerDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyDag::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -213,7 +213,7 @@ fn removes_inactive_deps1() {
         used_features: vec![],
         profile,
     };
-    let mut graph = CompilerDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
@@ -247,7 +247,7 @@ fn removes_inactive_deps2() {
         used_features: vec!["use_foo_with_baz".into()],
         profile,
     };
-    let mut graph = CompilerDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
@@ -284,7 +284,7 @@ fn removes_inactive_deps3() {
         used_features: vec!["use_bar_with_baz".into()],
         profile,
     };
-    let mut graph = CompilerDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
@@ -321,7 +321,7 @@ fn removes_inactive_deps4() {
         used_features: vec!["full".into()],
         profile,
     };
-    let mut graph = CompilerDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
@@ -361,7 +361,7 @@ fn cycle_in_freeze() {
         used_features: vec![],
         profile,
     };
-    let err = CompilerDag::new_early(&bcx).unwrap_err();
+    let err = EarlyDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         "malformed freezefile: cycle `root 1.0.0` -> `foo 1.0.0` -> `bar 1.0.0` -> `foo 1.0.0`"
@@ -381,7 +381,7 @@ fn missing_direct_dep_in_freeze() {
         used_features: vec![],
         profile,
     };
-    let err = CompilerDag::new_early(&bcx).unwrap_err();
+    let err = EarlyDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         "malformed freezefile: missing direct dependency `foo 1.0.0`"
@@ -401,7 +401,7 @@ fn missing_transitive_dep_in_freeze() {
         used_features: vec![],
         profile,
     };
-    let err = CompilerDag::new_early(&bcx).unwrap_err();
+    let err = EarlyDag::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         "malformed freezefile: missing transitive dependency `baz 1.0.0`"
