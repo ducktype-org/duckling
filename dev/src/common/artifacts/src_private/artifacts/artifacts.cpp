@@ -228,6 +228,8 @@ fs::FilePath artifacts::ArtifactCollection::getArtcFile() const {
 	return PATH / (PATH.filename().string() + ".artc");
 }
 
+fs::FilePath artifacts::ArtifactCollection::getPath() const { return PATH; }
+
 void artifacts::ArtifactCollection::flushNoLock() {
 	if (PARENT)
 		PARENT.value()->flush();

@@ -7,7 +7,6 @@
 #pragma once
 
 #include "../backend_type.hpp"
-#include "../options.hpp"
 
 #include <debug_info/debug_info.hpp>
 #include <frontend/module_tree/module_id.hpp>
@@ -55,17 +54,14 @@ namespace compiler::driver {
 	 *   - DVM backend  -> .dbc bytecode file
 	 *   - LLVM backend -> native executable (linked with linking_options)
 	 *
-	 * The script file must be set in global_state via init before calling this function.
-	 * Other config (artifacts, backend options) is passed via mode parameter.
+	 * The script file and artifact root must be set in global_state via init before calling this
+	 * function.
 	 *
-	 * @param mode             Script configuration (artifacts path, backend options, etc).
 	 * @param backend_type     Whether to use DVM or LLVM backend.
 	 * @param linking_options  Linker configuration (ignored for DVM backend).
 	 */
 	base::OkBad compileScript(
-		const CompilerModeOfOperationAndOptions::ScriptMode& mode,
-		BackendType                                          backend_type,
-		const linker::LinkingOptions&                        linking_options
+		BackendType backend_type, const linker::LinkingOptions& linking_options
 	);
 
 	/**

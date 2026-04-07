@@ -569,7 +569,7 @@ clah::Clah getClahForMain() {
 					}
 
 					const auto& linking_options = getLinkingOptionsFromClap(options);
-					auto        result = driver::compileScript(mode, backend_type, linking_options);
+					auto        result = driver::compileScript(backend_type, linking_options);
 
 					compiler::driver::exit();
 					return result.isOk() ? 0 : 1;

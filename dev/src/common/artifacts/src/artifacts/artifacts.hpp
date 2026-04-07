@@ -124,6 +124,11 @@ namespace artifacts {
 		 */
 		ArtifactCollection(std::filesystem::path root);
 
+		/**
+		 * @brief Return the root directory path of this collection.
+		 */
+		fs::FilePath getPath() const;
+
 		ArtifactCollection(const ArtifactCollection&)            = delete;
 		ArtifactCollection(ArtifactCollection&&)                 = delete;
 		ArtifactCollection& operator=(const ArtifactCollection&) = delete;

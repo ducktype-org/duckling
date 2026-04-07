@@ -11,6 +11,7 @@
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
+#include <driver/repl_utils/script_helpers.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
@@ -38,7 +39,6 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <vm/api/vm.hpp>
-#include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 
@@ -303,101 +303,6 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	namespace {
-		/**
-		 * Metadata for orchestrating execution of a compiled statement wrapper.
-		 * Holds function_name and result_type, which makeScriptMainFunction needs to emit
-		 * correct call instructions (Op_init_lany_type for non-void returns).
-		 */
-		struct ScriptExecutableCall final {
-			std::string function_name;
-			base::StrID result_type_name;
-		};
-
-		/**
-		 * Extract wrapper metadata from compiled statement chunk.
-		 * Each statement wrapper compiles to a CodeCollection with exactly one function.
-		 * Returns the wrapper's name + return type (needed for main orchestrator generation).
-		 *
-		 * Why extract from DVM bytecode instead of HOUT:
-		 * - HOUT types are semantic symbols (SymbolType<>), DVM types are string identifiers
-		 * - During lowering, type names may be transformed to match DVM conventions
-		 * - We need the type as represented in DVM (what Op_init_lany_type expects), not HOUT
-		 */
-		std::expected<ScriptExecutableCall, std::string> getExecutableCallMetadata(
-			const vm::code::CodeCollection& chunk, std::string_view wrapper_func_name
-		) {
-			// Statement wrappers compile to exactly one function per chunk
-			if (chunk.functions.size() != 1) {
-				return std::unexpected(base::strConcat(
-					"Expected exactly 1 function in wrapper chunk for '",
-					wrapper_func_name,
-					"', got ",
-					chunk.functions.size()
-				));
-			}
-
-			const auto& function           = chunk.functions[0];
-			auto        wrapper_name_strid = base::StrID(std::string(wrapper_func_name));
-
-			if (function.name.str != wrapper_name_strid) {
-				return std::unexpected(base::strConcat(
-					"Compiled wrapper name mismatch. Expected '",
-					wrapper_func_name,
-					"', got '",
-					function.name.str.strView(),
-					"'"
-				));
-			}
-
-			return ScriptExecutableCall{
-				.function_name    = std::string(wrapper_func_name),
-				.result_type_name = function.signature.result_type.str,
-			};
-		}
-
-		vm::code::Function makeScriptMainFunction(const std::vector<ScriptExecutableCall>& calls) {
-			using namespace vm;
-			using namespace vm::code;
-			using namespace vm::code::instructions;
-
-			// Program execution path is vm::api::run -> VMProcess::doRequest(request::Run)
-			// -> runFunction("main", ...), so scripts must synthesize a callable "main" entry.
-			// The bytecode validator also enforces that "main" returns i64.
-			Function script_main;
-			script_main.name                  = Identifier(base::StrID("main"));
-			script_main.signature.result_type = Identifier(base::StrID("i64"));
-
-			for (usize i = 0; i < calls.size(); ++i) {
-				const auto& call = calls[i];
-
-				// VM call validation requires return-value storage to be present on the local stack
-				// for non-void calls (FunctionValidator::validateCallAndPop checks it explicitly).
-				// We mirror backend lowering's call pattern from FunctionLoweringContext::handleCall:
-				// allocate temp slot -> call_func -> deinit temp slot.
-				if (call.result_type_name != base::StrID("void")) {
-					auto tmp_name = base::StrID(base::strConcat("__script_call_tmp_", i).c_str());
-					script_main.body.emplace_back(Op_init_lany_type(
-						opargs::StackLocalAny(tmp_name), opargs::Type(call.result_type_name)
-					));
-				}
-
-				script_main.body.emplace_back(
-					Op_call_func(opargs::FunctionName(base::StrID(call.function_name.c_str())))
-				);
-
-				if (call.result_type_name != base::StrID("void"))
-					script_main.body.emplace_back(Op_deinit());
-			}
-
-			// In lowered DVM code, function returns are written to a dedicated local named ret_val
-			script_main.body.emplace_back(
-				Op_mov_l64_imm(opargs::StackLocal64(base::StrID("ret_val")), opargs::Immediate(0))
-			);
-			script_main.body.emplace_back(Op_ret());
-
-			return script_main;
-		}
-
 		std::expected<vm::code::CodeCollection, std::string> compileScriptToDVMCollection() {
 			auto& script_context = global_state::getScriptContext();
 			auto  script_source  = script_context.script_file.getContent().view().stdString();
@@ -419,8 +324,8 @@ namespace compiler::driver {
 				defer(lowering_context.invalidateContext());
 
 				auto validated_program = vm::code::ValidProgram::withBuiltins();
-				std::vector<ScriptExecutableCall>  executable_calls;
-				base::Optional<frontend::ModuleID> parent_module_id;
+				std::vector<repl::ScriptExecutableCall> executable_calls;
+				base::Optional<frontend::ModuleID>      parent_module_id;
 
 				auto try_insert_chunk = [&](const vm::code::CodeCollection& chunk) -> bool {
 					try {
@@ -494,7 +399,7 @@ namespace compiler::driver {
 							return;
 						}
 
-						auto call_meta = getExecutableCallMetadata(
+						auto call_meta = repl::getExecutableCallMetadata(
 							chunk_result.value(), wrapper_result->wrapper_func_name
 						);
 						if (!call_meta.has_value()) {
@@ -514,7 +419,7 @@ namespace compiler::driver {
 				vm::code::CodeCollection main_collection;
 				// Generate the main entry point that calls all statement wrappers in order.
 				// executable_calls contains the wrapper names + return types collected above.
-				main_collection.functions.push_back(makeScriptMainFunction(executable_calls));
+				main_collection.functions.push_back(repl::makeScriptMainFunction(executable_calls));
 				if (!try_insert_chunk(main_collection)) return;
 
 				compiled_script = validated_program.produceValidCodeCollection();
@@ -526,9 +431,7 @@ namespace compiler::driver {
 	}
 
 	base::OkBad compileScript(
-		const CompilerModeOfOperationAndOptions::ScriptMode& mode,
-		BackendType                                          backend_type,
-		[[maybe_unused]] const linker::LinkingOptions&       linking_options
+		BackendType backend_type, [[maybe_unused]] const linker::LinkingOptions& linking_options
 	) {
 		if (backend_type != BackendType::DVM) {
 			CORE_USER_LOG("compile_script currently supports only --dvm-backend.\n");
@@ -542,11 +445,12 @@ namespace compiler::driver {
 		}
 
 		auto& script_context = global_state::getScriptContext();
-		auto  output_dir     = mode.compilation_artifacts.artifacts_path.getPath();
-		std::filesystem::create_directories(output_dir);
+		auto  output_dir     = global_state::getRootCollection()->getPath();
+		std::filesystem::create_directories(output_dir.getPath());
 
-		auto output_path = output_dir / (script_context.script_file.stem() + std::string(".dbc"));
-		std::ofstream output_file(output_path, std::ios::binary);
+		auto output_path
+			= output_dir.getPath() / (script_context.script_file.stem() + std::string(".dbc"));
+		std::ofstream output_file(output_path.string(), std::ios::binary);
 		if (!output_file.is_open()) {
 			CORE_USER_LOG(
 				"Failed to open output file for script bytecode: ", output_path.string(), "\n"
