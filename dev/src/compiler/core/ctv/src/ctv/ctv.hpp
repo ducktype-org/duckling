@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <tsh/symbol_type.hpp>
 
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>

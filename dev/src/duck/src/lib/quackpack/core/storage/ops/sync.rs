@@ -7,26 +7,23 @@ use tar::Archive;
 
 use crate::{
     QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err,
-    quackpack::{
-        core::{
-            BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine,
-            SolverAnswer, SolverGathererData,
-            fetcher::{Fetcher, types::PackageWithUrl},
-            git_access::GitAccess,
-            solver_freeze::SolverFreeze,
-            solver_mode::SolverMode,
-            storage::{
-                freeze::VenvFreeze,
-                git_access::StorageGitAccess,
-                locks::TrySyncLock,
-                package_id::{GitId, PackageId, RegistryId},
-                paths::Storage,
-                venv::{Venv, VenvData},
-                venv_id::ToVenvId,
-            },
-            types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
+    quackpack::core::{
+        BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine, SolverAnswer,
+        SolverGathererData,
+        fetcher::{Fetcher, types::PackageWithUrl},
+        git_access::GitAccess,
+        solver_freeze::SolverFreeze,
+        solver_mode::SolverMode,
+        storage::{
+            freeze::VenvFreeze,
+            git_access::StorageGitAccess,
+            locks::TrySyncLock,
+            package_id::{GitId, PackageId, RegistryId},
+            paths::Storage,
+            venv::{Venv, VenvData},
+            venv_id::ToVenvId,
         },
-        subcommands::sync::SyncOptions,
+        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
     },
     util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
@@ -35,10 +32,21 @@ use crate::quackpack::core::storage;
 
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
 
+#[derive(Debug, Clone, Copy)]
+/// Options passed to [`sync`].
+pub struct StorageSyncOptions {
+    /// Overwrite any existing venvs.
+    pub overwrite: bool,
+    /// Assume, that freezefile doesn't change.
+    pub frozen: bool,
+    /// Disallow any errors in foreign packages' manifests.
+    pub strict_errors: bool,
+}
+
 /// Synchronize virtual environment for package, and return information required to build it.
 pub fn sync(
     package: &PackageCtx<'_>,
-    options: SyncOptions,
+    options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     let venv_config = package.venv_config();
     let storage_localization = venv_config
