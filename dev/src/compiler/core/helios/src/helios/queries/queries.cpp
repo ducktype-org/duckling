@@ -59,7 +59,6 @@ namespace compiler::helios {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
 				const auto& type        = symbol_type.getType();
 
-				// @TODO: Find a better place for this
 				if (type.getKind() == tsh::Kind::Tuple) {
 					auto        tuple_type = type.as<tsh::TupleAbstractType>();
 					const auto& tuple_ctor
