@@ -457,9 +457,8 @@ namespace compiler::tsl {
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
-			const base::Optional<Bytes> field_offset
-				= getOffsetOfFieldSymbol(field_sym_id);
-			const tsh::SymbolType<> field_type
+			const base::Optional<Bytes> field_offset = getOffsetOfFieldSymbol(field_sym_id);
+			const tsh::SymbolType<>     field_type
 				= ctx.query<helios::QueryTypeOfSymbol>(field_sym_id)->valueOrThrow();
 			const auto field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)

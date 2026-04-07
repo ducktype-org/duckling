@@ -389,9 +389,11 @@ private:
 						"Tuple layout should align its component layouts."
 					);
 
-					for (const auto& field: {_1, _2, _3}) {
+					for (const auto& field: { _1, _2, _3 }) {
 						assertTrue(
-							l.getFieldSymbolOfLayoutIndex(l.getLayoutIndexOfFieldSymbol(field).value()) == field,
+							l.getFieldSymbolOfLayoutIndex(
+								l.getLayoutIndexOfFieldSymbol(field).value()
+							) == field,
 							"Layout field symbol to layout index mapping should be reversible."
 						);
 					}
@@ -460,16 +462,11 @@ private:
 			variant_match(my_class_layout->getVariant()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getOffsetOfFieldSymbol(a_field_symbol)
-								== Bytes(0)
-							&& l.getOffsetOfFieldSymbol(b_field_symbol)
-								== Bytes(2)
-							&& l.getOffsetOfFieldSymbol(c_field_symbol)
-								== Bytes(8)
-							&& l.getOffsetOfFieldSymbol(d_field_symbol)
-								== Bytes(16)
-							&& l.getOffsetOfFieldSymbol(e_field_symbol)
-								== Bytes(24),
+						l.getOffsetOfFieldSymbol(a_field_symbol) == Bytes(0)
+							&& l.getOffsetOfFieldSymbol(b_field_symbol) == Bytes(2)
+							&& l.getOffsetOfFieldSymbol(c_field_symbol) == Bytes(8)
+							&& l.getOffsetOfFieldSymbol(d_field_symbol) == Bytes(16)
+							&& l.getOffsetOfFieldSymbol(e_field_symbol) == Bytes(24),
 						"Class layout should align its component layouts."
 					);
 				}
