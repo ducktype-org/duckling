@@ -70,8 +70,8 @@ impl Duckc {
         graph: &CompilerDag,
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<()> {
-        let this = graph.package(&graph.dag().root())?;
-        let deps = graph.dag().dependencies_for_package(&graph.dag().root())?;
+        let this = graph.package(&graph.dag().root());
+        let deps = graph.dag().dependencies_for_package(&graph.dag().root());
         bail_if_has_deps(deps.dependencies())?;
         bail_if_has_explicit_aliases(this)?;
         let this = this.package();

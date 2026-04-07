@@ -22,6 +22,10 @@ pub mod profiles;
 use compiler_dag::*;
 use duckc::*;
 
+const MISSING_DEPENDENCY_IN_DAG_MESSAGE: &str = "missing dependency in the map";
+const MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE: &str =
+    "malformed manifest: missing dependency in the manifest";
+
 #[derive(Debug)]
 /// All informations required to compile a project.
 pub struct BuildContext<'duck, 'ctx> {
@@ -37,7 +41,7 @@ pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<()> {
     debug!("compiling `{bcx:?}`");
     let mut graph = CompilerDag::new_early(&bcx)?;
     graph.populate_features(&bcx.used_features)?;
-    graph.remove_disabled_dependencies()?;
+    graph.remove_disabled_dependencies();
     let duckc = Duckc::new(bcx.package.ctx());
     duckc.compile(&graph, CompilationType::OnlyRootPackage, &bcx)?;
     Ok(())

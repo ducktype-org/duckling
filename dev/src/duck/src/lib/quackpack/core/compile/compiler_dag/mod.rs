@@ -5,8 +5,11 @@ use std::collections::{HashMap, HashSet};
 use itertools::Itertools;
 
 use crate::{
-    QuackError, QuackResult, QuackResultContext,
-    quackpack::core::{compile::compiler_package::CompilerPackage, storage::freeze::FreezeDep},
+    QuackError, QuackResult,
+    quackpack::core::{
+        compile::{MISSING_DEPENDENCY_IN_DAG_MESSAGE, compiler_package::CompilerPackage},
+        storage::freeze::FreezeDep,
+    },
     util::error::MessageError,
 };
 
@@ -32,17 +35,17 @@ pub struct AllPackages {
 
 impl AllPackages {
     /// Get [`CompilerPackage`] for the given `name`.
-    pub fn package(&self, name: &FreezeDep) -> QuackResult<&CompilerPackage> {
+    pub fn package(&self, name: &FreezeDep) -> &CompilerPackage {
         self.packages
             .get(name)
-            .with_context_internal(|| format!("missing `{}` in a map", name))
+            .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
-    pub fn package_mut(&mut self, name: &FreezeDep) -> QuackResult<&mut CompilerPackage> {
+    pub fn package_mut(&mut self, name: &FreezeDep) -> &mut CompilerPackage {
         self.packages
             .get_mut(name)
-            .with_context_internal(|| format!("missing `{}` in a map", name))
+            .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
     }
 }
 
@@ -75,10 +78,10 @@ impl DependencyDag {
     }
 
     /// Get the [`DependencyNode`] for the given package.
-    pub fn dependencies_for_package(&self, package: &FreezeDep) -> QuackResult<&DependencyNode> {
+    pub fn dependencies_for_package(&self, package: &FreezeDep) -> &DependencyNode {
         self.dag
             .get(package)
-            .with_context_internal(|| format!("missing `{}` in a dag", package))
+            .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
     }
 
     /// Sort topologically this DAG.
@@ -141,12 +144,12 @@ impl DependencyNode {
 
 impl CompilerDag {
     /// Get the [`CompilerPackage`] for the given `name`.
-    pub fn package(&self, name: &FreezeDep) -> QuackResult<&CompilerPackage> {
+    pub fn package(&self, name: &FreezeDep) -> &CompilerPackage {
         self.all_packages.package(name)
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
-    pub fn package_mut(&mut self, name: &FreezeDep) -> QuackResult<&mut CompilerPackage> {
+    pub fn package_mut(&mut self, name: &FreezeDep) -> &mut CompilerPackage {
         self.all_packages.package_mut(name)
     }
 

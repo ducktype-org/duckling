@@ -67,25 +67,21 @@ fn expands_valid_features1() {
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let foo_features = graph
         .package(&"foo 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let bar_features = graph
         .package(&"bar 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let baz_features = graph
         .package(&"baz 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
     assert_eq!(root_features, HashSet::from(["use_bar".into()]));
@@ -112,25 +108,21 @@ fn expands_valid_features2() {
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let foo_features = graph
         .package(&"foo 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let bar_features = graph
         .package(&"bar 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let baz_features = graph
         .package(&"baz 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
     assert_eq!(
@@ -163,25 +155,21 @@ fn expands_valid_features3() {
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let foo_features = graph
         .package(&"foo 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let bar_features = graph
         .package(&"bar 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
 
     let baz_features = graph
         .package(&"baz 1.0.0".parse().unwrap())
-        .unwrap()
         .enabled_features()
         .clone();
     assert_eq!(root_features, HashSet::from(["baz_without_bar".into()]));
@@ -232,7 +220,7 @@ fn removes_inactive_deps1() {
     };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
-    graph.remove_disabled_dependencies().unwrap();
+    graph.remove_disabled_dependencies();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
         graph.dag.dag,
@@ -264,7 +252,7 @@ fn removes_inactive_deps2() {
     };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
-    graph.remove_disabled_dependencies().unwrap();
+    graph.remove_disabled_dependencies();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
         graph.dag.dag,
@@ -299,7 +287,7 @@ fn removes_inactive_deps3() {
     };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
-    graph.remove_disabled_dependencies().unwrap();
+    graph.remove_disabled_dependencies();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
         graph.dag.dag,
@@ -337,7 +325,7 @@ fn removes_inactive_deps4() {
     };
     let mut graph = CompilerDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
-    graph.remove_disabled_dependencies().unwrap();
+    graph.remove_disabled_dependencies();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
     assert_eq!(
         graph.dag.dag,
