@@ -99,14 +99,31 @@ namespace vm {
 		return getBlock(id)->data.element_type;
 	}
 
-	bool Memory::tryInsertGlobalData(GlobalDataID id, TypeCRef type) {
-		if (!global_data.contains(id)) {
-			auto             type_size = type->getSize().asInt();
-			base::OwningView storage(new byte[type_size], type_size);
-			auto             block = allocateDummy(type, storage.modView().getBegin());
+	bool Memory::tryInsertGlobalData(
+		usize global_buffer_offset, usize global_block_idx, TypeCRef type
+	) {
+		if (MRef(global_data_blocks[global_block_idx]).toOpt().empty()) {
+			auto type_size = type->getSize().asInt();
+			CORE_ASSERT(
+				global_buffer_offset + type_size <= global_data_buffer.size(),
+				"Global buffer overflow: trying to insert global data of size {}, at offset {}, "
+				"but buffer size is only {}",
+				type_size,
+				global_buffer_offset,
+				global_data_buffer.size()
+			);
+			CORE_ASSERT(
+				global_block_idx < global_data_blocks.size(),
+				"Global blocks buffer overflow: trying to insert global block at index {}, but "
+				"buffer "
+				"size is only {}",
+				global_block_idx,
+				global_data_blocks.size()
+			);
+			auto block
+				= allocateDummy(type, global_data_buffer.data() + global_buffer_offset);
 			increaseBlockRefcount(block);
-			global_blocks.put(id, block);
-			global_data.put(id, std::move(storage));
+			global_data_blocks[global_block_idx] = block.get();
 			return true;
 		}
 		return false;
@@ -119,10 +136,9 @@ namespace vm {
 			// and if we were to free them and decrease the refcount in the wrong order we might
 			// throw a false-positive exception. This solution avoids this problem.
 
-			for (const auto& block: global_blocks | std::views::values) freeBlockData(block);
+			for (const auto& block_ptr: global_data_blocks) freeBlockData(Ref(block_ptr));
 
-			for (const auto& block: global_blocks | std::views::values)
-				decreaseBlockRefcount(block);
+			for (const auto& block_ptr: global_data_blocks) decreaseBlockRefcount(Ref(block_ptr));
 		} catch (exceptions::VMFoundMemoryLeakException&) {
 			std::cerr
 				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
@@ -401,5 +417,10 @@ namespace vm {
 			TEST_HERE(!block.deallocated)
 		}
 		return true;
+	}
+
+	void Memory::reallocateBufferForGlobals(usize global_count, usize buffer_size) {
+		global_data_buffer.resize(buffer_size);
+		global_data_blocks.resize(global_count);
 	}
 }

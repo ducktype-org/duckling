@@ -39,6 +39,10 @@ namespace vm {
 
 		if (code_result.has_value()) {
 			loaded_program_copy.selfUpdate();
+			auto global_buffer_config = loaded_program_copy.getGlobalBufferConfig();
+			memory.reallocateBufferForGlobals(
+				global_buffer_config.global_count, global_buffer_config.buffer_size
+			);
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;

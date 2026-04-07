@@ -30,8 +30,8 @@ namespace vm {
 
 		std::deque<ThreadStack> threads_frame_stacks;
 
-		base::HashMap<GlobalDataID, base::OwningView> global_data;
-		base::HashMap<GlobalDataID, Ref<Block>>       global_blocks;
+		std::vector<std::byte>                  global_data_buffer;
+		std::vector<Block*>                     global_data_blocks;
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing
@@ -190,7 +190,7 @@ namespace vm {
 		 * @return true if the global data was inserted successfully (i.e., it did not already
 		 * exist); false otherwise.
 		 */
-		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type);
+		bool tryInsertGlobalData(usize offset_in_global_data_buffer, usize idx_in_global_blocks_buffer, TypeCRef type);
 
 		/**
 		 * @brief Frees all the global data
@@ -198,12 +198,17 @@ namespace vm {
 		void deinitGlobals();
 
 		/**
+		 * @brief Reallocates the buffer and blocks storages for globals.
+		 */
+		void reallocateBufferForGlobals(usize buffer_size, usize global_count);
+
+		/**
 		 * @brief Returns a view of global data by the id.
 		 */
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalViewUnsafe(
 			GlobalDataID id
 		) -> base::ModRawView {
-			return global_data.atMaybe(id).expect("Id not stored!")->modView();
+			return global_blocks.atMaybe(id).expect("Id not stored!")->toMRef()->data.view;
 		}
 
 		/**

@@ -532,7 +532,7 @@ namespace vm {
 		executing_program = program;
 		for (const auto& [global, id, name]: program->getGlobals().allData()) {
 			// Insert the global data if it hasn't been initialized; then run constructor if present
-			if (process_memory.tryInsertGlobalData(id, global->type)
+			if (process_memory.tryInsertGlobalData(global->global_blocks_idx, global->global_buffer_offset, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->getFunctions()

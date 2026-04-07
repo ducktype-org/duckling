@@ -44,6 +44,8 @@ namespace vm::low {
 		TypeCRef                    type;
 		base::Optional<base::StrID> ctor_name;
 		base::Optional<base::StrID> dtor_name;
+		usize                       global_buffer_offset;
+		usize                       global_blocks_idx;
 	};
 
 	/**
@@ -77,6 +79,15 @@ namespace vm::low {
 
 		[[nodiscard]]
 		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
+			= 0;
+
+		struct GlobalBufferConfig {
+			usize buffer_size;
+			usize global_count;
+		};
+
+		[[nodiscard]]
+		virtual GlobalBufferConfig getGlobalBufferConfig() const
 			= 0;
 
 		virtual ~ILowVMProgram() = default;
@@ -116,12 +127,20 @@ namespace vm::low {
 			return method_name_pool;
 		}
 
+		GlobalBufferConfig getGlobalBufferConfig() const override {
+			return { .buffer_size = global_buffer_size, .global_count = global_count };
+		}
+
 	private:
-		LowVMProgram()                                  = default;
-		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
-		ObjIdNameMap<LowFuncData, usize>          functions{};
-		ObjIdNameMap<LowExternCFunction>          extern_c_functions{};
+		LowVMProgram()                         = default;
+		Box<TypeMetadata>                types = makeBox<TypeMetadata>();
+		ObjIdNameMap<LowFuncData, usize> functions{};
+		ObjIdNameMap<LowExternCFunction> extern_c_functions{};
+
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
+		usize                                     global_buffer_size = 0;
+		usize                                     global_count       = 0;
+
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
 		base::HashMap<u64, base::StrID> method_name_pool{};
@@ -154,6 +173,10 @@ namespace vm::low {
 
 		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
 			return original_program->getMethodNamePool();
+		}
+
+		GlobalBufferConfig getGlobalBufferConfig() const override {
+			return original_program->getGlobalBufferConfig();
 		}
 
 		CRef<LowVMProgram> getOriginalProgram() const { return original_program; }

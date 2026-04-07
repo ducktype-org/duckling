@@ -361,12 +361,20 @@ namespace vm::loader::compiler {
 			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
 
 			low::LowGlobalData data{
-				.type      = low_program.types->at(global.type),
-				.ctor_name = ctor_name,
-				.dtor_name = dtor_name,
+				.type                 = low_program.types->at(global.type),
+				.ctor_name            = ctor_name,
+				.dtor_name            = dtor_name,
+				.global_buffer_offset = program_ctx.global_buffer_size,
+				.global_blocks_idx    = program_ctx.global_count,
 			};
 			low_program.global_data.insert(data, global.name);
+
+			program_ctx.global_count += 1;
+			program_ctx.global_buffer_size += data.type->getSize().asInt();
 		}
+
+		low_program.global_buffer_size = program_ctx.global_buffer_size;
+		low_program.global_count       = program_ctx.global_count;
 	}
 
 	void Compiler::compileNewTypes(const code::TypeContext& ctx) {

@@ -79,6 +79,10 @@ namespace vm::loader::compiler {
 			 * index.
 			 */
 			ObjIdNameMap<code::ExternalCFunction> ext_c_functions;
+
+
+			usize global_count = 0;
+			usize global_buffer_size = 0;
 		};
 
 		/**
