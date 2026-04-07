@@ -492,14 +492,13 @@ private:
 	}
 
 	void tuplesTest() {
-		// // @TODO: check tuple types and matching struct creations
-		// auto        llvm_module = getLLVMModuleFromPath("modules/tuples");
-		// std::string ir          = llvm_module.dumpLLVMToString();
+		auto        llvm_module = getLLVMModuleFromPath("modules/tuples");
+		std::string ir          = llvm_module.dumpLLVMToString();
 
-		// // Ckeck if tuple types are present
-		// assertTrue(
-		// 	std::regex_search(ir, std::regex{ R"(%T.*E)" }), "Expected tuple struct definition"
-		// );
+		// Ckeck if tuple types are present
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(%T.*E)" }), "Expected tuple struct definition"
+		);
 	}
 };
 

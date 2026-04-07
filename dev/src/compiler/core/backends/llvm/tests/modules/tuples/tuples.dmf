@@ -1,69 +1,38 @@
-class Wrapper {
-    a: (i64, i64);
+const Person: type = (str, str, i64); # name, surname, age
+
+fun makePerson(name: str, surname: str, age: i64) -> Person = {
+    return (name, surname, age);
 }
 
-fun makeTuple(x:i32, y:i32) -> (i32, i32) = {
-    return (x, y);
+fun getName(p: Person) = {
+    return p._1;
 }
 
-fun makeWrapper(x:i32, y:i32) -> Wrapper = {
-    return Wrapper((x, y));
+fun getSurname(p: Person) = {
+    return p._2;
 }
 
-fun unwrap(x: Wrapper) = {
-    return x.a;
-}
-
-class SomeClass {
-    a: i32;
-    b: str;
-
-    fun count(x: i32) = {
-        a = a+x;
-        return a;
-    }
-}
-
-fun someFunction(x: i64) = {
-    return x*2 + 7;
+fun getAge(p: Person) = {
+    return p._3;
 }
 
 fun main() = {
-    var a = ();
-    var b = (1, -2, 3, 4);
-    var c = (false, 1, 2., "3");
-    var d = ((1, 0.), (3.5, 4));
-    var e = (0, 0);
-    var f = ("Hello");
+    var p = makePerson("John", "Doe", 30);
+    var name = getName(p);
+    var surname = getSurname(p);
+    var age = getAge(p);
 
-    var x = (1+2, 3-4, 1+2-3*4, 2.5/5.*100.-1.333);
-    var y = (3*4 > 4*3, 1<2<3<4, 1 == 1 != 1, 1 < 2 and not 2 < 3 or 3 > 4);
-    var z = (
-        i16(12345),
-        if true then 67 else 76,
-        if true then (
-            if false then
-                1
-            else (
-                if false then (
-                    2
-                ) else (
-                    4      
-                )
-            )
-        ) else (
-            8
-        )
-    );
+    builtin_output_string(name);
+    builtin_output_string(surname);
+    builtin_output_i64(age);
 
-    var sc = SomeClass(0, "zero");
-    var w1 = Wrapper((0, 0));
-    var w2 = makeWrapper(6, 7);
+    p._1 = "Jane";
+    p._2 = "Smith";
+    p._3 = 18 + 5;
 
-    var tup1 = (someFunction(2+2) + 3, sc, SomeClass(6, "seven"));
-    var tup2: (i32, i32) = makeTuple(1, 2);
-    var tup3: (i64, i64) = unwrap(w1);
-    var tup4: (i64, i64) = w2.a;
+    builtin_output_string(p._1);
+    builtin_output_string(p._2);
+    builtin_output_i64(p._3);
 
     return 0;
 }

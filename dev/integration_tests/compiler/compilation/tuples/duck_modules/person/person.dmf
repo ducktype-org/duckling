@@ -33,4 +33,6 @@ fun main() = {
     builtin_output_string(p._1);
     builtin_output_string(p._2);
     builtin_output_i64(p._3);
+
+    return 0;
 }
