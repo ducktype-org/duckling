@@ -1,5 +1,7 @@
 #include "coercions.hpp"
 
+#include <helios_private/symbols/symbols.hpp>
+
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
@@ -102,6 +104,37 @@ namespace compiler::helios {
 				output(makeBox<code::TupleExpr>(
 					ctx, expr.origin.generatedFrom(), std::move(coerced_elements)
 				));
+			}
+
+			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
+				auto source_type = expr.expression_type.getType().as<tsh::TupleAbstractType>();
+				std::vector<Box<code::Expr>> elements;
+				elements.reserve(source_type.getComponents().size());
+				u32 order = 0;
+				for (const auto& component: source_type.getComponents()) {
+					// We create a tuple expression with the correct type, and then let the
+					// TupleExpr coercion handler handle the coercion to the target tuple type.
+					elements.emplace_back(makeBox<code::AccessExpr>(
+						ctx,
+						expr.origin.generatedFrom(),
+						expr.clone(),
+						ctx.query<defgen::QueryGeneratedSymbol>(
+							{ .name = base::StrID{ base::strConcat("_", order + 1) },
+					          .generated_symbol_data
+					          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
+								  .parent_type = source_type,
+								  .field_type  = component,
+								  .index       = order } } }
+						)
+					));
+					order++;
+				}
+
+				code::TupleExpr(
+					ctx,
+					expr.origin.generatedFrom(),
+					std::move(elements)
+				).acceptVisitor(*this);
 			}
 		};
 	}
