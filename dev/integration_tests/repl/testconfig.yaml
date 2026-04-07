@@ -9,7 +9,5 @@ begining: |
 end: "\nGoodbye!\n"
 
 SubDirs:
-  - basic_expressions
-  - decl_of_functions
-  # - multiline
-  - variable_assignment
+  - Working_tests
+  - TO_BE_ADDED
