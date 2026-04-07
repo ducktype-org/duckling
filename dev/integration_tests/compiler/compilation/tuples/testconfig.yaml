@@ -6,3 +6,10 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+  person:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "JohnDoe30\nJaneSmith23"
+        ExitCode: 0
