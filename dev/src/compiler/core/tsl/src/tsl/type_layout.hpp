@@ -494,8 +494,7 @@ namespace compiler::tsl {
 		usize num_sub_layouts;
 
 		/**
-		 * @brief A mapping of the order of appearance in the layout to the offsets of the fields,
-		 * in bytes.
+		 * @brief The offsets of the fields, in bytes.
 		 */
 		base::Map<compiler::helios::SymID, base::Optional<Bytes>> sym_id_to_offset;
 
