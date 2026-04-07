@@ -1,10 +1,9 @@
 #include "coercions.hpp"
 
-#include <helios_private/symbols/symbols.hpp>
-
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <tsh/queries/implicit_coercibility.hpp>
 #include <tsh/queries/types.hpp>
 #include <tsh/types.hpp>
@@ -130,11 +129,8 @@ namespace compiler::helios {
 					order++;
 				}
 
-				code::TupleExpr(
-					ctx,
-					expr.origin.generatedFrom(),
-					std::move(elements)
-				).acceptVisitor(*this);
+				code::TupleExpr(ctx, expr.origin.generatedFrom(), std::move(elements))
+					.acceptVisitor(*this);
 			}
 		};
 	}
