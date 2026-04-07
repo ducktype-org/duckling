@@ -11,6 +11,23 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+
+  class_type_eval:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n3\n4\n111\n111\n1\n"
+        ExitCode: 0
+
+  type_eval:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
   type_evaluation:
     Cases:
       #Issue: #2431 Enable DVM on this test
@@ -18,4 +35,4 @@ Tests:
         backend: llvm
         Output:
           String: ""
-        ExitCode: 42     
+        ExitCode: 42
