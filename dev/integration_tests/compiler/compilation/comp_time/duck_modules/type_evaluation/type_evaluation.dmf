@@ -1,5 +1,3 @@
-#Issue: #2431 Enable DVM on this test
-
 fun pickAType(n: i64, t: type) -> type = {
     if (n == 1) {
         return bool;
