@@ -173,7 +173,7 @@ mod test {
             parse_manifest,
             types_common::{ExpandedLocation, InternedExpandedLocation},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
     use tempfile::{TempDir, tempdir};
     use url::Url;

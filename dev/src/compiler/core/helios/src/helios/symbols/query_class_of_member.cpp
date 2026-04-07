@@ -7,7 +7,7 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/types.hpp>
 
 #include <base/except/exceptions.hpp>
 
