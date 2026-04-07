@@ -1,8 +1,6 @@
 use std::any::Any;
 
-use clap::{
-    Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser,
-};
+use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser};
 
 use crate::{StrId, quackpack::core::Package};
 
