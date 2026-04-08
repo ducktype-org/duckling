@@ -30,7 +30,13 @@ This means that it is possible for hashes of different types that are represente
 to be the same (e.g. `pair<int, int>{1, 2}` and `struct{x=1, y=2}` might end up hashing to the same value).
 One must be careful when using hashing for different types.
 
-There are three ways to enable a hashing support for a class (if possible, the first two should be preferred):
+There are four ways to enable a hashing support for a class (if possible, the first two should be preferred):
+
+`HASHING_CAN_HASH_BY_REPRESENTATION`
+------------------------------------
+
+@TODO
+
 
 `hashDecompose()`
 -----------------

@@ -178,7 +178,8 @@ namespace base {
 		}
 
 		void addToHash(hashing::hash_algorithm auto& hash_alg) const {
-			hashing::addToHash(hash_alg, view());
+			hashing::addToHash(hash_alg, strView().size());
+			hashing::addToHash(hash_alg, strView()); // does it work??
 		}
 
 		friend struct std::hash<StrID>;

@@ -81,7 +81,10 @@ namespace hashing {
 			std::has_unique_object_representations_v<T> &&
 			(
 				std::is_integral_v<T> || std::is_enum_v<T> ||
-				requires { {T::HASHING_CAN_HASH_BY_REPRESENTATION} -> std::same_as<base::Monostate>; }
+				
+				// the const& here is needed, as this is simply how it
+				// works with static constexpr members. 
+				requires { {T::HASHING_CAN_HASH_BY_REPRESENTATION}-> std::same_as<const base::Monostate&>; }
 			);
 
 		/**

@@ -3,6 +3,7 @@
 #include "hash_algorithm_utils.hpp"
 
 #include <base/comptime/type_traits.hpp>
+#include <base/types/bit256.hpp> // PRremove
 
 #include <ranges>
 #include <tuple>
@@ -62,15 +63,15 @@ namespace hashing {
 		else if constexpr (std::is_null_pointer_v<T>) {
 			internal::hashAsBytes(hash_alg, 0);
 		}
+		// If for each value of the type there is a unique representation of it in memory,
+		// we can treat it as a sequence of chars and hash it directly
+		else if constexpr (internal::can_hash_by_representation<T> || std::is_same_v<T, base::Bit256>) {
+			internal::hashAsBytes(hash_alg, t);
+		}
 		// If the range is contiguous and its elements have unique representations we can
 		// treat it as a segment of memory and hash it directly
 		else if constexpr (internal::can_hash_range_as_bytes<HashAlgorithm, T>) {
 			internal::hashRangeAsBytes(hash_alg, t);
-		}
-		// If for each value of the type there is a unique representation of it in memory,
-		// we can treat it as a sequence of chars and hash it directly
-		else if constexpr (internal::can_hash_by_representation<T>) {
-			internal::hashAsBytes(hash_alg, t);
 		}
 		// If type supports std::tuple_size and std::get, we can use them to get and hash its
 		// members
@@ -87,7 +88,7 @@ namespace hashing {
 		else {
 			// Note: the typeName(T) == "" is just to make the compiler print the T in the error message.
 			static_assert(
-				base::typeName<T> == "" && false, "Please provide an 'addToHash' or 'hashDecompose' overload for this type"
+				false, "Please provide an 'addToHash' or 'hashDecompose' overload for this type"
 			);
 		}
 	}
