@@ -51,6 +51,7 @@
 //! however only relatively new virtual environments.
 
 use std::{
+    fmt,
     io::Write,
     path::{Path, PathBuf},
     time::SystemTime,
@@ -60,7 +61,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::{
-    QuackResult, QuackResultContext,
+    QuackError, QuackResult, QuackResultContext,
     quackpack::core::storage::{
         freeze::{self, VenvFreeze},
         paths::Storage,
@@ -73,7 +74,43 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct CorruptedFileError {}
+pub enum CorruptedVenvReason {
+    MissingNewLine,
+    InvalidChecksum { expected: String, actual: String },
+    Other,
+}
+
+impl fmt::Display for CorruptedVenvReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingNewLine => write!(f, "is missing a newline"),
+            Self::InvalidChecksum { expected, actual } => write!(
+                f,
+                "checksums don't match: expected: {expected}, actual: {actual}"
+            ),
+            Self::Other => write!(f, "unknown reason"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CorruptedVenvError {
+    pub path: PathBuf,
+    pub reason: CorruptedVenvReason,
+}
+
+impl fmt::Display for CorruptedVenvError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "venv metadata located at `{}` is malformed, because: {}",
+            self.path.display(),
+            self.reason
+        )
+    }
+}
+
+impl std::error::Error for CorruptedVenvError {}
 
 #[derive(Debug, Deserialize, Serialize)]
 /// State of virtual environment in the storage. Stores the freeze for the given
@@ -106,12 +143,16 @@ impl VenvData {
     }
 
     /// Load [`VenvData`] from the given path.
-    fn load(path: &Path) -> QuackResult<Result<Self, CorruptedFileError>> {
+    fn load(path: &Path) -> QuackResult<Self> {
         debug!("loading venv data from `{}`", path.display());
         let content = path.read_to_string()?;
         let Some((data, checksum)) = content.rsplit_once("\n") else {
             debug!("missing newline for venv data at `{}`", path.display());
-            return Ok(Err(CorruptedFileError {}));
+            return Err(CorruptedVenvError {
+                reason: CorruptedVenvReason::MissingNewLine,
+                path: path.to_path_buf(),
+            }
+            .into());
         };
         let current_hash = hash::sha256_string(data);
         if current_hash != checksum {
@@ -121,15 +162,26 @@ impl VenvData {
                 checksum,
                 path.display()
             );
-            return Ok(Err(CorruptedFileError {}));
+            return Err(CorruptedVenvError {
+                reason: CorruptedVenvReason::InvalidChecksum {
+                    expected: checksum.to_string(),
+                    actual: current_hash,
+                },
+                path: path.to_path_buf(),
+            }
+            .into());
         }
-        Ok(serde_json::from_str(data).map_err(|e| {
+        serde_json::from_str(data).map_err(|e| {
             debug!(
                 "json error `{e}` while deserializing venv data at `{}`",
                 path.display()
             );
-            CorruptedFileError {}
-        }))
+            let err = QuackError::from(e);
+            err.context(CorruptedVenvError {
+                reason: CorruptedVenvReason::Other,
+                path: path.to_path_buf(),
+            })
+        })
     }
 
     /// Save to the given path.
@@ -294,8 +346,18 @@ impl Venv {
         let backup_existed = backup_path.exists();
         // if main file is valid, return state held in it
         if existed {
-            let data = VenvData::load(&path)?;
-            if let Ok(mut venv) = data {
+            let data = match VenvData::load(&path) {
+                Ok(data) => Some(data),
+                Err(e) => {
+                    if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
+                        debug!("venv `{venv_id}` is corrupted: {err}");
+                        None
+                    } else {
+                        return Err(e);
+                    }
+                }
+            };
+            if let Some(mut venv) = data {
                 if let Err(e) = venv.save_new_last_access(SystemTime::now(), &path) {
                     debug!("failed to update last access time for venv `{venv_id}`: {e} ({e:?})");
                 }
@@ -306,8 +368,18 @@ impl Venv {
         // otherwise, the state is not canonical, and current state, if it exists,
         // is held in the backup file
         if backup_existed {
-            let data = VenvData::load(&path)?;
-            if let Ok(mut venv) = data {
+            let data = match VenvData::load(&path) {
+                Ok(data) => Some(data),
+                Err(e) => {
+                    if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
+                        debug!("venv `{venv_id}` is corrupted: {err}");
+                        None
+                    } else {
+                        return Err(e);
+                    }
+                }
+            };
+            if let Some(mut venv) = data {
                 backup_path.copy_file_to(&path)?;
                 if !existed {
                     storage.venv_dir(venv_id).try_fsync_dir()?;

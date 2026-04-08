@@ -4,7 +4,6 @@ use std::{
 };
 
 use crate::{
-    StrId,
     quackpack::core::{
         fetcher::Fetcher,
         storage::{
@@ -35,7 +34,7 @@ use crate::{
 mod basic;
 mod concurrent;
 
-fn registry_url_hash() -> StrId {
+fn registry_url_hash() -> String {
     let url: Url = Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap();
     crate::util::hash::sha256_string(url.host_str().unwrap())
 }
