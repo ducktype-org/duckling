@@ -9,7 +9,7 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_metadata.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
