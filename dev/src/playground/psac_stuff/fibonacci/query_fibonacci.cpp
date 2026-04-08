@@ -1,4 +1,3 @@
-#include "common.h"
 #include "concurrent/module_flags/worker_count.hpp"
 
 #include "base/types/ints.hpp"

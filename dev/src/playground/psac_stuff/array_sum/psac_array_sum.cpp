@@ -1,4 +1,3 @@
-#include "common.hpp"
 #include "psac/types.hpp"
 
 #include <psac/psac.hpp>

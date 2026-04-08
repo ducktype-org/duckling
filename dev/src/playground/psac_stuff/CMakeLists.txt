@@ -1,17 +1,17 @@
 set(PSAC_FLAGS "-mcx16")
 
-function (add_psac_exec name)
-    add_executable(${name} ${name}.cpp)
+function (add_psac_exec name source)
+    add_executable(${name} ${source})
     target_link_libraries(${name} psac ${ARGN})
     target_compile_options(${name} PRIVATE ${PSAC_FLAGS})
 endfunction()
 
-add_psac_exec(psac_array_sum Base PstParser Clah)
-add_example(query_array_sum query_array_sum.cpp USES QueryFramework Base Clah)
+add_psac_exec(psac_array_sum array_sum/psac_array_sum.cpp Base PstParser Clah)
+add_example(query_array_sum array_sum/query_array_sum.cpp USES QueryFramework Base Clah)
 
-add_psac_exec(psac_fibonacci Base PstParser Clah)
-add_example(query_fibonacci query_fibonacci.cpp USES QueryFramework Base Clah)
+add_psac_exec(psac_fibonacci fibonacci/psac_fibonacci.cpp Base PstParser Clah)
+add_example(query_fibonacci fibonacci/query_fibonacci.cpp USES QueryFramework Base Clah)
 
-add_psac_exec(psac_dag Base PstParser Clah)
-add_example(query_dag query_dag.cpp USES QueryFramework Base Clah)
-add_example(full_dag full_dag.cpp USES QueryFramework Base Clah)
+add_psac_exec(psac_dag dag/psac_dag.cpp Base PstParser Clah)
+add_example(query_dag dag/query_dag.cpp USES QueryFramework Base Clah)
+add_example(full_dag dag/full_dag.cpp USES QueryFramework Base Clah)
