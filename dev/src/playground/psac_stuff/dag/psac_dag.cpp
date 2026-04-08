@@ -108,6 +108,8 @@ int main(int argc, const char* argv[]) {
 		if (g_config.command == "update") runUpdateAndRecompute();
 	}
 
+	// must be destroyed before parlay's global static fork_join_scheduler fj
+	g_state->computation.reset();
 	psac::GarbageCollector::run();
 
 	return 0;
