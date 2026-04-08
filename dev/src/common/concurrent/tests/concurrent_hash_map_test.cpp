@@ -306,7 +306,7 @@ private:
 
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map, i]() {
-				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(1, j * thread_count + i);
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(u64(1), j * thread_count + i);
 			});
 		}
 

@@ -30,6 +30,10 @@ namespace concurrent {
 		/**
 		 * @brief Tries to pop the front element if it matches @param pred.
 		 * @return Empty optional when the queue is empty or predicate fails.
+		 * @note Contract: once @p pred evaluates to true for an element in this call,
+		 * that same element is extracted and returned before releasing the queue lock.
+		 * It cannot be removed concurrently by another thread between match and extraction.
+		 * Parts of the compiler implementation rely on this guarantee.
 		 */
 		template<typename Predicate>
 		[[nodiscard]]
@@ -183,18 +187,6 @@ namespace concurrent {
 		 * @brief Returns a const iterator sentinel that does not own the lock.
 		 */
 		ConstIterator end() const { return ConstIterator(nullptr, queue.cend()); }
-
-		/**
-		 * @brief Erases the element pointed by @param it and returns next iterator.
-		 */
-		Iterator erase(Iterator it) {
-			CORE_ASSERT(it.lock_guard != nullptr, "Erasing requires a locked iterator");
-			CORE_ASSERT(it.internal_iterator != queue.end(), "Erasing end iterator is not allowed");
-			auto internal_it     = it.internal_iterator;
-			internal_it          = queue.erase(internal_it);
-			it.internal_iterator = internal_it;
-			return it;
-		}
 
 	private:
 		std::deque<DATA_T>         queue;

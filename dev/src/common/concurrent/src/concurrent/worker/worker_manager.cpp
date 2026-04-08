@@ -2,7 +2,7 @@
 
 #include <concurrent/worker/worker.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 #include <mutex>
 #include <ranges>
@@ -35,6 +35,8 @@ namespace concurrent::worker {
 			"Cannot call waitForAllWorkersFree from a worker thread"
 		);
 		while (true) {
+			// Recursively locks each worker's mutex in order and checks if all are free.
+			// Holding all locks simultaneously ensures a consistent snapshot of worker states.
 			auto lock_and_check_all = [&](auto&& self, usize index) -> bool {
 				if (index >= workers.size()) return true;
 

@@ -99,7 +99,7 @@ namespace concurrent::worker {
 
 			// Schedule this callback as a task, if the worker was free we have a guarantee
 			// that the callback will be called first
-			task_queue.emplace([callback](WRef ref) { (*callback)(ref); });
+			task_queue.emplace([callback = std::move(callback)](WRef ref) { (*callback)(ref); });
 
 			// wake up the worker to call the scheduled callback
 		}

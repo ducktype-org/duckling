@@ -1,8 +1,7 @@
 #include "task_pool.hpp"
 
-#include "concurrent/worker/worker_manager.hpp"
-
 #include <concurrent/worker/worker.hpp>
+#include <concurrent/worker/worker_manager.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -38,9 +37,10 @@ namespace query::internal {
 
 	TaskPool::~TaskPool() {
 		// We need to make sure, that no worker is executing a task from this pool before we destroy
-		// it, otherwise we might have a use-after-free. We can ensure this by waiting for all workers
-		// to be free, which means that they are not executing any task from this pool. This will also
-		// wait for finishing the taks not sheduled by TaskPool but there is no other way to do that
+		// it, otherwise we might have a use-after-free. We can ensure this by waiting for all
+		// workers to be free, which means that they are not executing any task from this pool. This
+		// will also wait for finishing the taks not sheduled by TaskPool but there is no other way
+		// to do that
 		concurrent::worker::WorkerManager::get().waitForAllWorkersFree(std::chrono::milliseconds(10)
 		);
 	}

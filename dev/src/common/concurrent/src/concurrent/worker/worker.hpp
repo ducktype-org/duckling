@@ -208,23 +208,46 @@ namespace concurrent::worker {
 		/**
 		 * @brief Indicates whether the worker is free.
 		 */
-		std::atomic_bool is_free       = true;
-		std::atomic_bool loop_run_flag = true;  /// Controls the main loop of the worker thread.
+		/**
+		 * @brief Indicates whether the worker is free.
+		 */
+		std::atomic_bool is_free = true;
 
-		std::shared_ptr<NoTasksCallback> no_tasks_callback  /// Callback when there are no tasks.
-			= std::make_shared<NoTasksCallback>([](WRef) {}
-		    );  /// Shared with worker loop and setter so the callback can be replaced safely.
+		/**
+		 * @brief Controls the main loop of the worker thread.
+		 */
+		std::atomic_bool loop_run_flag = true;
+
+		/**
+		 * @brief Callback when there are no tasks.
+		 * Shared with worker loop and setter so the callback can be replaced safely.
+		 */
+		std::shared_ptr<NoTasksCallback> no_tasks_callback
+			= std::make_shared<NoTasksCallback>([](WRef) {});
 
 		std::queue<Task> task_queue;
 
-		mutable std::mutex mut;  /// Internal synchronization mutex.
-		std::condition_variable
-			task_cv;             /// Condition variable to notify the worker thread about new tasks.
+		/**
+		 * @brief Internal synchronization mutex.
+		 */
+		mutable std::mutex mut;
+
+		/**
+		 * @brief Condition variable to notify the worker thread about new tasks.
+		 */
+		std::condition_variable task_cv;
 
 		std::jthread real_thread;
 
+		/**
+		 * @brief Global counter for generating unique worker IDs.
+		 */
 		static constinit u64 next_id;
-		u64                  id = next_id++;  /// Unique u64 ID for the worker
+
+		/**
+		 * @brief Unique ID for this worker.
+		 */
+		u64 id = next_id++;
 	};
 }
 

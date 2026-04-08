@@ -80,21 +80,12 @@ private:
 		ASSERT_EQUAL(seen.size(), 8ULL);
 		for (int i = 0; i < 8; ++i) ASSERT_EQUAL(seen[static_cast<usize>(i)], i);
 
-		for (auto it = queue.begin(); it != queue.end();)
-			if ((*it % 2) == 0)
-				it = queue.erase(it);
-			else
-				++it;
+		std::vector<int> iterated;
+		for (const int value: queue) iterated.push_back(value);
 
-		ASSERT_EQUAL(queue.size(), 4ULL);
-
-		std::vector<int> odds;
-		for (const int value: queue) odds.push_back(value);
-		ASSERT_EQUAL(odds.size(), 4ULL);
-		ASSERT_EQUAL(odds[0], 1);
-		ASSERT_EQUAL(odds[1], 3);
-		ASSERT_EQUAL(odds[2], 5);
-		ASSERT_EQUAL(odds[3], 7);
+		ASSERT_EQUAL(queue.size(), 8ULL);
+		ASSERT_EQUAL(iterated.size(), 8ULL);
+		for (int i = 0; i < 8; ++i) ASSERT_EQUAL(iterated[static_cast<usize>(i)], i);
 	}
 
 	template<usize PRODUCER_COUNT, usize CONSUMER_COUNT>
@@ -234,10 +225,9 @@ private:
 
 	template<usize WORKER_COUNT>
 	void multiThreadedRandomMixedOps() {
-		constexpr usize OPS_PER_WORKER     = 2'000;
-		constexpr usize TOTAL_OPS          = WORKER_COUNT * OPS_PER_WORKER;
-		constexpr usize MAX_ERASE_PER_ITER = 8;
-		constexpr u64   RNG_SEED_BASE      = 0xC0'FF'EE'12'34ULL;
+		constexpr usize OPS_PER_WORKER = 2'000;
+		constexpr usize TOTAL_OPS      = WORKER_COUNT * OPS_PER_WORKER;
+		constexpr u64   RNG_SEED_BASE  = 0xC0'FF'EE'12'34ULL;
 
 		concurrent::ConQueue<u64> queue;
 
@@ -297,21 +287,8 @@ private:
 					}
 					case 4: {
 						iter_ops.fetch_add(1, std::memory_order_relaxed);
-						u64   mod_target = val_dist(rng) % 16ULL;
-						usize erased     = 0;
-						for (auto it = queue.begin(); it != queue.end();) {
-							if ((*it % 16ULL) == mod_target) {
-								it = queue.erase(it);
-								erased++;
-								if (erased >= MAX_ERASE_PER_ITER) break;
-							} else {
-								++it;
-							}
-						}
-						if (erased > 0)
-							net_delta.fetch_sub(
-								static_cast<long long>(erased), std::memory_order_relaxed
-							);
+						// Iterate to exercise concurrent iteration.
+						for ([[maybe_unused]] const auto& elem: queue) {}
 						break;
 					}
 					default:
