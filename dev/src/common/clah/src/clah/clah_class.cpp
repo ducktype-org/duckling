@@ -299,10 +299,12 @@ namespace clah {
 
 				variant_match(param.getParameterNecessity()) {
 					variant_case(Required, _) {
-						if (!result.hasParam(param))
+						if (!result.hasParam(param)) {
+							std::cout << "Crash: " << param.getLongName()->stringView() << '\n';
 							throw exceptions::MissingRequiredParameter(
 								"\"" + maybe_param_name.value() + "\""
 							);
+						}
 					}
 					variant_case(Optional, _) { /* Nothing in this case */ }
 					variant_case(Conditional, c) {

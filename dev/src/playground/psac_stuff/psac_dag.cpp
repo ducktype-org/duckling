@@ -3,86 +3,105 @@
 #include <psac/psac.hpp>
 #include <psac/types.hpp>
 
-#include "base/misc/int_conv.hpp"
-#include <base/types/ints.hpp>
-
 #include "clah/exceptions.hpp"
+#include "init/init.hpp"
 
-#include <vector>
+#include <memory>
 
-psac::Computation           g_comp;
-std::vector<psac::Mod<u64>> g_wmod;
-std::vector<psac::Mod<u64>> g_res;
+struct PSACState {
+	std::vector<psac::Mod<u64>>       wmod;
+	std::vector<psac::Mod<u64>>       res;
+	base::Optional<psac::Computation> computation{};
+};
 
-// from mapreduce example
+std::unique_ptr<PSACState> g_state;
+
 template<typename It>
-psac_function(sum, const u64 mod, It in_begin, It in_end, psac::Mod<usize>* result) {
+psac_function(sumNodes, const u64 mod, It in_begin, It in_end, psac::Mod<u64>* result) {
 	if (in_begin + 1 == in_end) {
-		psac_read((auto x), (*in_begin), { psac_write(result, x); });
+		psac_read((u64 x), (*in_begin), { psac_write(result, x); });
 	} else {
-		auto              in_mid       = in_begin + std::distance(in_begin, in_end) / 2;
-		psac::Mod<usize>* left_result  = psac_alloc(usize);
-		psac::Mod<usize>* right_result = psac_alloc(usize);
+		auto            in_mid    = in_begin + std::distance(in_begin, in_end) / 2;
+		psac::Mod<u64>* left_res  = psac_alloc(u64);
+		psac::Mod<u64>* right_res = psac_alloc(u64);
+
 		psac_par(
-			psac_call(sum, mod, in_begin, in_mid, left_result),
-			psac_call(sum, mod, in_mid, in_end, right_result)
+			psac_call(sumNodes, mod, in_begin, in_mid, left_res),
+			psac_call(sumNodes, mod, in_mid, in_end, right_res)
 		);
-		psac_read((auto x, auto y), (left_result, right_result), {
-			psac_write(result, (x + y) % mod);
-		});
+
+		psac_read((u64 x, u64 y), (left_res, right_res), { psac_write(result, (x + y) % mod); });
 	}
 }
 
 psac_function(
-	computeNode, usize i, std::vector<psac::Mod<u64>>* w, std::vector<psac::Mod<u64>>* out
+	computeNode, usize i, u64 mod, std::vector<psac::Mod<u64>>* w, std::vector<psac::Mod<u64>>* out
 ) {
 	work(g_config.workload);
 
-	std::vector<psac::Mod<u64>*> in_e;
-	in_e.push_back(&(*w)[i]);
-	for (usize j: g_adj[i]) in_e.push_back(&(*out)[j]);
-	psac_call(sum, g_mod, in_e.begin(), in_e.end(), &(*out)[i]);
+	std::vector<psac::Mod<u64>*> inputs;
+	inputs.push_back(&(*w)[i]);
+	for (usize j: g_adj[i]) inputs.push_back(&(*out)[j]);
+
+	psac_call(sumNodes, mod, inputs.begin(), inputs.end(), &(*out)[i]);
 }
 
-psac_function(compute, std::vector<psac::Mod<u64>>* w, std::vector<psac::Mod<u64>>* out) {
-	for (usize i = 0; i < w->size(); ++i) psac_call(computeNode, i, w, out);
+psac_function(computeAll, u64 mod, std::vector<psac::Mod<u64>>* w, std::vector<psac::Mod<u64>>* out) {
+	for (usize i = 0; i < w->size(); ++i) psac_call(computeNode, i, mod, w, out);
 }
 
 void runComputation() {
 	std::cout << "--- Initial Calculation ---\n";
 
-	g_wmod.resize(g_weights.size());
-	for (usize i = 0; i < g_weights.size(); ++i) psac_write(&g_wmod[i], g_weights[i]);
-	g_res.resize(g_weights.size());
+	g_state = std::make_unique<PSACState>();
+	g_state->wmod.resize(g_weights.size());
+	g_state->res.resize(g_weights.size());
 
-	g_comp = psac_run(compute, &g_wmod, &g_res);
+	for (usize i = 0; i < g_weights.size(); ++i) psac_write(&g_state->wmod[i], g_weights[i]);
 
-	std::cout << "Initial computation finished.\n";
+	auto temp_comp = psac_run(computeAll, g_config.mod, &g_state->wmod, &g_state->res);
+	g_state->computation.emplace(std::move(temp_comp));
+
+	std::vector<u64> results;
+	for (const auto& r: g_state->res) results.push_back(r.value);
+	printFinalChecksum("PSAC Initial", results);
 }
 
 void runUpdateAndRecompute() {
+	if (!g_state || !g_state->computation) return;
+
 	std::cout << "--- Updating and Recomputing ---\n";
 	std::mt19937_64 rng(6'767);
 	const usize     num_updates = g_weights.size() * g_config.update_percent / 100;
 
 	for (usize i = 0; i < num_updates; ++i) {
 		usize idx     = rng() % g_weights.size();
-		u64   new_val = (g_wmod[idx].value + 1) % g_mod;
-		psac_write(&g_wmod[idx], new_val);
+		u64   new_val = (g_state->wmod[idx].value + 1) % g_config.mod;
+		psac_write(&g_state->wmod[idx], new_val);
 	}
 
-	psac_propagate(g_comp);
-	std::cout << "Recomputation after update finished.\n";
+	psac_propagate(*g_state->computation);
+
+	std::vector<u64> results;
+	for (const auto& r: g_state->res) results.push_back(r.value);
+	printFinalChecksum("PSAC Recompute", results);
 }
 
 int main(int argc, const char* argv[]) {
+	init::InitObject _;
+
 	auto cli = getDagBenchClah(false, runComputation, runUpdateAndRecompute);
+
 	try {
-		cli.execute(base::safeIntConv<usize>(argc), argv);
+		i32 ret = cli.execute(base::safeIntConv<usize>(argc), argv);
+
+		g_state->computation.reset();  // Clear the computation first. Otherwise it segfaults.
+		g_state.reset();
+		psac::GarbageCollector::run();
+
+		return ret;
 	} catch (const clah::exceptions::ClahException& e) {
 		std::cerr << "Error: " << e.what() << '\n';
 		return 1;
 	}
-	psac::GarbageCollector::run();
-	return 0;
 }

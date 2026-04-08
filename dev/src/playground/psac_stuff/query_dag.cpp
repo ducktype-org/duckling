@@ -81,8 +81,12 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ComputeNode);
 void runComputation() {
 	std::cout << "--- Initial Calculation ---\n";
 	g_invocations = 0;
-	for (usize i = 0; i < g_weights.size(); i++) query::entryPoint<ComputeNode>(NodeKey{ i });
+	std::vector<u64> results;
+	results.reserve(g_weights.size());
+	for (usize i = 0; i < g_weights.size(); i++)
+		results.push_back(query::entryPoint<ComputeNode>(NodeKey{ i }));
 	std::cout << "Total query invocations: " << g_invocations << "\n";
+	printFinalChecksum("Query Initial", results);
 }
 
 void runUpdateAndRecompute() {
@@ -103,8 +107,12 @@ void runUpdateAndRecompute() {
 	query::external::invalidateQueries({}, std::move(updates));
 
 	g_invocations = 0;
-	for (usize i = 0; i < g_weights.size(); i++) query::entryPoint<ComputeNode>(NodeKey{ i });
+	std::vector<u64> results;
+	results.reserve(g_weights.size());
+	for (usize i = 0; i < g_weights.size(); i++)
+		results.push_back(query::entryPoint<ComputeNode>(NodeKey{ i }));
 	std::cout << "Total invocations after update: " << g_invocations << "\n";
+	printFinalChecksum("Query Recompute", results);
 }
 
 int main(int argc, const char* argv[]) {

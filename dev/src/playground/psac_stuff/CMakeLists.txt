@@ -14,3 +14,4 @@ add_example(query_fibonacci query_fibonacci.cpp USES QueryFramework Base Clah)
 
 add_psac_exec(psac_dag Base PstParser Clah)
 add_example(query_dag query_dag.cpp USES QueryFramework Base Clah)
+add_example(full_dag full_dag.cpp USES QueryFramework Base Clah)
