@@ -6,8 +6,8 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/errors.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

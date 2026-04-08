@@ -7,6 +7,7 @@
 
 #include <base/extend_cpp/stringifyable_enum.hpp>  // IWYU pragma: export
 #include <base/types/ints.hpp>                     // IWYU pragma: export
+#include <base/types/monostate.hpp>                // IWYU pragma: export
 
 #include <compare>                                 // IWYU pragma: export
 #include <sstream>                                 // IWYU pragma: export
@@ -25,7 +26,8 @@
 			[[nodiscard]] constexpr flag_name(u64 data): data(data) {}                               \
                                                                                                      \
 		public:                                                                                      \
-			[[nodiscard]] constexpr flag_name() = default;                                           \
+			static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};                \
+			[[nodiscard]] constexpr flag_name()                                 = default;           \
                                                                                                      \
 			[[nodiscard]] constexpr flag_name(enum_name single_option):                              \
 				  data(1 << static_cast<u32>(single_option)) {}                                      \

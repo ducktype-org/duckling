@@ -13,6 +13,20 @@
 
 namespace compiler::repl {
 	/**
+	 * @brief Compile a HOUT unit to a standalone DVM code chunk using persistent REPL lowering
+	 * context.
+	 *
+	 * This is the same lowering path used by REPL incremental execution, but without sending
+	 * the code to a running VM process.
+	 */
+	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
+		query::Context&                  ctx,
+		const helios::HOUTUnit&          hout_unit,
+		std::string_view                 module_name,
+		backend_vm::ReplLoweringContext& lowering_context
+	);
+
+	/**
 	 * @brief Compile a HOUT unit to DVM bytecode and load it into a running DVM process.
 	 *
 	 * @param ctx          Active query context for LIR compilation queries.
@@ -24,11 +38,10 @@ namespace compiler::repl {
 	 * @note This function does NOT call setContext() or invalidateContext() on lowering_context.
 	 *       The caller is responsible for managing the context lifecycle.
 	 *
-	 * @invariant The lowering_context must have an active query::Context set via setContext()
-	 *            BEFORE calling this function. This context is used for error reporting during
-	 *            type lowering. For best results, use the same @c ctx parameter that will be
-	 *            used for LIR compilation queries - they should be paired together.
-	 *            Mismatched contexts may cause error messages to be logged to the wrong context.
+	 * @pre The lowering_context must have an active query::Context set via setContext()
+	 *      BEFORE calling this function.
+	 * @pre The active context in lowering_context MUST be the same object as @c ctx.
+	 *      This is an enforced runtime invariant (asserted by the lowering path).
 	 *
 	 * @return Success or error message on failure.
 	 */
