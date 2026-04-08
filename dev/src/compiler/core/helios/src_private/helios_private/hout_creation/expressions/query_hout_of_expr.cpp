@@ -17,7 +17,7 @@
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <typesystem/higher/queries.hpp>
+#include <tsh/queries.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
