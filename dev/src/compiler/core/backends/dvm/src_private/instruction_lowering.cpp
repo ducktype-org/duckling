@@ -181,7 +181,7 @@ void FunctionLoweringContext::handleCall(
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
 	// Schedule cleaning of all temporaries created by `pushTempLocal` while lowering this instruction.
-	defer(cleanupInstructionTemps());
+	defer(cleanUpRegisteredTemps());
 
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_instruction.metadata.position, pos) {
@@ -210,8 +210,8 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			// If access to the variable is direct, we take it's address.
 			pushInstruction({ OpKind::ref, addr_temp.asArgument(), resolved_src.asAnyArgument() });
 		} else {
-			// Otherwise, if the resolved source is a pointer, than we have the address in hand. We
-			// just move it.
+			// Otherwise, if the resolved source is accessed through a pointer
+			// (AccessKind::Pointer), than we have the address in hand. We just move it.
 			pushInstruction({ OpKind::mov, addr_temp.asArgument(), resolved_src.asArgument() });
 		}
 
@@ -280,8 +280,8 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 				auto tmp_res
 					= pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
 				pushInstruction({ operation, lhs, rhs });
-				pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::i8(u8(0)) });
-				pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::i8(u8(1)) });
+				pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::l8(u8(0)) });
+				pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::l8(u8(1)) });
 				return { tmp_res, DVMPlace::AccessKind::Direct };
 			}
 		}();
@@ -307,7 +307,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			pushInstruction({ operation, output });
 		} else {
 			// Otherwise it's a global or indirect. We perform the operations on the
-			// temporary and than store it in the indirect place.
+			// temporary and then store it in the indirect place.
 			auto tmp = forceToLocal(args[0]);
 			pushInstruction({ operation, tmp });
 			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
@@ -337,6 +337,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 		return;
 	} else {
+		// Otherwise, it's a simple assignment.
 		storeResult(maybe_output.value(), args[0]);
 	}
 }
@@ -357,7 +358,7 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 		auto true_block  = lowerLirValue(lir_terminator.arguments.at(1));
 		auto false_block = lowerLirValue(lir_terminator.arguments.at(2));
 
-		cleanupInstructionTemps();
+		cleanUpRegisteredTemps();
 
 		variant_match(lir_terminator.arguments.at(0).getVariant()) {
 			variant_case(lir::LIRConstant, constant) {
@@ -394,7 +395,7 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 			getFunctionReturnValueLocal().asArgument(),
 			lowerLirValue(lir_terminator.arguments.at(0)),
 		});
-		cleanupInstructionTemps();
+		cleanUpRegisteredTemps();
 		pushInstruction({ OpKind::ret });
 	} else {
 		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
@@ -419,8 +420,7 @@ DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 	return temp_local;
 }
 
-void FunctionLoweringContext::cleanupInstructionTemps() {
-	for (usize i{ 0 }; i < current_temp_count; i++)
+void FunctionLoweringContext::cleanUpRegisteredTemps() {
+	for (; current_temp_count > 0; current_temp_count--)
 		pushInstruction({ vm::code::instructions::Op_deinit() });
-	current_temp_count = 0;
 }
