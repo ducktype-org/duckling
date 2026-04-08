@@ -80,6 +80,7 @@ use std::path::Path;
 use crate::QuackResult;
 use crate::QuackResultContext;
 use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::path_ops_ext::FileLockGuard;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -164,7 +165,7 @@ pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
 fn cleanup_locks_impl(storage: &Storage, dir_iterator: ReadDir) -> QuackResult<()> {
     for lockfile in dir_iterator {
         let lockfile = lockfile.context("failed to read entry from dir iterator")?;
-        let name = lockfile.file_name().into();
+        let name = lockfile.file_name().to_venv_id();
         let path = lockfile.path();
         if !storage.venv_dir(name).is_dir() {
             try_delete_lock(&path)
