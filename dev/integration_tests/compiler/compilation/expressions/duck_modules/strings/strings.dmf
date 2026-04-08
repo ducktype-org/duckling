@@ -1,6 +1,26 @@
-fun main() -> i64 = {
+fun helloWorld() = {
     let myString = builtin_input_string();
     builtin_output_string(myString);
     builtin_output_string("\nHello, world!\n");
+}
+
+fun prependAppend() = {
+    let b = "b";
+    builtin_output_string('a' +: b);
+    builtin_output_string("\n");
+    builtin_output_string(b :+ 'c' :+ 'd');
+    builtin_output_string("\n");
+}
+
+fun concat() = {
+    let hello = "Hello, ";
+    let world = "world!\n";
+    builtin_output_string(hello ++ world);
+}
+
+fun main() -> i64 = {
+    helloWorld();
+    prependAppend();
+    concat();
     return 0;
 }

@@ -2,7 +2,7 @@
 
 #include <backends/dvm/dvm_backend.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/types.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
@@ -43,7 +43,9 @@ namespace {
 					    // compiler::tsh::SymbolType) we should perform this conversion based on the
 					    // `SymbolType` not C++ type sizes.
 						base::StrID dvm_type_name;
-						if constexpr (sizeof(NumT) <= 2)
+						if constexpr (sizeof(NumT) <= 1)
+							dvm_type_name = base::StrID("i8");
+						else if (sizeof(NumT) <= 2)
 							dvm_type_name = base::StrID("i16");
 						else if constexpr (sizeof(NumT) <= 4)
 							dvm_type_name = base::StrID("i32");
@@ -64,7 +66,7 @@ namespace {
 				);
 			}
 			variant_case(bool, val) {
-				auto maybe_vm_value = get_vm_value(base::StrID("byte"));
+				auto maybe_vm_value = get_vm_value(base::StrID("i8"));
 				if (!maybe_vm_value) return maybe_vm_value;
 				(*maybe_vm_value)->writeBytes<bool>(val);
 				return maybe_vm_value;

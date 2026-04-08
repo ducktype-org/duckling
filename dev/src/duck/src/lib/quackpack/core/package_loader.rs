@@ -4,8 +4,12 @@ use std::{marker::PhantomData, path::Path};
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, qp_bail, qp_internal, quackpack::core::PackageCtx,
-    util_common::path_ops_ext::PathOpsExt,
+    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_internal,
+    quackpack::core::{
+        PackageCtx,
+        storage::{paths::Storage, venv::Venv},
+    },
+    util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -35,16 +39,16 @@ impl AllowGlobalPackage {
 pub struct PackageLoader(PhantomData<()>);
 
 impl PackageLoader {
-    pub const MANIFEST_NAME: &str = "quackconfig.yml";
+    pub const MANIFEST_NAME: &str = "quackconfig.yaml";
     pub const FREEZE_NAME: &str = "quackfreeze.json";
-    pub const VENV_CONFIG_NAME: &str = "venvconfig.toml";
+    pub const VENV_CONFIG_NAME: &str = "venvconfig.yaml";
 
     /// Get the global package.
     pub fn global_package<'duck>(_ctx: &'duck DuckCtx) -> QuackResult<PackageCtx<'duck>> {
         Err(qp_internal!("@TODO: #1394 it needs the EditableManifest"))
     }
 
-    /// Find a [`PackageCtx`] from a given `start`.
+    /// Find a [`PackageCtx`] from the given `start`.
     ///
     /// This function __expands tildes__ and __resolves__ path fully.
     /// Also, it walks up the chain of path's ancestors.
@@ -104,6 +108,27 @@ impl PackageLoader {
         let cwd = ctx.cwd();
         Self::find_from_directory(cwd, ctx, allow_global_package)
     }
+
+    /// Find the root of the venv with the given name.
+    pub fn find_venv_by_name<'duck>(
+        ctx: &'duck DuckCtx,
+        venv_id: StrId,
+    ) -> QuackResult<PackageCtx<'duck>> {
+        let storage_loc = ctx.default_storage_root();
+        let storage = Storage::new(storage_loc);
+        let data_lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
+        let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
+            qp_bail!("Could not find venv {} in the main storage", venv_id);
+        };
+        drop(data_lock);
+        let parent = venv
+            .data()
+            .last_location()
+            .parent()
+            .context(format!("Lost track of the venv {venv_id}"))?;
+        Self::find_at_exact_directory(parent, ctx)
+            .context(format!("Lost track of the venv {venv_id}"))
+    }
 }
 
 #[cfg(test)]
@@ -113,7 +138,7 @@ mod tests {
     use crate::{
         DuckCtx,
         quackpack::core::PackageLoader,
-        util_common::path_ops_ext::{MkdirOptions, PathOpsExt},
+        util::path_ops_ext::{MkdirOptions, PathOpsExt},
     };
 
     const BASIC_MANIFEST: &str = r"

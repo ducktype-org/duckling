@@ -1,6 +1,6 @@
 #pragma once
 
-#include <typesystem/higher/symbol_type.hpp>
+#include <tsh/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>

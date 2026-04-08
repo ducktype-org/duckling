@@ -13,7 +13,7 @@ impl QpCtx for DuckCtx {
     fn registry_url(&self) -> QuackResult<Url> {
         let url = self
             .duck_cfg()
-            .toml_config()
+            .yaml_config()
             .get_str("registry.url")?
             .unwrap_or(fetcher::Fetcher::DEFAULT_REGISTRY_URL);
         Url::parse(url).with_context(|| format!("`{url}` is not a valid URL"))

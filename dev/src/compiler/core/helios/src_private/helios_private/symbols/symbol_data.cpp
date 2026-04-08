@@ -5,12 +5,12 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 
 namespace compiler::helios {
-	namespace houtgen {
+	namespace defgen {
 		base::Bit256 GeneratedSymbolData::ImplicitConstructor::queryUnstablePerfectHash() const {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
@@ -263,35 +263,35 @@ namespace compiler::helios {
 	}
 
 	SymbolData SymbolData::makeGeneratedSymbol(
-		const base::StrID name, houtgen::GeneratedSymbolData generated_data
+		const base::StrID name, defgen::GeneratedSymbolData generated_data
 	) {
 		SymbolKind kind{};
 		variant_match(generated_data.data) {
-			variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
+			variant_case_novalue(defgen::GeneratedSymbolData::ImplicitConstructor) {
 				kind = SymbolKind::Function;
 			}
-			variant_case_novalue(houtgen::GeneratedSymbolData::DefaultClassConstructor) {
+			variant_case_novalue(defgen::GeneratedSymbolData::DefaultClassConstructor) {
 				kind = SymbolKind::Function;
 			}
-			variant_case_novalue(houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor) {
+			variant_case_novalue(defgen::GeneratedSymbolData::DefaultStaticArrayConstructor) {
 				kind = SymbolKind::Function;
 			}
-			variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+			variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 				kind = SymbolKind::Function;
 			}
-			variant_case_novalue(houtgen::GeneratedSymbolData::Parameter) {
+			variant_case_novalue(defgen::GeneratedSymbolData::Parameter) {
 				kind = SymbolKind::Parameter;
 			}
-			variant_case_novalue(houtgen::GeneratedSymbolData::SelfParameter) {
+			variant_case_novalue(defgen::GeneratedSymbolData::SelfParameter) {
 				kind = SymbolKind::Parameter;
 			}
-			variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
+			variant_case_novalue(defgen::GeneratedSymbolData::Variable) {
 				kind = SymbolKind::Variable;
 			}
-			variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper) {
+			variant_case_novalue(defgen::GeneratedSymbolData::ReplExpressionWrapper) {
 				kind = SymbolKind::Function;
 			}
-			variant_case_novalue(houtgen::GeneratedSymbolData::ReplInstructionWrapper) {
+			variant_case_novalue(defgen::GeneratedSymbolData::ReplInstructionWrapper) {
 				kind = SymbolKind::Function;
 			}
 			variant_default { CORE_UNREACHABLE(); }

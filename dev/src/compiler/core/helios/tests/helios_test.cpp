@@ -23,18 +23,15 @@
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/errors/errors.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/errors.hpp>
-#include <helios_private/hout_code_generation/class_constructors.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/mutability.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <tsh/mutability.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -83,6 +80,7 @@ public:
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testBuiltinFunctions);
@@ -436,7 +434,7 @@ private:
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
 		const auto& first_ctor
-			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
 				  first_class_abstract_type
 			)
 		          ->valueOrPanic();
@@ -468,7 +466,7 @@ private:
 		ASSERT_EQUAL(1, class_with_member_info.methods.size());
 
 		const auto& class_with_members_ctor
-			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
 				  class_with_member_abstract_type
 			)
 		          ->valueOrPanic();
@@ -948,6 +946,8 @@ private:
 
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
+
+		(void) query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
 		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -1768,6 +1768,56 @@ private:
 				          .valueOrThrow();
 				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
+		}
+	}
+
+	void testStrings() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/strings")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function   = hout.functions.at(0);
+		auto& statements = function->body->statements;
+		using namespace compiler::helios::code;
+
+		{
+			// let ab = 'a' +: b;
+			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
+			const auto  prepended_expr
+				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.value().get());
+			const auto prepended_callee
+				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(prepended_callee->symbol),
+				base::StrID("builtin_string_prepended"),
+				"The prepended expression should call builtin_string_prepended"
+			);
+		}
+
+		{
+			// let bcd = b :+ 'c' :+ 'd';
+			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
+			const auto  appended_expr
+				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.value().get());
+			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(appended_callee->symbol),
+				base::StrID("builtin_string_appended"),
+				"The appended expression should call builtin_string_appended"
+			);
+		}
+
+		{
+			// let helloWorld = hello ++ world;
+			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
+			const auto  concatenated_expr
+				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.value().get());
+			const auto concatenated_callee
+				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(concatenated_callee->symbol),
+				base::StrID("builtin_string_concatenated"),
+				"The prepended expression should call builtin_string_concatenated"
+			);
 		}
 	}
 
@@ -2592,7 +2642,7 @@ private:
 	void testDefaultInitializers() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
-		using namespace compiler::helios::houtgen;
+		using namespace compiler::helios::defgen;
 
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/default_constructors")));
 

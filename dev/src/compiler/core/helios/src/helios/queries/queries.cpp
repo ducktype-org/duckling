@@ -2,27 +2,20 @@
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
-#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/errors/errors.hpp>
-#include <helios_private/hout_code_generation/class_constructors.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <tsh/symbol_type.hpp>
+#include <tsh/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -73,14 +66,13 @@ namespace compiler::helios {
 				if (type.getKind() == tsh::Kind::StaticArray) {
 					auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
 					const auto& arr_ctor
-						= ctx.query<houtgen::QueryDefaultStaticArrayConstructor>(arr_type)
+						= ctx.query<defgen::QueryDefaultStaticArrayConstructor>(arr_type)
 					          ->valueOrThrow();
 					default_ctors.insert(arr_ctor.declaration->original_symbol);
 				} else if (type.getKind() == tsh::Kind::Class) {
 					auto        class_type = type.as<tsh::ClassAbstractType>();
 					const auto& class_ctor
-						= ctx.query<houtgen::QueryDefaultClassConstructor>(class_type)
-					          ->valueOrThrow();
+						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
 					default_ctors.insert(class_ctor.declaration->original_symbol);
 				}
 			};
@@ -169,9 +161,9 @@ namespace compiler::helios {
 					// `foo()` will get returned as a result of `QueryTransitiveFunctionCalls` since
 					// it's called by the default constructor of `T`. This function was already
 					// added when looping through the symbols in scope thus we skip it here.
-					if (!std::holds_alternative<houtgen::GeneratedSymbolData>(sym_ref->other))
+					if (!std::holds_alternative<defgen::GeneratedSymbolData>(sym_ref->other))
 						continue;
-					const auto gsd_data = std::get<houtgen::GeneratedSymbolData>(sym_ref->other);
+					const auto gsd_data = std::get<defgen::GeneratedSymbolData>(sym_ref->other);
 					// Insert only other default constructors to not insert implicit constructors twice.
 					if (gsd_data.isDefaultConstructor()) all_required_functions.insert(dependency);
 				}
@@ -206,7 +198,7 @@ namespace compiler::helios {
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
 			const auto& implicit_ctor
-				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
+				= ctx.query<defgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
 			out_functions.emplace_back(&implicit_ctor);
 		}
 
@@ -273,15 +265,32 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<CRef<HOUTUnit>>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<CRef<HOUTUnit>> out = { &ctx.query<QueryModuleHOUT>(key)->valueOrThrow() };
+			auto current_unit = &ctx.query<QueryModuleHOUT>(key)->valueOrThrow();
 
 			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
+
+			if (submodules->empty()) return std::vector<CRef<HOUTUnit>>{ current_unit };
+
+			std::vector<std::vector<CRef<HOUTUnit>>> sub_results;
+			sub_results.reserve(submodules->size());
+
+			size_t total_elements = 1;
+
 			for (auto submodule: *submodules) {
-				// @TODO: #2239 optimize multiple concatenations
-				auto submodule_hout
+				auto sub_hout
 					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
-				for (const auto& i: submodule_hout) out.push_back(i);
+				total_elements += sub_hout.size();
+
+				sub_results.emplace_back(std::move(sub_hout));
 			}
+
+			std::vector<CRef<HOUTUnit>> out;
+			out.reserve(total_elements);
+
+			out.emplace_back(current_unit);
+
+			for (auto& sub_vec: sub_results) out.insert(out.end(), sub_vec.begin(), sub_vec.end());
+
 			return out;
 		}
 
