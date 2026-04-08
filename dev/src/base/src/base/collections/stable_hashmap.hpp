@@ -9,7 +9,9 @@
 #include <base/memory/single_type_memory_pool_allocator.hpp>
 #include <base/pointers/box.hpp>
 
+#include <concepts>
 #include <iterator>
+#include <type_traits>
 #include <utility>
 
 namespace base {
@@ -158,23 +160,58 @@ namespace base {
 		 * See docs of maybePut() method for for info.
 		 * @param key_hash Precomputed hash of the key.
 		 */
-		template<typename K = KEY_T, typename D = DATA_T>
+		template<typename K, typename D = DATA_T>
+		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
 		MRef<KeyValuePair> maybePutAssumingHash(K&& key, D&& value, KeyHash key_hash)
 			RELEASE_NOEXCEPT {
+			u64        bucket_index = hashToBucket(key_hash);
+			MRef<Node> current_node = buckets.at(bucket_index);
+			while (current_node) {
+				if (current_node->key_value.key == key) return nullptr;
+				current_node = current_node->next;
+			}
+
 			auto new_node = node_allocator.allocateEmplace(
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
-
-			if (this->containsAssumingHash(new_node->key_value.key, key_hash)) {
-				node_allocator.deallocateDestroy(new_node);
-				return nullptr;
-			}
-
-			addToBucket(hashToBucket(key_hash), new_node);
+			addToBucket(bucket_index, new_node);
 
 			element_count++;
 			maybeRehash();
 
+			return &new_node->key_value;
+		}
+
+		/**
+		 * See docs of maybePutAndUpdate() method for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		template<typename K, typename D = DATA_T, typename Func>
+		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
+		MRef<KeyValuePair> maybePutAndUpdateAssumingHash(
+			K&& key, D&& value, Func&& f, KeyHash key_hash
+		) RELEASE_NOEXCEPT {
+			u64        bucket_index = hashToBucket(key_hash);
+			MRef<Node> current_node = buckets.at(bucket_index);
+
+			while (current_node) {
+				if (current_node->key_value.key == key) {
+					std::forward<Func>(f)(Ref<DATA_T>(&current_node->key_value.value));
+					return nullptr;
+				}
+				current_node = current_node->next;
+			}
+
+			auto new_node = node_allocator.allocateEmplace(
+				nullptr, std::forward<K>(key), std::forward<D>(value)
+			);
+
+			addToBucket(bucket_index, new_node);
+
+			element_count++;
+			maybeRehash();
+
+			std::forward<Func>(f)(Ref<DATA_T>(&new_node->key_value.value));
 			return &new_node->key_value;
 		}
 
@@ -377,10 +414,30 @@ namespace base {
 		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
 		 * already existed.
 		 */
-		template<typename K = KEY_T, typename D = DATA_T>
+		template<typename K, typename D = DATA_T>
+		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
 			auto hash = keyHash(key);
 			return maybePutAssumingHash(std::forward<K>(key), std::forward<D>(value), hash);
+		}
+
+		/**
+		 * Performs atomically a following sequence:
+		 * 1. Inserts key->value into the container if key does not exist.
+		 * 2. Calls f with reference to the value associated with the key.
+		 *
+		 * This method performs only one lookup in the target bucket.
+		 *
+		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
+		 * already existed.
+		 */
+		template<typename K, typename D = DATA_T, typename Func>
+		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
+		MRef<KeyValuePair> maybePutAndUpdate(K&& key, D&& value, Func&& f) RELEASE_NOEXCEPT {
+			auto hash = keyHash(key);
+			return maybePutAndUpdateAssumingHash(
+				std::forward<K>(key), std::forward<D>(value), std::forward<Func>(f), hash
+			);
 		}
 
 		[[nodiscard]]
