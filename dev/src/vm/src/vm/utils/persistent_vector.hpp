@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
@@ -8,6 +9,7 @@
 #include <vm/utils/bijective_map.hpp>
 
 #include <ranges>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -30,6 +32,8 @@ namespace vm::persistent {
 	template<typename VarT, typename VarH = std::hash<VarT>>
 	class Vector {
 		using NodeID = u64;
+
+		static constexpr auto SENTINEL = NodeID{ 0 };
 
 		struct NodeEntry {
 			NodeID left;
@@ -126,22 +130,48 @@ namespace vm::persistent {
 			return std::make_tuple(NodeID{ u64(state_id) }, entry.size, entry.height);
 		}
 
+		NodeID getNodeAt(NodeID root, usize height, usize idx) {
+			auto node = root;
+			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
+				auto& entry = node_entries.atRight(node);
+				node        = (idx & max_bit) ? entry.rght : entry.left;
+			}
+			return node;
+		}
+
+		void advancePath(Path& path) const {
+			const auto orig_size = path.size();
+
+			while (path.size() && path.back().first == Dir::Left) path.pop_back();
+
+			CORE_ASSERT(path.size(), "We require that at least node on path is left son");
+
+			NodeID node       = path.back().second;
+			path.back().first = Dir::Right;
+
+			while (path.size() < orig_size) {
+				node = getChild(node, Dir::Right);
+				path.emplace_back(Dir::Right, node);
+			}
+		}
+
+		const VarT& getLeafValue(NodeID node) {
+			auto var_id = leaf_entries.atRight(node).var_id;
+
+			return held_values.atRight(var_id);
+		}
+
 	public:
 		const VarT& access(VectorStateID state_id, usize idx) const {
-			auto [node, size, height] = getRootInfo(state_id);
+			auto [root, size, height] = getRootInfo(state_id);
 
 			if (idx == 0 || idx > size)
 				throw std::invalid_argument("received index out of range for given state");
 			CORE_ASSERT(height > 0, "Root of non-empty vector should always have non-zero height");
 
-			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
-				auto& entry = node_entries.atRight(node);
-				node        = (idx & max_bit) ? entry.rght : entry.left;
-			}
+			auto node = getNodeAt(root, height, idx);
 
-			auto var_id = leaf_entries.atRight(node).var_id;
-
-			return held_values.atRight(var_id);
+			return getLeafValue(node);
 		}
 
 		[[nodiscard]]
@@ -166,7 +196,7 @@ namespace vm::persistent {
 				if (merged == (dir == Dir::Left)) {
 					// when !merged and (dir == R) or merged and (dir == L)
 					left = node;
-					rght = 0;  // equiv to entry.right
+					rght = SENTINEL;  // equiv to entry.right
 				} else {
 					// when merged and (dir == R) or !merged and (dir == L)
 					left   = getChild(node_id, Dir::Left);
@@ -216,41 +246,62 @@ namespace vm::persistent {
 			return VectorStateID{ u64(node) };
 		}
 
-		VectorStateID pop(VectorStateID state_id) {
-			auto [prev_var_root, size, height] = getRootInfo(state_id);
+		std::vector<VarT> view(VectorStateID state_id, usize left, usize right) {
+			auto [prev_root, size, root_height] = getRootInfo(state_id);
 
-			if (size == 0)
-				throw std::invalid_argument("stack at given state is empty - cannot pop from it");
+			if (right < left) throw std::invalid_argument("right has to be bigger-equal than left");
+			if (right > size)
+				throw std::invalid_argument("trying to take view which is outside of size");
 
-			auto prev_path = getNodePath(prev_var_root, size - 1);
-			auto last_path = getNodePath(prev_var_root, size);
+			if (right == 0) return {};
+			if (left == 0) left = 1;
 
-			std::vector<std::pair<Dir, NodeID>> common = {};
+			std::vector<VarT> ans = {};
+
+			auto path = getNodePath(prev_root, left);
+
+			for (usize idx = left; idx <= right; idx++) {
+
+				NodeID leaf;
+				{
+					auto [dir, last] = path.back();
+					leaf = getChild(last, dir);
+				}
+
+				ans.emplace_back(getLeafValue(leaf));
+
+				if (idx == right) break;
+
+				advancePath(path);
+			}
+
+			return ans;
+		}
+
+		VectorStateID take(VectorStateID state_id, usize prefix_size) {
+			auto [prev_root, size, root_height] = getRootInfo(state_id);
+
+			if (prefix_size == 0) return VectorStateID{ SENTINEL };
+			if (prefix_size == size) return state_id;
+
+			if (prefix_size > size)
+				throw std::invalid_argument("Trying to take more elements than are in vector");
+
+			usize new_height = 0;
+			for (usize exp = 1; exp <= prefix_size; exp *= 2, new_height++);
 
 			using namespace std::views;
-			for (auto& [f, s]: zip(prev_path, last_path)) {
-				if (f != s) break;
-				common.emplace_back(f);
-			}
+			auto path = getNodePath(prev_root, prefix_size) | reverse | take(new_height)
+			          | std::ranges::to<std::vector>;
 
-			if (common.size() == 0) {
-				auto new_root = getChild(prev_var_root, Dir::Left);
-				root_info.put(new_root, RootEntry{ .height = height - 1, .size = size - 1 });
+			auto node = getChild(path[0].second, path[0].first);
 
-				return new_root;
-			}
-
-			auto [last_dir, node_id] = common.back();
-			NodeID lca               = getChild(node_id, last_dir);
-
-			auto node = nodeFromChildren(getChild(lca, Dir::Left), 0);
-
-			for (auto [dir, node_id]: common | reverse) {
+			for (auto [dir, node_id]: path) {
 				NodeID left = 0, rght = 0;
 
 				if (dir == Dir::Left) {
 					left = node;
-					rght = getChild(node_id, Dir::Right);
+					rght = SENTINEL;
 				} else {
 					left = getChild(node_id, Dir::Left);
 					rght = node;
@@ -259,19 +310,32 @@ namespace vm::persistent {
 				node = nodeFromChildren(left, rght);
 			}
 
-			root_info.put(node, RootEntry{ .height = height, .size = size - 1 });
+			root_info.put(node, RootEntry{ .height = new_height, .size = prefix_size });
 
-			return VectorStateID{ u64(node) };
+			return VectorStateID{ node };
+		}
+
+		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
+			auto [prev_var_root, size, height] = getRootInfo(state_id);
+
+			if (size < how_many_pop)
+				throw std::invalid_argument("stack at given state is empty - cannot pop from it");
+
+			return take(state_id, size - how_many_pop);
+		}
+
+		std::vector<VarT> slice(VectorStateID state_id, usize idx_L, usize idx_R) {
+			auto [prev_var_root, size, height] = getRootInfo(state_id);
 		}
 
 		[[nodiscard]]
 		VectorStateID getEmpty() const {
-			return VectorStateID{ 0 };
+			return VectorStateID{ SENTINEL };
 		}
 
 		Vector() {
-			auto node = NodeID(0);
-			root_info.put(node, RootEntry{ .height = 0, .size = 0 });
+			root_info.put(SENTINEL, RootEntry{ .height = 0, .size = 0 });
+			node_entries.addLink(NodeEntry{ .left = SENTINEL, .rght = SENTINEL }, SENTINEL);
 		}
 	};
 }
