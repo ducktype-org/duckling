@@ -1,0 +1,6 @@
+fun foo() = {
+    return 5;
+}
+
+# Not printed, but executed.
+foo();

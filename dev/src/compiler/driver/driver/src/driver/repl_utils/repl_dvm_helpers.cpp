@@ -22,21 +22,19 @@ namespace compiler::repl {
 	// float and double sizes are already validated in base/types/floats.hpp.
 	static_assert(sizeof(bool) == 1, "bool must be 1 byte for DVM compatibility");
 
-	std::expected<void, std::string> compileAndLoad(
+	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
 		query::Context&                  ctx,
 		const helios::HOUTUnit&          hout_unit,
 		std::string_view                 module_name,
-		vm::PID                          pid,
 		backend_vm::ReplLoweringContext& lowering_context
 	) {
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(
 			active_ctx.has_value() && active_ctx.value().get() == &ctx,
 			"ReplLoweringContext's active query context must match the ctx parameter passed to "
-			"compileAndLoad()"
+			"compileHOUTUnitToDVMCode()"
 		);
 
-		// Debug: Log HOUT functions before compilation
 		for (const auto& hout_func: hout_unit.functions) {
 			CORE_DEV_LOG(
 				REPL,
@@ -49,7 +47,6 @@ namespace compiler::repl {
 		}
 
 		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
-
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
 		CRef lir_data
@@ -143,7 +140,20 @@ namespace compiler::repl {
 		for (const auto& ext_func: new_code.external_c_functions)
 			CORE_DEV_LOG(REPL, "    ExtCFunction: ", ext_func.name.str, "\n");
 
-		return vm::api::loadCode(pid, new_code).transform_error(vm::api::errorToString);
+		return new_code;
+	}
+
+	std::expected<void, std::string> compileAndLoad(
+		query::Context&                  ctx,
+		const helios::HOUTUnit&          hout_unit,
+		std::string_view                 module_name,
+		vm::PID                          pid,
+		backend_vm::ReplLoweringContext& lowering_context
+	) {
+		return compileHOUTUnitToDVMCode(ctx, hout_unit, module_name, lowering_context)
+		    .and_then([&](const vm::code::CodeCollection& code) {
+				return vm::api::loadCode(pid, code).transform_error(vm::api::errorToString);
+			});
 	}
 
 	// @TODO: #1817 This approach is hacky.
