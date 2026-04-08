@@ -4,25 +4,103 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <concepts>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <random>
 #include <thread>
+#include <type_traits>
 
 namespace concurrent::worker {
 	class Worker;
 	using WRef = Ref<Worker>;
 
 	/**
+	 * @brief Move-only type-erased callable used for worker jobs and callbacks.
+	 *
+	 * Stores any callable invocable as `fn(WRef)` by keeping:
+	 * - a pointer to the concrete callable object,
+	 * - a function pointer that invokes it,
+	 * - a function pointer that destroys it.
+	 *
+	 * This gives one lightweight, uniform task type without requiring inheritance,
+	 * while still supporting move-only callables.
+	 */
+	class Work final {
+	public:
+		Work() = default;
+
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, WRef> && !std::same_as<std::decay_t<F>, Work>)
+		Work(F&& fn):
+			  callable_data(::new std::decay_t<F>(std::forward<F>(fn))),
+			  invoke_fn(&invokeCallable<std::decay_t<F>>),
+			  destroy_fn(&destroyCallable<std::decay_t<F>>) {}
+
+		Work(const Work&)            = delete;
+		Work& operator=(const Work&) = delete;
+
+		Work(Work&& other) noexcept:
+			  callable_data(std::exchange(other.callable_data, nullptr)),
+			  invoke_fn(std::exchange(other.invoke_fn, nullptr)),
+			  destroy_fn(std::exchange(other.destroy_fn, nullptr)) {}
+
+		Work& operator=(Work&& other) noexcept {
+			if (this == &other) return *this;
+
+			if (callable_data != nullptr) destroy_fn(callable_data);
+
+			callable_data = std::exchange(other.callable_data, nullptr);
+			invoke_fn     = std::exchange(other.invoke_fn, nullptr);
+			destroy_fn    = std::exchange(other.destroy_fn, nullptr);
+			return *this;
+		}
+
+		~Work() {
+			if (callable_data != nullptr) destroy_fn(callable_data);
+		}
+
+		void operator()(WRef worker_ref) const {
+			if (invoke_fn == nullptr) return;
+			invoke_fn(callable_data, worker_ref);
+		}
+
+	private:
+		template<typename Callable>
+		static void invokeCallable(void* callable, WRef worker_ref) {
+			auto* callable_internal = static_cast<Callable*>(callable);
+			(*callable_internal)(worker_ref);
+		}
+
+		template<typename Callable>
+		static void destroyCallable(void* callable) {
+			::delete static_cast<Callable*>(callable);
+		}
+
+		/// Type-erased storage for the concrete callable instance.
+		/// Needed because Work must hold many callable types behind one uniform interface.
+		void* callable_data = nullptr;
+
+		/// Type-erased invoker for the object stored in callable_data.
+		/// Needed to call the original callable without virtual inheritance or std::function copies.
+		void (*invoke_fn)(void*, WRef) = nullptr;
+
+		/// Type-erased destructor for the object stored in callable_data.
+		/// Needed to destroy the correct concrete callable type during move/reset/destruction.
+		void (*destroy_fn)(void*) = nullptr;
+	};
+
+	/**
 	 * @brief Callback type invoked when a worker has no tasks to execute.
 	 */
-	using NoTasksCallback = std::function<void(WRef)>;
+	using NoTasksCallback = Work;
 
 	/**
 	 * @brief Represents a task to be executed by a worker.
 	 */
-	using Task = std::function<void(WRef)>;
+	using Task = Work;
 
 	/**
 	 * @brief Represents a single worker in the WorkerManager.
@@ -45,14 +123,14 @@ namespace concurrent::worker {
 		 * @brief Pushes a task to the worker's task queue.
 		 * @param task The task to be executed.
 		 */
-		void scheduleTask(const Task& task);
+		void scheduleTask(Task&& task);
 
 		/**
-		 * @brief Pushes a task to the worker's task queue only if the worker is free.
+		 * @brief Pushes a task to the worker's task queue via move only if the worker is free.
 		 * @param task The task to be executed.
 		 * @return True if the task was pushed, false otherwise.
 		 */
-		bool scheduleTaskIfFree(const Task& task);
+		bool scheduleTaskIfFree(Task&& task);
 
 		/**
 		 * @brief Checks if a worker is free.
@@ -84,13 +162,21 @@ namespace concurrent::worker {
 		 * longer than the lifetime of a callback inside a worker. This means that you need to make
 		 * sure to reset the callback before the destruction of the variables
 		 */
-		void setNoTasksCallback(const NoTasksCallback& callback);
+		void setNoTasksCallback(NoTasksCallback&& callback);
 
 		/**
 		 * @brief Gets the reference of the current worker
 		 * Panics if called from a non-worker thread.
 		 */
 		static WRef getCurrentWorker();
+
+		static bool isCurrentThreadWorker();
+
+		/**
+		 * @brief Gets the unique u64 ID of the worker.
+		 */
+		[[nodiscard]]
+		u64 getID() const;
 
 	private:
 		Worker(usize seed);
@@ -99,6 +185,12 @@ namespace concurrent::worker {
 		 * @brief Starts the worker's main loop in a separate thread.
 		 */
 		void run();
+
+		/**
+		 * @brief Sets the callback to be invoked when there are no tasks.
+		 * @param callback Shared callback instance.
+		 */
+		void setNoTasksCallback(std::shared_ptr<NoTasksCallback> callback);
 
 		/**
 		 * @brief Generates a random u64 using the worker's RNG.
@@ -116,18 +208,46 @@ namespace concurrent::worker {
 		/**
 		 * @brief Indicates whether the worker is free.
 		 */
-		std::atomic_bool is_free       = true;
-		std::atomic_bool loop_run_flag = true;  /// Controls the main loop of the worker thread.
+		/**
+		 * @brief Indicates whether the worker is free.
+		 */
+		std::atomic_bool is_free = true;
 
-		NoTasksCallback no_tasks_callback = [](WRef) {};  /// Callback when there are no tasks.
+		/**
+		 * @brief Controls the main loop of the worker thread.
+		 */
+		std::atomic_bool loop_run_flag = true;
+
+		/**
+		 * @brief Callback when there are no tasks.
+		 * Shared with worker loop and setter so the callback can be replaced safely.
+		 */
+		std::shared_ptr<NoTasksCallback> no_tasks_callback
+			= std::make_shared<NoTasksCallback>([](WRef) {});
 
 		std::queue<Task> task_queue;
 
-		mutable std::mutex mut;  /// Internal synchronization mutex.
-		std::condition_variable
-			task_cv;             /// Condition variable to notify the worker thread about new tasks.
+		/**
+		 * @brief Internal synchronization mutex.
+		 */
+		mutable std::mutex mut;
+
+		/**
+		 * @brief Condition variable to notify the worker thread about new tasks.
+		 */
+		std::condition_variable task_cv;
 
 		std::jthread real_thread;
+
+		/**
+		 * @brief Global counter for generating unique worker IDs.
+		 */
+		static constinit u64 next_id;
+
+		/**
+		 * @brief Unique ID for this worker.
+		 */
+		u64 id = next_id++;
 	};
 }
 
