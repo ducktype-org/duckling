@@ -2,6 +2,8 @@
 
 #include <concurrent/worker/worker.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <mutex>
 #include <ranges>
 
@@ -27,22 +29,51 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
-	WRef WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
+	void WorkerManager::waitForAllWorkersFree(std::chrono::milliseconds sleep_duration) const {
+		CORE_ASSERT(
+			!Worker::isCurrentThreadWorker(),
+			"Cannot call waitForAllWorkersFree from a worker thread"
+		);
+		while (true) {
+			// Recursively locks each worker's mutex in order and checks if all are free.
+			// Holding all locks simultaneously ensures a consistent snapshot of worker states.
+			auto lock_and_check_all = [&](auto&& self, usize index) -> bool {
+				if (index >= workers.size()) return true;
+
+				auto&            worker = workers.at(index);
+				std::scoped_lock lock(worker->mut);
+				if (!worker->is_free.load(std::memory_order_seq_cst)) return false;
+
+				return self(self, index + 1);
+			};
+
+			if (lock_and_check_all(lock_and_check_all, 0)) return;
+
+			std::this_thread::sleep_for(sleep_duration);
+		}
+	}
+
+	WRef WorkerManager::scheduleTaskOnAnyWorker(Task&& task) {
 		for (auto& worker: workers)
-			if (worker->scheduleTaskIfFree(task)) return worker.get();
+			if (worker->scheduleTaskIfFree(std::move(task))) return worker.get();
 
 		// If no free worker is found, push to a random worker
 		std::scoped_lock lock(mut);
 		auto             id = static_cast<usize>(rng()) % (workers.size());
 
-		workers[id]->scheduleTask(task);
+		workers[id]->scheduleTask(std::move(task));
 		return workers[id].get();
 	}
 
 	bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
 
-	void WorkerManager::setNoTasksCallback(WRef worker, const NoTasksCallback& callback) {
-		worker->setNoTasksCallback(callback);
+	void WorkerManager::setNoTasksCallback(WRef worker, NoTasksCallback&& callback) {
+		worker->setNoTasksCallback(std::move(callback));
+	}
+
+	void WorkerManager::setNoTasksCallback(NoTasksCallback&& callback) {
+		auto callback_ptr = std::make_shared<NoTasksCallback>(std::move(callback));
+		for (auto& worker: getAllWorkers()) worker->setNoTasksCallback(callback_ptr);
 	}
 
 	WorkerManager& WorkerManager::get() {

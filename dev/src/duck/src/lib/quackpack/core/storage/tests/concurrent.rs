@@ -25,8 +25,11 @@ fn concurrent_delete() {
         for _ in 0..thread_count {
             s.spawn(|| {
                 barrier.wait();
-                let result =
-                    storage::ops::delete_venv(ctx.default_storage_root(), StrId::new("venv1"));
+                let result = storage::ops::delete_venv(
+                    &ctx,
+                    ctx.default_storage_root(),
+                    StrId::new("venv1"),
+                );
                 if let Err(e) = result {
                     lock_failures.fetch_add(1, Ordering::SeqCst);
                     assert_eq!(
@@ -99,7 +102,7 @@ fn concurrent_different_deletes() {
                     StrId::new("venv2")
                 };
 
-                storage::ops::delete_venv(ctx.default_storage_root(), venv).unwrap();
+                storage::ops::delete_venv(&ctx, ctx.default_storage_root(), venv).unwrap();
             });
         }
     });

@@ -4,7 +4,11 @@ use std::{io, marker::PhantomData, path::Path};
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, qp_bail, qp_err, qp_internal, quackpack::core::PackageCtx,
+    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_err, qp_internal,
+    quackpack::core::{
+        PackageCtx,
+        storage::{paths::Storage, venv::Venv, venv_id::VenvId},
+    },
     util::path_ops_ext::PathOpsExt,
 };
 
@@ -35,7 +39,7 @@ impl AllowGlobalPackage {
 pub struct PackageLoader(PhantomData<()>);
 
 impl PackageLoader {
-    pub const MANIFEST_NAME: &str = "quackconfig.yml";
+    pub const MANIFEST_NAME: &str = "quackconfig.yaml";
     pub const FREEZE_NAME: &str = "quackfreeze.json";
     pub const VENV_CONFIG_NAME: &str = "venvconfig.yaml";
 
@@ -44,7 +48,7 @@ impl PackageLoader {
         Err(qp_internal!("@TODO: #1394 it needs the EditableManifest"))
     }
 
-    /// Find a [`PackageCtx`] from a given `start`.
+    /// Find a [`PackageCtx`] from the given `start`.
     ///
     /// This function __expands tildes__ and __resolves__ path fully.
     /// Also, it walks up the chain of path's ancestors.
@@ -106,6 +110,21 @@ impl PackageLoader {
     ) -> QuackResult<PackageCtx<'duck>> {
         let cwd = ctx.cwd();
         Self::find_from_directory(cwd, ctx, allow_global_package)
+    }
+
+    /// Find the root of the venv with the given name.
+    pub fn find_venv_by_name<'duck>(
+        ctx: &'duck DuckCtx,
+        venv_id: VenvId,
+    ) -> QuackResult<PackageCtx<'duck>> {
+        let storage_loc = ctx.default_storage_root();
+        let storage = Storage::new(storage_loc);
+        let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
+            qp_bail!("Could not find venv {} in the main storage", venv_id);
+        };
+        let dir = venv.data().last_known_directory();
+        Self::find_at_exact_directory(dir, ctx)
+            .with_context(|| format!("Lost track of the venv {venv_id}"))
     }
 }
 

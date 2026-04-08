@@ -6,27 +6,24 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 
 use crate::{
-    QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err,
-    quackpack::{
-        core::{
-            BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine,
-            SolverAnswer, SolverGathererData,
-            fetcher::{Fetcher, types::PackageWithUrl},
-            git_access::GitAccess,
-            solver_freeze::SolverFreeze,
-            solver_mode::SolverMode,
-            storage::{
-                freeze::VenvFreeze,
-                git_access::StorageGitAccess,
-                locks::TrySyncLock,
-                package_id::{GitId, PackageId, RegistryId},
-                paths::Storage,
-                venv::{Venv, VenvData},
-                venv_id::ToVenvId,
-            },
-            types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
+    QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
+    quackpack::core::{
+        BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine, SolverAnswer,
+        SolverGathererData,
+        fetcher::{Fetcher, types::PackageWithUrl},
+        git_access::GitAccess,
+        solver_freeze::SolverFreeze,
+        solver_mode::SolverMode,
+        storage::{
+            freeze::VenvFreeze,
+            git_access::StorageGitAccess,
+            locks::TrySyncLock,
+            package_id::{GitId, PackageId, RegistryId},
+            paths::Storage,
+            venv::{Venv, VenvData},
+            venv_id::{ToVenvId, VenvId},
         },
-        subcommands::sync::SyncOptions,
+        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
     },
     util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
@@ -35,10 +32,21 @@ use crate::quackpack::core::storage;
 
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
 
+#[derive(Debug, Clone, Copy)]
+/// Options passed to [`sync`].
+pub struct StorageSyncOptions {
+    /// Overwrite any existing venvs.
+    pub overwrite: bool,
+    /// Assume, that freezefile doesn't change.
+    pub frozen: bool,
+    /// Disallow any errors in foreign packages' manifests.
+    pub strict_errors: bool,
+}
+
 /// Synchronize virtual environment for package, and return information required to build it.
 pub fn sync(
     package: &PackageCtx<'_>,
-    options: SyncOptions,
+    options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     let venv_config = package.venv_config();
     let storage_localization = venv_config
@@ -54,9 +62,7 @@ pub fn sync(
     let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)
         .context("failed to acquire try sync lock")?;
 
-    let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
     let venv = Venv::fix_and_load(&storage, id)?;
-    drop(data_lock);
 
     if !options.overwrite {
         check_if_overwrites(package, venv.as_ref(), id)?;
@@ -86,22 +92,33 @@ pub fn sync(
     let _was_anything_installed =
         fetch_source_codes(&storage, &mut fetcher, &mut git_access, pkgs)?;
 
-    let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
     let now = SystemTime::now();
-    let data = VenvData::new(
-        new_freeze,
-        venv_config.is_ephemeral()?,
-        package.package().manifest_path().to_path_buf(),
-        now,
-    );
-    let venv = Venv::new(id, data);
+    let venv = if let Some(mut venv) = venv {
+        let data = venv.data_mut();
+        data.set_last_modification(now);
+        data.set_freeze(new_freeze);
+        data.set_last_known_directory(package.package().root_directory().to_path_buf());
+        venv
+    } else {
+        let data = VenvData::new(
+            new_freeze,
+            venv_config.is_ephemeral()?,
+            package.package().root_directory().to_path_buf(),
+            now,
+            now,
+        );
+        Venv::new(id, data)
+    };
     venv.save_to(&storage)?;
-    drop(data_lock);
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
         freeze_name(package.package()).write(json)?;
     }
+    package
+        .ctx()
+        .console()
+        .info(format!("successfully synchronized venv `{id}`"));
     Ok((_sync_lock, venv, storage))
 }
 
@@ -112,24 +129,18 @@ pub fn sync(
 fn check_if_overwrites(
     pkg_ctx: &PackageCtx<'_>,
     venv: Option<&Venv>,
-    id: StrId,
+    id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pkg_ctx.package().manifest_path() == venv.data().last_location()
-        || !venv.data().last_location().exists()
+    if pkg_ctx.package().root_directory() == venv.data().last_known_directory()
+        || !venv.data().last_known_directory().exists()
     {
         return Ok(());
     }
-    let last_package_dir = venv.data().last_location().parent().ok_or_else(|| {
-        qp_err!(
-            "last location of venv `{}` (`{}`) doesn't have a parent",
-            venv.id(),
-            venv.data().last_location().display()
-        )
-    })?;
-    let package = PackageLoader::find_at_exact_directory(last_package_dir, pkg_ctx.ctx());
+    let package =
+        PackageLoader::find_at_exact_directory(venv.data().last_known_directory(), pkg_ctx.ctx());
     let replaces = match package {
-        Ok(package) => package.package().manifest().name() == id,
+        Ok(package) => package.package().manifest().name() == id.name() && !id.is_global(),
         Err(e) => {
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
