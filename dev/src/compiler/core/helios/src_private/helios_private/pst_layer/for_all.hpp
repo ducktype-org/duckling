@@ -36,7 +36,7 @@ namespace compiler::helios {
 			// handle macros here!
 			auto child_unlocked = child.unlockOpt(ctx);
 
-			// Note: filterring nullptrs is done on the level of PST children collection
+			// Note: filtering nullptrs is done on the level of PST children collection
 			CORE_ASSERT(
 				child_unlocked.has_value(),
 				"View children should only contain valid element (no null ptrs)"
