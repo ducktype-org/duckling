@@ -35,7 +35,16 @@ There are four ways to enable a hashing support for a class (if possible, the fi
 `HASHING_CAN_HASH_BY_REPRESENTATION`
 ------------------------------------
 
-@TODO
+If your type has a unique representation in memory, you can simply add a static member to it:
+~~~~~cpp
+struct S {
+    u64 x;
+    static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+};
+~~~~~
+
+With this member, the module will know that it can treat your type as a sequence of bytes and hash it directly.
+Note that this might now always be the correct way to hash your type, even if it has a unique representation.
 
 
 `hashDecompose()`

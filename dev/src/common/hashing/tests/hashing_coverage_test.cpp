@@ -328,6 +328,8 @@ private:
 		addToHash(h, std::tuple<float, int, X, S>{ 1.0f, 2, X{}, S{} });
 		std::array arr = std::array<S, 3>{ S{}, S{}, S{} };
 		addToHash(h, arr);
+		addToHash(h, HashByRepresentation{});
+
 		std::map<int, int> m;
 		m[1] = 2;
 		m[3] = 4;

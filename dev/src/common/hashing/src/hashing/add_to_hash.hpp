@@ -65,7 +65,7 @@ namespace hashing {
 		}
 		// If for each value of the type there is a unique representation of it in memory,
 		// we can treat it as a sequence of chars and hash it directly
-		else if constexpr (internal::can_hash_by_representation<T> || std::is_same_v<T, base::Bit256>) {
+		else if constexpr (internal::can_hash_by_representation<T>) {
 			internal::hashAsBytes(hash_alg, t);
 		}
 		// If the range is contiguous and its elements have unique representations we can
