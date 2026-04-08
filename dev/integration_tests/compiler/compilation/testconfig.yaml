@@ -11,16 +11,16 @@ compile_llvm_options: ""
 # Runs an extra deterministic compile check before normal compile_package.
 # You can override this to "false" in any subtree/test when duplication-based checks fail
 # for test-specific reasons (for example repeated globals or intentionally conflicting symbols).
-enable_conc_detterministic_tests: "true"
+enable_conc_deterministic_tests: "true"
 
 # Path to the local helper script used by the deterministic pre-check.
 compile_determinism_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/concurrent_compile_determinism.py"
 
-compile_dvm_determinism_cmd: "if [ '@{enable_conc_detterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
-compile_llvm_determinism_cmd: "if [ '@{enable_conc_detterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
+compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
+compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd:  "@{compile_dvm_determinism_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_backend_cmd: "@{compile_llvm_determinism_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
+compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
 
 compiled_to_llvm: "./build/package_llvm.exe"
 compiled_to_dvm: "./build/query/query*/*.dbc" # ??

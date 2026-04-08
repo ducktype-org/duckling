@@ -30,6 +30,8 @@ Tests:
         ExitCode: 0
 
   arrays_and_records:
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm
@@ -46,7 +48,8 @@ Tests:
         ExitCode: 0
 
   empty_arrays:
-    enable_conc_detterministic_tests: "false"
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm

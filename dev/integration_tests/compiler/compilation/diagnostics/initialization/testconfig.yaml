@@ -1,4 +1,5 @@
-enable_conc_detterministic_tests: "false"
+# @TODO: #2448 Investigate why deterministic compilation check fails for these tests
+enable_conc_deterministic_tests: "false"
 
 Tests:
   no_main_source_file:

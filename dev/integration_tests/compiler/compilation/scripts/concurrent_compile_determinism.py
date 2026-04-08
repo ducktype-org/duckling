@@ -291,7 +291,7 @@ def main() -> int:
         )
         if not ok_single:
             print(
-                "[determinism-check] Compilation is not deterministic and did not compile consistently.\n"
+                "[determinism-check] Compilation failed (single-worker pass).\n"
                 + single_error,
                 file=sys.stderr,
             )
@@ -307,7 +307,7 @@ def main() -> int:
         )
         if not ok_concurrent:
             print(
-                "[determinism-check] Compilation is not deterministic and did not compile consistently.\n"
+                "[determinism-check] Compilation failed (concurrent pass).\n"
                 + concurrent_error,
                 file=sys.stderr,
             )
@@ -315,8 +315,8 @@ def main() -> int:
 
         if not single_snapshot and not concurrent_snapshot:
             print(
-                "[determinism-check] Compilation is not deterministic and did not compile consistently.\n"
-                "No .o/.dbc artifacts were produced.",
+                "[determinism-check] No compiled artifacts were produced; cannot perform determinism check.\n"
+                f"Expected at least one .o/.dbc artifact for backend '{args.backend}'.",
                 file=sys.stderr,
             )
             return 1

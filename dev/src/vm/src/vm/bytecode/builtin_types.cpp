@@ -6,7 +6,8 @@
 #include <vm/core/process/type_metadata/type.hpp>
 
 namespace vm::code {
-	// This Map is not a hashmap to keep the compiler deterministic in mutli-thread scenario
+	// Use an ordered map instead of a hash map to preserve deterministic iteration order
+	// when the compiler runs in multi-threaded scenarios.
 	using BuiltinTypesMap = base::Map<base::StrID, TypeOfData>;
 
 	const SpecialTypes& SpecialTypes::get() {
