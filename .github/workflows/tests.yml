@@ -136,7 +136,7 @@ jobs:
         run: sudo apt -y install llvm-19 llvm-19-dev
 
       - name: Install clang
-        # Not that it is also necessary to compile Duckling builtins to LLVM bitcode
+        # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
         run: sudo apt -y install clang-19 clang-tools-19
 
