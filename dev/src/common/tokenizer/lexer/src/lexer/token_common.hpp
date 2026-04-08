@@ -60,9 +60,7 @@ namespace lexer {
 
 		auto operator<=>(const Operator& other) const = default;
 
-		friend auto hashDecompose(const Operator& c) {
-			return std::tie(c.value);
-		}
+		friend auto hashDecompose(const Operator& c) { return std::tie(c.value); }
 	};
 
 	/**

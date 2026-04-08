@@ -77,15 +77,16 @@ namespace hashing {
 		 * Checks if the type can be hashed by just hashing its representation
 		 */
 		template<typename T>
-		concept can_hash_by_representation =
-			std::has_unique_object_representations_v<T> &&
-			(
-				std::is_integral_v<T> || std::is_enum_v<T> ||
-				
-				// the const& here is needed, as this is simply how it
-				// works with static constexpr members. 
-				requires { {T::HASHING_CAN_HASH_BY_REPRESENTATION}-> std::same_as<const base::Monostate&>; }
-			);
+		concept can_hash_by_representation = std::has_unique_object_representations_v<T>
+		                                  && (std::is_integral_v<T> || std::is_enum_v<T> ||
+
+		                                      // the const& here is needed, as this is simply how it
+		                                      // works with static constexpr members.
+		                                      requires {
+												  {
+													  T::HASHING_CAN_HASH_BY_REPRESENTATION
+												  } -> std::same_as<const base::Monostate&>;
+											  });
 
 		/**
 		 * Checks if the type is a tuple of references

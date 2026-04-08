@@ -6,6 +6,7 @@
 #pragma once
 
 #include <base/pointers/ref.hpp>
+
 #include <hashing/add_to_hash.hpp>
 
 namespace compiler::helios {

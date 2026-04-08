@@ -3,7 +3,7 @@
 #include "hash_algorithm_utils.hpp"
 
 #include <base/comptime/type_traits.hpp>
-#include <base/types/bit256.hpp> // PRremove
+#include <base/types/bit256.hpp>  // PRremove
 
 #include <ranges>
 #include <tuple>
@@ -16,12 +16,12 @@ namespace hashing {
 	 * Options for the addToHash function template.
 	 * Currently empty.
 	 */
-	struct AddToHashOptions final { };
+	struct AddToHashOptions final {};
 
 	/**
 	 * Default (strict) options for the addToHash function template
 	 */
-	static constexpr AddToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS { };
+	static constexpr AddToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{};
 
 	/**
 	 * This is a template overload for the 'addToHash' function.
@@ -84,8 +84,7 @@ namespace hashing {
 		// Overload if range is contiguous
 		else if constexpr (std::ranges::contiguous_range<T>) {
 			for (const auto& elem: t) addToHash(hash_alg, elem);
-		}
-		else {
+		} else {
 			// Note: the typeName(T) == "" is just to make the compiler print the T in the error message.
 			static_assert(
 				false, "Please provide an 'addToHash' or 'hashDecompose' overload for this type"

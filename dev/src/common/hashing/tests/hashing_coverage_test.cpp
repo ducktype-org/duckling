@@ -67,7 +67,7 @@ public:
 };
 
 struct HashByRepresentation final {
-	u64 x = 1;
+	u64                              x                                  = 1;
 	static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
 };
 
@@ -250,7 +250,10 @@ private:
 			"std::array<std::string, 3> should not be hashable as chars"
 		);
 
-		struct AnyType { std::uint64_t x; };
+		struct AnyType {
+			std::uint64_t x;
+		};
+
 		static_assert(
 			!internal::can_hash_by_representation<AnyType>,
 			"AnyType should not be hashable by representation"
