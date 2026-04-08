@@ -3,7 +3,6 @@
 #include "hash_algorithm_utils.hpp"
 
 #include <base/comptime/type_traits.hpp>
-#include <base/types/bit256.hpp>  // PRremove
 
 #include <ranges>
 #include <tuple>
@@ -50,7 +49,6 @@ namespace hashing {
 		else if constexpr (std::is_floating_point_v<T>) {
 			// IEEE 754 floating point numbers have multiple representations of 0:
 			// -0.0 == 0.0, so they should have the same hash since they compare equal.
-			// However, they are effectively a different group elements.
 			auto t_copy = t;
 			if (t_copy == 0) t_copy = 0;
 			internal::hashAsBytes(hash_alg, t_copy);
@@ -85,7 +83,6 @@ namespace hashing {
 		else if constexpr (std::ranges::contiguous_range<T>) {
 			for (const auto& elem: t) addToHash(hash_alg, elem);
 		} else {
-			// Note: the typeName(T) == "" is just to make the compiler print the T in the error message.
 			static_assert(
 				false, "Please provide an 'addToHash' or 'hashDecompose' overload for this type"
 			);

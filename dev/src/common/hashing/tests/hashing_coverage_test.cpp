@@ -321,10 +321,8 @@ private:
 		char*            ptr1 = nullptr;
 		const int* const ptr2 = nullptr;
 		S                s{};
-		// auto             memptr = &S::y;
 		addToHash(h, ptr1);
 		addToHash(h, ptr2);
-		// addToHash(h, memptr); // remove?
 		addToHash(h, nullptr);
 		addToHash(h, std::tuple{ 1, 2, 3 });
 		addToHash(h, std::pair{ 1, 3 });

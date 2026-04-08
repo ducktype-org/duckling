@@ -80,7 +80,7 @@ namespace hashing {
 		concept can_hash_by_representation = std::has_unique_object_representations_v<T>
 		                                  && (std::is_integral_v<T> || std::is_enum_v<T> ||
 
-		                                      // the const& here is needed, as this is simply how it
+		                                      // the const Monostate& here is needed, as this is simply how it
 		                                      // works with static constexpr members.
 		                                      requires {
 												  {
