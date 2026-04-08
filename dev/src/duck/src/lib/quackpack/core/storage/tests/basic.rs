@@ -72,21 +72,21 @@ fn clean() {
 fn delete_venv() {
     let (ctx, root) = setup_mock_storage();
     let storage_root = ctx.default_storage_root();
-    storage::ops::delete_venv(storage_root, StrId::new("root1")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("root1")).unwrap();
     check_venvs_exist(root.path(), &["root2", "root3", "root4"]);
     check_venvs_dont_exist(root.path(), &["root1"]);
-    storage::ops::delete_venv(storage_root, StrId::new("root2")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("root2")).unwrap();
     check_venvs_exist(root.path(), &["root3", "root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2"]);
-    storage::ops::delete_venv(storage_root, StrId::new("root3")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("root3")).unwrap();
     check_venvs_exist(root.path(), &["root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3"]);
 
-    storage::ops::delete_venv(storage_root, StrId::new("non_existent_venv")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("non_existent_venv")).unwrap();
     check_venvs_exist(root.path(), &["root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3"]);
 
-    storage::ops::delete_venv(storage_root, StrId::new("root4")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("root4")).unwrap();
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3", "root4"]);
 
     let mut output = storage::ops::clean_storage(&ctx, storage_root).unwrap();

@@ -115,6 +115,10 @@ pub fn sync(
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
         freeze_name(package.package()).write(json)?;
     }
+    package
+        .ctx()
+        .console()
+        .info(format!("successfully synchronized venv `{id}`"));
     Ok((_sync_lock, venv, storage))
 }
 

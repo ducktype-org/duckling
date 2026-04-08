@@ -25,7 +25,7 @@ pub struct CleanOutput {
 }
 
 /// Delete a virtual environment from storage.
-pub fn delete_venv(storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
+pub fn delete_venv(ctx: &DuckCtx, storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
     debug!("deleting venv `{}`", venv.to_venv_id());
     let storage = paths::Storage::new(storage_root);
     let venv_id = venv.to_venv_id();
@@ -65,6 +65,8 @@ pub fn delete_venv(storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> 
     storage.compile_lock(venv_id).rm()?;
     storage.sync_lock(venv_id).rm()?;
     storage.data_lock(venv_id).rm()?;
+    ctx.console()
+        .info(format!("successfully removed venv `{venv_id}`"));
     Ok(())
 }
 
@@ -109,6 +111,7 @@ pub fn clean_storage(ctx: &DuckCtx, storage_root: &Path) -> QuackResult<CleanOut
     for pkg in pgks_to_remove.iter() {
         pkg.rmtree()?;
     }
+    ctx.console().info("successfully cleaned the storage");
     Ok(CleanOutput {
         removed_venvs,
         removed_packages: pgks_to_remove,
