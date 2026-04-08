@@ -119,13 +119,9 @@ impl PackageLoader {
         let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
             qp_bail!("Could not find venv {} in the main storage", venv_id);
         };
-        let parent = venv
-            .data()
-            .last_location()
-            .parent()
-            .context(format!("Lost track of the venv {venv_id}"))?;
-        Self::find_at_exact_directory(parent, ctx)
-            .context(format!("Lost track of the venv {venv_id}"))
+        let dir = venv.data().last_known_directory();
+        Self::find_at_exact_directory(dir, ctx)
+            .with_context(|| format!("Lost track of the venv {venv_id}"))
     }
 }
 

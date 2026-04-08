@@ -119,7 +119,7 @@ impl std::error::Error for CorruptedVenvError {}
 pub struct VenvData {
     freeze: freeze::VenvFreeze,
     is_ephemeral: bool,
-    last_location: PathBuf,
+    last_known_directory: PathBuf,
     last_modification: SystemTime,
     last_access: SystemTime,
 }
@@ -129,14 +129,14 @@ impl VenvData {
     pub fn new(
         freeze: freeze::VenvFreeze,
         is_ephemeral: bool,
-        last_location: PathBuf,
+        last_known_directory: PathBuf,
         last_modification: SystemTime,
         last_access: SystemTime,
     ) -> Self {
         Self {
             freeze,
             is_ephemeral,
-            last_location,
+            last_known_directory,
             last_modification,
             last_access,
         }
@@ -222,19 +222,19 @@ impl VenvData {
         self.is_ephemeral = is_ephemeral;
     }
 
-    /// Get the last known location of this venv.
-    pub fn last_location(&self) -> &Path {
-        &self.last_location
+    /// Get the last known directory of this venv.
+    pub fn last_known_directory(&self) -> &Path {
+        &self.last_known_directory
     }
 
-    /// A mutable counterpart to the [`last_location`](Self::last_location).
-    pub fn last_location_mut(&mut self) -> &mut PathBuf {
-        &mut self.last_location
+    /// A mutable counterpart to the [`last_known_directory`](Self::last_known_directory).
+    pub fn last_known_directory_mut(&mut self) -> &mut PathBuf {
+        &mut self.last_known_directory
     }
 
-    /// Set the last know location of this venv.
-    pub fn set_last_location(&mut self, last_location: PathBuf) {
-        self.last_location = last_location;
+    /// Set the last know directory of this venv.
+    pub fn set_last_known_directory(&mut self, last_known_directory: PathBuf) {
+        self.last_known_directory = last_known_directory;
     }
 
     /// Get the last access time of this venv.

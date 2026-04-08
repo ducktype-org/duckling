@@ -97,13 +97,13 @@ pub fn sync(
         let data = venv.data_mut();
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
-        data.set_last_location(package.package().manifest_path().to_path_buf());
+        data.set_last_known_directory(package.package().root_directory().to_path_buf());
         venv
     } else {
         let data = VenvData::new(
             new_freeze,
             venv_config.is_ephemeral()?,
-            package.package().manifest_path().to_path_buf(),
+            package.package().root_directory().to_path_buf(),
             now,
             now,
         );
@@ -128,13 +128,15 @@ fn check_if_overwrites(
     id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pkg_ctx.package().manifest_path() != venv.data().last_location()
-        && venv.data().last_location().exists()
+    if pkg_ctx.package().root_directory() != venv.data().last_known_directory()
+        && venv.data().last_known_directory().exists()
     {
-        let replaces =
-            PackageLoader::find_at_exact_directory(venv.data().last_location(), pkg_ctx.ctx())
-                .map(|pkg| pkg.package().manifest().name() == id.name() && !id.is_global())
-                .unwrap_or(false);
+        let replaces = PackageLoader::find_at_exact_directory(
+            venv.data().last_known_directory(),
+            pkg_ctx.ctx(),
+        )
+        .map(|pkg| pkg.package().manifest().name() == id.name() && !id.is_global())
+        .unwrap_or(false);
         if replaces {
             Err(
                 qp_err!("tried to overwrite an existing virtual environment from another location")
