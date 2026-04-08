@@ -444,16 +444,16 @@ namespace compiler::driver {
 			return base::BAD;
 		}
 
-		auto& script_context = global_state::getScriptContext();
-		auto  output_dir     = global_state::getRootCollection()->getPath();
-		std::filesystem::create_directories(output_dir.getPath());
-
-		auto output_path
-			= output_dir.getPath() / (script_context.script_file.stem() + std::string(".dbc"));
-		std::ofstream output_file(output_path.string(), std::ios::binary);
+		auto& script_context  = global_state::getScriptContext();
+		auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+            base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+        );
+		std::ofstream output_file(output_artifact.file.getFilePath().getPath(), std::ios::binary);
 		if (!output_file.is_open()) {
 			CORE_USER_LOG(
-				"Failed to open output file for script bytecode: ", output_path.string(), "\n"
+				"Failed to open output file for script bytecode: ",
+				output_artifact.file.getFilePath().string(),
+				"\n"
 			);
 			return base::BAD;
 		}
@@ -461,7 +461,9 @@ namespace compiler::driver {
 		vm::code::serializeCode(compiled_script.value(), output_file);
 		output_file.close();
 
-		CORE_USER_LOG("Script bytecode written to: ", output_path.string(), "\n");
+		CORE_USER_LOG(
+			"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
+		);
 		return base::OK;
 	}
 
