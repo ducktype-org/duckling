@@ -776,9 +776,16 @@ namespace compiler::helios::code {
 			}
 			case SymbolKind::Variable:
 			case SymbolKind::Parameter:
-			case SymbolKind::Const:
-			case SymbolKind::Class: {
+			case SymbolKind::Const: {
 				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case SymbolKind::Class: {
+				auto type_qresult = query_ctx.query<QueryTypeFromDefinition>({ symbol });
+				UNPACK_QRESULT_CREF(auto type_info =, type_qresult);
+
+				auto expr
+					= makeBox<LiteralTypeExpr>(query_ctx, pst_element_origin, type_info.getType());
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case SymbolKind::Field: {

@@ -66,6 +66,11 @@ public:
 	friend bool operator==(const S& lhs, const S& rhs) noexcept { return lhs.x == rhs.x; }
 };
 
+struct HashByRepresentation final {
+	u64                              x                                  = 1;
+	static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+};
+
 namespace my_map {
 	using Hasher = decltype([](auto&& x) { return Hash<>{}(x).data.at(0); });
 
@@ -176,11 +181,6 @@ private:
 			"getBase<X>(type_with_bases{}) should return const X&"
 		);
 
-		assertTrue(internal::can_stdhash<int>, "int should be hashable with std::hash");
-		assertTrue(
-			internal::can_stdhash<std::string>, "std::string should be hashable with std::hash"
-		);
-		assertFalse(internal::can_stdhash<Z>, "Z should not be hashable with std::hash");
 
 		assertTrue(
 			internal::tuple_of_refs<std::tuple<int&, float&>>,
@@ -249,6 +249,20 @@ private:
 			check_hashRangeAsBytes<std::array<std::string, 3>>,
 			"std::array<std::string, 3> should not be hashable as chars"
 		);
+
+		struct AnyType {
+			std::uint64_t x;
+		};
+
+		static_assert(
+			!internal::can_hash_by_representation<AnyType>,
+			"AnyType should not be hashable by representation"
+		);
+
+		static_assert(
+			internal::can_hash_by_representation<HashByRepresentation>,
+			"HashByRepresentation should be hashable by representation"
+		);
 	}
 
 	void hashingAlgorithmsTest() {
@@ -307,16 +321,16 @@ private:
 		char*            ptr1 = nullptr;
 		const int* const ptr2 = nullptr;
 		S                s{};
-		auto             memptr = &S::y;
 		addToHash(h, ptr1);
 		addToHash(h, ptr2);
-		addToHash(h, memptr);
 		addToHash(h, nullptr);
 		addToHash(h, std::tuple{ 1, 2, 3 });
 		addToHash(h, std::pair{ 1, 3 });
 		addToHash(h, std::tuple<float, int, X, S>{ 1.0f, 2, X{}, S{} });
 		std::array arr = std::array<S, 3>{ S{}, S{}, S{} };
 		addToHash(h, arr);
+		addToHash(h, HashByRepresentation{});
+
 		std::map<int, int> m;
 		m[1] = 2;
 		m[3] = 4;
@@ -357,7 +371,7 @@ private:
 		m[3]                                    = 4;
 		m[5]                                    = 6;
 		std::variant<int, float, std::string> v = 42;
-		assertTrue(internal::can_stdhash<decltype(v)>, "v should be hashable with std::hash");
+
 		// addToHash(h2, v); // hashing std::variant // @future
 
 		addToHash(h2, std::tuple{ 1, 2, 3 }, 123, 12.f, X{}, S{});
