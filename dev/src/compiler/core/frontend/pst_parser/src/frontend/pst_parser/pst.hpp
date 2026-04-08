@@ -83,8 +83,8 @@ namespace pst {
 		 * @note Requires that the file was successfully tokenized.
 		 */
 		template<typename... Args>
-		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args) requires PARSE_ABLE<Args...>
-		{
+		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args)
+			requires PARSE_ABLE<Args...> {
 			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
 
 			const lexer::TokenData& token_data = file->getTokenData();
