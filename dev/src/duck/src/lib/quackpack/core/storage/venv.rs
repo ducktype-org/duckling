@@ -68,7 +68,7 @@ use crate::{
     },
     util::{
         hash,
-        path_ops_ext::{MkdirOptions, PathOpsExt},
+        path_ops_ext::{MkdirOptions, PathOpsExt, ShouldBlock},
     },
 };
 
@@ -83,6 +83,7 @@ pub struct VenvData {
     freeze: freeze::VenvFreeze,
     is_ephemeral: bool,
     last_location: PathBuf,
+    last_modification: SystemTime,
     last_access: SystemTime,
 }
 
@@ -92,18 +93,20 @@ impl VenvData {
         freeze: freeze::VenvFreeze,
         is_ephemeral: bool,
         last_location: PathBuf,
+        last_modification: SystemTime,
         last_access: SystemTime,
     ) -> Self {
         Self {
             freeze,
             is_ephemeral,
             last_location,
+            last_modification,
             last_access,
         }
     }
 
     /// Load [`VenvData`] from the given path.
-    pub fn load(path: &Path) -> QuackResult<Result<Self, CorruptedFileError>> {
+    fn load(path: &Path) -> QuackResult<Result<Self, CorruptedFileError>> {
         debug!("loading venv data from `{}`", path.display());
         let content = path.read_to_string()?;
         let Some((data, checksum)) = content.rsplit_once("\n") else {
@@ -130,7 +133,7 @@ impl VenvData {
     }
 
     /// Save to the given path.
-    pub fn save_to(&self, path: &Path) -> QuackResult<()> {
+    fn save_to(&self, path: &Path) -> QuackResult<()> {
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
         let mut file = path.touch()?;
@@ -190,6 +193,26 @@ impl VenvData {
     /// Set the last access time of this venv.
     pub fn set_last_access(&mut self, last_access: SystemTime) {
         self.last_access = last_access;
+    }
+
+    /// Get the last modification time of this venv.
+    pub fn last_modification(&self) -> SystemTime {
+        self.last_modification
+    }
+
+    /// Set the last modification time of this venv.
+    pub fn set_last_modification(&mut self, last_modification: SystemTime) {
+        self.last_modification = last_modification;
+    }
+
+    /// Update the last access and save this data to the disk.
+    pub fn save_new_last_access(
+        &mut self,
+        last_access: SystemTime,
+        path: &Path,
+    ) -> QuackResult<()> {
+        self.set_last_access(last_access);
+        self.save_to(path)
     }
 }
 
@@ -253,6 +276,12 @@ impl Venv {
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
     pub fn fix_and_load(storage: &Storage, venv_id: VenvId) -> QuackResult<Option<Self>> {
+        let _lock = storage
+            .data_lock(venv_id)
+            .lock(ShouldBlock::Yes)
+            .with_context(|| {
+                format!("failed to acquire an exclusive data lock for venv `{venv_id}`")
+            })?;
         // NOTE: when external entity changes the storage disregarding the rules, we have
         // toctou here and an exception might be thrown later. We ignore that to keep sanity.
         if !storage.venv_dir(venv_id).is_dir() {
@@ -266,7 +295,10 @@ impl Venv {
         // if main file is valid, return state held in it
         if existed {
             let data = VenvData::load(&path)?;
-            if let Ok(venv) = data {
+            if let Ok(mut venv) = data {
+                if let Err(e) = venv.save_new_last_access(SystemTime::now(), &path) {
+                    debug!("failed to update last access time for venv `{venv_id}`: {e} ({e:?})");
+                }
                 return Ok(Some(Self::new(venv_id, venv)));
             }
         }
@@ -275,10 +307,13 @@ impl Venv {
         // is held in the backup file
         if backup_existed {
             let data = VenvData::load(&path)?;
-            if let Ok(venv) = data {
+            if let Ok(mut venv) = data {
                 backup_path.copy_file_to(&path)?;
                 if !existed {
                     storage.venv_dir(venv_id).try_fsync_dir()?;
+                }
+                if let Err(e) = venv.save_new_last_access(SystemTime::now(), &path) {
+                    debug!("failed to update last access time for venv `{venv_id}`: {e} ({e:?})");
                 }
                 return Ok(Some(Self::new(venv_id, venv)));
             }
@@ -295,6 +330,15 @@ impl Venv {
     /// Assumes that the current ``metadata`` file is valid. This is typically ensured
     /// by calling :func:`fix_and_load_venv` before.
     pub fn save_to(&self, storage: &Storage) -> QuackResult<()> {
+        let _lock = storage
+            .data_lock(self.id)
+            .lock(ShouldBlock::Yes)
+            .with_context(|| {
+                format!(
+                    "failed to acquire an exclusive data lock for venv `{}`",
+                    self.id
+                )
+            })?;
         let path = storage.venv_metadata(self.id);
         let backup_path = storage.venv_backup_metadata(self.id);
         let existed = path.exists();

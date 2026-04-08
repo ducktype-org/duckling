@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::{
     StrId,
+    duck::setup_logger,
     quackpack::core::{
         Version,
         storage::{self, venv_id::ToVenvId},
@@ -33,6 +34,7 @@ fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
 /// Check that we clean what we should've cleaned.
 /// Details are in [`setup_mock_storage`].
 fn clean() {
+    setup_logger();
     let (ctx, root) = setup_mock_storage();
     let mut output = storage::ops::clean_storage(&ctx, ctx.default_storage_root()).unwrap();
     output.removed_packages.sort();

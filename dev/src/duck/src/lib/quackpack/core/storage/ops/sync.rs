@@ -62,9 +62,7 @@ pub fn sync(
     let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)
         .context("failed to acquire try sync lock")?;
 
-    let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
     let venv = Venv::fix_and_load(&storage, id)?;
-    drop(data_lock);
 
     if !options.overwrite {
         check_if_overwrites(package, venv.as_ref(), id)?;
@@ -94,17 +92,24 @@ pub fn sync(
     let _was_anything_installed =
         fetch_source_codes(&storage, &mut fetcher, &mut git_access, pkgs)?;
 
-    let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
     let now = SystemTime::now();
-    let data = VenvData::new(
-        new_freeze,
-        venv_config.is_ephemeral()?,
-        package.package().manifest_path().to_path_buf(),
-        now,
-    );
-    let venv = Venv::new(id, data);
+    let venv = if let Some(mut venv) = venv {
+        let data = venv.data_mut();
+        data.set_last_modification(now);
+        data.set_freeze(new_freeze);
+        data.set_last_location(package.package().manifest_path().to_path_buf());
+        venv
+    } else {
+        let data = VenvData::new(
+            new_freeze,
+            venv_config.is_ephemeral()?,
+            package.package().manifest_path().to_path_buf(),
+            now,
+            now,
+        );
+        Venv::new(id, data)
+    };
     venv.save_to(&storage)?;
-    drop(data_lock);
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
