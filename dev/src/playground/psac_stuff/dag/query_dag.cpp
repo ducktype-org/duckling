@@ -1,9 +1,9 @@
+#include "concurrent/base/collections/queue.hpp"
 #include "dag_common.hpp"
 
 #include "base/misc/int_conv.hpp"
 #include "base/types/ints.hpp"
 
-#include "clah/exceptions.hpp"
 #include "init/init.hpp"
 #include "query_framework/context/context.hpp"
 #include "query_framework/entry/query_entry_point.hpp"
@@ -12,6 +12,7 @@
 #include "query_framework/input_query/query_input_impl.hpp"
 #include "query_framework/internal/query_graph/node_making.hpp"
 #include "query_framework/internal/task_pool/task_pool.hpp"
+#include "query_framework/module_flags/module_flags.hpp"
 #include "query_framework/query_int.hpp"
 #include "query_framework/standard_query/query_cache_macros.hpp"
 #include "query_framework/standard_query/query_impl.hpp"
@@ -118,12 +119,22 @@ void runUpdateAndRecompute() {
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
 
-	auto cli = getDagBenchClah(true, runComputation, runUpdateAndRecompute);
-
-	try {
-		return cli.execute(base::safeIntConv<usize>(argc), argv);
-	} catch (const clah::exceptions::ClahException& e) {
-		std::cerr << "Error: " << e.what() << '\n';
+	if (!parseArgs(argc, argv)) {
+		printUsage(argv[0]);
 		return 1;
 	}
+
+	concurrent::worker::setWorkerCount(g_config.threads);
+	query::track_reverse_graph = true;
+	std::ios::sync_with_stdio(false);
+	std::cin.tie(nullptr);
+
+	generateDag(g_config.layers, g_config.verts_per_layer, g_config.total_edges, g_config.mod);
+
+	if (g_config.command == "calc" || g_config.command == "update") {
+		runComputation();
+		if (g_config.command == "update") runUpdateAndRecompute();
+	}
+
+	return 0;
 }

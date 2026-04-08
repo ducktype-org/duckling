@@ -3,7 +3,6 @@
 #include "base/misc/int_conv.hpp"
 #include "base/types/ints.hpp"
 
-#include "clah/exceptions.hpp"
 #include "init/init.hpp"
 
 #include <iostream>
@@ -26,7 +25,7 @@ void computeAll() {
 void runComputation() {
 	std::cout << "--- Initial Calculation ---\n";
 	computeAll();
-	
+
 	printFinalChecksum("FULL Initial", g_results);
 }
 
@@ -50,12 +49,20 @@ void runUpdateAndRecompute() {
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
 
-	auto cli = getDagBenchClah(false, runComputation, runUpdateAndRecompute);
-
-	try {
-		return cli.execute(base::safeIntConv<usize>(argc), argv);
-	} catch (const clah::exceptions::ClahException& e) {
-		std::cerr << "Error: " << e.what() << '\n';
+	if (!parseArgs(argc, argv)) {
+		printUsage(argv[0]);
 		return 1;
 	}
+
+	std::ios::sync_with_stdio(false);
+	std::cin.tie(nullptr);
+
+	generateDag(g_config.layers, g_config.verts_per_layer, g_config.total_edges, g_config.mod);
+
+	if (g_config.command == "calc" || g_config.command == "update") {
+		runComputation();
+		if (g_config.command == "update") runUpdateAndRecompute();
+	}
+
+	return 0;
 }

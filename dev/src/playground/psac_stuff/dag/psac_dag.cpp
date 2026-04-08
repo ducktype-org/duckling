@@ -3,10 +3,12 @@
 #include <psac/psac.hpp>
 #include <psac/types.hpp>
 
-#include "clah/exceptions.hpp"
+#include <base/collections/optional.hpp>
+
 #include "init/init.hpp"
 
 #include <memory>
+#include <string>
 
 struct PSACState {
 	std::vector<psac::Mod<u64>>       wmod;
@@ -90,18 +92,24 @@ void runUpdateAndRecompute() {
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
 
-	auto cli = getDagBenchClah(false, runComputation, runUpdateAndRecompute);
-
-	try {
-		i32 ret = cli.execute(base::safeIntConv<usize>(argc), argv);
-
-		g_state->computation.reset();  // Clear the computation first. Otherwise it segfaults.
-		g_state.reset();
-		psac::GarbageCollector::run();
-
-		return ret;
-	} catch (const clah::exceptions::ClahException& e) {
-		std::cerr << "Error: " << e.what() << '\n';
+	if (!parseArgs(argc, argv)) {
+		printUsage(argv[0]);
 		return 1;
 	}
+
+	// 1 to override the previous value.
+	setenv("PARLAY_NUM_THREADS", std::to_string(g_config.threads).c_str(), 1);
+	std::ios::sync_with_stdio(false);
+	std::cin.tie(nullptr);
+
+	generateDag(g_config.layers, g_config.verts_per_layer, g_config.total_edges, g_config.mod);
+
+	if (g_config.command == "calc" || g_config.command == "update") {
+		runComputation();
+		if (g_config.command == "update") runUpdateAndRecompute();
+	}
+
+	psac::GarbageCollector::run();
+
+	return 0;
 }

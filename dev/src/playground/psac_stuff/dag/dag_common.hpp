@@ -4,10 +4,6 @@
 #include "base/misc/int_conv.hpp"
 #include "base/types/ints.hpp"
 
-#include "clah/clah_class.hpp"
-#include "clah/param_builder.hpp"
-#include "clah/parsing_result.hpp"
-#include "clah/value_parser.hpp"
 #include "query_framework/module_flags/module_flags.hpp"
 
 #include <algorithm>
@@ -36,6 +32,7 @@ std::mutex cout_mutex;
 	#define LOG(TEXT)
 #endif
 
+// Simulates workload in nodes.
 void work(u64 iterations) {
 	volatile i32 x = 0;
 	for (usize i = 0; i < iterations; i++) x += 1;
@@ -81,14 +78,14 @@ void generateDag(usize layers, usize verts_per_layer, usize total_edges, usize m
 }
 
 struct CliArgs {
-	usize layers          = 10;
-	usize verts_per_layer = 100;
-	usize total_edges     = 5'000;
-	u64   mod             = 1'000'000'007;
-
-	usize threads        = 8;
-	u64   workload       = 0;
-	u64   update_percent = 10;
+	usize       layers          = 0;
+	usize       verts_per_layer = 0;
+	usize       total_edges     = 0;
+	u64         mod             = 1'000'000'007;
+	usize       threads         = 1;
+	u64         workload        = 0;
+	u64         update_percent  = 10;
+	std::string command         = "";
 };
 
 CliArgs g_config;
@@ -99,94 +96,26 @@ inline void printFinalChecksum(const std::string& label, const std::vector<u64>&
 	std::cout << label << " Checksum: " << checksum << '\n';
 }
 
-clah::Clah getDagBenchClah(
-	bool query, std::function<void()> calc_handler, std::function<void()> update_handler
-) {
-	auto binary_name = query ? "query_dag" : "psac_dag";
+void printUsage(const char* bin_name) {
+	std::cout << "Usage: " << bin_name
+			  << " <layers> <verts_per_layer> <total_edges> <mod> <threads> <workload> "
+	             "<update_percent> <calc|update>\n"
+			  << "Example: " << bin_name << " 10 100 5000 1000000007 8 1000 10 update\n";
+}
 
-	return clah::Clah(binary_name, "Runs the DAG benchmark")
-	    .setPreHandler([&](const clah::ParsingResult& result) {
-			// Graph config.
-			g_config.layers = base::safeIntConv<usize>(result.getValue<i64>("layers").value());
-			g_config.verts_per_layer
-				= base::safeIntConv<usize>(result.getValue<i64>("verts-per-layer").value());
-			g_config.total_edges
-				= base::safeIntConv<usize>(result.getValue<i64>("total-edges").value());
-			g_config.mod
-				= base::safeIntConv<usize>(result.getValue<i64>("mod").copyValueOr(1'000'000'007));
-			g_config.update_percent
-				= base::safeIntConv<usize>(result.getValue<i64>("update").copyValueOr(10));
+bool parseArgs(int argc, const char* argv[]) {
+	if (argc != 9) return false;
 
-			// Bench config.
-			g_config.threads
-				= base::safeIntConv<usize>(result.getValue<i64>("threads").copyValueOr(1));
-			g_config.workload
-				= base::safeIntConv<usize>(result.getValue<i64>("workload").copyValueOr(0));
+	try {
+		g_config.layers          = std::stoull(argv[1]);
+		g_config.verts_per_layer = std::stoull(argv[2]);
+		g_config.total_edges     = std::stoull(argv[3]);
+		g_config.mod             = std::stoull(argv[4]);
+		g_config.threads         = std::stoull(argv[5]);
+		g_config.workload        = std::stoull(argv[6]);
+		g_config.update_percent  = std::stoull(argv[7]);
+		g_config.command         = argv[8];
+	} catch (...) { return false; }
 
-			if (query) {
-				concurrent::worker::setWorkerCount(g_config.threads);
-				query::track_reverse_graph = true;
-			} else {
-				setenv("PARLAY_NUM_THREADS", std::to_string(g_config.threads).c_str(), 1);
-			}
-
-			std::ios::sync_with_stdio(false);
-			std::cin.tie(nullptr);
-
-			generateDag(
-				g_config.layers, g_config.verts_per_layer, g_config.total_edges, g_config.mod
-			);
-		})
-	    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-	             .addShortName('t')
-	             .addLongName("threads")
-	             .addShortDesc("Number of worked threads.")
-	             .build())
-	    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-	             .addShortName('l')
-	             .addLongName("layers")
-	             .addShortDesc("Number of layers in the graph.")
-	             .required()
-	             .build())
-	    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-	             .addShortName('v')
-	             .addLongName("verts-per-layer")
-	             .addShortDesc("Number of vertices per layer.")
-	             .required()
-	             .build())
-	    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-	             .addShortName('e')
-	             .addLongName("total-edges")
-	             .addShortDesc("Number of edges in the graph.")
-	             .required()
-	             .build())
-	    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-	             .addShortName('m')
-	             .addLongName("mod")
-	             .addShortDesc("Modulo for calculations.")
-	             .required()
-	             .build())
-	    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-	             .addShortName('w')
-	             .addLongName("workload")
-	             .addShortDesc("Amount of simulated work per node.")
-	             .required()
-	             .build())
-	    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-	             .addShortName('u')
-	             .addLongName("update")
-	             .addShortDesc("Percentage of updated nodes.")
-	             .required()
-	             .build())
-	    .addSubcommand(clah::Clah("calc", "Run the calculation from scratch")
-	                       .setHandler([&](const clah::ParsingResult&) -> i32 {
-							   calc_handler();
-							   return 0;
-						   }))
-	    .addSubcommand(clah::Clah("update", "Run the calculation, update and rerun")
-	                       .setHandler([&](const clah::ParsingResult&) -> i32 {
-							   calc_handler();
-							   update_handler();
-							   return 0;
-						   }));
+	return (g_config.command == "calc" || g_config.command == "update");
 }
