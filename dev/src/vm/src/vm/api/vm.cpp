@@ -213,11 +213,10 @@ namespace vm::api {
 	}
 
 	std::expected<void, ApiError> attachStatusListener(
-		PID pid, events::Listener<ProcStatus>& listener
+		PID pid, Ref<events::Listener<ProcStatus>> listener
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::AttachStatusListener{ .listener = &listener })
-		    )
+		    .doRequest(SupervisorRequest(pid, request::AttachStatusListener{ .listener = listener }))
 		    .transform(ignoreResponse);
 	}
 }

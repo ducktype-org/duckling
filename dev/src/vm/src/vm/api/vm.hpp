@@ -210,6 +210,6 @@ namespace vm::api {
 	 * @return Nothing if attached succesfully
 	 */
 	std::expected<void, ApiError> attachStatusListener(
-		PID pid, events::Listener<ProcStatus>& listener
+		PID pid, Ref<events::Listener<ProcStatus>> listener
 	);
 }

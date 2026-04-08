@@ -54,6 +54,9 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 
+		/**
+		 * @brief Emits current status when VM changes status
+		 */
 		events::Emitter<api::ProcStatus> on_status_change;
 
 		VMProcess(PID my_pid);
