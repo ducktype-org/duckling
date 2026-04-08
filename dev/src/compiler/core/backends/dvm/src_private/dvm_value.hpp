@@ -86,7 +86,7 @@ namespace compiler::backend_vm::internal {
 	 *  Direct.
 	 * - Direct reference to a global variable - for which the AccessKind field will be set to
 	 * Direct.
-	 * - A pointer to the place - for which the AccessKind filed will be set to `Pointer`. This
+	 * - A pointer to the place - for which the AccessKind field will be set to `Pointer`. This
 	 * handles cases like:
 	 * 		- some_int_reference = 123 - DVMPlace stores a local variable storing a pointer to the
 	 * 		  original address that the reference stores.
@@ -96,7 +96,7 @@ namespace compiler::backend_vm::internal {
 	 * offset at which the third element of the array is located.
 	 *
 	 * If the access kind is set to `Direct`, a load into the place will be performed by `mov_X_X`.
-	 * If the access kind is set to `Direct`, a load into the place will be performed by
+	 * If the access kind is set to `Pointer`, a load into the place will be performed by
 	 * `store_lptr_lany`.
 	 */
 	class DVMPlace {

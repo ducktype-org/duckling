@@ -189,9 +189,9 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 	}
 
-	// This is an edge case where LIRValues should no be lowered to DVMValue as this creates a copy
+	// This is an edge case where LIRValues should not be lowered to DVMValue as this creates a copy
 	// of the value we try to reference on the stack. We have to lower it to a place and if it's
-	// direct, take a pointer to it, but if it's now, the resulting address is the pointer returned
+	// direct, take a pointer to it, but if it's not, the resulting address is the pointer returned
 	// by `resolveLirPlace`.
 	if (lir_instruction.operation == lir::Operation::AddressOf) {
 		CORE_ASSERT(lir_instruction.arguments.size() == 1, "Invalid ref args count");
@@ -219,10 +219,6 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
 		return;
 	}
-
-	const auto maybe_output_type = lir_instruction.output.map([&](const auto& place) {
-		return program_context.lowerAndKeepTslType(place.layout);
-	});
 
 	std::deque<DVMValue> args
 		= lir_instruction.arguments

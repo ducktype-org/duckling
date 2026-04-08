@@ -112,10 +112,6 @@ namespace compiler::backend_vm::internal {
 			type_args,
 			output
 		);
-
-		func_ctx.pushInstruction(
-			{ OpKind::cmov, output.value().asArgument(), DVMImmediate::l8(u8(1)).asArgument() }
-		);
 	}
 
 	void MetaOperationLowerer::lowerTypesNotEqual(
@@ -128,9 +124,6 @@ namespace compiler::backend_vm::internal {
 			),
 			type_args,
 			output
-		);
-		func_ctx.pushInstruction(
-			{ OpKind::cmov, output.value().asArgument(), DVMImmediate::l8(u8(1)).asArgument() }
 		);
 	}
 
