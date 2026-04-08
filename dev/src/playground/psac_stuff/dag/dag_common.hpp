@@ -1,36 +1,11 @@
 #pragma once
-#include "concurrent/module_flags/worker_count.hpp"
 
-#include "base/misc/int_conv.hpp"
-#include "base/types/ints.hpp"
-
-#include "query_framework/module_flags/module_flags.hpp"
+#include <base/types/ints.hpp>
 
 #include <algorithm>
 #include <iostream>
-#include <mutex>
 #include <random>
 #include <vector>
-
-std::mutex cout_mutex;
-
-#ifndef NDEBUG
-	#define LOG_WORKER(TEXT)                           \
-		{                                              \
-			std::lock_guard lock(cout_mutex);          \
-			std::cout << "[WORKER]: " << TEXT << '\n'; \
-		}
-
-	#define LOG(TEXT)                                  \
-		{                                              \
-			std::lock_guard lock(cout_mutex);          \
-			std::cout << "[LOGGER]: " << TEXT << '\n'; \
-		}
-
-#else
-	#define LOG_WORKER(TEXT)
-	#define LOG(TEXT)
-#endif
 
 // Simulates workload in nodes.
 void work(u64 iterations) {
@@ -99,7 +74,7 @@ inline void printFinalChecksum(const std::string& label, const std::vector<u64>&
 void printUsage(const char* bin_name) {
 	std::cout << "Usage: " << bin_name
 			  << " <layers> <verts_per_layer> <total_edges> <mod> <threads> <workload> "
-	             "<update_percent> <calc|update>\n"
+				 "<update_percent> <calc|update>\n"
 			  << "Example: " << bin_name << " 10 100 5000 1000000007 8 1000 10 update\n";
 }
 

@@ -1,3 +1,4 @@
+#include "array_sum_common.hpp"
 #include "psac/types.hpp"
 
 #include <psac/psac.hpp>
@@ -10,8 +11,6 @@
 #include <random>
 #include <ranges>
 
-using ValueTp = unsigned int;
-
 // This makes the code segfault after everything.
 // using ValueTp = u64;
 //
@@ -19,11 +18,6 @@ constexpr usize ARRAY_SIZE = (1 << 18);
 constexpr usize TREE_SIZE  = 2 * ARRAY_SIZE;
 
 std::vector<psac::Mod<ValueTp>> value_tree;
-
-struct Operation {
-	psac::Mod<ValueTp> left;
-	psac::Mod<ValueTp> right;
-};
 
 psac_function(
 	sum,
@@ -33,10 +27,10 @@ psac_function(
 	psac::Mod<ValueTp>*              r_mod
 ) {
 	psac_read((ValueTp my_index, ValueTp l, ValueTp r), (my_index_mod, l_mod, r_mod), {
-		// LOG_WORKER("Calculating " << my_index << " L=" << l << " R=" << r);
+		work(g_config.workload);
+
 		if (l == r - 1) {
 			psac_read((ValueTp my_value), (&source_array_mod->at(l)), {
-				// LOG_WORKER("Writing at " << my_index << " value=" << my_value);
 				psac_write(&value_tree.at(my_index), my_value);
 			});
 			return;
@@ -58,10 +52,7 @@ psac_function(
 		psac_read(
 			(ValueTp l_value, ValueTp r_value),
 			(&value_tree.at(my_index * 2), &value_tree.at(my_index * 2 + 1)),
-			{
-				// LOG_WORKER("Writing at " << my_index << " value=" << l_value + r_value);
-				psac_write(&value_tree.at(my_index), l_value + r_value);
-			}
+			{ psac_write(&value_tree.at(my_index), l_value + r_value); }
 		);
 	});
 }
@@ -69,32 +60,25 @@ psac_function(
 int main(int argc, const char* argv[]) {
 	init::InitObject init;
 
+	if (!parseArgs(argc, argv)) {
+		printUsage(argv[0]);
+		return 1;
+	}
+
+	// Setup the environment.
+	setenv("PARLAY_NUM_THREADS", std::to_string(g_config.threads).c_str(), 1);
 	std::ios::sync_with_stdio(false);
 	std::cin.tie(nullptr);
 
-	value_tree.resize(TREE_SIZE);
+	// Generate the array
+	generateArray();
+	value_tree.resize(2 * g_config.array_size + 1);
 
-	if (argc == 1) {
-		std::cout << "Usage: " << argv[0] << " [\"init\"/\"calc\"/\"update\"]\n";
-		return 1;
-	}
-	std::string user_value = argv[1];
-	if (user_value != "init" && user_value != "calc" && user_value != "update") {
-		std::cout << "Usage: " << argv[0] << " [\"init\"/\"calc\"/\"update\"]\n";
-		return 1;
-	}
-
-	// Array of type ValueTp
-	std::vector<psac::Mod<ValueTp>> arr;
-	arr.resize(ARRAY_SIZE);
-
-	// Fill the array
-	std::mt19937_64                        rng(0);
-	std::uniform_int_distribution<ValueTp> dist(0, 100);
-	usize                                  simple_sum = 0;
-	for (auto [i, elem]: std::views::enumerate(arr)) {
-		auto val = dist(rng);
-		psac_write(&elem, val);
+	std::vector<psac::Mod<ValueTp>> arr(g_config.array_size);
+	ValueTp                         simple_sum = 0;  // TODO: Remove this from here
+	for (usize i = 0; i < g_config.array_size; ++i) {
+		auto val = static_cast<ValueTp>(g_source_array[i]);
+		psac_write(&arr[i], val);
 		simple_sum += val;
 	}
 
@@ -103,25 +87,33 @@ int main(int argc, const char* argv[]) {
 	psac::Mod<ValueTp> l_mod;
 	psac_write(&l_mod, 0);
 	psac::Mod<ValueTp> r_mod;
-	psac_write(&r_mod, ARRAY_SIZE);
+	psac_write(&r_mod, static_cast<ValueTp>(g_config.array_size));
 
+	auto comp = psac_run(sum, &arr, &my_index_mod, &l_mod, &r_mod);
 
-	if (user_value == "calc" || user_value == "update") {
-		auto comp = psac_run(sum, &arr, &my_index_mod, &l_mod, &r_mod);
+	std::cout << "--- Initial Calculation ---\n";
+	std::cout << "real_sum = " << simple_sum << '\n';
+	std::cout << "psac_sum = " << value_tree.at(1).value << '\n';
+
+	if (g_config.command == "update") {
+		std::cout << "--- Updating " << g_config.update_count << " elements ---\n";
+
+		for (usize i = 0; i < g_config.update_count; ++i) {
+			usize   idx     = i % g_config.array_size;
+			ValueTp old_val = arr[idx].value;
+			ValueTp new_val = old_val + 1;
+
+			simple_sum += (new_val - old_val);
+			psac_write(&arr[idx], new_val);
+		}
+
+		psac_propagate(comp);
 
 		std::cout << "real_sum = " << simple_sum << '\n';
 		std::cout << "psac_sum = " << value_tree.at(1).value << '\n';
-
-		if (user_value == "update") {
-			simple_sum += (1'000 - arr[0].value);
-			psac_write(&arr.at(0), 1'000);
-			psac_propagate(comp);
-
-			std::cout << "real_sum = " << simple_sum << '\n';
-			std::cout << "psac_sum = " << value_tree.at(1).value << '\n';
-		}
 	}
 
-
 	psac::GarbageCollector::run();
+
+	return 0;
 }

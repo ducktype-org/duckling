@@ -1,30 +1,28 @@
+#include "array_sum_common.hpp"
 #include "concurrent/module_flags/worker_count.hpp"
 
 #include "base/types/ints.hpp"
 
 #include "init/init.hpp"
-#include "query_framework/context/context.hpp"
-#include "query_framework/entry/query_entry_point.hpp"
-#include "query_framework/external/api.hpp"
-#include "query_framework/input_query/query_input.hpp"
-#include "query_framework/input_query/query_input_impl.hpp"
-#include "query_framework/internal/query_graph/node_making.hpp"
-#include "query_framework/query_int.hpp"
-#include "query_framework/standard_query/query_cache_macros.hpp"
-#include "query_framework/standard_query/query_impl.hpp"
-#include "query_framework/utils/query_hash.hpp"
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/external/api.hpp>
+#include <query_framework/input_query/query_input.hpp>
+#include <query_framework/input_query/query_input_impl.hpp>
+#include <query_framework/internal/query_graph/node_making.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/utils/query_hash.hpp>
 
 #include <iostream>
 #include <ostream>
 #include <vector>
 
-using ValueTp            = u64;
-constexpr int ARRAY_SIZE = (1 << 18);
-
 std::vector<ValueTp> g_array;
 
 struct ArrayKey {
-	int index;
+	usize index;
 
 	bool operator==(const ArrayKey&) const = default;
 
@@ -37,9 +35,8 @@ DECLARE_QUERY_SIDE_INPUT(ArrayInput, ArrayKey);
 IMPLEMENT_QUERY_SIDE_INPUT(ArrayInput);
 
 struct SumKey {
-	int  l;
-	int  r;
-	auto operator<=>(const SumKey&) const = default;
+	usize l, r;
+	auto  operator<=>(const SumKey&) const = default;
 
 	[[nodiscard]] u64 queryUnstablePerfectHash() const { return ((u64) l << 32) | (u32) r; }
 };
@@ -48,13 +45,13 @@ DECLARE_QUERY(SumQuery, SumKey, ValueTp, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(SumQuery, ValueTp) {
 	static auto provide(query::Context& ctx, QKey key) -> PResult {
-		// count++;
+		work(g_config.workload);
 		if (key.r - key.l == 1) {
 			ctx.query<ArrayInput>(ArrayKey{ key.l });
 			return g_array[static_cast<usize>(key.l)];
 		}
 
-		int mid = key.l + (key.r - key.l) / 2;
+		usize mid = key.l + (key.r - key.l) / 2;
 
 		auto left_handle  = ctx.schedule<SumQuery>({ .l = key.l, .r = mid });
 		auto right_handle = ctx.schedule<SumQuery>({ .l = mid, .r = key.r });
@@ -70,57 +67,37 @@ struct IMPLEMENT_QUERY(SumQuery, ValueTp) {
 QUERY_IMPLEMENTATION_BOILERPLATE(SumQuery);
 
 int main(int argc, const char* argv[]) {
-	init::InitObject init;
-	concurrent::worker::setWorkerCount(16);
-	query::track_reverse_graph = true;
+	init::InitObject _;
+	if (!parseArgs(argc, argv)) {
+		printUsage(argv[0]);
+		return 1;
+	}
 
+	concurrent::worker::setWorkerCount(g_config.threads);
+	query::track_reverse_graph = true;
 	std::ios::sync_with_stdio(false);
 	std::cin.tie(nullptr);
 
-	if (argc == 1) {
-		std::cout << "Usage: " << argv[0] << " [\"init\"/\"calc\"/\"update\"]\n";
-		return 1;
-	}
-	std::string user_value = argv[1];
-	if (user_value != "init" && user_value != "calc" && user_value != "update") {
-		std::cout << "Usage: " << argv[0] << " [\"init\"/\"calc\"/\"update\"]\n";
-		return 1;
-	}
+	generateArray();
+	// TODO: Remove this from here.
+	u64 simple_sum = 0;
+	for (auto x: g_source_array) simple_sum = add(simple_sum, x);
 
-	g_array.resize(ARRAY_SIZE);
+	auto q_sum = query::entryPoint<SumQuery>({ .l = 0, .r = g_config.array_size });
+	std::cout << "Initial real_sum = " << simple_sum << " query_sum = " << q_sum << '\n';
 
-	std::mt19937_64                        rng(0);
-	std::uniform_int_distribution<ValueTp> dist(0, 100);
-	ValueTp                                simple_sum = 0;
-	for (usize i = 0; i < ARRAY_SIZE; ++i) {
-		auto val   = dist(rng);
-		g_array[i] = val;
-		simple_sum += val;
-	}
-
-	if (user_value == "calc" || user_value == "update") {
-		auto query_sum = query::entryPoint<SumQuery>({ .l = 0, .r = ARRAY_SIZE });
-
-		std::cout << "real_sum = " << simple_sum << '\n';
-		std::cout << "query_sum = " << query_sum << '\n';
-
-		if (user_value == "update") {
-			ValueTp new_val = 1'000;
-
-			simple_sum += (new_val - g_array[0]);
-			g_array[0] = new_val;
-
-			std::vector<query::external::InputData> updates;
-			auto node_id = query::internal::makeNodeID<ArrayInput>(ArrayKey{ 0 });
+	if (g_config.command == "update") {
+		std::vector<query::external::InputData> updates;
+		for (usize i = 0; i < g_config.update_count; ++i) {
+			usize idx = i % g_config.array_size;
+			g_source_array[idx]++;
+			simple_sum   = add(simple_sum, 1);
+			auto node_id = query::internal::makeNodeID<ArrayInput>(ArrayKey{ idx });
 			updates.emplace_back(ArrayInput::getID(), node_id.hash.val);
-
-			query::external::invalidateQueries({}, std::move(updates));
-
-			query_sum = query::entryPoint<SumQuery>({ .l = 0, .r = ARRAY_SIZE });
-
-			std::cout << "real_sum = " << simple_sum << '\n';
-			std::cout << "query_sum = " << query_sum << '\n';
 		}
+		query::external::invalidateQueries({}, std::move(updates));
+		q_sum = query::entryPoint<SumQuery>({ .l = 0, .r = g_config.array_size });
+		std::cout << "After update real_sum = " << simple_sum << " query_sum = " << q_sum << '\n';
 	}
 
 	return 0;
