@@ -34,7 +34,7 @@ private:
 
 		auto debugger = vm::debugger::Debugger(fs::File(path(std::string(path_name))));
 		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionNotStarted>(debugger.getStatus()));
-		debugger.on_vm_status_change.attachListener(listener);
+		debugger.attachOnVMStatusChangeListener(listener);
 		debugger.runMain();
 		std::unique_lock lk(m);
 		// timeout for the test
@@ -92,7 +92,7 @@ private:
 		auto debugger = vm::debugger::Debugger(fs::File(path("debugger_test.dbc")));
 		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionNotStarted>(debugger.getStatus()));
 
-		debugger.on_vm_status_change.attachListener(listener);
+		debugger.attachOnVMStatusChangeListener(listener);
 
 		int loop = 3;
 

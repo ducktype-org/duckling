@@ -20,6 +20,15 @@ namespace vm::debugger {
 		CORE_ASSERT(load_files_response.has_value(), "Failed to load files to the VM for debugger");
 	}
 
+	void Debugger::attachOnVMStatusChangeListener(Ref<events::Listener<vm::api::ProcStatus>> listener
+	) {
+		on_vm_status_change.attachListener(listener);
+	}
+
+	void Debugger::attachOnVMStatusChangeListener(events::Listener<vm::api::ProcStatus>& listener) {
+		on_vm_status_change.attachListener(listener);
+	}
+
 	void Debugger::runMain() {
 		auto status = vm::api::getExecutionStatus(pid);
 		CORE_ASSERT(status.has_value(), "Failed to get execution status for debugger");

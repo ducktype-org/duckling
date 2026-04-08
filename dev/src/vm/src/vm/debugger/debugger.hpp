@@ -20,6 +20,13 @@ namespace vm::debugger {
 
 		events::Listener<vm::api::ProcStatus> updater;
 
+		// Event handlers for the debugger:
+
+		/**		 *
+		 * @brief Emits current VM status when VM changes status
+		 */
+		events::Emitter<vm::api::ProcStatus> on_vm_status_change;
+
 	public:
 		Debugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
 		Debugger(const Debugger&)            = delete;
@@ -27,8 +34,17 @@ namespace vm::debugger {
 		Debugger(Debugger&&)                 = delete;
 		Debugger& operator=(Debugger&&)      = delete;
 
-		// Event handlers for the debugger:
-		events::Emitter<vm::api::ProcStatus> on_vm_status_change;
+		// Method for event handlers
+
+		/**
+		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
+		 */
+		void attachOnVMStatusChangeListener(Ref<events::Listener<vm::api::ProcStatus>> listener);
+
+		/**
+		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
+		 */
+		void attachOnVMStatusChangeListener(events::Listener<vm::api::ProcStatus>& listener);
 
 		// Methods to control the debugging session:
 
