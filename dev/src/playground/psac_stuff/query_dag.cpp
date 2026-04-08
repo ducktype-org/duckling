@@ -1,7 +1,9 @@
-#include "concurrent/module_flags/worker_count.hpp"
+#include "common.hpp"
 
+#include "base/misc/int_conv.hpp"
 #include "base/types/ints.hpp"
 
+#include "clah/exceptions.hpp"
 #include "init/init.hpp"
 #include "query_framework/context/context.hpp"
 #include "query_framework/entry/query_entry_point.hpp"
@@ -10,7 +12,6 @@
 #include "query_framework/input_query/query_input_impl.hpp"
 #include "query_framework/internal/query_graph/node_making.hpp"
 #include "query_framework/internal/task_pool/task_pool.hpp"
-#include "query_framework/module_flags/module_flags.hpp"
 #include "query_framework/query_int.hpp"
 #include "query_framework/standard_query/query_cache_macros.hpp"
 #include "query_framework/standard_query/query_impl.hpp"
@@ -21,9 +22,6 @@
 
 // ============= GLOBAL STUFF =============
 std::atomic<usize>                 g_invocations{ 0 };
-std::vector<u64>                   g_weights;
-std::vector<std::vector<usize>>    g_adj;
-u64                                g_mod;
 std::vector<std::pair<usize, u64>> g_updates;
 
 // ================ INPUT ================
@@ -54,6 +52,9 @@ struct IMPLEMENT_QUERY(ComputeNode, u64) {
 	static auto provide(query::Context& ctx, QKey key) -> PResult {
 		g_invocations++;
 
+		// Simulate workload.
+		work(g_config.workload);
+
 		usize node_idx = key.index;
 		u64   weight   = g_weights[node_idx];
 		ctx.query<WeightInput>(WeightKey{ .index = node_idx, .value = weight });
@@ -77,82 +78,44 @@ struct IMPLEMENT_QUERY(ComputeNode, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ComputeNode);
 
-int readData() {
-	usize n{ 0 };
-	u64   mod{ 0 };
-	if (!(std::cin >> n >> mod)) return 1;
-	g_mod = mod;
-	g_weights.resize(n);
-	for (usize i = 0; i < n; ++i) std::cin >> g_weights[i];
+void runComputation() {
+	std::cout << "--- Initial Calculation ---\n";
+	g_invocations = 0;
+	for (usize i = 0; i < g_weights.size(); i++) query::entryPoint<ComputeNode>(NodeKey{ i });
+	std::cout << "Total query invocations: " << g_invocations << "\n";
+}
 
-	usize m{ 0 };
-	std::cin >> m;
-	g_adj.resize(n);
-	for (int i = 0; i < m; ++i) {
-		usize u{ 0 };
-		usize v{ 0 };
-		std::cin >> u >> v;
-		g_adj[v].push_back(u);
-	}
+void runUpdateAndRecompute() {
+	std::cout << "--- Updating and Recomputing ---\n";
 
-	usize c = 0;
-	std::cin >> c;
-	std::vector<std::pair<int, u64>> updates(c);
-	for (usize i = 0; i < c; ++i) {
-		usize x = 0;
-		u64   y = 0;
-		std::cin >> x >> y;
-		g_updates.emplace_back(x, y);
+	std::vector<query::external::InputData> updates;
+	std::mt19937_64                         rng(6'767);
+	const usize num_updates = g_weights.size() * g_config.update_percent / 100;
+
+	for (usize i = 0; i < num_updates; ++i) {
+		usize idx      = rng() % g_weights.size();
+		u64   old_val  = g_weights[idx];
+		g_weights[idx] = (old_val + 1) % g_mod;
+		auto node_id
+			= query::internal::makeNodeID<WeightInput>(WeightKey{ .index = idx, .value = old_val });
+		updates.emplace_back(WeightInput::getID(), node_id.hash.val);
 	}
-	return 0;
+	query::external::invalidateQueries({}, std::move(updates));
+
+	g_invocations = 0;
+	for (usize i = 0; i < g_weights.size(); i++) query::entryPoint<ComputeNode>(NodeKey{ i });
+	std::cout << "Total invocations after update: " << g_invocations << "\n";
 }
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
-	concurrent::worker::setWorkerCount(9);
-	query::track_reverse_graph = true;
 
-	std::ios::sync_with_stdio(false);
-	std::cin.tie(nullptr);
+	auto cli = getDagBenchClah(true, runComputation, runUpdateAndRecompute);
 
-	if (argc == 1) {
-		std::cout << "Usage: " << argv[0] << " [\"init\"/\"calc\"/\"update\"]\n";
+	try {
+		return cli.execute(base::safeIntConv<usize>(argc), argv);
+	} catch (const clah::exceptions::ClahException& e) {
+		std::cerr << "Error: " << e.what() << '\n';
 		return 1;
 	}
-	std::string user_value = argv[1];
-	if (user_value != "init" && user_value != "calc" && user_value != "update") {
-		std::cout << "Usage: " << argv[0] << " [\"init\"/\"calc\"/\"update\"]\n";
-		return 1;
-	}
-
-	if (readData() != 0) return -1;
-	if (user_value == "init") return 0;
-
-	for (usize i{ 0 }; i < g_weights.size(); i++) {
-		auto res = query::entryPoint<ComputeNode>(NodeKey{ i });
-		std::cout << "Node " << i << " sum = " << res << "\n";
-	}
-
-	if (user_value == "calc") return 0;
-    
-    std::cout << "UPDATE\n";
-
-	if (user_value == "update") {
-		std::vector<query::external::InputData> updates;
-		for (const auto& [idx, new_val]: g_updates) {
-			u64 old_val    = g_weights[idx];
-			g_weights[idx] = new_val;
-
-			WeightKey k{ .index = idx, .value = old_val };
-			auto      node_id = query::internal::makeNodeID<WeightInput>(k);
-			updates.emplace_back(WeightInput::getID(), node_id.hash.val);
-		}
-		query::external::invalidateQueries({}, updates);
-		for (usize i{ 0 }; i < g_weights.size(); i++) {
-			auto res = query::entryPoint<ComputeNode>(NodeKey{ i });
-			std::cout << "Node " << i << " sum = " << res << "\n";
-		}
-	}
-
-	return 0;
 }

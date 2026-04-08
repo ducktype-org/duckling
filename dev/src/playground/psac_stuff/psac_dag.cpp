@@ -1,15 +1,18 @@
-#include <psac/psac.hpp>
+#include "common.hpp"
 
+#include <psac/psac.hpp>
+#include <psac/types.hpp>
+
+#include "base/misc/int_conv.hpp"
 #include <base/types/ints.hpp>
+
+#include "clah/exceptions.hpp"
 
 #include <vector>
 
-
-usize                              g_n;
-u64                                g_mod;
-std::vector<u64>                   g_weights;
-std::vector<std::vector<usize>>    g_adj;
-std::vector<std::pair<usize, u64>> g_updates;
+psac::Computation           g_comp;
+std::vector<psac::Mod<u64>> g_wmod;
+std::vector<psac::Mod<u64>> g_res;
 
 // from mapreduce example
 template<typename It>
@@ -31,89 +34,55 @@ psac_function(sum, const u64 mod, It in_begin, It in_end, psac::Mod<usize>* resu
 }
 
 psac_function(
-	compute,
-	usize                                  n,
-	u64                                    mod,
-	std::vector<psac::Mod<u64>>*           w,
-	const std::vector<std::vector<usize>>& e,
-	std::vector<psac::Mod<u64>>*           out
+	computeNode, usize i, std::vector<psac::Mod<u64>>* w, std::vector<psac::Mod<u64>>* out
 ) {
-	for (usize i = 0; i < n; ++i) {
-		std::vector<psac::Mod<usize>*> in_e;
-		in_e.push_back(&(*w)[i]);
-		for (usize j: e[i]) in_e.push_back(&(*out)[static_cast<usize>(j)]);
-		psac_call(sum, mod, in_e.begin(), in_e.end(), &(*out)[i]);
-	}
+	work(g_config.workload);
+
+	std::vector<psac::Mod<u64>*> in_e;
+	in_e.push_back(&(*w)[i]);
+	for (usize j: g_adj[i]) in_e.push_back(&(*out)[j]);
+	psac_call(sum, g_mod, in_e.begin(), in_e.end(), &(*out)[i]);
 }
 
-int readData() {
-	usize n{ 0 };
-	u64   mod{ 0 };
-	if (!(std::cin >> n >> mod)) return 1;
-	g_mod = mod;
-	g_weights.resize(n);
-	for (usize i = 0; i < n; ++i) std::cin >> g_weights[i];
+psac_function(compute, std::vector<psac::Mod<u64>>* w, std::vector<psac::Mod<u64>>* out) {
+	for (usize i = 0; i < w->size(); ++i) psac_call(computeNode, i, w, out);
+}
 
-	usize m{ 0 };
-	std::cin >> m;
-	g_adj.resize(n);
-	for (int i = 0; i < m; ++i) {
-		usize u{ 0 };
-		usize v{ 0 };
-		std::cin >> u >> v;
-		g_adj[v].push_back(u);
+void runComputation() {
+	std::cout << "--- Initial Calculation ---\n";
+
+	g_wmod.resize(g_weights.size());
+	for (usize i = 0; i < g_weights.size(); ++i) psac_write(&g_wmod[i], g_weights[i]);
+	g_res.resize(g_weights.size());
+
+	g_comp = psac_run(compute, &g_wmod, &g_res);
+
+	std::cout << "Initial computation finished.\n";
+}
+
+void runUpdateAndRecompute() {
+	std::cout << "--- Updating and Recomputing ---\n";
+	std::mt19937_64 rng(6'767);
+	const usize     num_updates = g_weights.size() * g_config.update_percent / 100;
+
+	for (usize i = 0; i < num_updates; ++i) {
+		usize idx     = rng() % g_weights.size();
+		u64   new_val = (g_wmod[idx].value + 1) % g_mod;
+		psac_write(&g_wmod[idx], new_val);
 	}
 
-	usize c = 0;
-	std::cin >> c;
-	std::vector<std::pair<int, u64>> updates(c);
-	for (usize i = 0; i < c; ++i) {
-		usize x = 0;
-		u64   y = 0;
-		std::cin >> x >> y;
-		g_updates.emplace_back(x, y);
-	}
-	return 0;
+	psac_propagate(g_comp);
+	std::cout << "Recomputation after update finished.\n";
 }
 
 int main(int argc, const char* argv[]) {
-	std::ios::sync_with_stdio(false);
-	std::cin.tie(nullptr);
-
-	if (argc == 1) {
-		std::cout << "Usage: " << argv[0] << " [\"init\"/\"calc\"/\"update\"]\n";
+	auto cli = getDagBenchClah(false, runComputation, runUpdateAndRecompute);
+	try {
+		cli.execute(base::safeIntConv<usize>(argc), argv);
+	} catch (const clah::exceptions::ClahException& e) {
+		std::cerr << "Error: " << e.what() << '\n';
 		return 1;
 	}
-	std::string user_value = argv[1];
-	if (user_value != "init" && user_value != "calc" && user_value != "update") {
-		std::cout << "Usage: " << argv[0] << " [\"init\"/\"calc\"/\"update\"]\n";
-		return 1;
-	}
-
-	if (readData() != 0) return -1;
-	if (user_value == "init") return 0;
-
-	std::vector<psac::Mod<u64>> wmod(g_n);
-	for (usize i = 0; i < g_n; ++i) psac_write(&wmod[i], g_weights[i]);
-
-	std::vector<psac::Mod<u64>> res(g_n);
-	auto                        comp = psac_run(compute, g_n, g_mod, &wmod, g_adj, &res);
-
-	for (usize i = 0; i < g_n; ++i) std::cout << "Node " << i << " sum = " << res[i].value << "\n";
-
-	if (user_value == "calc") return 0;
-
-	if (user_value == "update") {
-		std::cout << "UPDATE\n";
-
-		for (const auto& [idx, new_val]: g_updates) psac_write(&wmod[idx], new_val);
-
-		psac_propagate(comp);
-
-		for (usize i = 0; i < g_n; ++i)
-			std::cout << "Node " << i << " sum = " << res[i].value << "\n";
-	}
-
 	psac::GarbageCollector::run();
 	return 0;
 }

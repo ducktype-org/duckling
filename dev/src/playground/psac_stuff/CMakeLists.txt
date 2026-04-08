@@ -6,11 +6,11 @@ function (add_psac_exec name)
     target_compile_options(${name} PRIVATE ${PSAC_FLAGS})
 endfunction()
 
-add_psac_exec(psac_array_sum Base PstParser)
-add_example(query_array_sum query_array_sum.cpp USES QueryFramework Base)
+add_psac_exec(psac_array_sum Base PstParser Clah)
+add_example(query_array_sum query_array_sum.cpp USES QueryFramework Base Clah)
 
-add_psac_exec(psac_fibonacci Base PstParser)
-add_example(query_fibonacci query_fibonacci.cpp USES QueryFramework Base)
+add_psac_exec(psac_fibonacci Base PstParser Clah)
+add_example(query_fibonacci query_fibonacci.cpp USES QueryFramework Base Clah)
 
-add_psac_exec(psac_dag Base PstParser)
-add_example(query_dag query_dag.cpp USES QueryFramework Base)
+add_psac_exec(psac_dag Base PstParser Clah)
+add_example(query_dag query_dag.cpp USES QueryFramework Base Clah)
