@@ -380,8 +380,7 @@ namespace vm {
 		{
 			auto& jit_data = thread.jit_data;
 			auto  func_id  = instr->arg0;
-			;
-			auto func_obj = thread.executing_program->getFunctions().at(func_id);
+			auto  func_obj = thread.executing_program->getFunctions().at(func_id);
 
 			// @TODO: #2126 manage the size when inserting new code
 			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
@@ -402,7 +401,7 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_obj);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(func_obj);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(*func_obj);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;

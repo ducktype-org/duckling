@@ -123,7 +123,7 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(FunctionID, "func", vm::opargs::FunctionName);
 	/** @brief Stores underlying numeric value of builtins::BuiltinFunctionID. */
 	DEFINE_MICRO_ARG_TYPE(BuiltinFunctionID, "builtinfunc", vm::opargs::BuiltinFunctionName);
-	/** @brief Stores extern C function point in LowVMProgram extern C functions map. */
+	/** @brief Stores extern C function pointer in LowVMProgram extern C functions map. */
 	DEFINE_MICRO_ARG_TYPE(ExtCFunction, "cfunc", vm::opargs::ExtCFunctionName);
 	/** @brief Stores lowered method identifier used for virtual dispatch lookup. */
 	DEFINE_MICRO_ARG_TYPE(MethodName, "method", vm::opargs::MethodName);

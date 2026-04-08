@@ -68,7 +68,7 @@ namespace vm::low {
 			= 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
 			= 0;
 
 		[[nodiscard]]
@@ -104,7 +104,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return extern_c_functions;
 		}
 
@@ -120,7 +120,7 @@ namespace vm::low {
 		LowVMProgram()                                  = default;
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
-		ObjIdNameMap<LowExternCFunction>          extern_c_functions{};
+		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
@@ -148,7 +148,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return original_program->getExternCFunctions();
 		}
 
