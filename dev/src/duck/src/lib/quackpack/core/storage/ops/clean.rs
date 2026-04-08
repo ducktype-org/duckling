@@ -125,7 +125,7 @@ fn clean_venv_from_storage(
     removed_venvs: &mut Vec<VenvId>,
     all_deps: &mut HashSet<StrId>,
 ) -> QuackResult<()> {
-    let venv_id = dir.file_name().into();
+    let venv_id = dir.file_name().to_venv_id();
     let _lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
     let venv = Venv::fix_and_load(storage, venv_id)?;
     let Some(mut venv) = venv else {

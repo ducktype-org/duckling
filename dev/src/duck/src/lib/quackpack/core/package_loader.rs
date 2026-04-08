@@ -4,10 +4,10 @@ use std::{marker::PhantomData, path::Path};
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_internal,
+    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_internal,
     quackpack::core::{
         PackageCtx,
-        storage::{paths::Storage, venv::Venv},
+        storage::{paths::Storage, venv::Venv, venv_id::VenvId},
     },
     util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
@@ -112,7 +112,7 @@ impl PackageLoader {
     /// Find the root of the venv with the given name.
     pub fn find_venv_by_name<'duck>(
         ctx: &'duck DuckCtx,
-        venv_id: StrId,
+        venv_id: VenvId,
     ) -> QuackResult<PackageCtx<'duck>> {
         let storage_loc = ctx.default_storage_root();
         let storage = Storage::new(storage_loc);

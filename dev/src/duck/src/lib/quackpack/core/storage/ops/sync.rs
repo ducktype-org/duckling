@@ -6,7 +6,7 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 
 use crate::{
-    QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err,
+    QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
     quackpack::core::{
         BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine, SolverAnswer,
         SolverGathererData,
@@ -21,7 +21,7 @@ use crate::{
             package_id::{GitId, PackageId, RegistryId},
             paths::Storage,
             venv::{Venv, VenvData},
-            venv_id::ToVenvId,
+            venv_id::{ToVenvId, VenvId},
         },
         types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
     },
@@ -120,7 +120,7 @@ pub fn sync(
 fn check_if_overwrites(
     pkg_ctx: &PackageCtx<'_>,
     venv: Option<&Venv>,
-    id: StrId,
+    id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
     if pkg_ctx.package().manifest_path() != venv.data().last_location()
@@ -128,7 +128,7 @@ fn check_if_overwrites(
     {
         let replaces =
             PackageLoader::find_at_exact_directory(venv.data().last_location(), pkg_ctx.ctx())
-                .map(|pkg| pkg.package().manifest().name() == id)
+                .map(|pkg| pkg.package().manifest().name() == id.name() && !id.is_global())
                 .unwrap_or(false);
         if replaces {
             Err(

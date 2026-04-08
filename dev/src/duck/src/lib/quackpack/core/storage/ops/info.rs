@@ -23,7 +23,7 @@ pub fn list_venvs(storage_root: &Path) -> QuackResult<HashMap<VenvId, Venv>> {
         if !venv.path().is_dir() {
             continue;
         }
-        let id = venv.file_name().into();
+        let id = venv.file_name().to_venv_id();
         let _lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
         let data = Venv::fix_and_load(&storage, id)?;
         if let Some(data) = data {
