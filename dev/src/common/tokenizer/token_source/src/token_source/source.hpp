@@ -9,7 +9,6 @@
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/char.hpp>
-#include <lexer/decode.hpp>
 #include <lexer/token.hpp>
 #include <token_source/forward.hpp>  // IWYU pragma: keep
 
@@ -54,6 +53,24 @@ namespace tokenizer {
 
 		template<class... Ts>
 		friend Box<TokenSource> makeTokenSource(Ts&&... args);
+
+		/**
+	 	 * Decode the content into a character array.
+	 	 *
+	 	 * @tparam encoding Which encoding should the function use.
+	 	 *
+	 	 * @return CharArray of decoded data
+	 	 *
+	 	 * @note We should probably stick to only decoding UTF-8 for now
+	 	 */
+		template<fs::Encoding encoding>
+		lexer::CharArray internalDecode();
+
+		template<>
+		lexer::CharArray internalDecode<fs::UsAscii>();
+
+		template<>
+		lexer::CharArray internalDecode<fs::UTF8>();
 
 	public:
 		TokenSource(const TokenSource&) = delete;
@@ -102,7 +119,7 @@ namespace tokenizer {
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
-			decoded.emplace(lexer::decode<encoding>(Ref(this)));
+			decoded.emplace(internalDecode<encoding>());
 		}
 
 		void countLines();

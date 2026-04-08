@@ -1,4 +1,10 @@
-#include "decode.hpp"
+#include "source.hpp"
+
+#include "lexer/char.hpp"
+
+#include <diagnostic_interactive/logger.hpp>
+
+#include <filesystem/encoding.hpp>
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
@@ -10,7 +16,7 @@
 #include <token_source/source.hpp>
 #include <unicode_classification/classifications.hpp>
 
-namespace lexer {
+namespace tokenizer {
 
 	class AsciiByteError final: public dia_int::MessageBase {
 		dia_int::Metadata getMetadata() const final {
@@ -134,10 +140,11 @@ namespace lexer {
 	};
 
 	template<>
-	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource> file) {
+	lexer::CharArray TokenSource::internalDecode<fs::UsAscii>() {
+		auto file = Ref(this);
 		auto log = file->getIntLogger();
 		auto      bytes = file->getContent().view();
-		CharArray out;
+		lexer::CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			// Check if valid ascii byte
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
@@ -152,10 +159,11 @@ namespace lexer {
 	}
 
 	template<>
-	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenSource> file) {
+	lexer::CharArray TokenSource::internalDecode<fs::UTF8>() {
+		auto file = Ref(this);
 		auto log = file->getIntLogger();
 		auto      bytes = file->getContent().view();
-		CharArray out;
+		lexer::CharArray out;
 
 		usize pos = 0;
 		while (pos < bytes.size()) {

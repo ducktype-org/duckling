@@ -3,7 +3,6 @@ add_library(Lexer STATIC
 	src/lexer/token.cpp
 	src/lexer/lexer.cpp
 	src/lexer/token_common.cpp
-	src/lexer/decode.cpp
 	src/lexer/lexer_class.cpp
 )
 
