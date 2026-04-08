@@ -128,7 +128,8 @@ fn clean_venv_from_storage(
     let venv_id = dir.file_name().to_venv_id();
     let venv = Venv::fix_and_load(storage, venv_id)?;
     let Some(mut venv) = venv else {
-        debug!("failed to fix and load venv `{venv_id}`");
+        debug!("failed to fix and load venv `{venv_id}`, will clean the venv");
+        removed_venvs.push(venv_id);
         return Ok(());
     };
     let mut requires_save = false;
