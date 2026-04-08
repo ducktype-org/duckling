@@ -19,8 +19,6 @@
 #include <ostream>
 #include <vector>
 
-std::vector<ValueTp> g_array;
-
 struct ArrayKey {
 	usize index;
 
@@ -48,7 +46,7 @@ struct IMPLEMENT_QUERY(SumQuery, ValueTp) {
 		work(g_config.workload);
 		if (key.r - key.l == 1) {
 			ctx.query<ArrayInput>(ArrayKey{ key.l });
-			return g_array[static_cast<usize>(key.l)];
+			return g_source_array[key.l];
 		}
 
 		usize mid = key.l + (key.r - key.l) / 2;
@@ -80,8 +78,8 @@ int main(int argc, const char* argv[]) {
 
 	generateArray();
 	// TODO: Remove this from here.
-	u64 simple_sum = 0;
-	for (auto x: g_source_array) simple_sum = add(simple_sum, x);
+	ValueTp simple_sum = 0;
+	for (ValueTp x: g_source_array) simple_sum += x;
 
 	auto q_sum = query::entryPoint<SumQuery>({ .l = 0, .r = g_config.array_size });
 	std::cout << "Initial real_sum = " << simple_sum << " query_sum = " << q_sum << '\n';
@@ -91,7 +89,7 @@ int main(int argc, const char* argv[]) {
 		for (usize i = 0; i < g_config.update_count; ++i) {
 			usize idx = i % g_config.array_size;
 			g_source_array[idx]++;
-			simple_sum   = add(simple_sum, 1);
+			simple_sum += 1;
 			auto node_id = query::internal::makeNodeID<ArrayInput>(ArrayKey{ idx });
 			updates.emplace_back(ArrayInput::getID(), node_id.hash.val);
 		}

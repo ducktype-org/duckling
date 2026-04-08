@@ -1,21 +1,15 @@
 #include "array_sum_common.hpp"
-#include "psac/types.hpp"
 
+#include <parlay/parallel.h>
 #include <psac/psac.hpp>
+#include <psac/types.hpp>
 
-#include "base/str/str_utils.hpp"
 #include <base/types/ints.hpp>
 
 #include <init/init.hpp>
 
-#include <random>
-#include <ranges>
-
 // This makes the code segfault after everything.
 // using ValueTp = u64;
-//
-constexpr usize ARRAY_SIZE = (1 << 18);
-constexpr usize TREE_SIZE  = 2 * ARRAY_SIZE;
 
 std::vector<psac::Mod<ValueTp>> value_tree;
 
@@ -59,25 +53,25 @@ psac_function(
 
 int main(int argc, const char* argv[]) {
 	init::InitObject init;
-
 	if (!parseArgs(argc, argv)) {
 		printUsage(argv[0]);
 		return 1;
 	}
 
 	// Setup the environment.
-	setenv("PARLAY_NUM_THREADS", std::to_string(g_config.threads).c_str(), 1);
+	parlay::set_num_workers(g_config.threads);
 	std::ios::sync_with_stdio(false);
 	std::cin.tie(nullptr);
 
+
 	// Generate the array
 	generateArray();
-	value_tree.resize(2 * g_config.array_size + 1);
+	value_tree.resize(4 * g_config.array_size);
 
 	std::vector<psac::Mod<ValueTp>> arr(g_config.array_size);
 	ValueTp                         simple_sum = 0;  // TODO: Remove this from here
 	for (usize i = 0; i < g_config.array_size; ++i) {
-		auto val = static_cast<ValueTp>(g_source_array[i]);
+		auto val = g_source_array[i];
 		psac_write(&arr[i], val);
 		simple_sum += val;
 	}

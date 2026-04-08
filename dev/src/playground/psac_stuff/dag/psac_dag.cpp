@@ -97,8 +97,7 @@ int main(int argc, const char* argv[]) {
 		return 1;
 	}
 
-	// 1 to override the previous value.
-	setenv("PARLAY_NUM_THREADS", std::to_string(g_config.threads).c_str(), 1);
+	parlay::set_num_workers(g_config.threads);
 	std::ios::sync_with_stdio(false);
 	std::cin.tie(nullptr);
 
