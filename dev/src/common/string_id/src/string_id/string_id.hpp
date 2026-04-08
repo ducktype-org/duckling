@@ -59,6 +59,7 @@
 
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/misc/raw_view.hpp>
+#include <hashing/add_to_hash.hpp>
 
 #include <charconv>
 #include <string>
@@ -174,6 +175,10 @@ namespace base {
 		[[nodiscard]]
 		InnerID getInnerID() const {
 			return this->id;
+		}
+
+		void addToHash(hashing::hash_algorithm auto& hash_alg) const {
+			hashing::addToHash(hash_alg, view());
 		}
 
 		friend struct std::hash<StrID>;

@@ -2,6 +2,7 @@
 
 #include <base/comptime/type_traits.hpp>
 #include <base/types/ints.hpp>
+#include <base/types/monostate.hpp>
 
 #include <array>
 #include <bit>
@@ -72,12 +73,16 @@ namespace hashing {
 	}
 
 	namespace internal {
-
 		/**
-		 * Checks if the type can be hashed with std::hash
+		 * Checks if the type can be hashed by just hashing its representation
 		 */
 		template<typename T>
-		concept can_stdhash = requires(const T& t) { std::hash<T>{}(t); };
+		concept can_hash_by_representation =
+			std::has_unique_object_representations_v<T> &&
+			(
+				std::is_integral_v<T> || std::is_enum_v<T> ||
+				requires { {T::HASHING_CAN_HASH_BY_REPRESENTATION} -> std::same_as<base::Monostate>; }
+			);
 
 		/**
 		 * Checks if the type is a tuple of references

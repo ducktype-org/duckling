@@ -2,6 +2,8 @@
 
 #include "hash_algorithm_utils.hpp"
 
+#include <base/comptime/type_traits.hpp>
+
 #include <ranges>
 #include <tuple>
 #include <type_traits>
@@ -10,23 +12,15 @@
 namespace hashing {
 
 	/**
-	 * Options for the addToHash function template:
-	 * allow_std_hash - if true, the function will try to use std::hash for hashing types that
-	 *     can't be hashed using the provided hashing algorithm
+	 * Options for the addToHash function template.
+	 * Currently empty.
 	 */
-	struct AddToHashOptions {
-		bool allow_std_hash;
-	};
+	struct AddToHashOptions final { };
 
 	/**
 	 * Default (strict) options for the addToHash function template
 	 */
-	static constexpr AddToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{ .allow_std_hash = false };
-
-	/**
-	 * Relaxed options for the addToHash function template
-	 */
-	static constexpr AddToHashOptions RELAXED_ADD_TO_HASH_OPTIONS{ .allow_std_hash = true };
+	static constexpr AddToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS { };
 
 	/**
 	 * This is a template overload for the 'addToHash' function.
@@ -54,12 +48,13 @@ namespace hashing {
 		// Specializations for types that are not ours
 		else if constexpr (std::is_floating_point_v<T>) {
 			// IEEE 754 floating point numbers have multiple representations of 0:
-			// -0.0 == 0.0, but they should have the same hash since they compare equal
+			// -0.0 == 0.0, so they should have the same hash since they compare equal.
+			// However, they are effectively a different group elements.
 			auto t_copy = t;
 			if (t_copy == 0) t_copy = 0;
 			internal::hashAsBytes(hash_alg, t_copy);
 		}
-		// Specialation for pointers
+		// Specialization for pointers
 		else if constexpr (std::is_pointer_v<T>) {
 			internal::hashAsBytes(hash_alg, t);
 		}
@@ -74,7 +69,7 @@ namespace hashing {
 		}
 		// If for each value of the type there is a unique representation of it in memory,
 		// we can treat it as a sequence of chars and hash it directly
-		else if constexpr (std::has_unique_object_representations_v<T>) {
+		else if constexpr (internal::can_hash_by_representation<T>) {
 			internal::hashAsBytes(hash_alg, t);
 		}
 		// If type supports std::tuple_size and std::get, we can use them to get and hash its
@@ -89,13 +84,10 @@ namespace hashing {
 		else if constexpr (std::ranges::contiguous_range<T>) {
 			for (const auto& elem: t) addToHash(hash_alg, elem);
 		}
-		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
-		// its specialization should be provided above
-		else if constexpr (Options.allow_std_hash && internal::can_stdhash<T>) {
-			addToHash(hash_alg, std::hash<T>{}(t));
-		} else {
+		else {
+			// Note: the typeName(T) == "" is just to make the compiler print the T in the error message.
 			static_assert(
-				false, "Please provide an 'addToHash' or 'hashDecompose' overload for this type"
+				base::typeName<T> == "" && false, "Please provide an 'addToHash' or 'hashDecompose' overload for this type"
 			);
 		}
 	}
