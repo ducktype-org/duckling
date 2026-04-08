@@ -109,7 +109,8 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void performFunctionCall(
+			void
+			performFunctionCall(
 				const MicroInstruction*& instr,
 				std::byte*&              local_stack,
 				Frame*&                  frame,
@@ -174,7 +175,8 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void performInit(
+			void
+			performInit(
 				[[maybe_unused]] const MicroInstruction*& instr,
 				std::byte*&                               local_stack,
 				Frame*&                                   frame,
@@ -184,8 +186,7 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
-			thread.process_memory.increaseBlockRefcount(
-				block
+			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
 			*frame->local_block_ref_stack_end = block.get();
@@ -197,7 +198,8 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void performDeinit(Frame*& frame, VMThread& thread) {
+			void
+			performDeinit(Frame*& frame, VMThread& thread) {
 			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
 
@@ -211,7 +213,8 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			void setVariantType(
+			void
+			setVariantType(
 				VMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
 			) {
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
@@ -258,7 +261,8 @@ namespace vm {
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
-			Pointer getVariantPtr(
+			Pointer
+			getVariantPtr(
 				VMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
 			) {
 

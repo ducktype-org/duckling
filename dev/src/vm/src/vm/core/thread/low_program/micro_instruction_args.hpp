@@ -119,8 +119,8 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(Type, "type", vm::opargs::Type);
 	/** @brief Stores byte offset of a field within its containing type layout. */
 	DEFINE_MICRO_ARG_TYPE(Field, "field", vm::opargs::Field);
-	/** @brief Stores function pointer from LowVMProgram functions map. */
-	DEFINE_MICRO_ARG_TYPE(Function, "func", vm::opargs::FunctionName);
+	/** @brief Stores function ID from LowVMProgram functions map. */
+	DEFINE_MICRO_ARG_TYPE(FunctionID, "func", vm::opargs::FunctionName);
 	/** @brief Stores underlying numeric value of builtins::BuiltinFunctionID. */
 	DEFINE_MICRO_ARG_TYPE(BuiltinFunctionID, "builtinfunc", vm::opargs::BuiltinFunctionName);
 	/** @brief Stores extern C function point in LowVMProgram extern C functions map. */
@@ -140,7 +140,7 @@ namespace vm::low::opargs {
 		Immediate,
 		Type,
 		Field,
-		Function,
+		FunctionID,
 		BuiltinFunctionID,
 		ExtCFunction,
 		MethodName,
@@ -151,7 +151,7 @@ namespace vm::low::opargs {
 	using InstructionLocalBlockStackArg = std::variant<VM_MICRO_INSTR_ARG_LOCAL_BLOCK_STACK_TYPES>;
 	using InstructionGlobalArg          = std::variant<VM_MICRO_INSTR_ARG_GLOBAL_TYPES>;
 
-	using InstructionFunctionArg = std::variant<Function, BuiltinFunctionID, ExtCFunction>;
+	using InstructionFunctionArg = std::variant<FunctionID, BuiltinFunctionID, ExtCFunction>;
 	using InstructionPrimitiveArg
 		= std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;
 

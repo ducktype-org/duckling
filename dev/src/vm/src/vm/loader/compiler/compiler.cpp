@@ -85,9 +85,9 @@ namespace vm::loader::compiler {
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
-			low::opargs::Function,
+			low::opargs::FunctionID,
 		    opargs::FunctionName,
-		    return safeReadObjectBytes<u64>(compiler.low_program.getFunctions().at(opcode_arg.function_name));
+		    return compiler.program_ctx.function_forward_declarations.idOf(opcode_arg.function_name).value();
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
@@ -102,7 +102,7 @@ namespace vm::loader::compiler {
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::ExtCFunction,
 			opargs::ExtCFunctionName,
-			return safeReadObjectBytes<u64>(compiler.program_ctx.ext_c_functions.at(opcode_arg.function_name));
+			return safeReadObjectBytes<u64>(compiler.low_program.getExternCFunctions().at(opcode_arg.function_name));
 		);
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::MethodName,

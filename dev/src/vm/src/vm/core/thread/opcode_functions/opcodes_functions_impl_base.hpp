@@ -363,7 +363,7 @@ namespace vm {
 				local_stack,
 				frame,
 				thread,
-				safeReadObjectBytes<CRef<low::LowFuncData>>(instr->arg0)
+				thread.executing_program->getFunctions().at(instr->arg0)
 			);
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
@@ -378,9 +378,10 @@ namespace vm {
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
-			auto& jit_data         = thread.jit_data;
-			auto  current_function = safeReadObjectBytes<CRef<low::LowFuncData>>(instr->arg0);
-			auto  func_id          = current_function->getID();
+			auto& jit_data = thread.jit_data;
+			auto  func_id  = instr->arg0;
+			;
+			auto func_obj = thread.executing_program->getFunctions().at(func_id);
 
 			// @TODO: #2126 manage the size when inserting new code
 			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
@@ -388,7 +389,7 @@ namespace vm {
 			jit::JitFuncData& my_data = jit_data[func_id];
 
 			auto run_compiled = [&]() {
-				performFunctionCall(instr, local_stack, frame, thread, current_function);
+				performFunctionCall(instr, local_stack, frame, thread, func_obj);
 				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			};
 
@@ -398,10 +399,10 @@ namespace vm {
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
 				--my_data.until_compilation;
-				performFunctionCall(instr, local_stack, frame, thread, current_function);
+				performFunctionCall(instr, local_stack, frame, thread, func_obj);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(current_function);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(func_obj);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
@@ -504,7 +505,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
 		{
-			auto called_func = safeReadObjectBytes<CRef<low::LowFuncData>>(instr->arg0);
+			auto called_func = thread.executing_program->getFunctions().at(instr->arg0);
 			thread.setThreadCtx(called_func->name.str());
 		}
 		FUNCTION_CONT(1);
@@ -536,7 +537,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
-			auto function           = safeReadObjectBytes<CRef<low::LowFuncData>>(instr->arg0);
+			auto function           = thread.executing_program->getFunctions().at(instr->arg0);
 			instr                   = function->bc.data();
 			frame->current_function = function;
 

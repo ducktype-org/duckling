@@ -103,17 +103,15 @@ namespace vm {
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(
-				base::strConcat(
-					"Function '",
-					func.name.str(),
-					"' expects ",
-					func.parameters.size(),
-					" arguments, but ",
-					func_args.size(),
-					" were provided."
-				)
-			);
+			throw exceptions::VMRuntimeException(base::strConcat(
+				"Function '",
+				func.name.str(),
+				"' expects ",
+				func.parameters.size(),
+				" arguments, but ",
+				func_args.size(),
+				" were provided."
+			));
 		}
 
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
@@ -127,8 +125,8 @@ namespace vm {
 			                             .parameters  = {},
 			                             .result_type = func.result_type };
 
-		u64                    result_type_arg = safeReadObjectBytes<u64>(func.result_type);
-		CRef<low::LowFuncData> called_function = executing_program->getFunctions().at(func.name);
+		u64 result_type_arg    = safeReadObjectBytes<u64>(func.result_type);
+		u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
 
 		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
@@ -147,18 +145,16 @@ namespace vm {
 			}
 
 			if (arg_value->type != arg_type) {
-				throw exceptions::VMRuntimeException(
-					base::strConcat(
-						"Type mismatch for argument ",
-						i,
-						" of function '",
-						func.name.str(),
-						"': expected ",
-						arg_type->getName().str(),
-						", got ",
-						arg_value->type->getName().str()
-					)
-				);
+				throw exceptions::VMRuntimeException(base::strConcat(
+					"Type mismatch for argument ",
+					i,
+					" of function '",
+					func.name.str(),
+					"': expected ",
+					arg_type->getName().str(),
+					", got ",
+					arg_value->type->getName().str()
+				));
 			}
 
 			start_function.bc.push_back(
@@ -174,7 +170,7 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, safeReadObjectBytes<u64>(called_function), 0),
+				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
 		        // value/exit_code.
@@ -230,8 +226,8 @@ namespace vm {
 		u64 str_ptr_type_arg  = safeReadObjectBytes<u64>(str_ptr_type);
 		u64 byte_type_arg     = safeReadObjectBytes<u64>(byte_type);
 
-		CRef<low::LowFuncData> called_function = executing_program->getFunctions().at(func.name);
-		const bool             main_has_args   = !func.parameters.empty();
+		u64        called_function_id = executing_program->getFunctions().idOf(func.name).value();
+		const bool main_has_args      = !func.parameters.empty();
 
 		// Initialize the needed data first - argc and argv dynamic table.
 		// Note that `argv` and `argc` are always initialized even if `main` takes no arguments.
@@ -345,9 +341,7 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(
-					call_func, safeReadObjectBytes<u64>(called_function), 0
-				),                                              // call main
+				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
@@ -546,9 +540,9 @@ namespace vm {
 			if (process_memory.tryInsertGlobalData(id, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
-					const auto&      func           = *executing_program->getFunctions()
-					                                       .atMaybe(global->ctor_name.value())
-					                                       .value();
+					const auto& func = *executing_program->getFunctions()
+					                        .atMaybe(global->ctor_name.value())
+					                        .value();
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -561,10 +555,8 @@ namespace vm {
 			const auto& maybe_func
 				= executing_program->getFunctions().atMaybe(base::StrID(func_name.data()));
 			if (!maybe_func.has_value()) {
-				respondExecutionRequest(
-					api::ExecutionPanicked{
-						base::strConcat("Called function '", func_name, "' does not exist.") }
-				);
+				respondExecutionRequest(api::ExecutionPanicked{
+					base::strConcat("Called function '", func_name, "' does not exist.") });
 				return;
 			}
 			const auto& func = *maybe_func.value();
@@ -593,12 +585,12 @@ namespace vm {
 		for (const auto& [global, id, name]: executing_program->getGlobals().allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
-					const auto&      func = *executing_program->getFunctions()
-					                             .atMaybe(base::StrID(global->dtor_name.value()))
-					                             .expect(
-													 "Called function does not exist: "
-													 + global->dtor_name.value().str()
-												 );
+					const auto& func = *executing_program->getFunctions()
+					                        .atMaybe(base::StrID(global->dtor_name.value()))
+					                        .expect(
+												"Called function does not exist: "
+												+ global->dtor_name.value().str()
+											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -664,19 +656,15 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(
-							api::response::CodePosition{
-								.function_id  = index,  // Assuming function_id is int
-								.instr_number = static_cast<u64>(instr - func.bc.data()) }
-						);
+						return api::Response(api::response::CodePosition{
+							.function_id  = index,  // Assuming function_id is int
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(
-					api::ApiError{
-						api::OtherError{ "wrong execution status while reading current position" } }
-				);
+				return std::unexpected(api::ApiError{
+					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}
 		CORE_UNREACHABLE();

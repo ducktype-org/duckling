@@ -129,6 +129,10 @@ namespace vm::low {
 
 	/**
 	 * @brief Overlay over `LowVMProgram` with its own and therefore modifiable copy of functions.
+	 * @note Only the functions can be copied and modified, the types and extern C
+	 * functions are shared with the original program and are not modifiable through this structure
+	 * because of the way instruction arguments are currently being lowered - they contain direct
+	 * pointers to types.
 	 *
 	 * @note Needs updating via `selfUpdate()` to make new functions visible.
 	 * @note Program with current everything except functions is still a valid program.
