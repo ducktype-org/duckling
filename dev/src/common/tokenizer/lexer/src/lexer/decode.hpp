@@ -20,11 +20,11 @@ namespace lexer {
 	 * @note We should probably stick to only decoding UTF-8 for now
 	 */
 	template<fs::Encoding encoding>
-	CharArray decode(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> err);
+	CharArray decode(Ref<tokenizer::TokenSource> file);
 
 	template<>
-	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource>, Ref<dia_int::Logger>);
+	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource>);
 
 	template<>
-	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenSource>, Ref<dia_int::Logger>);
+	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenSource>);
 }

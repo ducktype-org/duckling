@@ -134,7 +134,8 @@ namespace lexer {
 	};
 
 	template<>
-	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> log) {
+	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource> file) {
+		auto log = file->getIntLogger();
 		auto      bytes = file->getContent().view();
 		CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
@@ -151,7 +152,8 @@ namespace lexer {
 	}
 
 	template<>
-	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> log) {
+	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenSource> file) {
+		auto log = file->getIntLogger();
 		auto      bytes = file->getContent().view();
 		CharArray out;
 

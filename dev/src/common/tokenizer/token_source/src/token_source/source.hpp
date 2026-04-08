@@ -102,7 +102,7 @@ namespace tokenizer {
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
-			decoded.emplace(lexer::decode<encoding>(Ref(this), &int_log));
+			decoded.emplace(lexer::decode<encoding>(Ref(this)));
 		}
 
 		void countLines();
