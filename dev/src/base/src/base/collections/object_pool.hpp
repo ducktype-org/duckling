@@ -87,6 +87,7 @@ namespace base {
 		 */
 		ValidObjectIterator& operator++() {
 			++current;
+			++index;
 			skipFreeObjects();
 			return *this;
 		}
