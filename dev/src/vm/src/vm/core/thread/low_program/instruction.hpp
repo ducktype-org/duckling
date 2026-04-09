@@ -22,13 +22,13 @@
  */
 #define OPFUN_TC_ARGS                                                                        \
 	const MicroInstruction *instr [[maybe_unused]], std::byte *local_stack [[maybe_unused]], \
-		Frame *frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
+		Frame *frame [[maybe_unused]], SafeVMThread &thread [[maybe_unused]]
 
 #define OPFUN_REF_ARGS                                                                         \
 	const MicroInstruction *&instr [[maybe_unused]], std::byte *&local_stack [[maybe_unused]], \
 		Frame *&frame [[maybe_unused]]                                                         \
 		,                                                                                      \
-		VMThread &thread [[maybe_unused]]
+		SafeVMThread &thread [[maybe_unused]]
 
 
 #define RETURN_TYPE_OPFUN_REF void
@@ -52,7 +52,7 @@ namespace internal {
 
 namespace vm {
 
-	class VMThread;
+	class SafeVMThread;
 
 	/**
 	 * @brief Bytecode instruction representation.
