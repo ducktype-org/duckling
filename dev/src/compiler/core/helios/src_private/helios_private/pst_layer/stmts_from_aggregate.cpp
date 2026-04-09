@@ -97,10 +97,11 @@ namespace compiler::helios {
 
 			// Handle macro expansions in a loop to support nested expansions.
 			while (current_stmt->getElementKind() == pst::ElementKind::Expand) {
-				auto expand_result
-					= ctx.query<QueryMacroExpansion>(current_stmt.template dynamicCast<pst::Expand>().value())
-				          .valueOrPanic();
-				
+				auto expand_result = ctx.query<QueryMacroExpansion>(
+											current_stmt.template dynamicCast<pst::Expand>().value()
+				)
+				                         .valueOrPanic();
+
 				variant_match(expand_result) {
 					variant_case(pst::AccessLocked<pst::Stmt>, expand_statement) {
 						current_stmt = expand_statement.unlock(ctx);
