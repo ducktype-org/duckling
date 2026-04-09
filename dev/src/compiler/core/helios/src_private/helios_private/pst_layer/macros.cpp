@@ -28,8 +28,7 @@ namespace compiler::helios {
 				);
 
 				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
-					pst.setAdditionalRootData(pst::AdditionalRootData{
-						.optional_macro_expansion_source = expand, .module_id = {} });
+					pst.setAdditionalRootData(pst::AdditionalRootData{ pst::AdditionalRootData::MacroExpansionParent { .expand_element = expand}});
 				}
 
 				return pst;

@@ -41,15 +41,30 @@ namespace pst {
 	 * @TODO: #2397 probably move or remove it.
 	 */
 	struct AdditionalRootData final {
-		/**
-		 * @brief Optional source element of macro expansion the PST was generated from.
-		 */
-		base::Optional<AccessLocked<LangElement>> optional_macro_expansion_source;
+		struct MacroExpansionParent final {
+			/**
+			* @brief Optional source element of macro expansion the PST was generated from.
+			*/
+			AccessLocked<LangElement> expand_element;
+		};
+
+		struct ModuleParent final {
+			/**
+			* @brief frontend::ModuleID the PST was generated from.
+			*/	
+			std::any module_id;
+		};
 
 		/**
-		 * @brief Optional frontend::ModuleID the PST was generated from.
+		 * @brief No parent, used for tests/debug/non-standard PST only.
 		 */
-		base::Optional<std::any> module_id;
+		// struct NoParent final {};
+
+		/**
+		 * @brief Source of PST.
+		 * @note This is used mostly for determining the parent helios-scope of PST root elements.
+		 */
+		std::variant<MacroExpansionParent, ModuleParent> pst_parent;
 	};
 
 	/**

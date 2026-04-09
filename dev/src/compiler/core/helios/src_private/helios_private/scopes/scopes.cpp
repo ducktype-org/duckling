@@ -251,27 +251,25 @@ namespace compiler::helios {
 
 					const auto& additional_root_data = element->getAdditionalRootData();
 
-					if (additional_root_data.optional_macro_expansion_source.has_value()) {
-						CORE_ASSERT(
-							not additional_root_data.module_id.has_value(),
-							"Element cannot have both macro expansion source and module id in "
-							"additional root data."
-						);
-						return ctx.query<QueryPrimaryCodeScopeFor>(
-							additional_root_data.optional_macro_expansion_source.value()
-						);
-					} else if (additional_root_data.module_id.has_value()) {
-						auto module_id_any = additional_root_data.module_id.value();
-
-						auto module_id = base::anyCast<frontend::ModuleID>(module_id_any);
-
-						return ctx.query<QueryRootScopeOf>(module_id);
-					} else {
-						CORE_PANIC(
-							"Element has no parent and no additional root data, cannot determine "
-							"scope parent."
-						);
+					variant_match(additional_root_data.pst_parent) {
+						variant_case(pst::AdditionalRootData::MacroExpansionParent, macro_parent) {
+							return ctx.query<QueryPrimaryCodeScopeFor>(
+								macro_parent.expand_element
+							);
+						}
+						variant_case(pst::AdditionalRootData::ModuleParent, module_parent) {
+							auto module_id_any = module_parent.module_id;
+							auto module_id = base::anyCast<frontend::ModuleID>(module_id_any);
+							return ctx.query<QueryRootScopeOf>(module_id);
+						}
+						variant_default {
+							CORE_PANIC(
+								"Element has no parent and no additional root data, cannot determine "
+								"scope parent."
+							);
+						}
 					}
+					CORE_UNREACHABLE();
 				}
 			}();
 
