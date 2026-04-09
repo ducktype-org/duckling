@@ -276,8 +276,8 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 				auto tmp_res
 					= pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
 				pushInstruction({ operation, lhs, rhs });
-				pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::usgn8(u8(0)) });
-				pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::usgn8(u8(1)) });
+				pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
+				pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
 				return { tmp_res, DVMPlace::AccessKind::Direct };
 			}
 		}();

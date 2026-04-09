@@ -83,47 +83,47 @@ DVMGlobal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 DVMPlace::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
-DVMImmediate::DVMImmediate(u64 value, vm::code::TypeOfData type):
+DVMImmediate::DVMImmediate(::u64 value, vm::code::TypeOfData type):
 	  value(value),
 	  type(std::move(type)) {}
 
-DVMImmediate DVMImmediate::usgn8(u8 value) {
+DVMImmediate DVMImmediate::u8(::u8 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), 1) };
 }
 
-DVMImmediate DVMImmediate::usgn16(u16 value) {
+DVMImmediate DVMImmediate::u16(::u16 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i16"), 2) };
 }
 
-DVMImmediate DVMImmediate::usgn32(u32 value) {
+DVMImmediate DVMImmediate::u32(::u32 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i32"), 4) };
 }
 
-DVMImmediate DVMImmediate::usgn64(u64 value) {
+DVMImmediate DVMImmediate::u64(::u64 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i64"), 8) };
 }
 
-DVMImmediate DVMImmediate::sgn8(i8 value) {
+DVMImmediate DVMImmediate::i8(::i8 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), 1) };
 }
 
-DVMImmediate DVMImmediate::sgn16(i16 value) {
+DVMImmediate DVMImmediate::i16(::i16 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i16"), 2) };
 }
 
-DVMImmediate DVMImmediate::sgn32(i32 value) {
+DVMImmediate DVMImmediate::i32(::i32 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i32"), 4) };
 }
 
-DVMImmediate DVMImmediate::sgn64(i64 value) {
+DVMImmediate DVMImmediate::i64(::i64 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i64"), 8) };
 }
 
-DVMImmediate DVMImmediate::flt32(f32 value) {
+DVMImmediate DVMImmediate::f32(::f32 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("f32"), 4) };
 }
 
-DVMImmediate DVMImmediate::flt64(f64 value) {
+DVMImmediate DVMImmediate::f64(::f64 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("f64"), 8) };
 }
 

@@ -33,23 +33,23 @@ namespace compiler::backend_vm::internal {
 	};
 
 	struct DVMImmediate {
-		DVMImmediate(u64 value, vm::code::TypeOfData type);
+		DVMImmediate(::u64 value, vm::code::TypeOfData type);
 		// @TODO: #2451 Make DVMImmediate string based
-		static DVMImmediate usgn8(u8 value);
-		static DVMImmediate usgn16(u16 value);
-		static DVMImmediate usgn32(u32 value);
-		static DVMImmediate usgn64(u64 value);
-		static DVMImmediate sgn8(i8 value);
-		static DVMImmediate sgn16(i16 value);
-		static DVMImmediate sgn32(i32 value);
-		static DVMImmediate sgn64(i64 value);
-		static DVMImmediate flt32(f32 value);
-		static DVMImmediate flt64(f64 value);
+		static DVMImmediate u8(::u8 value);
+		static DVMImmediate u16(::u16 value);
+		static DVMImmediate u32(::u32 value);
+		static DVMImmediate u64(::u64 value);
+		static DVMImmediate i8(::i8 value);
+		static DVMImmediate i16(::i16 value);
+		static DVMImmediate i32(::i32 value);
+		static DVMImmediate i64(::i64 value);
+		static DVMImmediate f32(::f32 value);
+		static DVMImmediate f64(::f64 value);
 		static DVMImmediate boolean(bool value);
 		static DVMImmediate character(char value);
 
 		// All values are represented as u64, so e.g. a float is bit-casted to u64.
-		u64                  value{};
+		::u64                value{};
 		vm::code::TypeOfData type;
 		bool                 operator==(const DVMImmediate& other) const = default;
 		operator vm::opargs::OpCodeArg() const;
