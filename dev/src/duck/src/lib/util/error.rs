@@ -398,6 +398,12 @@ where
     }
 }
 
+impl From<QuackError> for BoxError {
+    fn from(value: QuackError) -> Self {
+        value.error
+    }
+}
+
 pub trait ErrorExt {
     /// Get the [`ErrorType`] of this error.
     fn error_type(&self) -> ErrorType;
