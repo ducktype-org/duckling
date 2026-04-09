@@ -4,12 +4,14 @@ use std::{
 };
 
 use crate::{
-    StrId,
     quackpack::core::{
         fetcher::Fetcher,
         storage::{
             freeze::{FreezeDep, FreezePackage},
             package_id::{PackageId, RegistryId},
+            paths::Storage,
+            venv::Venv,
+            venv_id::ToVenvId,
         },
         types_common::{ExpandedLocation, InternedExpandedLocation},
     },
@@ -32,7 +34,7 @@ use crate::{
 mod basic;
 mod concurrent;
 
-fn registry_url_hash() -> StrId {
+fn registry_url_hash() -> String {
     let url: Url = Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap();
     crate::util::hash::sha256_string(url.host_str().unwrap())
 }
@@ -96,16 +98,22 @@ fn setup_mock_venv(
     freeze_mutator: impl FnOnce(&mut VenvFreeze),
     data_mutator: impl FnOnce(&mut VenvData),
 ) {
+    let storage = Storage::new(root);
     let mut basic_freeze = VenvFreeze::new(
         RootPackage::new(name.into(), Version::new(1, 0, 0), vec![], vec![]),
         vec![],
     );
     freeze_mutator(&mut basic_freeze);
-    let mut basic_data = VenvData::new(basic_freeze, false, PathBuf::default(), SystemTime::now());
+    let mut basic_data = VenvData::new(
+        basic_freeze,
+        false,
+        PathBuf::default(),
+        SystemTime::now(),
+        SystemTime::now(),
+    );
     data_mutator(&mut basic_data);
-    basic_data
-        .save_to(&root.join("venv").join(name).join("metadata"))
-        .unwrap();
+    let venv = Venv::new(name.to_venv_id(), basic_data);
+    venv.save_to(&storage).unwrap()
 }
 
 fn setup_mock_venvs(root: &Path) {
@@ -138,7 +146,7 @@ fn setup_mock_venvs(root: &Path) {
         },
         |data| {
             data.set_ephemeral(true);
-            data.set_last_access(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
     );
 
@@ -162,7 +170,7 @@ fn setup_mock_venvs(root: &Path) {
             freeze.dependencies_mut().push(package);
         },
         |data| {
-            data.set_last_access(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
     );
 }

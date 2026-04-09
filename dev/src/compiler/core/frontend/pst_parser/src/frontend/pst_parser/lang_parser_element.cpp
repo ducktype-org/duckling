@@ -92,7 +92,7 @@ namespace pst {
 	void LangElement::calcHash() {
 		auto partial_hash = calcStableHash();
 		addToHash(partial_hash, context_hash);
-		hash = calcStableHash().finalize();
+		hash = partial_hash.finalize();
 
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();

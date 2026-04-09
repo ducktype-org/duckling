@@ -189,7 +189,7 @@ private:
 
 			for (u64 i = 0; i < count; i++) {
 				auto v       = rng() % 1'000'000;
-				auto put_res = map.maybePut(v, v * 10);
+				auto put_res = map.maybePut(BigObject<13>(v), BigObject<16>(v * 10));
 
 				if (put_res != nullptr) {
 					ASSERT_EQUAL(put_res->key, v);
@@ -281,7 +281,7 @@ private:
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map]() {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++)
-					map.maybePutAndUpdate(1ULL, 0ULL, [](Ref<u64> v) { *v += 10; });
+					map.maybePutAndUpdate(u64(1), u64(0), [](Ref<u64> v) { *v += 10; });
 			});
 		}
 
@@ -306,7 +306,7 @@ private:
 
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map, i]() {
-				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(1, j * thread_count + i);
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(u64(1), j * thread_count + i);
 			});
 		}
 
