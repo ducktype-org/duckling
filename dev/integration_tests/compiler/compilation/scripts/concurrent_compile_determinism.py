@@ -14,16 +14,33 @@ import sys
 
 # Deterministic compile pre-check used by integration tests.
 #
+# The goal is to verify that concurrent compilation produces byte-identical
+# artifacts to single-threaded compilation. Duplicating modules increases
+# the workload so that worker threads naturally process the same functions
+# in parallel, exposing any non-determinism from thread scheduling.
+#
+# Beyond determinism, this test indirectly helps detect concurrency bugs:
+# non-deterministic output can be a symptom of data races, and running
+# a heavier concurrent workload under a test timeout helps surface
+# deadlocks. Neither check is 100% reliable, but together they catch
+# a meaningful class of threading issues.
+#
 # High-level flow:
 # 1) duplicate every .dmf module file in one selected package (default x3),
+#    so there is enough work to exercise concurrent modification paths
+#    and force parallel processing of identical function bodies,
 # 2) rewrite duplicated files so they can coexist in one package:
-#    - rename `fun main(...)` to `fun main_copyN(...)` in each copy,
+#    - rename `fun main(...)` to `fun main_copyN(...)` because the linker
+#      requires exactly one main function per package,
 #    - rewrite imports in copied main-module files from `import child...`
-#      to `import main.child...` when needed,
+#      to `import main.child...` because copied .dmf files become
+#      sub-modules of the original, so their import paths must be adjusted,
 # 3) compile the same package twice into a local `build` dir:
-#    - first with 1 worker,
-#    - then with user-provided workers (or 3 when requested workers == 1),
-# 4) compare hashes of produced .o/.dbc artifacts,
+#    - first with 1 worker to get a deterministic baseline,
+#    - then with concurrent workers — if single-threaded output matches
+#      multi-threaded output the compiler is deterministic,
+# 4) compare sha256 hashes of produced .o/.dbc artifacts to verify
+#    byte-identical output regardless of thread scheduling order,
 # 5) clean temporary duplicated modules and temporary build artifacts,
 # 6) return 0 on success, otherwise return 1 and print error details to stderr.
 #
