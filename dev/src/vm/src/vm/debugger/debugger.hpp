@@ -29,6 +29,7 @@ namespace vm::debugger {
 
 	public:
 		Debugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
+		~Debugger();
 		Debugger(const Debugger&)            = delete;
 		Debugger& operator=(const Debugger&) = delete;
 		Debugger(Debugger&&)                 = delete;
