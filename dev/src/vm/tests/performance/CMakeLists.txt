@@ -1,4 +1,4 @@
-find_program(VTUNE vtune)
+find_program(VTUNE vtune /opt/intel/oneapi/vtune/latest/bin64/)
 if (NOT ${VTUNE} STREQUAL VTUNE-NOTFOUND)
     message(STATUS "VTune found, generating profiler targets")
     option(PROFILE "Add profiler targets" ON)
@@ -14,8 +14,8 @@ function(duck_add_perf_test test_pack test_name source USES)
         target_compile_options(${EXEC} PRIVATE -g)
 
         set(target_name "profile_${test_name}")
-        set(exec_path "${CMAKE_BINARY_DIR}/bin/${EXEC}")
-        set(results_path "${CMAKE_BINARY_DIR}/results")
+        set(exec_path "${CMAKE_BINARY_DIR}/bin/perf/${EXEC}")
+        set(results_path "${CMAKE_BINARY_DIR}/perf/results")
 
         add_custom_target("${target_name}"
                 COMMAND mkdir -p ${results_path}

@@ -29,6 +29,8 @@ namespace vm {
 	}
 
 	bool GIL::shouldRelease() {
-		return release_requested_flag.exchange(false, std::memory_order_relaxed);
+		if (release_requested_flag.load(std::memory_order_relaxed) == true)
+			return release_requested_flag.exchange(false, std::memory_order_relaxed);
+		return false;
 	}
 }
