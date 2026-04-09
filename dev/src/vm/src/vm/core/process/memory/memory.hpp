@@ -203,30 +203,12 @@ namespace vm {
 		void reallocateBufferForGlobals(usize buffer_size, usize global_count);
 
 		/**
-		 * @brief Returns a view of global data by the id.
-		 */
-		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalViewUnsafe(
-			GlobalDataID id
-		) -> base::ModRawView {
-			return global_blocks.atMaybe(id).expect("Id not stored!")->toMRef()->data.view;
-		}
-
-		/**
 		 * @brief Returns a view of block's data
 		 */
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getBlockViewUnsafe(
 			Ref<Block> block
 		) -> base::ModRawView {
 			return block->data.view;
-		}
-
-		/**
-		 * @brief Returns a reference to the block appropriate for the global data by id.
-		 * @note This should be the preferred method of accessing global data, if applicable.
-		 */
-		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id)
-			-> Ref<Block> {
-			return *global_blocks.atMaybe(id).expect("Id not stored!");
 		}
 
 		// =================== Variant operations ===================

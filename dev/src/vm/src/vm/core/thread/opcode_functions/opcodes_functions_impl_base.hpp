@@ -101,15 +101,11 @@ namespace vm {
 	}
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
 		{ writeToStack<TYPE>(local_stack, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); } \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ WRITE_TO_GLOBAL(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }           \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {             \
 		{                                                                                         \
 			safeWriteBytes<TYPE>(                                                                 \
 				local_stack, readFromStack<TYPE>(local_stack, instr->arg1), instr->arg0           \
@@ -117,28 +113,7 @@ namespace vm {
 		}                                                                                         \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			const auto value = READ_FROM_GLOBAL(TYPE, instr->arg1);                               \
-			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			const auto value = readFromStack<TYPE>(local_stack, instr->arg1);                     \
-			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			const auto value = READ_FROM_GLOBAL(TYPE, instr->arg1);                               \
-			writeToStack<TYPE>(local_stack, instr->arg0, value);                                  \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {            \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {            \
 		{                                                                                         \
 			if (frame->flags.flag) {                                                              \
 				const auto value = readFromStack<TYPE>(local_stack, instr->arg1);                 \
@@ -147,7 +122,7 @@ namespace vm {
 		}                                                                                         \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                     \
 		{                                                                                         \
 			if (frame->flags.flag)                                                                \
 				writeToStack<TYPE>(                                                               \
@@ -162,28 +137,8 @@ namespace vm {
 	DEFINE_MOVE_OPS(16, u16)
 	DEFINE_MOVE_OPS(8, u8)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
-		{
-			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       src     = READ_FROM_GLOBAL(Pointer, instr->arg1);
-			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
-		{
-			const auto dst     = READ_FROM_GLOBAL(Pointer, instr->arg0);
-			auto       src     = readFromStack<Pointer>(local_stack, instr->arg1);
-			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			WRITE_TO_GLOBAL(Pointer, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
 #define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
 			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
 			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
@@ -192,7 +147,7 @@ namespace vm {
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
 			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
 			const auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                     \
@@ -203,7 +158,7 @@ namespace vm {
 	}
 
 #define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {  \
 		{                                                                                 \
 			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);               \
 			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);               \
@@ -213,7 +168,7 @@ namespace vm {
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}                                                                                     \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
 		{                                                                                 \
 			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                     \
 			auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                            \
@@ -225,7 +180,7 @@ namespace vm {
 	}
 
 #define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                        \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE)(FUNCTION_ARGS) {                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {                \
 		{                                                                                \
 			auto value = readFromStack<TYPE>(local_stack, instr->arg0);                  \
 			writeToStack<TYPE>(local_stack, instr->arg0, value * static_cast<TYPE>(-1)); \
@@ -260,7 +215,7 @@ namespace vm {
 
 
 #define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                   \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_p8)(FUNCTION_ARGS) {                   \
 		{                                                                              \
 			const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
 			const bool rhs = (readFromStack<u8>(local_stack, instr->arg1) != u8{ 0 }); \
@@ -268,7 +223,7 @@ namespace vm {
 		}                                                                              \
 		FUNCTION_CONT(1);                                                              \
 	}                                                                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_imm)(FUNCTION_ARGS) {                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_imm)(FUNCTION_ARGS) {                  \
 		{                                                                              \
 			const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
 			const bool rhs = (safeReadObjectBytes<u8>(instr->arg1) != u8{ 0 });        \
@@ -281,7 +236,7 @@ namespace vm {
 	DEFINE_BOOLEAN_OP(log_or, ||)
 	DEFINE_BOOLEAN_OP(log_xor, !=)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_l8)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_p8)(FUNCTION_ARGS) {
 		{
 			bool result = (readFromStack<u8>(local_stack, instr->arg0) == u8{ 0 });
 			writeToStack<u8>(local_stack, instr->arg0, (result ? u8{ 1 } : u8{ 0 }));
@@ -290,14 +245,14 @@ namespace vm {
 	}
 
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
 			frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
 				OP readFromStack<TYPE>(local_stack, instr->arg1);                        \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
 			frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
 				OP safeReadObjectBytes<TYPE>(instr->arg1);                               \
@@ -329,7 +284,7 @@ namespace vm {
 
 	FOR_EACH(DEFINE_FLOAT_N_COMPARISONS, 64, 32)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_pptr)(FUNCTION_ARGS) {
 		{
 			auto pointer      = readFromStack<Pointer>(local_stack, instr->arg0);
 			frame->flags.flag = pointer.isNull();
@@ -505,7 +460,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_pptr_method)(FUNCTION_ARGS) {
 		{
 			const auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 
@@ -583,7 +538,7 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_blany_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
 		{ performInit(instr, local_stack, frame, thread, TypeID(instr->arg1)); }
 		FUNCTION_CONT(1);
 	}
@@ -593,7 +548,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(input_p64)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::Sleeping{});
 			i64 io_value = thread.safe_process.getIO().getInput<i64>(thread);
@@ -603,12 +558,12 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(output_l64)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(output_p64)(FUNCTION_ARGS) {
 		{ thread.safe_process.getIO().writeOutput(readFromStack<u64>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(input_p32)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::Sleeping{});
 			i32 io_value = thread.safe_process.getIO().getInput<i32>(thread);
@@ -618,12 +573,12 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(output_l32)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(output_p32)(FUNCTION_ARGS) {
 		{ thread.safe_process.getIO().writeOutput(readFromStack<u32>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(strOutput_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(strOutput_pptr)(FUNCTION_ARGS) {
 		{
 			auto ptr = readFromStack<Pointer>(local_stack, instr->arg0);
 
@@ -638,8 +593,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(nop)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ext_l64)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_l64 not consumed by previous instruction");
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_p64 not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_imm)(FUNCTION_ARGS) {
@@ -658,15 +613,15 @@ namespace vm {
 		CORE_PANIC("ext_type_field not consumed by previous instruction");
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_l64)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_type_l64 not consumed by previous instruction");
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_p64)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_p64 not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_type)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_type_type not consumed by previous instruction");
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_pptr_type)(FUNCTION_ARGS) {
 		{
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       type
@@ -678,7 +633,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
 		{
 			if (auto ptr = readFromStack<Pointer>(local_stack, instr->arg0))
 				thread.process_memory.freeBlockData(ptr.getBlock());
@@ -686,7 +641,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_pptr_bany)(FUNCTION_ARGS) {
 		{
 			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
@@ -696,7 +651,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_gany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_pptr_gany)(FUNCTION_ARGS) {
 		{
 			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       src_block = GET_GLOBAL_BLOCK(instr->arg1);
@@ -707,7 +662,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -717,7 +672,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_lopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_popq)(FUNCTION_ARGS) {
 		{
 			const auto type_size = instr[1].arg0;
 			std::memcpy(local_stack + instr->arg0, local_stack + instr->arg1, type_size);
@@ -725,7 +680,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_lopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_popq)(FUNCTION_ARGS) {
 		{
 			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
 			std::memcpy(
@@ -737,7 +692,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_gopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_gopq)(FUNCTION_ARGS) {
 		{
 			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
 			std::memcpy(
@@ -749,7 +704,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_imm)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_imm)(FUNCTION_ARGS) {
 		{
 			// @TODO: #1728 remove this evil instruction
 			const void* value = safeReadObjectBytes<void*>(instr->arg1);
@@ -758,7 +713,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blste_blste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bste_bste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto src_block = Ref(frame->local_block_ref_stack_base[instr->arg1]);
@@ -780,7 +735,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blste_gste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bste_gste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
@@ -791,7 +746,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_blste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_bste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
 			auto src_block = Ref(frame->local_block_ref_stack_base[instr->arg1]);
@@ -802,7 +757,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_pptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			const Pointer new_dst
@@ -812,7 +767,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_pptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto type
@@ -827,7 +782,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(resetVTable_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(resetVTable_pptr)(FUNCTION_ARGS) {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto view    = thread.process_memory.getPointerData(pointer, sizeof(Type*));
@@ -836,7 +791,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_blvnt_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_bvnt_type)(FUNCTION_ARGS) {
 		{
 			auto variant_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto alt_type_id     = TypeID(instr->arg1);
@@ -846,7 +801,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_blvnt)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_pptr_bvnt)(FUNCTION_ARGS) {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
@@ -864,7 +819,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_pptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto alt_type_id     = TypeID(instr->arg1);
@@ -874,7 +829,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -890,9 +845,9 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			// Same as move_lptr_lptr, treated differently by static analysis.
+			// Same as move_pptr_pptr, treated differently by static analysis.
 			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
@@ -901,7 +856,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -921,7 +876,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(store_pptr_bany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto src_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
@@ -934,7 +889,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(load_blany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(load_bany_pptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -948,7 +903,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			const auto dst    = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       src    = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -961,7 +916,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_pptr_bany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
@@ -977,7 +932,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_blany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_bany_pptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -993,7 +948,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_blste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_bste)(FUNCTION_ARGS) {
 		{
 			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto src_block = Ref(frame->local_block_ref_stack_base[instr->arg1]);
@@ -1006,7 +961,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_blste_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_bste_bany)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -1024,7 +979,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_blany_blste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_bany_bste)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -1042,7 +997,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			auto dst          = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -1058,7 +1013,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			auto dst          = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
@@ -1074,7 +1029,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_pptr_bany)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
@@ -1090,7 +1045,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_pptr_bany)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
@@ -1106,7 +1061,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_blany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_bany_pptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -1122,7 +1077,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_blany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_bany_pptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
 			auto dst_pointer = Pointer(dst_block, 0);
@@ -1138,7 +1093,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_pptr_type)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer    = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto pointed_type   = thread.process_program->getTypes().at(TypeID(instr->arg1));
