@@ -87,7 +87,9 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) }).has_value());
+	auto res = vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) });
+	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
+	ASSERT_TRUE(res.has_value());
 }
 
 #define EXPECT_VOID(action)                          \
@@ -106,10 +108,10 @@ auto VmTestSuite::runTestOnVmGetResult(
 
 	EXPECT_VOID(vm::api::join(pid));
 
-	if_opt_some(optional_output, output) {
+	if_opt_some(optional_output, wanted_output) {
 		auto program_output = vm::api::output(pid);
 		EXPECT_VOID(program_output);
-		ASSERT_EQUAL_PRINT(output, program_output->output);
+		ASSERT_EQUAL_PRINT(wanted_output, program_output->output);
 	}
 	const auto exit_value = vm::api::getExitValue(pid).transform([&](Ref<vm::VmValue> value) {
 		ASSERT_TRUE(value->type->getName().str() == "i64");
@@ -182,4 +184,14 @@ void VmTestSuite::runFunctionSynchronouslyAsTest(
 		// @note: If expected_exit_code is an empty optional, it's expected that a called
 		// function is void.
 		ASSERT_TRUE(exit_value->type->getName() == base::StrID("void"));
+}
+
+auto VmTestSuite::runFunctionExpectPanic(
+	vm::PID pid, const std::string& func_name, const vm::FunctionRunArguments& args
+) -> TestResult {
+	auto run_result = vm::api::runFunction(pid, func_name, args);
+	if (!run_result.has_value())
+		return { .pid = pid, .run_result = std::unexpected(run_result.error()) };
+	auto join_result = vm::api::join(pid);
+	return { .pid = pid, .run_result = std::unexpected(join_result.error()) };
 }

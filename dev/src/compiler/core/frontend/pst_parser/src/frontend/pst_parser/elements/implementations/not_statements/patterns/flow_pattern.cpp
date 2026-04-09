@@ -4,19 +4,17 @@
 
 namespace pst {
 	MBox<FlowPattern> FlowPattern::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<FlowPattern>(position);
+		auto out = makeBox<FlowPattern>(state);
 
-		state.parse(out).one(&out->pattern);
+		PARSE().one(&out->pattern);
 
-		if (state.parse(out).tryEat(Keyword::As)) {
+		if (PARSE().tryEat(Keyword::As)) {
 			tpc::Identifier temp_ident;
-			state.parse(out).one(&temp_ident);
+			PARSE().one(&temp_ident);
 			out->as_identifier = temp_ident;
 		}
 
-		if (state.parse(out).tryEat(NamedOperator::Colon))
-			state.parse(out).one(&out->type_constraint);
+		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->type_constraint);
 		PST_RETURN out;
 	}
 
@@ -43,7 +41,7 @@ namespace pst {
 		return type_constraint.map([](const auto& value) { return value.give(); });
 	}
 
-	LangElement::HashAlg& FlowPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& FlowPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, as_identifier.has_value());
 		if (as_identifier.has_value()) addToHash(partial_hash, as_identifier.value());
 		addToHash(partial_hash, type_constraint.has_value());

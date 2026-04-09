@@ -5,14 +5,13 @@
 namespace pst {
 
 	MBox<Param> Param::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Param>(position);
+		auto out = makeBox<Param>(state);
 
-		state.parse(out).all(&out->name, NamedOperator::Colon);
+		PARSE().all(&out->name, NamedOperator::Colon);
 
-		state.parse(out).one(&out->type);
+		PARSE().one(&out->type);
 
-		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->initial);
+		if (PARSE().tryEat(NamedOperator::Assign)) PARSE().one(&out->initial);
 
 		PST_RETURN out;
 	}
@@ -36,7 +35,7 @@ namespace pst {
 		out << "}}";
 	}
 
-	LangElement::HashAlg& Param::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Param::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, initial.has_value());
 		return partial_hash;

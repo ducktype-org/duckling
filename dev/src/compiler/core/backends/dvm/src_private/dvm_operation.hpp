@@ -8,6 +8,11 @@ namespace compiler::backend_vm::internal {
 	using vm::code::builders::OpKind;
 
 	/**
+	 * @brief Represents a DVM operation which is a NoOp and is skipped in bytecode lowering.
+	 */
+	struct NoOpOperation {};
+
+	/**
 	 * @brief Represents a simple DVM operation that trivially maps to a DVM OpKind.
 	 */
 	struct SimpleOperation {
@@ -34,7 +39,7 @@ namespace compiler::backend_vm::internal {
 		lir::CastParameters cast_params;
 	};
 
-	using DVMOperation = std::variant<SimpleOperation, MetaOperation, CastOperation>;
+	using DVMOperation = std::variant<NoOpOperation, SimpleOperation, MetaOperation, CastOperation>;
 
 
 	/**

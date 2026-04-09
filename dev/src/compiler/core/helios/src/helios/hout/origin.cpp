@@ -19,7 +19,7 @@ namespace compiler::helios::code {
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> ElementOrigin::getPSTElement() const {
-		return pst_element.map([](const pst::LangElement::HashType& hash) {
+		return pst_element.map([](const pst::HashType& hash) {
 			auto element = pst::LangElement::getByStableHash(hash);
 			return element;
 		});
@@ -38,6 +38,17 @@ namespace compiler::helios::code {
 		if_opt_some(source_position, pos) { pos.extendWith(pst_element->getStablePosition()); }
 		if_opt_none(source_position) { source_position = pst_element->getStablePosition(); }
 		return { source_position, {}, false };
+	}
+
+	ElementOrigin elementOrigin(const ElementOrigin& left, const ElementOrigin& right) {
+		auto lsp = left.getStablePosition();
+		auto rsp = right.getStablePosition();
+		if_opt_some(lsp, lpos) {
+			if_opt_some(rsp, rpos) { lpos.extendWith(rpos); }
+			return { lpos, {}, false };
+		}
+		if_opt_none(lsp) { return { rsp, {}, rsp.empty() }; }
+		CORE_UNREACHABLE();
 	}
 
 	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements) {

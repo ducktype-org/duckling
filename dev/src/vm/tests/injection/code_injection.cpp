@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(separateGlobals);
 		TESTER_ADD_TEST(cyclicRepl);
 		TESTER_ADD_TEST(injectExistingFunction);
+		TESTER_ADD_TEST(runFunctionArgumentValidation);
 	}
 
 private:
@@ -259,6 +260,79 @@ private:
 		fs::File file(path("inject_code_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 		ASSERT_TRUE(!vm::api::loadFiles(pid, { file }).has_value());
+		vm::api::deinitAndValidate(pid);
+	}
+
+	void runFunctionArgumentValidation() {
+		vm::PID  pid = initProcess();
+		fs::File file(path("call_non_void_function.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		{
+			// Not enough arguments.
+			OwnedArgumentList arguments;
+			arguments.push_back(getIntVmValue(pid, 10));
+			auto func_args = createArgumentList(arguments);
+
+			assertExecutionPanickedWith(
+				runFunctionExpectPanic(pid, "summer", func_args),
+				"expects 2 arguments, but 1 were provided"
+			);
+
+			freeArguments(arguments);
+		}
+		{
+			// Too many arguments.
+			OwnedArgumentList arguments;
+			arguments.push_back(getIntVmValue(pid, 10));
+			arguments.push_back(getIntVmValue(pid, 20));
+			arguments.push_back(getIntVmValue(pid, 30));
+			auto func_args = createArgumentList(arguments);
+
+			assertExecutionPanickedWith(
+				runFunctionExpectPanic(pid, "summer", func_args),
+				"expects 2 arguments, but 3 were provided"
+			);
+
+			freeArguments(arguments);
+		}
+
+		{
+			// Argument type mismatch.
+			OwnedArgumentList arguments;
+			arguments.push_back(getIntVmValue(pid, 10));
+
+			auto i32_value = vm::api::getVmValue(pid, "i32");
+			ASSERT_TRUE(i32_value.has_value());
+			arguments.push_back(std::move(i32_value->vm_value));
+
+			auto func_args = createArgumentList(arguments);
+
+			assertExecutionPanickedWith(
+				runFunctionExpectPanic(pid, "summer", func_args),
+				"Type mismatch for argument 1 of function 'summer': expected i64, got i32"
+			);
+
+			freeArguments(arguments);
+		}
+
+		{
+			// VMValue from different process.
+			vm::PID other_pid = initProcess();
+
+			OwnedArgumentList arguments;
+			arguments.push_back(getIntVmValue(pid, 5));
+			arguments.push_back(getIntVmValue(other_pid, 99));
+			auto func_args = createArgumentList(arguments);
+
+			assertExecutionPanickedWith(
+				runFunctionExpectPanic(pid, "summer", func_args),
+				"VMValue for argument 1 comes from a different process"
+			);
+
+			freeArguments(arguments);
+			vm::api::deinitAndValidate(other_pid);
+		}
+
 		vm::api::deinitAndValidate(pid);
 	}
 };

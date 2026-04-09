@@ -4,9 +4,9 @@ use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
 use url::Url;
 
 use crate::{
-    DuckCtx, QpCtx,
+    DuckCtx,
     quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::git::GitClient},
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 fn generate_local_git_repo() -> TempDir {
@@ -63,8 +63,7 @@ fn clone_local_repo() {
     );
 
     let ctx = DuckCtx::default();
-    let qp_ctx = QpCtx::new(&ctx);
-    let _ = GitClient::clone_blocking(&source, &target, &qp_ctx).unwrap();
+    let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     assert!(target.exists());
     assert!(target.is_dir());
@@ -87,8 +86,7 @@ fn clone_local_repo_with_branch() {
     );
 
     let ctx = DuckCtx::default();
-    let qp_ctx = QpCtx::new(&ctx);
-    let _ = GitClient::clone_blocking(&source, &target, &qp_ctx).unwrap();
+    let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     assert_eq!(repo.head().unwrap().shorthand().unwrap(), "test-branch");
@@ -106,8 +104,7 @@ fn clone_local_repo_with_tag() {
     );
 
     let ctx = DuckCtx::default();
-    let qp_ctx = QpCtx::new(&ctx);
-    let _ = GitClient::clone_blocking(&source, &target, &qp_ctx).unwrap();
+    let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let mut opts = DescribeOptions::new();
@@ -133,8 +130,7 @@ fn clone_local_repo_with_rev() {
         Some(original_commit.id().to_string().into()),
     );
     let ctx = DuckCtx::default();
-    let qp_ctx = QpCtx::new(&ctx);
-    let _ = GitClient::clone_blocking(&source, &target, &qp_ctx).unwrap();
+    let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let new_commit = repo.head().unwrap().peel_to_commit().unwrap();

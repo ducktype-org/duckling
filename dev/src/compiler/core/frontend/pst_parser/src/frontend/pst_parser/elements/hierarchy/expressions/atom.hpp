@@ -11,6 +11,6 @@ namespace pst::expr {
 	public:
 		Atom() = delete;
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 	};
 }

@@ -4,25 +4,23 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> ExprStrValue::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> ExprStrValue::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
 		if (!state[0].isString()) {
 			// This should (probably) never happen with how it's called by the parser
 			state.logInt(makeBox<BadStrValueError>(pos));
-			fastForward(state, length);
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprStrValue>(pos, state[0].getValue());
-		state.parse(out).eatOne();
+		auto out = makeBox<ExprStrValue>(state, state[0].getValue());
+		PARSE().eatOne();
 
-		if (length > 1) {
-			state.logInt(makeBox<MoreThanStrValueError>(pos));
-			fastForward(state, length);
-		}
+		if (length > 1) state.logInt(makeBox<MoreThanStrValueError>(pos));
 
 		PST_RETURN out;
 	}
@@ -35,7 +33,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ExprStrValue::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ExprStrValue::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, string);
 		return partial_hash;
 	}

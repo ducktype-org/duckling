@@ -186,6 +186,10 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
+	void testFormatStrParsing() {
+		testJsonRelativePath("format_strings.duck", "format_strings.json");
+	}
+
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testNumericLiteralParsing() {
@@ -194,7 +198,7 @@ private:
 
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 4, "Expected 4 errors");
+		assertTrue(pst.getLogger()->errorCount() == 3, "Expected 3 errors");
 	}
 
 	void testUsingErrors() {
@@ -204,7 +208,7 @@ private:
 
 	void testParamListErrors() {
 		pst::PST<> pst = prepare(path("snippets/params_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 10, "Expected 10 errors");
+		assertTrue(pst.getLogger()->errorCount() == 7, "Expected 7 errors");
 	}
 
 	void testMissingSemiErr() {

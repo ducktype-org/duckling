@@ -1,14 +1,17 @@
+//! Various path helpers.
 use std::path::{Path, PathBuf};
 
 use crate::{
     QuackResult,
-    util_common::{env::Env, path_ops_ext::PathOpsExt},
+    util::{env::Env, path_ops_ext::PathOpsExt},
 };
 
-const DUCK_HOME: &str = "DUCK_HOME";
+/// Environmental variable overriding duck home root.
+const DUCK_HOME_ENV: &str = "DUCK_HOME";
 
+/// Get the root to the duck home, given an env snapshot and a user home directory.
 pub fn duck_home_path(env: &Env, user_home: &Path) -> QuackResult<PathBuf> {
-    env.get_os(DUCK_HOME)
+    env.get_os(DUCK_HOME_ENV)
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             let mut home = user_home.to_path_buf();

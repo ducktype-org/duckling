@@ -1,3 +1,4 @@
+//! Serde schemas used to (de-)serialize manifests.
 pub mod manifest;
 pub mod registry;
 
@@ -9,8 +10,11 @@ use serde::ser;
 use serde::ser::SerializeMap;
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
+/// A map with exactly one entry.
 pub struct OneEntryMap<K, V> {
+    /// The key in the map.
     pub key: K,
+    /// The key's value.
     pub value: V,
 }
 
@@ -40,7 +44,7 @@ where
 
 impl<'de, K, V> de::Deserialize<'de> for OneEntryMap<K, V>
 where
-    K: de::Deserialize<'de> + Eq + Hash,
+    K: de::Deserialize<'de>,
     V: de::Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

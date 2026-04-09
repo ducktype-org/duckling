@@ -12,7 +12,7 @@ namespace pst {
 		NAMED_CHILD(args, AtrArgList);
 
 	public:
-		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {
+		explicit Attribute(LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::Attribute;
 		}
 

@@ -9,6 +9,7 @@ namespace vm {
 	private:
 		std::vector<Frame>     frame_stack;
 		std::vector<std::byte> local_stack;
+		std::vector<Block*>    block_ref_stack;
 
 	public:
 		static constexpr u64 FRAMES_LENGTH = 16'384;
@@ -23,10 +24,22 @@ namespace vm {
 
 		static constexpr u64 STACK_LENGTH = FRAMES_LENGTH * BYTES_PER_FRAME;
 
-		ThreadStack(): frame_stack(FRAMES_LENGTH), local_stack(STACK_LENGTH) {}
+		/**
+		 * Also some heuristic limit on the number of blocks.
+		 */
+		static constexpr u64 BLOCKS_PER_FRAME = BYTES_PER_FRAME / 8;
+
+		static constexpr u64 BLOCK_REF_STACK_LENGTH = FRAMES_LENGTH * BLOCKS_PER_FRAME;
+
+		ThreadStack():
+			  frame_stack(FRAMES_LENGTH),
+			  local_stack(STACK_LENGTH),
+			  block_ref_stack(BLOCK_REF_STACK_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
 		auto getLocalStack() -> Ref<std::vector<std::byte>> { return &local_stack; }
+
+		auto getBlockRefStack() -> Ref<std::vector<Block*>> { return &block_ref_stack; }
 	};
 }

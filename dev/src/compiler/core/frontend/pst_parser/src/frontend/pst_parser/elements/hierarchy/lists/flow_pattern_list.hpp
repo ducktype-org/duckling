@@ -10,7 +10,7 @@ namespace pst {
 	 */
 	class FlowPatternList final: public List<FlowPattern, internal::NameGetters::flowPatternList> {
 	public:
-		explicit FlowPatternList(const dia::SourcePosition& pos): List(pos) {
+		explicit FlowPatternList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::FlowPatternList;
 		}
 

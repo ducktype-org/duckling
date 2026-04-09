@@ -17,23 +17,24 @@ fn create_sample_metadata() -> registry::Manifest {
         "license": "GPS",
         "description": ""
     },
-    "dependencies": {
-        "pkg1": {
+    "dependencies": [
+        {
+            "name": "pkg1",
             "version": ["2.3.4"],
             "source": {
                 "inner": {
                     "type": "registry",
-                    "registry_url": "xd"
+                    "registry-url": "xd"
                 }
             },
             "features": [],
             "pinned": false,
             "conditions": {
-                "package_features": []
+                "package-features": []
             }
         }
-    },
-    "dev_dependencies": {},
+    ],
+    "dev-dependencies": [],
     "features": {},
     "profiles": {}
 }
@@ -70,24 +71,22 @@ fn make_test_db() -> ManifestCache {
     ManifestCache::new(CacheLocation::Memory).unwrap()
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn add_and_fetch_metadata() {
+#[test]
+fn add_and_fetch_metadata() {
     let cache = make_test_db();
     cache
         .add_or_replace_manifest(&create_example_package(), create_sample_metadata())
-        .await
         .unwrap();
     let metadata = cache
         .get_manifest(&create_example_package())
-        .await
         .unwrap()
         .unwrap();
     assert_eq!(metadata, create_sample_metadata());
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn not_found_metadata() {
+#[test]
+fn not_found_metadata() {
     let cache = make_test_db();
-    let metadata = cache.get_manifest(&create_example_package()).await.unwrap();
+    let metadata = cache.get_manifest(&create_example_package()).unwrap();
     assert_eq!(metadata, None);
 }

@@ -12,9 +12,9 @@ namespace pst::expr {
 		NAMED_CHILD(block, CodeBlock);
 
 	public:
-		explicit BlockExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
+		explicit BlockExpr(const LangParserState& state): ExprElement(state, 200) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~BlockExpr() override = default;
 		void     dprint(std::ostream& out) const final;

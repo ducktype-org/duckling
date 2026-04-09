@@ -1,10 +1,27 @@
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/race_tester/race_tester.hpp>
 
 #include <tester/tester.hpp>
 
 #include <algorithm>
 #include <random>
 #include <set>
+#include <unordered_map>
+
+// strConcat specializations for result types used in race testing
+// These must be declared before including race_tester.hpp
+namespace base {
+	// Specialization for Optional<u64> — specific to hashMapRaceTest
+	static void strConcat(std::string& out, const Optional<u64>& opt) {
+		if (opt.empty()) {
+			out.append("Optional(empty)");
+		} else {
+			out.append("Optional(");
+			strConcat(out, opt.value());
+			out.append(")");
+		}
+	}
+}
 
 template<usize Size>
 struct BigObject final {
@@ -79,6 +96,8 @@ public:
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<4>);
 
 		TESTER_ADD_TEST(testGetAllKeyValuePairs);
+
+		TESTER_ADD_TEST(hashMapRaceTest);
 	}
 
 protected:
@@ -170,7 +189,7 @@ private:
 
 			for (u64 i = 0; i < count; i++) {
 				auto v       = rng() % 1'000'000;
-				auto put_res = map.maybePut(v, v * 10);
+				auto put_res = map.maybePut(BigObject<13>(v), BigObject<16>(v * 10));
 
 				if (put_res != nullptr) {
 					ASSERT_EQUAL(put_res->key, v);
@@ -262,7 +281,7 @@ private:
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map]() {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++)
-					map.maybePutAndUpdate(1ULL, 0ULL, [](Ref<u64> v) { *v += 10; });
+					map.maybePutAndUpdate(u64(1), u64(0), [](Ref<u64> v) { *v += 10; });
 			});
 		}
 
@@ -287,7 +306,7 @@ private:
 
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map, i]() {
-				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(1, j * thread_count + i);
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(u64(1), j * thread_count + i);
 			});
 		}
 
@@ -788,6 +807,130 @@ private:
 			});
 		}
 		ASSERT_EQUAL(map.size(), 0ULL);
+	}
+
+	/**
+	 * Race test for concurrent::ConHashMap using the RaceTester framework.
+	 * Tests maybePut, atMaybeCopy, and erase operations for linearizability.
+	 */
+	void hashMapRaceTest() {
+		using Key   = u64;
+		using Value = u64;
+
+		// Common interface for both implementations
+		class HashMapInterface {
+		public:
+			[[nodiscard]]
+			virtual bool maybePut(const Key& key, const Value& value)
+				= 0;
+			[[nodiscard]]
+			virtual base::Optional<Value> atMaybeCopy(const Key& key) const
+				= 0;
+			[[nodiscard]]
+			virtual bool erase(const Key& key)
+				= 0;
+
+			virtual ~HashMapInterface() = default;
+		};
+
+		// Wrapper for ConHashMap
+		class ConHashMapWrapper: public HashMapInterface {
+			concurrent::ConHashMap<Key, Value> map;
+
+		public:
+			bool maybePut(const Key& key, const Value& value) override {
+				auto result = map.maybePut(key, value);
+				return result != nullptr;
+			}
+
+			base::Optional<Value> atMaybeCopy(const Key& key) const override {
+				return map.atMaybeCopy(key);
+			}
+
+			bool erase(const Key& key) override { return map.erase(key); }
+		};
+
+		// Wrapper for std::unordered_map
+		class SequentialHashMapWrapper: public HashMapInterface {
+			std::unordered_map<Key, Value> map;
+
+		public:
+			bool maybePut(const Key& key, const Value& value) override {
+				auto [_, inserted] = map.try_emplace(key, value);
+				return inserted;
+			}
+
+			base::Optional<Value> atMaybeCopy(const Key& key) const override {
+				auto it = map.find(key);
+				if (it == map.end()) return base::Optional<Value>{};
+				return base::Optional{ it->second };
+			}
+
+			bool erase(const Key& key) override { return map.erase(key) > 0; }
+		};
+
+		// Run the race test multiple times for confidence
+		const usize reps           = 100;
+		const usize worker_count   = 2;
+		const usize ops_per_thread = 12;
+
+		for (usize rep = 0; rep < reps; ++rep) {
+			std::cerr << "\rRep: " << rep + 1 << " / " << reps;
+			auto tested     = makeBox<ConHashMapWrapper>();
+			auto sequential = makeBox<SequentialHashMapWrapper>();
+
+			using RaceTester = concurrent::tester::RaceTester<
+				HashMapInterface,
+				ConHashMapWrapper,
+				SequentialHashMapWrapper,
+				bool,
+				base::Optional<Value>>;
+
+			RaceTester race_tester{ tested.refMut(), sequential.ref() };
+
+			// Worker function that performs random operations
+			const std::function<void(u32, RaceTester::Executor_)> worker
+				= [](u32, RaceTester::Executor_ executor) {
+					  std::minstd_rand rng(std::random_device{}());
+
+					  for (usize i = 0; i < ops_per_thread; ++i) {
+						  // Use only one key because we want to test races on a single shard.
+					      // Running the test on multiple independent shards grows the search space.
+						  Key   key   = 1;
+						  Value value = rng() % 4;
+
+						  double op = static_cast<double>(rng() % 100) / 100.0;
+
+						  if (op < 0.30) {
+							  // maybePut operation (30%)
+							  executor.execute(
+								  base::strConcat("maybePut(", key, ", ", value, ")"),
+								  [key, value](Ref<HashMapInterface> map) {
+									  return map->maybePut(key, value);
+								  }
+							  );
+						  } else if (op < 0.65) {
+							  // atMaybeCopy operation (35%)
+							  executor.execute(
+								  base::strConcat("atMaybeCopy(", key, ")"),
+								  [key](Ref<HashMapInterface> map) { return map->atMaybeCopy(key); }
+							  );
+						  } else {
+							  // erase operation (35%)
+							  executor.execute(
+								  base::strConcat("erase(", key, ")"),
+								  [key](Ref<HashMapInterface> map) { return map->erase(key); }
+							  );
+						  }
+					  }
+				  };
+
+			// Run the test and check linearizability
+			assertTrue(
+				race_tester.runAndCheck(worker_count, worker), "ConHashMap should be linearizable."
+			);
+		}
+		std::cerr << "\n";
 	}
 };
 

@@ -1,8 +1,10 @@
-use crate::{QuackError, QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
+//! Managing a single dependency abstraction.
+use crate::{
+    QuackError, QuackResult, StrId, qp_bail,
+    quackpack::core::{FeatureName, InternedSource, Source, Version},
+};
 
 mod conditions;
-mod dependency_description;
-pub use dependency_description::*;
 mod dependencies;
 mod dependency_feature;
 use crate::quackpack::schemas::registry;
@@ -13,8 +15,6 @@ pub use dependency_feature::*;
 #[derive(Clone, Debug)]
 /// High level abstraction on a package's dependency.
 pub struct Dependency {
-    /// The dependency description.
-    desc: DependencyDescription,
     /// Features of this dependency.
     features: Vec<DependencyFeature>,
     /// Whether this dependency is pinned to a specific version.
@@ -22,7 +22,13 @@ pub struct Dependency {
     /// Optional conditions for this dependency to be enabled.
     conditions: Option<Conditions>,
     /// The real (unaliased) name of the dependency.
-    real_name: StrId,
+    name: StrId,
+    /// Alias specified in the manifest.
+    alias: Option<StrId>,
+    /// All versions of this dependency.
+    versions: Vec<Version>,
+    /// Source of this dependency.
+    source: InternedSource,
 }
 
 impl Dependency {
@@ -32,35 +38,42 @@ impl Dependency {
     /// 1. `is_pinned` is true and `desc` doesn't have a [`Registry`](super::Registry) source.
     /// 2. `is_pinned` is true and `desc.versions()` doesn't have a length 1.
     pub fn new(
-        desc: DependencyDescription,
+        name: StrId,
+        versions: Vec<Version>,
+        source: Source,
         features: Vec<DependencyFeature>,
         is_pinned: bool,
         conditions: Option<Conditions>,
-        real_name: StrId,
+        alias: Option<StrId>,
     ) -> QuackResult<Self> {
-        if is_pinned && !desc.source().is_registry() {
+        debug_assert_ne!(
+            Some(name),
+            alias,
+            "alias should be None, if it's the same as name"
+        );
+        if source.is_registry() && versions.is_empty() {
+            qp_bail!("a registry dependency must provide at least one version")
+        }
+        if is_pinned && !source.is_registry() {
             qp_bail!("only registry sources can be pinned")
         }
-        if is_pinned && desc.versions().len() != 1 {
+        if is_pinned && versions.len() != 1 {
             qp_bail!("pinned dependencies must specify exactly one version")
         }
         Ok(Self {
-            desc,
             features,
             is_pinned,
             conditions,
-            real_name,
+            name,
+            alias,
+            versions,
+            source: source.into(),
         })
     }
 
-    /// Get the dependency description.
-    pub fn desc(&self) -> &DependencyDescription {
-        &self.desc
-    }
-
     /// Get the real (unaliased) name of the dependency.
-    pub fn real_name(&self) -> StrId {
-        self.real_name
+    pub fn name(&self) -> StrId {
+        self.name
     }
 
     /// Get the list of dependency features.
@@ -80,6 +93,7 @@ impl Dependency {
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
     }
 
+    /// Get the required root packages mentioned in the manifest.
     pub fn enableing_features(&self) -> &[FeatureName] {
         let Some(conditions) = &self.conditions else {
             return &[];
@@ -90,13 +104,22 @@ impl Dependency {
         features
     }
 
+    /// Whether this dependency was aliased in the manifest.
+    pub fn is_aliased(&self) -> bool {
+        self.alias.is_some()
+    }
+
     /// Get an iterator over features that are enabled for the given features.
-    // NOTE: We take `Vec`, because it has trivially a copyable iterator (iterator over a slice).
-    pub fn enabled_features(&self, enabled_features: Vec<FeatureName>) -> Vec<FeatureName> {
+    pub fn enabled_features<I>(&self, enabled_features: I) -> Vec<FeatureName>
+    where
+        I: IntoIterator<Item = FeatureName>,
+        <I as IntoIterator>::IntoIter: Clone,
+    {
+        let iter = enabled_features.into_iter();
         self.features
             .iter()
             .filter_map(|feature| {
-                if feature.is_enabled_for(enabled_features.iter().copied()) {
+                if feature.is_enabled_for(iter.clone()) {
                     Some(feature.name())
                 } else {
                     None
@@ -104,34 +127,61 @@ impl Dependency {
             })
             .collect()
     }
+
+    /// Get the aliased name of this package.
+    /// If none, then this package has not been aliased.
+    pub fn alias(&self) -> Option<StrId> {
+        self.alias
+    }
+
+    /// Get versions of this package.
+    pub fn versions(&self) -> &[Version] {
+        &self.versions
+    }
+
+    /// Get the source of this package.
+    pub fn source(&self) -> InternedSource {
+        self.source
+    }
+
+    /// Get the effective name of this dependency.
+    ///
+    /// Helper for `self.alias().unwrap_or(self.name())`.
+    pub fn effective_name(&self) -> StrId {
+        self.alias.unwrap_or(self.name)
+    }
 }
 
-impl TryFrom<(&str, registry::Dependency)> for Dependency {
+impl TryFrom<registry::Dependency> for Dependency {
     type Error = QuackError;
 
-    fn try_from(value: (&str, registry::Dependency)) -> Result<Self, Self::Error> {
-        let (real_name, value) = value;
-        let real_name = real_name.into();
+    fn try_from(value: registry::Dependency) -> Result<Self, Self::Error> {
         let registry::Dependency {
+            name,
             version,
             source,
             features,
             pinned,
             conditions,
-            is_alias_for,
+            alias,
         } = value;
-        let manifest_name = is_alias_for.map(Into::into).unwrap_or(real_name);
-        let desc = DependencyDescription::new(manifest_name, version, source.try_into()?)?;
+        let alias = alias.map(StrId::from);
+        let name = name.into();
+        if alias == Some(name) {
+            qp_bail!("registry dependency `{name}` specified itself as an alias")
+        }
         let features = features
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()?;
         Self::new(
-            desc,
+            name,
+            version,
+            source.try_into()?,
             features,
             pinned,
             Some(conditions.try_into()?),
-            real_name,
+            alias,
         )
     }
 }
@@ -141,18 +191,14 @@ impl TryFrom<Dependency> for registry::Dependency {
 
     fn try_from(value: Dependency) -> Result<Self, Self::Error> {
         let Dependency {
-            desc,
             features,
             is_pinned,
             conditions,
-            real_name,
+            name,
+            alias,
+            versions,
+            source,
         } = value;
-        let is_alias_for = if real_name == desc.manifest_name() {
-            None
-        } else {
-            Some(real_name.into())
-        };
-        let (_, version, source) = desc.decompose();
         let features = features.into_iter().map(Into::into).collect();
         let conditions = match conditions {
             Some(conditions) => conditions.into(),
@@ -161,12 +207,13 @@ impl TryFrom<Dependency> for registry::Dependency {
             },
         };
         Ok(Self {
-            version,
+            version: versions,
             source: source.try_into()?,
             features,
             pinned: is_pinned,
             conditions,
-            is_alias_for,
+            alias: alias.map(Into::into),
+            name: name.into(),
         })
     }
 }

@@ -4,7 +4,7 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -66,9 +66,7 @@ namespace compiler::helios {
 		query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
 	) {
 		auto hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
-
 		if (!hout_expr->hasValue()) return {};
-
 		return querySymIDOfHOUTExpr(ctx, hout_expr->valueOrThrow().ref());
 	}
 }

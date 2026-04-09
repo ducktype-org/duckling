@@ -24,7 +24,7 @@ Tests:
           String: ""
         ExitCode: 0
 
-  comparison-chain:
+  comparison_chain:
     Cases:
       dvm:
         backend: dvm
@@ -128,7 +128,7 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-  
+
   coercions:
     Cases:
       dvm:
@@ -142,13 +142,17 @@ Tests:
           String: ""
         ExitCode: 0
 
-  default_init:
+  zero_init:
     Cases:
-      # @TODO: #2079 Add a DVM case when possible.
       llvm:
         backend: llvm
         Output:
-          String: "0\n0\n0\n0\n0\n0\n"
+          String: "0\n0\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "0\n0\n"
         ExitCode: 0
 
   strings:
@@ -156,6 +160,16 @@ Tests:
       llvm:
         backend: llvm
         Input:
-         String: "Test"
+          String: "Test"
         Output:
-          String: "Test\nHello, world!\n"
+          String: "Test\nHello, world!\nab\nbcd\nHello, world!\n"
+
+  chars:
+    Cases:
+      llvm:
+        backend: llvm
+        Input:
+          String: "Xd;"
+        Output:
+          String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
+          

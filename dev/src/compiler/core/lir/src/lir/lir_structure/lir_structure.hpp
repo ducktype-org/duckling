@@ -3,11 +3,13 @@
 #include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
+#include <frontend/pst_parser/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <mir/mir_structure/mir_metadata.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
@@ -28,9 +30,15 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf, 
-	AllocBox,
-	// @TODO: #1894 This approach may be temporary and depends on how we handle destructors in the future.
-	FreeBox,
+	BoxAlloc,
+	// @TODO: #1894 This approach (for both `BoxFree` and `ListFree`) may be temporary and 
+	// depends on how we handle destructors in the future.
+	BoxFree,
+	ListFree,
+
+	ListPush,
+	ListPop,
+	ListLen,
 
 	/**
 		@brief Placeholder.
@@ -131,6 +139,15 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Metadata for LIR local variables or function arguments.
+	 * Used by the backends for the DebugInfo.
+	 */
+	struct LIRLocalMetadata {
+		base::Optional<base::StrID>         source_code_name;
+		base::Optional<pst::StablePosition> position;
+	};
+
+	/**
 	 * @brief Description of a LIR Local variable or function argument.
 	 * @note This structure should only be stored directly in LIR Function, as part of the
 	 * description of a function. Other uses should use LocalRef to reference the variable
@@ -149,15 +166,19 @@ namespace compiler::lir {
 		 */
 		base::Optional<u64> parameter_index;
 
+		LIRLocalMetadata metadata;
+
 	private:
 		LIRLocal(
 			const base::Optional<helios::SymID> helios_id,
 			const CRef<tsl::TypeLayout>         layout,
-			const base::Optional<u64>           parameter_index
+			const base::Optional<u64>           parameter_index,
+			LIRLocalMetadata                    metadata
 		):
 			  helios_id(helios_id),
 			  layout(layout),
-			  parameter_index(parameter_index) {}
+			  parameter_index(parameter_index),
+			  metadata(metadata) {}
 
 		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
 
@@ -166,9 +187,22 @@ namespace compiler::lir {
 
 	public:
 		/**
+		 * @brief Creates LIR local data from MIR local data.
+		 * @important remember that LIRLocal should only be stored in a LIR function.
 		 * @note Do not use this function outside of LIR lowering.
+		 *
+		 * @param ctx
+		 * @param mir_local
+		 * @param new_parameter_index If the local is a parameter, this should be its index in the
+		 * LIR function's parameter list. This is needed to adjust for discarded parameters with
+		 * information-less types.
+		 * @return LIRLocal
 		 */
-		static LIRLocal fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local);
+		static LIRLocal fromMIR(
+			query::Context&     ctx,
+			mir::MIRLocalRef    mir_local,
+			base::Optional<u64> new_parameter_index = {}
+		);
 
 		/**
 		 * @brief Crates unique local with bool-type, and without
@@ -399,6 +433,14 @@ namespace compiler::lir {
 		const T& get() const {
 			return std::get<T>(value);
 		}
+
+		/**
+		 * @brief Whether a LIRValue holds a type T.
+		 */
+		template<class T>
+		[[nodiscard]] bool is() const {
+			return std::holds_alternative<T>(value);
+		}
 	};
 
 	/**
@@ -425,10 +467,26 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout> target_layout;
 	};
 
+	struct ListOperationParameters final {
+		/**
+		 * @brief The element layout for generic `ListPush` and `ListPop` operations.
+		 */
+		CRef<tsl::TypeLayout> element_layout;
+	};
+
 	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+	using InstrParameters
+		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
+
+	struct InstructionMetadata {
+		base::Optional<pst::StablePosition> position;
+
+		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
+
+		InstructionMetadata() = default;
+	};
 
 	/**
 	 * @brief Single instruction of LIR code.
@@ -438,8 +496,8 @@ namespace compiler::lir {
 		base::Optional<LIRPlace> output;
 		std::vector<LIRValue>    arguments;
 		InstrParameters          extra_params{ NoInstrParameters{} };
+		InstructionMetadata      metadata;
 
-		// @TODO: each Instruction should have source position reference
 
 		Instruction()                       = default;
 		Instruction(const Instruction&)     = default;
@@ -451,12 +509,14 @@ namespace compiler::lir {
 			const Operation          operation,
 			base::Optional<LIRPlace> output,
 			std::vector<LIRValue>    arguments,
+			InstructionMetadata      metadata,
 			InstrParameters          extra_parameters = NoInstrParameters{}
 		):
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
-			  extra_params(extra_parameters) {}
+			  extra_params(extra_parameters),
+			  metadata(metadata) {}
 	};
 
 	/**
@@ -467,6 +527,11 @@ namespace compiler::lir {
 	struct Block final {
 		std::vector<Instruction> instructions;
 		Instruction              terminator;
+	};
+
+	struct FunctionMetadata {
+		base::Optional<pst::StablePosition> position;
+		base::Optional<base::StrID>         source_code_name;
 	};
 
 	/**
@@ -483,6 +548,8 @@ namespace compiler::lir {
 		base::StableVector<LIRLocal> local_list;
 
 		std::vector<BlockRef> block_order;
+
+		FunctionMetadata metadata;
 
 		/**
 		 * @brief Checks if block order uniquely stores

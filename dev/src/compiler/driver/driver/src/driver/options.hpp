@@ -1,7 +1,6 @@
 #pragma once
 
 #include <global_state/backend_options.hpp>
-#include <linker/link.hpp>
 
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
@@ -120,12 +119,30 @@ namespace compiler::driver {
 		};
 
 		/**
+		 * Script compilation mode for .ds files.
+		 *
+		 * Compiles a script top-to-bottom (like REPL statements executed in sequence),
+		 * but produces a single persistent artifact (.dbc or native executable)
+		 * instead of executing immediately.
+		 *
+		 * Like ReplMode, does not set up a main package or incremental compilation.
+		 * The script file is extracted to global_state::ScriptContext during initialization.
+		 */
+		struct ScriptMode final {
+			fs::File                        script_file;
+			global_state::BackendOptions    backend_options;
+			options_types::ArtifactsOptions compilation_artifacts;
+			options_types::DebugOptions     debug_options;
+			options_types::ExecutionOptions execution_options;
+		};
+
+		/**
 		 * @note: in the future this might hold more modes,
-		 * like script compilation mode, lsp deamon, etc.
+		 * like lsp daemon, etc.
 		 * don't refrain from refactoring this file (and module) if needed.
 		 * We might also want to restrain compiler functionality based on the mode.
 		 */
-		std::variant<BareMode, PackageCompilationMode, ReplMode> mode;
+		std::variant<BareMode, PackageCompilationMode, ReplMode, ScriptMode> mode;
 
 		CompilerModeOfOperationAndOptions(BareMode bare_mode): mode(bare_mode) {}
 
@@ -133,5 +150,7 @@ namespace compiler::driver {
 			  mode(package_mode) {}
 
 		CompilerModeOfOperationAndOptions(ReplMode repl_mode): mode(repl_mode) {}
+
+		CompilerModeOfOperationAndOptions(ScriptMode script_mode): mode(script_mode) {}
 	};
 };

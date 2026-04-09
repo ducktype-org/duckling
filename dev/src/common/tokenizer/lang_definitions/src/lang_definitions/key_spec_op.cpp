@@ -20,7 +20,6 @@ namespace lang_def {
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
-	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
 	constexpr auto LANG_KEYWORDS_ARRAY
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			// These are Keywords that should always indicate a start of a statement.
@@ -80,6 +79,7 @@ namespace lang_def {
 
 			// This is the list of keywords that are general prefix operators
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Len, "len", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
@@ -132,10 +132,10 @@ namespace lang_def {
 			{ Keyword::Str, "str", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
 
-			{ Keyword::Vec, "vec", KeywordFlags() },
-			{ Keyword::Set, "set", KeywordFlags() },
-			{ Keyword::Dict, "dict", KeywordFlags() },
-			{ Keyword::Array, "array", KeywordFlags() },
+			{ Keyword::List, "List", KeywordFlags() },
+			{ Keyword::Set, "Set", KeywordFlags() },
+			{ Keyword::Dict, "Dict", KeywordFlags() },
+			{ Keyword::Array, "Array", KeywordFlags() },
 
 			{ Keyword::None, "none", KeywordFlags() },
 			{ Keyword::True, "true", KeywordFlags() },

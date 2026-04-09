@@ -2,6 +2,7 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <frontend/module_tree/file_id.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
@@ -14,6 +15,18 @@
 #include <mutex>
 
 namespace {
+	/**
+	 * @brief Map storing FileID of each parsed PST (by root element ID)
+	 * @note: as of right now it is needed only for QueryPrimaryCodeScopeFor for acquiring
+	 * the root scope via extendQueryModuleIDOfPST.
+	 * @TODO: #2289 Either delete root scopes and add to PST some kind of "module nodes" or put
+	 * information from this map into PST nodes.
+	 *
+	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used
+	 * during PST construction/association; must be safe if PST is built concurrently.
+	 */
+	concurrent::ConHashMap<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
+
 	/**
 	 * @brief A value pair storing the information about a file.
 	 */
@@ -37,7 +50,7 @@ namespace {
 namespace compiler::frontend {
 
 	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
-		  state_lock(base::makeBox<concurrent::AtomicFlagSpinlock>()),
+		  state_lock(base::makeBox<std::recursive_mutex>()),
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
@@ -72,7 +85,7 @@ namespace compiler::frontend {
 	}
 
 	void SourceFile::update() {
-		std::lock_guard lock(*state_lock);
+		std::scoped_lock lock(*state_lock);
 
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 
@@ -87,6 +100,7 @@ namespace compiler::frontend {
 	}
 
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
+		std::scoped_lock lock(*state_lock);
 		if (!component_hash.has_value()) {
 			auto m_path_component_hash = ModuleTree::getPathComponentHash(linked_module);
 			component_hash = hashing::ComponentHash(m_path_component_hash, lang_file_name);
@@ -95,14 +109,29 @@ namespace compiler::frontend {
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
-		std::lock_guard lock(*state_lock);
+		std::scoped_lock lock(*state_lock);
 
 		// If component hash changed, reset parse tree
 		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
 		} else {
-			// @TODO: #1879 Program chosen as default type
-			parse_tree.emplace(pst::PST(file, pst::PSTType::Program, getComponentHash()));
+			// @TODO: #1879 Program chosen as default type for non_REPL
+			auto pst_type = getModuleRef(linked_module)->isReplModule() ? pst::PSTType::Script
+			                                                            : pst::PSTType::Program;
+			parse_tree.emplace(pst::PST(file, pst_type, getComponentHash()));
+
+			auto root_optional = parse_tree.value().getRootElement().illegalAccess();
+			if (root_optional.has_value()) {
+				auto root_id          = root_optional.value()->getID();
+				auto maybe_put_result = root_element_file_back_map.maybePut(root_id, getFileID());
+				if (!maybe_put_result) {
+					CORE_ASSERT(
+						root_element_file_back_map.getCopy(root_id) == getFileID(),
+						"Root element ID already exists in back map with a different file ID"
+					);
+				}
+			}
+
 			return &parse_tree.value();
 		}
 	}
@@ -134,10 +163,18 @@ namespace compiler::frontend {
 		return *path_registry.at(abs_path)->content;
 	}
 
-	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
+	void SourceFile::invalidateComponentHash() {
+		std::scoped_lock lock(*state_lock);
+		component_hash.reset();
+	}
 
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
+
+		if (source_file->parse_tree.has_value()) {
+			auto root_id = source_file->parse_tree.value().getRootElement().illegalAccess();
+			if (root_id.has_value()) root_element_file_back_map.erase(root_id.value()->getID());
+		}
 
 		// Remove the `Path -> (SourceFiles, SharedView)` if the value vector is empty.
 		path_registry.eraseIf(abs_path, [&](Ref<PathState> state) {
@@ -168,5 +205,9 @@ namespace compiler::frontend {
 			}
 			if (!is_tracked) CORE_PANIC("dangling reference used after removing SourceFile");
 		});
+	}
+
+	base::Optional<FileID> getFileIDOfPSTRoot(pst::PstID root_element_id) {
+		return root_element_file_back_map.atMaybeCopy(root_element_id);
 	}
 }

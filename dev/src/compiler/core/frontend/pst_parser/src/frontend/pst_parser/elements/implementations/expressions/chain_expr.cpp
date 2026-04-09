@@ -6,12 +6,12 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	i64 ChainExpr::toNextLink(const LangParserState& state, i64 length) {
-		CORE_ASSERT(length > 0, "Illegal max length to next link");
+	i64 ChainExpr::toNextLink(const LangParserState& state) {
+		CORE_ASSERT(state.ctokens().size() > 0, "Illegal max length to next link");
 
 		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
-		PST_WHILE(fwd < length) {
+		PST_WHILE(!state[fwd].is(Token::Type::Sentinel)) {
 			if (state[fwd].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)
 			    || state[fwd].isBracketGroup(lexer::Token::Square)
@@ -24,37 +24,34 @@ namespace pst::expr {
 		return fwd;
 	}
 
-	MBox<ExprElement> ChainExpr::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> ChainExpr::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
-		i64 fwd = toNextLink(state, length);
-		if (fwd == length) return Lower::parse(state, length);
+		i64 fwd = toNextLink(state);
+		if (state[fwd].is(Token::Type::Sentinel)) return Lower::parse(state);
 
-		auto out = makeBox<ChainExpr>(state.getPosition());
+		auto out = makeBox<ChainExpr>(state);
 
-		state.parse(out).with(&out->atom, Lower::parse, +fwd);
-		length -= fwd;
+		PARSE().autoFallbackLen(fwd).with(&out->atom, Lower::parse);
 
-		PST_WHILE(length > 0) {
-			fwd = toNextLink(state, length);
+		PST_WHILE(state.ctokens().size() > 0) {
+			fwd = toNextLink(state);
 			MBox<ExprElement> extension;
 			if (state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)) {
-				state.parse(out).with(&extension, Access::parse, +fwd);
+				PARSE().autoFallbackLen(fwd).with(&extension, Access::parse);
 			} else if (state[0].isBracketGroup(lexer::Token::Round)
 			           || state[0].isBracketGroup(lexer::Token::Square)) {
-				state.parse(out).with(&extension, Call::parse, +fwd);
+				PARSE().autoFallbackLen(fwd).with(&extension, Call::parse);
 			} else {
 				state.logInt(makeBox<BadChainExprError>(
 					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())
 				));
-				fastForward(state, fwd);
 			}
 			if (extension) {
 				out->chain.emplace_back(nullptr);
-				state.parse(out).assign(&out->chain.back(), std::move(extension));
+				PARSE().assign(&out->chain.back(), std::move(extension));
 			}
-			length -= fwd;
 		}
 
 		PST_RETURN out;
@@ -79,7 +76,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ChainExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ChainExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, chain.size());
 		return partial_hash;
 	}

@@ -2,7 +2,7 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -193,11 +193,21 @@ namespace compiler::mir {
 		return local_list.last();
 	}
 
-	/**
-	 * Creates a temporary local value, and also sets its lifetime scope.
-	 */
+	MIRLocalMutRef FunctionBuilder::getTmpForReusableExpr(
+		const helios::code::ReusableExpr& reusable_expr, const ScopeRef scope
+	) {
+		auto expr_id = reusable_expr.inner->getID();
+		if (auto found = reusable_expr_locals.atMaybeCopy(expr_id); found.has_value())
+			return found.value();
+
+		const auto symbol_type = reusable_expr.expression_type.getSymbolType();
+		auto       tmp         = addTmp(symbol_type, scope);
+		reusable_expr_locals.put(expr_id, tmp);
+		return tmp;
+	}
+
 	[[nodiscard]]
-	MIRLocalMutRef FunctionBuilder::addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
+	MIRLocalMutRef FunctionBuilder::addTmp(const tsh::SymbolType<> type, const ScopeRef scope) {
 		local_list.emplaceBack(MIRLocal{ type });
 		auto tmp = local_list.last();
 		tmp->setLifetimeScope(scope);
@@ -205,7 +215,7 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * Creates a temporary local value, i.e. local value
+	 * Creates an anonymous temporary local value, i.e. local value
 	 * not arising from variable written directly in the Duckling source code.
 	 * Sets its lifetime scope to no_lifetime_scope.
 	 */

@@ -35,11 +35,11 @@ private:
 			);
 
 			assertTrue(imd->implements.empty(), "I1 should not implement anything");
-			assertTrue(imd->virtual_methods.size() == 2, "I1 should have two virtual methods");
+			assertTrue(imd->available_methods.size() == 2, "I1 should have two virtual methods");
 			assertTrue(imd->vtable.size() == 1, "I1 should have foo in it's vtable");
 
-			auto foo_type = imd->virtual_methods[base::StrID("foo")];
-			auto bar_type = imd->virtual_methods[base::StrID("bar")];
+			auto foo_type = imd->available_methods[base::StrID("foo")];
+			auto bar_type = imd->available_methods[base::StrID("bar")];
 			auto vt_foo   = imd->vtable[base::StrID("foo")];
 			assertTrue(foo_type == bar_type, "I2's methods should have the same type");
 			assertTrue(foo_type == expected_method_type, "I1's method have the wrong type");
@@ -59,7 +59,7 @@ private:
 				"I2 should be an interface"
 			);
 			assertTrue(imd->implements.empty(), "I2 should not implement anything");
-			assertTrue(imd->virtual_methods.empty(), "I2 should not have any virtual methods");
+			assertTrue(imd->available_methods.empty(), "I2 should not have any virtual methods");
 			assertTrue(imd->vtable.empty(), "I2 should not implement any virtual methods");
 
 			return;
@@ -81,10 +81,12 @@ private:
 			}
 
 			assertTrue(imd->implements.empty(), "Parent should not implement anything");
-			assertTrue(imd->virtual_methods.size() == 1, "Parent should declare one virtual method");
+			assertTrue(
+				imd->available_methods.size() == 1, "Parent should declare one virtual method"
+			);
 			assertTrue(imd->vtable.size() == 1, "Parents' vtable should contain one method");
 
-			auto get_age_type        = imd->virtual_methods[base::StrID("getAge")];
+			auto get_age_type        = imd->available_methods[base::StrID("getAge")];
 			auto vtable_get_age_type = imd->vtable[base::StrID("getAge")];
 			assertTrue(get_age_type == method_type, "Invalid Parent method type");
 			assertTrue(vtable_get_age_type == method_impl_type, "Invalid Parent method type");
@@ -96,14 +98,14 @@ private:
 	}
 
 	void checkChild(
-		vm::TypeCRef                     type,
-		vm::TypeCRef                     super_type,
-		const std::vector<vm::TypeCRef>& interfaces,
-		base::StrID                      expected_i1_foo_impl,
-		vm::TypeCRef                     expected_child_method,
-		base::StrID                      expected_child_get_age_impl,
-		base::StrID                      expected_child_i1_impl,
-		base::StrID                      expected_child_cry_impl
+		vm::TypeCRef                            type,
+		vm::TypeCRef                            super_type,
+		const std::unordered_set<vm::TypeCRef>& interfaces,
+		base::StrID                             expected_i1_foo_impl,
+		vm::TypeCRef                            expected_child_method,
+		base::StrID                             expected_child_get_age_impl,
+		base::StrID                             expected_child_i1_impl,
+		base::StrID                             expected_child_cry_impl
 	) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
@@ -116,19 +118,13 @@ private:
 				variant_default { fail("Child should be a class"); }
 			}
 			assertTrue(
-				std::ranges::equal(
-					imd->implements,
-					interfaces,
-					// Custom comparison needed since one is nonconst.
-					[](vm::TypeCRef a, vm::TypeCRef b) { return a == b; }
-				),
-				"Child implements wrong interfaces"
+				imd->implements == interfaces, base::strConcat("Child implements wrong interfaces")
 			);
 
-			assertTrue(imd->virtual_methods.size() == 1, "Child should declare one virtual method");
+			assertTrue(imd->available_methods.size() == 4, "Child should have 4 available methods");
 			assertTrue(imd->vtable.size() == 4, "Child should have 4 method in its vtable");
 
-			auto cry_type = imd->virtual_methods[base::StrID("cry")];
+			auto cry_type = imd->available_methods[base::StrID("cry")];
 			assertTrue(cry_type == expected_child_method, "Invalid Child vmethod type: cry()");
 
 			auto vt_foo     = imd->vtable[base::StrID("foo")];
@@ -168,7 +164,9 @@ private:
 			}
 
 			assertTrue(imd->implements.empty(), "PietMondrian should implement no interfaces");
-			assertTrue(imd->virtual_methods.empty(), "PietMondrian should have no virtual methods");
+			assertTrue(
+				imd->available_methods.empty(), "PietMondrian should have no virtual methods"
+			);
 			assertTrue(imd->vtable.empty(), "PietMondrian's  vtable should be empty");
 
 			return;
@@ -191,13 +189,13 @@ private:
 		auto join_response = vm::api::join(pid);
 		assertTrue(join_response.has_value(), "Join failed (1)");
 
-		auto        pod           = getType(pid, "POD");
-		auto        i1            = getType(pid, "I1");
-		auto        i2            = getType(pid, "I2");
-		auto        parent        = getType(pid, "Parent");
-		auto        child         = getType(pid, "Child");
-		auto        piet_mondrian = getType(pid, "PietMondrian");
-		std::vector interfaces{ i1, i2 };
+		auto               pod           = getType(pid, "POD");
+		auto               i1            = getType(pid, "I1");
+		auto               i2            = getType(pid, "I2");
+		auto               parent        = getType(pid, "Parent");
+		auto               child         = getType(pid, "Child");
+		auto               piet_mondrian = getType(pid, "PietMondrian");
+		std::unordered_set interfaces{ i1, i2 };
 
 		auto i1_method           = getType(pid, "method_I1_int");
 		auto i1_foo_impl         = base::StrID("I1_foo_impl");

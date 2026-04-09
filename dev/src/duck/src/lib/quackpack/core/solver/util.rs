@@ -11,14 +11,17 @@ use crate::{
     },
 };
 
-pub fn get_possible_realisations(
+/// For a given dpendency entry from the manifest and
+/// given all the found versions of a package from some location,
+/// find all the packages satisfying the dependency.
+pub fn get_possible_realizations(
     dependency_description: &Dependency,
     versions_for_location: &HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
 ) -> QuackResult<Vec<ExpandedPackage>> {
     if dependency_description.is_pinned() {
+        // For a pinned dependency only one package can be a realization.
         let version = dependency_description
-            .desc()
             .versions()
             .first()
             .context_internal("Pinned dependency should have exactly one version specified")?;
@@ -34,11 +37,12 @@ pub fn get_possible_realisations(
         ))) else {
             return Ok(vec![]);
         };
+        // Baseline versions are the versions specified in the manifest,
+        // with which we want to check the compatibility of the existing packages.
         let baseline_versions = if location.is_local() || location.is_git() {
             vec![None]
         } else {
             dependency_description
-                .desc()
                 .versions()
                 .iter()
                 .copied()
@@ -78,16 +82,16 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, QpCtx, StrId,
+        DuckCtx, StrId,
         quackpack::core::{
             Version, parse_manifest,
             types_common::{
                 ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
                 Location,
             },
-            util::get_possible_realisations,
+            util::get_possible_realizations,
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -95,6 +99,7 @@ mod test {
         let manifest = dir.path().join("x");
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
+        dir.path().try_fsync_dir().unwrap();
         (dir, manifest)
     }
 
@@ -113,12 +118,11 @@ dependencies:
 "#,
         );
         let ctx = DuckCtx::default();
-        let pkg = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
-            .all_dependencies()
-            .get(&StrId::new("b"))
+            .get_by_name(StrId::new("b"))
             .unwrap();
         let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
@@ -140,7 +144,7 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
             .unwrap();
         assert_eq!(
             res,
@@ -165,12 +169,11 @@ dependencies:
 "#,
         );
         let ctx = DuckCtx::default();
-        let pkg = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
-            .all_dependencies()
-            .get(&StrId::new("b"))
+            .get_by_name(StrId::new("b"))
             .unwrap();
         let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
@@ -192,7 +195,7 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
             .unwrap();
         assert_eq!(
             HashSet::from_iter(res),

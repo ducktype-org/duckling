@@ -5,8 +5,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> Ternary::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> Ternary::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
@@ -20,24 +22,20 @@ namespace pst::expr {
 			if (state[i].is(Keyword::If)) {
 				if (if_found) {
 					state.logInt(makeBox<MultipleTernaryError>(pos));
-					fastForward(state, length);
 					return nullptr;
 				}
 				if (i != 0) {
 					state.logInt(makeBox<ImproperTernaryError>(pos));
-					fastForward(state, length);
 					return nullptr;
 				}
 				if (!if_found) if_found = true;
 			} else if (state[i].is(Keyword::Then)) {
 				if (!if_found) {
 					state.logInt(makeBox<PartialTernaryError>(pos));
-					fastForward(state, length);
 					return nullptr;
 				}
 				if (then_found) {
 					state.logInt(makeBox<MultipleTernaryError>(pos));
-					fastForward(state, length);
 					return nullptr;
 				}
 				if (!then_found) {
@@ -47,12 +45,10 @@ namespace pst::expr {
 			} else if (state[i].is(Keyword::Else)) {
 				if (!if_found || !then_found) {
 					state.logInt(makeBox<PartialTernaryError>(pos));
-					fastForward(state, length);
 					return nullptr;
 				}
 				if (else_found) {
 					state.logInt(makeBox<MultipleTernaryError>(pos));
-					fastForward(state, length);
 					return nullptr;
 				}
 				if (!else_found) {
@@ -61,23 +57,23 @@ namespace pst::expr {
 				}
 			}
 		}
-		if (!if_found) return Lower::parse(state, length);
+		if (!if_found) return Lower::parse(state);
 		if (if_found && !else_found) {
 			state.logInt(makeBox<PartialTernaryError>(pos));
-			fastForward(state, length);
 			return nullptr;
 		}
 
-		auto out = makeBox<Ternary>(pos);
+		auto out = makeBox<Ternary>(state);
 
-		state.parse(out).one(Keyword::If);
-		state.parse(out).with(&out->condition, Lower::parse, then_fwd - 1);
+		PARSE().one(Keyword::If);
+		PARSE().autoFallbackLen(then_fwd - 1).with(&out->condition, Lower::parse);
 
-		state.parse(out).one(Keyword::Then);
-		state.parse(out).with(&out->if_true, Lower::parse, else_fwd - then_fwd - 1);
+		PARSE().one(Keyword::Then);
+		PARSE().autoFallbackLen(else_fwd - then_fwd - 1).with(&out->if_true, Lower::parse);
 
-		state.parse(out).one(Keyword::Else);
-		state.parse(out).with(&out->if_false, Lower::parse, length - else_fwd - 1);
+		PARSE().one(Keyword::Else);
+		PARSE().autoFallbackLen(length - else_fwd - 1).with(&out->if_false, Lower::parse);
+
 		PST_RETURN out;
 	}
 
@@ -94,7 +90,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Ternary::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Ternary::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

@@ -5,7 +5,7 @@
 namespace pst {
 	class Return final: public Action {
 	public:
-		explicit Return(const dia::SourcePosition& position): Action(position) {}
+		explicit Return(const LangParserState& state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Return() final = default;

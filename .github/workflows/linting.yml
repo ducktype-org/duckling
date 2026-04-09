@@ -36,10 +36,10 @@ jobs:
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install gvc, LLVM and nlohmann_json
-        run: sudo apt -y install libgraphviz-dev llvm-19 llvm-19-dev nlohmann-json3-dev ${{ env.CXX_COMPILER }} ${{ env.CC_COMPILER }}
+        run: sudo apt -y install libgraphviz-dev llvm-19 clang-19 llvm-19-dev nlohmann-json3-dev ${{ env.CXX_COMPILER }} ${{ env.CC_COMPILER }}
         # @TODO: Remove nlohmann-json3-dev dependency from here. It was added, because linter
         # didn't see nlohmann_json library for some reason. It should be removed, because it is
         # already added through CMake and version from package manager and in our configuration may differ.
@@ -94,7 +94,7 @@ jobs:
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Fetch origin/main for the following steps, because by default repo on the runners contains just the bare-minimum.
       - name: Fetch origin/main

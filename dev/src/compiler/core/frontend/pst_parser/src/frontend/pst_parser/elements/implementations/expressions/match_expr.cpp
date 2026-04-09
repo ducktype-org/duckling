@@ -6,39 +6,38 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> MatchExpr::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> MatchExpr::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
-		if (!state[0].is(Keyword::Match)) return Lower::parse(state, length);
+		if (!state[0].is(Keyword::Match)) return Lower::parse(state);
 
-		auto position = state.getPosition();
-		auto out      = makeBox<MatchExpr>(position);
+		auto out = makeBox<MatchExpr>(state);
 
 		if (!assertStmtChoice<MatchExpr>(state, state[0].is(Keyword::Match))) return nullptr;
-		state.parse(out).one(Keyword::Match);
+		PARSE().one(Keyword::Match);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
 			state.logInt(makeBox<MatchRoundBracketError>(state.getPosition()));
 			return nullptr;
 		}
 
-		state.goDown();
-		state.parse(out).one(&out->value_to_match);
-		state.goUpAndSkip();
+		PARSE().goDown();
+		PARSE().one(&out->value_to_match);
+		PARSE().goUpAndSkip();
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.logInt(makeBox<MatchCurlyBracketError>(state.getPosition()));
 			return nullptr;
 		}
-		state.parse(out).goDown();
+		PARSE().goDown();
 
 		PST_WHILE(true) {
 			if (state[0].is(Keyword::Case)) {
 				MBox<MatchCase> match_case;
-				state.parse(out).one(&match_case);
+				PARSE().one(&match_case);
 				if (match_case) {
 					out->cases.emplace_back(nullptr);
-					state.parse(out).assign(&out->cases.back(), std::move(match_case));
+					PARSE().assign(&out->cases.back(), std::move(match_case));
 				}
 			} else {
 				break;
@@ -47,7 +46,7 @@ namespace pst::expr {
 		// A non-case in a match expression.
 		if (state.notEmpty()) state.logInt(makeBox<NotACaseExpression>(state.getPosition()));
 
-		state.parse(out).goUpAndSkip();
+		PARSE().goUpAndSkip();
 		PST_RETURN out;
 	}
 
@@ -67,7 +66,7 @@ namespace pst::expr {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& MatchExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& MatchExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, cases.size());
 		return partial_hash;
 	}

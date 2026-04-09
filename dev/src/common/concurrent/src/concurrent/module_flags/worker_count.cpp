@@ -1,24 +1,36 @@
 #include "worker_count.hpp"
 
-#include <concurrent/worker/worker_manager.hpp>
-
 #include <base/except/exceptions.hpp>
+
+#include <atomic>
+#include <iostream>
 
 namespace concurrent::worker {
 
 	namespace {
-		constinit u64 worker_count = 0;
+		constinit std::atomic<u64> worker_count{ 0 };
 	}
 
 	void setWorkerCount(u64 value) {
-		CORE_ASSERT(worker_count == 0, "Worker count can only be set once.");
-		worker_count = value;
-		worker::WorkerManager::setWorkers(static_cast<usize>(value));
+		auto previous = worker_count.exchange(value);
+		CORE_ASSERT(previous == 0, "Worker count can only be set once.");
 	}
 
 	u64 getWorkerCount() {
-		CORE_ASSERT(worker_count != 0, "Worker count has not been set.");
-		return worker_count;
+		auto count = worker_count.load(std::memory_order_relaxed);
+		if (count == 0) {
+			setWorkerCount(1);
+			count = 1;
+
+			// @TODO: #2038 likely change that.
+			// This intentionally does not use the logger as this is a temporary warning,
+			// not a proper log, as well as to keep concurrent module dependent only on base.
+			std::cerr << "Warning: Worker count was not set, defaulting to 1 worker.\n";
+		}
+
+		CORE_ASSERT(count != 0, "Worker count has not been set.");
+
+		return count;
 	}
 
 }

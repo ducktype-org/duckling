@@ -5,7 +5,7 @@
 namespace pst {
 	class Continue final: public Action {
 	public:
-		explicit Continue(const dia::SourcePosition& position): Action(position) {}
+		explicit Continue(const LangParserState& state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Continue() final = default;

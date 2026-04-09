@@ -15,4 +15,3 @@ const C: i32 = B * 2;
 # Left is deduced to type 'i64' right is deduced to type 'i32'
 const INVALID_ADD = 10 + 0.125;                         # i32 x f32
 const CHAIN_MIXED_TYPES_TRUE = 3.0 < 3.125 < 3.5 < 42;  # f32 x f32 x f32 x i32
-const INVALID_MODULO = 10.5 % 2.0;

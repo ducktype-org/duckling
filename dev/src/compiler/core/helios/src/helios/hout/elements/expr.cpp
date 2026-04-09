@@ -7,9 +7,10 @@
 
 #include "../visitors.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <typesystem/higher/queries.hpp>
+#include <tsh/queries.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -23,9 +24,11 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(LiteralUnitExpr)
 	EXPR_VISITOR(LiteralNumericExpr)
 	EXPR_VISITOR(LiteralBoolExpr)
+	EXPR_VISITOR(LiteralCharExpr)
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
 	EXPR_VISITOR(IdentifierExpr)
+	EXPR_VISITOR(ReusableExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
 	EXPR_VISITOR(TernaryOperatorExpr)
@@ -43,6 +46,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(DefaultValueExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
+	EXPR_VISITOR(ListPushExpr)
+	EXPR_VISITOR(ListPopExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context&, ElementOrigin origin):
 		  Expr(
@@ -118,11 +123,32 @@ namespace compiler::helios::code {
 		return makeBox<LiteralBoolExpr>(expression_type, origin, value);
 	}
 
+	LiteralCharExpr::LiteralCharExpr(query::Context&, const ElementOrigin& origin, char value):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  tsh::getCharType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
+			  origin
+		  ),
+		  value(value) {}
+
+	void LiteralCharExpr::debugPrint(std::ostream& out) const { out << "'" << value << "'"; }
+
+	LiteralCharExpr::LiteralCharExpr(
+		const tsh::ExpressionType<>& expression_type, const ElementOrigin& origin, const char value
+	):
+		  Expr(expression_type, origin),
+		  value(value) {}
+
 	LiteralStringExpr::LiteralStringExpr(
 		query::Context&, ElementOrigin origin, const base::StrID value
 	):
 		  Expr(
-
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
 					  tsh::getStringType(),
@@ -134,6 +160,10 @@ namespace compiler::helios::code {
 			  origin
 		  ),
 		  value(value) {}
+
+	Box<Expr> LiteralCharExpr::clone() const {
+		return makeBox<LiteralCharExpr>(expression_type, origin, value);
+	}
 
 	LiteralStringExpr::LiteralStringExpr(
 		const tsh::ExpressionType<>& expression_type, ElementOrigin origin, const base::StrID value
@@ -203,13 +233,74 @@ namespace compiler::helios::code {
 		return makeBox<IdentifierExpr>(expression_type, origin, symbol);
 	}
 
-	tsh::AbstractType builtinOperationToReturnType(
-		query::Context&, BuiltinBinary operation, tsh::AbstractType argument_type
+	ReusableExpr::ReusableExpr(query::Context&, Box<Expr> inner, const bool first_use):
+		  Expr(inner->expression_type, inner->origin),
+		  inner(std::move(inner)),
+		  first_use(first_use) {}
+
+	void ReusableExpr::debugPrint(std::ostream& out) const {
+		if (first_use)
+			out << "[tmp](";
+		else
+			out << "[reuse](";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> ReusableExpr::clone() const {
+		// Using a concurrent static map isn't particularly elegant. Another solution would be to
+		// add a "cloning context" (by default empty) to the clone methods and pass it around. It
+		// could then also be a simple sequential data structure.
+		// Consider adding a cloning context if we find more use cases for it, but for now
+		// this is a simple solution for a local problem.
+		static concurrent::ConHashMap<HOUTExprID, SharedBox<Expr>> inner_id_to_cloned;
+
+		// We want to clone the inner expression only once, and reuse the cloned version for all
+		// reusable expressions which pointed to the same inner expression. Hence, we keep a map
+		// from the inner ID of the cloned expression to its clone
+		// Note that when the reusable expressions get cloned *again*, the ID of the inner *clone*
+		// is taken as the key to the map, and the clone of the clone is inserted.
+		auto inner_cloned = [&] -> SharedBox<Expr> {
+			auto inner_id = inner->getID();
+			if (!inner_id_to_cloned.contains(inner_id)) {
+				// Attempt to populate the map only if it doesn't already contain a cloned version
+				// of the inner expression. This might fail if another thread populated the map after
+				// the `contains` check above, in which case all is good, and we ignore the failure.
+				inner_id_to_cloned.maybePut(inner_id, SharedBox(inner->clone()));
+			}
+			return *inner_id_to_cloned.at(inner_id);
+		}();
+
+		return makeBox<ReusableExpr>(inner_cloned, first_use);
+	}
+
+	Box<Expr> ReusableExpr::nextUse() const {
+		return makeBox<ReusableExpr>(inner, /*first_use=*/false);
+	}
+
+	ReusableExpr::ReusableExpr(const SharedBox<Expr>& inner, const bool first_use):
+		  Expr(inner->expression_type, inner->origin),
+		  inner(inner),
+		  first_use(first_use) {}
+
+	tsh::AbstractType builtinBinaryOperationToReturnType(
+		query::Context&         ctx,
+		const BuiltinBinary     operation,
+		const tsh::AbstractType lhs_type,
+		const tsh::AbstractType rhs_type
 	) {
 		using enum BuiltinBinary;
 		switch (operation) {
 		case IntegerAdd:
+			if ((lhs_type.getKind() == tsh::Kind::Char && rhs_type.getKind() == tsh::Kind::Integral)
+			    || (lhs_type.getKind() == tsh::Kind::Integral
+			        && rhs_type.getKind() == tsh::Kind::Char))
+				return tsh::getCharType();
+			return lhs_type;
 		case IntegerSub:
+			if (lhs_type.getKind() == tsh::Kind::Char && rhs_type.getKind() == tsh::Kind::Char)
+				return tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned);
+			return lhs_type;
 		case IntegerMul:
 		case IntegerDiv:
 		case IntegerMod:
@@ -220,7 +311,7 @@ namespace compiler::helios::code {
 		case FloatDiv:
 		case FloatMod:
 		case FloatPow:
-			return argument_type;
+			return lhs_type;
 		case IntegerLt:
 		case IntegerGt:
 		case IntegerLteq:
@@ -238,7 +329,7 @@ namespace compiler::helios::code {
 			return tsh::getBoolType();
 		case BooleanAnd:
 		case BooleanOr:
-			return argument_type;
+			return lhs_type;
 		default:
 			CORE_UNREACHABLE();
 		}
@@ -252,11 +343,15 @@ namespace compiler::helios::code {
 		Box<Expr>       rhs
 	):
 		  Expr(
-
 			  tsh::ExpressionType<>(
-				  // @TODO: Select type of expression based on result type of the operation.
+				  // @TODO: #2171 Select type of expression based on result type of the operation.
 				  tsh::SymbolType{
-					  builtinOperationToReturnType(ctx, operation, lhs->expression_type.getType()),
+					  builtinBinaryOperationToReturnType(
+						  ctx,
+						  operation,
+						  lhs->expression_type.getType(),
+						  rhs->expression_type.getType()
+					  ),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -284,6 +379,7 @@ namespace compiler::helios::code {
 		// note: this might get more complex in the future
 
 		lhs->debugPrint(out);
+		out << " ";
 
 		using enum BuiltinBinary;
 		switch (operation) {
@@ -304,6 +400,7 @@ namespace compiler::helios::code {
 			out << "/";
 			break;
 		case IntegerMod:
+		case FloatMod:
 			out << "%";
 			break;
 		case IntegerPow:
@@ -311,32 +408,42 @@ namespace compiler::helios::code {
 			out << "**";
 			break;
 		case IntegerLt:
-			out << " < ";
+		case FloatLt:
+			out << "<";
 			break;
 		case IntegerLteq:
-			out << " <= ";
+		case FloatLteq:
+			out << "<=";
 			break;
 		case IntegerGt:
-			out << " > ";
+		case FloatGt:
+			out << ">";
 			break;
 		case IntegerGteq:
-			out << " >= ";
+		case FloatGteq:
+			out << ">=";
 			break;
 		case IntegerEq:
-			out << " == ";
+		case FloatEq:
+		case MetaEq:
+			out << "==";
 			break;
 		case IntegerNeq:
-			out << " != ";
+		case FloatNeq:
+		case MetaNeq:
+			out << "!=";
 			break;
 		case BooleanAnd:
-			out << " and ";
+			out << "and";
 			break;
 		case BooleanOr:
-			out << " or ";
+			out << "or";
 			break;
 		default:
 			CORE_UNREACHABLE();
 		}
+
+		out << " ";
 		rhs->debugPrint(out);
 	}
 
@@ -498,10 +605,41 @@ namespace compiler::helios::code {
 		);
 	}
 
+	tsh::AbstractType builtinUnaryOperationToReturnType(
+		query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
+	) {
+		using enum BuiltinUnary;
+		switch (operation) {
+		case BuiltinUnary::IntegerNegation:
+		case BuiltinUnary::FloatNegation:
+		case BuiltinUnary::BooleanNot:
+		case BuiltinUnary::Ref:
+		case BuiltinUnary::Box:
+		case BuiltinUnary::Const:
+			// For most of the unary operators the result is the same as their argument type:
+			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
+			return argument_type;
+		case BuiltinUnary::Len: {
+			return tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
+		}
+		default:
+			CORE_UNREACHABLE();
+		}
+	}
+
 	UnaryOperatorExpr::UnaryOperatorExpr(
-		ElementOrigin origin, BuiltinUnary operation, Box<Expr> expr
+		query::Context& ctx, ElementOrigin origin, BuiltinUnary operation, Box<Expr> expr
 	):
-		  Expr(expr->expression_type, origin),
+		  Expr(
+			  tsh::ExpressionType<>{
+				  tsh::SymbolType<>{ builtinUnaryOperationToReturnType(
+										 ctx, operation, expr->expression_type.getType()
+									 ),
+	                                 tsh::ReferenceKind::Direct,
+	                                 tsh::Mutability::Mutable },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary) },
+			  origin
+		  ),
 		  operation(operation),
 		  expr(std::move(expr)) {}
 
@@ -536,6 +674,10 @@ namespace compiler::helios::code {
 			break;
 		case BuiltinUnary::Const:
 			out << "const ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Len:
+			out << "len ";
 			expr->debugPrint(out);
 			break;
 		default:
@@ -726,10 +868,7 @@ namespace compiler::helios::code {
 	}
 
 	ChainComparisonExpr::ChainComparisonExpr(
-		query::Context&,
-		ElementOrigin              origin,
-		std::vector<Box<Expr>>     expressions,
-		std::vector<BuiltinBinary> operators
+		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> comparisons
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
@@ -742,63 +881,36 @@ namespace compiler::helios::code {
 			  ),
 			  origin
 		  ),
-		  expressions{ std::move(expressions) },
-		  operators{ std::move(operators) } {}
+		  comparisons{ std::move(comparisons) } {
+		CORE_ASSERT(
+			this->comparisons.size() > 0, "ChainComparisonExpr must have at least one comparison"
+		);
+	}
 
 	ChainComparisonExpr::ChainComparisonExpr(
-		tsh::ExpressionType<>        expression_type,
-		ElementOrigin                origin,
-		std::vector<base::Box<Expr>> expressions,
-		std::vector<BuiltinBinary>   operators
+		tsh::ExpressionType<>  expression_type,
+		ElementOrigin          origin,
+		std::vector<Box<Expr>> comparisons
 	):
 		  Expr(expression_type, origin),
-		  expressions{ std::move(expressions) },
-		  operators{ std::move(operators) } {}
+		  comparisons{ std::move(comparisons) } {}
 
 	void ChainComparisonExpr::debugPrint(std::ostream& out) const {
 		using namespace std::views;
-		auto comparison_to_string = [](BuiltinBinary comp) {
-			using enum BuiltinBinary;
-			switch (comp) {
-			case IntegerLt:
-			case FloatLt:
-				return "<";
-			case IntegerLteq:
-			case FloatLteq:
-				return "<=";
-			case IntegerGt:
-			case FloatGt:
-				return ">";
-			case IntegerGteq:
-			case FloatGteq:
-				return ">=";
-			case IntegerEq:
-			case FloatEq:
-			case MetaEq:
-				return "==";
-			case IntegerNeq:
-			case FloatNeq:
-			case MetaNeq:
-				return "!=";
-			default:
-				CORE_UNREACHABLE();
-			}
-		};
 
-		expressions.front()->debugPrint(out);
-		for (auto [expr, comp]: zip(expressions | drop(1), operators)) {
-			out << comparison_to_string(comp);
-			expr->debugPrint(out);
+		std::string separator = "";
+		for (auto& comp: comparisons) {
+			out << separator;
+			comp->debugPrint(out);
+			separator = " and ";
 		}
 	}
 
 	Box<Expr> ChainComparisonExpr::clone() const {
-		std::vector<base::Box<Expr>> expressions;
-		expressions.reserve(this->expressions.size());
-		for (const auto& expr: this->expressions) expressions.push_back(expr->clone());
-		return makeBox<ChainComparisonExpr>(
-			expression_type, origin, std::move(expressions), operators
-		);
+		std::vector<Box<Expr>> comparisons;
+		comparisons.reserve(this->comparisons.size());
+		for (const auto& comp: this->comparisons) comparisons.push_back(comp->clone());
+		return makeBox<ChainComparisonExpr>(expression_type, origin, std::move(comparisons));
 	}
 
 	CastExpr::CastExpr(
@@ -912,14 +1024,22 @@ namespace compiler::helios::code {
 		return makeBox<DerefExpr>(expression_type, origin, inner->clone());
 	}
 
-	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::SymbolType<> type):
+	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::AbstractType type):
 		  Expr(
-			  tsh::ExpressionType<>(type, tsh::ValueCategory(tsh::PrimaryCategory::Literal)), origin
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType<>{
+					  type,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
+			  origin
 		  ),
 		  type(type) {}
 
 	DefaultValueExpr::DefaultValueExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
 	):
 		  Expr(expression_type, origin),
 		  type(type) {}
@@ -959,4 +1079,69 @@ namespace compiler::helios::code {
 	Box<Expr> LiftToTypeExpr::clone() const {
 		return makeBox<LiftToTypeExpr>(expression_type, origin, value_expr->clone());
 	}
+
+	ListPushExpr::ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element):
+		  Expr(
+			  tsh::ExpressionType(
+				  tsh::SymbolType<>(
+					  tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+				  ),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  list(std::move(list)),
+		  element(std::move(element)) {}
+
+	ListPushExpr::ListPushExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> list, Box<Expr> element
+	):
+		  Expr(expression_type, origin),
+		  list(std::move(list)),
+		  element(std::move(element)) {}
+
+	void ListPushExpr::debugPrint(std::ostream& out) const {
+		out << "list_push(";
+		list->debugPrint(out);
+		out << ", ";
+		element->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> ListPushExpr::clone() const {
+		return makeBox<ListPushExpr>(expression_type, origin, list->clone(), element->clone());
+	}
+
+	ListPopExpr::ListPopExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> count):
+		  Expr(
+			  tsh::ExpressionType(
+				  tsh::SymbolType<>(
+					  tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+				  ),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  list(std::move(list)),
+		  count(std::move(count)) {}
+
+	ListPopExpr::ListPopExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> list, Box<Expr> count
+	):
+		  Expr(expression_type, origin),
+		  list(std::move(list)),
+		  count(std::move(count)) {}
+
+	void ListPopExpr::debugPrint(std::ostream& out) const {
+		out << "list_pop(";
+		list->debugPrint(out);
+		out << ", ";
+		count->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> ListPopExpr::clone() const {
+		return makeBox<ListPopExpr>(expression_type, origin, list->clone(), count->clone());
+	}
+
 }

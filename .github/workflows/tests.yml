@@ -8,7 +8,7 @@ on:
   push:
     branches: [ "main", "dev" ]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
   workflow_dispatch:
 
 env:
@@ -21,28 +21,53 @@ env:
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
-  CXX_COMPILER: g++-14
-  CC_COMPILER: gcc-14
-  GCOV_VERSION: gcov-14
   BUILD_SYSTEM: Ninja
-  LINKER_TYPE: MOLD
 
 jobs:
-  determine-runners:
-    if: github.event.pull_request.draft == false
-    uses: ./.github/workflows/determine-runners.yml
-    with:
-      self-hosted-labels: '["debug", "release"]'
-      github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
-    secrets: inherit
+  # Determines the build matrix based on the event type.
+  # On regular PRs only Dev/gcc runs; on push, workflow_dispatch or approved reviews the full matrix runs.
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Determine build matrix
+        id: set-matrix
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          MATRIX=$(python3 .github/workflows/setup-build-matrix.py \
+            --event-name "${{ github.event_name }}" \
+            --branch "${{ env.BRANCH_NAME }}" \
+            --repo "${{ github.repository }}" \
+            --pr-number "${{ github.event.pull_request.number || 0 }}" \
+            --github-token "${{ secrets.QUACKER_PAT }}")
+          echo "Determined build matrix: $MATRIX"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   build:
-    if: github.event.pull_request.draft == false
-    needs: determine-runners
+    needs: [setup]
+    # This if condition is quite complex, so let's break it down:
+    # 1. Run on push or workflow_dispatch events (these are not related to PRs).
+    # 2. Run on pull_request events only if the PR is not a draft, and either
+    #    it is not a labeling event or it is a labeling event but the label is
+    #    "Override Coverage Check"/"Run All Workflows". This allows to re-run the workflow on PRs
+    #    that were just labeled with the above labels, which is useful for
+    #    re-running the workflow.
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
+      ||
+      (
+        github.event.pull_request.draft == false &&
+        github.event_name == 'pull_request' &&
+        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check' || github.event.label.name == 'Run All Workflows')
+      )
 
     strategy:
-      matrix:
-        build-type: [Dev, DevOpt]  # (Release, Dev, RelWithDebInfo, etc.)
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
       fail-fast: false
 
     outputs:
@@ -56,24 +81,19 @@ jobs:
       itest-coverage-value: ${{ steps.test-coverage-itests.outputs.coverage-percent }}
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
-    timeout-minutes: 25  # (Per matrix run)
-    runs-on: ${{ matrix.build-type == 'Dev' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
+    timeout-minutes: 40  # (Per matrix run)
+    runs-on:
+      group: SelfHostedRunners
+      labels: ${{ matrix.build-type == 'Dev' && 'debug' || 'release' }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
-      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' }}
+      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'gcc' }}
 
     steps:
-      - name: Set self-hosted flag
+      - name: Set self-hosted placeholder
         id: set-self-hosted
-        run: |
-          if [[ "${{ matrix.build-type }}" == "Dev" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
-            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "DevOpt" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
-            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          else
-            echo "is-self-hosted=false" >> $GITHUB_OUTPUT
-          fi
+        run: echo "is-self-hosted=true" >> $GITHUB_OUTPUT
 
       - name: Set number of threads
         id: set-jobs
@@ -86,7 +106,7 @@ jobs:
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
 
-      - name: Clean workspace (self-hosted only)
+      - name: Clean workspace
         if: ${{ steps.set-self-hosted.outputs.is-self-hosted == 'true' }}
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
@@ -95,7 +115,7 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Update apt
         run: sudo apt update
@@ -116,24 +136,26 @@ jobs:
         run: sudo apt -y install llvm-19 llvm-19-dev
 
       - name: Install clang
-        # Necessary to compile Duckling builtins to LLVM bitcode
+        # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
-        run: sudo apt -y install clang-19
+        run: sudo apt -y install clang-19 clang-tools-19
 
       - name: Install xxd
         # Necessary to embed LLVM bitcode into duckc source files.
         run: sudo apt -y install xxd
 
       - name: Install mold
+        if: ${{ matrix.compiler.linker == 'mold' }}
         run: sudo apt -y install mold
 
       - name: Install GCC 14 and gcov-14
-        run: sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
+        if: ${{ matrix.compiler.name == 'gcc' }}
+        run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }} # gcov is included in gcc package
 
       - name: Install Ninja
         run: sudo apt -y install ninja-build
 
-      - name: Install Valgrind 
+      - name: Install Valgrind
         run: sudo apt -y install valgrind
 
       - name: Setup duck dependencies
@@ -141,9 +163,9 @@ jobs:
 
       - name: Check installations
         run: |
-          ${{ env.CXX_COMPILER }} --version
-          ${{ env.CC_COMPILER }} --version
-          ${{ env.GCOV_VERSION }} --version
+          ${{ matrix.compiler.cxx }} --version
+          ${{ matrix.compiler.cc }} --version
+          ${{ matrix.compiler.name == 'gcc' && format('{0} --version', matrix.compiler.gcov) || 'echo "No gcov for clang"' }}
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -164,19 +186,19 @@ jobs:
       # main branch misses, fallback to any branch's cache.
       - name: Restore build cache
         id: restore-build-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          key: ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
           # If there is no match with the key, then it tries to partially
           # match with any of restore-keys (top to bottom).
           # Most recent entry is used when multiple match to the same key.
           # See readme for details.
           restore-keys : |
-            ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
-            ${{ runner.os }}-build-${{ matrix.build-type }}-main
-            ${{ runner.os }}-build-${{ matrix.build-type }}
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
 
       # Remove ccache folder to prevent cache snowball growth
       - name: Remove ccache on main
@@ -190,7 +212,7 @@ jobs:
         # Env here is used for readability only
         env:
           flags:
-            ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', env.GCOV_VERSION) || '' }}
+            ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', matrix.compiler.gcov) || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
       - name: Configure CMake
@@ -200,14 +222,13 @@ jobs:
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -G ${{ env.BUILD_SYSTEM }} \
-              -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
-              -D CMAKE_C_COMPILER=${{ env.CC_COMPILER }} \
+              -D CMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }} \
+              -D CMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
-              -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               -D STRIP_SYMBOL_INFORMATION=ON \
-              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
+              ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
               ${{ steps.cmake-flags.outputs.flags }}
 
       # Build all tests.
@@ -267,7 +288,7 @@ jobs:
           echo "Deleting caches..."
           for cacheKey in $cacheKeysForPR
           do
-            if [[ $cacheKey == ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ]]; then
+            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ]]; then
               gh actions-cache delete $cacheKey -R $REPO --confirm
             fi
           done
@@ -279,7 +300,7 @@ jobs:
       # Manually cache the build before testing, but **after** cleaning.
       - name: Save build cache
         id: save-build-cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             ${{ env.CCACHE_DIR }}
@@ -308,7 +329,19 @@ jobs:
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --duckc-worker-count 1
+
+      - name: Integration Tests Multithreaded (Only Compiler)
+        id: integration-tests-multithreaded-only-compiler
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --filter "integration_tests/compiler" --duckc-worker-count 4
+
+      # failure() makes this step run even when a previous step has failed (which would otherwise
+      # cause all subsequent steps to be skipped). The additional conditions ensure this step only
+      # runs when at least one of the integration test steps actually failed.
+      - name: Cat itests log file on failure
+        if: ${{ failure() && (steps.integration-tests.outcome == 'failure' || steps.integration-tests-multithreaded-only-compiler.outcome == 'failure') }}
+        run: cat /tmp/dit.log
 
       - name: Test Coverage After Integration Tests
         id: test-coverage-itests
@@ -337,7 +370,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Fetch origin/main
         run: git fetch origin main

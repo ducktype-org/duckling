@@ -2,6 +2,7 @@
 
 #include "ordering.hpp"
 
+#include <hashing/add_to_hash.hpp>
 #include <token_parser_core/parser_state.hpp>
 
 namespace pst {
@@ -18,6 +19,10 @@ namespace pst {
 			  class_name(class_name),
 			  block_order(block_order) {}
 
+		LangParserContext(CRef<LangParserContext> other):
+			  class_name(other->class_name),
+			  block_order(other->block_order) {}
+
 		static Box<LangParserContext> programBaseContext() {
 			return base::makeBox<LangParserContext>(base::StrID(""), BlockOrderType::Unordered);
 		}
@@ -29,6 +34,13 @@ namespace pst {
 		[[nodiscard]]
 		Box<tpc::ParserContext> copy() const override {
 			return base::makeBox<LangParserContext>(class_name, block_order);
+		}
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const LangParserContext& ctx
+		) noexcept {
+			addToHash(h, ctx.class_name);
+			addToHash(h, ctx.block_order);
 		}
 	};
 }

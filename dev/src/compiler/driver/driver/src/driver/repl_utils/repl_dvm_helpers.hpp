@@ -1,5 +1,6 @@
 #pragma once
 
+#include <backends/dvm/repl_lowering.hpp>
 #include <helios/hout/hout.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -8,14 +9,48 @@
 
 #include <expected>
 #include <string>
+#include <string_view>
 
 namespace compiler::repl {
+	/**
+	 * @brief Compile a HOUT unit to a standalone DVM code chunk using persistent REPL lowering
+	 * context.
+	 *
+	 * This is the same lowering path used by REPL incremental execution, but without sending
+	 * the code to a running VM process.
+	 */
+	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
+		query::Context&                  ctx,
+		const helios::HOUTUnit&          hout_unit,
+		std::string_view                 module_name,
+		backend_vm::ReplLoweringContext& lowering_context
+	);
 
 	/**
-	 * @brief Compile HOUT unit to DVM bytecode and load it into a running DVM process
+	 * @brief Compile a HOUT unit to DVM bytecode and load it into a running DVM process.
+	 *
+	 * @param ctx          Active query context for LIR compilation queries.
+	 * @param hout_unit    The HOUT unit to compile.
+	 * @param module_name  Used for identification and symbol resolution.
+	 * @param pid          Process ID of the target DVM instance.
+	 * @param lowering_context Persistent lowering context for REPL statement compilation.
+	 *
+	 * @note This function does NOT call setContext() or invalidateContext() on lowering_context.
+	 *       The caller is responsible for managing the context lifecycle.
+	 *
+	 * @pre The lowering_context must have an active query::Context set via setContext()
+	 *      BEFORE calling this function.
+	 * @pre The active context in lowering_context MUST be the same object as @c ctx.
+	 *      This is an enforced runtime invariant (asserted by the lowering path).
+	 *
+	 * @return Success or error message on failure.
 	 */
 	std::expected<void, std::string> compileAndLoad(
-		query::Context& ctx, const helios::HOUTUnit& hout_unit, vm::PID pid
+		query::Context&                  ctx,
+		const helios::HOUTUnit&          hout_unit,
+		std::string_view                 module_name,
+		vm::PID                          pid,
+		backend_vm::ReplLoweringContext& lowering_context
 	);
 
 	/**

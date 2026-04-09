@@ -1,7 +1,7 @@
 #include "ctv.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <string_id/string_id.hpp>
@@ -18,7 +18,8 @@ namespace compiler::ctv {
 		variant_match(value) {
 			variant_case(bool, val) { return val ? "true" : "false"; }
 			variant_case(NumericValue, val) { return val.toString(); }
-			variant_case(base::StrID, val) { return "\"" + val.str() + "\""; }
+			variant_case(char, c) { return "'" + base::escapeString(std::string{ c }) + "'"; }
+			variant_case(base::StrID, val) { return "\"" + base::escapeString(val.str()) + "\""; }
 			variant_case_novalue(UnitCTV) { return "()"; }
 			variant_case(TupleCTV, tuple) {
 				std::stringstream ss;
@@ -46,6 +47,13 @@ namespace compiler::ctv {
 				};
 			}
 			variant_case(NumericValue, numeric) { return numeric.getTypeOfStoredValue(ctx); }
+			variant_case_novalue(char) {
+				return tsh::SymbolType<>{
+					tsh::getCharType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			}
 			variant_case_novalue(base::StrID) {
 				return tsh::SymbolType<>{
 					tsh::getStringType(),

@@ -1,0 +1,43 @@
+Tests:
+  recursive_comp_time_eval:
+    Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+  comp_time_references:
+    Cases:
+      # @TODO: #1849 Add a DVM case when this is fixed.
+      llvm:
+        backend: llvm
+        Output:
+          String: "124\n"
+        ExitCode: 0
+  class_type_eval:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n3\n4\n111\n111\n1\n"
+        ExitCode: 0
+  type_eval:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+  type_evaluation:
+    Cases:
+      # @TODO: #2431 Enable DVM on this test
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 42

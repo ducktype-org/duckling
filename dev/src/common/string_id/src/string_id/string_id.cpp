@@ -67,7 +67,7 @@ namespace base {
 	 * Stores data is vector of buffers of size 32768
 	 * New buffer is created, when new string cannot fit
 	 * in previous one.
-	 * If string has length greater then 32768 it is given its own buffer.
+	 * If string has length greater than 32768 it is given its own buffer.
 	 * Only last buffer is considered
 	 *
 	 * @OPT: better memory/buffers usage

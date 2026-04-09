@@ -1,11 +1,11 @@
-# lsp_daemon
+# Duck LS
 
-This package contains `lsp_daemon`, a REST API server responsible for providing information about code to the LSP language server.
+This package contains `duck_ls`, a REST API server responsible for providing information about code to the LSP language server.
 
 ## Usage
 
-`./lsp_daemon -p <port_number>`
+`./duck_ls -p <port_number>`
 
 or
 
-`./lsp_daemon --port <port_number>`
+`./duck_ls --port <port_number>`

@@ -18,7 +18,7 @@ namespace compiler::mir {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class ShadowedDeclerationNote final: public dia_int::MessageWithCodeFragmentAndCause {
+	class ShadowedDeclarationNote final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "note",
@@ -27,7 +27,7 @@ namespace compiler::mir {
 		}
 
 	public:
-		ShadowedDeclerationNote(dia::SourcePosition source_position):
+		ShadowedDeclarationNote(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

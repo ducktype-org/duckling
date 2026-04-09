@@ -3,7 +3,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(defaultInitialization);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
@@ -202,7 +203,7 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 8, 9); }
+	void classTest() { runTestForModule("modules/classes/records", 10, 11); }
 
 	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
 
@@ -298,6 +299,56 @@ private:
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+1,\s+i32\s+1)" }),
 			"Expected GEP for struct field access in array: points[1].y"
+		);
+	}
+
+	void dynamicArraysTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/dynamic_arrays");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Is List[i64] defined.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(%Di64E\s*=\s*type\s*\{)" }),
+			"Expected list struct definition for i64"
+		);
+
+		// Check if builtins are invoked.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_push)" }),
+			"Expected a call to builtin_list_push"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call\s+i64\s+@builtin_list_len)" }),
+			"Expected a call to builtin_list_len"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_pop)" }),
+			"Expected a call to builtin_list_pop"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_free)" }),
+			"Expected a call to builtin_list_free"
+		);
+
+		// Check if correct dynamic array access was generated.
+		const std::regex access_pattern(
+			// GEP to 'data' field (0th index).
+		    // %(\w+) captures the GEP result as group 1.
+			R"(%(\w+)\s*=\s*getelementptr\s+%Di64E,\s+ptr\s+%\w+,\s+i32\s+0,\s+i32\s+0\s*)"
+			// Accept newlines.
+			R"(\s*)"
+			// Now we expect load from the pointer returned by GEP (group 1) and store the result in
+		    // group 2.
+			R"(%(\w+)\s*=\s*load\s+ptr,\s+ptr\s+%\1(?:,\s+align\s+\d+)?\s*)"
+			// Accept newlines.
+			R"(\s*)"
+			// Now we expect a GEP on a the pointer returned by the load (group 2).
+			R"(%\w+\s*=\s*getelementptr\s+i64,\s+ptr\s+%\2,\s+i64\s+%\w+)",
+			std::regex::multiline
+		);
+		assertTrue(
+			std::regex_search(ir, access_pattern),
+			"Correct sequence for dynamic array element access was not found."
 		);
 	}
 

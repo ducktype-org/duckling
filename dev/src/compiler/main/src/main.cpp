@@ -15,9 +15,9 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
-#include <repl/repl_session.hpp>
+#include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -131,11 +131,16 @@ clah::Clah getClahForMain() {
 			clah::Clah("lex", "Runs lexer on a single file and prints the result to cout.")
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto file_to_lex = options.getPositional<fs::File>(0);
 
@@ -177,11 +182,16 @@ clah::Clah getClahForMain() {
 			clah::Clah("parse", "Runs parser on a single file and prints result in json to cout.")
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
@@ -207,11 +217,15 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(clah::Clah("get_hout", "Debug prints hout-unit of a module.")
 	                       .addPositional(clah::FileParser::make("module"))
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
+							   auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 								   }
 							   );
+							   if (init_result.status().isBad()) {
+								   compiler::driver::exit();
+								   return 1;
+							   }
 
 							   auto path_to_compile = options.getPositional<fs::File>(0);
 
@@ -226,7 +240,7 @@ clah::Clah getClahForMain() {
 		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
-									   std::cout << hout_unit->debugPrint(ctx);
+									   hout_unit->debugPrint(ctx, std::cout);
 							   });
 
 							   return exit_code;
@@ -267,7 +281,7 @@ clah::Clah getClahForMain() {
                         base::generateRandomString(32)
                     );
 
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
@@ -285,6 +299,11 @@ clah::Clah getClahForMain() {
 						}
 					);
 
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
 
@@ -293,8 +312,7 @@ clah::Clah getClahForMain() {
 
 					auto root = global_state::getMainPackage().root_module;
 
-					auto output_artifact
-						= query::entryPoint<driver::CompileModule>({ root, backend_type });
+					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
 
 					compiler::driver::exit();
@@ -363,11 +381,9 @@ clah::Clah getClahForMain() {
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
-
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
-
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
@@ -385,6 +401,12 @@ clah::Clah getClahForMain() {
 							},
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 
 
@@ -446,7 +468,7 @@ clah::Clah getClahForMain() {
                     );
 					using namespace compiler;
 
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.main_package_info = {
 										.package_name = package_name,
@@ -461,8 +483,13 @@ clah::Clah getClahForMain() {
 									.execution_options = {
 										.worker_count = 1,
 									},
-}
+						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
@@ -482,14 +509,136 @@ clah::Clah getClahForMain() {
 					return exit_code;
 				})
 		)
+	    .addSubcommand(
+			clah::Clah("compile_script", "Compile a .ds script file into a .dbc or executable.")
+				.addPositional(clah::FileParser::make("script"))
+				.add(getLlvmOptLevelParam())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("dvm-backend")
+	                     .addShortDesc(
+							 "Compile to DVM bytecode (.dbc) instead of a native executable."
+						 )
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("linker"))
+	                     .addLongName("linker")
+	                     .addShortDesc("Path to the linker executable.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-c-standard-library")
+	                     .addShortDesc("Don't link the C standard library (LLVM backend only).")
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					using namespace compiler;
+
+					auto script_file  = options.getPositional<fs::File>(0);
+					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
+		                                                              : driver::BackendType::LLVM;
+
+					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+
+					auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
+						.script_file     = script_file,
+						.backend_options = getBackendOptionsFromClap(options),
+						.compilation_artifacts = {
+							.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
+							                      .copyValueOr("./duck_build/"),
+						},
+						.debug_options     = getDebugOptionsFromClap(options),
+						.execution_options = {
+							.worker_count = base::safeIntConv<u64>(worker_count),
+						},
+					};
+
+					auto init_result = compiler::driver::initializeTheCompiler(mode);
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					const auto& linking_options = getLinkingOptionsFromClap(options);
+					auto        result = driver::compileScript(backend_type, linking_options);
+
+					compiler::driver::exit();
+					return result.isOk() ? 0 : 1;
+				})
+		)
+	    // For now run works only for DVM backend.
+	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
+	                       .addPositional(clah::FileParser::make("script"))
+	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                                .addShortName('w')
+	                                .addLongName("workers")
+	                                .addShortDesc("Worker count.")
+	                                .optional()
+	                                .build())
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   using namespace compiler;
+
+							   auto script_file  = options.getPositional<fs::File>(0);
+							   auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+							   // duckc run doesn't produce any artifacts for now, but this may be
+		                       // changed later by for example adding option to save compiled
+		                       // bytecode. Also, ScriptMode requires artifacts path, maybe this
+		                       // will be refactored later.
+							   auto run_temp_artifacts_path = fs::FilePath(
+								   fs::FilePath::getDefaultTempDirectoryPath().getPath()
+								   / "duckling_script_run_artifacts"
+							   );
+
+							   auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
+						.script_file     = script_file,
+						.backend_options = {}, // only dvm for now.
+						.compilation_artifacts = {
+							.artifacts_path = run_temp_artifacts_path,
+						},
+						.debug_options     = getDebugOptionsFromClap(options),
+						.execution_options = {
+							.worker_count = base::safeIntConv<u64>(worker_count),
+						},
+					};
+
+							   auto init_result = compiler::driver::initializeTheCompiler(mode);
+							   if (init_result.status().isBad()) {
+								   compiler::driver::exit();
+								   return 1;
+							   }
+
+							   auto run_result = driver::runScriptOnDVM();
+
+							   compiler::driver::exit();
+							   if (!run_result.has_value()) {
+								   std::cerr << "Error: " << run_result.error() << "\n";
+								   return 1;
+							   }
+							   return run_result->exit_code;
+						   }))
 	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
+							   auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
-									   .debug_options     = getDebugOptionsFromClap(options),
-									   .execution_options = { 1 },
+									   .debug_options = getDebugOptionsFromClap(options),
+									   .execution_options = {
+										   .worker_count = 1,
+									   },
 								   }
 							   );
+							   if (init_result.status().isBad()) {
+								   compiler::driver::exit();
+								   return 1;
+							   }
 							   compiler::repl::ReplSession session;
 							   int                         result = session.run();
 							   compiler::driver::exit();
@@ -497,11 +646,12 @@ clah::Clah getClahForMain() {
 						   }))
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
+							   (void) compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 								   }
-							   );
+							   )
+								   .status();
 							   return 0;
 						   }));
 }

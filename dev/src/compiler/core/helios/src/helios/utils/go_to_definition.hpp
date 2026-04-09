@@ -5,7 +5,6 @@
 #include <helios/hout/elements/expr.hpp>
 
 #include <base/collections/optional.hpp>
-#include <base/pointers/ref.hpp>
 
 namespace compiler::helios {
 	/**

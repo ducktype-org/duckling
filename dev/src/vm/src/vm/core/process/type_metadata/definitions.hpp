@@ -2,10 +2,15 @@
 
 #include <base/collections/stable_container.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
+#include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
 
 namespace vm {
-	using Offset = u64;
+	/// Size of type in bytes
+	using TypeSize = Bytes;
+
+	using Offset = Bytes;
+
 	class Type;
 
 	using TypeRef  = Ref<Type>;
@@ -17,3 +22,12 @@ namespace vm {
 
 ID_STD_HASH(vm::TypeID);
 ID_STD_HASH(vm::GlobalDataID);
+
+namespace std {
+	template<>
+	struct hash<vm::TypeCRef> {
+		size_t operator()(const vm::TypeCRef& type_ref) const noexcept {
+			return usize(type_ref.get());
+		}
+	};
+}

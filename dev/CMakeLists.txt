@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 project(Duckling)
 
+option(USE_REPLXX "Use replxx library for REPL frontend" ON)
+
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
 # macOS platform detection and SDK configuration

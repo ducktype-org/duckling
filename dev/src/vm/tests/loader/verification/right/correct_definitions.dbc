@@ -1,0 +1,15 @@
+type pointer: ptr_A ptr_B
+type pointer: ptr_B ptr_A
+
+type fun: foo { i64, fun_ptr } void
+
+type pointer: fun_ptr foo
+
+type pointer: ptr_Val Value
+type variant: Value {
+    i64, ptr_Val
+}
+
+function main { i64, ptr_argv } -> i64 {
+	ret;
+}

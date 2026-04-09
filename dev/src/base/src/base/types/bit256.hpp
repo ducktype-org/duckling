@@ -3,6 +3,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/misc/noexcept.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
+#include <base/types/monostate.hpp>
 
 #include <array>
 #include <string>
@@ -10,16 +11,37 @@
 namespace base {
 	/**
 	 * Bit256 is a 256-bit integer type used for example for SHA-256 hash values.
-	 * It is represented as an array of 4 64-bit integers.
+	 * The value is represented in an array of 4 u64s as a number in base 2^64, with the lowest
+	 * letter in data[0]
 	 */
-	struct Bit256 {
+	struct Bit256 final {
 		std::array<u64, 4> data = {};
+
+		static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
 
 		constexpr Bit256() = default;
 
+		/**
+		 * @param bytes an array of 32 bytes that will be interpreted as a 256-bit number written in
+		 * base 2^8 with the lowest letter in bytes[0]
+		 */
+		constexpr Bit256(const std::array<uint8_t, 32>& bytes) noexcept {
+			for (size_t i = 0; i < 4; ++i) {
+				data.at(i) = 0;
+				for (size_t j = 0; j < 8; ++j) {
+					data.at(i) <<= 8;
+					data.at(i) |= bytes.at(i * 8 + j);
+				}
+			}
+		}
+
+		/**
+		 * @param arr an array of u32 that will be interpreted as a 256-bit number written in base
+		 * 2^32 with the lowest letter in arr[0]
+		 */
 		constexpr Bit256(const std::array<u32, 8>& arr) noexcept {
 			for (size_t i = 0; i < 4; ++i)
-				data.at(i) = (static_cast<u64>(arr.at(i * 2)) << 32) | arr.at(i * 2 + 1);
+				data.at(i) = (static_cast<u64>(arr.at(i * 2 + 1)) << 32) | arr.at(i * 2);
 		}
 
 		constexpr Bit256(const std::array<u64, 4>& arr) noexcept: data(arr) {}
@@ -31,6 +53,11 @@ namespace base {
 		constexpr Bit256(u64 a, u64 b) noexcept: data{ a, b, 0, 0 } {}
 
 		constexpr Bit256(u64 a) noexcept: data{ a, 0, 0, 0 } {}
+
+		/**
+		 * Constructor taking a hex string starting with 0x
+		 */
+		Bit256(std::string_view hex);
 
 		constexpr bool operator==(const Bit256& other) const noexcept = default;
 		constexpr bool operator!=(const Bit256& other) const noexcept = default;

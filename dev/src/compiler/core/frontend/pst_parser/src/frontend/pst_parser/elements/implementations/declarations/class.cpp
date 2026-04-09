@@ -11,17 +11,20 @@ namespace pst {
 	}
 
 	MBox<Class> Class::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Class>(position);
+		auto out = makeBox<Class>(state);
 
 		if (!assertStmtChoice<Class>(state, state[0].is(Keyword::Class))) return nullptr;
 
-		state.parse(out).all(Keyword::Class, &out->name);
+		PARSE().all(Keyword::Class, &out->name);
 
-		if (state.parse(out).tryEat(Keyword::Extends)) state.parse(out).one(&out->base);
-		if (state.parse(out).tryEat(Keyword::Implements)) state.parse(out).one(&out->implements);
+		if (PARSE().tryEat(Keyword::Extends)) PARSE().one(&out->base);
+		if (PARSE().tryEat(Keyword::Implements)) PARSE().one(&out->implements);
 
-		state.parse(out).with(&out->body, ClassBlock::parse, { .name = out->name });
+		PST_NEW_CONTEXT({
+			state.setContextClassName(out->name);
+			state.setContextBlockOrdering(BlockOrderType::Unordered);
+			PARSE().one(&out->body);
+		})
 
 		PST_RETURN out;
 	}
@@ -42,7 +45,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Class::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Class::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		return partial_hash;
 	}

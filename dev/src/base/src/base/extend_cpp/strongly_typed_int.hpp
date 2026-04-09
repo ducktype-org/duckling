@@ -82,6 +82,10 @@
 		inline constexpr explicit(true) operator T() const noexcept {                              \
 			return static_cast<T>(value);                                                          \
 		}                                                                                          \
+		template<typename T = BASE_T>                                                              \
+		inline constexpr T asInt() const noexcept {                                                \
+			return T(value);                                                                       \
+		}                                                                                          \
 		inline constexpr NAME operator+() const noexcept { return NAME(+value); }                  \
 		inline constexpr NAME operator-() const noexcept {                                         \
 			return NAME(static_cast<BASE_T>(-value));                                              \
@@ -131,7 +135,7 @@
 		std::is_integral_v<BASE>,                                                                  \
 		"STRONG_TYPEDEF_INT can only define integral types. Use `STRONG_TYPEDEF` for any generic " \
 		"types"                                                                                    \
-	);
+	)
 
 /**
  * @brief This macro is intended to create strongly typed

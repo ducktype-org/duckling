@@ -28,25 +28,51 @@ pub struct PinnedRequest {
     pub features: HashSet<FeatureName>,
 }
 
-/// Type respresenting the result of a successful fetch.
-#[derive(Debug)]
-pub enum FetchResult {
-    Pinned(PinnedResult),
-    NotPinned(NotPinnedResult),
+/// Type representing non-error results of a fetch.
+pub enum FetchResponse {
+    Success(FetchSuccess),
+    Failed(FetchFailure),
 }
 
-/// Result of a fetch of a single package's manifest.
+/// Type respresenting the result of a successful fetch.
 #[derive(Debug)]
-pub struct PinnedResult {
+pub enum FetchSuccess {
+    Pinned(PinnedSuccess),
+    NotPinned(NotPinnedSuccess),
+}
+
+/// Result of a successful fetch of a single package's manifest.
+#[derive(Debug)]
+pub struct PinnedSuccess {
     pub origin_location: InternedLocation,
     pub origin_version: Version,
     pub expanded_package: ExpandedPackage,
     pub fetched_manifest: Box<Manifest>,
 }
 
-/// Result of a fetch of manifests of all packages from a location.
+/// Result of a successful fetch of manifests of all packages from a location.
 #[derive(Debug)]
-pub struct NotPinnedResult {
+pub struct NotPinnedSuccess {
     pub origin_location: InternedLocation,
     pub fetched_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+}
+
+/// Type representing a failed fetch.
+#[derive(Debug)]
+pub enum FetchFailure {
+    Pinned(PinnedFailure),
+    NotPinned(NotPinnedFailure),
+}
+
+/// Failed fetch of a single package's manifest.
+#[derive(Debug)]
+pub struct PinnedFailure {
+    pub origin_location: InternedLocation,
+    pub origin_version: Version,
+}
+
+/// Failed fetch of manifests of all packages from a location.
+#[derive(Debug)]
+pub struct NotPinnedFailure {
+    pub origin_location: InternedLocation,
 }

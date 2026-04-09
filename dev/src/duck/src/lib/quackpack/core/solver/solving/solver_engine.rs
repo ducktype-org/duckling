@@ -15,7 +15,7 @@ use crate::{
         types_common::{
             DependencyEdge, ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
         },
-        util::get_possible_realisations,
+        util::get_possible_realizations,
     },
 };
 
@@ -129,7 +129,7 @@ impl<'a> SolverEngine<'a> {
                 .all_possible_features
                 .get(package)
                 .unwrap_or(&empty_hashset);
-            for dependency in manifest.dependencies().all_dependencies().values() {
+            for dependency in manifest.dependencies().all_dependencies() {
                 if dependency.is_enabled_for(possible_features.iter().cloned()) {
                     self.construct_for_single_dependency(package, dependency)?;
                 }
@@ -229,7 +229,7 @@ impl<'a> SolverEngine<'a> {
         edge: &DependencyEdge,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let possible_realizations = get_possible_realisations(
+        let possible_realizations = get_possible_realizations(
             manifest_dependency,
             &self.input.versions_for_location,
             &self.input.location_resolver,
@@ -336,12 +336,12 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, QpCtx,
+        DuckCtx,
         quackpack::core::{
             parse_manifest,
             types_common::{ExpandedLocation, Location},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     use super::*;
@@ -351,6 +351,7 @@ mod test {
         let manifest = dir.path().join("x");
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
+        dir.path().try_fsync_dir().unwrap();
         (dir, manifest)
     }
 
@@ -376,9 +377,8 @@ metadata:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -474,9 +474,8 @@ dependencies:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -584,9 +583,8 @@ features:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -680,9 +678,8 @@ features:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
@@ -791,10 +788,9 @@ features:
 "#,
         );
         let ctx = DuckCtx::default();
-        let qpctx = QpCtx::new(&ctx);
-        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),

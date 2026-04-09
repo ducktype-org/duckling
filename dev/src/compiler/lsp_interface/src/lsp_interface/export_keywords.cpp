@@ -28,7 +28,7 @@ namespace lsp {
 		std::vector<std::string> keywords;
 
 		/**
-		 * This loop parses the output of Duckling cvompiler's getKeywords() function and adds the
+		 * This loop parses the output of Duckling compiler's getKeywords() function and adds the
 		 * keywords to the list.
 		 */
 		for (lang_def::Keyword k: lang_def::getKeywords()) {
@@ -49,7 +49,7 @@ namespace lsp {
 		std::vector<std::string> specials;
 
 		/**
-		 * This loop parses the output of Duckling cvompiler's getSpecials() function and adds the
+		 * This loop parses the output of Duckling compiler's getSpecials() function and adds the
 		 * specials to the list.
 		 */
 		for (lang_def::Special s: lang_def::getSpecials()) {
@@ -70,7 +70,7 @@ namespace lsp {
 		std::vector<std::string> operators;
 
 		/**
-		 * This loop parses the output of Duckling cvompiler's getOperators() function and adds the
+		 * This loop parses the output of Duckling compiler's getOperators() function and adds the
 		 * operators to the list.
 		 */
 		for (lang_def::NamedOperator o: lang_def::getOperators()) {

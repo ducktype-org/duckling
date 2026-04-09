@@ -4,8 +4,6 @@
 
 namespace pst {
 	MBox<Action> Action::parse(LangParserState& state) {
-		dia::SourcePosition position = state.getPosition();
-
 		if (!assertStmtChoice<Action>(state, state[0].isKeyword())) return nullptr;
 
 		MBox<Action> out;
@@ -13,25 +11,25 @@ namespace pst {
 
 		switch (keyword) {
 		case Keyword::Return:
-			out = makeBox<Return>(position);
+			out = makeBox<Return>(state);
 			break;
 		case Keyword::Break:
-			out = makeBox<Break>(position);
+			out = makeBox<Break>(state);
 			break;
 		case Keyword::Continue:
-			out = makeBox<Continue>(position);
+			out = makeBox<Continue>(state);
 			break;
 		case Keyword::Redo:
-			out = makeBox<Redo>(position);
+			out = makeBox<Redo>(state);
 			break;
 		case Keyword::Restart:
-			out = makeBox<Restart>(position);
+			out = makeBox<Restart>(state);
 			break;
 		case Keyword::Defer:
-			out = makeBox<Defer>(position);
+			out = makeBox<Defer>(state);
 			break;
 		case Keyword::Throw:
-			out = makeBox<Throw>(position);
+			out = makeBox<Throw>(state);
 			break;
 		default:
 			assertStmtChoice<Action>(state, false);
@@ -68,7 +66,7 @@ namespace pst {
 		}
 	}
 
-	LangElement::HashAlg& Action::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Action::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, expr.has_value());
 		return partial_hash;
 	}

@@ -5,7 +5,13 @@
 
 #include "generic_operations.hpp"
 
+#include <debug_info/debug_info_io.hpp>
+#include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
+#include <driver/repl_utils/repl_dvm_helpers.hpp>
+#include <driver/repl_utils/repl_split_helpers.hpp>
+#include <driver/repl_utils/repl_statement_helpers.hpp>
+#include <driver/repl_utils/script_helpers.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
@@ -14,45 +20,51 @@
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
+#include <global_state/script_context.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <utility>
 
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
-		return { module_id.queryUnstablePerfectHash(), std::to_underlying(backend_type) };
+		return { module_id.queryUnstablePerfectHash(),
+			     std::to_underlying(backend_type),
+			     build_debug_info };
 	}
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
 		auto component_hash = compiler::frontend::ModuleTree::getPathComponentHash(module_id);
 		auto partial        = component_hash.partial;
 		hashing::addToHash(partial, std::to_underlying(backend_type));
+		hashing::addToHash(partial, build_debug_info);
 		return partial.finalize();
 	}
 
-	struct IMPLEMENT_QUERY(CompileModule, query::QResult<artifacts::FileArtifact>) {
+	struct IMPLEMENT_QUERY(CompileModule, query::QResult<CompileModuleResult>) {
 		QUERY_ARTIFACTS_MACROS
-		QUERY_AUTO_CACHE_COPY
-
-		/** Helper variable for printing user logs, change freely if needed */
-		constinit static inline std::atomic<u64> this_module_count = 0;
+		QUERY_AUTO_CACHE_CREF
 
 		/** Helper variable for printing user logs, change freely if needed */
 		constinit static inline std::atomic<u64> total_module_count = 0;
@@ -76,10 +88,23 @@ namespace compiler::driver {
 		 * Helper function to log module compilation info.
 		 */
 		static void moduleLog(const QKey& key, std::string_view info) {
+			/** Helper variables for printing user logs, change freely if needed */
+			static concurrent::ConHashMap<frontend::ModuleID, u64> module_number_cache;
+			static std::atomic<u64>                                next_module_number = 1;
+
+			u64 id = 0;
+			module_number_cache.maybePutAndUpdate(key.module_id, u64{ 0 }, [&](Ref<u64> number) {
+				if (*number == 0) {
+					// this is a new module
+					*number = next_module_number.fetch_add(1, std::memory_order_relaxed);
+				}
+				id = *number;
+			});
+
 			auto total = total_module_count.load(std::memory_order_relaxed);
 			CORE_USER_LOG(
 				"[",
-				this_module_count.fetch_add(1, std::memory_order_relaxed),
+				id,
 				"/",
 				total == 0 ? "?" : std::to_string(total),
 				"] ",
@@ -105,8 +130,20 @@ namespace compiler::driver {
 			}
 		}
 
-		static std::string getModuleOutputName(const QKey& key) {
-			return key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+		struct ModuleOutputNames {
+			std::string                 object_file;
+			base::Optional<std::string> debug_info_file;
+		};
+
+		static ModuleOutputNames getModuleOutputName(const QKey& key) {
+			ModuleOutputNames names;
+			names.object_file
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			if (key.build_debug_info && key.backend_type == BackendType::DVM) {
+				names.debug_info_file
+					= key.queryStablePerfectHash().toStringHex().append(DEBUG_INFO_STABLE_EXTENSION);
+			}
+			return names;
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
@@ -119,10 +156,13 @@ namespace compiler::driver {
 			}
 			CRef lir_data = &lir_data_result->valueOrThrow();
 
-			auto output_name = getModuleOutputName(key);
-			auto output
-				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
-			    ));
+			auto output_names = getModuleOutputName(key);
+			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
+                base::StrID(output_names.object_file.c_str())
+            );
+
+			base::Optional<debug_info::DebugInfo>   debug_info_output;
+			base::Optional<artifacts::FileArtifact> debug_info_artifact;
 
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
@@ -133,7 +173,7 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
-						output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
+						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 
@@ -152,18 +192,46 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
-				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
-				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
-				vm::code::serialize(dvm_code_collection, dvm_file);
-				dvm_file.close();
+				if_opt_some(output_names.debug_info_file, di_file) {
+					debug_info_artifact.emplace(getQueryArtifactsCollection()->fileArtifactAtOrNew(
+						base::StrID(di_file.c_str())
+					));
+				}
+
+				auto serialize_to_artifact = [&](artifacts::FileArtifact& art,
+				                                 auto&                    source,
+				                                 auto                     serialize_fn) {
+					std::ofstream output_file(art.file.getFilePath().getPath(), std::ios::binary);
+					if (!output_file.is_open()) CORE_PANIC("Failed to open file for writing");
+					serialize_fn(source, output_file);
+					output_file.close();
+				};
+
+				auto dvm_module_data = compileLIRModuleToDVM(lir_data, ctx, key.build_debug_info);
+
+				serialize_to_artifact(code_output, dvm_module_data.code, vm::code::serializeCode);
+
+				if (key.build_debug_info) {
+					dvm_module_data.debug_info.value().module_path
+						= code_output.file.getFilePath().string();
+
+					serialize_to_artifact(
+						debug_info_artifact.value(),
+						dvm_module_data.debug_info.value(),
+						debug_info::saveToStream
+					);
+
+					debug_info_output = std::move(dvm_module_data.debug_info);
+				}
+
 				break;
 			}
 			default:
 				CORE_PANIC("bad backend type");
 			}
 
-			return output;
+			return CompileModuleResult{ .object_art = std::move(code_output),
+				                        .debug_info = std::move(debug_info_output) };
 		}
 
 		/**
@@ -173,18 +241,47 @@ namespace compiler::driver {
 		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
 			auto output_name = getModuleOutputName(key);
 
-			auto collection   = getQueryArtifactsCollection();
-			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
+			auto collection = getQueryArtifactsCollection();
+			auto output_maybe
+				= collection->fileArtifactAtMaybe(base::StrID(output_name.object_file.c_str()));
 
 			if (!output_maybe.has_value()) {
 				moduleLog(key, "artifact not found in artifacts collection");
 				return {};
 			}
 
-			auto output = *output_maybe.value();
+
+			CompileModuleResult result{ .object_art = *output_maybe.value(), .debug_info = {} };
+
+			if_opt_some(output_name.debug_info_file, di_file) {
+				auto debug_info_maybe
+					= collection->fileArtifactAtMaybe(base::StrID(di_file.c_str()));
+
+				if (!debug_info_maybe.has_value()) {
+					moduleLog(key, "debug info artifact not found in artifacts collection");
+					return {};
+				}
+
+				std::ifstream input_file(
+					debug_info_maybe.value()->file.getFilePath().getPath(), std::ios::binary
+				);
+				if (!input_file.is_open()) {
+					moduleLog(key, "Failed to open debug info artifact file");
+					return {};
+				}
+
+				auto debug_info_or_error = debug_info::loadFromStream(input_file);
+				if (!debug_info_or_error.has_value()) {
+					CORE_USER_LOG(
+						"Failed to parse debug-info artifact: ", debug_info_or_error.error(), "\n"
+					);
+					return {};
+				}
+				result.debug_info.emplace(std::move(debug_info_or_error.value()));
+			}
 
 			moduleLog(key, "Cached, loading artifact from disk");
-			return output;
+			return result;
 		}
 
 		static auto deleteFromDisc(const QKey& key) -> bool {
@@ -192,11 +289,206 @@ namespace compiler::driver {
 
 			auto collection = getQueryArtifactsCollection();
 			moduleLog(key, "Deleting artifact from disk");
-			return collection->deleteFileArtifact(base::StrID(output_name.c_str()));
+			bool deleted
+				= collection->deleteFileArtifact(base::StrID(output_name.object_file.c_str()));
+			if_opt_some(output_name.debug_info_file, di_file) {
+				bool artifact_deleted
+					= collection->deleteFileArtifact(base::StrID(di_file.c_str()));
+				deleted = deleted && artifact_deleted;
+			}
+			return deleted;
 		}
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
+
+	namespace {
+		std::expected<vm::code::CodeCollection, std::string> compileScriptToDVMCollection() {
+			auto& script_context = global_state::getScriptContext();
+			auto  script_source  = script_context.script_file.getContent().view().stdString();
+			auto  split_result   = repl::splitInputIntoStatements(script_source);
+			if (!split_result.has_value())
+				return std::unexpected(
+					base::strConcat("Script parsing failed: ", split_result.error())
+				);
+
+			CORE_DEV_LOG(
+				REPL, "compile_script: split into ", split_result->size(), " statement(s)\n"
+			);
+
+			std::expected<vm::code::CodeCollection, std::string> compiled_script;
+
+			query::utils::withContextDo([&](query::Context& ctx) {
+				backend_vm::ReplLoweringContext lowering_context(ctx);
+				lowering_context.setContext(ctx);
+				defer(lowering_context.invalidateContext());
+
+				auto validated_program = vm::code::ValidProgram::withBuiltins();
+				std::vector<repl::ScriptExecutableCall> executable_calls;
+				base::Optional<frontend::ModuleID>      parent_module_id;
+
+				auto try_insert_chunk = [&](const vm::code::CodeCollection& chunk) -> bool {
+					try {
+						validated_program = validated_program.tryInsertCode(chunk);
+						return true;
+					} catch (const std::exception& e) {
+						compiled_script = std::unexpected(base::strConcat(
+							"DVM bytecode validation failed while composing script chunks: ",
+							e.what()
+						));
+						return false;
+					}
+				};
+
+				u64 statement_counter = 0;
+				for (const auto& statement_source: *split_result) {
+					auto module_ref = repl::createEphemeralChainedStatementModule(
+						statement_source, parent_module_id, statement_counter, "script_"
+					);
+					auto module_id   = module_ref->getModuleID();
+					parent_module_id = module_id;
+
+					CORE_DEV_LOG(
+						REPL,
+						"compile_script: statement #",
+						statement_counter + 1,
+						", module #",
+						module_id.queryUnstablePerfectHash(),
+						"\n"
+					);
+
+					auto statement_info_result = repl::classifySingleStatement(ctx, module_id);
+					if (!statement_info_result.has_value()) {
+						compiled_script = std::unexpected(statement_info_result.error());
+						return;
+					}
+
+					auto module_name = repl::getStatementModuleName(module_id, "script_module_");
+
+					if (std::holds_alternative<repl::DefinitionSingleStatementInfo>(
+							statement_info_result.value()
+						)) {
+						CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
+						const auto& hout_unit    = repl::getDefinitionHOUTUnit(ctx, module_id);
+						auto        chunk_result = repl::compileHOUTUnitToDVMCode(
+                            ctx, hout_unit, module_name, lowering_context
+                        );
+						if (!chunk_result.has_value()) {
+							compiled_script = std::unexpected(chunk_result.error());
+							return;
+						}
+						if (!try_insert_chunk(chunk_result.value())) return;
+					} else {
+						CORE_DEV_LOG(REPL, "compile_script: classified as executable statement\n");
+
+						auto wrapper_result = repl::buildStatementWrapper(
+							ctx, statement_info_result.value(), statement_counter
+						);
+						if (!wrapper_result.has_value()) {
+							compiled_script = std::unexpected(wrapper_result.error());
+							return;
+						}
+
+						auto hout_unit
+							= repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
+						auto chunk_result = repl::compileHOUTUnitToDVMCode(
+							ctx, hout_unit, module_name, lowering_context
+						);
+						if (!chunk_result.has_value()) {
+							compiled_script = std::unexpected(chunk_result.error());
+							return;
+						}
+
+						auto call_meta = repl::getExecutableCallMetadata(
+							chunk_result.value(), wrapper_result->wrapper_func_name
+						);
+						if (!call_meta.has_value()) {
+							compiled_script = std::unexpected(base::strConcat(
+								"Failed to extract wrapper metadata: ", call_meta.error()
+							));
+							return;
+						}
+
+						executable_calls.push_back(call_meta.value());
+						if (!try_insert_chunk(chunk_result.value())) return;
+					}
+
+					++statement_counter;
+				}
+
+				vm::code::CodeCollection main_collection;
+				// Generate the main entry point that calls all statement wrappers in order.
+				// executable_calls contains the wrapper names + return types collected above.
+				main_collection.functions.push_back(repl::makeScriptMainFunction(executable_calls));
+				if (!try_insert_chunk(main_collection)) return;
+
+				compiled_script = validated_program.produceValidCodeCollection();
+			});
+
+			if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
+			return compiled_script.value();
+		}
+	}
+
+	base::OkBad compileScript(
+		BackendType backend_type, [[maybe_unused]] const linker::LinkingOptions& linking_options
+	) {
+		if (backend_type != BackendType::DVM) {
+			CORE_USER_LOG("compile_script currently supports only --dvm-backend.\n");
+			return base::BAD;
+		}
+
+		auto compiled_script = compileScriptToDVMCollection();
+		if (!compiled_script.has_value()) {
+			CORE_USER_LOG(compiled_script.error(), "\n");
+			return base::BAD;
+		}
+
+		auto& script_context  = global_state::getScriptContext();
+		auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+            base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+        );
+		std::ofstream output_file(output_artifact.file.getFilePath().getPath(), std::ios::binary);
+		if (!output_file.is_open()) {
+			CORE_USER_LOG(
+				"Failed to open output file for script bytecode: ",
+				output_artifact.file.getFilePath().string(),
+				"\n"
+			);
+			return base::BAD;
+		}
+
+		vm::code::serializeCode(compiled_script.value(), output_file);
+		output_file.close();
+
+		CORE_USER_LOG(
+			"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
+		);
+		return base::OK;
+	}
+
+	std::expected<RunOutput, std::string> runScriptOnDVM() {
+		auto compiled_script = compileScriptToDVMCollection();
+		if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
+
+		vm::PID pid{};
+
+		return vm::api::spawn()
+		    .and_then([&](vm::api::ProcessInfo process) {
+				pid = process.pid;
+				return std::expected<void, vm::api::ApiError>{};
+			})
+		    .and_then([&] { return vm::api::loadCode(pid, compiled_script.value()); })
+		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
+		    .and_then([&] { return vm::api::run(pid); })
+		    .and_then([&] { return vm::api::join(pid); })
+		    .and_then([&] { return vm::api::getExitValue(pid); })
+		    .transform_error(vm::api::errorToString)
+		    .transform([](Ref<vm::VmValue> exit_value) {
+				return RunOutput{ .exit_code
+				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
+			});
+	}
 
 	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,
@@ -220,12 +512,17 @@ namespace compiler::driver {
 
 		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
 
+		// @TODO: #2354 This is temporary.
+		const bool build_debug_info = backend == BackendType::DVM;
+
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
-			auto module_result = query::entryPoint<CompileModule>({ module_id, backend });
-			if (module_result.hasValue())
-				objects.emplace_back(module_result.valueOrPanic());
-			else
+			auto module_result
+				= query::entryPoint<CompileModule>({ module_id, backend, build_debug_info });
+			if (module_result->hasValue()) {
+				objects.emplace_back(module_result->valueOrPanic().object_art);
+				if (build_debug_info) query::entryPoint<DebugInfoForModule>({ module_id, backend });
+			} else
 				result = base::BAD;
 		};
 		for (const auto& module_id: modules_to_compile) handle_module(module_id);
@@ -255,7 +552,7 @@ namespace compiler::driver {
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
 		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx);
+		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx, false);
 
 		vm::PID pid{};
 
@@ -264,7 +561,7 @@ namespace compiler::driver {
 				pid = process.pid;
 				return std::expected<void, vm::api::ApiError>{};
 			})
-		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection }); })
+		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection.code }); })
 		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 		    .and_then([&] { return vm::api::run(pid); })
 		    .and_then([&] { return vm::api::join(pid); })

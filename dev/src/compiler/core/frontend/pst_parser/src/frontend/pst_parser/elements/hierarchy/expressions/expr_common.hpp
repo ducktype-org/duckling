@@ -20,16 +20,4 @@ namespace pst {
 		CONDITION(isAssignment);
 		CONDITION(exprStmtEnd);
 	};
-
-	namespace expr {
-		/**
-		 * @brief General parseUntil that allows to parse an expression element with a condition for
-		 * expression end.
-		 */
-		template<std::derived_from<ExprElement> T>
-		MBox<ExprElement> parseUntilEnd(LangParserState& state) {
-			u64  length = internal::streamSize(state);
-			auto res    = T::parse(state, length);
-		}
-	}
 }

@@ -101,7 +101,7 @@ namespace vm {
 
 	bool Memory::tryInsertGlobalData(GlobalDataID id, TypeCRef type) {
 		if (!global_data.contains(id)) {
-			auto             type_size = type->getSize();
+			auto             type_size = type->getSize().asInt();
 			base::OwningView storage(new byte[type_size], type_size);
 			auto             block = allocateDummy(type, storage.modView().getBegin());
 			increaseBlockRefcount(block);
@@ -149,7 +149,7 @@ namespace vm {
 
 		auto block_data         = parent_pointer.block->data;
 		block_data.element_type = type;
-		block_data.view         = getPointerData(parent_pointer, type->getSize());
+		block_data.view         = getPointerData(parent_pointer, type->getSize().asInt());
 
 		auto new_block    = createBlock(block_data);  // @note createBlock nulls them bytes
 		new_block->parent = parent_pointer.getBlock();
@@ -213,19 +213,19 @@ namespace vm {
 		// Free child blocks.
 		auto& dst_child_blocks = dst.getBlock()->children_blocks;
 		for (auto iter = dst_child_blocks.lower_bound(dst.offset);
-		     iter != dst_child_blocks.end() && iter->first < dst.offset + type->getSize();
+		     iter != dst_child_blocks.end() && iter->first < dst.offset + type->getSize().asInt();
 		     iter = dst_child_blocks.erase(iter)) {
 			freeBlockData(iter->second);
 		}
 
-		const auto dst_view = getPointerData(dst, type->getSize());
-		const auto src_view = getPointerData(src, type->getSize());
+		const auto dst_view = getPointerData(dst, type->getSize().asInt());
+		const auto src_view = getPointerData(src, type->getSize().asInt());
 		runDataDestructors(dst_view, type);
 
 		// Copy the child blocks
 		auto& src_child_blocks = src.getBlock()->children_blocks;
 		for (auto iter = src_child_blocks.lower_bound(src.offset);
-		     iter != src_child_blocks.end() && iter->first < src.offset + type->getSize();
+		     iter != src_child_blocks.end() && iter->first < src.offset + type->getSize().asInt();
 		     ++iter) {
 			auto    offset      = dst.offset + iter->first - src.offset;
 			Pointer new_pointer = Pointer(dst.getBlock(), offset);
@@ -234,7 +234,7 @@ namespace vm {
 		}
 
 		// Copy the data itself
-		std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize());
+		std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize().asInt());
 		runDataCopyConstructors(dst_view, type);
 	}
 
@@ -297,7 +297,7 @@ namespace vm {
 		if (type->getKind() != Type::Kind::DynamicTable) {
 			// Only types other than dynamic_table can be next to each other.
 			// Callback on the first object
-			(this->*callback)(base::ModRawView{ data.getBegin(), type->getSize() }, type);
+			(this->*callback)(base::ModRawView{ data.getBegin(), type->getSize().asInt() }, type);
 		}
 
 		switch (type->getKind()) {
@@ -310,7 +310,7 @@ namespace vm {
 		case Type::Kind::DynamicTable:
 		case Type::Kind::FixedSizeTable: {
 			const auto inner_type = type->getInnerType().value();
-			const auto inner_size = inner_type->getSize();
+			const auto inner_size = inner_type->getSize().asInt();
 			for (usize begin = 0; begin < data.size(); begin += inner_size)
 				(this->*callback)(
 					base::ModRawView{ data.getBegin() + begin, inner_size }, inner_type
@@ -320,7 +320,9 @@ namespace vm {
 		case Type::Kind::Data: {
 			// Iterate over data's fields
 			for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
-				(this->*callback)(base::ModRawView{ data.getBegin() + offset, tp->getSize() }, tp);
+				(this->*callback)(
+					base::ModRawView{ data.getBegin() + offset.asInt(), tp->getSize().asInt() }, tp
+				);
 			break;
 		}
 		default:
@@ -331,10 +333,12 @@ namespace vm {
 			// In case we were given a slice of a table with multiple objects of the same type laying
 			// next to each other, then iterate over those as well.
 			// Here we start from the second, since the first one was handled above
-			for (usize next_item = type->getSize(); next_item < data.size();
-			     next_item += type->getSize()) {
+			for (auto next_item = type->getSize().asInt(); next_item < data.size();
+			     next_item += type->getSize().asInt()) {
 				iterateOverDataAndExecute(
-					base::ModRawView{ data.getBegin() + next_item, type->getSize() }, type, callback
+					base::ModRawView{ data.getBegin() + next_item, type->getSize().asInt() },
+					type,
+					callback
 				);
 			}
 		}

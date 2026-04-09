@@ -12,8 +12,8 @@ namespace pst::expr {
 		Operator op;
 
 	public:
-		explicit PrefixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
-			  ExprElement(pos, precedence),
+		explicit PrefixOperator(const LangParserState& state, Operator op, i64 precedence):
+			  ExprElement(state, precedence),
 			  op(op) {}
 
 		~PrefixOperator() override = default;

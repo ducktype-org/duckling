@@ -3,20 +3,20 @@
 
 namespace pst {
 	MBox<ImportIdentifierAs> ImportIdentifierAs::parse(LangParserState& state) {
-		auto out = makeBox<ImportIdentifierAs>(state.getPosition());
+		auto out = makeBox<ImportIdentifierAs>(state);
 
 		tpc::Identifier id;
 
-		state.parse(out).all(&id);
+		PARSE().all(&id);
 		out->names.push_back(id);
 
 		PST_WHILE(state[0].is(NamedOperator::Period)) {
-			state.parse(out).all(NamedOperator::Period, &id);
+			PARSE().all(NamedOperator::Period, &id);
 			out->names.push_back(id);
 		}
 
-		if (state.parse(out).tryEat(Keyword::As)) {
-			state.parse(out).all(&id);
+		if (PARSE().tryEat(Keyword::As)) {
+			PARSE().all(&id);
 			out->as = id;
 		}
 
@@ -41,8 +41,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ImportIdentifierAs::addElementDataToStableHash(HashAlg& partial_hash
-	) const {
+	HashAlg& ImportIdentifierAs::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, names);
 		addToHash(partial_hash, as.has_value());
 		if (as) addToHash(partial_hash, *as);

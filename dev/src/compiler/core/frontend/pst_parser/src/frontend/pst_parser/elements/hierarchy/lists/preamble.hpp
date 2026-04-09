@@ -29,7 +29,7 @@ namespace pst {
 			return elements.size();
 		}
 
-		explicit List(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit List(const LangParserState& state): NotStmt(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

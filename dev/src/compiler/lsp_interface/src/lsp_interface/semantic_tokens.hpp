@@ -14,7 +14,7 @@
 
 #include <string>
 
-MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
+MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, StandardTokenType,
 	Namespace,
 	Type,
 	Class,
@@ -48,8 +48,9 @@ namespace lsp {
 		// https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
 
 		SemanticToken(CRef<lexer::Token>);
+		SemanticToken(CRef<lexer::Token>, StandardTokenType);
 
-		static Type translateType(lexer::Token::Type);
+		static StandardTokenType translateType(lexer::Token::Type);
 
 		std::string toJSON();
 
@@ -58,8 +59,7 @@ namespace lsp {
 		u64                line;
 		u64                start_character;
 		u64                length;
-		Type               type;
-		// @TODO token modifiers (Duckling LSP 2.0)
+		StandardTokenType  type;
 	};
 
 	std::string getSemanticTokens(base::Ref<compiler::frontend::SourceFile>);

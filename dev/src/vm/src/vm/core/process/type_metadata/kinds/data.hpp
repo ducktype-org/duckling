@@ -7,7 +7,6 @@
 
 #include <string_id/string_id.hpp>
 
-#include <unordered_map>
 #include <vector>
 
 namespace vm::kind {

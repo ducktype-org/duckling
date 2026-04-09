@@ -2,7 +2,11 @@ use std::path::Path;
 
 use crate::{
     StrId,
-    quackpack::core::{Version, storage},
+    duck::setup_logger,
+    quackpack::core::{
+        Version,
+        storage::{self, venv_id::ToVenvId},
+    },
 };
 
 use super::registry_url_hash;
@@ -30,8 +34,9 @@ fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
 /// Check that we clean what we should've cleaned.
 /// Details are in [`setup_mock_storage`].
 fn clean() {
+    setup_logger();
     let (ctx, root) = setup_mock_storage();
-    let mut output = storage::ops::clean_storage(&ctx).unwrap();
+    let mut output = storage::ops::clean_storage(&ctx, ctx.default_storage_root()).unwrap();
     output.removed_packages.sort();
     let mut expected_packages = [
         root.path()
@@ -42,7 +47,7 @@ fn clean() {
             .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
     ];
     expected_packages.sort();
-    assert_eq!(output.removed_venvs, ["root3"]);
+    assert_eq!(output.removed_venvs, ["root3".to_venv_id()]);
     assert_eq!(output.removed_packages, expected_packages);
     check_venvs_exist(root.path(), &["root1", "root2", "root4"]);
     check_venvs_dont_exist(root.path(), &["root3"]);
@@ -66,24 +71,25 @@ fn clean() {
 /// removed.
 fn delete_venv() {
     let (ctx, root) = setup_mock_storage();
-    storage::ops::delete_venv(&ctx, StrId::new("root1")).unwrap();
+    let storage_root = ctx.default_storage_root();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("root1")).unwrap();
     check_venvs_exist(root.path(), &["root2", "root3", "root4"]);
     check_venvs_dont_exist(root.path(), &["root1"]);
-    storage::ops::delete_venv(&ctx, StrId::new("root2")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("root2")).unwrap();
     check_venvs_exist(root.path(), &["root3", "root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2"]);
-    storage::ops::delete_venv(&ctx, StrId::new("root3")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("root3")).unwrap();
     check_venvs_exist(root.path(), &["root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3"]);
 
-    storage::ops::delete_venv(&ctx, StrId::new("non_existent_venv")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("non_existent_venv")).unwrap();
     check_venvs_exist(root.path(), &["root4"]);
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3"]);
 
-    storage::ops::delete_venv(&ctx, StrId::new("root4")).unwrap();
+    storage::ops::delete_venv(&ctx, storage_root, StrId::new("root4")).unwrap();
     check_venvs_dont_exist(root.path(), &["root1", "root2", "root3", "root4"]);
 
-    let mut output = storage::ops::clean_storage(&ctx).unwrap();
+    let mut output = storage::ops::clean_storage(&ctx, storage_root).unwrap();
     output.removed_packages.sort();
     let mut expected_packages = [
         root.path()
@@ -105,16 +111,22 @@ fn delete_venv() {
 /// Basic info output tests.
 fn info() {
     let (ctx, _root) = setup_mock_storage();
-    let output = storage::ops::list_venvs(&ctx).unwrap();
+    let output = storage::ops::list_venvs(ctx.default_storage_root()).unwrap();
     assert_eq!(output.len(), 4);
     assert_eq!(
-        output.get("root1").unwrap().data().freeze().root().name(),
+        output
+            .get(&"root1".to_venv_id())
+            .unwrap()
+            .data()
+            .freeze()
+            .root()
+            .name(),
         "root1"
     );
 
     assert_eq!(
         output
-            .get("root1")
+            .get(&"root1".to_venv_id())
             .unwrap()
             .data()
             .freeze()
@@ -124,23 +136,41 @@ fn info() {
     );
 
     assert_eq!(
-        output.get("root2").unwrap().data().freeze().root().name(),
+        output
+            .get(&"root2".to_venv_id())
+            .unwrap()
+            .data()
+            .freeze()
+            .root()
+            .name(),
         "root2"
     );
 
     assert_eq!(
-        output.get("root3").unwrap().data().freeze().root().name(),
+        output
+            .get(&"root3".to_venv_id())
+            .unwrap()
+            .data()
+            .freeze()
+            .root()
+            .name(),
         "root3"
     );
 
     assert_eq!(
-        output.get("root4").unwrap().data().freeze().root().name(),
+        output
+            .get(&"root4".to_venv_id())
+            .unwrap()
+            .data()
+            .freeze()
+            .root()
+            .name(),
         "root4"
     );
 
     assert_eq!(
         output
-            .get("root2")
+            .get(&"root2".to_venv_id())
             .unwrap()
             .data()
             .freeze()
@@ -151,7 +181,7 @@ fn info() {
 
     assert_eq!(
         output
-            .get("root3")
+            .get(&"root3".to_venv_id())
             .unwrap()
             .data()
             .freeze()
@@ -162,7 +192,7 @@ fn info() {
 
     assert_eq!(
         output
-            .get("root3")
+            .get(&"root3".to_venv_id())
             .unwrap()
             .data()
             .freeze()
@@ -174,7 +204,7 @@ fn info() {
 
     assert!(
         output
-            .get("root2")
+            .get(&"root2".to_venv_id())
             .unwrap()
             .data()
             .freeze()
@@ -184,7 +214,7 @@ fn info() {
 
     assert!(
         output
-            .get("root1")
+            .get(&"root1".to_venv_id())
             .unwrap()
             .data()
             .freeze()

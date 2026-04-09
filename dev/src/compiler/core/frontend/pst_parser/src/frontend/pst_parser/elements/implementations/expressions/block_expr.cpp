@@ -5,8 +5,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> BlockExpr::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> BlockExpr::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {
 			// This should (probably) never happen with how it's called by the parser
@@ -15,9 +17,12 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<BlockExpr>(state.getPosition());
+		auto out = makeBox<BlockExpr>(state);
 
-		state.parse(out).withDef(&out->block, BlockOrderType::Ordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().one(&out->block);
+		})
 
 		PST_RETURN out;
 	}
@@ -31,7 +36,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& BlockExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& BlockExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

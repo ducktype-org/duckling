@@ -14,7 +14,7 @@
 /**
  * @brief Macro used to create Strong ID types.
  * Usage:
- * 	STRONG_TYPEDEF_ID(TypeName)
+ * 	STRONG_TYPEDEF_ID(TypeName);
  *
  *  Created type has following interface:
  *
@@ -60,13 +60,13 @@
 		auto                 operator<=>(const NAME&) const = default;       \
 		inline bool          isBad() const { return id == BAD_ID; }          \
 		inline bool          isGood() const { return id != BAD_ID; }         \
-	};
+	}
 
 /**
  * @brief Macro used to create Strong ID types that can be created
  * directly from integers rather then with `Type::next()`
  * Usage:
- * 	STRONG_TYPEDEF_ID(TypeName)
+ * 	STRONG_TYPEDEF_ID_DIRECT_CREATION(TypeName);
  *
  *  Created type has following interface:
  *
@@ -106,15 +106,15 @@
 		auto        operator<=>(const NAME&) const = default;            \
 		inline bool isBad() const { return id == BAD_ID; }               \
 		inline bool isGood() const { return id != BAD_ID; }              \
-	};
+	}
 
 
 /**
  * @brief Add std::hash specialization to given ID type.
- * Usage: ID_STD_HASH(MY_ID)
+ * Usage: ID_STD_HASH(MY_ID);
  */
 #define ID_STD_HASH(TYPE)                                                                   \
 	template<>                                                                              \
 	struct std::hash<TYPE> final {                                                          \
 		usize operator()(const TYPE& key) const { return static_cast<usize>(key.asInt()); } \
-	};
+	}

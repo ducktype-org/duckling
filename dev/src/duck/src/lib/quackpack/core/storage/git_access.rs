@@ -1,35 +1,31 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+//! A storage management of gits.
+use std::path::{Path, PathBuf};
 
 use url::Url;
 
 use crate::{
     QuackResult, StrId,
-    quackpack::core::{Git, git_access::GitAccess},
-    util_common::path_ops_ext::{MkdirOptions, PathOpsExt},
+    quackpack::core::git_access::GitAccess,
+    util::path_ops_ext::{MkdirOptions, PathOpsExt},
 };
 
 use super::package_id::{GitId, PackageId};
 
 use super::paths::Storage;
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
+/// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {
     paths: &'paths Storage,
-    _cached: HashMap<Git, GitId>,
 }
 
 impl<'paths> StorageGitAccess<'paths> {
-    pub fn new(paths: &'paths Storage, cached: HashMap<Git, GitId>) -> Self {
-        Self {
-            paths,
-            _cached: cached,
-        }
+    /// Create a new [`StorageGitAccess`].
+    pub fn new(paths: &'paths Storage) -> Self {
+        Self { paths }
     }
 }
 
-impl<'paths> GitAccess for StorageGitAccess<'paths> {
+impl GitAccess for StorageGitAccess<'_> {
     fn git_path(&self, url: Url, commit: StrId) -> PathBuf {
         self.paths.pkg_dir(&PackageId::Git(GitId::new(url, commit)))
     }

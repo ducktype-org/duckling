@@ -1,3 +1,4 @@
+//! Dependencies' sources and interning.
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
@@ -14,12 +15,13 @@ use crate::{QuackError, StrId, qp_bail};
 static INTERNED_SOURCE_CACHE: OnceLock<Mutex<HashSet<&'static Source>>> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-/// Interned version of [`Source`].
+/// An interned version of [`Source`].
 pub struct InternedSource {
     inner: &'static Source,
 }
 
 impl InternedSource {
+    /// Create a new [`InternedSource`].
     pub fn new(source: Source) -> Self {
         let mut cache = INTERNED_SOURCE_CACHE
             .get_or_init(Default::default)
@@ -136,12 +138,12 @@ pub struct Registry {
 }
 
 impl Registry {
-    /// Create a new registry source.
+    /// Create a new [`Registry`] source.
     pub fn new(url: Url) -> Self {
         Self { url }
     }
 
-    /// Get the registry URL.
+    /// Get the registry [`Url`].
     pub fn url(&self) -> &Url {
         &self.url
     }
@@ -156,7 +158,7 @@ pub struct Local {
 }
 
 impl Local {
-    /// Create a new local source.
+    /// Create a new [`Local`] source.
     pub fn new(
         absolute: PathBuf,
         entry_in_manifest: StrId,
@@ -186,7 +188,7 @@ impl Local {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// Represents a source a dependency cloned from git.
+/// Represents a source of a dependency cloned from git.
 pub struct Git {
     url: Url,
     branch_or_tag: BranchOrTag,
@@ -194,7 +196,7 @@ pub struct Git {
 }
 
 impl Git {
-    /// Create a new git source.
+    /// Create a new [`Git`] source.
     pub fn new(url: Url, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
         Self {
             url,

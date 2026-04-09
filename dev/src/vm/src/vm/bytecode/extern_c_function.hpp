@@ -95,13 +95,16 @@ namespace vm::detail {
 #define VM_EXT_C_INTO_PARAMS(Type, VmType, Name)       , Type Name
 #define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , func_args->Name
 
-#define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                                        \
-	auto tp_##Name = vm::api::getType(pid, VmType);                                          \
-	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);                      \
-	if (tp_##Name->type->getSize() != vm::detail::safe_sizeof<Type>::VALUE)                  \
-		throw vm::ExtCArgumentSizeMismatch(                                                  \
-			#Type, vm::detail::safe_sizeof<Type>::VALUE, #VmType, tp_##Name->type->getSize() \
-		);                                                                                   \
+#define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                               \
+	auto tp_##Name = vm::api::getType(pid, VmType);                                 \
+	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);             \
+	if (tp_##Name->type->getSize().asInt() != vm::detail::safe_sizeof<Type>::VALUE) \
+		throw vm::ExtCArgumentSizeMismatch(                                         \
+			#Type,                                                                  \
+			vm::detail::safe_sizeof<Type>::VALUE,                                   \
+			#VmType,                                                                \
+			tp_##Name->type->getSize().asInt()                                      \
+		);                                                                          \
 	vm_arg_type_size_sum += tp_##Name->type->getSize();
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2
@@ -156,7 +159,7 @@ namespace vm::detail {
 			});                                                                                         \
 		}                                                                                               \
 		static vm::code::FuncSignature getSignature(vm::PID pid) {                                      \
-			usize vm_arg_type_size_sum = 0;                                                             \
+			Bytes vm_arg_type_size_sum(0);                                                              \
 			VM_EXT_C_PLACE_VALIDATION(ResCType, ResVmType, result)                                      \
 			vm_arg_type_size_sum                                                                        \
 				-= tp_result->type->getSize(); /* undo what we've done to the sum */                    \
@@ -166,10 +169,10 @@ namespace vm::detail {
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \
-				vm_arg_type_size_sum == sizeof(FunctionData)                                            \
-					|| (vm_arg_type_size_sum == 0 && sizeof(FunctionData) == 1),                        \
+				vm_arg_type_size_sum.asInt() == sizeof(FunctionData)                                    \
+					|| (vm_arg_type_size_sum.asInt() == 0 && sizeof(FunctionData) == 1),                \
 				"FunctionData\'s fields alignment does not match stack structure in the VM: ",          \
-				vm_arg_type_size_sum,                                                                   \
+				vm_arg_type_size_sum.asInt(),                                                           \
 				"!=",                                                                                   \
 				sizeof(FunctionData)                                                                    \
 			);                                                                                          \

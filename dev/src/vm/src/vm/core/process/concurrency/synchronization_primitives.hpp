@@ -1,5 +1,10 @@
+#pragma once
+
+#include "condition_variable.hpp"
+
 #include <base/collections/maps.hpp>
-#include <base/pointers/shared_box.hpp>
+#include <base/collections/object_pool.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <mutex>
@@ -8,30 +13,46 @@ namespace vm {
 	class SynchronizationPrimitives final {
 	private:
 		/**
-		 * @brief ID of a new mutex that's gonna be added to mutex pool.
+		 * @brief Pool for mutexes used in the process.
 		 */
-		i64 next_mutex_id = 0;
+		base::StableObjectPool<std::mutex, u64, false> mutex_pool;
 
 		/**
-		 * @brief Pool for mutexes used in the process. In the future they should be reusable.
+		 * @brief Pool for condition variables used in the process.
 		 */
-		base::HashMap<i64, SharedBox<std::mutex>>
-			mutex_map;  // @TODO: #2109 Find better structure then map for storing mutexes.
+		base::StableObjectPool<ConditionVariable, u64, false> cv_pool;
+
 
 	public:
 		/**
 		 * @brief Getter for mutexes in the pool.
 		 */
-		SharedBox<std::mutex> getMutex(i64 mutex_id);
+		Ref<std::mutex> getMutex(usize mutex_id);
 
 		/**
 		 * @brief Adds new mutex into pool.
 		 */
-		i64 addMutex();
+		usize addMutex();
 
 		/**
 		 * @brief Removes mutex from pool.
 		 */
-		void removeMutex(i64);
+		void removeMutex(usize);
+
+
+		/**
+		 * @brief Getter for condition variables in the pool.
+		 */
+		base::Ref<ConditionVariable> getCV(usize cv_id);
+
+		/**
+		 * @brief Adds new condition variable into pool.
+		 */
+		usize addCV();
+
+		/**
+		 * @brief Removes condition variable from pool.
+		 */
+		void removeCV(usize);
 	};
 }

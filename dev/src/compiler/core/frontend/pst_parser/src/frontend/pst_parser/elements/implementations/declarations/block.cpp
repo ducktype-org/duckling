@@ -5,14 +5,11 @@
 
 namespace pst {
 	MBox<Block> Block::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Block>(position);
+		auto out = makeBox<Block>(state);
 
 		if (!assertStmtChoice<Block>(state, state[0].is(Keyword::Block))) return nullptr;
 
-		state.parse(out)
-			.all(Keyword::Block, &out->optional_name)
-			.withDef(&out->code_block, BlockOrderType::Unordered);
+		PARSE().all(Keyword::Block, &out->optional_name, &out->code_block);
 
 		PST_RETURN out;
 	}
@@ -28,7 +25,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Block::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Block::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, optional_name);
 		return partial_hash;
 	}

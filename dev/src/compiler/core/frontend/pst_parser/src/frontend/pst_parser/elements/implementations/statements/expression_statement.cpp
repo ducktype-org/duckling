@@ -4,14 +4,14 @@
 
 namespace pst {
 	MBox<ExprStmt> ExprStmt::parse(LangParserState& state) {
-		auto out = makeBox<ExprStmt>(state.getPosition());
-		state.parse(out).one(&out->expr);
+		auto out = makeBox<ExprStmt>(state);
+		PARSE().one(&out->expr);
 		PST_RETURN out;
 	}
 
 	void ExprStmt::dprint(std::ostream& out) const { nullAwareDprint(expr, out); }
 
-	LangElement::HashAlg& ExprStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ExprStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

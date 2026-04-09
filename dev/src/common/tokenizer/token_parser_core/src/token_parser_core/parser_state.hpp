@@ -32,7 +32,7 @@ namespace tpc {
 	};
 
 	/**
-	 * @brief Implements higher level token stream interactions
+	 * @brief Implements higher level token stream interactions.
 	 */
 	class ParserState {
 	protected:
@@ -44,21 +44,43 @@ namespace tpc {
 		enum SubStreamType { Recursive, NonRecursive };
 
 		/**
-		 * @brief Data needed to handle restoring to a fallback
+		 * @brief Data needed to handle restoring to a fallback.
 		 */
 		struct Fallback final {
 			SubStreamType                                         type;
 			Box<TokenStream>                                      saved_stream;
 			std::variant<Box<ParserContext>, CRef<ParserContext>> saved_context;
 			/**
-			 * @brief Jump done after restoring a fallback.
+			 * @brief Jump done after restoring a fallback stored as a set jump length.
 			 */
 			u64 post_jump;
 		};
 
+		/**
+		 * @brief Data needed to handle restoring to a fallback. This type of fallback doesn't
+		 * define a specific length, instead if error is encountered it uses the function saved
+		 * under fail_jump to try to restore a proper parsing context
+		 *
+		 * Right now mostly used for flow control elements as the complexity of finding the end of
+		 * such a statement is non-trivial.
+		 */
+		struct SoftFallback final {
+			std::variant<Box<ParserContext>, CRef<ParserContext>> saved_context;
+			/**
+			 * @brief Condition to be skipped to on error.
+			 *
+			 * The condition should only be used where specific place is hard to compute, mostly
+			 * flow control elements as the versions without brackets are hard to handle on error.
+			 *
+			 * The condition version only uses the condition to jump on failure.
+			 */
+			std::function<TokenStreamCondition> fail_jump;
+		};
+
 		Box<TokenStream> current_stream;
 
-		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
+		std::vector<std::variant<Fallback, SoftFallback>>
+			fallback_stack;  ///< Internal storage of fallback token streams
 
 		std::variant<Box<ParserContext>, CRef<ParserContext>> current_context;
 

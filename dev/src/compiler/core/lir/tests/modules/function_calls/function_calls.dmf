@@ -4,7 +4,7 @@ fun arg0() -> i64 = 0;
 fun foo() -> i64 = {
     let x: i64 = 123;
 
-    let y: i64 = arg1(x);
+    let y: i64 = arg1(x) + 20;
     let z: i64 = arg1(arg0());
 
     arg0();

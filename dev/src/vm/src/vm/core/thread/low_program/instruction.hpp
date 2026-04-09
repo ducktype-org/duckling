@@ -22,13 +22,13 @@
  */
 #define OPFUN_TC_ARGS                                                                        \
 	const MicroInstruction *instr [[maybe_unused]], std::byte *local_stack [[maybe_unused]], \
-		Frame *frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
+		Frame *frame [[maybe_unused]], SafeVMThread &thread [[maybe_unused]]
 
 #define OPFUN_REF_ARGS                                                                         \
 	const MicroInstruction *&instr [[maybe_unused]], std::byte *&local_stack [[maybe_unused]], \
 		Frame *&frame [[maybe_unused]]                                                         \
 		,                                                                                      \
-		VMThread &thread [[maybe_unused]]
+		SafeVMThread &thread [[maybe_unused]]
 
 
 #define RETURN_TYPE_OPFUN_REF void
@@ -52,7 +52,7 @@ namespace internal {
 
 namespace vm {
 
-	class VMThread;
+	class SafeVMThread;
 
 	/**
 	 * @brief Bytecode instruction representation.
@@ -68,20 +68,19 @@ namespace vm {
 	constexpr u64 OP_CASES_COUNT = ::internal::countOpCases();
 
 	struct MicroInstruction final {
-		union {
-			/**
-			 * @brief Index indicating which opcode it is.
-			 * @details This is used when the `USE_TAIL_CALLS` option is disabled.
-			 */
-			u64 nontc_opcode;
-
-			/**
-			 * @brief Pointer to the opcode functions
-			 * @details This is used when the `USE_TAIL_CALLS` option is enabled.
-			 */
-			OpFunTC* tc_opfun;
-		};
-
+#ifdef USE_TAIL_CALLS
+		/**
+		 * @brief Pointer to the opcode functions
+		 * @details This is used when the `USE_TAIL_CALLS` option is enabled.
+		 */
+		OpFunTC* tc_opfun;
+#else
+		/**
+		 * @brief Index indicating which opcode it is.
+		 * @details This is used when the `USE_TAIL_CALLS` option is disabled.
+		 */
+		u64 nontc_opcode;
+#endif
 		u64 arg0;
 		u64 arg1;
 

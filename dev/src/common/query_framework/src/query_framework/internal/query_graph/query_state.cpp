@@ -130,6 +130,11 @@ namespace query::internal {
 
 	Ref<ActiveGraph> QueryState::getActiveGraph() noexcept { return &active_graph; }
 
+	Ref<TaskPool> QueryState::getTaskPool() const {
+		static TaskPool task_pool;
+		return &task_pool;
+	}
+
 	u64 QueryState::activeQueryCount() const { return active_graph.size(); }
 
 	void QueryState::setPrevNodeColor(internal::NodeID node, PrevColor color) {

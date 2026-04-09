@@ -4,13 +4,14 @@
 #include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/thread/vmvalueref.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <ostream>
 #include <sstream>
 
 namespace vm {
-	class VMProcess;
+	class SafeVMProcess;
 
 	/**
 	 * @brief Storage for a value. It is meant to import value into/export value out of VM.
@@ -29,22 +30,22 @@ namespace vm {
 	 */
 	class VmValue final {
 	private:
-		friend class VMProcess;
+		friend class SafeVMProcess;
 
 		/**
 		 * @brief Creates an empty VmValue of the specified type.
 		 */
-		VmValue(VMProcess& process, TypeCRef type);
+		VmValue(SafeVMProcess& process, TypeCRef type);
 
 		/**
 		 * @brief Creates a VmValue of specified type and fills it with the bytes from the `src`
 		 * pointer.
 		 */
-		VmValue(VMProcess& process, TypeCRef type, Pointer src);
+		VmValue(SafeVMProcess& process, TypeCRef type, Pointer src);
 
-		std::vector<byte> data;        /// data.size() == type.getSize()
-		Ref<VMProcess>    my_process;  /// The process for which the VmValue exists.
-		Ref<Memory>       memory;
+		std::vector<byte>  data;        /// data.size() == type.getSize()
+		Ref<SafeVMProcess> my_process;  /// The process for which the VmValue exists.
+		Ref<Memory>        memory;
 
 	public:
 		VmValue(const VmValue&)            = delete;
@@ -69,6 +70,12 @@ namespace vm {
 
 		void importData(Pointer src);
 
+		[[nodiscard]] VMValueRef asRef() const;
+
+		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
+
+		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const;
+
 		[[nodiscard]] PID getPID() const;
 
 		TypeCRef type;
@@ -78,12 +85,12 @@ namespace vm {
 		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
 		 */
 		template<class T>
-		T readBytes(const usize offset = 0) const {
+		T readBytes() const {
 			CORE_ASSERT(
 				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
 			);
-			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds read");
-			return vm::safeReadPointerBytes<T>(data.data(), offset);
+			CORE_ASSERT(sizeof(T) <= data.size(), "VmValue: Out of bounds read");
+			return vm::safeReadPointerBytes<T>(data.data());
 		}
 
 		/**
@@ -125,7 +132,7 @@ struct nlohmann::adl_serializer<vm::VmValue> {
 		// Convert VmValue's bytes to HEX string
 		std::stringstream ss;
 		ss << std::hex;
-		for (size_t i = 0; i < v.type->getSize(); ++i)
+		for (size_t i = 0; i < v.type->getSize().asInt(); ++i)
 			ss << std::setw(2) << std::setfill('0') << static_cast<int>(v.getBytes()[i]);
 		j["data"] = ss.str();
 	}

@@ -1,3 +1,4 @@
+//! Root package features handling.
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::{QuackError, QuackResult, StrId, qp_bail};
@@ -12,12 +13,14 @@ pub type PulledFeatures = HashSet<FeatureName>;
 pub struct Features(HashMap<FeatureName, Vec<FeatureName>>);
 
 impl Features {
-    /// Create a new features map, validating that all referenced features exist.
+    /// Create a [`Features`], validating that all referenced features exist.
     pub fn new(features: HashMap<FeatureName, Vec<FeatureName>>) -> QuackResult<Self> {
         Self::is_valid_features_map(&features)?;
         Ok(Self(features))
     }
 
+    /// Checks, whether `features` is a valid features map (i.e. all values in `Vec`s exist as
+    /// keys).
     fn is_valid_features_map(features: &HashMap<FeatureName, Vec<FeatureName>>) -> QuackResult<()> {
         for (feature, pulled_features) in features {
             for pulled_feature in pulled_features {
@@ -33,7 +36,7 @@ impl Features {
         Ok(())
     }
 
-    /// Check if a feature exists.
+    /// Check, if a feature exists.
     pub fn has_feature(&self, feature: FeatureName) -> bool {
         self.0.contains_key(&feature)
     }

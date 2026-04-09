@@ -38,6 +38,7 @@ file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
 	"${PST_SRC}/elements/implementations/not_statements/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/import_chains/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/patterns/*.cpp"
+	"${PST_SRC}/elements/implementations/not_statements/format_string_sub_elements/*.cpp"
 	"${PST_SRC}/elements/implementations/lists/*.cpp"
 )
 set_source_files_properties(${OtherElementsImplementationFiles}
@@ -79,3 +80,5 @@ duck_add_test(compiler parser_builder tests/parser_builder_test.cpp USES PstPars
 duck_add_test(compiler parser_errors tests/parser_errors_test.cpp USES PstParser)
 
 duck_add_test(compiler extract_single_expression tests/extract_single_expression_test.cpp USES PstParser)
+duck_add_test(compiler extract_single_instruction tests/extract_single_instruction_test.cpp USES PstParser)
+duck_add_test(compiler extract_single_top_level_statement tests/extract_single_top_level_statement_test.cpp USES PstParser)

@@ -1,3 +1,4 @@
+//! Packages' and dependencies' versions.
 use std::{fmt, str::FromStr};
 
 use serde::{de, ser};
@@ -5,6 +6,7 @@ use serde::{de, ser};
 use crate::{QuackError, qp_bail};
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+/// (Almost) SemVer compatible version.
 pub struct Version {
     major: u64,
     minor: u64,
@@ -12,6 +14,7 @@ pub struct Version {
 }
 
 impl Version {
+    /// Create a new [`Version`].
     pub const fn new(major: u64, minor: u64, patch: u64) -> Self {
         Self {
             major,
@@ -20,19 +23,23 @@ impl Version {
         }
     }
 
-    pub const fn major(&self) -> u64 {
+    /// Get the major number of this version.
+    pub const fn major(self) -> u64 {
         self.major
     }
 
-    pub const fn minor(&self) -> u64 {
+    /// Get the minor number of this version.
+    pub const fn minor(self) -> u64 {
         self.minor
     }
 
-    pub const fn patch(&self) -> u64 {
+    /// Get the patch number of this version.
+    pub const fn patch(self) -> u64 {
         self.patch
     }
 
-    pub fn to_string_without_trailing_zeros(&self) -> String {
+    /// Format this version to string, but remove any trialing zeroes.
+    pub fn to_string_without_trailing_zeros(self) -> String {
         if self.patch == 0 && self.minor == 0 {
             format!("{}", self.major)
         } else if self.patch == 0 {
@@ -42,7 +49,9 @@ impl Version {
         }
     }
 
-    pub fn format_without_trailing_zeros(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    /// Same as [`to_string_without_trailing_zeros`](Self::to_string_without_trailing_zeros), but
+    /// write to a formatter.
+    pub fn format_without_trailing_zeros(self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.patch == 0 && self.minor == 0 {
             write!(f, "{}", self.major)
         } else if self.patch == 0 {
@@ -52,22 +61,26 @@ impl Version {
         }
     }
 
-    pub const fn bump_patch(&self) -> Self {
-        let mut copy = *self;
-        copy.patch += 1;
-        copy
+    /// Bump patch number of this version.
+    pub const fn bump_patch(mut self) -> Self {
+        self.patch += 1;
+        self
     }
 
-    pub fn bump_minor(&self) -> Self {
+    /// Bump minor number of this version, zeroing patch number.
+    pub fn bump_minor(self) -> Self {
         Self::from((self.major, self.minor + 1))
     }
 
-    pub fn bump_major(&self) -> Self {
+    /// Bump major number of this version, zeroing minor and patch numbers.
+    pub fn bump_major(self) -> Self {
         Self::from(self.major + 1)
     }
 }
 
+/// Trait for checking compatibilities.
 pub trait CompatibilityCheck {
+    /// Whether `self` can be upgraded to `other`.
     fn can_be_upgraded_to(&self, other: &Self) -> bool;
 }
 
@@ -118,6 +131,7 @@ impl From<u64> for Version {
 }
 
 impl fmt::Display for Version {
+    /// Formats [`Version`] with trailing zeros.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
     }
@@ -143,10 +157,8 @@ impl FromStr for Version {
             splitted.next(),
             splitted.next(),
         ) {
-            (Some(major), None, None, None) => Ok(Self::new(major.parse()?, 0, 0)),
-            (Some(major), Some(minor), None, None) => {
-                Ok(Self::new(major.parse()?, minor.parse()?, 0))
-            }
+            (Some(major), None, _, _) => Ok(Self::new(major.parse()?, 0, 0)),
+            (Some(major), Some(minor), None, _) => Ok(Self::new(major.parse()?, minor.parse()?, 0)),
             (Some(major), Some(minor), Some(patch), None) => {
                 Ok(Self::new(major.parse()?, minor.parse()?, patch.parse()?))
             }

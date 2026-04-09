@@ -1,18 +1,19 @@
+//! Local venv's configuration.
 use std::path::{Path, PathBuf};
 
-use crate::{QuackResult, util_common::toml_config::TomlConfig};
+use crate::{QuackResult, util::yaml_config::YamlConfig};
 
 #[derive(Debug, Default)]
 /// Configuration of a package's venv.
 pub struct VenvConfig {
-    config: TomlConfig,
+    config: YamlConfig,
 }
 
 impl VenvConfig {
-    /// Create a new [`VenvConfig`] from config at a given path.
+    /// Create a new [`VenvConfig`] from a config at the given path.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
         Ok(Self {
-            config: TomlConfig::new(path)?,
+            config: YamlConfig::new(path)?,
         })
     }
 

@@ -9,7 +9,7 @@ namespace pst {
 	class AtrArgList final:
 		  public List<UniversalExprHolder, internal::NameGetters::attributeArgList> {
 	public:
-		explicit AtrArgList(const dia::SourcePosition& pos): List(pos) {}
+		explicit AtrArgList(const LangParserState& state): List(state) {}
 
 		static MBox<AtrArgList> parse(LangParserState& state);
 

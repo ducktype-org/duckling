@@ -15,7 +15,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ExprHolder::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& ExprHolder::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 
@@ -35,20 +35,24 @@ namespace pst {
 		    || internal::Conditions::isBlockGroup(state, fwd);
 	}
 
+	bool ExprParserHelper::untilUniversalAllowCommaAndBlockEnd(const TokenStream& state, i64 fwd) {
+		return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd);
+	}
+
 	bool ExprParserHelper::untilSemicolon(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon);
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseAssignment(LangParserState& state) {
-		return expr::Assignment::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+		return expr::Assignment::parse(state);
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseComma(LangParserState& state) {
-		return expr::Comma::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+		return expr::Comma::parse(state);
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseTernary(LangParserState& state) {
-		return expr::Ternary::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+		return expr::Ternary::parse(state);
 	}
 
 }

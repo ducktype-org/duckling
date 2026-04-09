@@ -1,5 +1,7 @@
 #include "function_lowering_context.hpp"
 
+#include "common.hpp"
+#include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
 
@@ -27,10 +29,11 @@ using namespace compiler::backend_vm::internal;
 	}
 
 FunctionLoweringContext::FunctionLoweringContext(
-	ProgramLoweringContext&                   program_context,
-	base::StrID                               name,
-	CRef<tsl::TypeLayout>                     return_type,
-	const std::vector<CRef<tsl::TypeLayout>>& parameter_types
+	ProgramLoweringContext&                     program_context,
+	base::StrID                                 name,
+	CRef<tsl::TypeLayout>                       return_type,
+	const std::vector<CRef<tsl::TypeLayout>>&   parameter_types,
+	base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 ):
 	  program_context(program_context),
 	  function_return_type(program_context.lowerAndKeepTslType(return_type)),
@@ -40,7 +43,8 @@ FunctionLoweringContext::FunctionLoweringContext(
 		  })
 		  | std::ranges::to<std::vector>()
 	  ),
-	  function_name(name) {}
+	  function_name(name),
+	  fun_di_builder_opt(std::move(fun_di_builder_opt)) {}
 
 base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 	if (!block_to_label.contains(block)) {
@@ -52,19 +56,24 @@ base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 }
 
 namespace {
-	constexpr DVMImmediate lirConstantToImmediate(const compiler::lir::LIRConstant& constant) {
+	constexpr DVMImmediate lirConstantToImmediate(
+		const compiler::lir::LIRConstant& constant, const vm::code::TypeOfData& type
+	) {
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				return std::visit(
-					[&](auto&& val) -> DVMImmediate { return DVMImmediate{ val }; },
+					[&](auto&& val) -> DVMImmediate {
+						return DVMImmediate{ translateToU64(val), type };
+					},
 					numeric.getStorage()
 				);
 			}
-			variant_case(bool, value) { return DVMImmediate{ value }; }
+			variant_case(char, value) { return DVMImmediate{ translateToU64(value), type }; }
+			variant_case(bool, value) { return DVMImmediate{ translateToU64(value), type }; }
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				// @TODO: #1728 remove this evil bit_cast
 				// Representation of a meta type in DVM is a pointer to the symbol type.
-				return DVMImmediate{ std::bit_cast<u64>(&type_val) };
+				return DVMImmediate{ std::bit_cast<u64>(&type_val), type };
 			}
 			variant_default {
 				CORE_PANIC("Unsupported CompileTimeValue type for a VM constant operand");
@@ -74,16 +83,146 @@ namespace {
 	}
 }
 
+DVMLocal FunctionLoweringContext::forceToLocal(
+	const DVMValue& value, base::Optional<std::string_view> name_hint
+) {
+	if (value.is<DVMLocal>()) return value.get<DVMLocal>();
+
+	DVMLocal temp = pushTempLocal(value.getType(), name_hint);
+	pushInstruction({ vm::code::builders::OpKind::mov, temp.asArgument(), value.asArgument() });
+	return temp;
+}
+
+void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMValue& src_value) {
+	// If a place is direct we just move the value into it.
+	if (dest_place.isDirect()) {
+		pushInstruction(
+			{ vm::code::builders::OpKind::mov, dest_place.asArgument(), src_value.asArgument() }
+		);
+		return;
+	}
+
+	// Otherwise, we store the result in the memory pointed by the pointer.
+	// If the src_value is immediate we have to store it in a temp first, as store requires a
+	// place as source.
+	DVMValue src_arg = [&]() -> DVMValue {
+		if (src_value.is<DVMImmediate>()) {
+			DVMLocal temp_local = pushTempLocal(src_value.getType(), "store_tmp");
+			pushInstruction(
+				{ vm::code::builders::OpKind::mov, temp_local.asArgument(), src_value.asArgument() }
+			);
+			return { temp_local, DVMPlace::AccessKind::Direct };
+		} else {
+			CORE_ASSERT(
+				!(src_value.is<DVMPlace>() && !src_value.get<DVMPlace>().isDirect()),
+				"Indirect DVMValue in storeResult"
+			);
+			return src_value;
+		}
+	}();
+
+	// Store the value in memory.
+	pushInstruction(
+		{ vm::code::builders::OpKind::store, dest_place.asArgument(), src_arg.asAnyArgument() }
+	);
+}
+
+DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
+	// First get the base place.
+	DVMPlace base_place = [&]() -> DVMPlace {
+		variant_match(place.base) {
+			variant_case(lir::LIRLocalRef, lir_local) {
+				return { getLirLocal(lir_local), DVMPlace::AccessKind::Direct };
+			}
+			variant_case(lir::LIRGlobal, lir_global) {
+				return { program_context.getLirGlobal(&lir_global), DVMPlace::AccessKind::Direct };
+			}
+		}
+		CORE_UNREACHABLE();
+	}();
+
+	// If a place has no projections we access the global/local directly, not through a pointer.
+	if (not place.hasProjections()) return base_place;
+
+	CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
+	DVMPlace              current_place  = base_place;
+	// Go through all the projections and perform appropriate loads to get to the final destination
+	// place.
+	for (usize i{ 0 }; i < place.projection_chain.size(); i++) {
+		const auto& projection = place.projection_chain[i];
+		// Skip the last projection to not perform an unnecessary load on the last projection is a
+		// dereference. DVMPlace now stores a pointer to the final place after all projections have
+		// been applied.
+		if (i == place.projection_chain.size() - 1) {
+			current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
+			break;
+		}
+
+		variant_match(projection.storage) {
+			variant_case(lir::LIRPlace::DerefProjection, deref) {
+				CORE_ASSERT(
+					current_layout->is<tsl::PointerTypeLayout>(),
+					"DerefProjection performed on a non pointer layout"
+				);
+				const auto& current_pointer_layout
+					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
+				auto pointee_layout = current_pointer_layout.getPointee();
+
+
+				if (current_place.isDirect()) {
+					// In this case we have a direct stack variable which stores a pointer.
+					// Dereferencing means we now treat the local as a pointer.
+					current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
+				} else {
+					auto vm_loaded_type = program_context.lowerAndKeepTslType(current_layout);
+
+					auto loaded_val_tmp = pushTempLocal(vm_loaded_type, "deref_tmp");
+
+					// Emit the load instruction.
+					pushInstruction({ vm::code::builders::OpKind::load,
+					                  loaded_val_tmp.asAnyArgument(),
+					                  current_place });
+
+					// Update types after the projection has been applied.
+					current_place = { loaded_val_tmp, DVMPlace::AccessKind::Pointer };
+				}
+
+				current_layout = pointee_layout;
+			}
+			variant_case(lir::LIRPlace::FieldProjection, field) {
+				// @TODO: #1560 handle access into fields.
+				throw base::NotYetImplemented("Field Projection in DVM backend");
+			}
+			variant_case(lir::LIRPlace::IndexProjection, index) {
+				throw base::NotYetImplemented("Index Projection in DVM backend");
+			}
+		}
+	}
+
+	return current_place;
+}
+
 DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) {
 	variant_match(lir_value.getVariant()) {
-		variant_case(lir::LIRConstant, value) { return { lirConstantToImmediate(value) }; }
+		variant_case(lir::LIRConstant, value) {
+			auto dvm_type = program_context.lowerAndKeepTslType(value.layout);
+			return { lirConstantToImmediate(value, dvm_type) };
+		}
 		variant_case(lir::LIRPlace, place) {
-			// @TODO: #1560 handle access into fields.
-			variant_match(place.base) {
-				variant_case(lir::LIRLocalRef, local_ref) { return { getLirLocal(local_ref) }; }
-				variant_case(lir::LIRGlobal, global) {
-					return { program_context.getLirGlobal(&global) };
-				}
+			DVMPlace resolved = resolveLirPlace(place);
+			if (resolved.isDirect()) {
+				// If the resolved place is a direct value (it's stored in a stack variable or a
+				// global) we return it directly.
+				return { resolved };
+			} else {
+				// Otherwise it's indirect. We have to load it from memory into a stack variable.
+				auto val_type = program_context.lowerAndKeepTslType(place.layout);
+				auto tmp      = pushTempLocal(val_type, "deref_load");
+				pushInstruction(
+					{ vm::code::builders::OpKind::load, tmp.asAnyArgument(), resolved.asArgument() }
+				);
+				// Now mark the place as direct as the value was loaded from the pointer.
+				return { tmp, DVMPlace::AccessKind::Direct };
 			}
 		}
 		variant_case(lir::BlockRef, block_ref) { return { DVMLabel{ getBlockLabel(block_ref) } }; }
@@ -120,6 +259,15 @@ void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionPa
 	lir::LIRLocalRef lir_func_param
 ) {
 	createLirLocalToDVMMapping(lir_func_param);
+	if_opt_some(fun_di_builder_opt, builder) {
+		if_opt_some(lir_func_param->metadata.source_code_name, param_name) {
+			builder.addParameter(
+				lir_func_param->parameter_index.value(),
+				param_name.str(),
+				lir_func_param->metadata.position.map(mapDIPosition)
+			);
+		}
+	}
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::beginBlock(lir::BlockRef block) {
@@ -141,35 +289,23 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInstruction(
 vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::finish() && {
 	vm::code::Function function;
 	function.name = function_name;
+	for (const auto& param_type: function_parameter_types)
+		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
+	function.signature.result_type = vm::code::Identifier(vm::code::typeName(function_return_type));
+	function.body                  = std::move(function_body);
 
-	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
-	// should be removed.
-	if (function_name == "main") {
-		function.signature.parameters.emplace_back(base::StrID("i64"));
-		function.signature.parameters.emplace_back(base::StrID("ptr_argv"));
-		function.signature.result_type = vm::code::Identifier(base::StrID("i64"));
-	} else {
-		for (const auto& param_type: function_parameter_types)
-			function.signature.parameters.emplace_back(vm::code::typeName(param_type));
-		function.signature.result_type
-			= vm::code::Identifier(vm::code::typeName(function_return_type));
-	}
-	function.body = std::move(function_body);
+	if_opt_some(fun_di_builder_opt, builder) { builder.end(); }
+
 	return function;
 }
 
 DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
-	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
-	// should be removed.
 	if (function_name == "main") {
-		if (function_return_type
-		    != vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), 8) }) {
-			CORE_PANIC("Main function must have i64 return type");
-		}
-		// return DVMLocal{
-		// 	.name = base::StrID("ret_val"),
-		// 	.type = vm::code::PrimitiveType(base::StrID("i64"), 8),
-		// };
+		CORE_ASSERT(
+			function_return_type
+				== vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), 8) },
+			"Main function must have i64 return type"
+		);
 	}
 	return DVMLocal{
 		.name = base::StrID("ret_val"),
@@ -184,10 +320,18 @@ DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRLocalRef lir_local) {
+	if_opt_some(fun_di_builder_opt, builder) {
+		if_opt_some(lir_local->metadata.source_code_name, var_name) {
+			builder.addVariableInit(
+				instructionsCount(), var_name.str(), lir_local->metadata.position.map(mapDIPosition)
+			);
+		}
+	}
+
 	auto dvm_local = insertLirLocal(lir_local);
 	pushInstruction({
 		vm::code::builders::OpKind::init,
-		vm::opargs::StackLocalAny(dvm_local.name),
+		dvm_local.asAnyArgument(),
 		vm::opargs::Type(typeName(dvm_local.type)),
 	});
 }
@@ -234,4 +378,8 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 		.param_types = param_types,
 		.is_extern_c = true,
 	};
+}
+
+usize compiler::backend_vm::internal::FunctionLoweringContext::instructionsCount() const {
+	return function_body.size();
 }

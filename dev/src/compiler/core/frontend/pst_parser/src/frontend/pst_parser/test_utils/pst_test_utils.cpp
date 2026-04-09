@@ -40,10 +40,10 @@ namespace pst {
 	}
 
 	base::OkBad checkUniqueHashes(AccessLocked<pst::LangElement> root) {
-		std::set<LangElement::HashType> hashes;
-		auto                            elements = viewAllSubTreeElements(root);
+		std::set<HashType> hashes;
+		auto               elements = viewAllSubTreeElements(root);
 		for (auto& element: elements) {
-			LangElement::HashType hash = element.illegalAccess().value()->getHash();
+			HashType hash = element.illegalAccess().value()->getHash();
 			if (hashes.contains(hash)) return base::BAD;
 			hashes.insert(hash);
 		}

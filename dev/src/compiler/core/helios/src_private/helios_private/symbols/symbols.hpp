@@ -61,7 +61,7 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
-		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({ .uses_qresult = false })
+		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	using QueryDealias_Result = query::QResult<SymbolList>;
@@ -104,7 +104,7 @@ namespace compiler::helios {
 		({ .uses_qresult = false })
 	);
 
-	namespace houtgen {
+	namespace defgen {
 		struct KeyFor_QueryGeneratedSymbol {
 			base::StrID         name;
 			GeneratedSymbolData generated_symbol_data;
@@ -129,7 +129,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query all function dependencies of a function (e.g. for a given function SymID, return
 	 * all SymID-s of functions called directly by this one.
-	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 * @note Works only for SymID-s that represent functions (both PST and generated).
 	 *
 	 * \query_thread_safe_if_cache
 	 */
@@ -137,10 +137,12 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
-	 * this function or all functions called by the called functions).
+	 * this function or all functions called by the called functions). A function is considered its
+	 * own dependency, meaning calling this query with a function which doesn't call any other
+	 * functions will return a vector containing the SymID provided in the key.
 	 * @note This query is used to determine all other functions that have to be compiled when
-	 * compile time evaluating a function.
-	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 * compile time evaluating a function and when collecting default constructor dependencies.
+	 * @note Works only for SymID-s that represent functions (both PST and generated).
 	 *
 	 * \query_thread_safe_if_cache
 	 */

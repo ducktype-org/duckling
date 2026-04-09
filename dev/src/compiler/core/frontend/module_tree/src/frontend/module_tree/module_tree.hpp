@@ -6,12 +6,14 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 #include <hashing/component_hash.hpp>
 
+#include <mutex>
 #include <regex>
 #include <string>
 
@@ -35,6 +37,19 @@ namespace compiler::frontend {
 	class ModuleTreeBuilder;
 	class ModuleTreeModifier;
 	struct GetModuleID_Functor;
+
+	/**
+	 * @brief REPL-specific data structure.
+	 *
+	 * Only used for repl modules.
+	 */
+	struct ReplData final {
+		/**
+		 * Parent REPL module in chronological order.
+		 * Optional - only empty for first REPL module.
+		 */
+		base::Optional<ModuleID> m_repl_module_parent;
+	};
 
 	/**
 	 * @brief Represents a single module in the Duckling project tree.
@@ -138,14 +153,39 @@ namespace compiler::frontend {
 		base::StrID getPackageID() const { return m_package_id; }
 
 		/**
-		 * Returns ComponentHash of the module.
-		 * it is calculated from module logical path
-		 * eg. for module tree like:
+		 * Check if this module is a REPL-generated module.
+		 * REPL modules have special cross-module lookup behavior.
+		 * @return true if this is a REPL module, false otherwise
+		 */
+		[[nodiscard]]
+		bool isReplModule() const {
+			return m_repl_data.has_value();
+		}
+
+		/**
+		 * Get the parent REPL module.
+		 * Only valid for REPL modules.
+		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
+		 */
+		[[nodiscard]]
+		base::Optional<ModuleID> getReplModuleParent() const {
+			CORE_ASSERT(
+				m_repl_data.has_value(), "repl data of a node with parent should have value!"
+			);
+			return m_repl_data->m_repl_module_parent;
+		}
+
+		/**
+		 * Returns the ComponentHash of the module.
+		 * It is calculated from the module logical path.
+		 * For example, for a module tree like:
 		 * /root
 		 *   /sub1
 		 *     /sub2
 		 * The component hash of sub2 will be ComponentHash({"root", "sub1", "sub2"})
 		 * @param module_id ModuleID of the module to get the component hash for.
+		 * @note This function is thread-safe only if the module tree hash is not modified/deleted
+		 * concurrently.
 		 */
 		[[nodiscard]]
 		static const hashing::ComponentHash& getPathComponentHash(ModuleID module_id);
@@ -176,6 +216,8 @@ namespace compiler::frontend {
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes
 		 * This also invalidates all children modules recursively
+		 * @note This is not thread-safe, this should be called in main thread only with no active
+		 * workers.
 		 */
 		void invalidateHash();
 
@@ -190,7 +232,7 @@ namespace compiler::frontend {
 		 * Updates the module hashes from the root module down to this module.
 		 * This is needed to ensure that all parent modules have their hashes updated before this
 		 * module.
-		 * @note This fuction will update both module hash and path component hash.
+		 * @note This function updates both module hash and path component hash.
 		 */
 		void updateModuleHashFromRootToThis();
 
@@ -229,12 +271,25 @@ namespace compiler::frontend {
 		                            // package_name/root/submodule1/sub2
 		base::Optional<hashing::ComponentHash::HashType>
 			m_hash;                 //< This is the actual hash for the Module used in SideInput
+		/**
+		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
+		 * @note Hold this lock while reading/writing m_path_component_hash or m_hash during lazy
+		 * recomputation flow (updateModuleHashFromRootToThis/updateModuleHash).
+		 */
+		mutable base::Box<std::mutex> m_hash_recompute_mutex;
 
 		/**
 		 * Package ID associated with this module tree.
 		 * Used for component hash calculation.
 		 */
 		base::StrID m_package_id;
+
+		/**
+		 * REPL-specific data.
+		 * Optional - only set for modules created in REPL sessions.
+		 * Presence of this optional indicates the module is a REPL module.
+		 */
+		base::Optional<ReplData> m_repl_data;
 	};
 
 	/**
@@ -330,6 +385,12 @@ namespace compiler::frontend {
 		void setParent(base::Ref<ModuleTree> parent);
 
 		/**
+		 * Sets REPL-specific module data.
+		 * @param repl_data The ReplData struct.
+		 */
+		void setReplModule(const ReplData& repl_data);
+
+		/**
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.
 		 */
@@ -385,6 +446,8 @@ namespace compiler::frontend {
 
 		base::StrID m_name;
 		bool        m_finalized;
+
+		base::Optional<ReplData> m_repl_data;
 	};
 
 	/**
@@ -408,7 +471,6 @@ namespace compiler::frontend {
 		/**
 		 * Removes a source file from its module.
 		 * @param file The SourceFile to remove.
-		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
 		static void removeSourceFileFromStorage(base::Ref<SourceFile> file);
 
@@ -422,7 +484,6 @@ namespace compiler::frontend {
 		/**
 		 * Removes the main source file from the given module.
 		 * @param module The module to modify.
-		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
 		static void removeMainSourceFile(base::Ref<ModuleTree> module);
 
@@ -478,7 +539,6 @@ namespace compiler::frontend {
 		 * Also removes it from its parent's submodules and deletes associated source files.
 		 * @param module_id The ModuleID to remove.
 		 * This will set the parent of all submodules to the parent of the removed module.
-		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
 		 */
 		static void removeSingleModule(base::Ref<ModuleTree> module);
 
@@ -486,7 +546,6 @@ namespace compiler::frontend {
 		 * Removes the given module and all of its submodules recursively.
 		 * Parent hashes are updated once after the entire subtree is removed.
 		 * @param module_id The ModuleID to remove.
-		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
 		 */
 		static void removeModuleRecursive(base::Ref<ModuleTree> module);
 

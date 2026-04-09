@@ -11,7 +11,7 @@ namespace pst {
 	 */
 	class InitList final: public List<UniversalExprHolder, internal::NameGetters::classInitList> {
 	public:
-		explicit InitList(const dia::SourcePosition& pos): List(pos) {}
+		explicit InitList(const LangParserState& state): List(state) {}
 
 		static MBox<InitList> parse(LangParserState& state);
 

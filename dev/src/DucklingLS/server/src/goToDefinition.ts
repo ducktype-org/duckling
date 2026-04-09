@@ -32,6 +32,5 @@ export async function handleDefinition(
     let definition = await compilerDaemonClient.getDefinition(params, offset, connection);
     if (!definition) return null;
 
-    console.log("Definition received from compiler daemon: ", definition);
     return definition;
 }

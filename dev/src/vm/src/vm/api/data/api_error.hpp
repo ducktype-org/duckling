@@ -10,7 +10,10 @@ namespace vm::api {
 
 	struct PauseError {};
 
-	struct RunError {};
+	struct RunError {
+		std::string error;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(RunError, error);
+	};
 
 	struct JoinError {};
 

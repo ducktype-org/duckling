@@ -1,3 +1,4 @@
+//! Common types used in network communication.
 use crate::{
     StrId,
     quackpack::{core::Version, schemas::registry},
@@ -13,8 +14,11 @@ use crate::quackpack::core;
 /// Represents exact informations required to fetch some data of a package `id` in version
 /// `version` from repository at `url`.
 pub struct PackageWithUrl {
+    /// Name of this package.
     pub id: StrId,
+    /// Version of this package.
     pub version: Version,
+    /// Url pointing to a Ducknest instance with this package.
     pub url: Url,
 }
 
@@ -24,7 +28,9 @@ pub struct PackageWithUrl {
 /// 2. for [`UrlExt`](super::ducknest::endpoints::UrlExt) internal trait: when creating an endpoint,
 ///    we don't need the root `url`, it's `self`.
 pub struct Package {
+    /// Name of this package.
     pub id: StrId,
+    /// Version of this package.
     pub version: Version,
 }
 
@@ -54,17 +60,34 @@ impl From<&registry::Manifest> for Package {
 }
 
 #[derive(Debug)]
+/// Response of the [`GitClient::clone_blocking`](super::git::GitClient::clone_blocking).
 pub struct GitCloneResponse {
+    /// Hash of the checkouted repository.
     pub commit_hash: StrId,
+    /// Parsed package at the repository checkouted at the
+    /// [`commit_hash`](GitCloneResponse::commit_hash).
     pub package: core::Package,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+/// Response for getting multimetadata from a registry.
 pub struct MultiMetadata {
+    /// All published versions of the package.
     pub packages_metadata: Vec<registry::Manifest>,
 }
 
 #[derive(Debug, Deserialize)]
+/// Response for searching for a package in a registry.
 pub struct SearchResult {
+    /// All matched packages.
     pub result: Vec<Package>,
+}
+
+#[derive(Debug)]
+/// General fetcher response.
+pub enum FetcherResponse<T> {
+    /// Resource was available.
+    Some(T),
+    /// [`Fetcher`](super::Fetcher) was created in an offline mode.
+    Offline,
 }

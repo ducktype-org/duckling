@@ -1,6 +1,7 @@
 #include "tester.hpp"
 
 #include <base/except/exceptions.hpp>
+#include <base/except/pretty_stacktrace.hpp>
 
 #include <cctype>
 #include <chrono>
@@ -45,6 +46,15 @@ namespace tester {
 
 	usize fullEqualSignL([[maybe_unused]] usize name_l) { return HEADER_LINE_LENGTH; }
 
+	TestSuite::CritTestError::CritTestError(std::string_view message) {
+		// This temporarily prints an early stack trace, since
+		// we now often terminate, after CritTestError is thrown within the worker thread.
+		std::cerr << "Critical test failure. Stopping test execution.\n";
+		std::cerr << "Stack trace at the point of failure:\n";
+		std::cerr << base::getCurrentStackTrace();
+		std::cerr << "Error message: " << message << "\n";
+	}
+
 	const char* TestSuite::CritTestError::what() const noexcept {
 		return "This shouldn't be called";
 	}
@@ -65,7 +75,7 @@ namespace tester {
 	void TestSuite::fail(std::string_view err, bool critical) {
 		curr_global_res->success = false;
 		message(err);
-		if (critical) throw CritTestError();
+		if (critical) throw CritTestError(err);
 	}
 
 	void TestSuite::message(std::string_view mess) {

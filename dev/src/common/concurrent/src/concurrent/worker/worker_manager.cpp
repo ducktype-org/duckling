@@ -2,6 +2,8 @@
 
 #include <concurrent/worker/worker.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <mutex>
 #include <ranges>
 
@@ -10,12 +12,6 @@ namespace concurrent::worker {
 	namespace {
 		std::mt19937_64 rng;
 		std::mutex      mut;
-
-		/**
-		 * Helper flag used to ensure that WorkerManager::setWorkers is called only once and before
-		 * any call to WorkerManager::get().
-		 */
-		constinit std::atomic_flag is_worker_count_set;
 	}
 
 	std::vector<WRef> WorkerManager::getAllWorkers() const {
@@ -33,53 +29,78 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
-	void WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
+	void WorkerManager::waitForAllWorkersFree(std::chrono::milliseconds sleep_duration) const {
+		CORE_ASSERT(
+			!Worker::isCurrentThreadWorker(),
+			"Cannot call waitForAllWorkersFree from a worker thread"
+		);
+		while (true) {
+			// Recursively locks each worker's mutex in order and checks if all are free.
+			// Holding all locks simultaneously ensures a consistent snapshot of worker states.
+			auto lock_and_check_all = [&](auto&& self, usize index) -> bool {
+				if (index >= workers.size()) return true;
+
+				auto&            worker = workers.at(index);
+				std::scoped_lock lock(worker->mut);
+				if (!worker->is_free.load(std::memory_order_seq_cst)) return false;
+
+				return self(self, index + 1);
+			};
+
+			if (lock_and_check_all(lock_and_check_all, 0)) return;
+
+			std::this_thread::sleep_for(sleep_duration);
+		}
+	}
+
+	WRef WorkerManager::scheduleTaskOnAnyWorker(Task&& task) {
 		for (auto& worker: workers)
-			if (worker->scheduleTaskIfFree(task)) return;
+			if (worker->scheduleTaskIfFree(std::move(task))) return worker.get();
 
 		// If no free worker is found, push to a random worker
 		std::scoped_lock lock(mut);
-		workers[static_cast<usize>(rng()) % (workers.size())]->scheduleTask(task);
+		auto             id = static_cast<usize>(rng()) % (workers.size());
+
+		workers[id]->scheduleTask(std::move(task));
+		return workers[id].get();
 	}
 
 	bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
 
-	void WorkerManager::setNoTasksCallback(WRef worker, const NoTasksCallback& callback) {
-		worker->setNoTasksCallback(callback);
+	void WorkerManager::setNoTasksCallback(WRef worker, NoTasksCallback&& callback) {
+		worker->setNoTasksCallback(std::move(callback));
+	}
+
+	void WorkerManager::setNoTasksCallback(NoTasksCallback&& callback) {
+		auto callback_ptr = std::make_shared<NoTasksCallback>(std::move(callback));
+		for (auto& worker: getAllWorkers()) worker->setNoTasksCallback(callback_ptr);
 	}
 
 	WorkerManager& WorkerManager::get() {
 		static WorkerManager instance;
-		CORE_ASSERT(
-			is_worker_count_set.test(),
-			"WorkerManager::get() called before setting worker count with setWorkers()!"
-		);
 		return instance;
 	}
 
-	void WorkerManager::setWorkers(usize num_workers) {
-		auto ware_worker_count_set = is_worker_count_set.test_and_set();
-		CORE_ASSERT(
-			not ware_worker_count_set,
-			"WorkerManager::setWorkers can only be called once and before any call to get()!"
-		);
-
-		auto& worker_manager = get();
-		worker_manager.workers.clear();
-		worker_manager.workers.reserve(num_workers);
+	void WorkerManager::setup(usize num_workers) {
+		workers.clear();
+		workers.reserve(num_workers);
 		for (usize i = 0; i < num_workers; i++) {
 			auto worker = Box<Worker>::fromPointer(new Worker(i));
 			worker->run();
-			worker_manager.workers.push_back(std::move(worker));
+			workers.push_back(std::move(worker));
 		}
 		// Set the seed for the random number generator to ensure different random sequences across runs.
 		rng.seed(num_workers);
 	}
 
+	WorkerManager::WorkerManager() {
+		auto num_workers = getWorkerCount();
+		setup(static_cast<usize>(num_workers));
+	}
+
 	void WorkerManager::testPrivateAccessReloadState() {
 		auto& worker_manager = get();
 		auto  size           = worker_manager.workers.size();
-		worker_manager.workers.clear();
-		worker_manager.setWorkers(size);
+		worker_manager.setup(size);
 	}
 }

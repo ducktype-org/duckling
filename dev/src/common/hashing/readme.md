@@ -30,7 +30,22 @@ This means that it is possible for hashes of different types that are represente
 to be the same (e.g. `pair<int, int>{1, 2}` and `struct{x=1, y=2}` might end up hashing to the same value).
 One must be careful when using hashing for different types.
 
-There are three ways to enable a hashing support for a class (if possible, the first two should be preferred):
+There are four ways to enable a hashing support for a class (if possible, the first three should be preferred):
+
+`HASHING_CAN_HASH_BY_REPRESENTATION`
+------------------------------------
+
+If your type has a unique representation in memory, you can simply add a static member to it:
+~~~~~cpp
+struct S {
+    u64 x;
+    static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+};
+~~~~~
+
+With this member, the module will know that it can treat your type as a sequence of bytes and hash it directly.
+Note that this might now always be the correct way to hash your type, even if it has a unique representation.
+
 
 `hashDecompose()`
 -----------------
@@ -152,10 +167,7 @@ But it can also be customized.
 There is one template parameters that can be specified: `HashAlgorithm`.
 By specifying it we can choose the underlying algorithm that converts bytes to the hash value.
 
-
-Module provides a generic, constexpr implementation of `Fnv1a` which is a fast and simple hashing algorithm with a good enough distribution for most applications like hash tables. It is available in its 32 bit version as `Fnv1a_32` and 64 bit version as `Fnv1a_64` which is also the default algorithm used by `Hash`.
-
-There is also a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object).
+Module also provides a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object).
 
 
 <html>
@@ -167,12 +179,7 @@ There is also a `DebugHash`, which instead of converting bytes to a hash value, 
 Using different hashing algorithms:
 
 ~~~~~cpp
-// `Hash` is the same as `Hash<Fnv1a_64>`
-bool b = Hash{}(42) == Hash<Fnv1a_64>{}(42); // true
-
-// If many hashes are stored we can use shorter ones:
-u32 hash = Hash<Fnv1a_32>{}(42);
-
+auto _ x = Hash<SHA256>{}(42);
 std::cout << Hash<DebugHash>{}(42) << '\n';
 // prints:
 ~~~~~
@@ -210,7 +217,7 @@ std::cout << hashing::StatefulHash<hashing::DebugHash>{}(
 		42,
         3.14,
         "hello",
-        std::pair<std::string, char>{"abc", 'x'
+        std::pair<std::string, char>{"abc", 'x'}
     ).finalize() << '\n';
 ~~~~~
 

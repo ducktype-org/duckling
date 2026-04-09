@@ -11,17 +11,12 @@ namespace pst {
 
 	protected:
 		/**
-		 * @brief Skips tokens, used to preserve position in case of error.
+		 * @brief Sanity check of non-emptyness length.
 		 */
-		static void fastForward(LangParserState& state, i64 length);
+		static bool checkNonEmpty(LangParserState& state);
 
-		/**
-		 * @brief Sanity check of length.
-		 */
-		static bool checkLength(LangParserState& state, i64 length);
-
-		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
-			  NotStmt(position),
+		explicit ExprElement(const LangParserState& state, i64 precedence):
+			  NotStmt(state),
 			  PRECEDENCE(precedence) {
 			this->element_kind = ElementKind::ExprElement;
 		}

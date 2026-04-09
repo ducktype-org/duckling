@@ -4,16 +4,18 @@ use std::{
 };
 
 use crate::{
-    StrId,
     quackpack::core::{
         fetcher::Fetcher,
         storage::{
             freeze::{FreezeDep, FreezePackage},
             package_id::{PackageId, RegistryId},
+            paths::Storage,
+            venv::Venv,
+            venv_id::ToVenvId,
         },
         types_common::{ExpandedLocation, InternedExpandedLocation},
     },
-    util_common::path_ops_ext::PathOpsExt,
+    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 use tempfile::TempDir;
 use url::Url;
@@ -32,9 +34,9 @@ use crate::{
 mod basic;
 mod concurrent;
 
-fn registry_url_hash() -> StrId {
+fn registry_url_hash() -> String {
     let url: Url = Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap();
-    crate::util_common::hash::sha256_string(url.host_str().unwrap())
+    crate::util::hash::sha256_string(url.host_str().unwrap())
 }
 
 /// This function creates mock storage with following contents:
@@ -51,23 +53,26 @@ fn registry_url_hash() -> StrId {
 /// 2. remove root3, because it's too old,
 /// 3. remove bar, because it was only references by root3.
 fn setup_mock_storage() -> (DuckCtx, TempDir) {
-    let storage_root = TempDir::new().unwrap();
-    setup_mock_packages(storage_root.path());
-    setup_mock_venvs(storage_root.path());
-    setup_mock_locks(storage_root.path());
-    // Also overwrite DUCK_HOME, so we'll use the default configuration options.
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::set_var("DUCK_STORAGE_DIR", storage_root.path());
-        std::env::set_var("DUCK_HOME", storage_root.path());
-    }
-    let ctx = DuckCtx::default();
-    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
-    unsafe {
-        std::env::remove_var("DUCK_STORAGE_DIR");
-        std::env::remove_var("DUCK_HOME");
-    }
-    (ctx, storage_root)
+    let setup = || {
+        let storage_root = TempDir::new().unwrap();
+        setup_mock_packages(storage_root.path());
+        setup_mock_venvs(storage_root.path());
+        setup_mock_locks(storage_root.path());
+        // Also overwrite DUCK_HOME, so we'll use the default configuration options.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::set_var("DUCK_STORAGE_DIR", storage_root.path());
+            std::env::set_var("DUCK_HOME", storage_root.path());
+        }
+        let ctx = DuckCtx::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        unsafe {
+            std::env::remove_var("DUCK_STORAGE_DIR");
+            std::env::remove_var("DUCK_HOME");
+        }
+        (ctx, storage_root)
+    };
+    setup_test(setup)
 }
 
 fn setup_mock_packages(root: &Path) {
@@ -93,16 +98,22 @@ fn setup_mock_venv(
     freeze_mutator: impl FnOnce(&mut VenvFreeze),
     data_mutator: impl FnOnce(&mut VenvData),
 ) {
+    let storage = Storage::new(root);
     let mut basic_freeze = VenvFreeze::new(
         RootPackage::new(name.into(), Version::new(1, 0, 0), vec![], vec![]),
         vec![],
     );
     freeze_mutator(&mut basic_freeze);
-    let mut basic_data = VenvData::new(basic_freeze, false, PathBuf::default(), SystemTime::now());
+    let mut basic_data = VenvData::new(
+        basic_freeze,
+        false,
+        PathBuf::default(),
+        SystemTime::now(),
+        SystemTime::now(),
+    );
     data_mutator(&mut basic_data);
-    basic_data
-        .save_to(&root.join("venv").join(name).join("metadata"))
-        .unwrap();
+    let venv = Venv::new(name.to_venv_id(), basic_data);
+    venv.save_to(&storage).unwrap()
 }
 
 fn setup_mock_venvs(root: &Path) {
@@ -135,7 +146,7 @@ fn setup_mock_venvs(root: &Path) {
         },
         |data| {
             data.set_ephemeral(true);
-            data.set_last_access(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
     );
 
@@ -159,7 +170,7 @@ fn setup_mock_venvs(root: &Path) {
             freeze.dependencies_mut().push(package);
         },
         |data| {
-            data.set_last_access(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
     );
 }

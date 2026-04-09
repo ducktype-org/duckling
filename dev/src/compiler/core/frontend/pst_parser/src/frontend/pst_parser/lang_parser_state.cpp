@@ -9,28 +9,43 @@ namespace pst {
 
 	void LangParserState::goUp() {
 		CORE_ASSERT(
-			fallback_stack.size() && fallback_stack.back().type == SubStreamType::Recursive,
+			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
+		auto& fallback = std::get<Fallback>(fallback_stack.back());
 		checkAllParsed();
-		current_stream  = std::move(fallback_stack.back().saved_stream);
-		current_context = std::move(fallback_stack.back().saved_context);
+		current_stream  = std::move(fallback.saved_stream);
+		current_context = std::move(fallback.saved_context);
 		fallback_stack.pop_back();
 		skip_till_fallback = false;
 	}
 
 	void LangParserState::goUpAndSkip() {
 		CORE_ASSERT(
-			fallback_stack.size() && fallback_stack.back().type == SubStreamType::Recursive,
+			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
+		auto& fallback = std::get<Fallback>(fallback_stack.back());
 		checkAllParsed();
-		u64 fwd         = fallback_stack.back().post_jump;
-		current_stream  = std::move(fallback_stack.back().saved_stream);
-		current_context = std::move(fallback_stack.back().saved_context);
+		u64 fwd         = fallback.post_jump;
+		current_stream  = std::move(fallback.saved_stream);
+		current_context = std::move(fallback.saved_context);
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
 		skip_till_fallback = false;
+	}
+
+	void LangParserState::setSoftFallback(std::function<TokenStreamCondition> jump_on_error) {
+		auto new_stream = ctokens().getSubstream(ctokens().size());
+		fallback_stack.emplace_back(SoftFallback{ .saved_context = std::move(current_context),
+		                                          .fail_jump     = std::move(jump_on_error) });
+		current_stream = makeBox<TokenStream>(std::move(new_stream));
+		variant_match(std::get<SoftFallback>(fallback_stack.back()).saved_context) {
+			variant_case(CRef<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref; }
+			variant_case(Box<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref.ref(); }
+		}
 	}
 
 	void LangParserState::setFallback(u64 length) {
@@ -40,7 +55,7 @@ namespace pst {
 		                                      .saved_context = std::move(current_context),
 		                                      .post_jump     = length });
 		current_stream = makeBox<TokenStream>(std::move(new_stream));
-		variant_match(fallback_stack.back().saved_context) {
+		variant_match(std::get<Fallback>(fallback_stack.back()).saved_context) {
 			variant_case(CRef<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref; }
 			variant_case(Box<tpc::ParserContext>, ctx_ref) { current_context = ctx_ref.ref(); }
 		}
@@ -48,15 +63,32 @@ namespace pst {
 
 	void LangParserState::exitFallback() {
 		CORE_ASSERT(
-			fallback_stack.size() && fallback_stack.back().type == SubStreamType::NonRecursive,
+			fallback_stack.size() && std::holds_alternative<Fallback>(fallback_stack.back())
+				&& std::get<Fallback>(fallback_stack.back()).type == SubStreamType::NonRecursive,
 			"No fallback token stream to go up from"
 		);
+		auto& fallback = std::get<Fallback>(fallback_stack.back());
 		checkAllParsed();
-		u64 fwd         = fallback_stack.back().post_jump;
-		current_stream  = std::move(fallback_stack.back().saved_stream);
-		current_context = std::move(fallback_stack.back().saved_context);
+		u64 fwd         = fallback.post_jump;
+		current_stream  = std::move(fallback.saved_stream);
+		current_context = std::move(fallback.saved_context);
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
+		skip_till_fallback = false;
+	}
+
+	void LangParserState::exitSoftFallback() {
+		CORE_ASSERT(
+			fallback_stack.size() && std::holds_alternative<SoftFallback>(fallback_stack.back()),
+			"No fallback token stream to go up from"
+		);
+		auto& fallback  = std::get<SoftFallback>(fallback_stack.back());
+		auto  fun       = std::move(fallback.fail_jump);
+		current_context = std::move(fallback.saved_context);
+		fallback_stack.pop_back();
+		if (isSkipping())
+			while (!ctokens()[0].is(lexer::Token::Type::Sentinel) && !fun(ctokens(), 0))
+				tokens().skip();
 		skip_till_fallback = false;
 	}
 
@@ -102,7 +134,7 @@ namespace pst {
 			= name;
 	}
 
-	void LangParserState::setConstextBlockOrdering(BlockOrderType type) {
+	void LangParserState::setContextBlockOrdering(BlockOrderType type) {
 		if (type == getContext()->block_order) return;
 		copyOwnContext();
 		dynamic_cast<LangParserContext*>(&*std::get<Box<tpc::ParserContext>>(current_context))

@@ -62,18 +62,17 @@ public:
 };
 
 namespace my_map {
+	using Hasher = decltype([](auto&& x) { return Hash<>{}(x).data.at(0); });
+
 	template<
 		class Key,
 		class T,
-		class Hash  = Hash<>,
+		class Hash  = Hasher,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
 
 	using unordered_map = std::unordered_map<Key, T, Hash, Pred, Alloc>;
 }
-
-template<typename T>
-concept check_hashRangeAsBytes = requires(T t) { internal::hashRangeAsBytes(Fnv1a_32{}, t); };
 
 struct Check_1 {
 	void updateHash(void*, usize) {}
@@ -129,6 +128,8 @@ struct type3 {
 
 struct type4 {
 	std::array<int, 2> a{ 123, 456 };
+
+	static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
 };
 
 template<typename From, typename To>
@@ -142,26 +143,19 @@ class HashingTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
-		TESTER_ADD_TEST(hashTest<Fnv1a_32>);
-		TESTER_ADD_TEST(hashTest<Fnv1a_64>);
 		TESTER_ADD_TEST(hashTest<SHA256>);
-		TESTER_ADD_TEST(constexprTest);
-		TESTER_ADD_TEST(defaultsTest<Fnv1a_32>);
-		TESTER_ADD_TEST(defaultsTest<Fnv1a_64>);
 		TESTER_ADD_TEST(defaultsTest<SHA256>);
 		TESTER_ADD_TEST(sha256Test);
 	}
 
 private:
 	void hashingAlgorithmsTest() {
-		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
-		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
+		assertTrue(hash_algorithm<SHA256>, "SHA256 should be a hashing algorithm");
 
-		constexpr auto RES1 = Hash<Fnv1a_32>{}(4);
-
-		constexpr auto ARR  = std::array{ 1, 2, 3 };
-		constexpr auto RES2 = Hash<Fnv1a_64>{}(std::span{ ARR });
+		constexpr auto ARR = std::array{ 1, 2, 3 };
+		SHA256         h;
+		h(std::as_bytes(std::span{ ARR }));
 
 		auto res3 = [] {
 			DebugHash dh;
@@ -169,12 +163,6 @@ private:
 			return dh.finalize().size();
 		}();
 
-		assertTrue(
-			std::is_same_v<decltype(RES1), const u32>, "Fnv1a_32's finalize() should return u32"
-		);
-		assertTrue(
-			std::is_same_v<decltype(RES2), const u64>, "Fnv1a_64's finalize() should return u64"
-		);
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 
 		DebugHash dh;
@@ -189,9 +177,9 @@ private:
 
 		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
 
-		constexpr auto RES1 = hasher(X{});
-		constexpr auto RES2 = hasher(S{});
-		assertTrue(RES1 != RES2, "hashes should differ");
+		const auto res_1 = hasher(X{});
+		const auto res_2 = hasher(S{});
+		assertTrue(res_1 != res_2, "hashes should differ");
 
 		my_map::unordered_map<std::string, int> m;
 		m["hello"] = 42;
@@ -199,22 +187,6 @@ private:
 		assertTrue(m["hello"] == 42, "hello should be 42");
 		assertTrue(m["world"] == 7, "world should be 7");
 	}
-
-	[[nodiscard]]
-	static constexpr u64 constexprTestHelper() {
-		constexpr auto R1 = Hash<Fnv1a_32>{}(876'543);
-
-		constexpr auto R2 = Hash<Fnv1a_32>{}(std::string_view{ "hello" });
-
-		constexpr auto R3 = Hash<Fnv1a_64>{}(S{});
-
-		StatefulHash<Fnv1a_64> h;
-		h(123, 345.f, std::string_view{ "hello" }, S{});
-
-		return R1 + R2 + R3 + h.finalize();
-	}
-
-	void constexprTest() { [[maybe_unused]] constexpr auto RES = constexprTestHelper(); }
 
 	template<typename T>
 	void defaultsTest() {
@@ -227,6 +199,17 @@ private:
 	}
 
 	void sha256Test() {
+		constexpr auto HASH_VALUE_SIMPLE
+			= hashing::StatefulHash<hashing::SHA256>{}(std::byte{ 0x42 }).finalize();
+		std::cerr << HASH_VALUE_SIMPLE << '\n' << HASH_VALUE_SIMPLE.toStringHex() << '\n';
+		assertEqual(
+			HASH_VALUE_SIMPLE.toStringHex(),
+			"df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c",
+			"SHA256 hash of a byte 0x42 does not match expected value:\nExpected:\n"
+			"df7e70e5021544f4834bbee64a9e3789febc4be81470df629cad6ddb03320a5c\nComputed:\n"
+				+ HASH_VALUE_SIMPLE.toStringHex()
+		);
+
 		constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::SHA256>{}(
 										7,
 										type2{},
@@ -247,7 +230,6 @@ private:
 										42
 		)
 		                                .finalize();
-
 
 		const std::string expected_hash
 			= "cc29a5e32052f1e78ce5933758b457e9829c84322bfa1e8e2794ae1456a274a0";

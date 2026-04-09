@@ -14,6 +14,7 @@
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
+#include <query_framework/internal/task_pool/task_pool.hpp>
 
 namespace query {
 	// Forward declaration
@@ -153,6 +154,15 @@ namespace query::internal {
 		[[nodiscard]]
 		u64 activeQueryCount() const;
 
+		/************************\
+		| Task pool interface:   |
+		\************************/
+
+		/**
+		 * Returns singleton task pool used for handling execution of queries.
+		 * @TODO: #2038 change this to a getter of query state member.
+		 */
+		Ref<TaskPool> getTaskPool() const;
 
 		/***************************\
 		| Incremental interface:    |

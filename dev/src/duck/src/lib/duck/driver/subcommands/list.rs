@@ -3,6 +3,7 @@ use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
 
+/// Creates parser for the `list` subcommand.
 pub fn get_parser() -> Command {
     subcommand("list")
         .about("List all the virtual environments")
@@ -20,6 +21,7 @@ pub fn get_parser() -> Command {
         .arg(flag("sort-reverse", "Display output in reverse order"))
 }
 
+/// Logic for executing the `list` subcommand.
 pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
     qp_bail!("implement list")
 }

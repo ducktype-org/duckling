@@ -15,14 +15,14 @@ namespace pst::expr {
 		std::vector<AccessInternalAnonymous<ExprElement>> expressions;
 
 	public:
-		explicit Comma(const dia::SourcePosition& position): ExprElement(position, 900) {}
+		explicit Comma(const LangParserState& state): ExprElement(state, 900) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Comma Expr";
 		}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~Comma() override = default;
 		void     dprint(std::ostream& out) const final;

@@ -15,11 +15,11 @@ namespace pst::expr {
 			return string;
 		}
 
-		explicit ExprStrValue(const dia::SourcePosition& position, tpc::StringValue value):
-			  ExprElement(position, 0),
+		explicit ExprStrValue(const LangParserState& state, tpc::StringValue value):
+			  ExprElement(state, 0),
 			  string(value) {}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~ExprStrValue() override = default;
 		void     dprint(std::ostream& out) const final;

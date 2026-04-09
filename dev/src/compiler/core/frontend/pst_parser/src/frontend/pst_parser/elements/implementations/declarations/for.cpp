@@ -13,33 +13,35 @@ namespace pst {
 	}
 
 	MBox<For> For::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<For>(position);
+		auto out = makeBox<For>(state);
 
 		if (!assertStmtChoice<For>(state, state[0].is(Keyword::For))) return nullptr;
 
-		state.parse(out).all(Keyword::For, &out->optional_name);
+		PARSE().all(Keyword::For, &out->optional_name);
 
 		if (!state[0].isBracketGroup(Token::Round)) {
 			state.logInt(makeBox<ForBracketError>(state.getPosition()));
 		} else {
-			state.parse(out).goDown();
+			PARSE().goDown();
 
-			state.parse(out).one(&out->iterator);
+			PARSE().one(&out->iterator);
 
-			if (state.parse(out).tryEat(NamedOperator::Colon)) {
-				state.parse(out).one(&out->type);
-				state.parse(out).tryEat(Keyword::In);
+			if (PARSE().tryEat(NamedOperator::Colon)) {
+				PARSE().one(&out->type);
+				PARSE().tryEat(Keyword::In);
 			} else {
-				state.parse(out).one(Keyword::In);
+				PARSE().one(Keyword::In);
 			}
 
-			state.parse(out).one(&out->iterable);
+			PARSE().one(&out->iterable);
 
-			state.parse(out).goUpAndSkip();
+			PARSE().goUpAndSkip();
 		}
 
-		state.parse(out).withDef(&out->body, BlockOrderType::Ordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().one(&out->body);
+		})
 
 		PST_RETURN out;
 	}
@@ -59,7 +61,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, optional_name);
 		addToHash(partial_hash, iterator);
 		return partial_hash;

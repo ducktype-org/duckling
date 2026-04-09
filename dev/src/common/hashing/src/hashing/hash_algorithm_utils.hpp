@@ -2,6 +2,7 @@
 
 #include <base/comptime/type_traits.hpp>
 #include <base/types/ints.hpp>
+#include <base/types/monostate.hpp>
 
 #include <algorithm>
 #include <array>
@@ -73,12 +74,20 @@ namespace hashing {
 	}
 
 	namespace internal {
-
 		/**
-		 * Checks if the type can be hashed with std::hash
+		 * Checks if the type can be hashed by just hashing its representation
 		 */
 		template<typename T>
-		concept can_stdhash = requires(const T& t) { std::hash<T>{}(t); };
+		concept can_hash_by_representation = std::has_unique_object_representations_v<T>
+		                                  && (std::is_integral_v<T> || std::is_enum_v<T> ||
+
+		                                      // the const Monostate& here is needed, as this is
+		                                      // simply how it works with static constexpr members.
+		                                      requires {
+												  {
+													  T::HASHING_CAN_HASH_BY_REPRESENTATION
+												  } -> std::same_as<const base::Monostate&>;
+											  });
 
 		/**
 		 * Checks if the type is a tuple of references
@@ -159,19 +168,6 @@ namespace hashing {
 
 			delete[] buffer;
 		}
-
-		/**
-		 * Checks if a range that may have unspecified order of elements can be hashed
-		 */
-		template<typename HashAlgorithm, typename R>
-		concept can_hash_range_with_unspecified_order
-			= std::copy_constructible<HashAlgorithm> && std::ranges::input_range<R>
-		   && requires(HashAlgorithm::result_type res) {
-				  {
-					  res ^= res
-				  }
-				  -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
-			  };
 
 		/**
 		 * Checks if the type is tuple-like i.e. supports std::tuple_size and std::get

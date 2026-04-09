@@ -22,7 +22,21 @@ namespace query {
 		struct EntryPointHelper final {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
-				return QueryType::internal_query(key);
+				static_assert(
+					!QueryType::QUERY_DATA.isInputQuery(),
+					"entryPoint cannot be used to call input queries"
+				);
+
+				auto node_id = makeNodeID<QueryType>(key);
+
+				Context::getState().getTaskPool()->addTask(internal::Task{
+					node_id,
+					[key](concurrent::worker::WRef) { QueryType::internal_query(key); },
+				});
+
+				Context::getState().getTaskPool()->waitForTask(node_id);
+
+				return QueryType::internal_load(node_id.hash.val);
 			}
 		};
 	}
@@ -33,10 +47,11 @@ namespace query {
 	 */
 	template<typename QueryType>
 	auto entryPoint(const typename QueryType::QKey& key) -> decltype(auto) {
-		CORE_ASSERT(
-			Context::getState().activeQueryCount() == 0,
-			"query::entryPoint called from within query!"
-		);
+		// @TODO: #1933 bring this assert back.
+		// CORE_ASSERT(
+		// 	Context::getState().activeQueryCount() == 0,
+		// 	"query::entryPoint called from within query!"
+		// );
 		return internal::EntryPointHelper::callQuery<QueryType>(key);
 	}
 }

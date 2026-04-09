@@ -26,7 +26,6 @@
 #include <query_framework/utils/query_hash.hpp>
 
 #include <type_traits>  // IWYU pragma: export
-#include <utility>
 
 namespace query::internal {
 
@@ -37,6 +36,8 @@ namespace query::internal {
 	 * @param key Query key
 	 * @param from node id of caller
 	 * @return QueryImplType::QResult
+	 *
+	 * @TODO: #1887 think about what should be here, and rename it to inner-layer.
 	 */
 	template<typename QueryImplType>
 	auto standardQueryEntry(const typename QueryImplType::QKey& key) ->
@@ -50,121 +51,106 @@ namespace query::internal {
 		[[maybe_unused]]
 		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{ QueryIntType::getID() };
 
+		// @TODO: #2026 add note status static assertion if possible.
 
-		if (auto v = QueryImplType::load(perfect_hash)) {
-			/****************************************************\
-			| Query result was cached, we return it directly.    |
-			\****************************************************/
+		CORE_ASSERT(
+			QueryImplType::load(perfect_hash).empty(), "Cache should be empty in standardQueryEntry"
+		);
 
-			// @TODO: #1889 we might want to detect if a query should be loaded based on its state?
-			// Or is cache entry effectively a state?
-			// Maybe this is what ACD is for?
+		auto node_id = makeNodeID<QueryIntType>(key);
+		auto context = ContextAccess::make(node_id);
 
-			// @FUTURE: Add ACD check here...
-			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Cached. Done.\n");
+		// @FUTURE: provide legit acd here
+		ACD acd;
 
-			return std::move(v.value().data);
-		} else {
-			auto node_id = makeNodeID<QueryIntType>(key);
-			auto context = ContextAccess::make(node_id);
+		// Before computing, try to reuse result from disk if available and safe to do so.
+		// Conditions:
+		//  - QueryImplType provides loadFromDisc(QKey) -> PResult
+		//  - redGreenSweep(node_id) returns true (node and its deps are green in previous graph)
+		if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
+			if (ContextAccess::getState()->redGreenSweep(node_id) == QueryState::PrevColor::Green) {
+				auto loaded = QueryImplType::loadFromDisc(key);
 
-			// @FUTURE: provide legit acd here
-			ACD acd;
-
-			// Before computing, try to reuse result from disk if available and safe to do so.
-			// Conditions:
-			//  - QueryImplType provides loadFromDisc(QKey) -> PResult
-			//  - redGreenSweep(node_id) returns true (node and its deps are green in previous graph)
-			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
-				if (ContextAccess::getState()->redGreenSweep(node_id)
-				    == QueryState::PrevColor::Green) {
-					auto loaded = QueryImplType::loadFromDisc(key);
-
-					if (loaded) {
-						CORE_DEV_LOG(
-							Query,
-							"[QUERY \"",
-							QueryIntType::QUERY_DATA.name,
-							"\"]: Loading from disk.\n"
-						);
-
-
-						// Merge previous graph nodes into current graph
-						// We merge only node_id and its dependencies
-						ContextAccess::getState()->mergePreviousGraphIntoCurrentGraph(node_id);
-						return QueryImplType::store(perfect_hash, loaded.value(), acd);
-					}  // fall through to provide() if loading from disk failure
-
+				if (loaded) {
 					CORE_DEV_LOG(
 						Query,
 						"[QUERY \"",
 						QueryIntType::QUERY_DATA.name,
-						"\"]: Query was marked green, but loading from disk failed.\n"
+						"\"]: Loading from disk.\n"
 					);
-				}
-			}
-
-			/*******************************************************************\
-			| Now we enter a section, in which we actually compute the query    |
-			| result by calling provide().                                      |
-			\*******************************************************************/
 
 
-			// @TODO: in the future we might want to guarantee that query operation are no-throw
-			// apart from panics and similar stuff.
-			// We for sure need more control of what happens if query operation throws.
+					// Merge previous graph nodes into current graph
+					// We merge only node_id and its dependencies
+					ContextAccess::getState()->mergePreviousGraphIntoCurrentGraph(node_id);
+					return QueryImplType::store(perfect_hash, loaded.value(), acd);
+				}  // fall through to provide() if loading from disk failure
 
-			// PROLOG:
-			// we put the node, it does not have any deps yet,
-			// actual cycle checks are done in ctx.query
-			// @TODO: #1887 might want to put it under one more layer of abstraction:
-			ContextAccess::getState()->addGraphNode(node_id);
-			ContextAccess::getState()->getActiveGraph()->putNode(node_id);
-			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
-
-			// EPILOG
-			// Use of defer here makes it also called when an exception is thrown.
-			defer({
-				// This happens after node is calculated, and we are all done
-				CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n");
-				ContextAccess::getState()->getActiveGraph()->removeNode(node_id);
-			});
-
-			if constexpr (USE_STATS) stat_object.was_provide_call = true;
-
-			try {
-				if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK
-				              && QueryImplType::USES_QRESULT) {
-					auto provide_result = QueryImplType::provide(context, key);
-					if (provide_result.hasFailed()) {
-						// Here we need to delete artifact from disk
-						QueryImplType::deleteFromDisc(key);
-					}
-					return QueryImplType::store(perfect_hash, provide_result, acd);
-				} else {
-					return QueryImplType::store(
-						perfect_hash, QueryImplType::provide(context, key), acd
-					);
-				}
-			} catch (const QueryFailedException& qfe) {
 				CORE_DEV_LOG(
 					Query,
 					"[QUERY \"",
 					QueryIntType::QUERY_DATA.name,
-					"\"]: Caught failed exception.\n",
-					qfe.what()
+					"\"]: Query was marked green, but loading from disk failed.\n"
 				);
+			}
+		}
 
-				// If provide throws we need to delete artifact from disk from prev compilation
-				if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK)
+		/*******************************************************************\
+		| Now we enter a section, in which we actually compute the query    |
+		| result by calling provide().                                      |
+		\*******************************************************************/
+
+
+		// @TODO: #2195 in the future we might want to guarantee that query operation are no-throw
+		// apart from panics and similar stuff.
+		// We for sure need more control of what happens if query operation throws.
+
+		// PROLOG:
+		// we put the node, it does not have any deps yet,
+		// actual cycle checks are done in ctx.query
+		// @TODO: #1887 might want to put it under one more layer of abstraction:
+		ContextAccess::getState()->addGraphNode(node_id);
+		ContextAccess::getState()->getActiveGraph()->putNode(node_id);
+		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
+
+		// EPILOG
+		// Use of defer here makes it also called when an exception is thrown.
+		defer({
+			// This happens after node is calculated, and we are all done
+			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n");
+			ContextAccess::getState()->getActiveGraph()->removeNode(node_id);
+		});
+
+		if constexpr (USE_STATS) stat_object.was_provide_call = true;
+
+		try {
+			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK && QueryImplType::USES_QRESULT) {
+				auto provide_result = QueryImplType::provide(context, key);
+				if (provide_result.hasFailed()) {
+					// Here we need to delete artifact from disk
 					QueryImplType::deleteFromDisc(key);
-
-				if constexpr (QueryImplType::USES_QRESULT
-				              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
-					return QueryImplType::store(perfect_hash, query::Failed(), acd);
-				} else {
-					CORE_PANIC(qfe.what());
 				}
+				return QueryImplType::store(perfect_hash, provide_result, acd);
+			} else {
+				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
+			}
+		} catch (const QueryFailedException& qfe) {
+			CORE_DEV_LOG(
+				Query,
+				"[QUERY \"",
+				QueryIntType::QUERY_DATA.name,
+				"\"]: Caught failed exception.\n",
+				qfe.what()
+			);
+			// If provide throws we need to delete artifact from disk from prev compilation
+			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK)
+				QueryImplType::deleteFromDisc(key);
+
+			if constexpr (QueryImplType::USES_QRESULT
+			              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
+				return QueryImplType::store(perfect_hash, query::Failed(), acd);
+			} else {
+				CORE_PANIC(qfe.what());
 			}
 		}
 	}
@@ -257,6 +243,9 @@ namespace query::internal {
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                                                                  \
 	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                       \
 		return ::query::internal::standardQueryEntry<type>(key);                                                                         \
+	}                                                                                                                                    \
+	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                                \
+		return type::load(type::KHash(hash)).value().data;                                                                               \
 	}                                                                                                                                    \
 	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                        \
 		return type::erase(type::KHash(hash));                                                                                           \

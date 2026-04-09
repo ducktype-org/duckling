@@ -3,7 +3,7 @@
 #include "lookup_result.hpp"
 
 #include <helios/scope_id.hpp>
-#include <typesystem/higher/abstract_type.hpp>
+#include <tsh/abstract_type.hpp>
 
 #include <base/pointers/box.hpp>
 
@@ -37,7 +37,7 @@ namespace compiler::helios {
 		 * @param params Additional parameters for the lookup.
 		 * @return The result of the lookup.
 		 */
-		virtual CRef<LookupResult> lookup(
+		virtual CRef<query::QResult<LookupResult>> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 		) = 0;
 	};
@@ -118,7 +118,7 @@ namespace compiler::helios {
 		/**
 		 * Performs a lookup in a given interface.
 		 */
-		CRef<LookupResult> lookup(
+		CRef<query::QResult<LookupResult>> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters = {}
 		) const;
 
