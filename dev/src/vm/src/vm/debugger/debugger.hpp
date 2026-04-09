@@ -10,8 +10,11 @@ namespace vm::debugger {
 	 * This class is responsible for managing the state of debugging sessions, including
 	 * breakpoints, stepping through code, and inspecting program state.
 	 *
-	 * It will interact with the VM API and be the middleman between the VM and any user interfaces
+	 * It is the middleman between the VM and any user interfaces
 	 * (e.g., command-line interface, graphical debugger, Debug Adapter).
+	 * 
+	 * @TODO: #2454 Implement CLI
+	 * @TODO: #2455 Implement DAP
 	 */
 	class Debugger {
 	private:
