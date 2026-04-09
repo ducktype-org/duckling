@@ -86,7 +86,7 @@ namespace vm::loader::compiler {
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::Type,
 			opargs::Type,
-			return static_cast<u64>(compiler.low_program.getTypes().at(opcode_arg.type_name)->getID());
+			return safeReadObjectBytes<u64>(compiler.low_program.getTypes().at(opcode_arg.type_name));
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
@@ -98,13 +98,13 @@ namespace vm::loader::compiler {
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
-			low::opargs::FunctionName,
+			low::opargs::FunctionID,
 		    opargs::FunctionName,
-		    return u64(*compiler.program_ctx.function_forward_declarations.idOf(opcode_arg.function_name));
+		    return compiler.program_ctx.function_forward_declarations.idOf(opcode_arg.function_name).value();
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
-			low::opargs::BuiltinFunctionName,
+			low::opargs::BuiltinFunctionID,
 			opargs::BuiltinFunctionName,
 			auto func_id = *builtins::getBuiltinFunctionID(opcode_arg.function_name);
 			return base::safeIntConv<u64>(
@@ -113,9 +113,9 @@ namespace vm::loader::compiler {
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
-			low::opargs::ExtCFunctionName,
+			low::opargs::ExtCFunction,
 			opargs::ExtCFunctionName,
-			return u64(*compiler.program_ctx.ext_c_functions.idOf(opcode_arg.function_name));
+			return safeReadObjectBytes<u64>(compiler.low_program.getExternCFunctions().at(opcode_arg.function_name));
 		);
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::MethodName,

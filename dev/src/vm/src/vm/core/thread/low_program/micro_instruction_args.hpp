@@ -94,16 +94,16 @@ namespace vm::low::opargs {
 
 #define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant
 
-	/** @brief Stores TypeID (u64) used by runtime type metadata lookups. */
+	/** @brief Stores TypeCRef (pointer) from type metadata. */
 	DEFINE_MICRO_ARG_TYPE(Type, "type", vm::opargs::Type);
 	/** @brief Stores byte offset of a field within its containing type layout. */
 	DEFINE_MICRO_ARG_TYPE(Field, "field", vm::opargs::Field);
-	/** @brief Stores function ID/index in LowVMProgram functions map. */
-	DEFINE_MICRO_ARG_TYPE(FunctionName, "func", vm::opargs::FunctionName);
+	/** @brief Stores function ID from LowVMProgram functions map. */
+	DEFINE_MICRO_ARG_TYPE(FunctionID, "func", vm::opargs::FunctionName);
 	/** @brief Stores underlying numeric value of builtins::BuiltinFunctionID. */
-	DEFINE_MICRO_ARG_TYPE(BuiltinFunctionName, "builtinfunc", vm::opargs::BuiltinFunctionName);
-	/** @brief Stores extern C function ID/index in LowVMProgram extern C functions map. */
-	DEFINE_MICRO_ARG_TYPE(ExtCFunctionName, "cfunc", vm::opargs::ExtCFunctionName);
+	DEFINE_MICRO_ARG_TYPE(BuiltinFunctionID, "builtinfunc", vm::opargs::BuiltinFunctionName);
+	/** @brief Stores extern C function pointer in LowVMProgram extern C functions map. */
+	DEFINE_MICRO_ARG_TYPE(ExtCFunction, "cfunc", vm::opargs::ExtCFunctionName);
 	/** @brief Stores lowered method identifier used for virtual dispatch lookup. */
 	DEFINE_MICRO_ARG_TYPE(MethodName, "method", vm::opargs::MethodName);
 	/** @brief Stores relative instruction jump offset after label linking. */
@@ -118,9 +118,9 @@ namespace vm::low::opargs {
 		Immediate,
 		Type,
 		Field,
-		FunctionName,
-		BuiltinFunctionName,
-		ExtCFunctionName,
+		FunctionID,
+		BuiltinFunctionID,
+		ExtCFunction,
 		MethodName,
 		Label>;
 	using InstructionArgCRef = base::CRefifyParams<InstructionArg>;
@@ -128,8 +128,7 @@ namespace vm::low::opargs {
 	using InstructionPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES>;
 	using InstructionPlaceBlockArg = std::variant<VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES>;
 
-	using InstructionFunctionArg
-		= std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
+	using InstructionFunctionArg = std::variant<FunctionID, BuiltinFunctionID, ExtCFunction>;
 
 	template<typename T>
 	concept ArgumentType = base::IsVariantMember<T, InstructionArg>;

@@ -97,7 +97,7 @@ namespace vm::loader::compiler::detail {
 
 		template<typename LowArg, typename HighArg>
 		requires IsTranslatableInstructionArgumentPair<LowArg, HighArg>
-		u64 lowerLowArg(HighArg&& arg) {
+		u64 lowerLowArg(const HighArg& arg) {
 			if constexpr (std::constructible_from<u64, HighArg>) {
 				return u64(arg);
 			} else {

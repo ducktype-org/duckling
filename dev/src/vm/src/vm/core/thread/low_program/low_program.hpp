@@ -70,7 +70,7 @@ namespace vm::low {
 			= 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
 			= 0;
 
 		[[nodiscard]]
@@ -124,7 +124,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return extern_c_functions;
 		}
 
@@ -141,11 +141,10 @@ namespace vm::low {
 		}
 
 	private:
-		LowVMProgram()                         = default;
-		Box<TypeMetadata>                types = makeBox<TypeMetadata>();
-		ObjIdNameMap<LowFuncData, usize> functions{};
-		ObjIdNameMap<LowExternCFunction> extern_c_functions{};
-
+		LowVMProgram()                                  = default;
+		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
+		ObjIdNameMap<LowFuncData, usize>          functions{};
+		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		usize                                     global_buffer_size = 0;
 		usize                                     global_count       = 0;
@@ -157,6 +156,10 @@ namespace vm::low {
 
 	/**
 	 * @brief Overlay over `LowVMProgram` with its own and therefore modifiable copy of functions.
+	 * @note Only the functions can be copied and modified, the types and extern C
+	 * functions are shared with the original program and are not modifiable through this structure
+	 * because of the way instruction arguments are currently being lowered - they contain direct
+	 * pointers to types.
 	 *
 	 * @note Needs updating via `selfUpdate()` to make new functions visible.
 	 * @note Program with current everything except functions is still a valid program.
@@ -172,7 +175,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return original_program->getExternCFunctions();
 		}
 

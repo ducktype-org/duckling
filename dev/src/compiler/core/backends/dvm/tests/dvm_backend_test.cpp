@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
+		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(unitsTest);
 	}
 
@@ -118,11 +119,26 @@ private:
 
 	void builtinFuncsTest() { runTest("modules/builtin_funcs", "9", "81\n82\n", {}, 82); }
 
-	void globalVariablesTest() { runTest("modules/globals", {}, {}, {}, 48); }
+	void globalVariablesTest() {
+		runTest(
+			"modules/globals", {}, "10\n42\n99\n99\n42\n99\n43\n-42\n-41\n41\n777\n1\n0\n", {}, 0
+		);
+	}
 
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
+
+	void referencesTest() {
+		runTest(
+			"modules/references",
+			{},
+			"10\n20\n20\n20\n20\n21\n16\n20\n-20\n-20\n-40\n-"
+			"30\n222\n111\n222\n400\n400\n400\n500\n",
+			{},
+			0
+		);
+	}
 
 	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
 };
