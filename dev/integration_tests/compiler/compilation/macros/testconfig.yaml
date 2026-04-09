@@ -11,6 +11,7 @@ Tests:
         Output:
           String: "2\n"
         ExitCode: 0
+
   simple_expand_2:
     Cases:
       llvm:
@@ -23,6 +24,7 @@ Tests:
         Output:
           String: "2\n2\n"
         ExitCode: 0
+
   simple_expand_3:
     Cases:
       llvm:
@@ -34,4 +36,17 @@ Tests:
         backend: dvm
         Output:
           String: "1\n2\n"
+        ExitCode: 0
+
+  expand_expand:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n"
         ExitCode: 0
