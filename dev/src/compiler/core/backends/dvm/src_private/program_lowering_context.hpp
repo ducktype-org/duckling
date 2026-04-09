@@ -136,7 +136,7 @@ namespace compiler::backend_vm::internal {
 			// Mapping from TSL layouts to names of DVM types which exist in `dvm_types`.
 			base::Map<CRef<tsl::TypeLayout>, base::StrID> tsl_type_to_dvm_type_name;
 			// Main container for all types in the module.
-			base::Map<base::StrID, vm::code::TypeOfData> dvm_types;
+			base::HashMap<base::StrID, vm::code::TypeOfData> dvm_types;
 		};
 
 		// A set of types allowing for insertion of both TSL types and manual insertion of types.

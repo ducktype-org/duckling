@@ -208,7 +208,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				const auto field_layout  = class_layout.getFieldLayoutOfLayoutIndex(field_index);
 				const auto vm_field_type = program_context.lowerAndKeepTslType(field_layout);
 
-				auto vm_field_name = base::strConcat("_", field_index + 1);
+				auto vm_field_name = base::strConcat("_", field_index);
 
 				auto ptr_to_field_type = program_context.getOrInsertPointerType(vm_field_type);
 

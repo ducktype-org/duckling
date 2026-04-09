@@ -7,9 +7,14 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
+#include "base/config/build_type.hpp"
+#include "base/except/exceptions.hpp"
+
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
+#include <algorithm>
 #include <ranges>
 
 using namespace compiler::backend_vm::internal;
@@ -33,6 +38,15 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 
 	auto dvm_type  = lowerTslTypeInternal(layout);
 	auto type_name = vm::code::typeName(dvm_type);
+
+
+	IF_BUILD_TYPE_DEV({
+		auto maybe_dvm_type = type_storage.dvm_types.atMaybe(type_name);
+		CORE_ASSERT(
+			!maybe_dvm_type.has_value() || **maybe_dvm_type == dvm_type,
+			"Type mismatch in type lowering"
+		);
+	});
 
 	type_storage.tsl_type_to_dvm_type_name.put(layout, type_name);
 	type_storage.dvm_types.put(type_name, std::move(dvm_type));
@@ -229,9 +243,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			for (usize i{ 0 }; i < num_fields; i++) {
 				const auto  field_layout  = class_layout.getFieldLayoutOfLayoutIndex(i);
 				const auto& vm_field_type = lowerAndKeepTslType(field_layout);
-				fields.emplace_back(
-					base::StrID(base::strConcat("_", i + 1)), typeName(vm_field_type)
-				);
+				fields.emplace_back(base::StrID(base::strConcat("_", i)), typeName(vm_field_type));
 			}
 
 			return vm::code::DataType{
@@ -261,13 +273,29 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 ) {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	// Sort globals and functions by their mangled names to ensure deterministic output, which is
+	// important for reproducibility. This also should guarantee that the order of functions and
+	// globals in the resulting DVM module is deterministic, which can be important for debugging
+	// and testing.
+	std::ranges::sort(
+		collection.functions,
+		[](const vm::code::Function& lhs, const vm::code::Function& rhs) {
+			return lhs.name.str < rhs.name.str;
+		}
+	);
 	collection.functions.insert(
 		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);
-	collection.global_data = std::ranges::to<std::vector>(
-		global_name_to_dvm_data | std::views::values
-		| std::views::transform([](const auto& tuple) { return tuple; })
-	);
+	collection.global_data
+		= std::ranges::to<std::vector>(global_name_to_dvm_data | std::views::values);
+	// Note, that this not only makes the output deterministic,
+	// but also ensures that globals are ordered as they are declared in the source code
+	// This is because they are sorted by mangled names base::StrID ids
+	// This ids are incrementally generated during lirLowering, so the order of declaration is
+	// preserved. This is true as long as the LIR globals are generated in the same order as the
+	// source globals, which is currently the case. This is desirable behavior because we want to
+	// generate globals in the order they appear in the file to prevent order initialization fiasco.
+	// @TODO: #1431 Think about this and make it better if needed
 	std::ranges::sort(
 		collection.global_data,
 		[](const vm::code::GlobalData& lhs, const vm::code::GlobalData& rhs) {
@@ -275,7 +303,14 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		}
 	);
 
+	// Sorting types by their string identification to ensure deterministic output
 	collection.types = std::ranges::to<std::vector>(type_storage.dvm_types | std::views::values);
+	std::ranges::sort(
+		collection.types,
+		[](const vm::code::TypeOfData& lhs, const vm::code::TypeOfData& rhs) {
+			return vm::code::typeName(lhs).str() < vm::code::typeName(rhs).str();
+		}
+	);
 
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
