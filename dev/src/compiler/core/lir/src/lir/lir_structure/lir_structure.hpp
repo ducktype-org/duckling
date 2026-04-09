@@ -21,7 +21,6 @@
 
 #include <memory>
 #include <utility>
-#include <variant>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,

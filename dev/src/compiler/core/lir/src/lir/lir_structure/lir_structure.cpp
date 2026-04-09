@@ -11,8 +11,6 @@
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "query_framework/context/context.hpp"
-
 #include <iomanip>
 #include <set>
 
@@ -201,7 +199,7 @@ namespace compiler::lir {
 		 * @note Custom output, so we can align when printing instruction
 		 */
 		void printLocal(LIRLocalRef local, std::ostream& loc_output) const {
-			loc_output << "  Local(" << local_id[local] << ")";
+			loc_output << "Local(" << local_id[local] << ")";
 		}
 
 		void printGlobal(const LIRGlobal& global, std::ostream& loc_output) const {

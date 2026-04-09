@@ -204,6 +204,15 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			const usize                  num_fields = class_layout.getNumSubLayouts();
 			fields.reserve(num_fields);
 
+			/*
+			Class types are lowered to:
+			type data: <name> {
+			    _1: <type_of_field_1>
+			    _2: <type_of_field_2>
+			    _3: <type_of_field_3>
+			}
+			*/
+			// @TODO: #2100 Change that to indexes.
 			for (usize i{ 0 }; i < num_fields; i++) {
 				const auto  field_layout  = class_layout.getFieldLayoutOfLayoutIndex(i);
 				const auto& vm_field_type = lowerAndKeepTslType(field_layout);

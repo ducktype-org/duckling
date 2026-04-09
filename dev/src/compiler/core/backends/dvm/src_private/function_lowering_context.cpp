@@ -146,12 +146,13 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 	// If a place is global, we load a pointer to it to a local.
 	if (place.hasProjections() && current_place.is<DVMGlobal>()) {
-		auto global             = current_place.get<DVMGlobal>();
+		auto global = current_place.get<DVMGlobal>();
+
+		// TODOP: Make a better abstraction for that.
 		auto ptr_to_global_type = vm::code::PointerType(
 			base::StrID(base::strConcat("ptr_", vm::code::typeName(global.type))),
 			vm::code::typeName(global.type)
 		);
-		// TODOP: Make a better abstraction for that.
 		program_context.insertType(ptr_to_global_type);
 
 		auto addr_tmp = pushTempLocal(ptr_to_global_type, "global_addr_ref");
@@ -200,6 +201,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				CORE_ASSERT(
 					current_layout->is<tsl::ClassTypeLayout>(), "FieldProjection on non-class layout"
 				);
+				// @TODO: #2100 Change that to use indexes.
+
 				// Prepare the class type.
 				const auto& class_layout
 					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
@@ -213,14 +216,14 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 				auto vm_field_name = base::strConcat("_", field_index + 1);
 
+				// TODOP: Better abstraction for that.
 				const auto ptr_to_field_type = vm::code::PointerType(
 					base::StrID(base::strConcat("ptr_", vm::code::typeName(vm_field_type))),
 					vm::code::typeName(vm_field_type)
 				);
-				program_context.insertType(ptr_to_field_type
-				);  // TODOP: Better abstraction for that.
+				program_context.insertType(ptr_to_field_type);
 
-				// TODOP: Create a temporary to the field
+				// Create a temporary to the field
 				auto field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
 
 				// Emit the pointer move instruction. Based on the `current_place` type,
