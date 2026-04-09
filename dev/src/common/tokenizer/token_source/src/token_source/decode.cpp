@@ -1,18 +1,15 @@
 #include "source.hpp"
 
-#include "lexer/char.hpp"
-
-#include <diagnostic_interactive/logger.hpp>
-
-#include <filesystem/encoding.hpp>
-
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <diagnostic_interactive/message.hpp>
 
 #include <base/misc/convert.hpp>
 #include <base/misc/int_conv.hpp>
 
+#include "lexer/char.hpp"
 #include <diagnostic/source_position.hpp>
+#include <filesystem/encoding.hpp>
 #include <token_source/source.hpp>
 #include <unicode_classification/classifications.hpp>
 
@@ -141,9 +138,9 @@ namespace tokenizer {
 
 	template<>
 	lexer::CharArray TokenSource::internalDecode<fs::UsAscii>() {
-		auto file = Ref(this);
-		auto log = file->getIntLogger();
-		auto      bytes = file->getContent().view();
+		auto             file  = Ref(this);
+		auto             log   = file->getIntLogger();
+		auto             bytes = file->getContent().view();
 		lexer::CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			// Check if valid ascii byte
@@ -160,9 +157,9 @@ namespace tokenizer {
 
 	template<>
 	lexer::CharArray TokenSource::internalDecode<fs::UTF8>() {
-		auto file = Ref(this);
-		auto log = file->getIntLogger();
-		auto      bytes = file->getContent().view();
+		auto             file  = Ref(this);
+		auto             log   = file->getIntLogger();
+		auto             bytes = file->getContent().view();
 		lexer::CharArray out;
 
 		usize pos = 0;

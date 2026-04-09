@@ -55,14 +55,14 @@ namespace tokenizer {
 		friend Box<TokenSource> makeTokenSource(Ts&&... args);
 
 		/**
-	 	 * Decode the content into a character array.
-	 	 *
-	 	 * @tparam encoding Which encoding should the function use.
-	 	 *
-	 	 * @return CharArray of decoded data
-	 	 *
-	 	 * @note We should probably stick to only decoding UTF-8 for now
-	 	 */
+		 * Decode the content into a character array.
+		 *
+		 * @tparam encoding Which encoding should the function use.
+		 *
+		 * @return CharArray of decoded data
+		 *
+		 * @note We should probably stick to only decoding UTF-8 for now
+		 */
 		template<fs::Encoding encoding>
 		lexer::CharArray internalDecode();
 
