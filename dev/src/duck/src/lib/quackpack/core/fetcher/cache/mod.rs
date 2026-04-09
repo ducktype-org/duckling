@@ -12,8 +12,10 @@ mod tests;
 
 use crate::{QuackResult, QuackResultContext};
 
+const SQL_ERROR_MESSAGE: &str = "failed to execute an SQL query";
+
 #[derive(Debug)]
-/// Where should we cache metdata.
+/// Where should we cache metadata.
 pub enum CacheLocation<'a> {
     /// Cache metadata in memory.
     Memory,
@@ -136,7 +138,7 @@ impl ManifestCache {
         let maybe_json = self
             .connection
             .get_single_manifest_json(package)
-            .context_internal("invalid SQL")?;
+            .context(SQL_ERROR_MESSAGE)?;
         maybe_json
             .map(|json| {
                 serde_json::from_str(&json)
@@ -158,7 +160,7 @@ impl ManifestCache {
         let jsons = self
             .connection
             .get_all_manifests_json(package)
-            .context_internal("invalid SQL")?;
+            .context(SQL_ERROR_MESSAGE)?;
         jsons
             .into_iter()
             .map(|json| serde_json::from_str(&json))
@@ -178,7 +180,7 @@ impl ManifestCache {
             .context_internal("failed to serialize registry schema to JSON")?;
         self.connection
             .add_or_replace_manifest_json(package, json)
-            .context_internal("invalid SQL")?;
+            .context(SQL_ERROR_MESSAGE)?;
         Ok(())
     }
 
@@ -209,7 +211,7 @@ impl ManifestCache {
             .collect::<QuackResult<_>>()?;
         self.connection
             .add_or_replace_mutliple_manifests_jsons(package_manifest_pairs)
-            .context_internal("invalid SQL")?;
+            .context(SQL_ERROR_MESSAGE)?;
         Ok(())
     }
 }
