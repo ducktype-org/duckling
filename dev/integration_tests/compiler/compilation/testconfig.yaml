@@ -12,6 +12,8 @@ compile_llvm_options: ""
 # You can override this to "false" in any subtree/test when duplication-based checks fail
 # for test-specific reasons (for example repeated globals or intentionally conflicting symbols).
 enable_conc_deterministic_tests: "true"
+# Number of duckc worker threads used for compilation and determinism checks.
+duckc_worker_count: "3"
 
 # Path to the local helper script used by the deterministic pre-check.
 compile_determinism_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/concurrent_compile_determinism.py"
