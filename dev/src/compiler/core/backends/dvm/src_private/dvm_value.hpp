@@ -34,7 +34,7 @@ namespace compiler::backend_vm::internal {
 
 	struct DVMImmediate {
 		DVMImmediate(u64 value, vm::code::TypeOfData type);
-		// @TODO: #2451: Make DVMImmediate string based
+		// @TODO: #2451 Make DVMImmediate string based
 		static DVMImmediate usgn8(u8 value);
 		static DVMImmediate usgn16(u16 value);
 		static DVMImmediate usgn32(u32 value);
