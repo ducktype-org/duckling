@@ -35,8 +35,8 @@ namespace vm {
 
 		std::deque<ThreadStack> threads_frame_stacks;
 
-		std::vector<std::byte> global_data_buffer;
-		std::vector<Block*>    global_data_blocks;
+		std::vector<std::byte> global_data_buffer{};
+		std::vector<Block*>    global_data_blocks{};
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing

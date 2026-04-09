@@ -100,30 +100,31 @@ namespace vm {
 		IF_TC(return;)
 	}
 
-#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                      \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                  \
-		{ WRITE_TO_PLACE_ARG(TYPE, inter->arg0, READ_FROM_PLACE_ARG(TYPE, instr->arg1)); }    \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {         \
-		{ WRITE_TO_PLACE_ARG(TYPE, READ_FROM_PLACE_ARG(TYPE, instr->arg1), instr->arg0); }    \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {        \
-		{                                                                                     \
-			if (frame->flags.flag) {                                                          \
-				const auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                    \
-				WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value);                                        \
-			}                                                                                 \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                 \
-		{                                                                                     \
-			if (frame->flags.flag)                                                            \
-				WRITE_TO_PLACE_ARG(TYPE, instr->arg0, READ_FROM_PLACE_ARG(TYPE, instr->arg1)) \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
+		{ std::cerr << (instr->arg0 & 0x7F'FF'FF'FF'FF'FF'FF'FF) << std::endl;\
+			std::cerr << thread.runtime_data.global_data_buffer_base << std::endl;  WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }     \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {          \
+		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, READ_FROM_PLACE_ARG(TYPE, instr->arg1)); }     \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {         \
+		{                                                                                      \
+			if (frame->flags.flag) {                                                           \
+				const auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                     \
+				WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value);                                  \
+			}                                                                                  \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                  \
+		{                                                                                      \
+			if (frame->flags.flag)                                                             \
+				WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
 	}
 
 	DEFINE_MOVE_OPS(64, u64)
@@ -137,7 +138,7 @@ namespace vm {
 			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
 			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                     \
 			lhs OP     rhs;                                                              \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                         \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                  \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
@@ -146,7 +147,7 @@ namespace vm {
 			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
 			const auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                     \
 			lhs        OP static_cast<TYPE>(rhs);                                        \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                         \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                  \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
@@ -158,7 +159,7 @@ namespace vm {
 			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                      \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
 			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                          \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}                                                                                     \
@@ -168,18 +169,18 @@ namespace vm {
 			auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                            \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
 			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                          \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}
 
-#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                 \
-			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);          \
+#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {        \
+		{                                                                        \
+			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                 \
 			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value* static_cast<TYPE>(-1)); \
-		}                                                                 \
-		FUNCTION_CONT(1);                                                 \
+		}                                                                        \
+		FUNCTION_CONT(1);                                                        \
 	}
 
 // @TODO: #1216 Check for over/under flows.
@@ -213,7 +214,7 @@ namespace vm {
 		{                                                                       \
 			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 }); \
 			const bool rhs = (READ_FROM_PLACE_ARG(u8, instr->arg1) != u8{ 0 }); \
-			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));          \
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));   \
 		}                                                                       \
 		FUNCTION_CONT(1);                                                       \
 	}                                                                           \
@@ -221,7 +222,7 @@ namespace vm {
 		{                                                                       \
 			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 }); \
 			const bool rhs = (safeReadObjectBytes<u8>(instr->arg1) != u8{ 0 }); \
-			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));          \
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));   \
 		}                                                                       \
 		FUNCTION_CONT(1);                                                       \
 	}
@@ -658,7 +659,13 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_popq)(FUNCTION_ARGS) {
 		{
 			const auto type_size = instr[1].arg0;
-			std::memcpy(local_stack + instr->arg0, local_stack + instr->arg1, type_size);
+			auto       dst       = getBytePtrFromPlaceArg(
+                local_stack, thread.runtime_data.global_data_buffer_base, instr->arg0
+            );
+			auto src = getBytePtrFromPlaceArg(
+				local_stack, thread.runtime_data.global_data_buffer_base, instr->arg1
+			);
+			std::memcpy(dst, src, type_size);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -666,8 +673,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_imm)(FUNCTION_ARGS) {
 		{
 			// @TODO: #1728 remove this evil instruction
-			const void* value = safeReadObjectBytes<void*>(instr->arg1);
-			writeToStack(local_stack, instr->arg0, value);
+			void* value = safeReadObjectBytes<void*>(instr->arg1);
+			WRITE_TO_PLACE_ARG(void*, instr->arg0, value);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1062,7 +1069,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##DST_SIZE##_p##SRC_SIZE)(FUNCTION_ARGS) { \
 		{                                                                              \
 			auto val = READ_FROM_PLACE_ARG(SRC_TYPE, instr->arg1);                     \
-			WRITE_TO_PLACE_ARG(DST_TYPE, instr->arg0, static_cast<DST_TYPE>(val));            \
+			WRITE_TO_PLACE_ARG(DST_TYPE, instr->arg0, static_cast<DST_TYPE>(val));     \
 		}                                                                              \
 		FUNCTION_CONT(1);                                                              \
 	}
@@ -1126,7 +1133,7 @@ namespace vm {
 					res = static_cast<IntT>(x);                                               \
 				}                                                                             \
 			}                                                                                 \
-			WRITE_TO_PLACE_ARG(IntT, instr->arg0, res);                                              \
+			WRITE_TO_PLACE_ARG(IntT, instr->arg0, res);                                       \
 		}                                                                                     \
 		FUNCTION_CONT(1);                                                                     \
 	}
@@ -1150,7 +1157,7 @@ namespace vm {
 					res = static_cast<UIntT>(x);                                               \
 				}                                                                              \
 			}                                                                                  \
-			WRITE_TO_PLACE_ARG(UIntT, instr->arg0, res);                                              \
+			WRITE_TO_PLACE_ARG(UIntT, instr->arg0, res);                                       \
 		}                                                                                      \
 		FUNCTION_CONT(1);                                                                      \
 	}

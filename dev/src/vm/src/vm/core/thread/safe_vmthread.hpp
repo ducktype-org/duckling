@@ -206,5 +206,7 @@ namespace vm {
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
 		Frame& getStackFrame(u64 frame_index);
+
+		void updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers);
 	};
 }

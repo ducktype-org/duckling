@@ -106,19 +106,23 @@ namespace vm {
 			auto type_size = type->getSize().asInt();
 			CORE_ASSERT(
 				global_buffer_offset + type_size <= global_data_buffer.size(),
-				"Global buffer overflow: trying to insert global data of size {}, at offset {}, "
-				"but buffer size is only {}",
-				type_size,
-				global_buffer_offset,
-				global_data_buffer.size()
+				std::format(
+					"Global buffer overflow: trying to insert global data of size {}, at offset "
+			        "{}, "
+					"but buffer size is only {}",
+					type_size,
+					global_buffer_offset,
+					global_data_buffer.size()
+				)
 			);
 			CORE_ASSERT(
 				global_block_idx < global_data_blocks.size(),
-				"Global blocks buffer overflow: trying to insert global block at index {}, but "
-				"buffer "
-				"size is only {}",
-				global_block_idx,
-				global_data_blocks.size()
+				std::format(
+					"Global blocks buffer overflow: trying to insert global block at index {}, but "
+			        "buffer size is only {}",
+					global_block_idx,
+					global_data_blocks.size()
+				)
 			);
 			auto block = allocateDummy(type, global_data_buffer.data() + global_buffer_offset);
 			increaseBlockRefcount(block);
@@ -421,9 +425,14 @@ namespace vm {
 	void Memory::reallocateBufferForGlobals(usize global_count, usize buffer_size) {
 		global_data_buffer.resize(buffer_size);
 		global_data_blocks.resize(global_count);
+		std::cerr << "Reallocated global buffer to size " << buffer_size
+				  << " and global blocks buffer to size " << global_count << "\n";
 	}
 
 	GlobalBufferPointers Memory::getGlobalDataMemory() {
+		std::cout << "Global buffer base: " << static_cast<void*>(global_data_buffer.data())
+				  << ", Global blocks buffer base: "
+				  << static_cast<void*>(global_data_blocks.data()) << "\n";
 		return { .data_buffer_base   = global_data_buffer.data(),
 			     .blocks_buffer_base = global_data_blocks.data() };
 	}

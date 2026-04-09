@@ -220,6 +220,12 @@ namespace vm::opargs {
 
 	template<typename T>
 	concept ArgumentType = base::IsVariantMember<T, OpCodeArg>;
+
+	template<typename T>
+	concept LocalArgumentType = base::IsVariantMember<T, OpCodeLocalArg>;
+
+	template<typename T>
+	concept GlobalArgumentType = base::IsVariantMember<T, OpCodeGlobalArg>;
 }
 
 #undef DEFINE_STR_ARG_TYPE

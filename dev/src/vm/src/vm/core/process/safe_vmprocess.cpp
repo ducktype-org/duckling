@@ -40,10 +40,7 @@ namespace vm {
 
 		if (code_result.has_value()) {
 			loaded_program_copy.selfUpdate();
-			auto global_buffer_config = loaded_program_copy.getGlobalBufferConfig();
-			memory.reallocateBufferForGlobals(
-				global_buffer_config.global_count, global_buffer_config.buffer_size
-			);
+			updateGlobalDataMemory(&loaded_program_copy);
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -340,5 +337,13 @@ namespace vm {
 	api::ThreadID SafeVMProcess::getMainThreadID() {
 		std::shared_lock lock(rw_global);
 		return getMainVMThread().getThreadID();
+	}
+
+	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {
+		auto global_buffer_config = program->getGlobalBufferConfig();
+		memory.reallocateBufferForGlobals(
+			global_buffer_config.global_count, global_buffer_config.buffer_size
+		);
+		for (auto& thread: vm_threads) thread.updateGlobalDataBufferPointers(memory.getGlobalDataMemory());
 	}
 }

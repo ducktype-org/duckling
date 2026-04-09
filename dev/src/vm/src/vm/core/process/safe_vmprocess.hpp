@@ -134,6 +134,8 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
+
 	public:
 		SafeVMProcess(PID my_pid);
 

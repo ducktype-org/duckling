@@ -3,11 +3,37 @@
 #include "../config.hpp"
 
 #include <base/misc/raw_view.hpp>
-#include <base/types/ints.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/utils/interpret.hpp>
-struct Block;
+
+namespace vm {
+	struct Block;
+}
+
+[[gnu::always_inline]]
+inline static std::byte* getBytePtrFromPlaceArg(
+	std::byte* local_stack, std::byte* global_buffer, u64 arg
+) {
+	uint64_t offset  = arg & 0x7F'FF'FF'FF'FF'FF'FF'FF;
+	uint64_t on_bit  = arg >> 63;
+	auto     address = (std::byte*) (((uint64_t) global_buffer * on_bit)   // NOLINT
+                                 + ((uint64_t) local_stack * !on_bit)  // NOLINT
+                                 + offset);                            // NOLINT
+	return address;
+}
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static Ref<vm::Block> getBlockRefFromArg(
+	vm::Block** local_stack_blocks, vm::Block** global_buffer_blocks, u64 place_arg
+) {
+	uint64_t offset  = place_arg & 0x7F'FF'FF'FF'FF'FF'FF'FF;
+	uint64_t on_bit  = place_arg >> 63;
+	auto     address = (vm::Block**) (((uint64_t) global_buffer_blocks * on_bit)  // NOLINT
+                                  + ((uint64_t) local_stack_blocks * !on_bit) + offset);  // NOLINT
+	return { *address };
+}
 
 /**
  * @brief Writes a value of a given TYPE to a specified location on the stack.
@@ -15,10 +41,8 @@ struct Block;
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
 inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, u64 place_arg) {
-	uint64_t offset = place_arg & 0x7FFFFFFFFFFFFFFF;
-	uint64_t on_bit = place_arg >> 63;
-	auto address = (std::byte*)(((uint64_t)global_buffer * on_bit) + ((uint64_t)local_stack * !on_bit) + offset); //NOLINT
-	return vm::safeReadPointerBytes<T>(address);
+	return vm::safeReadPointerBytes<T>(getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg)
+	);
 }
 
 /**
@@ -26,25 +50,22 @@ inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, 
  */
 template<typename T>
 [[gnu::always_inline]]
-inline static void writeToPlace(std::byte* local_stack, std::byte* global_buffer, u64 place_arg, const T& value) {
-	uint64_t offset = place_arg & 0x7FFFFFFFFFFFFFFF;
-	uint64_t on_bit = place_arg >> 63;
-	auto address = (std::byte*)(((uint64_t)global_buffer * on_bit) + ((uint64_t)local_stack * !on_bit) + offset); //NOLINT
-	return vm::safeWriteBytes<T>(address, value);
+inline static void writeToPlace(
+	std::byte* local_stack, std::byte* global_buffer, u64 place_arg, const T& value
+) {
+	return vm::safeWriteBytes<T>(
+		getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg), value
+	);
 }
 
-[[nodiscard]] [[gnu::always_inline]]
-inline static Ref<Block> getBlockRefFromArg(Block** local_stack_blocks, Block** global_buffer_blocks, u64 place_arg) {
-	uint64_t offset = place_arg & 0x7FFFFFFFFFFFFFFF;
-	uint64_t on_bit = place_arg >> 63;
-	auto address = (Block**)(((uint64_t)global_buffer_blocks * on_bit) + ((uint64_t)local_stack_blocks * !on_bit) + offset); //NOLINT
-	return {*address};
-}
-
-
-#define READ_FROM_PLACE_ARG(TYPE, ARG) readFromPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG)
-#define WRITE_TO_PLACE_ARG(TYPE, ARG, VALUE) writeToPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG, VALUE)
-#define READ_BLOCK_REF_FROM_ARG(ARG) getBlockRefFromArg(frame->local_block_ref_stack_base, thread.runtime_data.global_block_ref_buffer_base, ARG)
+#define READ_FROM_PLACE_ARG(TYPE, ARG) \
+	readFromPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG)
+#define WRITE_TO_PLACE_ARG(TYPE, ARG, VALUE) \
+	writeToPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG, VALUE)
+#define READ_BLOCK_REF_FROM_ARG(ARG)                                                             \
+	getBlockRefFromArg(                                                                          \
+		frame->local_block_ref_stack_base, thread.runtime_data.global_block_ref_buffer_base, ARG \
+	)
 
 /**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
