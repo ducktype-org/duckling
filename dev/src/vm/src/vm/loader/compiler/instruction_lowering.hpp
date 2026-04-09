@@ -183,9 +183,17 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_mov_popq_popq>(i.dst, i.src);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
 			}
-			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_popq_popq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lopq_gopq, i) {
+				auto type_size = ctx.locals_map.at(i.dst.var_name).type->getSize().asInt();
+				addLow<Op_mov_popq_popq>(i.dst, i.src);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
+			}
 			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_popq_popq>(i.dst, i.src); }
+			instr_case(high::Op_mov_gopq_lopq, i) {
+				auto type_size = ctx.locals_map.at(i.src.var_name).type->getSize().asInt();
+				addLow<Op_mov_popq_popq>(i.dst, i.src);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
+			}
 			instr_case(high::Op_mov_lste_lste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_lste_gste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_gste_lste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }

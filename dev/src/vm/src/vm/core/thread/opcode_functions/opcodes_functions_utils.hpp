@@ -12,6 +12,12 @@ namespace vm {
 	struct Block;
 }
 
+/**
+ * @brief Given the argument of type "place", which is an offset to the global buffer or local
+ * stack, with the highest bit indicating whether it's global or local, returns the pointer to the
+ * actual byte in memory.
+ * @param arg - the mentioned argument
+ */
 [[gnu::always_inline]]
 inline static std::byte* getBytePtrFromPlaceArg(
 	std::byte* local_stack, std::byte* global_buffer, u64 arg
@@ -24,19 +30,27 @@ inline static std::byte* getBytePtrFromPlaceArg(
 	return address;
 }
 
+/**
+ * @brief Given the argument of type "place", which is an index in the local block reference stack
+ * or global block reference buffer, with the highest bit indicating whether it's global or local,
+ * returns the actual block reference.
+ * @param arg - the mentioned argument
+ */
 [[nodiscard]] [[gnu::always_inline]]
 inline static Ref<vm::Block> getBlockRefFromArg(
 	vm::Block** local_stack_blocks, vm::Block** global_buffer_blocks, u64 place_arg
 ) {
-	uint64_t offset  = place_arg & 0x7F'FF'FF'FF'FF'FF'FF'FF;
-	uint64_t on_bit  = place_arg >> 63;
-	auto     address = (vm::Block**) (((uint64_t) global_buffer_blocks * on_bit)  // NOLINT
-                                  + ((uint64_t) local_stack_blocks * !on_bit) + offset);  // NOLINT
+	uint64_t offset = place_arg & 0x7F'FF'FF'FF'FF'FF'FF'FF;
+	uint64_t on_bit = place_arg >> 63;
+	auto     address
+		= (vm::Block**) (((uint64_t) global_buffer_blocks * on_bit)                  // NOLINT
+	                     + ((uint64_t) local_stack_blocks * !on_bit) + offset * 8);  // NOLINT
 	return { *address };
 }
 
 /**
- * @brief Writes a value of a given TYPE to a specified location on the stack.
+ * @brief Writes a value of a given TYPE to a specified location on the stack or global buffer,
+ * depending on the highest bit of the place argument.
  */
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
@@ -46,7 +60,8 @@ inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, 
 }
 
 /**
- * @brief Writes a value of a given TYPE to a specified location on the stack.
+ * @brief Writes a value of a given TYPE to a specified location on the stack or global buffer,
+ * depending on the highest bit of the place argument.
  */
 template<typename T>
 [[gnu::always_inline]]
@@ -58,6 +73,10 @@ inline static void writeToPlace(
 	);
 }
 
+/**
+ * @brief Helper macros for reading/writing values from/to place arguments,
+ * which can be either local or global depending on the highest bit of the argument.
+ */
 #define READ_FROM_PLACE_ARG(TYPE, ARG) \
 	readFromPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG)
 #define WRITE_TO_PLACE_ARG(TYPE, ARG, VALUE) \

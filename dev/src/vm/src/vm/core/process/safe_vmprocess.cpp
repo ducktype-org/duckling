@@ -344,6 +344,7 @@ namespace vm {
 		memory.reallocateBufferForGlobals(
 			global_buffer_config.global_count, global_buffer_config.buffer_size
 		);
-		for (auto& thread: vm_threads) thread.updateGlobalDataBufferPointers(memory.getGlobalDataMemory());
+		for (auto& thread: vm_threads)
+			thread.updateGlobalDataBufferPointers(memory.getGlobalDataMemory());
 	}
 }

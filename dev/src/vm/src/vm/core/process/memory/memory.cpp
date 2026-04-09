@@ -108,7 +108,7 @@ namespace vm {
 				global_buffer_offset + type_size <= global_data_buffer.size(),
 				std::format(
 					"Global buffer overflow: trying to insert global data of size {}, at offset "
-			        "{}, "
+					"{}, "
 					"but buffer size is only {}",
 					type_size,
 					global_buffer_offset,
@@ -119,7 +119,7 @@ namespace vm {
 				global_block_idx < global_data_blocks.size(),
 				std::format(
 					"Global blocks buffer overflow: trying to insert global block at index {}, but "
-			        "buffer size is only {}",
+					"buffer size is only {}",
 					global_block_idx,
 					global_data_blocks.size()
 				)

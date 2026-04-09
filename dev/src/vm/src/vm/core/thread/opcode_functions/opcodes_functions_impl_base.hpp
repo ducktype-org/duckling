@@ -102,8 +102,7 @@ namespace vm {
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
-		{ std::cerr << (instr->arg0 & 0x7F'FF'FF'FF'FF'FF'FF'FF) << std::endl;\
-			std::cerr << thread.runtime_data.global_data_buffer_base << std::endl;  WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }     \
+		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }     \
 		FUNCTION_CONT(1);                                                                      \
 	}                                                                                          \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {          \

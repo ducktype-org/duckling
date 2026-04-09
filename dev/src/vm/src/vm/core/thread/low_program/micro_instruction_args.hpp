@@ -64,18 +64,20 @@ namespace vm::low::opargs {
 	/** @brief Stores byte offset of local opaque value on the frame local stack. */
 	DEFINE_MICRO_ARG_TYPE(PlaceOpq, "popq", vm::opargs::StackLocalOpq, vm::opargs::GlobalOpq);
 
-#define VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES \
-	Place8, Place16, Place32, Place64, PlacePtr, PlaceOpq
+#define VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES Place8, Place16, Place32, Place64, PlacePtr, PlaceOpq
 
 	/** @brief Stores index of type-erased local data in the frame local block reference stack. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockAny, "bany", vm::opargs::StackLocalAny, vm::opargs::GlobalAny);
 	/** @brief Stores index of local struct storage in Frame::block_ref_stack (not a byte offset). */
-	DEFINE_MICRO_ARG_TYPE(PlaceBlockStructure, "bste", vm::opargs::StackLocalStructure, vm::opargs::GlobalStructure);
+	DEFINE_MICRO_ARG_TYPE(
+		PlaceBlockStructure, "bste", vm::opargs::StackLocalStructure, vm::opargs::GlobalStructure
+	);
 	/** @brief Stores index of local variant storage in Frame::block_ref_stack (not a byte offset). */
-	DEFINE_MICRO_ARG_TYPE(PlaceBlockVariant, "bvnt", vm::opargs::StackLocalVnt/*, vm::opargs::GlobalVnt*/);
+	DEFINE_MICRO_ARG_TYPE(
+		PlaceBlockVariant, "bvnt", vm::opargs::StackLocalVnt /*, vm::opargs::GlobalVnt*/
+	);
 
-#define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES \
-	PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant
+#define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant
 
 	/** @brief Stores TypeID (u64) used by runtime type metadata lookups. */
 	DEFINE_MICRO_ARG_TYPE(Type, "type", vm::opargs::Type);
@@ -108,7 +110,7 @@ namespace vm::low::opargs {
 		Label>;
 	using InstructionArgCRef = base::CRefifyParams<InstructionArg>;
 
-	using InstructionPlaceDataArg      = std::variant<VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES>;
+	using InstructionPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES>;
 	using InstructionPlaceBlockArg = std::variant<VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES>;
 
 	using InstructionFunctionArg

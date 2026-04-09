@@ -84,9 +84,7 @@ DEF_MICRO_INSTR(cmov_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immedia
 
 
 DEF_MICRO_INSTR(
-	mov_bste_bste,
-	vm::low::opargs::PlaceBlockStructure,
-	vm::low::opargs::PlaceBlockStructure
+	mov_bste_bste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::PlaceBlockStructure
 )
 // does a shallow pointer copy
 DEF_MICRO_INSTR(mov_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
