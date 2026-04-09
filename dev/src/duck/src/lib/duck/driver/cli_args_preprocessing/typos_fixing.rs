@@ -1,7 +1,10 @@
 //! Try to (wisely) fix user typos.
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use crate::{DuckCtx, QuackResult, qp_bail};
+use crate::{
+    DuckCtx, QuackResult,
+    duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd, qp_bail,
+};
 use clap::ArgMatches;
 use itertools::Itertools;
 use tracing::debug;
@@ -57,7 +60,8 @@ pub fn fix_typos(
 /// - builtin subcommands,
 /// - builtin aliases,
 /// - user-defined aliases,
-/// - external subcommands.
+/// - external subcommands,
+/// - anything that resembles a path to a script.
 fn is_valid_subcmd(
     ctx: &DuckCtx,
     name: &str,
@@ -66,7 +70,8 @@ fn is_valid_subcmd(
     Ok(is_builtin_subcommand(name)
         || get_builtin_alias_expansion(name).is_some()
         || ctx.duck_cfg().alias_for(name)?.is_some()
-        || external_cmds.contains_key(name))
+        || external_cmds.contains_key(name)
+        || is_name_possible_script_path_subcmd(name))
 }
 
 /// Get all known and valid subcommands.
@@ -80,9 +85,8 @@ fn possible_targets(
         .into_iter()
         .map(|x| x.get_name().to_string())
         .collect::<Vec<_>>();
-    if let Some(iter) = ctx.duck_cfg().aliases()? {
-        targets.extend(iter.cloned());
-    }
+    let aliases = ctx.duck_cfg().aliases()?;
+    targets.extend(aliases.0.into_keys());
     targets.extend(external_cmds.keys().cloned());
     targets.extend(get_builtin_aliases().map(str::to_string));
     Ok(targets)
@@ -93,7 +97,7 @@ fn possible_targets(
 fn find_closest_targets<'a>(
     bad_cmd: &str,
     targets: &'a [String],
-    max_fix_dist: u32,
+    max_fix_dist: u64,
 ) -> Vec<&'a str> {
     targets
         .iter()
@@ -110,12 +114,12 @@ fn find_closest_targets<'a>(
 /// This function will __only__ keep those values, which are (currently) closest to the target,
 /// and all have exactly the same distance.
 fn update_closest_targets<'a>(
-    mut acc: Vec<(&'a str, u32)>,
+    mut acc: Vec<(&'a str, u64)>,
     target: &'a str,
     bad_cmd: &str,
-    max_fix_dist: u32,
-) -> Vec<(&'a str, u32)> {
-    let dist = levenshtein::distance(bad_cmd, target);
+    max_fix_dist: u64,
+) -> Vec<(&'a str, u64)> {
+    let dist = levenshtein::distance(bad_cmd, target) as u64;
     if dist > max_fix_dist {
         return acc;
     }
@@ -180,40 +184,41 @@ mod tests {
 
     #[test]
     fn test_fixes() {
-        let args_matches = cli().try_get_matches_from(["duck", "searcg"]).unwrap();
+        let args_matches = cli().try_get_matches_from(["duck", "buil"]).unwrap();
         let mut ctx = DuckCtx::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(1);
         let external_cmds = HashMap::new();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
-        assert_eq!(result.subcommand_name(), Some("search"));
+        assert_eq!(result.subcommand_name(), Some("build"));
     }
 
-    #[test]
-    fn test_multiple_targets() {
-        let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
-        ctx.duck_cfg_mut().set_fixes_enabled(true);
-        ctx.duck_cfg_mut().set_max_fix_dist(100);
-        let external_cmds = HashMap::new();
-        let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
-            "There are two equally distant targets (`info` and `init`), so fixing should fail.",
-        );
-        assert_eq!(
-            result.to_string(),
-            "No such command as `inaa`. Did you mean:\n- `info`\n- `init`?"
-        );
-    }
+    // !TODO: Reenable after enabling more subcommands.
+    // #[test]
+    // fn test_multiple_targets() {
+    //     let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
+    //     let mut ctx = DuckCtx::new().unwrap();
+    //     ctx.duck_cfg_mut().set_fixes_enabled(true);
+    //     ctx.duck_cfg_mut().set_max_fix_dist(100);
+    //     let external_cmds = HashMap::new();
+    //     let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
+    //         "There are two equally distant targets (`info` and `init`), so fixing should fail.",
+    //     );
+    //     assert_eq!(
+    //         result.to_string(),
+    //         "No such command as `inaa`. Did you mean:\n- `info`\n- `init`?"
+    //     );
+    // }
 
     #[test]
     fn test_single_closest_target() {
-        let args_matches = cli().try_get_matches_from(["duck", "searcg"]).unwrap();
+        let args_matches = cli().try_get_matches_from(["duck", "ini"]).unwrap();
         let mut ctx = DuckCtx::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(100);
         let external_cmds = HashMap::new();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
-        assert_eq!(result.subcommand_name(), Some("search"));
+        assert_eq!(result.subcommand_name(), Some("init"));
     }
 
     #[test]

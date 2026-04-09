@@ -86,6 +86,12 @@ impl From<OsString> for StrId {
     }
 }
 
+impl From<&OsString> for StrId {
+    fn from(value: &OsString) -> Self {
+        Self::from(value.to_string_lossy())
+    }
+}
+
 impl From<Cow<'_, str>> for StrId {
     fn from(value: Cow<'_, str>) -> Self {
         let mut cache = STRID_CACHE

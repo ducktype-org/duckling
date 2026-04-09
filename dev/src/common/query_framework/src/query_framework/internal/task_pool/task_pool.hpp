@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/base/collections/queue.hpp>
 #include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
@@ -12,8 +13,11 @@
 #include <query_framework/internal/query_graph/node_id.hpp>
 
 #include <atomic>
+#include <concepts>
 #include <condition_variable>
 #include <mutex>
+#include <type_traits>
+#include <vector>
 
 namespace query::internal {
 	class TaskPool;
@@ -31,14 +35,12 @@ namespace query::internal {
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
 	struct Task final {
-		// @TODO: #2035 at least one layer of std::function should be removed here, as it adds
-		// unnecessary overhead. (the other one is inside the task pool implementation). See if
-		// std::any apparch/manual void* is sufficiently faster to be used instead of std::function.
-
 		NodeID                   id;
 		concurrent::worker::Task work;
 
-		Task(NodeID id, concurrent::worker::Task&& work): id(id), work(std::move(work)) {}
+		template<typename F>
+		requires(std::invocable<std::decay_t<F>&, concurrent::worker::WRef>)
+		Task(NodeID id, F&& fn): id(id), work(std::forward<F>(fn)) {}
 	};
 
 	/**
@@ -86,12 +88,6 @@ namespace query::internal {
 		void addTask(Task&& tasks);
 
 		/**
-		 * @brief Wait for all tasks in the pool to complete.
-		 * Should be called after execute().
-		 */
-		void waitExecutionCompletion();
-
-		/**
 		 * @brief Query (execute) a task immediately.
 		 *
 		 * If the task is already being executed by another worker, this will
@@ -136,10 +132,10 @@ namespace query::internal {
 
 		/**
 		 * @brief Callback invoked when a worker has no tasks.
-		 * Attempts to steal work from the pool and shedules it on the
-		 * current worker. Should be called from the worker's no_tasks_callback.
+		 * Attempts to steal work from the pool and schedule it on the
+		 * current worker.
 		 */
-		void onWorkerNoTasks(WRef current_worker);
+		void onWorkerNoTasks();
 
 		/**
 		 * @brief Waits until some worker executed the task.
@@ -153,19 +149,19 @@ namespace query::internal {
 		 * @brief Try to steal a task from the global pool.
 		 * @return Optional Task if one was available.
 		 */
-		base::Optional<Task> tryStealFromGlobalUnlocked();
+		base::Optional<Task> tryStealFromGlobal();
 
 		/**
 		 * @brief Try to steal a task from another worker's pool.
 		 * @param worker_ref The ID of the worker to steal from.
 		 * @return Optional Task if one was available.
 		 */
-		base::Optional<Task> tryStealFromWorkerUnlocked(WRef worker_ref);
+		base::Optional<Task> tryStealFromWorker(WRef worker_ref);
 
 		/**
 		 * @brief Same as above but only steals the task of the given ID by @param task_id.
 		 */
-		base::Optional<Task> tryStealFromWorkerUnlocked(WRef worker_ref, NodeID task_id);
+		base::Optional<Task> tryStealFromWorker(WRef worker_ref, NodeID task_id);
 
 		/**
 		 * @brief Tries to execute the given task.
@@ -186,29 +182,24 @@ namespace query::internal {
 		 * @param worker_ref The worker ref.
 		 * @param task The task to add.
 		 */
-		void addToWorkerPoolUnlocked(WRef worker_ref, Task&& task);
+		void addToWorkerPool(WRef worker_ref, Task&& task);
 
 		/**
 		 * @brief Add a task to the global pool.
 		 * @param task The task to add.
 		 */
-		void addToGlobalPoolUnlocked(Task&& task);
+		void addToGlobalPool(Task&& task);
 
 		/**
 		 * @brief Gets the reference of a free worker if available.
-		 * There is a similiar function in WorkerManager, but here we
-		 * set the availability of the worker under our mutex
-		 * avoiding the missed wake up problem (missed schedule problem in this case).
+		 * There is a similar function in WorkerManager, but here we
+		 * set the availability of the worker under our synchronization,
+		 * avoiding the missed wake-up problem (a missed schedule in this case).
+		 * @note This will set a worker as not free, so the caller should set it back to free if it
+		 * fails to schedule a task on it.
+		 * @return Optional reference to a free worker.
 		 */
-		base::Optional<WRef> getFreeWorkerUnlocked() const;
-
-
-		/**
-		 * @brief Waits until the `no_tasks_callback` has exited on all workers
-		 * to ensure that the workers are not executing any method of the TaskPool
-		 * object to safely destroy it.
-		 */
-		void flushWorkers();
+		base::Optional<WRef> getFreeWorker();
 
 		/// Reference to the WorkerManager.
 		concurrent::worker::WorkerManager& worker_manager;
@@ -216,29 +207,23 @@ namespace query::internal {
 		/// Number of workers.
 		usize num_workers;
 
-		/// Main mutex protecting pool queues (global_pool, worker_pools, pending_tasks).
-		mutable std::mutex pool_mutex;
 		/// Global task pool (shared among all workers).
-		std::deque<Task> global_pool;
+		concurrent::ConQueue<Task> global_pool;
 
 		/// Per-worker task pools.
-		base::HashMap<WRef, std::deque<Task>> worker_pools;
+		std::vector<concurrent::ConQueue<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
-		/// @TODO: #1988 #2035 hash map per query id? Or even stronger, lock free data structure.
+		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
 
+		static constexpr usize              TASK_SHARDS = 113;
+		std::array<std::mutex, TASK_SHARDS> task_completed_mutexes;
 		/// Condition variable for signaling task completion.
-		std::condition_variable task_completed_cv;
-
-		/// Counter for completed tasks (used in execute()).
-		std::atomic<usize> completed_tasks{ 0 };
-
-		/// Total number of tasks (used in execute()).
-		std::atomic<usize> added_tasks{ 0 };
+		std::array<std::condition_variable, TASK_SHARDS> task_completed_cv;
 
 		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
-		base::StableHashMap<WRef, std::atomic<bool>> is_worker_free_map;
+		std::vector<std::atomic<bool>> is_worker_free;
 	};
 
 }  // namespace concurrent

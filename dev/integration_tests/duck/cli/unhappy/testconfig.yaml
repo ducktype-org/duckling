@@ -26,4 +26,4 @@ Tests:
             error: when trying to check the maximum typos fixing distance
 
               Caused by:
-                the key \`security.typos.max_distance\` expects an integer, not a string
+                the key \`security.typos.max_distance\` expects a positive integer, not a string

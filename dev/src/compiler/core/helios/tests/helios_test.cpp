@@ -30,9 +30,9 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/mutability.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <tsh/mutability.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

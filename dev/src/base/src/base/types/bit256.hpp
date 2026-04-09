@@ -3,6 +3,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/misc/noexcept.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
+#include <base/types/monostate.hpp>
 
 #include <array>
 #include <string>
@@ -13,8 +14,10 @@ namespace base {
 	 * The value is represented in an array of 4 u64s as a number in base 2^64, with the lowest
 	 * letter in data[0]
 	 */
-	struct Bit256 {
+	struct Bit256 final {
 		std::array<u64, 4> data = {};
+
+		static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
 
 		constexpr Bit256() = default;
 
