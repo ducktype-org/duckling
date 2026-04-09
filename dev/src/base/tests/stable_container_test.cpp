@@ -16,6 +16,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(stableHashMapTest);
+		TESTER_ADD_TEST(stableHashMapMaybePutAndUpdateTest);
 		TESTER_ADD_TEST(stableHashMapTestStability);
 	}
 
@@ -127,7 +128,7 @@ private:
 		map.put("lol", "test 1");
 		map.put("a", "test 2");
 		map.put("b", "test 3");
-		auto put_res = map.maybePut("lol", "test");
+		auto put_res = map.maybePut(std::string("lol"), std::string("test"));
 
 		assertTrue(put_res == nullptr, "Value was wrongly inserted");
 
@@ -135,6 +136,24 @@ private:
 		ASSERT_EQUAL(map["a"], "test 2");
 		ASSERT_EQUAL(map["b"], "test 3");
 		ASSERT_EQUAL(map["lol"], "test 1");
+	}
+
+	void stableHashMapMaybePutAndUpdateTest() {
+		base::StableHashMap<std::string, i32> map;
+
+		auto inserted
+			= map.maybePutAndUpdate(std::string("key"), 10, [](Ref<i32> value) { *value += 5; });
+
+		assertTrue(inserted != nullptr, "Expected insertion for missing key");
+		ASSERT_EQUAL(1, map.size());
+		ASSERT_EQUAL(15, map["key"]);
+
+		auto not_inserted
+			= map.maybePutAndUpdate(std::string("key"), 999, [](Ref<i32> value) { *value += 2; });
+
+		assertTrue(not_inserted == nullptr, "Expected no insertion for existing key");
+		ASSERT_EQUAL(1, map.size());
+		ASSERT_EQUAL(17, map["key"]);
 	}
 
 	void stableHashMapTestStability() {

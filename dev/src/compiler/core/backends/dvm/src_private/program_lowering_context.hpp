@@ -4,7 +4,7 @@
 
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 

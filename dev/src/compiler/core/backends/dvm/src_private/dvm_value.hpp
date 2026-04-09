@@ -34,19 +34,23 @@ namespace compiler::backend_vm::internal {
 	};
 
 	struct DVMImmediate {
-		DVMImmediate(u64 value, vm::code::TypeOfData type);
-
-		static DVMImmediate i8(u8 value);
-		static DVMImmediate i16(u16 value);
-		static DVMImmediate i32(u32 value);
-		static DVMImmediate i64(u64 value);
-		static DVMImmediate f32(f32 value);
-		static DVMImmediate f64(f64 value);
+		DVMImmediate(::u64 value, vm::code::TypeOfData type);
+		// @TODO: #2451 Make DVMImmediate string based
+		static DVMImmediate u8(::u8 value);
+		static DVMImmediate u16(::u16 value);
+		static DVMImmediate u32(::u32 value);
+		static DVMImmediate u64(::u64 value);
+		static DVMImmediate i8(::i8 value);
+		static DVMImmediate i16(::i16 value);
+		static DVMImmediate i32(::i32 value);
+		static DVMImmediate i64(::i64 value);
+		static DVMImmediate f32(::f32 value);
+		static DVMImmediate f64(::f64 value);
 		static DVMImmediate boolean(bool value);
 		static DVMImmediate character(char value);
 
 		// All values are represented as u64, so e.g. a float is bit-casted to u64.
-		u64                  value{};
+		::u64                value{};
 		vm::code::TypeOfData type;
 		bool                 operator==(const DVMImmediate& other) const = default;
 		operator vm::opargs::OpCodeArg() const;
@@ -87,7 +91,7 @@ namespace compiler::backend_vm::internal {
 	 *  Direct.
 	 * - Direct reference to a global variable - for which the AccessKind field will be set to
 	 * Direct.
-	 * - A pointer to the place - for which the AccessKind filed will be set to `Pointer`. This
+	 * - A pointer to the place - for which the AccessKind field will be set to `Pointer`. This
 	 * handles cases like:
 	 * 		- some_int_reference = 123 - DVMPlace stores a local variable storing a pointer to the
 	 * 		  original address that the reference stores.
@@ -97,7 +101,7 @@ namespace compiler::backend_vm::internal {
 	 * offset at which the third element of the array is located.
 	 *
 	 * If the access kind is set to `Direct`, a load into the place will be performed by `mov_X_X`.
-	 * If the access kind is set to `Direct`, a load into the place will be performed by
+	 * If the access kind is set to `Pointer`, a load into the place will be performed by
 	 * `store_lptr_lany`.
 	 */
 	class DVMPlace {

@@ -14,6 +14,7 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
+#include <global_state/script_context.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
@@ -180,6 +181,10 @@ namespace compiler::driver {
 		void handleExecutionOptions(const options_types::ExecutionOptions& execution_options) {
 			concurrent::worker::setWorkerCount(execution_options.worker_count);
 		}
+
+		void handleScriptContext(const fs::File& script_file) {
+			global_state::setters::setScriptContext(script_file);
+		}
 	}
 
 	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
@@ -233,6 +238,7 @@ namespace compiler::driver {
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
 				handleBackendOptions(script_options.backend_options);
+				handleScriptContext(script_options.script_file);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

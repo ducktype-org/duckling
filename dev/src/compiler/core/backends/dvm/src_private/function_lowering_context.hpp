@@ -4,7 +4,7 @@
 
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -112,10 +112,10 @@ namespace compiler::backend_vm::internal {
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
 
 		/**
-		 * @brief Removes all temporaries added by the current instruction, e.g. temps created when
+		 * @brief Removes all existing temporaries added by pushTempLocal, e.g. temps created when
 		 * lowering LIRPlace, temps created for comparison operations, etc.
 		 */
-		void cleanupInstructionTemps();
+		void cleanUpRegisteredTemps();
 
 		void handleCall(
 			const FunctionCallInfo&     call_info,
@@ -131,6 +131,7 @@ namespace compiler::backend_vm::internal {
 		 *
 		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
 		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
+		 * These temporaries have to be deinitialized manually.
 		 */
 		DVMLocal pushTempLocal(
 			const vm::code::TypeOfData&      type,

@@ -5,7 +5,7 @@
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
 #include <debug_info/debug_info_builder.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>

@@ -61,17 +61,17 @@ fun localsTest() -> () = {
     # ===== Ref To Ref ===== 
     var g = 300;
     var h = 400;
-    var r_g = &a;
-    var r_h = &b;
+    var r_g = &g;
+    var r_h = &h;
     
     r_g = r_h;
     
-    builtin_output_i64(g);      # 300
+    builtin_output_i64(g);      # 400
     builtin_output_i64(h);      # 400
     
     r_h = 500;
     
-    builtin_output_i64(g);      # 300
+    builtin_output_i64(g);      # 400
     builtin_output_i64(r_h);    # 500
 }
 

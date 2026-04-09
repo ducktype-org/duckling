@@ -5,8 +5,12 @@
 #include <vm/utils/interpret.hpp>
 
 namespace compiler::backend_vm::internal {
+	/**
+	 * @brief Safely transforms an immediate value of type T to `u64` which is then used in DVMs
+	 * opcodes. This basically means a bit_cast.
+	 */
 	template<class T>
-	u64 translateToU64(T value) {
+	constexpr u64 translateToU64(T value) {
 		if constexpr (sizeof(T) == 8)
 			return vm::safeReadObjectBytes<u64>(value);
 		else if constexpr (sizeof(T) == 4)

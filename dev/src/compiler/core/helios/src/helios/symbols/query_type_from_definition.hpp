@@ -2,7 +2,7 @@
 
 
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <tsh/symbol_type.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
