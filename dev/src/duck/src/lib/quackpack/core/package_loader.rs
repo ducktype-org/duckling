@@ -4,7 +4,7 @@ use std::{io, marker::PhantomData, path::Path};
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_err, qp_internal,
+    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_err,
     quackpack::core::{
         PackageCtx,
         storage::{paths::Storage, venv::Venv, venv_id::VenvId},
@@ -44,8 +44,9 @@ impl PackageLoader {
     pub const VENV_CONFIG_NAME: &str = "venvconfig.yaml";
 
     /// Get the global package.
-    pub fn global_package<'duck>(_ctx: &'duck DuckCtx) -> QuackResult<PackageCtx<'duck>> {
-        Err(qp_internal!("@TODO: #1394 it needs the EditableManifest"))
+    pub fn global_package<'duck>(ctx: &'duck DuckCtx) -> QuackResult<PackageCtx<'duck>> {
+        let global_package_path = ctx.duck_home().ensure_and_populate_global_dir()?;
+        PackageCtx::new(global_package_path.to_path_buf(), ctx)
     }
 
     /// Find a [`PackageCtx`] from the given `start`.

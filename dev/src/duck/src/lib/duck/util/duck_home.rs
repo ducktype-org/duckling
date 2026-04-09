@@ -9,7 +9,11 @@
 //! ├── global_venv/ <root of the global shared virtual environment>
 //! └── storage/ <root of the storage internal files>
 
-use crate::{QuackResult, util::env::Env};
+use crate::{
+    QuackResult,
+    quackpack::core::PackageLoader,
+    util::{env::Env, path_ops_ext::PathOpsExt},
+};
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
@@ -217,5 +221,23 @@ impl DuckHome {
 
     call_on_files! {
         ensure_file
+    }
+
+    /// Default minimal manifest for the global package.
+    const DEFAULT_GLOBAL_MANIFEST: &str = "\
+    metadata:\
+      name: __global__\
+      version: 0.1\
+      authors: []\
+      licence: \"\"";
+
+    /// Assure that the global package root folder exists and there is a manifest in it.
+    pub fn ensure_and_populate_global_dir(&self) -> QuackResult<&Path> {
+        let global_pkg_dir = self.ensure_global_dir()?;
+        let manifest_path = global_pkg_dir.join(PackageLoader::MANIFEST_NAME);
+        if !manifest_path.exists() {
+            manifest_path.write(Self::DEFAULT_GLOBAL_MANIFEST)?;
+        }
+        Ok(global_pkg_dir)
     }
 }
