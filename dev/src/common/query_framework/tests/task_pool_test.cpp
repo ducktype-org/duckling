@@ -1,10 +1,10 @@
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/base/run_or_timeout.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
-#include <concurrent/task_pool/task_pool.hpp>
 #include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
+#include <query_framework/internal/task_pool/task_pool.hpp>
 #include <tester/tester.hpp>
 
 class TaskPoolTest: public tester::TestSuite {
@@ -39,26 +39,47 @@ protected:
 	}
 
 private:
-	void basicFunctionalityTest() {
-		concurrent::pool::TaskPool task_pool;
-		constexpr usize            TASK_COUNT      = 10;
-		std::atomic_int            completed_tasks = 0;
-		concurrent::worker::Task   task            = [&completed_tasks](concurrent::worker::WRef) {
-            completed_tasks.fetch_add(1, std::memory_order_relaxed);
-		};
-		std::vector<concurrent::pool::Task> tasks;
-		tasks.reserve(TASK_COUNT);
-		for (usize i = 0; i < TASK_COUNT; ++i) tasks.emplace_back(i, task);
+	static bool fakeEraseFunction(query::QueryStableHash) { return false; }
 
-		task_pool.addInitialTasks(std::move(tasks));
-		task_pool.execute();
-		task_pool.waitExecutionCompletion();
+	static query::internal::QueryID getFakeQueryID() {
+		static const query::internal::QueryID fake_query_id
+			= query::internal::registerQuery(query::internal::QueryData(
+				query::internal::QueryKind::Normal,
+				"TaskPoolTestFakeQuery",
+				query::internal::QueryTags{ .used_hashes  = query::UsedHashes::UnstableHash,
+		                                    .uses_qresult = false },
+				query::internal::QueryCacheData{ .erase_function = &fakeEraseFunction }
+			));
+		return fake_query_id;
+	}
+
+	static query::internal::NodeID makeFakeNodeID(u64 value) {
+		return { getFakeQueryID(), query::internal::KeyHash{ base::Bit256(value) } };
+	}
+
+	void basicFunctionalityTest() {
+		query::internal::TaskPool task_pool;
+		constexpr usize           TASK_COUNT      = 10;
+		std::atomic_int           completed_tasks = 0;
+
+		for (usize i = 0; i < TASK_COUNT; ++i) {
+			auto node_id = makeFakeNodeID(i + 1);
+			task_pool.addTask(query::internal::Task(
+				node_id,
+				[&completed_tasks](concurrent::worker::WRef) {
+					completed_tasks.fetch_add(1, std::memory_order_relaxed);
+				}
+			));
+		}
+
+		for (usize i = 0; i < TASK_COUNT; ++i) task_pool.waitForTask(makeFakeNodeID(i + 1));
+
 		std::cout << "Execution completed.\n";
 		ASSERT_EQUAL(completed_tasks.load(std::memory_order_relaxed), TASK_COUNT);
 	}
 
 	void testFibonacciSchedule() {
-		concurrent::pool::TaskPool task_pool;
+		query::internal::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
 		std::function<u64(u64)>          fib_task_gen;
@@ -68,13 +89,15 @@ private:
 				return n;
 			}
 
-			concurrent::pool::Task task1(n - 1, [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 1);
-			});
+			query::internal::Task task1(
+				makeFakeNodeID(n - 1),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 1); }
+			);
 
-			concurrent::pool::Task task2(n - 2, [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 2);
-			});
+			query::internal::Task task2(
+				makeFakeNodeID(n - 2),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 2); }
+			);
 
 			auto future1 = task_pool.schedule(std::move(task1));
 			auto future2 = task_pool.schedule(std::move(task2));
@@ -90,15 +113,14 @@ private:
 			return result;
 		};
 
-		concurrent::pool::Task initial_task(250, [&fib_task_gen](concurrent::worker::WRef) {
-			return fib_task_gen(250);
-		});
+		auto root_id = makeFakeNodeID(250);
 
 		concurrent::runOrTimeout(
 			[&]() {
-				task_pool.addInitialTasks({ std::move(initial_task) });
-				task_pool.execute();
-				task_pool.waitExecutionCompletion();
+				task_pool.addTask(query::internal::Task(
+					root_id, [&fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(250); }
+				));
+				task_pool.waitForTask(root_id);
 			},
 			[&] { fail("Timeout"); }
 		);
@@ -106,7 +128,7 @@ private:
 	}
 
 	void testFibonacciScheduleReversed() {
-		concurrent::pool::TaskPool task_pool;
+		query::internal::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
 		std::function<u64(u64)>          fib_task_gen;
@@ -116,13 +138,15 @@ private:
 				return n;
 			}
 
-			concurrent::pool::Task task1(n - 1, [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 1);
-			});
+			query::internal::Task task1(
+				makeFakeNodeID(n - 1),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 1); }
+			);
 
-			concurrent::pool::Task task2(n - 2, [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 2);
-			});
+			query::internal::Task task2(
+				makeFakeNodeID(n - 2),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 2); }
+			);
 
 			auto future1 = task_pool.schedule(std::move(task1));
 			auto future2 = task_pool.schedule(std::move(task2));
@@ -138,15 +162,14 @@ private:
 			return result;
 		};
 
-		concurrent::pool::Task initial_task(250, [&fib_task_gen](concurrent::worker::WRef) {
-			return fib_task_gen(250);
-		});
+		auto root_id = makeFakeNodeID(250);
 
 		concurrent::runOrTimeout(
 			[&]() {
-				task_pool.addInitialTasks({ std::move(initial_task) });
-				task_pool.execute();
-				task_pool.waitExecutionCompletion();
+				task_pool.addTask(query::internal::Task(
+					root_id, [&fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(250); }
+				));
+				task_pool.waitForTask(root_id);
 			},
 			[&] { fail("Timeout"); }
 		);
@@ -155,7 +178,7 @@ private:
 	}
 
 	void testFibonacciQuery() {
-		concurrent::pool::TaskPool task_pool;
+		query::internal::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
 		std::function<u64(u64)>          fib_task_gen;
@@ -165,13 +188,15 @@ private:
 				return n;
 			}
 
-			concurrent::pool::Task task1(n - 1, [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 1);
-			});
+			query::internal::Task task1(
+				makeFakeNodeID(n - 1),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 1); }
+			);
 
-			concurrent::pool::Task task2(n - 2, [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 2);
-			});
+			query::internal::Task task2(
+				makeFakeNodeID(n - 2),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 2); }
+			);
 
 			task_pool.query(task1);
 			task_pool.query(task2);
@@ -184,15 +209,14 @@ private:
 			return result;
 		};
 
-		concurrent::pool::Task initial_task(250, [&fib_task_gen](concurrent::worker::WRef) {
-			return fib_task_gen(250);
-		});
+		auto root_id = makeFakeNodeID(250);
 
 		concurrent::runOrTimeout(
 			[&]() {
-				task_pool.addInitialTasks({ std::move(initial_task) });
-				task_pool.execute();
-				task_pool.waitExecutionCompletion();
+				task_pool.addTask(query::internal::Task(
+					root_id, [&fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(250); }
+				));
+				task_pool.waitForTask(root_id);
 			},
 			[&] { fail("Timeout"); }
 		);
@@ -201,7 +225,7 @@ private:
 	}
 
 	void testFibonacciScheduleAndQuery() {
-		concurrent::pool::TaskPool task_pool;
+		query::internal::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
 		std::function<u64(u64)>          fib_task_gen;
@@ -211,13 +235,15 @@ private:
 				return n;
 			}
 
-			concurrent::pool::Task task1(n - 1, [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 1);
-			});
+			query::internal::Task task1(
+				makeFakeNodeID(n - 1),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 1); }
+			);
 
-			concurrent::pool::Task task2(n - 2, [n, &fib_task_gen](concurrent::worker::WRef) {
-				return fib_task_gen(n - 2);
-			});
+			query::internal::Task task2(
+				makeFakeNodeID(n - 2),
+				[n, &fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(n - 2); }
+			);
 
 			auto future1 = task_pool.schedule(std::move(task1));
 			task_pool.query(task2);
@@ -231,15 +257,14 @@ private:
 			return result;
 		};
 
-		concurrent::pool::Task initial_task(250, [&fib_task_gen](concurrent::worker::WRef) {
-			return fib_task_gen(250);
-		});
+		auto root_id = makeFakeNodeID(250);
 
 		concurrent::runOrTimeout(
 			[&]() {
-				task_pool.addInitialTasks({ std::move(initial_task) });
-				task_pool.execute();
-				task_pool.waitExecutionCompletion();
+				task_pool.addTask(query::internal::Task(
+					root_id, [&fib_task_gen](concurrent::worker::WRef) { return fib_task_gen(250); }
+				));
+				task_pool.waitForTask(root_id);
 			},
 			[&] { fail("Timeout"); }
 		);
@@ -248,7 +273,7 @@ private:
 	}
 
 	void testGibonacci() {
-		concurrent::pool::TaskPool task_pool;
+		query::internal::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> gib_cache;
 		std::function<u64(u64)>          gib_task_gen;
@@ -258,21 +283,25 @@ private:
 				return n;
 			}
 
-			concurrent::pool::Task task1(n - 1, [n, &gib_task_gen](concurrent::worker::WRef) {
-				return gib_task_gen(n - 1);
-			});
+			query::internal::Task task1(
+				makeFakeNodeID(n - 1),
+				[n, &gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(n - 1); }
+			);
 
-			concurrent::pool::Task task2(n - 2, [n, &gib_task_gen](concurrent::worker::WRef) {
-				return gib_task_gen(n - 2);
-			});
+			query::internal::Task task2(
+				makeFakeNodeID(n - 2),
+				[n, &gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(n - 2); }
+			);
 
-			concurrent::pool::Task task3(n - 3, [n, &gib_task_gen](concurrent::worker::WRef) {
-				return gib_task_gen(n - 3);
-			});
+			query::internal::Task task3(
+				makeFakeNodeID(n - 3),
+				[n, &gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(n - 3); }
+			);
 
-			concurrent::pool::Task task4(n - 4, [n, &gib_task_gen](concurrent::worker::WRef) {
-				return gib_task_gen(n - 4);
-			});
+			query::internal::Task task4(
+				makeFakeNodeID(n - 4),
+				[n, &gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(n - 4); }
+			);
 
 			auto future1 = task_pool.schedule(std::move(task1));
 			auto future2 = task_pool.schedule(std::move(task2));
@@ -292,15 +321,14 @@ private:
 			return result;
 		};
 
-		concurrent::pool::Task initial_task(250, [&gib_task_gen](concurrent::worker::WRef) {
-			return gib_task_gen(250);
-		});
+		auto root_id = makeFakeNodeID(250);
 
 		concurrent::runOrTimeout(
 			[&]() {
-				task_pool.addInitialTasks({ std::move(initial_task) });
-				task_pool.execute();
-				task_pool.waitExecutionCompletion();
+				task_pool.addTask(query::internal::Task(
+					root_id, [&gib_task_gen](concurrent::worker::WRef) { return gib_task_gen(250); }
+				));
+				task_pool.waitForTask(root_id);
 			},
 			[&] { fail("Timeout"); }
 		);
@@ -309,4 +337,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/src/common/concurrent/tests/");
+TESTER_COMMON_MAIN("/src/common/query_framework/tests/");

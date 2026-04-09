@@ -8,11 +8,12 @@
 #include <logger/logger.hpp>  // IWYU pragma: export
 
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/module_flags/module_flags.hpp>
 
 #ifdef USE_TAIL_CALLS
@@ -114,20 +115,21 @@ namespace vm {
 				const MicroInstruction*& instr,
 				std::byte*&              local_stack,
 				Frame*&                  frame,
-				VMThread&                thread,
-				CRef<low::LowFuncData>   called_func
+				SafeVMThread&            thread,
+				usize                    function_id
 			) {
 			auto&      runtime_data     = thread.runtime_data;
-			const bool called_rets_void = called_func->result_type->getName() == "void";
+			auto&      called_func      = thread.process_program->getFunctions()[function_id];
+			const bool called_rets_void = called_func.result_type->getName() == "void";
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
-				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func->name.str());
+				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size
-				= called_func->arg_size + !called_rets_void * called_func->ret_size;
+				= called_func.arg_size + !called_rets_void * called_func.ret_size;
 
-			auto arg_count           = called_func->parameters.size();
+			auto arg_count           = called_func.parameters.size();
 			auto shared_blocks_count = arg_count + !called_rets_void;
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
@@ -140,13 +142,13 @@ namespace vm {
 			auto* prev_frame = frame;
 
 			frame++;
-			frame->current_function = called_func;
+			frame->current_function = &called_func;
 
 			if (frame + 1 >= runtime_data.frame_stack_end)
 				throw exceptions::VMStackOverflowException();
 
 			// Update values passed as arguments.
-			instr = called_func->bc.data();
+			instr = called_func.bc.data();
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
 			// up to this point) - the size of ret_val and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
@@ -154,9 +156,9 @@ namespace vm {
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func->local_stack_size >= runtime_data.local_stack_end)
+			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
-			if (frame->local_block_ref_stack_base + called_func->local_block_count
+			if (frame->local_block_ref_stack_base + called_func.local_block_count
 			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
 
@@ -168,7 +170,7 @@ namespace vm {
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
 			prev_frame->local_block_ref_stack_end -= arg_count;
-			prev_frame->local_stack_head -= called_func->arg_size;
+			prev_frame->local_stack_head -= called_func.arg_size;
 		}
 
 		static
@@ -180,7 +182,7 @@ namespace vm {
 				[[maybe_unused]] const MicroInstruction*& instr,
 				std::byte*&                               local_stack,
 				Frame*&                                   frame,
-				VMThread&                                 thread,
+				SafeVMThread&                             thread,
 				TypeCRef                                  type
 			) {
 			auto data_ptr = local_stack + frame->local_stack_head;
@@ -199,7 +201,7 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			void
-			performDeinit(Frame*& frame, VMThread& thread) {
+			performDeinit(Frame*& frame, SafeVMThread& thread) {
 			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
 
@@ -215,7 +217,7 @@ namespace vm {
 #endif
 			void
 			setVariantType(
-				VMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
+				SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
 			) {
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
@@ -263,7 +265,7 @@ namespace vm {
 #endif
 			Pointer
 			getVariantPtr(
-				VMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
+				SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
 			) {
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
