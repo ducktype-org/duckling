@@ -7,7 +7,6 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
-#include "vm/bytecode/serializer/serializer.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
