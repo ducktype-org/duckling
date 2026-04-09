@@ -44,6 +44,14 @@ namespace vm {
 		return &threads_frame_stacks.back();
 	}
 
+	GlobalBufferPointers Memory::getGlobalDataMemory() {
+		std::cout << "Global buffer base: " << static_cast<void*>(global_data_buffer.data())
+				  << ", Global blocks buffer base: "
+				  << static_cast<void*>(global_data_blocks.data()) << "\n";
+		return { .data_buffer_base   = global_data_buffer.data(),
+			     .blocks_buffer_base = global_data_blocks.data() };
+	}
+
 	auto Memory::allocateHeap(TypeCRef type) -> Ref<Block> {
 		return createBlock(heap_allocator.allocate(type));
 	}
@@ -130,24 +138,6 @@ namespace vm {
 			return true;
 		}
 		return false;
-	}
-
-	void Memory::deinitGlobals() {
-		try {
-			// We are first freeing all the data and then decreasing the refcounts.
-			// This is very important, because there might be links between the global variables,
-			// and if we were to free them and decrease the refcount in the wrong order we might
-			// throw a false-positive exception. This solution avoids this problem.
-
-			for (const auto& block_ptr: global_data_blocks) freeBlockData(Ref(block_ptr));
-
-			for (const auto& block_ptr: global_data_blocks) decreaseBlockRefcount(Ref(block_ptr));
-		} catch (exceptions::VMFoundMemoryLeakException&) {
-			std::cerr
-				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
-				   "data, that was not freed.\n";
-			throw;
-		}
 	}
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
@@ -422,18 +412,26 @@ namespace vm {
 		return true;
 	}
 
+	void Memory::deinitGlobals() {
+		try {
+			// We are first freeing all the data and then decreasing the refcounts.
+			// This is very important, because there might be links between the global variables,
+			// and if we were to free them and decrease the refcount in the wrong order we might
+			// throw a false-positive exception. This solution avoids this problem.
+
+			for (const auto& block_ptr: global_data_blocks) freeBlockData(Ref(block_ptr));
+
+			for (const auto& block_ptr: global_data_blocks) decreaseBlockRefcount(Ref(block_ptr));
+		} catch (exceptions::VMFoundMemoryLeakException&) {
+			std::cerr
+				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
+				   "data, that was not freed.\n";
+			throw;
+		}
+	}
+
 	void Memory::reallocateBufferForGlobals(usize global_count, usize buffer_size) {
 		global_data_buffer.resize(buffer_size);
 		global_data_blocks.resize(global_count);
-		std::cerr << "Reallocated global buffer to size " << buffer_size
-				  << " and global blocks buffer to size " << global_count << "\n";
-	}
-
-	GlobalBufferPointers Memory::getGlobalDataMemory() {
-		std::cout << "Global buffer base: " << static_cast<void*>(global_data_buffer.data())
-				  << ", Global blocks buffer base: "
-				  << static_cast<void*>(global_data_blocks.data()) << "\n";
-		return { .data_buffer_base   = global_data_buffer.data(),
-			     .blocks_buffer_base = global_data_blocks.data() };
 	}
 }

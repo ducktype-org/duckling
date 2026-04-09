@@ -18,9 +18,12 @@
 #include <deque>
 
 namespace vm {
+	/**
+	 * @brief Helper structure that holds pointers to the global data buffer and global blocks buffer.
+	 */
 	struct GlobalBufferPointers {
-		std::byte* data_buffer_base;
-		Block**    blocks_buffer_base;
+		std::byte* data_buffer_base;    /// Base pointer to the global data buffer.
+		Block**    blocks_buffer_base;  /// Base pointer to the global blocks buffer.
 	};
 
 	/**
@@ -146,6 +149,8 @@ namespace vm {
 	public:
 		Memory() = default;
 
+		// =================== Used by the process ===================
+
 		/**
 		 * @brief Validates the memory state.
 		 * It can be thought of as a check that is executed after program's exit
@@ -157,9 +162,25 @@ namespace vm {
 		 */
 		bool validateMemoryState() const;
 
+		/**
+		 * @brief Frees all the global data
+		 */
+		void deinitGlobals();
+
+		/**
+		 * @brief Reallocates the buffer and blocks storages for globals.
+		 */
+		void reallocateBufferForGlobals(usize buffer_size, usize global_count);
+
 		// =================== Used by executor ===================
 
 		auto initializeFrameStack() -> Ref<ThreadStack>;
+
+		/**
+		 * @brief Get the pointers to the global data buffer and global blocks buffer, that can be
+		 * used by the threads.
+		 */
+		GlobalBufferPointers getGlobalDataMemory();
 
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
@@ -188,28 +209,18 @@ namespace vm {
 		void freeBlockData(Ref<Block> block);
 
 		/**
-		 * @brief Attempts to insert global data associated with the given ID.
+		 * @brief Attempts to create a block for the global data in memory and insert it into the
+		 * buffer.
 		 *
-		 * @param id The unique identifier for the global data.
-		 * @param type The type reference to associate with the global data.
-		 * @return true if the global data was inserted successfully (i.e., it did not already
-		 * exist); false otherwise.
+		 * @param offset_in_global_data_buffer Offset in the global data buffer where the data of
+		 * the global variable should be stored.
+		 * @param idx_in_global_blocks_buffer Index in the global blocks buffer where the block
+		 * reference of the global variable should be stored.
+		 * @param type Type of the global variable.
 		 */
 		bool tryInsertGlobalData(
 			usize offset_in_global_data_buffer, usize idx_in_global_blocks_buffer, TypeCRef type
 		);
-
-		/**
-		 * @brief Frees all the global data
-		 */
-		void deinitGlobals();
-
-		/**
-		 * @brief Reallocates the buffer and blocks storages for globals.
-		 */
-		void reallocateBufferForGlobals(usize buffer_size, usize global_count);
-
-		GlobalBufferPointers getGlobalDataMemory();
 
 		/**
 		 * @brief Returns a view of block's data

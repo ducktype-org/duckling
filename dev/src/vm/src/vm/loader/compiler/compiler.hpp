@@ -80,8 +80,13 @@ namespace vm::loader::compiler {
 			 */
 			ObjIdNameMap<code::ExternalCFunction> ext_c_functions;
 
-
-			usize global_count       = 0;
+			/**
+			 * @brief Count of the global variables compiled up to this point.
+			 */
+			usize global_count = 0;
+			/**
+			 * @brief Total size of the globals compiled up to this point, in bytes.
+			 */
 			usize global_buffer_size = 0;
 		};
 

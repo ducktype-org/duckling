@@ -207,6 +207,11 @@ namespace vm {
 
 		Frame& getStackFrame(u64 frame_index);
 
+		/**
+		 * @brief Update the pointers to the global data buffer and global blocks buffer.
+		 * For now only the VMProcess calls this function after the global data memory is
+		 * reallocated and the pointers change.
+		 */
 		void updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers);
 	};
 }

@@ -134,6 +134,13 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		/**
+		 * @brief Updates the memory for the globals, growing or shrinking the buffers if necessary
+		 * and updating the pointers to the buffers everywhere.
+
+		 * Should be called after loading a new globals.
+		 * @param program The program with new globals.
+		 */
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 	public:

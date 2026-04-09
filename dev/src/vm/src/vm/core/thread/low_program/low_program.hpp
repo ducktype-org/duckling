@@ -81,11 +81,20 @@ namespace vm::low {
 		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
 			= 0;
 
+		/**
+		 * @brief Helper structure with the configuration for the global buffer in the program.
+		 * Global buffer is the contiguous memory area where the data of global variables is stored.
+		 *
+		 * Used mainly by the VMProcess to determine the amount of memory to allocate for the globals.
+		 */
 		struct GlobalBufferConfig {
-			usize buffer_size;
-			usize global_count;
+			usize buffer_size;   /// The sum of sizes of all the global variables in the program.
+			usize global_count;  /// The count of global variables in the program
 		};
 
+		/**
+		 * @brief Get the global buffer configuration.
+		 */
 		[[nodiscard]]
 		virtual GlobalBufferConfig getGlobalBufferConfig() const
 			= 0;

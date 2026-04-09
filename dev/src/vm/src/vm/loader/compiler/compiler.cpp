@@ -380,9 +380,6 @@ namespace vm::loader::compiler {
 				.global_buffer_offset = program_ctx.global_buffer_size,
 				.global_blocks_idx    = program_ctx.global_count,
 			};
-			std::cerr << "Compiling global: " << global.name.str.strView()
-					  << ", offset: " << data.global_buffer_offset
-					  << ", block idx: " << data.global_blocks_idx << "\n";
 			low_program.global_data.insert(data, global.name);
 
 			program_ctx.global_count += 1;
