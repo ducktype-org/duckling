@@ -62,31 +62,4 @@ namespace lexer {
 
 		friend auto hashDecompose(const Operator& c) { return std::tie(c.value); }
 	};
-
-	/**
-	 * @brief Simple wrapper for a value
-	 */
-	struct Value final {
-		const base::StrID value;
-
-		Value();
-
-		Value(const base::StrID id): value(id) {}
-
-		Value(const std::string& str): value(base::StrID(str.c_str())) {}
-
-		Value(const Value&) = default;
-
-		operator base::StrID() { return value; }
-
-		[[nodiscard]]
-		std::string str() const {
-			return value.str();
-		}
-
-		/**
-		 * @note This should probably do something more in the future
-		 */
-		bool operator==(Value& other) { return value == other.value; }
-	};
 }

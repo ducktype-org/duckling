@@ -4,6 +4,9 @@ add_library(Lexer STATIC
 	src/lexer/lexer.cpp
 	src/lexer/token_common.cpp
 	src/lexer/lexer_class.cpp
+	src/lexer/lexer_class_handlers.cpp
+	src/lexer/lexer_class_utils.cpp
+	src/lexer/lexer_class_conditions.cpp
 )
 
 make_module(Lexer USES Filesystem Printer LexerDefinitions UnicodeClassification Diagnostic Init StringID Logger)
