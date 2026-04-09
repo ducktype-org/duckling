@@ -7,10 +7,7 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
-#include "base/config/build_type.hpp"
-#include "base/except/exceptions.hpp"
-
-#include "vm/bytecode/type_of_data.hpp"
+#include "vm/bytecode/serializer/serializer.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 

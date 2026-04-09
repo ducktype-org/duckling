@@ -152,12 +152,12 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "0\n0\n"
+          String: "0\n0\n0\n0\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "0\n0\n"
+          String: "0\n0\n0\n0\n"
         ExitCode: 0
 
   strings:
