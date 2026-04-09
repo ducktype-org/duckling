@@ -45,9 +45,6 @@ namespace vm {
 	}
 
 	GlobalBufferPointers Memory::getGlobalDataMemory() {
-		std::cout << "Global buffer base: " << static_cast<void*>(global_data_buffer.data())
-				  << ", Global blocks buffer base: "
-				  << static_cast<void*>(global_data_blocks.data()) << "\n";
 		return { .data_buffer_base   = global_data_buffer.data(),
 			     .blocks_buffer_base = global_data_blocks.data() };
 	}
