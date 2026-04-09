@@ -12,7 +12,7 @@ namespace vm::debugger {
 	 *
 	 * It is the middleman between the VM and any user interfaces
 	 * (e.g., command-line interface, graphical debugger, Debug Adapter).
-	 * 
+	 *
 	 * @TODO: #2454 Implement CLI
 	 * @TODO: #2455 Implement DAP
 	 */
