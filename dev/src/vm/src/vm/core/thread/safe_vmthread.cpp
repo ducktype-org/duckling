@@ -28,7 +28,6 @@
 
 #include <ranges>
 #include <string>
-
 #include <vector>
 
 namespace vm {
@@ -511,7 +510,7 @@ namespace vm {
 
 	void SafeVMThread::execGlobalDestructors() {
 		const auto& executing_program = process_program;
-		auto globals                  = executing_program->getGlobals().allData();
+		auto        globals           = executing_program->getGlobals().allData();
 		// Destructors should run in reverse order of construction so that any object depending on
 		// earlier-created resources is destroyed first, preventing use-after-destruction and
 		// keeping teardown safe and logically consistent.
