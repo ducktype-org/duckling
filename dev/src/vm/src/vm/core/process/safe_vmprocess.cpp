@@ -9,9 +9,10 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
@@ -55,15 +56,13 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-		VMThread&        thread = getEmptyThread();
-		bool response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
+		SafeVMThread&    thread   = getEmptyThread();
+		bool             response = thread.spawnThreadAndRun(func_name, run_arguments);
 		// Setting thread ctx necessary for now, until function pointers implemented
 		thread.setThreadCtx("");
 
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
-		i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
-
-		return api::Response(api::ThreadID{ id });
+		return api::Response(thread.getThreadID());
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::runFunctionAwait(
@@ -71,60 +70,35 @@ namespace vm {
 	) {
 		std::unique_lock lock(rw_global);
 
-		getMainVMThread().runNoSpawn(loaded_program, func_name, run_arguments);
+		getMainVMThread().runNoSpawn(func_name, run_arguments);
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
 			variant_default return std::unexpected(api::StateError(
-				executingStarted(getStatus()) ? "Execution did not complete"
-											  : "Execution did not start"
+				hasExecutionStarted(getStatus()) ? "Execution did not complete"
+												 : "Execution did not start"
 			));
 		}
 		CORE_UNREACHABLE();
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::join(api::ThreadID thread_id) {
-		// @TODO: #2342 check status
-		auto& thread = getVMThreadByID(thread_id);
-
-		auto& opt_exec_thread = thread.exec_thread;
-		if (!opt_exec_thread || !opt_exec_thread->joinable())
-			return std::unexpected(api::ApiError{ api::JoinError{} });
-
-		opt_exec_thread->join();
-		opt_exec_thread.reset();
-
-		auto execution_status = thread.execution_response_queue.pop();
-		variant_match(execution_status) {
-			variant_case(api::ExecutionCompleted, completed) {
-				return api::Response(api::response::Empty());
-			}
-			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(api::ApiError(
-					api::OtherError("Execution panicked with error: " + panicked.error_message)
-				));
-			}
-			variant_default {
-				return std::unexpected(api::ApiError(api::OtherError("Unexpected run status!")));
-			}
-		}
-		CORE_UNREACHABLE();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		return opt_thread.value()->join();
 	}
 
 	void SafeVMProcess::notifyPausedVMThread(api::ThreadID thread_id) {
-		getVMThreadByID(thread_id).notifyPaused();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (opt_thread) opt_thread.value()->notifyPaused();
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
 		for (auto& thread: vm_threads) {
-			auto  response        = thread.stop();
-			auto& opt_exec_thread = thread.exec_thread;
+			auto response = thread.stop();
 
-			if (opt_exec_thread && opt_exec_thread->joinable()) {
-				opt_exec_thread->join();
-				thread.exec_thread.reset();
-			} else {
+			if (!thread.joinExecutionThread())
 				return std::unexpected(api::ApiError{ api::JoinError{} });
-			}
 
 			// @TODO: #1222 make two different "stop" functions, one that throws error if
 			// program was not stopped successfully and another that does nothing
@@ -137,13 +111,7 @@ namespace vm {
 	base::Optional<api::ApiError> SafeVMProcess::assertProcessCanRespond() {
 		api::ProcStatus status = getStatus();
 
-		if (std::holds_alternative<api::Parsing>(status)
-		    || std::holds_alternative<api::TypeAnalysis>(status)) {
-			return api::ApiError{ api::OtherError{
-				"Cannot do memory request while parsing or analyzing types" } };
-		}
-
-		if (std::holds_alternative<api::Running>(status))
+		if (!api::canRespond(status))
 			return api::ApiError{ api::OtherError{
 				"Cannot do memory request while program is running" } };
 
@@ -171,33 +139,24 @@ namespace vm {
 	}
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid):
-		  VMProcess(my_pid),
+		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(loader.getProgram()) {
-		vm_threads.emplace_back(*this);
+		vm_threads.add(*this);
 	}
 
-	VMThread& SafeVMProcess::getMainVMThread() { return vm_threads.front(); }
+	SafeVMThread& SafeVMProcess::getMainVMThread() { return *vm_threads.get(api::ThreadID{ 0 }); }
 
-	VMThread& SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
-		if (thread_id == api::ThreadID{ 0 }) return getMainVMThread();
-		for (auto& thread: vm_threads) {
-			if (thread.exec_thread) {
-				api::ThreadID id = static_cast<api::ThreadID>(
-					std::hash<std::thread::id>{}(thread.exec_thread->get_id())
-				);
-				if (id == thread_id) return thread;
-			}
-		}
-		return getMainVMThread();
+	base::Optional<Ref<SafeVMThread>> SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
+		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
+		return std::nullopt;
 	}
 
-	VMThread& SafeVMProcess::getEmptyThread() {
+	SafeVMThread& SafeVMProcess::getEmptyThread() {
 		for (auto& thread: vm_threads)
-			if (!thread.exec_thread) return thread;
+			if (!api::isExecuting(thread.getStatus())) return thread;
 
-		vm_threads.emplace_back(*this);
-		return vm_threads.back();
+		return *vm_threads.get(vm_threads.add(*this));
 	}
 
 	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
@@ -205,8 +164,8 @@ namespace vm {
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
 			variant_default return std::unexpected(api::StateError(
-				executingStarted(getStatus()) ? "Execution did not complete"
-											  : "Execution did not start"
+				hasExecutionStarted(getStatus()) ? "Execution did not complete"
+												 : "Execution did not start"
 			));
 		}
 		CORE_UNREACHABLE();
@@ -215,13 +174,13 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
 		std::unique_lock lock(rw_global);
 		for (auto& t: vm_threads) {
-			if (t.exec_thread)
+			if (api::isExecuting(t.getStatus()))
 				if (auto res = stop(); !res.has_value()) return res;
 		}
 		try {
 			// There might be numerous runtime exceptions during the deinitialization,
 			// any of those means there was an issue during the validation.
-			getMainVMThread().execGlobalDestructors(loaded_program);
+			getMainVMThread().execGlobalDestructors();
 
 			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 
@@ -235,21 +194,25 @@ namespace vm {
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::pauseVMThread(api::ThreadID thread_id) {
-		auto& thread   = getVMThreadByID(thread_id);
-		auto  response = thread.pause();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		auto response = opt_thread.value()->pause();
 		if (!response) return api::ApiError{ api::PauseError{} };
 		return {};
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::resumeVMThread(api::ThreadID thread_id) {
-		auto& thread   = getVMThreadByID(thread_id);
-		auto  response = thread.resume();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		auto response = opt_thread.value()->resume();
 		if (!response) return api::ApiError{ api::ResumeError{} };
 		return {};
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
-		auto response = getVMThreadByID(thread_id).step();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		auto response = opt_thread.value()->step();
 		if (!response) return api::ApiError{ api::OtherError{ "step error" } };
 		return {};
 	}
@@ -257,7 +220,10 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(
 		api::ThreadID thread_id
 	) {
-		return getVMThreadByID(thread_id).getCurrentPosition();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		return opt_thread.value()->getCurrentPosition();
 	}
 
 	void SafeVMProcess::waitForBreakpoint() {
@@ -274,11 +240,10 @@ namespace vm {
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
-				// +1 because frame_stack_current points to the current frame, not the next
-				// free slot
-				RuntimeData& runtime_data = getVMThreadByID(thread_id).runtime_data;
-				u64          frames
-					= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+				auto opt_thread = getVMThreadByID(thread_id);
+				if (!opt_thread)
+					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+				u64 frames = opt_thread.value()->getNumberOfCurrentStackFrames();
 				return api::Response(api::response::NumberOfCurrentStackFrames{
 					.number_of_stack_frames = frames });
 			}
@@ -293,13 +258,14 @@ namespace vm {
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
-				RuntimeData& runtime_data = getVMThreadByID(thread_id).runtime_data;
-				u64          frames
-					= u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+				auto opt_thread = getVMThreadByID(thread_id);
+				if (!opt_thread)
+					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+				u64 frames = opt_thread.value()->getNumberOfCurrentStackFrames();
 				if (frame_index >= frames)
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "Frame index out of bounds" } });
-				Frame& frame = runtime_data.frame_stack_base[frame_index];
+				Frame& frame = opt_thread.value()->getStackFrame(frame_index);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
 				for (Block* block_ptr:
@@ -366,21 +332,13 @@ namespace vm {
 	std::vector<api::ThreadID> SafeVMProcess::getAllThreadIDs() {
 		std::shared_lock           lock(rw_global);
 		std::vector<api::ThreadID> thread_ids;
-		for (const auto& thread: vm_threads) {
-			if (thread.exec_thread) {
-				api::ThreadID id = static_cast<api::ThreadID>(
-					std::hash<std::thread::id>{}(thread.exec_thread->get_id())
-				);
-				thread_ids.push_back(id);
-			}
-		}
+		for (const auto& thread: vm_threads)
+			if (api::isExecuting(thread.getStatus())) thread_ids.push_back(thread.getThreadID());
 		return thread_ids;
 	}
 
 	api::ThreadID SafeVMProcess::getMainThreadID() {
 		std::shared_lock lock(rw_global);
-		return static_cast<api::ThreadID>(
-			std::hash<std::thread::id>{}(getMainVMThread().exec_thread->get_id())
-		);
+		return getMainVMThread().getThreadID();
 	}
 }

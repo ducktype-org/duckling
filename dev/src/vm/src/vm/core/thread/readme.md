@@ -1,5 +1,5 @@
 # DVM — VMThread and VMValue module
-## [`VMThread`](./vmthread.hpp)
+## [`VMThread`](./safe_vmthread.hpp)
 The `VMThread` is the primary execution engine of DVM. While a `VMProcess` manages the overall environment
 for a program, the `VMThread` is the component that actually interprets and executes the
 [low-level bytecode](./low_program/low_program.hpp) instructions, one by one. Each `VMThread` represents
