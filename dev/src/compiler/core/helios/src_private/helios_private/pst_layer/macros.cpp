@@ -8,6 +8,8 @@
 
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <base/str/str_utils.hpp>
+
 namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
@@ -21,7 +23,7 @@ namespace compiler::helios {
 			if (value.has_value()) {
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
 					expand->getSourcePosition(),
-					value.value()->getValue().str(),
+					base::unescapeString(value.value()->getValue().value.strView()).value().value,
 					makeBox<pst::LangParserContext>(expand->getContext())
 				);
 
