@@ -33,7 +33,7 @@ private:
 		});
 
 		auto debugger = vm::debugger::Debugger(fs::File(path(std::string(path_name))));
-		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionNotStarted>(debugger.getStatus()));
+		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
 		debugger.attachOnVMStatusChangeListener(listener);
 		debugger.runMain();
 		std::unique_lock lk(m);
@@ -45,10 +45,12 @@ private:
 	}
 
 	void runAndGetStatus() {
-		testTemplate(
-			"debugger_test.dbc",
-			{ altIndex(vm::api::Running), altIndex(vm::api::ExecutionCompleted) }
-		);
+		{
+			testTemplate(
+				"debugger_test.dbc",
+				{ altIndex(vm::api::Running), altIndex(vm::api::ExecutionCompleted) }
+			);
+		}
 	}
 
 	void getStatusWait() {
@@ -56,7 +58,7 @@ private:
 			"vm_api_tests.dbc",
 			{
 				altIndex(vm::api::Running),
-				altIndex(vm::api::WaitingForInput),
+				altIndex(vm::api::Sleeping),
 			}
 		);
 	}
@@ -90,7 +92,7 @@ private:
 		});
 
 		auto debugger = vm::debugger::Debugger(fs::File(path("debugger_test.dbc")));
-		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionNotStarted>(debugger.getStatus()));
+		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
 
 		debugger.attachOnVMStatusChangeListener(listener);
 
