@@ -18,6 +18,11 @@
 #include <deque>
 
 namespace vm {
+	struct GlobalBufferPointers {
+		std::byte* data_buffer_base;
+		Block**    blocks_buffer_base;
+	};
+
 	/**
 	 * @brief A memory module for a process.
 	 * @note Memory is single threaded!
@@ -30,8 +35,8 @@ namespace vm {
 
 		std::deque<ThreadStack> threads_frame_stacks;
 
-		std::vector<std::byte>                  global_data_buffer;
-		std::vector<Block*>                     global_data_blocks;
+		std::vector<std::byte> global_data_buffer;
+		std::vector<Block*>    global_data_blocks;
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing
@@ -190,7 +195,9 @@ namespace vm {
 		 * @return true if the global data was inserted successfully (i.e., it did not already
 		 * exist); false otherwise.
 		 */
-		bool tryInsertGlobalData(usize offset_in_global_data_buffer, usize idx_in_global_blocks_buffer, TypeCRef type);
+		bool tryInsertGlobalData(
+			usize offset_in_global_data_buffer, usize idx_in_global_blocks_buffer, TypeCRef type
+		);
 
 		/**
 		 * @brief Frees all the global data
@@ -201,6 +208,8 @@ namespace vm {
 		 * @brief Reallocates the buffer and blocks storages for globals.
 		 */
 		void reallocateBufferForGlobals(usize buffer_size, usize global_count);
+
+		GlobalBufferPointers getGlobalDataMemory();
 
 		/**
 		 * @brief Returns a view of block's data

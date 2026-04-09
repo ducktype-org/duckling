@@ -120,8 +120,7 @@ namespace vm {
 				global_block_idx,
 				global_data_blocks.size()
 			);
-			auto block
-				= allocateDummy(type, global_data_buffer.data() + global_buffer_offset);
+			auto block = allocateDummy(type, global_data_buffer.data() + global_buffer_offset);
 			increaseBlockRefcount(block);
 			global_data_blocks[global_block_idx] = block.get();
 			return true;
@@ -422,5 +421,10 @@ namespace vm {
 	void Memory::reallocateBufferForGlobals(usize global_count, usize buffer_size) {
 		global_data_buffer.resize(buffer_size);
 		global_data_blocks.resize(global_count);
+	}
+
+	GlobalBufferPointers Memory::getGlobalDataMemory() {
+		return { .data_buffer_base   = global_data_buffer.data(),
+			     .blocks_buffer_base = global_data_blocks.data() };
 	}
 }

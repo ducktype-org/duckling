@@ -4,16 +4,21 @@
 
 #include <base/misc/raw_view.hpp>
 #include <base/types/ints.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <vm/utils/interpret.hpp>
+struct Block;
 
 /**
- * @brief Reads a value of a given TYPE from the specified location on the stack.
+ * @brief Writes a value of a given TYPE to a specified location on the stack.
  */
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
-inline static T readFromStack(std::byte* stack, u64 position) {
-	return vm::safeReadPointerBytes<T>(stack, position);
+inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, u64 place_arg) {
+	uint64_t offset = place_arg & 0x7FFFFFFFFFFFFFFF;
+	uint64_t on_bit = place_arg >> 63;
+	auto address = (std::byte*)(((uint64_t)global_buffer * on_bit) + ((uint64_t)local_stack * !on_bit) + offset); //NOLINT
+	return vm::safeReadPointerBytes<T>(address);
 }
 
 /**
@@ -21,9 +26,25 @@ inline static T readFromStack(std::byte* stack, u64 position) {
  */
 template<typename T>
 [[gnu::always_inline]]
-inline static void writeToStack(std::byte* stack, u64 position, const T& value) {
-	return vm::safeWriteBytes<T>(stack, value, position);
+inline static void writeToPlace(std::byte* local_stack, std::byte* global_buffer, u64 place_arg, const T& value) {
+	uint64_t offset = place_arg & 0x7FFFFFFFFFFFFFFF;
+	uint64_t on_bit = place_arg >> 63;
+	auto address = (std::byte*)(((uint64_t)global_buffer * on_bit) + ((uint64_t)local_stack * !on_bit) + offset); //NOLINT
+	return vm::safeWriteBytes<T>(address, value);
 }
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static Ref<Block> getBlockRefFromArg(Block** local_stack_blocks, Block** global_buffer_blocks, u64 place_arg) {
+	uint64_t offset = place_arg & 0x7FFFFFFFFFFFFFFF;
+	uint64_t on_bit = place_arg >> 63;
+	auto address = (Block**)(((uint64_t)global_buffer_blocks * on_bit) + ((uint64_t)local_stack_blocks * !on_bit) + offset); //NOLINT
+	return {*address};
+}
+
+
+#define READ_FROM_PLACE_ARG(TYPE, ARG) readFromPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG)
+#define WRITE_TO_PLACE_ARG(TYPE, ARG, VALUE) writeToPlace<TYPE>(local_stack, thread.runtime_data.global_data_buffer_base, ARG, VALUE)
+#define READ_BLOCK_REF_FROM_ARG(ARG) getBlockRefFromArg(frame->local_block_ref_stack_base, thread.runtime_data.global_block_ref_buffer_base, ARG)
 
 /**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
@@ -43,28 +64,6 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 	return vm::safeWriteBytes<T>(view.getBegin(), value);
 }
 
-/**
- * @brief Returns a block containing the data of the global specified by the ID.
- */
-#define GET_GLOBAL_BLOCK(ID) thread.process_memory.getGlobalData(GlobalDataID(usize(ID)))
-
-/**
- * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
- */
-#define READ_FROM_GLOBAL(TYPE, GLOBAL_ID)                                               \
-	([&](u64 id) {                                                                      \
-		auto view = thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(id))); \
-		return readFromView<TYPE>(view);                                                \
-	}(GLOBAL_ID))
-
-/**
- * @brief Writes a value to a global memory location specified by a global ID.
- */
-#define WRITE_TO_GLOBAL(TYPE, GLOBAL_ID, VALUE)                                                \
-	do {                                                                                       \
-		auto view = thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(GLOBAL_ID))); \
-		writeToView<TYPE>(view, VALUE);                                                        \
-	} while (false)
 
 #if defined(__clang_major__) && __clang_major__ >= 13
 	#define MUST_TAIL [[clang::musttail]]

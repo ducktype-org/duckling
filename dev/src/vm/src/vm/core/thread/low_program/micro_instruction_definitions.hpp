@@ -453,8 +453,6 @@ DEF_MICRO_INSTR(load_bany_pptr, vm::low::opargs::PlaceBlockAny, vm::low::opargs:
 
 // stores reference to local object of any type T in pointer<T>
 DEF_MICRO_INSTR(ref_pptr_bany, vm::low::opargs::PlacePtr, vm::low::opargs::PlaceBlockAny)
-// stores reference to global object of any type T in pointer<T>
-DEF_MICRO_INSTR(ref_pptr_gany, vm::low::opargs::PlacePtr, vm::low::opargs::GlobalAny)
 
 // ========= STRUCTURE OPERATIONS ========
 
