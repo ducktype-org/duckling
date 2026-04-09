@@ -263,7 +263,7 @@ namespace compiler::helios {
 						variant_default {
 							CORE_PANIC(
 								"Element has no parent and no additional root data, cannot "
-							    "determine "
+								"determine "
 								"scope parent."
 							);
 						}

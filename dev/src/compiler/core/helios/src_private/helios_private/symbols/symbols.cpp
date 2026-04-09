@@ -409,7 +409,10 @@ namespace compiler::helios {
 				// we hit an expand!
 				// note that here, we should never hit an element without parent that is not an expand
 				return ctx.query<QueryPrimaryCodeScopeFor>(
-					std::get<pst::AdditionalRootData::MacroExpansionParent>(unlocked->getAdditionalRootData().pst_parent).expand_element
+					std::get<pst::AdditionalRootData::MacroExpansionParent>(
+						unlocked->getAdditionalRootData().pst_parent
+					)
+						.expand_element
 				);
 			}
 		}
