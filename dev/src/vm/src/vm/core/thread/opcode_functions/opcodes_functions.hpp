@@ -183,9 +183,8 @@ namespace vm {
 				std::byte*&                               local_stack,
 				Frame*&                                   frame,
 				SafeVMThread&                             thread,
-				TypeID                                    type_id
+				TypeCRef                                  type
 			) {
-			auto type     = thread.process_program->getTypes().at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
@@ -220,13 +219,9 @@ namespace vm {
 			setVariantType(
 				SafeVMThread& thread,
 				Pointer       variant_pointer,
-				TypeID        wanted_type_id,
-				TypeID        variant_type_id
+				TypeCRef      wanted_type,
+				TypeCRef      variant_type
 			) {
-
-			auto wanted_type  = thread.process_program->getTypes().at(wanted_type_id);
-			auto variant_type = thread.process_program->getTypes().at(variant_type_id);
-
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block
@@ -238,7 +233,7 @@ namespace vm {
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
 			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt->getID() == wanted_type_id) alternative_index = static_cast<usize>(idx);
+				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -275,11 +270,9 @@ namespace vm {
 			getVariantPtr(
 				SafeVMThread& thread,
 				Pointer       variant_pointer,
-				TypeID        wanted_type_id,
-				TypeID        variant_type_id
+				TypeCRef      wanted_type,
+				TypeCRef      variant_type
 			) {
-			auto variant_type = thread.process_program->getTypes().at(variant_type_id);
-			auto wanted_type  = thread.process_program->getTypes().at(wanted_type_id);
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
 				variant_pointer.movedPointer(static_cast<i64>(*variant_type->getTypeTagSizeBytes())),
