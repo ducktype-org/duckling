@@ -6,10 +6,13 @@ use std::{
 use clap::ArgMatches;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
+    DuckCtx, QuackResult, QuackResultContext, qp_bail_internal,
     quackpack::core::{
         AllowGlobalPackage, PackageLoader,
-        storage::{StorageSyncOptions, sync},
+        storage::{
+            StorageSyncOptions, sync,
+            venv_id::{ToVenvId, VenvId},
+        },
     },
 };
 
@@ -21,7 +24,7 @@ pub struct RunScriptOptions<'duck> {
     /// Path to the folder where the script is located.
     pub folder_path: &'duck Path,
     /// Optional name of the venv to run the script in.
-    pub venv_id: Option<StrId>,
+    pub venv_id: Option<VenvId>,
     /// Force the script to be run in the global venv.
     pub global: bool,
     /// Artefact from [`StorageSyncOptions`].
@@ -47,7 +50,7 @@ impl<'duck> RunScriptOptions<'duck> {
         let folder_path = path
             .parent()
             .context_internal("we assured that the path points to a file")?;
-        let venv_id = matches.get_one::<String>("venv").map(StrId::new);
+        let venv_id = matches.get_one::<String>("venv").map(ToVenvId::to_venv_id);
         let args: Vec<OsString> = matches
             .get_many::<OsString>("args")
             .map(|values| values.cloned().collect())

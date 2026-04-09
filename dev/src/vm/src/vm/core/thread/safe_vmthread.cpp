@@ -1,4 +1,4 @@
-#include "vmthread.hpp"
+#include "safe_vmthread.hpp"
 
 #include "kill_process_exception.hpp"
 #include "opcode_functions/opcodes_functions.hpp"
@@ -21,23 +21,24 @@
 #include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/module_flags/module_flags.hpp>
+#include <vm/utils/interpret.hpp>
 
-#include <iostream>
-#include <mutex>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace vm {
 #define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
 	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
-	VMThread::VMThread(SafeVMProcess& process):
+	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
+		  IVMThread(thread_id, process),
 		  runtime_data(process.getMemory().initializeFrameStack()),
-		  process(process),
-		  process_memory(process.getMemory()) {}
+		  safe_process(process),
+		  process_memory(process.getMemory()),
+		  process_program(process.getLoadedProgram()) {}
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
@@ -76,7 +77,7 @@ namespace vm {
 	/**
 	 * @brief Main debug function that executes one step of the program.
 	 */
-	void VMThread::executeOneStep() {
+	void SafeVMThread::executeOneStep() {
 		Frame*     frame       = runtime_data.frame_stack_current;
 		std::byte* local_stack = frame->local_stack;
 		auto*      instr       = frame->instr;
@@ -97,7 +98,7 @@ namespace vm {
 	 *
 	 * @note For more detailed explanation go to `createProgramStartFunction`.
 	 */
-	low::LowFuncData VMThread::createStartFunctionFor(
+	low::LowFuncData SafeVMThread::createStartFunctionFor(
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		if (func_args.size() != func.parameters.size()) {
@@ -115,17 +116,20 @@ namespace vm {
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
 			                             .bc               = {},
 			                             .local_stack_size = 0,
-			                             .arg_size         = 0,
-			                             .ret_size         = func.result_type->getSize().asInt(),
-			                             .parameters       = {},
-			                             .result_type      = func.result_type };
+			                             .local_block_count
+			                             = (func.result_type->getName() == "void" ? 0 : 1)
+			                             + func.parameters.size(),
+			                             .arg_size    = 0,
+			                             .ret_size    = func.result_type->getSize().asInt(),
+			                             .parameters  = {},
+			                             .result_type = func.result_type };
 
-		u64       result_type_id     = func.result_type->getID().asInt();
-		const u64 called_function_id = executing_program->getFunctions().idOf(func.name).value();
+		u64       result_type_arg    = safeReadObjectBytes<u64>(func.result_type);
+		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
 		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
-		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_blany_type, 0, result_type_id));
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_blany_type, 0, result_type_arg));
 
 		start_function.local_stack_size += func.result_type->getSize().asInt();
 
@@ -133,7 +137,7 @@ namespace vm {
 			const auto& arg_value = func_args[i];
 			auto        arg_type  = func.parameters[i];
 
-			if (arg_value->getPID() != process.getPID()) {
+			if (arg_value->getPID() != safe_process.getPID()) {
 				throw exceptions::VMRuntimeException(
 					base::strConcat("VMValue for argument ", i, " comes from a different process")
 				);
@@ -188,7 +192,7 @@ namespace vm {
 	 * loading phase is not possible. This also results in the need to create the function in the
 	 * micro-bytecode right away.
 	 */
-	low::LowFuncData VMThread::createProgramStartFunction(
+	low::LowFuncData SafeVMThread::createProgramStartFunction(
 		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
 		// Types
@@ -196,7 +200,7 @@ namespace vm {
 		// during code loading.
 
 		auto        main_return_type = func.result_type;
-		const auto& types            = executing_program->getTypes();
+		const auto& types            = process_program->getTypes();
 		auto        argv_type        = types.at(base::StrID("argv"));
 		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
 		auto        i64_type         = types.at(base::StrID("i64"));
@@ -214,14 +218,14 @@ namespace vm {
 			                             .result_type       = func.result_type };
 
 		// TypeIDs to pass to opcodes.
-		u64 argv_type_id     = argv_type->getID().asInt();
-		u64 argv_ptr_type_id = argv_ptr_type->getID().asInt();
-		u64 i64_type_id      = i64_type->getID().asInt();
-		u64 str_type_id      = str_type->getID().asInt();
-		u64 str_ptr_type_id  = str_ptr_type->getID().asInt();
-		u64 byte_type_id     = byte_type->getID().asInt();
+		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
+		u64 argv_ptr_type_arg = safeReadObjectBytes<u64>(argv_ptr_type);
+		u64 i64_type_arg      = safeReadObjectBytes<u64>(i64_type);
+		u64 str_type_arg      = safeReadObjectBytes<u64>(str_type);
+		u64 str_ptr_type_arg  = safeReadObjectBytes<u64>(str_ptr_type);
+		u64 byte_type_arg     = safeReadObjectBytes<u64>(byte_type);
 
-		const u64  called_function_id = executing_program->getFunctions().idOf(func.name).value();
+		const u64  called_function_id = process_program->getFunctions().idOf(func.name).value();
 		const bool main_has_args      = !func.parameters.empty();
 
 		// Initialize the needed data first - argc and argv dynamic table.
@@ -232,22 +236,22 @@ namespace vm {
 			{
 				// Program return value is fixes to return `i64`.
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 0, i64_type_id
+					init_blany_type, 0, i64_type_arg
 				),  // stack [0, 8), block idx 0 program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 1, argv_ptr_type_id
+					init_blany_type, 1, argv_ptr_type_arg
 				),  // stack [8, 24) block idx 1 *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 2, i64_type_id
+					init_blany_type, 2, i64_type_arg
 				),  // stack  [24, 32) block idx 2 argc_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 3, i64_type_id
+					init_blany_type, 3, i64_type_arg
 				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_l64_imm, 24, args.size()
 				),  // argc_internal := args.size()
 				MAKE_BYTECODE_INSTRUCTION(
-					dynTableReAlloc_lptr_type, 8, argv_type_id
+					dynTableReAlloc_lptr_type, 8, argv_type_arg
 				),  // alloc *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 			}
@@ -260,16 +264,16 @@ namespace vm {
 					start_function.bc.end(),
 					{
 						MAKE_BYTECODE_INSTRUCTION(
-							init_blany_type, 4, str_ptr_type_id
+							init_blany_type, 4, str_ptr_type_arg
 						),  // stack [40, 56) block idx 4 ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
-							init_blany_type, 5, byte_type_id
+							init_blany_type, 5, byte_type_arg
 						),  // stack [56, 57) block idx 5 char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_l64_imm, 24, arg.size() + 1
 						),  // argc_internal := arg.size() + 1 (for the \0 character)
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableReAlloc_lptr_type, 40, str_type_id
+							dynTableReAlloc_lptr_type, 40, str_type_arg
 						),                                              // alloc ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 						MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
@@ -314,7 +318,7 @@ namespace vm {
 
 		// Now actually prepare to call 'main'.
 		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_blany_type, 4, i64_type_id)  // [40, 48) main ret_val
+			MAKE_BYTECODE_INSTRUCTION(init_blany_type, 4, i64_type_arg)  // [40, 48) main ret_val
 		);
 
 		// Pass the command line arguments only if main signature specifies it.
@@ -322,9 +326,9 @@ namespace vm {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
-					MAKE_BYTECODE_INSTRUCTION(init_blany_type, 5, i64_type_id),  // [48, 56) argc
+					MAKE_BYTECODE_INSTRUCTION(init_blany_type, 5, i64_type_arg),  // [48, 56) argc
 					MAKE_BYTECODE_INSTRUCTION(
-						init_blany_type, 6, argv_ptr_type_id
+						init_blany_type, 6, argv_ptr_type_arg
 					),                                                        // [56, 72) *argv
 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
 					MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),  // argv := argv_internal
@@ -340,7 +344,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 5, str_ptr_type_id
+					init_blany_type, 5, str_ptr_type_arg
 				),  // [48, 64) ptr_tmp_store
 			}
 		);
@@ -386,7 +390,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	Ref<VmValue> VMThread::executeFunction(
+	Ref<VmValue> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		acquireGil();
@@ -433,7 +437,7 @@ namespace vm {
 			"After function execution, there should be exactly one block on the block stack."
 		);
 		auto block         = Ref(frame->local_block_ref_stack_base[0]);
-		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
+		exit_value_storage = safe_process.createVmValue(func.result_type, Pointer(block, 0));
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
@@ -454,90 +458,18 @@ namespace vm {
 #endif
 
 	/**
-	 * @brief Handles execution request when `execution_request_break` bool is set.
-	 * Used from the thread loop.
-	 */
-	void VMThread::breakActiveExecution() {
-		std::unique_lock lock(execution_request_mutex);
-		switch (execution_request) {
-		case ExecutionRequest::Pause:
-			respondExecutionRequest(api::Paused{});
-			handlePausedExecution(lock);
-			execution_request_break = false;
-			break;
-
-		case ExecutionRequest::Stop:
-			throw KillProcessException{};
-
-		default:
-			CORE_PANIC("Unexpected execution status");
-		}
-	}
-
-	/**
-	 * @brief Main function of the VMThread "debug" mode, where the step by step execution can take
-	 * place. After each step the execution status is set to `paused` and the VMThread waits for the
-	 * next command. Mutex "execution_request_mutex" is held when the VM is executing the code.
-	 *
-	 * @param lock
-	 */
-	void VMThread::handlePausedExecution(std::unique_lock<std::mutex>& lock) {
-		while (true) {
-			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
-
-			switch (execution_request) {
-			case ExecutionRequest::Resume: {
-				execution_request = ExecutionRequest::NoRequest;
-				respondExecutionRequest(api::Running{});
-				return;
-			}
-			case ExecutionRequest::Stop: {
-				throw KillProcessException{};
-			}
-			case ExecutionRequest::ExecuteOneStep: {
-				respondExecutionRequest(api::Running{});
-
-				executeOneStep();
-
-				execution_request = ExecutionRequest::Pause;
-				respondExecutionRequest(api::Paused{});
-				break;
-			}
-			default:
-				throw exceptions::VMResumedWithPausedStatusException();
-			}
-		}
-	}
-
-	/**
-	 * @brief Function to be called when the VMThread hits a breakpoint.
-	 */
-	void VMThread::handleBreakpoint() {
-		std::unique_lock lock(execution_request_mutex);
-		setProcessStatus(api::Paused{});
-		execution_request = ExecutionRequest::Pause;
-		this->handlePausedExecution(lock);
-	}
-
-	/**
 	 * @brief Starts the execution of a function with a given name and arguments.
 	 */
-	void VMThread::run(
-		CRef<low::ILowVMProgram> program,
-		const std::string&       func_name,
-		const RunArguments&      run_arguments
-	) {
+	void SafeVMThread::run(const std::string& func_name, const RunArguments& run_arguments) {
 		respondExecutionRequest(api::Running{});
 
-		executing_program = program;
-		for (const auto& [global, id, name]: program->getGlobals().allData()) {
+		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
 			// Insert the global data if it hasn't been initialized; then run constructor if present
 			if (process_memory.tryInsertGlobalData(id, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(global->ctor_name.value())
-					                        .value();
+					const auto& func
+						= *process_program->getFunctions().atMaybe(global->ctor_name.value()).value();
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -548,7 +480,7 @@ namespace vm {
 
 		try {
 			const auto& maybe_func
-				= executing_program->getFunctions().atMaybe(base::StrID(func_name.data()));
+				= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
 			if (!maybe_func.has_value()) {
 				respondExecutionRequest(api::ExecutionPanicked{
 					base::strConcat("Called function '", func_name, "' does not exist.") });
@@ -575,8 +507,8 @@ namespace vm {
 		}
 	}
 
-	void VMThread::execGlobalDestructors(CRef<low::ILowVMProgram> program) {
-		executing_program = program;
+	void SafeVMThread::execGlobalDestructors() {
+		const auto& executing_program = process_program;
 		for (const auto& [global, id, name]: executing_program->getGlobals().allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
@@ -595,64 +527,17 @@ namespace vm {
 		}
 	}
 
-	bool VMThread::stop() {
-		{
-			std::unique_lock lock(execution_request_mutex);
-
-			execution_request       = ExecutionRequest::Stop;
-			execution_request_break = true;
-		}
-		pause_cv.notify_all();
-
-		return waitForStoppedResponse();
-	}
-
-	bool VMThread::resume() {
-		{
-			std::unique_lock lock(execution_request_mutex);
-
-			execution_request = ExecutionRequest::Resume;
-		}
-		pause_cv.notify_all();
-
-		return waitForRunningResponse();
-	}
-
-	bool VMThread::pause() {
-		{
-			std::unique_lock lock(execution_request_mutex);
-
-			execution_request       = ExecutionRequest::Pause;
-			execution_request_break = true;
-		}
-
-		return waitForBreakpointResponse();
-	}
-
-	bool VMThread::step() {
-		{
-			std::unique_lock lock(execution_request_mutex);
-
-			execution_request = ExecutionRequest::ExecuteOneStep;
-			pause_cv.notify_all();
-		}
-		if (waitForRunningResponse()) {
-			if (waitForBreakpointResponse()) return true;
-		}
-		return false;
-	}
-
-	std::expected<api::Response, api::ApiError> VMThread::getCurrentPosition() {
-		variant_match(status) {
+	std::expected<api::Response, api::ApiError> SafeVMThread::getCurrentPosition() {
+		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
-					const auto& func = executing_program->getFunctions()[index];
+				for (const auto& [idx, func]:
+				     std::views::enumerate(process_program->getFunctions())) {
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
-							.function_id  = index,  // Assuming function_id is int
+							.function_id  = static_cast<u64>(idx),  // Assuming function_id is int
 							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}
@@ -665,86 +550,12 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	void VMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
-		status = new_status;
-		process.setStatus(new_status);
-	}
-
-	bool VMThread::isPauseRequested() {
-		std::unique_lock lock(execution_request_mutex);
-		return execution_request == ExecutionRequest::Pause;
-	}
-
-	bool VMThread::isTerminateRequested() {
-		std::unique_lock lock(execution_request_mutex);
-		return execution_request == ExecutionRequest::Stop;
-	}
-
-	void VMThread::notifyPaused() { pause_cv.notify_all(); }
-
-	void VMThread::safeRun(
-		CRef<low::ILowVMProgram> program,
-		const std::string&       func_name,
-		const RunArguments&      run_arguments
-	) {
-		try {
-			run(program, func_name, run_arguments);
-		} catch (const exceptions::VMRuntimeException& e) {
-			std::cerr << "VMThread has panicked: " << e.what() << "\n";
-			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-		}
-	}
-
-	void VMThread::runNoSpawn(
-		CRef<low::ILowVMProgram> program,
-		const std::string&       func_name,
-		const RunArguments&      run_arguments
-	) {
-		// @TODO: #2040 Make this function check if anyone else is executing anything,
-		// or simplify the state checking, perhaps remove state from thread and move all the state
-		// to the process?
-		safeRun(program, func_name, run_arguments);
-		waitForRunningResponse();
-	}
-
-	bool VMThread::spawnThreadAndRun(
-		CRef<low::ILowVMProgram> program,
-		const std::string&       func_name,
-		const RunArguments&      run_arguments
-	) {
-		if (exec_thread)  // There is already a thread running.
-			return false;
-
-		exec_thread = std::thread(&VMThread::safeRun, this, program, func_name, run_arguments);
-		return waitForRunningResponse();
-	}
-
-	void VMThread::respondExecutionRequest(const api::ProcStatus& response) {
-		setProcessStatus(response);
-		execution_response_queue.push(response);
-	}
-
-	bool VMThread::waitForStoppedResponse() {
-		auto response = execution_response_queue.pop();
-		return std::holds_alternative<api::ExecutionStopped>(response)
-		    || std::holds_alternative<api::ExecutionCompleted>(response)
-		    || std::holds_alternative<api::ExecutionPanicked>(response);
-	}
-
-	bool VMThread::waitForBreakpointResponse() {
-		return std::holds_alternative<api::Paused>(execution_response_queue.pop());
-	}
-
-	bool VMThread::waitForRunningResponse() {
-		return std::holds_alternative<api::Running>(execution_response_queue.pop());
-	}
-
-	void VMThread::stepGil() {
+	void SafeVMThread::stepGil() {
 		if (has_gil) {
 			// Check if you can hold it longer - releasing policy
 			// If you can't hold it longer then
 			// 1. say
-			if (!process.getGIL().shouldRelease()) return;
+			if (!safe_process.getGIL().shouldRelease()) return;
 			// 2. release gil
 			releaseGil();
 			// 3. yield - to not reacquire instantly
@@ -754,19 +565,26 @@ namespace vm {
 		acquireGil();
 	}
 
-	void VMThread::releaseGil() {
+	void SafeVMThread::releaseGil() {
 		CORE_ASSERT(has_gil, "Cannot release GIL without acquiring it first");
 		has_gil = false;
-		process.getGIL().release();
+		safe_process.getGIL().release();
 	}
 
-	void VMThread::acquireGil() {
+	void SafeVMThread::acquireGil() {
 		CORE_ASSERT(!has_gil, "Cannot acquire GIL twice");
-		process.getGIL().acquire();
+		safe_process.getGIL().acquire();
 		has_gil = true;
 	}
 
-	void VMThread::setThreadCtx(std::string name) { thread_ctx = std::move(name); }
+	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
 
-	std::string VMThread::getThreadCtx() { return thread_ctx; }
+	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
+		// +1 because frame_stack_current points to the current frame, not the next free slot.
+		return u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
+	}
+
+	Frame& SafeVMThread::getStackFrame(u64 frame_index) {
+		return runtime_data.frame_stack_base[frame_index];
+	}
 }
