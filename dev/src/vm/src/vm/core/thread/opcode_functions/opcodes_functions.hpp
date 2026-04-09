@@ -217,7 +217,10 @@ namespace vm {
 #endif
 			void
 			setVariantType(
-				SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
+				SafeVMThread& thread,
+				Pointer       variant_pointer,
+				TypeCRef      wanted_type,
+				TypeCRef      variant_type
 			) {
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
@@ -265,7 +268,10 @@ namespace vm {
 #endif
 			Pointer
 			getVariantPtr(
-				SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
+				SafeVMThread& thread,
+				Pointer       variant_pointer,
+				TypeCRef      wanted_type,
+				TypeCRef      variant_type
 			) {
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
