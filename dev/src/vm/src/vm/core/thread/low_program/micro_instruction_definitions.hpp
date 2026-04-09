@@ -423,18 +423,18 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
 
 // ========= FUNCTION OPERATIONS ========
 
-DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionName)
+DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
 #ifdef ENABLE_JIT
 // call a function, with the possibility to compile it later
-DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::FunctionName)
+DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::FunctionID)
 #endif
-DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionName)
-DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunctionName)
+DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
+DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
 
-DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionName)
+DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
 
 // return while performing a tail call
-DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionName)
+DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionID)
 // return
 DEF_MICRO_INSTR(ret)
 

@@ -178,7 +178,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			usize       bytes = bits / 8;
 			std::string name  = "i" + std::to_string(bits);
 
-			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::FloatTypeLayout) {
 			auto bits = usize(layout->getSize());
@@ -188,25 +188,15 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			usize       bytes = bits / 8;
 			std::string name  = "f" + std::to_string(bits);
 
-			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::MetaTypeLayout) {
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
 		}
-		variant_case_novalue(tsl::PointerTypeLayout) {
-			CORE_ASSERT(
-				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
-			);
-			query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat(
-					"DVM backend does not yet support pointer types. Offending type "
-					"layout: ",
-					layout->toStringDefinition(*query_ctx_for_errors.value()),
-					". This usually means you used a pointer in compile time."
-				),
-				base::Optional<dia::SourcePosition>()
-			));
-			query::throwFailed();
+		variant_case(tsl::PointerTypeLayout, pointer_layout) {
+			auto pointee_type      = lowerAndKeepTslType(pointer_layout.getPointee());
+			auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
+			return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
 		}
 		variant_default {
 			CORE_ASSERT(

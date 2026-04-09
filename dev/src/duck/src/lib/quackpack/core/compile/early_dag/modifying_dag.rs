@@ -1,30 +1,24 @@
-//! Helpers for modifying an existing [`CompilerDag`] (and its members).
+//! Helpers for modifying an existing [`EarlyDag`] (and its members).
 
 use tracing::debug;
 
-use crate::quackpack::core::FeatureName;
+use crate::quackpack::core::{FeatureName, compile::MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE};
 
 use super::*;
 
 impl DependencyDag {
     /// Same as [`CompilerDag::remove_disabled_dependencies`].
-    pub fn remove_disabled_dependencies(&mut self, packages: &AllPackages) -> QuackResult<()> {
+    pub fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
         for (k, v) in self.dag.iter_mut() {
             let mut to_remove = HashSet::new();
-            let this = packages.package(k)?;
+            let this = packages.package(k);
             for dep in &v.dependencies {
                 let is_enabled = this
                     .package()
                     .manifest()
                     .dependencies()
                     .get_by_name(dep.name())
-                    .with_context_internal(|| {
-                        format!(
-                            "dependency `{}` was in a freezefile, but not in a manifest of `{}`?!",
-                            dep,
-                            this.package().as_freeze_dep()
-                        )
-                    })?
+                    .expect(MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE)
                     .is_enabled_for(this.enabled_features().iter().copied());
                 debug!(
                     "package `{k}` has features `{}` and dependency `{dep}` is {}",
@@ -37,22 +31,21 @@ impl DependencyDag {
             }
             v.dependencies.retain(|dep| !to_remove.contains(dep));
         }
-        Ok(())
     }
 }
 
-impl CompilerDag {
+impl EarlyDag {
     /// Recursively populate enabled features, starting from the root of the graph.
     pub fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
-        let root_package = self.package_mut(&self.dag.root())?;
+        let root_package = self.package_mut(&self.dag.root());
         root_package.add_new_features(root_features.iter().copied())?;
 
         fn populate_impl(
             current: FreezeDep,
             dag: &HashMap<FreezeDep, DependencyNode>,
-            packages: &mut AllPackages,
+            packages: &mut PackagesSet,
         ) -> QuackResult<()> {
-            let this = packages.package(&current)?;
+            let this = packages.package(&current);
             let this_features = this.enabled_features().clone();
             let this = this.package().clone();
             let node = dag
@@ -64,16 +57,10 @@ impl CompilerDag {
                         .manifest()
                         .dependencies()
                         .get_by_name(dep.name())
-                        .with_context_internal(|| {
-                            format!(
-                                "dependency `{}` was in a freezefile, but not in a manifest of `{}`?!",
-                                dep,
-                                this.as_freeze_dep()
-                            )
-                        })?;
+                        .expect(MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE);
                     entry_in_dep_manifest.enabled_features(this_features.iter().copied())
                 };
-                let entry = packages.package_mut(dep)?;
+                let entry = packages.package_mut(dep);
                 entry.add_new_features(enabled_features)?;
             }
             Ok(())
@@ -84,7 +71,7 @@ impl CompilerDag {
             .topo_sort_order()
             .expect("we've verified that there are no cycles");
         for dep in order {
-            populate_impl(dep, &self.dag.dag, &mut self.all_packages)?;
+            populate_impl(dep, &self.dag.dag, &mut self.packages)?;
         }
         Ok(())
     }
@@ -95,7 +82,7 @@ impl CompilerDag {
     /// should point at them.
     ///
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
-    pub fn remove_disabled_dependencies(&mut self) -> QuackResult<()> {
-        self.dag.remove_disabled_dependencies(&self.all_packages)
+    pub fn remove_disabled_dependencies(&mut self) {
+        self.dag.remove_disabled_dependencies(&self.packages)
     }
 }

@@ -1,15 +1,15 @@
 //! Loading packages from the disk.
-use std::{marker::PhantomData, path::Path};
+use std::{io, marker::PhantomData, path::Path};
 
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_internal,
+    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_err, qp_internal,
     quackpack::core::{
         PackageCtx,
-        storage::{paths::Storage, venv::Venv},
+        storage::{paths::Storage, venv::Venv, venv_id::VenvId},
     },
-    util::path_ops_ext::{PathOpsExt, ShouldBlock},
+    util::path_ops_ext::PathOpsExt,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -59,7 +59,8 @@ impl PackageLoader {
     ) -> QuackResult<PackageCtx<'duck>> {
         let start = start.expand_user()?.resolve()?;
         if !start.is_dir() {
-            qp_bail!("the path `{}` is not a directory", start.display())
+            let err = qp_err!("the path `{}` is not a directory", start.display());
+            return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
         }
         let mut current: &Path = start.as_ref();
         for potential_location in start.ancestors() {
@@ -91,11 +92,13 @@ impl PackageLoader {
         ctx: &'duck DuckCtx,
     ) -> QuackResult<PackageCtx<'duck>> {
         if !path.is_dir() {
-            qp_bail!("the path `{}` is not a directory", path.display())
+            let err = qp_err!("the path `{}` is not a directory", path.display());
+            return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
         }
         let manifest_path = path.join(PackageLoader::MANIFEST_NAME);
         if !manifest_path.is_file() {
-            qp_bail!("the directory `{}` has no manifest", path.display())
+            let err = qp_err!("the directory `{}` has no manifest", path.display());
+            return Err(io::Error::new(io::ErrorKind::NotFound, err).into());
         }
         PackageCtx::new(path.to_path_buf(), ctx)
     }
@@ -112,22 +115,16 @@ impl PackageLoader {
     /// Find the root of the venv with the given name.
     pub fn find_venv_by_name<'duck>(
         ctx: &'duck DuckCtx,
-        venv_id: StrId,
+        venv_id: VenvId,
     ) -> QuackResult<PackageCtx<'duck>> {
         let storage_loc = ctx.default_storage_root();
         let storage = Storage::new(storage_loc);
-        let data_lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
         let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
             qp_bail!("Could not find venv {} in the main storage", venv_id);
         };
-        drop(data_lock);
-        let parent = venv
-            .data()
-            .last_location()
-            .parent()
-            .context(format!("Lost track of the venv {venv_id}"))?;
-        Self::find_at_exact_directory(parent, ctx)
-            .context(format!("Lost track of the venv {venv_id}"))
+        let dir = venv.data().last_known_directory();
+        Self::find_at_exact_directory(dir, ctx)
+            .with_context(|| format!("Lost track of the venv {venv_id}"))
     }
 }
 

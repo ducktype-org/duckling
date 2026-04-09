@@ -44,7 +44,7 @@
 #include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
@@ -372,6 +372,7 @@ namespace vm {
 		{
 			auto& jit_data = thread.jit_data;
 			auto  func_id  = instr->arg0;
+			auto& func_obj = thread.process_program->getFunctions()[func_id];
 
 			// @TODO: #2126 manage the size when inserting new code
 			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
@@ -392,10 +393,7 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				const low::LowFuncData& current_function
-					= thread.executing_program->getFunctions()[func_id];
-
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(current_function);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(func_obj);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
@@ -421,15 +419,15 @@ namespace vm {
 			// Create VmValue objects from local arguments.
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_signature->parameters[i];
-				TypeCRef          real_type = thread.executing_program->getTypes().at(arg_type);
+				TypeCRef          real_type = thread.process_program->getTypes().at(arg_type);
 				auto              block = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
-				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
+				args.push_back(thread.safe_process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id,
-				thread.executing_program->getTypes().at(function_signature->result_type),
-				thread.process,
+				thread.process_program->getTypes().at(function_signature->result_type),
+				thread.safe_process,
 				thread,
 				args
 			);
@@ -453,8 +451,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
 		{
-			auto ext_func_id = instr->arg0;
-			auto ext_func    = thread.executing_program->getExternCFunctions().at(ext_func_id);
+			auto ext_func = safeReadObjectBytes<CRef<low::LowExternCFunction>>(instr->arg0);
 
 			auto arg_count = ext_func->parameters.size();
 			bool is_void   = ext_func->result_type->getName() == "void";
@@ -499,7 +496,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(set_threadctx)(FUNCTION_ARGS) {
 		{
-			auto& called_func = thread.executing_program->getFunctions()[instr->arg0];
+			auto& called_func = thread.process_program->getFunctions()[instr->arg0];
 			thread.setThreadCtx(called_func.name.str());
 		}
 		FUNCTION_CONT(1);
@@ -518,11 +515,11 @@ namespace vm {
 			if (inh_meta_pointer == nullptr) throw exceptions::VMVtableUnset();
 
 			const auto inh_metadata = inh_meta_pointer->getInheritanceMetadata().value();
-			const auto method_name  = thread.executing_program->getMethodNamePool()[instr->arg1];
+			const auto method_name  = thread.process_program->getMethodNamePool()[instr->arg1];
 			const auto implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
-				= *thread.executing_program->getFunctions().idOf(implementation_name);
+				= *thread.process_program->getFunctions().idOf(implementation_name);
 
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
@@ -532,7 +529,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
 			auto  function_id       = static_cast<usize>(instr->arg0);
-			auto& function          = thread.executing_program->getFunctions()[function_id];
+			auto& function          = thread.process_program->getFunctions()[function_id];
 			instr                   = function.bc.data();
 			frame->current_function = &function;
 
@@ -584,7 +581,11 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_blany_type)(FUNCTION_ARGS) {
-		{ performInit(instr, local_stack, frame, thread, TypeID(instr->arg1)); }
+		{
+			performInit(
+				instr, local_stack, frame, thread, safeReadObjectBytes<TypeCRef>(instr->arg1)
+			);
+		}
 		FUNCTION_CONT(1);
 	}
 
@@ -595,8 +596,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
 		{
-			thread.setProcessStatus(api::WaitingForInput{});
-			i64 io_value = thread.process.getIO().getInput<i64>(thread);
+			thread.setProcessStatus(api::Sleeping{});
+			i64 io_value = thread.safe_process.getIO().getInput<i64>(thread);
 			writeToStack<i64>(local_stack, instr->arg0, io_value);
 			thread.setProcessStatus(api::Running{});
 		}
@@ -604,14 +605,14 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(output_l64)(FUNCTION_ARGS) {
-		{ thread.process.getIO().writeOutput(readFromStack<u64>(local_stack, instr->arg0)); }
+		{ thread.safe_process.getIO().writeOutput(readFromStack<u64>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
 		{
-			thread.setProcessStatus(api::WaitingForInput{});
-			i32 io_value = thread.process.getIO().getInput<i32>(thread);
+			thread.setProcessStatus(api::Sleeping{});
+			i32 io_value = thread.safe_process.getIO().getInput<i32>(thread);
 			writeToStack<i32>(local_stack, instr->arg0, io_value);
 			thread.setProcessStatus(api::Running{});
 		}
@@ -619,7 +620,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(output_l32)(FUNCTION_ARGS) {
-		{ thread.process.getIO().writeOutput(readFromStack<u32>(local_stack, instr->arg0)); }
+		{ thread.safe_process.getIO().writeOutput(readFromStack<u32>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
@@ -631,7 +632,7 @@ namespace vm {
 			auto block_id   = thread.process_memory.requestBlockID(block);
 			auto block_data = thread.process_memory.requestBlockData(block_id);
 			auto str_data   = block_data.stdString();
-			thread.process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1));
+			thread.safe_process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -668,9 +669,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       type
-				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<u32>(instr->arg1)));
+			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       type    = safeReadObjectBytes<TypeCRef>(instr->arg1);
 			auto       block   = thread.process_memory.allocateHeap(type);
 			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
@@ -815,9 +815,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto type    = thread.executing_program->getTypes().at(
-                TypeID(base::safeIntConv<usize>(instr->arg1))
-            );
+			auto type    = safeReadObjectBytes<TypeCRef>(instr->arg1);
 
 			// Objects hold vtable pointer as their first field.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
@@ -838,26 +836,23 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_blvnt_type)(FUNCTION_ARGS) {
 		{
-			auto variant_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
-			auto alt_type_id     = TypeID(instr->arg1);
-			auto variant_type_id = TypeID(instr[1].arg0);
-			OpFuns::setVariantType(thread, Pointer(variant_block, 0), alt_type_id, variant_type_id);
+			auto variant_block = Ref(frame->local_block_ref_stack_base[instr->arg0]);
+			auto alt_type      = safeReadObjectBytes<TypeCRef>(instr->arg1);
+			auto variant_type  = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
+			OpFuns::setVariantType(thread, Pointer(variant_block, 0), alt_type, variant_type);
 		}
 		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_blvnt)(FUNCTION_ARGS) {
 		{
-			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       variant_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
-			auto       alt_type_id     = TypeID(instr[1].arg0);
-			auto       variant_type_id = TypeID(instr[1].arg1);
+			const auto dst           = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       variant_block = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			auto       alt_type      = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
+			auto       variant_type  = safeReadObjectBytes<TypeCRef>(instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
-				dst,
-				OpFuns::getVariantPtr(
-					thread, Pointer(variant_block, 0), alt_type_id, variant_type_id
-				)
+				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), alt_type, variant_type)
 			);
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
@@ -867,9 +862,9 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto alt_type_id     = TypeID(instr->arg1);
-			auto variant_type_id = TypeID(instr[1].arg0);
-			OpFuns::setVariantType(thread, variant_pointer, alt_type_id, variant_type_id);
+			auto alt_type        = safeReadObjectBytes<TypeCRef>(instr->arg1);
+			auto variant_type    = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
+			OpFuns::setVariantType(thread, variant_pointer, alt_type, variant_type);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -878,11 +873,11 @@ namespace vm {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto       alt_type_id     = TypeID(instr[1].arg0);
-			auto       variant_type_id = TypeID(instr[1].arg1);
+			auto       alt_type        = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
+			auto       variant_type    = safeReadObjectBytes<TypeCRef>(instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
-				dst, OpFuns::getVariantPtr(thread, variant_pointer, alt_type_id, variant_type_id)
+				dst, OpFuns::getVariantPtr(thread, variant_pointer, alt_type, variant_type)
 			);
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
@@ -906,7 +901,7 @@ namespace vm {
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
 
-			auto dst_type = thread.executing_program->getTypes().at(TypeID(instr[1].arg0));
+			auto dst_type = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
 			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
@@ -1141,7 +1136,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer    = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto pointed_type   = thread.executing_program->getTypes().at(TypeID(instr->arg1));
+			auto pointed_type   = safeReadObjectBytes<TypeCRef>(instr->arg1);
 			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
 
 			if (new_elem_count == 0) {
@@ -1314,7 +1309,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
 		{
 			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
-			performInit(instr, local_stack, frame, thread, vm_value.type->getID());
+			performInit(instr, local_stack, frame, thread, vm_value.type);
 			vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
 		}
 		FUNCTION_CONT(1);
