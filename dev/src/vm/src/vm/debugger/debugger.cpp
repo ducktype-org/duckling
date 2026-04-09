@@ -9,15 +9,17 @@ namespace vm::debugger {
 		  main_args(main_args),
 		  updater([&](const vm::api::ProcStatus& status) { on_vm_status_change.emitEvent(status); }
 	      ) {
-		const auto process_pid_response = vm::api::spawn();
-		CORE_ASSERT(process_pid_response.has_value(), "Failed to spawn VM process for debugger");
-		pid = process_pid_response->pid;
+		vm::api::spawn()
+			.and_then([&](const vm::api::ProcessInfo& info) {
+				pid = info.pid;
 
-		const auto attach_listener_response = vm::api::attachStatusListener(pid, &updater);
-		CORE_ASSERT(attach_listener_response.has_value(), "Failed to attach listener for debugger");
-
-		const auto load_files_response = vm::api::loadFiles(pid, { filepath });
-		CORE_ASSERT(load_files_response.has_value(), "Failed to load files to the VM for debugger");
+				return std::expected<void, vm::api::ApiError>{};
+			})
+			.and_then([&] { return vm::api::loadFiles(pid, { filepath }); })
+			.and_then([&] { return vm::api::attachStatusListener(pid, &updater); })
+			.transform_error([](const vm::api::ApiError& api_error) -> void* {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+			});
 	}
 
 	void Debugger::attachOnVMStatusChangeListener(Ref<events::Listener<vm::api::ProcStatus>> listener
@@ -30,21 +32,24 @@ namespace vm::debugger {
 	}
 
 	void Debugger::runMain() {
-		auto status = vm::api::getExecutionStatus(pid);
-		CORE_ASSERT(status.has_value(), "Failed to get execution status for debugger");
-
-		if (std::holds_alternative<vm::api::ExecutionCompleted>(status.value())) {
-			const auto join_response = vm::api::join(pid);
-			CORE_ASSERT(join_response.has_value(), "Failed to join VM process for debugger");
-		}
-		const auto run_response = vm::api::run(pid);
-		CORE_ASSERT(run_response.has_value(), "Failed to run VM");
+		vm::api::getExecutionStatus(pid)
+			.and_then([&](const vm::api::ProcStatus& status) {
+				if (std::holds_alternative<vm::api::ExecutionCompleted>(status))
+					return vm::api::join(pid);
+				return std::expected<void, vm::api::ApiError>{};
+			})
+			.and_then([&] { return vm::api::run(pid); })
+			.transform_error([](const vm::api::ApiError& api_error) -> void* {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+			});
 	}
 
 	vm::api::ProcStatus Debugger::getStatus() const {
-		auto response = vm::api::getExecutionStatus(pid);
-		CORE_ASSERT(response.has_value(), "Failed to get execution status for debugger");
-		return response.value();
+		return vm::api::getExecutionStatus(pid)
+		    .transform_error([](const vm::api::ApiError& api_error) -> void* {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+			})
+		    .value();
 	}
 
 }
