@@ -115,8 +115,8 @@ namespace compiler::frontend {
 				// @TODO: #2397 we could change it, such that root element is never null.
 				// Set additional root data only if the root element is not null:
 				parsed_pst.setAdditionalRootData(pst::AdditionalRootData{
-
-					.pst_parent = pst::AdditionalRootData::ModuleParent{ this->linked_module } });
+					.pst_parent = pst::AdditionalRootData::ModuleParent{ this->linked_module, },
+				});
 			}
 			parse_tree.emplace(std::move(parsed_pst));
 

@@ -240,6 +240,8 @@ namespace compiler::helios {
 			}
 
 			ScopeID parent = [&]() {
+				// @TODO: #2452 this logic should be unified
+				
 				auto maybe_element_parent = element->getParent();
 				if (maybe_element_parent.has_value()) {
 					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());

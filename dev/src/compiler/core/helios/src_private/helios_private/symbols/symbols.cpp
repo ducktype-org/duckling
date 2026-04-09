@@ -401,6 +401,8 @@ namespace compiler::helios {
 			// Note: This has to be consistent with QuerySymbolsInScope logic.
 			// @TODO: #2397 maybe move it into a single place
 
+			// @TODO: #2452 this logic should be unified
+
 			auto unlocked = element.unlock(ctx);
 
 			if (unlocked->getParent().has_value()) {
