@@ -16,6 +16,8 @@ namespace compiler::helios::mangler {
 			base::StrID id;
 
 			constexpr auto operator<=>(const LIRModuleID& other) const = default;
+
+			friend auto hashDecompose(const LIRModuleID& self) { return std::tie(self.id); }
 		};
 	}
 
