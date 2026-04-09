@@ -253,18 +253,17 @@ namespace compiler::helios {
 
 					variant_match(additional_root_data.pst_parent) {
 						variant_case(pst::AdditionalRootData::MacroExpansionParent, macro_parent) {
-							return ctx.query<QueryPrimaryCodeScopeFor>(
-								macro_parent.expand_element
-							);
+							return ctx.query<QueryPrimaryCodeScopeFor>(macro_parent.expand_element);
 						}
 						variant_case(pst::AdditionalRootData::ModuleParent, module_parent) {
 							auto module_id_any = module_parent.module_id;
-							auto module_id = base::anyCast<frontend::ModuleID>(module_id_any);
+							auto module_id     = base::anyCast<frontend::ModuleID>(module_id_any);
 							return ctx.query<QueryRootScopeOf>(module_id);
 						}
 						variant_default {
 							CORE_PANIC(
-								"Element has no parent and no additional root data, cannot determine "
+								"Element has no parent and no additional root data, cannot "
+							    "determine "
 								"scope parent."
 							);
 						}

@@ -43,15 +43,15 @@ namespace pst {
 	struct AdditionalRootData final {
 		struct MacroExpansionParent final {
 			/**
-			* @brief Optional source element of macro expansion the PST was generated from.
-			*/
+			 * @brief Optional source element of macro expansion the PST was generated from.
+			 */
 			AccessLocked<LangElement> expand_element;
 		};
 
 		struct ModuleParent final {
 			/**
-			* @brief frontend::ModuleID the PST was generated from.
-			*/	
+			 * @brief frontend::ModuleID the PST was generated from.
+			 */
 			std::any module_id;
 		};
 

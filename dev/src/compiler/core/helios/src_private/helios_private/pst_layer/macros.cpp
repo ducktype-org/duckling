@@ -6,9 +6,9 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <frontend/pst_parser/pst.hpp>
 
-#include <query_framework/standard_query/query_impl.hpp>
-
 #include <base/str/str_utils.hpp>
+
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -28,7 +28,8 @@ namespace compiler::helios {
 				);
 
 				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
-					pst.setAdditionalRootData(pst::AdditionalRootData{ pst::AdditionalRootData::MacroExpansionParent { .expand_element = expand}});
+					pst.setAdditionalRootData(pst::AdditionalRootData{
+						pst::AdditionalRootData::MacroExpansionParent{ .expand_element = expand } });
 				}
 
 				return pst;
