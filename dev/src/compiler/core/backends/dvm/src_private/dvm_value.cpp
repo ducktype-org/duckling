@@ -79,23 +79,6 @@ DVMGlobal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 	return VISIT(stored_place, place, return place.asAnyArgument());
 }
 
-void DVMPlace::debugPrint(std::ostream& out) const {
-	out << "DVMPlace: {\n";
-	variant_match(stored_place) {
-		variant_case(DVMLocal, local) {
-			out << "    LOCAL: " << local.name.strView() << " : "
-				<< vm::code::typeName(local.type).strView() << '\n';
-		}
-		variant_case(DVMGlobal, global) {
-			out << "    GLOBAL: " << global.name.strView() << " : "
-				<< vm::code::typeName(global.type).strView() << '\n';
-		}
-	}
-	auto acc_str = access_kind == AccessKind::Direct ? "[Direct]" : "[Pointer]";
-	out << "    Access Kind: " << acc_str << '\n';
-	out << "}\n";
-}
-
 [[nodiscard]] vm::opargs::OpCodeArg DVMImmediate::asArgument() const {
 	return vm::opargs::Immediate{ value };
 }

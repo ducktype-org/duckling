@@ -6,10 +6,8 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
-#include "string_id/string_id.hpp"
 #include <query_framework/context/context_fd.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -132,6 +130,8 @@ namespace compiler::backend_vm::internal {
 	private:
 		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
+		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
+
 		struct TypeStorage {
 			// Mapping from TSL layouts to names of DVM types which exist in `dvm_types`.
 			base::Map<CRef<tsl::TypeLayout>, base::StrID> tsl_type_to_dvm_type_name;
@@ -142,7 +142,6 @@ namespace compiler::backend_vm::internal {
 		// A set of types allowing for insertion of both TSL types and manual insertion of types.
 		TypeStorage type_storage;
 
-		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
 		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
 
 		// Extern function name to definition.
