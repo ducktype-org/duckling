@@ -463,11 +463,7 @@ namespace pst {
 
 		void setParent(Ref<LangElement> parent) { this->parent = { parent }; }
 
-		void setAdditionalRootData(AdditionalRootData data) {
-			CORE_ASSERT(!additional_root_data.has_value(), "Additional root data already set");
-			CORE_ASSERT(!parent.has_value(), "Only root elements can have additional root data");
-			additional_root_data.emplace(std::move(data));
-		}
+		void setAdditionalRootData(AdditionalRootData data);
 
 	private:
 		PstID id = PstID::next();

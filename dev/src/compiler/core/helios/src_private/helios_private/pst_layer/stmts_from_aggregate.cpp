@@ -93,22 +93,26 @@ namespace compiler::helios {
 
 		StmtList<> output_after_macro_expansion;
 		for (auto stmt: output) {
-			if (stmt.unlock(ctx)->getElementKind() == pst::ElementKind::Expand) {
+			auto current_stmt = stmt.unlock(ctx);
+
+			// Handle macro expansions in a loop to support nested expansions.
+			while (current_stmt->getElementKind() == pst::ElementKind::Expand) {
 				auto expand_result
-					= ctx.query<QueryMacroExpansion>(stmt.template dynamicCast<pst::Expand>())
+					= ctx.query<QueryMacroExpansion>(current_stmt.template dynamicCast<pst::Expand>().value())
 				          .valueOrPanic();
+				
 				variant_match(expand_result) {
 					variant_case(pst::AccessLocked<pst::Stmt>, expand_statement) {
-						output_after_macro_expansion.emplace_back(expand_statement);
+						current_stmt = expand_statement.unlock(ctx);
 					}
 					variant_case(ExpansionError<pst::Stmt>, error) {
 						// @TODO: #2406 change this panic into failed state propagation
 						CORE_PANIC("Macro expansion error in getStmtsFromStmtAggregate");
 					}
 				}
-			} else {
-				output_after_macro_expansion.emplace_back(stmt);
 			}
+
+			output_after_macro_expansion.emplace_back(current_stmt);
 		}
 
 		return output_after_macro_expansion;

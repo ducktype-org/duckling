@@ -1,3 +1,5 @@
+#pragma once
+
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <helios_private/pst_layer/macros.hpp>
@@ -24,7 +26,10 @@ namespace compiler::helios {
 				variant_case(pst::AccessLocked<pst::Stmt>, expanded_stmt) {
 					pstForAll(ctx, expanded_stmt.unlock(ctx), function);
 				}
-				variant_case(ExpansionError<pst::Stmt>, error) { CORE_PANIC("aa"); }
+				variant_case(ExpansionError<pst::Stmt>, error) {
+					// @TODO: #2406 deal with this panic
+					CORE_PANIC("Error in macro expanded code not handled");
+				}
 			}
 			return;
 		}
@@ -33,7 +38,6 @@ namespace compiler::helios {
 		function(element);
 
 		for (auto child: element->viewChildren()) {
-			// handle macros here!
 			auto child_unlocked = child.unlockOpt(ctx);
 
 			// Note: filtering nullptrs is done on the level of PST children collection

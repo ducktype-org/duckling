@@ -187,6 +187,12 @@ namespace pst {
 			source_position = dia::SourcePosition(source_position, pos.getEnd());
 	}
 
+	void LangElement::setAdditionalRootData(AdditionalRootData data) {
+		CORE_ASSERT(!additional_root_data.has_value(), "Additional root data already set");
+		CORE_ASSERT(!parent.has_value(), "Only root elements can have additional root data");
+		additional_root_data.emplace(std::move(data));
+	}
+
 	void LangElement::acceptVisitor(PstVisitor&) const {
 		CORE_PANIC("PstVisitor not supported for " + elementType());
 	}

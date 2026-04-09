@@ -31,8 +31,9 @@ namespace compiler::helios {
 				}
 
 				return pst;
-			} else
+			} else {
 				CORE_PANIC("Expand argument is not exactly a single string.");
+			}
 		}
 
 		static auto extractResult(const pst::PST<pst::Stmt>& pst_ref) -> QResult {
