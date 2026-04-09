@@ -10,6 +10,7 @@
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
+#include <algorithm>
 #include <ranges>
 
 using namespace compiler::backend_vm::internal;
@@ -219,6 +220,16 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 ) {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	// Sort globals and functions by their mangled names to ensure deterministic output, which is
+	// important for reproducibility. This also should guarantee that the order of functions and
+	// globals in the resulting DVM module is deterministic, which can be important for debugging
+	// and testing.
+	std::ranges::sort(
+		collection.functions,
+		[](const vm::code::Function& lhs, const vm::code::Function& rhs) {
+			return lhs.name.str < rhs.name.str;
+		}
+	);
 	collection.functions.insert(
 		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);
@@ -226,7 +237,32 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		global_name_to_dvm_data | std::views::values
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
-	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
+	// Note, that this not only makes the output deterministic,
+	// but also ensures that globals are ordered as they are declared in the source code
+	// This is because they are sorted by mangled names base::StrID ids
+	// This ids are incrementally generated during lirLowering, so the order of declaration is
+	// preserved. This is true as long as the LIR globals are generated in the same order as the
+	// source globals, which is currently the case. This is desirable behavior because we want to
+	// generate globals in the order they appear in the file to prevent order initialization fiasco.
+	// @TODO: #1431 Think about this and make it better if needed
+	std::ranges::sort(
+		collection.global_data,
+		[](const vm::code::GlobalData& lhs, const vm::code::GlobalData& rhs) {
+			return lhs.name.str < rhs.name.str;
+		}
+	);
+
+	// Sorting types by their string identification to ensure deterministic output
+	std::vector<std::pair<CRef<tsl::TypeLayout>, vm::code::TypeOfData>> sorted_types;
+	sorted_types.reserve(tsl_type_to_dvm.size());
+	for (const auto& [layout, type]: tsl_type_to_dvm) sorted_types.emplace_back(layout, type);
+	std::ranges::sort(sorted_types, [](const auto& lhs, const auto& rhs) {
+		return lhs.first->toStringIdentification() < rhs.first->toStringIdentification();
+	});
+
+	collection.types.reserve(sorted_types.size());
+	for (const auto& [_, type]: sorted_types) collection.types.push_back(type);
+
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
