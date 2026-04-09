@@ -146,14 +146,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 	// If a place is global, we load a pointer to it to a local.
 	if (place.hasProjections() && current_place.is<DVMGlobal>()) {
-		auto global = current_place.get<DVMGlobal>();
-
-		// TODOP: Make a better abstraction for that.
-		auto ptr_to_global_type = vm::code::PointerType(
-			base::StrID(base::strConcat("ptr_", vm::code::typeName(global.type))),
-			vm::code::typeName(global.type)
-		);
-		program_context.insertType(ptr_to_global_type);
+		auto global             = current_place.get<DVMGlobal>();
+		auto ptr_to_global_type = program_context.getOrInsertPointerType(global.type);
 
 		auto addr_tmp = pushTempLocal(ptr_to_global_type, "global_addr_ref");
 		pushInstruction({ vm::code::builders::OpKind::ref, addr_tmp, current_place.asAnyArgument() }
@@ -216,12 +210,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 				auto vm_field_name = base::strConcat("_", field_index + 1);
 
-				// TODOP: Better abstraction for that.
-				const auto ptr_to_field_type = vm::code::PointerType(
-					base::StrID(base::strConcat("ptr_", vm::code::typeName(vm_field_type))),
-					vm::code::typeName(vm_field_type)
-				);
-				program_context.insertType(ptr_to_field_type);
+				auto ptr_to_field_type = program_context.getOrInsertPointerType(vm_field_type);
 
 				// Create a temporary to the field
 				auto field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");

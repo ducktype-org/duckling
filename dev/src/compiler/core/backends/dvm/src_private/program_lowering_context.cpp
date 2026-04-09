@@ -7,6 +7,7 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
@@ -28,18 +29,33 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 
 const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
 ) {
-	if (tsl_type_to_dvm.contains(layout)) {
-		return tsl_type_to_dvm.at(layout);
-	} else {
-		auto dvm_type = lowerTslTypeInternal(layout);
-		tsl_type_to_dvm.put(layout, dvm_type);
+	if (auto maybe_name = type_storage.tsl_type_to_dvm_type_name.atMaybe(layout))
+		return type_storage.dvm_types.at(**maybe_name);
 
-		if_opt_some(debug_info_builder, builder) {
-			builder.addType(vm::code::typeName(dvm_type).str(), layout->getSourceType().toString());
-		}
+	auto dvm_type  = lowerTslTypeInternal(layout);
+	auto type_name = vm::code::typeName(dvm_type);
 
-		return tsl_type_to_dvm.at(layout);
+	type_storage.tsl_type_to_dvm_type_name.put(layout, type_name);
+	type_storage.dvm_types.put(type_name, std::move(dvm_type));
+
+	if_opt_some(debug_info_builder, builder) {
+		builder.addType(type_name.str(), layout->getSourceType().toString());
 	}
+
+	return type_storage.dvm_types.at(type_name);
+}
+
+const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
+	const vm::code::TypeOfData& pointee_type
+) {
+	auto pointee_name = vm::code::typeName(pointee_type);
+	auto pointer_name = base::StrID(base::strConcat("ptr_", pointee_name));
+
+	if (auto maybe_type = type_storage.dvm_types.atMaybe(pointer_name)) return **maybe_type;
+
+	vm::code::PointerType pointer_type(pointer_name, pointee_name);
+	type_storage.dvm_types.put(pointer_name, pointer_type);
+	return type_storage.dvm_types.at(pointer_name);
 }
 
 const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
@@ -165,8 +181,6 @@ void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunc
 	extern_c_functions.put(extern_func.name.str, extern_func);
 }
 
-void ProgramLoweringContext::insertType(const vm::code::TypeOfData& type) { types.push_back(type); }
-
 vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::TypeLayout> layout) {
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) {
@@ -262,14 +276,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		}
 	);
 
-	base::Map<base::StrID, vm::code::TypeOfData> unique_types_map;
-
-	for (const auto& [_, type]: tsl_type_to_dvm)
-		unique_types_map.put(vm::code::typeName(type), type);
-
-	for (const auto& type: types) unique_types_map.put(vm::code::typeName(type), type);
-
-	collection.types = std::ranges::to<std::vector>(unique_types_map | std::views::values);
+	collection.types = std::ranges::to<std::vector>(type_storage.dvm_types | std::views::values);
 
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);

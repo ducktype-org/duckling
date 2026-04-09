@@ -6,8 +6,10 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
+#include "string_id/string_id.hpp"
 #include <query_framework/context/context_fd.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -81,6 +83,12 @@ namespace compiler::backend_vm::internal {
 		const vm::code::TypeOfData& lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
+		 * @brief Creates and inserts a pointer type into the program lowering context.
+		 * It caches the result, so inserts the type into the program only if needed.
+		 */
+		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
+
+		/**
 		 * @brief Retrieves the DVM global variable corresponding to the given LIR global.
 		 * @note The LIR global must have been previously declared using insertLirGlobal,
 		 * panics otherwise.
@@ -100,11 +108,6 @@ namespace compiler::backend_vm::internal {
 		 * @brief Inserts an extern C function into the program context.
 		 */
 		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
-
-		/**
-		 * @brief Inserts an extern C function into the program context.
-		 */
-		void insertType(const vm::code::TypeOfData& type);
 
 		/**
 		 * @brief Insert raw bytecode into program context.
@@ -129,13 +132,18 @@ namespace compiler::backend_vm::internal {
 	private:
 		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
+		struct TypeStorage {
+			// Mapping from TSL layouts to names of DVM types which exist in `dvm_types`.
+			base::Map<CRef<tsl::TypeLayout>, base::StrID> tsl_type_to_dvm_type_name;
+			// Main container for all types in the module.
+			base::Map<base::StrID, vm::code::TypeOfData> dvm_types;
+		};
+
+		// A set of types allowing for insertion of both TSL types and manual insertion of types.
+		TypeStorage type_storage;
+
 		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
-
 		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
-
-		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
-		// TODOP: Think about that
-		std::vector<vm::code::TypeOfData> types;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
