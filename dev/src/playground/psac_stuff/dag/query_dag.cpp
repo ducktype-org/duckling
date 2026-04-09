@@ -22,7 +22,7 @@
 #include <vector>
 
 // ============= GLOBAL STUFF =============
-std::atomic<usize> g_invocations{ 0 };
+// std::atomic<usize> g_invocations{ 0 };
 
 // ================ INPUT ================
 struct WeightKey {
@@ -50,7 +50,7 @@ DECLARE_QUERY(ComputeNode, NodeKey, ValueTp, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(ComputeNode, ValueTp) {
 	static auto provide(query::Context& ctx, QKey key) -> PResult {
-		g_invocations++;
+		// g_invocations++;
 
 		// Simulate workload.
 		work(g_config.workload);
@@ -80,13 +80,13 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ComputeNode);
 
 void runComputation() {
 	std::cout << "--- Initial Calculation ---\n";
-	g_invocations = 0;
+	// g_invocations = 0;
 	std::vector<ValueTp> results;
 	results.reserve(g_weights.size());
 	for (usize i = 0; i < g_weights.size(); i++)
 		results.push_back(query::entryPoint<ComputeNode>(NodeKey{ i }));
-	std::cout << "Total query invocations: " << g_invocations << "\n";
-	printFinalChecksum("Query Initial", results);
+	// std::cout << "Total query invocations: " << g_invocations << "\n";
+	// printFinalChecksum("Query Initial", results);
 }
 
 void runUpdateAndRecompute() {
@@ -106,13 +106,13 @@ void runUpdateAndRecompute() {
 	}
 	query::external::invalidateQueries({}, std::move(updates));
 
-	g_invocations = 0;
+	// g_invocations = 0;
 	std::vector<ValueTp> results;
 	results.reserve(g_weights.size());
 	for (usize i = 0; i < g_weights.size(); i++)
 		results.push_back(query::entryPoint<ComputeNode>(NodeKey{ i }));
-	std::cout << "Total invocations after update: " << g_invocations << "\n";
-	printFinalChecksum("Query Recompute", results);
+	// std::cout << "Total invocations after update: " << g_invocations << "\n";
+	// printFinalChecksum("Query Recompute", results);
 }
 
 int main(int argc, const char* argv[]) {

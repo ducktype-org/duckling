@@ -72,9 +72,9 @@ void runComputation() {
 	auto temp_comp = psac_run(computeAll, MOD, &g_state->wmod, &g_state->res);
 	g_state->computation.emplace(std::move(temp_comp));
 
-	std::vector<ValueTp> results;
-	for (const auto& r: g_state->res) results.push_back(r.value);
-	printFinalChecksum("PSAC Initial", results);
+	// std::vector<ValueTp> results;
+	// for (const auto& r: g_state->res) results.push_back(r.value);
+	// printFinalChecksum("PSAC Initial", results);
 }
 
 void runUpdateAndRecompute() {
@@ -92,9 +92,9 @@ void runUpdateAndRecompute() {
 
 	psac_propagate(*g_state->computation);
 
-	std::vector<ValueTp> results;
-	for (const auto& r: g_state->res) results.push_back(r.value);
-	printFinalChecksum("PSAC Recompute", results);
+	// std::vector<ValueTp> results;
+	// for (const auto& r: g_state->res) results.push_back(r.value);
+	// printFinalChecksum("PSAC Recompute", results);
 }
 
 int main(int argc, const char* argv[]) {
