@@ -233,7 +233,6 @@ def infer_cc_compiler(ctx: click.Context):
     """Infer the default C compiler from the C++ compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
-    enable_jit = ctx.params.get("enable_jit")
 
     if not cc_compiler and cxx_compiler:
         if "clang++" in cxx_compiler:
@@ -246,8 +245,6 @@ def infer_cc_compiler(ctx: click.Context):
             cc_compiler = cxx_compiler.replace("icpc", "icc")
         else:
             cc_compiler = "gcc"
-    elif enable_jit:
-        cc_compiler = "clang-19"
     else:
         cc_compiler = "gcc"
 
@@ -258,7 +255,6 @@ def infer_cxx_compiler(ctx: click.Context):
     """Infer the default C++ compiler from the C compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
-    enable_jit = ctx.params.get("enable_jit")
 
     if not cxx_compiler and cc_compiler:
         if "clang" in cc_compiler:
@@ -271,8 +267,6 @@ def infer_cxx_compiler(ctx: click.Context):
             cxx_compiler = cc_compiler.replace("icc", "icpc")
         else:
             cxx_compiler = "g++"
-    elif enable_jit:
-        cxx_compiler = "clang++-19"
     else:
         cxx_compiler = "g++"
 

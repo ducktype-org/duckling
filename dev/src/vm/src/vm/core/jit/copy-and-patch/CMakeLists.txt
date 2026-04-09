@@ -1,3 +1,8 @@
+# @TODO: #2282 resolve this earlier
+find_program(LLVM_LLC NAMES llc-19 llc REQUIRED)
+find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
+find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
+
 # Analyze and process the `binary_file`, preparing to embed in `destination_file`
 function(process_to_binary binary_file destination_file binary_artifact_prefix)
     set(extra_deps ${ARGN})
@@ -39,12 +44,13 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     # Analyze and generate data from the binary
     add_custom_command(
         OUTPUT ${nm_out}
-        COMMAND ${CMAKE_SOURCE_DIR}/.venv/bin/python3
-        "${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py"
+        COMMAND python3
+        "${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py"
         "${linked_out}"
         "--output=${nm_out}"
-        ${LLVM_TOOLS_ARGS}
-        DEPENDS ${linked_out} ${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py
+        "--llvm-nm=${LLVM_NM}"
+        DEPENDS ${linked_out} ${CMAKE_CURRENT_SOURCE_DIR}/analyze-bin/analyze-bin.py
+        VERBATIM
     )
 
     set_source_files_properties("${linked_out}" "${nm_out}"
@@ -96,11 +102,11 @@ make_module(Stencils USES Base)
 duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES Base Stencils Tester)
 
 # prepare to include it in the full LTO of opfuncs
-add_library(cp-stencils_bc OBJECT stencils/stencils.cpp)
+add_library(cp-stencils_bc OBJECT stencils/wrapper.cpp)
 target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
 target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
-process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "stencils" $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
+process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "wrapper" $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
 add_files(
     memory/memory.cpp
