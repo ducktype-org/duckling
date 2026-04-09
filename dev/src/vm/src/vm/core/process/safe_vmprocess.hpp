@@ -73,7 +73,7 @@ namespace vm {
 		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
 		 * then it returns main thread
 		 */
-		SafeVMThread& getVMThreadByID(api::ThreadID thread_id);
+		base::Optional<Ref<SafeVMThread>> getVMThreadByID(api::ThreadID thread_id);
 
 		/**
 		 * @brief Returns reference to either existing empty thread or

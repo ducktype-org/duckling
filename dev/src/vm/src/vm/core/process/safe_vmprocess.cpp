@@ -78,11 +78,15 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::join(api::ThreadID thread_id) {
-		return getVMThreadByID(thread_id).join();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		return opt_thread.value()->join();
 	}
 
 	void SafeVMProcess::notifyPausedVMThread(api::ThreadID thread_id) {
-		getVMThreadByID(thread_id).notifyPaused();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (opt_thread) opt_thread.value()->notifyPaused();
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
@@ -139,11 +143,9 @@ namespace vm {
 
 	SafeVMThread& SafeVMProcess::getMainVMThread() { return *vm_threads.get(api::ThreadID{ 0 }); }
 
-	SafeVMThread& SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
-		if_opt_some(vm_threads.maybeGet(thread_id), thread) return *thread;
-		throw exceptions::VMRuntimeException(
-			"Thread with given ID does not exist: " + std::to_string(thread_id.asInt())
-		);
+	base::Optional<Ref<SafeVMThread>> SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
+		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
+		return std::nullopt;
 	}
 
 	SafeVMThread& SafeVMProcess::getEmptyThread() {
@@ -188,21 +190,25 @@ namespace vm {
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::pauseVMThread(api::ThreadID thread_id) {
-		auto& thread   = getVMThreadByID(thread_id);
-		auto  response = thread.pause();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		auto response = opt_thread.value()->pause();
 		if (!response) return api::ApiError{ api::PauseError{} };
 		return {};
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::resumeVMThread(api::ThreadID thread_id) {
-		auto& thread   = getVMThreadByID(thread_id);
-		auto  response = thread.resume();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		auto response = opt_thread.value()->resume();
 		if (!response) return api::ApiError{ api::ResumeError{} };
 		return {};
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
-		auto response = getVMThreadByID(thread_id).step();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		auto response = opt_thread.value()->step();
 		if (!response) return api::ApiError{ api::OtherError{ "step error" } };
 		return {};
 	}
@@ -210,7 +216,10 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(
 		api::ThreadID thread_id
 	) {
-		return getVMThreadByID(thread_id).getCurrentPosition();
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		return opt_thread.value()->getCurrentPosition();
 	}
 
 	void SafeVMProcess::waitForBreakpoint() {
@@ -227,7 +236,10 @@ namespace vm {
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
-				u64 frames = getVMThreadByID(thread_id).getNumberOfCurrentStackFrames();
+				auto opt_thread = getVMThreadByID(thread_id);
+				if (!opt_thread)
+					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+				u64 frames = opt_thread.value()->getNumberOfCurrentStackFrames();
 				return api::Response(api::response::NumberOfCurrentStackFrames{
 					.number_of_stack_frames = frames });
 			}
@@ -242,12 +254,14 @@ namespace vm {
 		match_optional(assertProcessCanRespond()) {
 			opt_some(error) { return std::unexpected(error); }
 			opt_none {
-				auto& thread = getVMThreadByID(thread_id);
-				u64   frames = thread.getNumberOfCurrentStackFrames();
+				auto opt_thread = getVMThreadByID(thread_id);
+				if (!opt_thread)
+					return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+				u64 frames = opt_thread.value()->getNumberOfCurrentStackFrames();
 				if (frame_index >= frames)
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "Frame index out of bounds" } });
-				Frame& frame = thread.getStackFrame(frame_index);
+				Frame& frame = opt_thread.value()->getStackFrame(frame_index);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
 				for (Block* block_ptr:

@@ -62,7 +62,7 @@ namespace vm::api {
 }
 
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::Sleeping, "WaitingForInput")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Sleeping, "Sleeping")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
