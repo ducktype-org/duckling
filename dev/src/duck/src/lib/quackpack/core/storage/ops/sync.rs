@@ -1,6 +1,6 @@
 //! Synchronize a given venv.
 //! This includes: creating a venv, resolving dependencies, downloading them.
-use std::{fs::File, path::PathBuf, time::SystemTime};
+use std::{fs::File, io, path::PathBuf, time::SystemTime};
 
 use flate2::read::GzDecoder;
 use tar::Archive;
@@ -132,23 +132,31 @@ fn check_if_overwrites(
     id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pkg_ctx.package().root_directory() != venv.data().last_known_directory()
-        && venv.data().last_known_directory().exists()
+    if pkg_ctx.package().root_directory() == venv.data().last_known_directory()
+        || !venv.data().last_known_directory().exists()
     {
-        let replaces = PackageLoader::find_at_exact_directory(
-            venv.data().last_known_directory(),
-            pkg_ctx.ctx(),
-        )
-        .map(|pkg| pkg.package().manifest().name() == id.name() && !id.is_global())
-        .unwrap_or(false);
-        if replaces {
-            Err(
-                qp_err!("tried to overwrite an existing virtual environment from another location")
-                    .add_hint("use `--overwrite` to force an overwrite"),
-            )
-        } else {
-            Ok(())
+        return Ok(());
+    }
+    let package =
+        PackageLoader::find_at_exact_directory(venv.data().last_known_directory(), pkg_ctx.ctx());
+    let replaces = match package {
+        Ok(package) => package.package().manifest().name() == id.name() && !id.is_global(),
+        Err(e) => {
+            if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
+                // Maybe we missed something, check, if package has been moved.
+                ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory].contains(&io_error.kind())
+            } else {
+                // Other error, maybe we failed to deserialize?
+                // Safely assume, that package still exists.
+                true
+            }
         }
+    };
+    if replaces {
+        Err(
+            qp_err!("tried to overwrite an existing virtual environment from another location")
+                .add_hint("use `--overwrite` to force an overwrite"),
+        )
     } else {
         Ok(())
     }

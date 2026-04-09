@@ -33,26 +33,26 @@ namespace compiler::backend_vm::internal {
 		void lower(
 			const MetaOperation&            lir_instruction,
 			const std::deque<DVMValue>&     args,
-			const base::Optional<DVMValue>& output
+			const base::Optional<DVMPlace>& output
 		);
 
 	private:
 		FunctionLoweringContext& func_ctx;
 
-		void lowerCreateBox(const DVMValue& type_arg, const base::Optional<DVMValue>& output);
-		void lowerCreateRef(const DVMValue& type_arg, const base::Optional<DVMValue>& output);
-		void lowerCreateConst(const DVMValue& type_arg, const base::Optional<DVMValue>& output);
+		void lowerCreateBox(const DVMValue& type_arg, const base::Optional<DVMPlace>& output);
+		void lowerCreateRef(const DVMValue& type_arg, const base::Optional<DVMPlace>& output);
+		void lowerCreateConst(const DVMValue& type_arg, const base::Optional<DVMPlace>& output);
 		void lowerCreateTuple(
-			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+			const std::deque<DVMValue>& type_args, const base::Optional<DVMPlace>& output
 		);
 		void lowerCreateVariant(
-			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+			const std::deque<DVMValue>& type_args, const base::Optional<DVMPlace>& output
 		);
 		void lowerTypesEqual(
-			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+			const std::deque<DVMValue>& type_args, const base::Optional<DVMPlace>& output
 		);
 		void lowerTypesNotEqual(
-			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+			const std::deque<DVMValue>& type_args, const base::Optional<DVMPlace>& output
 		);
 
 		struct BuilderSequence {
@@ -64,7 +64,7 @@ namespace compiler::backend_vm::internal {
 		void lowerBuilderPattern(
 			const BuilderSequence&          builder,
 			const std::deque<DVMValue>&     type_args,
-			const base::Optional<DVMValue>& output
+			const base::Optional<DVMPlace>& output
 		);
 
 		/**

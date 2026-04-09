@@ -1,10 +1,10 @@
 //! Loading packages from the disk.
-use std::{marker::PhantomData, path::Path};
+use std::{io, marker::PhantomData, path::Path};
 
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_internal,
+    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_err, qp_internal,
     quackpack::core::{
         PackageCtx,
         storage::{paths::Storage, venv::Venv, venv_id::VenvId},
@@ -59,7 +59,8 @@ impl PackageLoader {
     ) -> QuackResult<PackageCtx<'duck>> {
         let start = start.expand_user()?.resolve()?;
         if !start.is_dir() {
-            qp_bail!("the path `{}` is not a directory", start.display())
+            let err = qp_err!("the path `{}` is not a directory", start.display());
+            return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
         }
         let mut current: &Path = start.as_ref();
         for potential_location in start.ancestors() {
@@ -91,11 +92,13 @@ impl PackageLoader {
         ctx: &'duck DuckCtx,
     ) -> QuackResult<PackageCtx<'duck>> {
         if !path.is_dir() {
-            qp_bail!("the path `{}` is not a directory", path.display())
+            let err = qp_err!("the path `{}` is not a directory", path.display());
+            return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
         }
         let manifest_path = path.join(PackageLoader::MANIFEST_NAME);
         if !manifest_path.is_file() {
-            qp_bail!("the directory `{}` has no manifest", path.display())
+            let err = qp_err!("the directory `{}` has no manifest", path.display());
+            return Err(io::Error::new(io::ErrorKind::NotFound, err).into());
         }
         PackageCtx::new(path.to_path_buf(), ctx)
     }
