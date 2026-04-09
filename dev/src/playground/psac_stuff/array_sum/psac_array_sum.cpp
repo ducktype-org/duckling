@@ -8,9 +8,6 @@
 
 #include <init/init.hpp>
 
-// This makes the code segfault after everything.
-// using ValueTp = u64;
-
 std::vector<psac::Mod<ValueTp>> value_tree;
 
 psac_function(
@@ -90,9 +87,11 @@ int main(int argc, const char* argv[]) {
 	std::cout << "psac_sum = " << value_tree.at(1).value << '\n';
 
 	if (g_config.command == "update") {
-		std::cout << "--- Updating " << g_config.update_count << " elements ---\n";
+		const auto num_updates = g_config.array_size * g_config.update_percent / 100;
+		std::cout << "--- Updating " << num_updates << " elements (" << g_config.update_percent
+				  << "% -> " << num_updates << "/" << g_config.array_size << ") ---\n";
 
-		for (usize i = 0; i < g_config.update_count; ++i) {
+		for (usize i = 0; i < num_updates; ++i) {
 			usize   idx     = i % g_config.array_size;
 			ValueTp old_val = arr[idx].value;
 			ValueTp new_val = old_val + 1;

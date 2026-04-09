@@ -8,7 +8,7 @@
 #include <iostream>
 #include <vector>
 
-std::vector<u64> g_results;
+std::vector<ValueTp> g_results;
 
 void computeAll() {
 	const usize n = g_weights.size();
@@ -16,8 +16,8 @@ void computeAll() {
 
 	for (usize i = 0; i < n; ++i) {
 		work(g_config.workload);
-		u64 current_val = g_weights[i];
-		for (usize pred_idx: g_adj[i]) current_val = (current_val + g_results[pred_idx]) % g_mod;
+		ValueTp current_val = g_weights[i];
+		for (usize pred_idx: g_adj[i]) current_val = (current_val + g_results[pred_idx]) % MOD;
 		g_results[i] = current_val;
 	}
 }
@@ -38,7 +38,7 @@ void runUpdateAndRecompute() {
 	const usize     num_updates = g_weights.size() * g_config.update_percent / 100;
 	for (usize i = 0; i < num_updates; ++i) {
 		usize idx      = rng() % g_weights.size();
-		g_weights[idx] = (g_weights[idx] + 1) % g_mod;
+		g_weights[idx] = (g_weights[idx] + 1) % MOD;
 	}
 
 	computeAll();
@@ -57,7 +57,7 @@ int main(int argc, const char* argv[]) {
 	std::ios::sync_with_stdio(false);
 	std::cin.tie(nullptr);
 
-	generateDag(g_config.layers, g_config.verts_per_layer, g_config.total_edges, g_config.mod);
+	generateDag(g_config.layers, g_config.verts_per_layer, g_config.total_edges);
 
 	if (g_config.command == "calc" || g_config.command == "update") {
 		runComputation();

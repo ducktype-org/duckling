@@ -22,16 +22,15 @@
 #include <vector>
 
 // ============= GLOBAL STUFF =============
-std::atomic<usize>                 g_invocations{ 0 };
-std::vector<std::pair<usize, u64>> g_updates;
+std::atomic<usize> g_invocations{ 0 };
 
 // ================ INPUT ================
 struct WeightKey {
-	usize index;
-	u64   value;
+	usize   index;
+	ValueTp value;
 
 	[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const {
-		return { (u64) index, value, 0, 0 };
+		return { (u64) index, (u64) value, 0, 0 };
 	}
 };
 
@@ -47,28 +46,28 @@ struct NodeKey {
 	[[nodiscard]] u64 queryUnstablePerfectHash() const { return static_cast<u64>(index); }
 };
 
-DECLARE_QUERY(ComputeNode, NodeKey, u64, ({ .uses_qresult = false }));
+DECLARE_QUERY(ComputeNode, NodeKey, ValueTp, ({ .uses_qresult = false }));
 
-struct IMPLEMENT_QUERY(ComputeNode, u64) {
+struct IMPLEMENT_QUERY(ComputeNode, ValueTp) {
 	static auto provide(query::Context& ctx, QKey key) -> PResult {
 		g_invocations++;
 
 		// Simulate workload.
 		work(g_config.workload);
 
-		usize node_idx = key.index;
-		u64   weight   = g_weights[node_idx];
+		usize   node_idx = key.index;
+		ValueTp weight   = g_weights[node_idx];
 		ctx.query<WeightInput>(WeightKey{ .index = node_idx, .value = weight });
 
-		u64 sum = weight;
+		ValueTp sum = weight;
 
 		std::vector<query::internal::TaskHandle> handles;
 		for (usize pred: g_adj[node_idx])
 			handles.push_back(ctx.schedule<ComputeNode>(NodeKey{ pred }));
 
 		for (auto& handle: handles) {
-			u64 pred_val = ctx.await<ComputeNode>(handle);
-			sum          = (sum + pred_val) % g_mod;
+			ValueTp pred_val = ctx.await<ComputeNode>(handle);
+			sum              = (sum + pred_val) % MOD;
 		}
 
 		return sum;
@@ -82,7 +81,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ComputeNode);
 void runComputation() {
 	std::cout << "--- Initial Calculation ---\n";
 	g_invocations = 0;
-	std::vector<u64> results;
+	std::vector<ValueTp> results;
 	results.reserve(g_weights.size());
 	for (usize i = 0; i < g_weights.size(); i++)
 		results.push_back(query::entryPoint<ComputeNode>(NodeKey{ i }));
@@ -98,9 +97,9 @@ void runUpdateAndRecompute() {
 	const usize num_updates = g_weights.size() * g_config.update_percent / 100;
 
 	for (usize i = 0; i < num_updates; ++i) {
-		usize idx      = rng() % g_weights.size();
-		u64   old_val  = g_weights[idx];
-		g_weights[idx] = (old_val + 1) % g_mod;
+		usize   idx     = rng() % g_weights.size();
+		ValueTp old_val = g_weights[idx];
+		g_weights[idx]  = (old_val + 1) % MOD;
 		auto node_id
 			= query::internal::makeNodeID<WeightInput>(WeightKey{ .index = idx, .value = old_val });
 		updates.emplace_back(WeightInput::getID(), node_id.hash.val);
@@ -108,7 +107,7 @@ void runUpdateAndRecompute() {
 	query::external::invalidateQueries({}, std::move(updates));
 
 	g_invocations = 0;
-	std::vector<u64> results;
+	std::vector<ValueTp> results;
 	results.reserve(g_weights.size());
 	for (usize i = 0; i < g_weights.size(); i++)
 		results.push_back(query::entryPoint<ComputeNode>(NodeKey{ i }));
@@ -129,7 +128,7 @@ int main(int argc, const char* argv[]) {
 	std::ios::sync_with_stdio(false);
 	std::cin.tie(nullptr);
 
-	generateDag(g_config.layers, g_config.verts_per_layer, g_config.total_edges, g_config.mod);
+	generateDag(g_config.layers, g_config.verts_per_layer, g_config.total_edges);
 
 	if (g_config.command == "calc" || g_config.command == "update") {
 		runComputation();

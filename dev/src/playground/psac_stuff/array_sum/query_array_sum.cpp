@@ -85,8 +85,12 @@ int main(int argc, const char* argv[]) {
 	std::cout << "Initial real_sum = " << simple_sum << " query_sum = " << q_sum << '\n';
 
 	if (g_config.command == "update") {
+		const usize num_updates = g_config.array_size * g_config.update_percent / 100;
+		std::cout << "--- Updating " << num_updates << " elements (" << g_config.update_percent
+				  << "% -> " << num_updates << "/" << g_config.array_size << ") ---\n";
+
 		std::vector<query::external::InputData> updates;
-		for (usize i = 0; i < g_config.update_count; ++i) {
+		for (usize i = 0; i < num_updates; ++i) {
 			usize idx = i % g_config.array_size;
 			g_source_array[idx]++;
 			simple_sum += 1;
