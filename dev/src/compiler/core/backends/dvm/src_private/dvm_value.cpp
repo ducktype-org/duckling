@@ -87,19 +87,35 @@ DVMImmediate::DVMImmediate(u64 value, vm::code::TypeOfData type):
 	  value(value),
 	  type(std::move(type)) {}
 
-DVMImmediate DVMImmediate::l8(u8 value) {
+DVMImmediate DVMImmediate::usgn8(u8 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), 1) };
 }
 
-DVMImmediate DVMImmediate::l16(u16 value) {
+DVMImmediate DVMImmediate::usgn16(u16 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i16"), 2) };
 }
 
-DVMImmediate DVMImmediate::l32(u32 value) {
+DVMImmediate DVMImmediate::usgn32(u32 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i32"), 4) };
 }
 
-DVMImmediate DVMImmediate::l64(u64 value) {
+DVMImmediate DVMImmediate::usgn64(u64 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i64"), 8) };
+}
+
+DVMImmediate DVMImmediate::sgn8(i8 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i8"), 1) };
+}
+
+DVMImmediate DVMImmediate::sgn16(i16 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i16"), 2) };
+}
+
+DVMImmediate DVMImmediate::sgn32(i32 value) {
+	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i32"), 4) };
+}
+
+DVMImmediate DVMImmediate::sgn64(i64 value) {
 	return { translateToU64(value), vm::code::PrimitiveType(base::StrID("i64"), 8) };
 }
 
