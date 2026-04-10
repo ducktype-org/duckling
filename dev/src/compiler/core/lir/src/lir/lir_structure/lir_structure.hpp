@@ -433,6 +433,14 @@ namespace compiler::lir {
 		const T& get() const {
 			return std::get<T>(value);
 		}
+
+		/**
+		 * @brief Whether a LIRValue holds a type T.
+		 */
+		template<class T>
+		[[nodiscard]] bool is() const {
+			return std::holds_alternative<T>(value);
+		}
 	};
 
 	/**
