@@ -33,7 +33,7 @@ namespace vm::jit {
 
 		llvm::StructType* mi_ty        = llvm::StructType::create(ctx, "vm::MicroInstruction");
 		llvm::StructType* frame_ty     = llvm::StructType::create(ctx, "vm::Frame");
-		llvm::StructType* vm_thread_ty = llvm::StructType::create(ctx, "vm::VMThread");
+		llvm::StructType* vm_thread_ty = llvm::StructType::create(ctx, "vm::SafeVMThread");
 
 		llvm::PointerType* mi_ptr_ptr_ty
 			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(mi_ty));

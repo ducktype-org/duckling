@@ -12,7 +12,7 @@ pub type Dependencies = HashMap<String, Dependency>;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-/// Schema of the [`quackconfig.yml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
+/// Schema of the [`quackconfig.yaml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
 pub struct Manifest {
     /// `metadata:` root field.
     pub metadata: Option<Metadata>,

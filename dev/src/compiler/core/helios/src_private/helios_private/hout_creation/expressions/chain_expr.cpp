@@ -29,8 +29,8 @@
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -778,9 +778,16 @@ namespace compiler::helios::code {
 			}
 			case SymbolKind::Variable:
 			case SymbolKind::Parameter:
-			case SymbolKind::Const:
-			case SymbolKind::Class: {
+			case SymbolKind::Const: {
 				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
+				return ChainState::ofExpr(std::move(expr));
+			}
+			case SymbolKind::Class: {
+				auto type_qresult = query_ctx.query<QueryTypeFromDefinition>({ symbol });
+				UNPACK_QRESULT_CREF(auto type_info =, type_qresult);
+
+				auto expr
+					= makeBox<LiteralTypeExpr>(query_ctx, pst_element_origin, type_info.getType());
 				return ChainState::ofExpr(std::move(expr));
 			}
 			case SymbolKind::Field: {

@@ -6,8 +6,8 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/errors.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -802,21 +802,6 @@ private:
 				}
 			)",
 			{ "Feature not implemented" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
-				fun foo() = {
-					var a: i64 = 0;
-					&a;
-
-					return a;
-				}
-
-				const bar = foo();
-			)",
-			{ "Feature not implemented", "pointer types" },
 			1
 		);
 

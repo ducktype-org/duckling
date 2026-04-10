@@ -4,7 +4,7 @@
 
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <tsh/symbol_type.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>

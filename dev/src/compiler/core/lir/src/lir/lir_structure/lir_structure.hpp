@@ -9,7 +9,7 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_metadata.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
@@ -432,6 +432,14 @@ namespace compiler::lir {
 		template<class T>
 		const T& get() const {
 			return std::get<T>(value);
+		}
+
+		/**
+		 * @brief Whether a LIRValue holds a type T.
+		 */
+		template<class T>
+		[[nodiscard]] bool is() const {
+			return std::holds_alternative<T>(value);
 		}
 	};
 
