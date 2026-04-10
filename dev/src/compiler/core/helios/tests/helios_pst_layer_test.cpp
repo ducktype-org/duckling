@@ -5,6 +5,9 @@
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
 #include <tester/tester.hpp>
@@ -24,8 +27,13 @@ public:
 
 private:
 
+
     void testPstForAll() {
-        auto [_, root_scope] = getModule(fs::File(path("test_modules/types")));
+
+    }
+
+    void testGetStmtsFromStmtAggregate() {
+        auto [_, root_scope] = getModule(fs::File(path("test_modules/pst_layer/get_stmts")));
 
         auto n_namespace = getChain("N", root_scope).back();
         
@@ -54,9 +62,6 @@ private:
 
     }
 
-    void testGetStmtsFromStmtAggregate() {
-
-    }
 
 };
 
