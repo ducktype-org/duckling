@@ -183,7 +183,7 @@ namespace compiler::mir {
 							};
 							auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
 							msg->addAttachedMessage(
-								makeBox<ShadowedDeclerationNote>(get_pos(shadowed))
+								makeBox<ShadowedDeclarationNote>(get_pos(shadowed))
 							);
 							ctx.logInt(std::move(msg));
 							return base::BAD;

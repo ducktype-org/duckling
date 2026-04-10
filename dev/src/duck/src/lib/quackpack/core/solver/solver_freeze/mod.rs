@@ -128,13 +128,13 @@ impl SolverFreeze {
                     .get(&realization)
                     .context_internal("No manifest for realization")?;
                 dependencies.push(FreezeDep::new(
-                    realization_manifest.root_description().name(),
-                    realization_manifest.root_description().version(),
+                    realization_manifest.name(),
+                    realization_manifest.version(),
                 ));
             }
             pkg_freezes.push(FreezePackage::new(
-                package_manifest.root_description().name(),
-                package_manifest.root_description().version(),
+                package_manifest.name(),
+                package_manifest.version(),
                 freeze.features.into_iter().collect(),
                 dependencies,
                 pkg.location,
@@ -149,13 +149,13 @@ impl SolverFreeze {
                 .get(&realization)
                 .context_internal("No manifest for realization")?;
             root_deps.push(FreezeDep::new(
-                realization_manifest.root_description().name(),
-                realization_manifest.root_description().version(),
+                realization_manifest.name(),
+                realization_manifest.version(),
             ));
         }
         let root = RootPackage::new(
-            root_manifest.root_description().name(),
-            root_manifest.root_description().version(),
+            root_manifest.name(),
+            root_manifest.version(),
             root_freeze.features.into_iter().collect(),
             root_deps,
         );
@@ -170,10 +170,10 @@ mod test {
     use crate::{
         DuckCtx,
         quackpack::core::{
-            parse_manifest,
+            PackageLoader, parse_manifest,
             types_common::{ExpandedLocation, InternedExpandedLocation},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
     use tempfile::{TempDir, tempdir};
     use url::Url;
@@ -182,7 +182,7 @@ mod test {
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
-        let manifest = dir.path().join("quackconfig.yml");
+        let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
         dir.path().try_fsync_dir().unwrap();

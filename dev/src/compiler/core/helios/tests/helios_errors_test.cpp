@@ -4,14 +4,13 @@
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/expressions/errors.hpp>
+#include <helios_private/hout_creation/expressions/errors.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
@@ -450,6 +449,55 @@ private:
 			1
 		);
 
+		// ========================== Default initialization errors ==========================
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: ref i64;
+					return 0;
+				}
+			)",
+			{ "Type `ref i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: box i64;
+					return 0;
+				}
+			)",
+			{ "Type `box i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Inner { non_defaultable: ref i64; }
+				class Outer { inner: Inner; }
+
+				fun main() -> i64 = {
+					var o: Outer;
+					return 0;
+				}
+			)",
+			{ "Type `Class Outer` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+				var arr: Inner[2];
+					return 0;
+				}
+			)",
+			{ "Type `Class Inner[2]` cannot be default initialized" },
+			1
+		);
 
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
@@ -491,6 +539,7 @@ private:
 			{ "Immutable variables must have an initial value." },
 			1
 		);
+
 
 		checkForErrorOnCompileModule(
 			R"(
@@ -645,7 +694,7 @@ private:
 					l[0] = 123;
 				}
 			)",
-			{ "Index operator base must be indexable" },
+			{ "Type `List` cannot be default initialized" },
 			1
 		);
 
@@ -758,21 +807,6 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"(
-				fun foo() = {
-					var a: i64 = 0;
-					&a;
-
-					return a;
-				}
-
-				const bar = foo();
-			)",
-			{ "Feature not implemented", "pointer types" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
 				class A { x: i64 = 0; }
 				const a = A();
 
@@ -780,7 +814,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "compile time evaluation" },
+			{ "Feature not implemented", "at compile time", "generated class constructor" },
 			1
 		);
 
@@ -793,6 +827,134 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "zero-sized classes" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { a: i64 = 1; }
+				fun main() -> i64 = {
+					var a: (i32, A);
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "Generating default constructors for", "tuple types" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: List[i32];
+					var b = a;
+					return 0;
+				};
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U; }
+
+				fun main() -> i64 = {
+					var a: T;
+					var b = a;
+					return 0;
+				};
+			)",
+			{ "Copy constructor for non-trivially-copyable type `Class T`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() -> List[i32] = {
+				    var a: List[i32];
+				    return a;
+				}
+				fun main() -> i64 = {
+				    var list = foo();
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`", "return a", "foo()" },
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(list: List[i32]) -> i32 = {
+				    return 1;
+				}
+				fun main() -> i64 = {
+					var list: List[i32];
+				    foo(list);
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(list: ref List[i32]) -> i32 = {
+				    var list_copy: List[i32] = list;
+				    return list[0];
+				}
+				fun main() -> i64 = {
+				    var list: List[i32];
+				    foo(&list);
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U }
+				fun main() -> i64 = {
+					var a: T;
+				    var b = a.u.list; 
+					return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U }
+				fun main() -> i64 = {
+					var list: List[i32];
+					var a: T = T(U(&list));
+					return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`",
+		      "This was caused by the need" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+    				var nested: List[List[i32]];
+    				var inner: List[i32];
+    				nested += inner;    
+    				return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
 			1
 		);
 	}

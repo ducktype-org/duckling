@@ -108,8 +108,9 @@ impl SolverFreeze {
                 continue;
             };
             let mut is_every_dep_satisfied = true;
-            for (name, dep) in manifest.dependencies().all_dependencies().iter() {
-                let Some(realization) = freeze.dependencies_realization.get(name) else {
+            for dep in manifest.dependencies().all_dependencies().iter() {
+                let Some(realization) = freeze.dependencies_realization.get(&dep.effective_name())
+                else {
                     is_every_dep_satisfied = false;
                     break;
                 };
@@ -149,7 +150,7 @@ impl SolverFreeze {
             return None;
         }
         if let Some(pkg_version) = pkg.version {
-            if manifest.root_description().version() == pkg_version {
+            if manifest.version() == pkg_version {
                 Some(manifest)
             } else {
                 None
@@ -166,10 +167,7 @@ impl SolverFreeze {
         realization_freeze: &SolverPackageFreeze,
         dep: &Dependency,
     ) -> QuackResult<bool> {
-        let Some(realisation) = freeze
-            .dependencies_realization
-            .get(&dep.desc().manifest_name())
-        else {
+        let Some(realisation) = freeze.dependencies_realization.get(&dep.name()) else {
             // We do not have a realization of such dependency so the answer is negative.
             return Ok(false);
         };
@@ -234,7 +232,7 @@ impl SolverFreeze {
         // Check which main package dependencies are still satisfied.
         let mut still_satisfied_root_deps = HashSet::new();
         for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
-            if let Some(dependency) = main_manifest.dependencies().get_dependency(*alias)
+            if let Some(dependency) = main_manifest.dependencies().get_by_effective_name(*alias)
                 && let Some(realization_freeze) = self.package_freezes.get(realization)
                 && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
             {
@@ -252,8 +250,12 @@ impl SolverFreeze {
         let all_main_pkg_deps_satisfied = main_manifest
             .dependencies()
             .all_dependencies()
-            .keys()
-            .all(|alias| main_pkg_freeze.dependencies_realization.contains_key(alias));
+            .iter()
+            .all(|dep| {
+                main_pkg_freeze
+                    .dependencies_realization
+                    .contains_key(&dep.effective_name())
+            });
         // Change the previous main package to the new root package.
         let main_pkg_freeze = self
             .package_freezes
@@ -281,7 +283,7 @@ mod test {
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
             types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {

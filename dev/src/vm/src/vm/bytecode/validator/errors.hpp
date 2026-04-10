@@ -348,6 +348,9 @@ namespace vm::code {
 		InvalidUpcastError, "The source type does not inherit from the destination type"
 	);
 	DEFINE_INSTRUCTION_ERROR(
+		InvalidDowncastError, "The source type does not inherit from the destination type"
+	);
+	DEFINE_INSTRUCTION_ERROR(
 		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
 	);
 	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitialized.");
@@ -380,22 +383,23 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(TypeIsNotDataError, "Invalid instruction argument type: ");
 	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.");
 	DEFINE_INSTRUCTION_ERROR(
-		PointerTypeMismatchError, "Inner pointer type does not match expected type."
+		PointerTypeMismatchError, "Pointer type does not match the expected type."
 	);
+	DEFINE_INSTRUCTION_ERROR(FieldTypeMismatchError, "Field type does not match the expected type.");
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidVirtualCallError, "Provided method does not exists for a given argument."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		FixedSizeTableTypeMismatchError, "Inner fixed size table type does not match expected type."
+		FixedSizeTableTypeMismatchError, "Fixed size table type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		DynamicTableTypeMismatchError, "Inner dynamic table type does not match expected type."
+		DynamicTableTypeMismatchError, "Dynamic table type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		StructTypeMismatchError, "Inner struct type does not match expected type."
+		StructTypeMismatchError, "Struct type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		VariantTypeMismatchError, "Possible variant types do not match expected type."
+		VariantTypeMismatchError, "Possible variant types do not match the expected type."
 	);
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");

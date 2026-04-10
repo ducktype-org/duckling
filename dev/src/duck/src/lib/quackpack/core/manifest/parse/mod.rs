@@ -6,7 +6,7 @@ use serde::Deserialize;
 use tracing::{Level, debug, span};
 
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util_common::path_ops_ext::PathOpsExt;
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckCtx, QuackResultContext, StrId, qp_internal};
 use crate::{QuackResult, quackpack::core::Package};
 
@@ -62,6 +62,11 @@ impl Scope {
     /// Turn this [`Scope`] into a human friendly [`String`].
     pub fn format(&self) -> String {
         self.inner.iter().join(".")
+    }
+
+    /// A helper for creating common context messages.
+    pub fn make_context_string(&self) -> String {
+        format!("when parsing the field `{}`", self.format())
     }
 }
 

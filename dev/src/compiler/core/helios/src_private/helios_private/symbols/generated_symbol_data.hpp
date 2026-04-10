@@ -2,15 +2,16 @@
 
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/symbol_type.hpp>
+#include <tsh/types.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
 #include <variant>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios::defgen {
 	/**
 	 * Represents any data associated with a compiler-generated symbol. See the inner classes.
 	 */
@@ -23,6 +24,34 @@ namespace compiler::helios::houtgen {
 		 */
 		struct ImplicitConstructor final {
 			SymID class_symbol;  // The symbol of the class this constructor belongs to.
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * Represents a compiler-generated default constructor for a class.
+		 *
+		 * The default constructor is a function that takes no parameters and initializes all class
+		 * fields with their initial values or default values if initial values where not provided.
+		 * Returns the initialized class.
+		 */
+		struct DefaultClassConstructor final {
+			SymID class_symbol;  // The symbol of the class this constructor belongs to.
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * Represents a compiler-generated default constructor for a static array type.
+		 *
+		 * The default constructor is a function that doesn't takes any parameters and loops through
+		 * the static array initializing its fields with a default value (which may mean a call to
+		 * another constructor). Returns the initialized static array value.
+		 */
+		struct DefaultStaticArrayConstructor final {
+			tsh::AbstractType array_type;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -98,29 +127,36 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		std::variant<
+		using GeneratedSymbolDataVariant = std::variant<
 			ImplicitConstructor,
+			DefaultClassConstructor,
+			DefaultStaticArrayConstructor,
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,
 			Variable,
 			ReplExpressionWrapper,
-			ReplInstructionWrapper>
-			data;
+			ReplInstructionWrapper>;
+		GeneratedSymbolDataVariant data;
 
-		explicit GeneratedSymbolData(const std::variant<
-									 ImplicitConstructor,
-									 BuiltinOperator,
-									 Parameter,
-									 SelfParameter,
-									 Variable,
-									 ReplExpressionWrapper,
-									 ReplInstructionWrapper>& data);
+		explicit GeneratedSymbolData(const GeneratedSymbolDataVariant& data);
 
 		[[nodiscard]]
 		base::Bit256                          queryUnstablePerfectHash() const;
 		tsh::SymbolType<>                     getType(query::Context& ctx) const;
 		[[nodiscard]] ScopeID                 getScope() const;
 		[[nodiscard]] base::Optional<ScopeID> maybeScope() const;
+
+		/**
+		 * @brief Whether GeneratedSymbolData stores a generated default constructor.
+		 * @return True if the inner variant stores a default constructor, false otherwise.
+		 */
+		[[nodiscard]] bool isDefaultConstructor() const {
+			variant_match(data) {
+				variant_case_novalue(DefaultClassConstructor) { return true; }
+				variant_case_novalue(DefaultStaticArrayConstructor) { return true; }
+				variant_default { return false; }
+			}
+		}
 	};
 }

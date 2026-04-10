@@ -398,8 +398,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Variant{
-														 .type_tag_size = type_tag_size,
-														 .alternatives  = std::move(variant.alternatives),
+														 .type_tag_size        = type_tag_size,
+														 .alternatives_ordered = variant.alternatives,
+														 .alternatives_set
+                                   = variant.alternatives | std::ranges::to<std::unordered_set>(),
                                } };
 		}
 		variant_case(defined::DefinedStructure, structure) {
@@ -482,7 +484,7 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 		}
 		variant_case(finalized::Variant, variant) {
 			is_instantiable
-				= std::ranges::all_of(variant.alternatives, [&](const auto& alternative) {
+				= std::ranges::all_of(variant.alternatives_ordered, [&](const auto& alternative) {
 					  auto alternative_type = types.at(alternative);
 					  return alternative_type->isInstantiable();
 				  });

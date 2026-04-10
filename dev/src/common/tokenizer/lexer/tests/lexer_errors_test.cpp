@@ -72,6 +72,13 @@ class LexerErrorTests: public tester::TestSuite {
 		std::make_unique<Example<true>>("'\\n'"),
 	};
 
+	std::array<std::unique_ptr<GenExample>, 4> bad_fmt_str = {
+		std::make_unique<Example<false>>(R"(f")"),
+		std::make_unique<Example<false>>(R"(f"\n)"),
+		std::make_unique<Example<false>>(R"(f"{")"),
+		std::make_unique<Example<false>>(R"(f"{}x)"),
+	};
+
 	std::array<std::unique_ptr<GenExample>, 1> bad_type_specifier
 		= { std::make_unique<Example<false>>("123abc") };
 

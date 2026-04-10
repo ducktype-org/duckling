@@ -12,7 +12,7 @@ use crate::{
             registry::{self, DependencyCondition, DependencyFeature},
         },
     },
-    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
+    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
 use std::collections::HashSet;
@@ -81,6 +81,7 @@ fn create_mock_server() -> MockServer {
 
     // Assets for not_pinned_registry test.
     let foo_bar_dep = registry::Dependency {
+        name: "bar".into(),
         version: vec![Version::new(3, 0, 0), Version::new(4, 0, 0)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -92,7 +93,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let foo1 = registry::Manifest {
@@ -103,7 +104,7 @@ fn create_mock_server() -> MockServer {
             name: "foo".into(),
             description: "".into(),
         },
-        dependencies: [("bar".into(), foo_bar_dep)].into(),
+        dependencies: vec![foo_bar_dep],
         dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
@@ -153,6 +154,7 @@ fn create_mock_server() -> MockServer {
 
     // Assets for pinned_registry and features tests.
     let dx_xd_dep = registry::Dependency {
+        name: "xd".into(),
         version: vec![Version::new(1, 0, 0)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -169,7 +171,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let xd1 = registry::Manifest {
@@ -194,7 +196,7 @@ fn create_mock_server() -> MockServer {
             name: "dx".into(),
             description: "".into(),
         },
-        dependencies: [("xd".into(), dx_xd_dep)].into(),
+        dependencies: vec![dx_xd_dep],
         dev_dependencies: registry::Dependencies::new(),
         features: [("root".into(), vec![])].into(),
         profiles: HashMap::new(),
@@ -202,6 +204,7 @@ fn create_mock_server() -> MockServer {
 
     // Assets for pinned_request_while_pending_not_pinned test.
     let b_a_dep = registry::Dependency {
+        name: "a".into(),
         version: vec![Version::new(1, 0, 0)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -213,10 +216,11 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let a_c_dep = registry::Dependency {
+        name: "c".into(),
         version: vec![Version::new(1, 0, 0)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -228,7 +232,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: Some(vec!["f".into()]),
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let a1 = registry::Manifest {
@@ -239,7 +243,7 @@ fn create_mock_server() -> MockServer {
             name: "a".into(),
             description: "".into(),
         },
-        dependencies: [("c".into(), a_c_dep)].into(),
+        dependencies: vec![a_c_dep],
         dev_dependencies: registry::Dependencies::new(),
         features: [("f".into(), vec![])].into(),
         profiles: HashMap::new(),
@@ -267,7 +271,7 @@ fn create_mock_server() -> MockServer {
             name: "b".into(),
             description: "".into(),
         },
-        dependencies: [("a".into(), b_a_dep)].into(),
+        dependencies: vec![b_a_dep],
         dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
@@ -387,7 +391,7 @@ metadata:
 dependencies:
   foo:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
 "#,
         &url
@@ -515,12 +519,12 @@ metadata:
 dependencies:
   xd:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
     pinned: true
   dx:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
     pinned: true
 "#,
@@ -579,15 +583,15 @@ metadata:
 dependencies:
   xd:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
     pinned: true
   dx:
     source:
-      registry_url: {}
+      registry-url: {}
     features:
     - root:
-        package_features: [my_feature] 
+        package-features: [my_feature] 
     version: '2'
     pinned: true
 
@@ -676,11 +680,11 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
 "#,
         &url, &url,

@@ -49,8 +49,14 @@ namespace pst {
 		/**
 		 * @brief Checks if an element is pars-able using given arguments.
 		 */
+		constexpr static bool PARSE_ABLE_EMPTY
+			= tpc::ParseAbleElement<Element, Parser, LangParserState>;
+
+		/**
+		 * @brief Checks if an element is pars-able using given arguments.
+		 */
 		template<typename... Args>
-		constexpr static bool ParseAble
+		constexpr static bool PARSE_ABLE
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 		/**
@@ -77,8 +83,8 @@ namespace pst {
 		 * @note Requires that the file was successfully tokenized.
 		 */
 		template<typename... Args>
-		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args) requires ParseAble<Args...>
-		{
+		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args)
+			requires PARSE_ABLE<Args...> {
 			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
 
 			const lexer::TokenData& token_data = file->getTokenData();
@@ -132,7 +138,7 @@ namespace pst {
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {},
 			Args&&... args
-		) requires ParseAble<Args...>:
+		) requires PARSE_ABLE<Args...>:
 			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))),
 			  hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
@@ -149,7 +155,7 @@ namespace pst {
 			Box<LangParserContext> parsing_ctx,
 			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
-		) requires ParseAble<Args...>
+		) requires PARSE_ABLE<Args...>
 			  : file(tokenizer::makeTokenSource(pos, content)), hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
 			parse(std::move(parsing_ctx), std::forward<Args>(args)...);
@@ -190,7 +196,7 @@ namespace pst {
 		    PSTContext&&                pst_ctx,
 		    hashing::ComponentHash      hash_ctx = {})
 
-		requires ParseAble<>: file(std::move(file)), hash_ctx_info(std::move(hash_ctx)) {
+		requires PARSE_ABLE_EMPTY: file(std::move(file)), hash_ctx_info(std::move(hash_ctx)) {
 			if (getLogger()->bad()) return;
 			parse(makeParserContext(std::move(pst_ctx)));
 		}
@@ -200,7 +206,7 @@ namespace pst {
 		 */
 		PST(const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {})
 
-		requires ParseAble<>:
+		requires PARSE_ABLE_EMPTY:
 			  file(tokenizer::makeTokenSource(path)),
 			  hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
@@ -209,7 +215,7 @@ namespace pst {
 
 		static PST fromContents(
 			std::string_view contents, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
-		) requires ParseAble<> {
+		) requires PARSE_ABLE_EMPTY {
 			return PST(contents, makeParserContext(std::move(pst_ctx)), std::move(hash_ctx));
 		}
 
@@ -219,7 +225,7 @@ namespace pst {
 			PSTContext&&           pst_ctx,
 			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
-		) requires ParseAble<Args...> {
+		) requires PARSE_ABLE<Args...> {
 			return PST(
 				contents,
 				makeParserContext(std::move(pst_ctx)),
@@ -244,7 +250,7 @@ namespace pst {
 			Box<LangParserContext> parsing_ctx,
 			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
-		) requires ParseAble<Args...> {
+		) requires PARSE_ABLE<Args...> {
 			auto out = PST(
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);

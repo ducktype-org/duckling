@@ -887,7 +887,7 @@ namespace vm::loader::parser {
 
 	void Type::dprint(std::ostream& out) const {
 		out << "type: ";
-		VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { vm::code::serialize(data, out); }))
+		VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { vm::code::serializeType(data, out); }))
 		out << "\n}";
 	}
 

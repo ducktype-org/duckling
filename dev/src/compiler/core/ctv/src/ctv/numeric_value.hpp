@@ -1,6 +1,6 @@
 #pragma once
 
-#include <typesystem/higher/symbol_type.hpp>
+#include <tsh/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
@@ -73,7 +73,7 @@ namespace compiler::numeric_value {
 		template<typename T = i64>
 		requires(std::is_arithmetic_v<T>)
 		[[nodiscard]] static base::Optional<NumericValue> createOfType(
-			const tsh::SymbolType<>& type, T value = 0
+			const tsh::AbstractType& type, T value = 0
 		) {
 			NumericValue initial = createMinimized(value);
 			return initial.castTo(type);
@@ -142,7 +142,7 @@ namespace compiler::numeric_value {
 		 * @return A new NumericValue with the casted value, or an empty optional if the
 		 *         cast failed (e.g., overflow).
 		 */
-		[[nodiscard]] base::Optional<NumericValue> castTo(const tsh::SymbolType<>& target_type
+		[[nodiscard]] base::Optional<NumericValue> castTo(const tsh::AbstractType& target_type
 		) const;
 
 		/**

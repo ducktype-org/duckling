@@ -126,8 +126,8 @@ namespace {
 				}
 				variant_case(vm::code::valid_type::finalized::Variant, data) {
 					std::vector<vm::TypeRef> variants;
-					variants.reserve(data.alternatives.size());
-					for (auto& variant: data.alternatives)
+					variants.reserve(data.alternatives_ordered.size());
+					for (auto& variant: data.alternatives_ordered)
 						variants.emplace_back(type_metadata->at(vm::TypeID(variant.asInt())));
 					type_at_metadata->defineVariant(data.type_tag_size, variants);
 				}

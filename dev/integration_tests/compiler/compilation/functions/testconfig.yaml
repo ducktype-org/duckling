@@ -58,6 +58,15 @@ Tests:
         Output:
           String: "5\n7\n"
         ExitCode: 0
+  type_overloading:
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0
 
 
 

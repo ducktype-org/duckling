@@ -1,13 +1,10 @@
 //! `build` subcommand execution logic.
 use crate::{
     QuackResult, QuackResultContext, StrId,
-    quackpack::{
-        core::{
-            FeatureName, PackageCtx,
-            compile::{self, BuildContext},
-            storage::{sync, venv_id::ToVenvId},
-        },
-        subcommands::sync::SyncOptions,
+    quackpack::core::{
+        FeatureName, PackageCtx,
+        compile::{self, BuildContext, profiles::Profile},
+        storage::{StorageSyncOptions, sync, venv_id::ToVenvId},
     },
 };
 
@@ -20,13 +17,11 @@ pub struct BuildOptions<'duck> {
     pub used_features: Vec<FeatureName>,
     /// Selected build profile.
     pub profile: StrId,
-    /// Artefact from [`SyncOptions`].
-    pub global: bool,
-    /// Artefact from [`SyncOptions`].
+    /// Artefact from [`StorageSyncOptions`].
     pub overwrite: bool,
-    /// Artefact from [`SyncOptions`].
+    /// Artefact from [`StorageSyncOptions`].
     pub frozen: bool,
-    /// Artefact from [`SyncOptions`].
+    /// Artefact from [`StorageSyncOptions`].
     pub strict_errors: bool,
 }
 
@@ -36,15 +31,13 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         package,
         used_features,
         profile,
-        global,
         overwrite,
         frozen,
         strict_errors,
     } = options;
     let (lock, venv, storage) = sync(
         &package,
-        SyncOptions {
-            global,
+        StorageSyncOptions {
             overwrite,
             frozen,
             strict_errors,
@@ -53,6 +46,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let _compile_lock = lock
         .to_compile_lock(&storage, package.to_venv_id())
         .context("failed to acquire a compile lock")?;
+    let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
     let bcx = BuildContext {
         package: &package,
         freeze: venv.into(),

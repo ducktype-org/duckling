@@ -7,7 +7,7 @@ use crate::{
     QuackResult, QuackResultContext,
     duck::util::{duck_cfg::DuckCfg, duck_home::DuckHome, terminal::Terminal},
     quackpack::util::paths::duck_home_path,
-    util_common::env::Env,
+    util::env::Env,
 };
 
 #[derive(Debug)]
@@ -23,6 +23,7 @@ pub struct DuckCtx {
 }
 
 impl DuckCtx {
+    /// Create a new [`DuckCtx`].
     pub fn new() -> QuackResult<Self> {
         let env = Env::default();
         let console = Terminal::stdout();
@@ -46,22 +47,27 @@ impl DuckCtx {
         })
     }
 
+    /// Get the [`Terminal`] for stdout.
     pub fn console(&self) -> &Terminal {
         &self.console
     }
 
+    /// Get the [`Terminal`] for stdout.
     pub fn console_mut(&mut self) -> &mut Terminal {
         &mut self.console
     }
 
+    /// Get the [`Terminal`] for stderr.
     pub fn error_console(&self) -> &Terminal {
         &self.error_console
     }
 
+    /// Get the [`Terminal`] for stderr.
     pub fn error_console_mut(&mut self) -> &mut Terminal {
         &mut self.error_console
     }
 
+    /// Get the [`DuckCfg`].
     pub fn duck_cfg(&self) -> &DuckCfg {
         &self.duck_cfg
     }
@@ -71,6 +77,7 @@ impl DuckCtx {
         &mut self.duck_cfg
     }
 
+    /// Get the snapshot of all environmental variables.
     pub fn env(&self) -> &Env {
         &self.env
     }
@@ -86,18 +93,22 @@ impl DuckCtx {
         Ok(())
     }
 
+    /// Get the path to the user home directory.
     pub fn user_home(&self) -> &Path {
         &self.user_home
     }
 
+    /// Get the [`DuckHome`] layout.
     pub fn duck_home(&self) -> &DuckHome {
         &self.duck_home
     }
 
+    /// Whether we ignore any HTTP requests.
     pub fn is_offline(&self) -> bool {
         self.offline
     }
 
+    /// Set, whether we should ignore any HTTP requests.
     pub fn set_offline(&mut self, offline: bool) {
         self.offline = offline;
     }

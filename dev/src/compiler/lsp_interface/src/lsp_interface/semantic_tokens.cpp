@@ -57,7 +57,7 @@ namespace lsp {
 			return sT::Number;
 		case lTT::String:
 			return sT::String;
-		case lTT::FormattedString:
+		case lTT::FormatString:
 			return sT::String;
 		case lTT::Operator:
 			return sT::Operator;

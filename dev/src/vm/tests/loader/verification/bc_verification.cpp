@@ -33,6 +33,8 @@ public:
 		TESTER_ADD_TEST(afterDeinit);
 		TESTER_ADD_TEST(invalidName);
 		TESTER_ADD_TEST(repeatedName);
+		TESTER_ADD_TEST(wrongDowncast);
+		TESTER_ADD_TEST(wrongPtrMov);
 
 		// @note: Not implemented yet
 		TESTER_ADD_TEST(derefWrongType);
@@ -306,6 +308,24 @@ private:
 			"wrong/types/duplicated_variant_alternative.dbc",
 			{
 				vm::code::DuplicatedVariantAlternativeError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongDowncast() {
+		loadInvalidDbc(
+			"wrong/pointers/wrong_downcast.dbc",
+			{
+				vm::code::InvalidDowncastError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongPtrMov() {
+		loadInvalidDbc(
+			"wrong/types/wrong_ptr_mov.dbc",
+			{
+				vm::code::PointerTypeMismatchError::ERR_MSG,
 			}
 		);
 	}
