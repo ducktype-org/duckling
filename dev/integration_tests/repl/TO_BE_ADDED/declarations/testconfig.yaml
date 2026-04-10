@@ -1,3 +1,5 @@
 SubDirs:
  - classes
+ - aliases
+ - namespaces
  

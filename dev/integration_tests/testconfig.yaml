@@ -1,4 +1,5 @@
 SubDirs:
-    # - compiler
-    # - duck
+    - compiler
+    - duck
     - repl
+    - scripts

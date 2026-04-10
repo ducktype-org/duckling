@@ -1,0 +1,30 @@
+mode: "direct"
+folder: "." 
+duckc_bin: "../../../build/bin/duckc"
+vm_bin: "../../../build/bin/VM"
+
+# We introduce a variable to control whether the build artifacts should be kept after running the test in VM mode. 
+keep_build: "false"
+
+PreCase: "
+  if [ '@{mode}' = 'vm' ]; then
+    @{duckc_bin} compile_script @{folder}/@{Name}.ds --dvm-backend;
+  fi"
+
+Run: "
+  if [ '@{mode}' = 'vm' ]; then
+    @{vm_bin} run duck_build/@{Name}.dbc;
+    
+    EXIT_CODE=$?; 
+    
+    if [ '@{keep_build}' != 'true' ]; then
+      rm -rf duck_build;
+    fi;
+    
+    exit $EXIT_CODE;
+  else
+    @{duckc_bin} run @{folder}/@{Name}.ds;
+  fi"
+
+SubDirs:
+  - working_tests
