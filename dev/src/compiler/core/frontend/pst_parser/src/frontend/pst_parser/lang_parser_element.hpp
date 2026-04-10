@@ -56,11 +56,6 @@ namespace pst {
 		};
 
 		/**
-		 * @brief No parent, used for tests/debug/non-standard PST only.
-		 */
-		// struct NoParent final {};
-
-		/**
 		 * @brief Source of PST.
 		 * @note This is used mostly for determining the parent helios-scope of PST root elements.
 		 */
@@ -478,6 +473,10 @@ namespace pst {
 
 		void setParent(Ref<LangElement> parent) { this->parent = { parent }; }
 
+		/**
+		 * @brief Sets the additional root data for this element.
+		 * @note This should only be used for root elements of the PST.
+		 */
 		void setAdditionalRootData(AdditionalRootData data);
 
 	private:
