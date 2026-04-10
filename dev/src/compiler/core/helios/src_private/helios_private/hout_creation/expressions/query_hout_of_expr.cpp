@@ -547,12 +547,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
-				const auto bool_type = tsh::SymbolType<>{
-					tsh::getBoolType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-
+				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
 				// @TODO: #2063 Change that to subExprFromPSTWithType :)
 				auto condition_res
 					= getHoutOfExprWithExpectedType(ctx, stmt->getCondition(), bool_type);
