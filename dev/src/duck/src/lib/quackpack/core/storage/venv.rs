@@ -415,9 +415,9 @@ impl Venv {
         let backup_path = storage.venv_backup_metadata(self.id);
         let existed = path.exists();
         let backup_existed = backup_path.exists();
-        let parent = path
-            .parent()
-            .with_context_internal(|| format!("`{}` does not have a parent?", path.display()))?;
+        let parent = path.parent().with_context_internal(|| {
+            format!("path `{}` does not have a parent?", path.display())
+        })?;
         if !parent.exists() {
             parent.mkdir(MkdirOptions::WithParents)?;
         }

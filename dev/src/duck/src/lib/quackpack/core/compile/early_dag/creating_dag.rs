@@ -1,4 +1,4 @@
-//! Entrypoints for creating a new [`CompilerDag`] and friends.
+//! Entrypoints for creating a new [`EarlyDag`] and friends.
 
 use tracing::debug;
 
@@ -178,10 +178,10 @@ fn parse_dependency(
     Ok(CompilerPackage::new(package, pkg_type))
 }
 
-impl CompilerDag {
-    /// Creates a new *early* [`CompilerDag`] from the given [`BuildContext`].
+impl EarlyDag {
+    /// Creates a new [`EarlyDag`] from the given [`BuildContext`].
     ///
-    /// *early* means that:
+    /// Also note that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
     pub fn new_early(ctx: &BuildContext<'_, '_>) -> QuackResult<Self> {
@@ -218,7 +218,7 @@ impl CompilerDag {
         }
         Ok(Self {
             dag: graph,
-            all_packages: AllPackages { packages },
+            packages: PackagesSet { inner: packages },
         })
     }
 }
