@@ -164,8 +164,9 @@ namespace compiler::helios::mangler {
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
 		 * @note: See mangling-scheme.md for details
 		 *
-		 * @TODO: #2464 This is still a little simplified, there should probably be at least an additional
-		 * layer for things like macros and there will probably be other elements that create scopes like templates.
+		 * @TODO: #2464 This is still a little simplified, there should probably be at least an
+		 * additional layer for things like macros and there will probably be other elements that
+		 * create scopes.
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
