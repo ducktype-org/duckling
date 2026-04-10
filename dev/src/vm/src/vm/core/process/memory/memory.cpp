@@ -94,6 +94,14 @@ namespace vm {
 		}
 	}
 
+	bool Memory::isGlobalInitialized(Ref<Block> global_block) {
+		return initialized_globals.contains(global_block->id);
+	}
+
+	void Memory::setGlobalInitialized(Ref<Block> global_block) {
+		initialized_globals.insert(global_block->id);
+	}
+
 	auto Memory::requestBlockID(Ref<Block> block) -> BlockID { return block->id; }
 
 	auto Memory::requestBlockData(BlockID id) -> base::RawView {
@@ -102,39 +110,6 @@ namespace vm {
 
 	auto Memory::requestBlockType(BlockID id) -> TypeCRef {
 		return getBlock(id)->data.element_type;
-	}
-
-	bool Memory::tryInsertGlobalData(
-		usize global_buffer_offset, usize global_block_idx, TypeCRef type
-	) {
-		if (MRef(global_data_blocks[global_block_idx]).toOpt().empty()) {
-			auto type_size = type->getSize().asInt();
-			CORE_ASSERT(
-				global_buffer_offset + type_size <= global_data_buffer.size(),
-				std::format(
-					"Global buffer overflow: trying to insert global data of size {}, at offset "
-					"{}, "
-					"but buffer size is only {}",
-					type_size,
-					global_buffer_offset,
-					global_data_buffer.size()
-				)
-			);
-			CORE_ASSERT(
-				global_block_idx < global_data_blocks.size(),
-				std::format(
-					"Global blocks buffer overflow: trying to insert global block at index {}, but "
-					"buffer size is only {}",
-					global_block_idx,
-					global_data_blocks.size()
-				)
-			);
-			auto block = allocateDummy(type, global_data_buffer.data() + global_buffer_offset);
-			increaseBlockRefcount(block);
-			global_data_blocks[global_block_idx] = block.get();
-			return true;
-		}
-		return false;
 	}
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
@@ -427,8 +402,49 @@ namespace vm {
 		}
 	}
 
-	void Memory::reallocateBufferForGlobals(usize global_count, usize buffer_size) {
-		global_data_buffer.resize(buffer_size);
-		global_data_blocks.resize(global_count);
+	void Memory::reallocateGlobalBlocks(const GlobalBlocks& global_blocks) {
+		CORE_ASSERT(
+			global_blocks.global_count >= global_data_blocks.size(),
+			"Global blocks buffer cannot be shrunk"
+		);
+		CORE_ASSERT(
+			global_blocks.total_global_data_size >= global_data_buffer.size(),
+			"Global data buffer cannot be shrunk"
+		);
+
+		global_data_buffer.resize(global_blocks.total_global_data_size);
+		global_data_blocks.resize(global_blocks.global_count);
+
+		for (usize i = 0; i < global_blocks.global_count; i++) {
+			auto  block_idx = global_blocks.global_blocks_idxs[i];
+			auto  off       = global_blocks.global_data_offsets[i];
+			auto& type      = global_blocks.global_types[i];
+			auto  type_size = type->getSize().asInt();
+			CORE_ASSERT(
+				block_idx < global_data_blocks.size(),
+				"Global block index is out of bounds of the global blocks buffer"
+			);
+			auto block_ref = MRef(global_data_blocks[block_idx]);
+
+			if (block_ref.toOpt().empty()) {
+				CORE_ASSERT(
+					off + type_size <= global_data_buffer.size(),
+					std::format(
+						"Trying to insert global data of size {}, at offset {}, but buffer size is "
+						"only {}",
+						type_size,
+						off,
+						global_data_buffer.size()
+					)
+				);
+
+				auto block = allocateDummy(type, global_data_buffer.data() + off);
+				increaseBlockRefcount(block);
+				global_data_blocks[block_idx] = block.get();
+			} else {
+				// We have to update the view of the data block
+				block_ref->data.view = { global_data_buffer.data() + off, type_size };
+			}
+		}
 	}
 }

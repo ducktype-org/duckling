@@ -340,10 +340,24 @@ namespace vm {
 	}
 
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {
+		using namespace std::ranges;
 		auto global_buffer_config = program->getGlobalBufferConfig();
-		memory.reallocateBufferForGlobals(
-			global_buffer_config.global_count, global_buffer_config.buffer_size
-		);
+		auto global_indices       = program->getGlobals()
+		                    | views::transform(&low::LowGlobalData::global_block_idx)
+		                    | to<std::vector>();
+		auto global_offsets = program->getGlobals()
+		                    | views::transform(&low::LowGlobalData::global_buffer_offset)
+		                    | to<std::vector>();
+		auto global_types = program->getGlobals() | views::transform(&low::LowGlobalData::type)
+		                  | to<std::vector>();
+
+		memory.reallocateGlobalBlocks(Memory::GlobalBlocks{
+			.global_data_offsets    = std::move(global_offsets),
+			.global_blocks_idxs     = std::move(global_indices),
+			.global_types           = std::move(global_types),
+			.total_global_data_size = global_buffer_config.buffer_size,
+			.global_count           = global_buffer_config.global_count });
+
 		for (auto& thread: vm_threads)
 			thread.updateGlobalDataBufferPointers(memory.getGlobalDataMemory());
 	}

@@ -76,7 +76,7 @@ namespace vm::loader::compiler {
 			}
 			else if constexpr (opargs::GlobalArgumentType<FromType>) {
 				// Global offsets are stored in the same place as local offsets, but with the highest bit set to 1.
-				return compiler.low_program.getGlobals().at(opcode_arg.global_data_name)->global_blocks_idx | (1ULL << 63);
+				return compiler.low_program.getGlobals().at(opcode_arg.global_data_name)->global_block_idx | (1ULL << 63);
 			}
 			else {
 				return u64(-1);
@@ -378,7 +378,7 @@ namespace vm::loader::compiler {
 				.ctor_name            = ctor_name,
 				.dtor_name            = dtor_name,
 				.global_buffer_offset = program_ctx.global_buffer_size,
-				.global_blocks_idx    = program_ctx.global_count,
+				.global_block_idx     = program_ctx.global_count,
 			};
 			low_program.global_data.insert(data, global.name);
 

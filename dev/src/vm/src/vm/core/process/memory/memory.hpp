@@ -38,8 +38,15 @@ namespace vm {
 
 		std::deque<ThreadStack> threads_frame_stacks;
 
+		/// Buffer for the global data
 		std::vector<std::byte> global_data_buffer{};
-		std::vector<Block*>    global_data_blocks{};
+
+		/// Buffer for the global blocks
+		std::vector<Block*> global_data_blocks{};
+
+		/// If the global has been initialized (constructor has been called), then it is in this
+		/// set. Otherwise, it is not.
+		std::unordered_set<BlockID> initialized_globals{};
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing
@@ -167,10 +174,18 @@ namespace vm {
 		 */
 		void deinitGlobals();
 
+		struct GlobalBlocks {
+			std::vector<usize>    global_data_offsets;
+			std::vector<usize>    global_blocks_idxs;
+			std::vector<TypeCRef> global_types;
+			usize                 total_global_data_size = 0;
+			usize                 global_count           = 0;
+		};
+
 		/**
 		 * @brief Reallocates the buffer and blocks storages for globals.
 		 */
-		void reallocateBufferForGlobals(usize buffer_size, usize global_count);
+		void reallocateGlobalBlocks(const GlobalBlocks& global_blocks);
 
 		// =================== Used by executor ===================
 
@@ -208,19 +223,9 @@ namespace vm {
 		 */
 		void freeBlockData(Ref<Block> block);
 
-		/**
-		 * @brief Attempts to create a block for the global data in memory and insert it into the
-		 * buffer.
-		 *
-		 * @param offset_in_global_data_buffer Offset in the global data buffer where the data of
-		 * the global variable should be stored.
-		 * @param idx_in_global_blocks_buffer Index in the global blocks buffer where the block
-		 * reference of the global variable should be stored.
-		 * @param type Type of the global variable.
-		 */
-		bool tryInsertGlobalData(
-			usize offset_in_global_data_buffer, usize idx_in_global_blocks_buffer, TypeCRef type
-		);
+		bool isGlobalInitialized(Ref<Block> global_block);
+
+		void setGlobalInitialized(Ref<Block> global_block);
 
 		/**
 		 * @brief Returns a view of block's data

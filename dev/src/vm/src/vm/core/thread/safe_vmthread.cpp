@@ -467,16 +467,16 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
+			auto block_ref
+				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
 			// Insert the global data if it hasn't been initialized; then run constructor if present
-			if (process_memory.tryInsertGlobalData(
-					global->global_buffer_offset, global->global_blocks_idx, global->type
-				)
-			    && global->ctor_name.has_value()) {
+			if (not process_memory.isGlobalInitialized(block_ref) && global->ctor_name.has_value()) {
 				try {
 					const auto& func
 						= *process_program->getFunctions().atMaybe(global->ctor_name.value()).value();
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
+					process_memory.setGlobalInitialized(block_ref);
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}

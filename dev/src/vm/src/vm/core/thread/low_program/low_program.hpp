@@ -41,11 +41,20 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of global data.
 	 */
 	struct LowGlobalData {
-		TypeCRef                    type;
+		/// Type
+		TypeCRef type;
+
+		/// Optional constructor name.
 		base::Optional<base::StrID> ctor_name;
+
+		/// Optional destructor name.
 		base::Optional<base::StrID> dtor_name;
-		usize                       global_buffer_offset;
-		usize                       global_blocks_idx;
+
+		/// The offset of the global variable's data in the global buffer.
+		usize global_buffer_offset;
+
+		/// The index of the global block ref in the global block array.
+		usize global_block_idx;
 	};
 
 	/**
