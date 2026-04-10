@@ -5,9 +5,12 @@ namespace vm::jit::cf {
         blocks.clear();
         blocks.reserve(block_beginnings.size());
 
+        CORE_ASSERT(!block_beginnings.empty(), "There should be at least one block beginning for a valid function");
+
         auto instrToBlock = [block_beginnings](usize instr_index) {
             auto it = std::ranges::lower_bound(block_beginnings, instr_index);
-            if (it == block_beginnings.end()) return block_beginnings.size() - 1;
+
+            CORE_ASSERT(it != block_beginnings.end(), "Instruction index out of bounds for block beginnings");
 
             usize block_idx = std::distance(block_beginnings.begin(), it);
             return block_idx;
@@ -18,6 +21,7 @@ namespace vm::jit::cf {
             usize end = block_beginnings[id + 1];
             blocks.emplace_back(id, start, end);
         }
+        blocks.emplace_back(block_beginnings.size() - 1, block_beginnings.back(), function.bc.size());
 
         for (const auto& block : blocks) {
             const vm::MicroInstruction& last_instr = function.bc[block.end - 1];

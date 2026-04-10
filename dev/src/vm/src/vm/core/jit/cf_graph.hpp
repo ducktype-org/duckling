@@ -143,7 +143,7 @@ namespace vm::jit::cf {
         }
 
         const BasicBlock& getBlock(BlockID id) const {
-            CORE_ASSERT(id >= blocks.size(), "Invalid block ID");
+            CORE_ASSERT(id < blocks.size(), "Invalid block ID");
             return blocks[id];
         }
     };

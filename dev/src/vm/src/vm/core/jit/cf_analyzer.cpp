@@ -43,6 +43,10 @@ namespace vm::jit::cf {
             std::unique(block_beginnings.begin(), block_beginnings.end()),
             block_beginnings.end()
         );
+
+        if (block_beginnings.back() == function.bc.size()) {
+            block_beginnings.pop_back(); // Remove the last block beginning if it points to the end of the bytecode
+        }
         return block_beginnings;
     }
 } // namespace vm::jit
