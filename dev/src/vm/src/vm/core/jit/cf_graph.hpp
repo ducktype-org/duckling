@@ -13,8 +13,8 @@ namespace vm::jit::cf {
     class OutEdges {
       public:
         enum class Kind {
-            End,
-            Default,
+            End,        // No outgoing edges (e.g., return)
+            Default,    // Jmp or fallthrough
             JmpIf,
             JmpIfNot,
         };
