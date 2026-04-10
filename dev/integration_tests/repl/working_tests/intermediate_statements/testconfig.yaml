@@ -1,0 +1,10 @@
+# Intermediate Statements Tests
+
+Tests:
+  if_statement:
+    Cases:
+      print_in_if:
+        Input:
+          File: "if_statement/print_in_if.rtf"
+        Output:
+          String: "@{begining}\n42\n@{instruction_prompt}@{end}"

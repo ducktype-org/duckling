@@ -7,7 +7,8 @@ begining: |
   Press Enter for new line, Alt+Enter to submit.
 
 end: "\nGoodbye!\n"
+instruction_prompt: "Instruction executed.\n"
 
 SubDirs:
-  - Working_tests
-  - TO_BE_ADDED
+  - working_tests
+  # - TO_BE_ADDED

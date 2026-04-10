@@ -1,0 +1,10 @@
+# Tests for declarations of namespaces in REPL
+
+Tests:
+  simple_usage:
+    Cases:
+      simple_usage:
+        Input:
+          File: "simple_usage/simple_usage.rtf"
+        Output:
+          String: "@{begining}\n=> 42\n@{end}"

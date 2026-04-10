@@ -1,0 +1,19 @@
+# Tests for declarations of classes in REPL
+
+Tests:
+  basic_declarations:
+    Cases:
+      basic_declarations:
+        Input:
+          File: "basic_declarations/basic_declarations.rtf"
+        Output: 
+          String : "@{begining}\n=> 42\n=> 25\n@{end}"
+
+  interactions:
+    Cases:
+      using_previously_defined_objects:
+        Input:
+          File: "interactions/using_previously_defined_objects.rtf"
+        Output:
+          String: "@{begining}\n=> 12\n@{end}" 
+

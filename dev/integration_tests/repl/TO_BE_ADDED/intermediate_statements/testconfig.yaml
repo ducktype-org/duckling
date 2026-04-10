@@ -1,0 +1,36 @@
+# Intermediate Expressions Tests
+
+Tests:
+  if_statement:
+    Cases:
+      nested_modifications:
+        Input:
+          File: "if_statement/nested_modifications.rtf"
+        Output:
+          String: "@{begining}\n@{instruction_prompt}=> 6\n@{end}"
+  
+  for_statement:
+    Cases:
+      basic_for_usage:
+        Input:
+          File: "for_statement/basic_for_usage.rtf"
+        Output:
+          String: "@{begining}\n0\n1\n2\n3\n4\n5\n@{instruction_prompt}@{end}"
+      modifying_variable:
+        Input:
+          File: "for_statement/modifying_variable.rtf"
+        Output:
+          String: "@{begining}\n@{instruction_prompt}=> 42\n@{end}"
+
+  while_statement:
+    Cases:
+      basic_while_usage:
+        Input:
+          File: "while_statement/basic_while_usage.rtf"
+        Output:
+          String: "@{begining}\n0\n1\n2\n3\n4\n5\n@{instruction_prompt}@{end}"
+      modifying_variable:
+        Input:
+          File: "while_statement/modifying_variable.rtf"
+        Output:
+          String: "@{begining}\n@{instruction_prompt}=> 42\n@{end}"
