@@ -30,7 +30,7 @@ public:
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
 		TESTER_ADD_TEST(referencesTest);
-		// @TODO: #2246 This tests works well when compiled with `duckc dvm_run` although fails when
+		// @TODO: #2246 This test works well when compiled with `duckc dvm_run` although fails when
 		// tested here because constructors aren't inserted properly. When this pipeline is unified,
 		// uncomment this test.
 		// TESTER_ADD_TEST(recordsTest);

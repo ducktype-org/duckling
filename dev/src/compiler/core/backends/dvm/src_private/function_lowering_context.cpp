@@ -210,7 +210,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 				auto vm_field_name = base::strConcat("_", field_index);
 
-				auto ptr_to_field_type = program_context.getOrInsertPointerType(vm_field_type);
+				const auto& ptr_to_field_type
+					= program_context.getOrInsertPointerType(vm_field_type);
 
 				// Create a temporary to the field
 				auto field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");

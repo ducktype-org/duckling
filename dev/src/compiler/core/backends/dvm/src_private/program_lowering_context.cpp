@@ -230,9 +230,9 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			/*
 			Class types are lowered to:
 			type data: <name> {
-			    _1: <type_of_field_1>
-			    _2: <type_of_field_2>
-			    _3: <type_of_field_3>
+			    _0: <type_of_field_1>
+			    _1: <type_of_field_2>
+			    _2: <type_of_field_3>
 			}
 			*/
 			// @TODO: #2100 Change that to indexes.
