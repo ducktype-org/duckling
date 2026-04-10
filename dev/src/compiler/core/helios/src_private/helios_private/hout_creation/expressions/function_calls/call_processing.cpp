@@ -620,8 +620,8 @@ namespace compiler::helios::code {
 	 * argument collections.
 	 * @param ctx Query context
 	 * @param call_expr The PST call expression containing arguments
-	 * @param positional_arguments Output vector for positional arguments
-	 * @param named_arguments Output map for named arguments
+	 * @param[out] positional_arguments Output vector for positional arguments
+	 * @param[out] named_arguments Output map for named arguments
 	 * @return A vector of argument origins if successful, or a failure result if validation fails.
 	 */
 	query::QResult<std::vector<ElementOrigin>> fillCallArgs(
