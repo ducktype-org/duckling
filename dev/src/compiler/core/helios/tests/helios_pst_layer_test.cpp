@@ -1,9 +1,9 @@
 
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
@@ -28,12 +28,12 @@ public:
 
 private:
 	void testPstForAll() {
-        auto [module_id, root_scope] = getModule(fs::File(path("test_modules/pst_layer/for_all")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/pst_layer/for_all")));
 
 
-        query::utils::withContextDo([&](query::Context& ctx) {
-	        auto module_file = ctx.query<compiler::frontend::QueryMainSourceFile>(module_id);
-			auto pst = getFilePST(ctx, module_file);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto module_file = ctx.query<compiler::frontend::QueryMainSourceFile>(module_id);
+			auto pst         = getFilePST(ctx, module_file);
 
 			auto root_element = pst->getRootElement().unlock(ctx);
 
@@ -50,8 +50,8 @@ private:
 
 			// Expands are transparent to pstForAll, so they shouldn't be counted as elements.
 			ASSERT_EQUAL(element_types_count[pst::ElementKind::Expand], 0);
-        });
-    }
+		});
+	}
 
 	void testGetStmtsFromStmtAggregate() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/pst_layer/get_stmts")));
