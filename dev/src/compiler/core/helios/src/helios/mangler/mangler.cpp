@@ -107,16 +107,28 @@ namespace compiler::helios::mangler {
 		 * it will be prefixed with 'U' and punnycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string identifier(std::string name) {
+		void identifier(std::stringstream& ss, std::string_view name) {
 			// @future: use punnycode for unicode strings
 			if (/* hasCharsOnlyFromAllowedCharacterSet */ true) {
-				name = std::to_string(name.size()) + name;
-				return name;
+				ss << name.size() << name;
+				return;
 			} else {
-				constexpr char UNICODE_PREFIX = 'U';
-				std::string    punny_string   = name;  // @future: convert to punnycode
-				return base::strConcat(UNICODE_PREFIX, punny_string.size(), punny_string);
+				constexpr char   UNICODE_PREFIX = 'U';
+				std::string_view punny_string   = name;  // @future: convert to punnycode
+				ss << UNICODE_PREFIX << punny_string.size() << punny_string;
 			}
+		}
+
+		/**
+		 * @brief Returns bare identifier of the symbol prefixed with its size
+		 * If the name contains characters outside of the allowed set,
+		 * it will be prefixed with 'U' and punnycode-encoded.
+		 * @note: See mangling-scheme.md for details
+		 */
+		std::string identifier(std::string_view name) {
+			std::stringstream ss;
+			identifier(ss, name);
+			return ss.str();
 		}
 
 		/**
@@ -134,18 +146,18 @@ namespace compiler::helios::mangler {
 			if (/* standalone module */ true) {
 				auto enclosing_scope = scope(symbol_id);
 
-				std::vector<std::string> modules;
-				auto                     curr = frontend::getModuleRef(module(enclosing_scope));
-				modules.emplace_back(curr->getName().str());
+				std::vector<std::string_view> modules;
+				auto                          curr = module(enclosing_scope);
+				modules.push_back(frontend::moduleName(curr).strView());
 
-				while (auto parent = curr->getParentModule()) {
-					curr = frontend::getModuleRef(parent->unlock(ctx).getID());
-					modules.emplace_back(curr->getName().str());
+				while (auto parent = ctx.query<frontend::QueryParentModule>(curr)) {
+					curr = parent.value();
+					modules.push_back(frontend::moduleName(curr).strView());
 				}
 
 				std::stringstream ret;
 				ret << "M";
-				for (auto& mod: modules | std::views::reverse) ret << identifier(std::move(mod));
+				for (auto& mod: modules | std::views::reverse) identifier(ret, mod);
 
 				return ret.str();
 			}
@@ -170,7 +182,7 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string unscopedName(SymID symbol_id) {
-			return identifier(compiler::helios::name(symbol_id).str());
+			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
 		/**
@@ -198,13 +210,13 @@ namespace compiler::helios::mangler {
 
 						if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
 							auto nmsp = ancestor.dynamicCast<pst::Namespace>().value();
-							path_parts.push_back(identifier(nmsp->getName().str()));
+							path_parts.push_back(identifier(nmsp->getName().strView()));
 							current_pst = pst::Access<pst::LangElement>(ancestor);
 							break;
 						}
 						if (ancestor->getElementKind() == pst::ElementKind::Class) {
 							auto nmsp = ancestor.dynamicCast<pst::Class>().value();
-							path_parts.push_back(identifier(nmsp->getName().str()));
+							path_parts.push_back(identifier(nmsp->getName().strView()));
 							current_pst = pst::Access<pst::LangElement>(ancestor);
 							break;
 						}
@@ -251,7 +263,7 @@ namespace compiler::helios::mangler {
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
 
-				for (const auto& param: fun_decl.parameters) ret << identifier(param.name.str());
+				for (const auto& param: fun_decl.parameters) identifier(ret, param.name.strView());
 
 				ret << "E";
 			} else {
@@ -592,9 +604,11 @@ namespace compiler::helios::mangler {
 			case Meta:
 				return mangle(ctx, type.as<tsh::MetaAbstractType>());
 			default:
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
-				));
+				ctx.logInt(
+					makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
+					)
+				);
 				return query::Failed();
 			}
 		}
