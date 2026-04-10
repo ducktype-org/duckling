@@ -540,10 +540,9 @@ namespace compiler::helios::code {
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
 				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
-				auto condition_res
-					= subExprFromPSTWithType(ctx, stmt->getCondition(), bool_type);
-				auto if_true_res  = subExprFromPST(ctx, stmt->getIfTrue());
-				auto if_false_res = subExprFromPST(ctx, stmt->getIfFalse());
+				auto condition_res   = subExprFromPSTWithType(ctx, stmt->getCondition(), bool_type);
+				auto if_true_res     = subExprFromPST(ctx, stmt->getIfTrue());
+				auto if_false_res    = subExprFromPST(ctx, stmt->getIfFalse());
 
 				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;
