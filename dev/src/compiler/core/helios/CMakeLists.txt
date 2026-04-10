@@ -68,3 +68,7 @@ duck_add_test(compiler helios_repl_instruction_wrapper tests/helios_repl_instruc
 duck_add_test(compiler helios_repl_expression_wrapper tests/helios_repl_expression_wrapper_test.cpp
 	USES Base TypeSystemHigher PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler helios_pst_layer tests/helios_pst_layer_test.cpp
+	USES Base TypeSystemHigher PstParser HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
