@@ -143,9 +143,7 @@ namespace vm::jit::cf {
         }
 
         const BasicBlock& getBlock(BlockID id) const {
-            if (id >= blocks.size()) {
-                throw std::runtime_error("Invalid block ID");
-            }
+            CORE_ASSERT(id >= blocks.size(), "Invalid block ID");
             return blocks[id];
         }
     };
