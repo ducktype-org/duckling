@@ -74,13 +74,17 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
+		// We go up the PST until we find a statement that determines whether the variable is global or not. 
 		return std::invoke(
 			[&ctx](this auto self, const pst::Access<pst::LangElement>& el) -> bool {
 				switch (el->getElementKind()) {
+
+				// Variables inside Top-level and namespace are global: 
 				case pst::ElementKind::TopLevel:
 				case pst::ElementKind::Namespace:
 					return true;
 
+				// Variables inside classes, functions and some statements are not global:
 				case pst::ElementKind::Class:
 				case pst::ElementKind::Fun:
 				case pst::ElementKind::ClassBlock:
@@ -91,14 +95,28 @@ namespace compiler::helios {
 				case pst::ElementKind::While:
 				case pst::ElementKind::For:
 					return false;
-
+				
+				// For other elements we go up the PST tree:
 				case pst::ElementKind::CodeBlock:
 				case pst::ElementKind::CodeBlockOrStmt:
 				case pst::ElementKind::Variable:
-				case pst::ElementKind::StmtSpecifier:
+				case pst::ElementKind::Expand:
+				case pst::ElementKind::StmtSpecifier: {
+					// @TODO: #2452 unify this logic
 					// we panic if there is no parent:
-					return self(el->getParent().value().unlock(ctx));
-
+					if (el->getParent().has_value()) {
+						return self(el->getParent().value().unlock(ctx));
+					} else {
+						// we hit an expand!
+						// note that here, we should never hit an element without parent that is not an expand
+						return self(
+							std::get<pst::AdditionalRootData::MacroExpansionParent>(
+								el->getAdditionalRootData().pst_parent
+							)
+								.expand_element.unlock(ctx)
+						);
+					}
+				}
 				default:
 					CORE_PANIC(base::strConcat(
 						"Unexpected element kind for variable symbol: ", el->elementType()
