@@ -38,15 +38,15 @@ Tests:
           String: "1\n2\n"
         ExitCode: 0
 
-  expand_expand:
+  various_statements:
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "1\n"
+          String: "176\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "1\n"
+          String: "176\n"
         ExitCode: 0
