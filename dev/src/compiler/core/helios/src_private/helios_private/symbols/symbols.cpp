@@ -100,11 +100,9 @@ namespace compiler::helios {
 					return self(el->getParent().value().unlock(ctx));
 
 				default:
-					CORE_PANIC(
-						base::strConcat(
-							"Unexpected element kind for variable symbol: ", el->elementType()
-						)
-					);
+					CORE_PANIC(base::strConcat(
+						"Unexpected element kind for variable symbol: ", el->elementType()
+					));
 				}
 			},
 			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
@@ -257,12 +255,12 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = base::StrID(
-						base::strConcat(
-							"<USING> ", using_stmt->getPointed().unlock(ctx)->getNames().front().value
-						)
-							.c_str()
-					),
+					.name
+					= base::StrID(base::strConcat(
+									  "<USING> ",
+									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
+					)
+			                          .c_str()),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -362,48 +360,46 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::CodeDecl: {
-			// CodeDecl include things like named ifs, whiles, fors and code blocks. 
-			// Note that this function should only be called if the statement creates a symbol, so we can assume that it is only named ones.
+			// CodeDecl include things like named ifs, whiles, fors and code blocks.
+			// Note that this function should only be called if the statement creates a symbol, so
+			// we can assume that it is only named ones.
 			base::Optional<base::StrID> decl_name;
 			switch (stmt->getElementKind()) {
-				case pst::ElementKind::If: {
-					auto if_stmt = stmt.dynamicCast<pst::If>().value();
-					decl_name = if_stmt->getDeclSymbolName();
-					break;
-				}
-				case pst::ElementKind::While: {
-					auto while_stmt = stmt.dynamicCast<pst::While>().value();
-					decl_name = while_stmt->getDeclSymbolName();
-					break;
-				}
-				case pst::ElementKind::For: {
-					auto for_stmt = stmt.dynamicCast<pst::For>().value();
-					decl_name = for_stmt->getDeclSymbolName();
-					break;
-				}
-				default:
-					CORE_PANIC(
-						base::strConcat(
-							"makeSymbolFromStatement unhandled CodeDecl kind, stmt: ", stmt->elementType()
-						)
-					);
+			case pst::ElementKind::If: {
+				auto if_stmt = stmt.dynamicCast<pst::If>().value();
+				decl_name    = if_stmt->getDeclSymbolName();
+				break;
 			}
-			return SymbolData::makePSTSymbolData({
+			case pst::ElementKind::While: {
+				auto while_stmt = stmt.dynamicCast<pst::While>().value();
+				decl_name       = while_stmt->getDeclSymbolName();
+				break;
+			}
+			case pst::ElementKind::For: {
+				auto for_stmt = stmt.dynamicCast<pst::For>().value();
+				decl_name     = for_stmt->getDeclSymbolName();
+				break;
+			}
+			default:
+				CORE_PANIC(base::strConcat(
+					"makeSymbolFromStatement unhandled CodeDecl kind, stmt: ", stmt->elementType()
+				));
+			}
+			return SymbolData::makePSTSymbolData(
+				{
 					.name = decl_name.value(),
 					.kind = SymbolKind::NamedCodeElement,
 				},
 				pst_data
 			);
-		} 
+		}
 		default:
 			break;
 		}
 		[[maybe_unused]] auto stmt_ptr = &*stmt;
-		CORE_PANIC(
-			base::strConcat(
-				"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
-			)
-		);
+		CORE_PANIC(base::strConcat(
+			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
+		));
 	}
 
 	/**
@@ -443,14 +439,12 @@ namespace compiler::helios {
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (key.element.unlock(ctx)->getElementKind() == pst::ElementKind::NonClassStmt) {
 				// @TODO: #2087 remove this branch, when non-class statements will be properly supported.
-				ctx.logInt(
-					makeBox<dia_int::NotYetImplementedCodeError>(
-						"Non-class statements inside classes are not supported yet.",
-						key.element.unlock(ctx)->getSourcePosition(),
-						"",
-						"here"
-					)
-				);
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Non-class statements inside classes are not supported yet.",
+					key.element.unlock(ctx)->getSourcePosition(),
+					"",
+					"here"
+				));
 				return query::Failed();
 			} else if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
@@ -736,11 +730,9 @@ namespace compiler::helios {
 					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
 
 				if (!maybe_imported_module.has_value()) {
-					ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Module not found.", import_stmt->getSourcePosition()
-						)
-					);
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Module not found.", import_stmt->getSourcePosition()
+					));
 					output(query::Failed());
 					return;
 				}
@@ -767,15 +759,13 @@ namespace compiler::helios {
 				return visitor.result_scope.value();
 			}
 			default: {
-				ctx.logInt(
-					makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Linked scope for this symbol kind is not implemented yet: ",
-							key.ref->common.kind
-						),
-						stmt(ctx, key.ref).value()->getSourcePosition()
-					)
-				);
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"Linked scope for this symbol kind is not implemented yet: ",
+						key.ref->common.kind
+					),
+					stmt(ctx, key.ref).value()->getSourcePosition()
+				));
 				return query::Failed();
 			}
 			}
@@ -1072,8 +1062,7 @@ namespace compiler::helios {
 				for (const auto& sub_expr: expr.elements) sub_expr->acceptVisitor(*this);
 			}
 
-			void visitVariantTypeConstructorExpr(
-				const code::VariantTypeConstructorExpr& expr
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
 				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
 			}
