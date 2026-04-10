@@ -14,6 +14,8 @@ namespace vm::persistent {
 	/**
 	 * @brief A persistent data structure, which simulates array. It can store up to 2^{root_height}
 	 * elements.
+	 *
+	 * @note Allows for (==) comparison of two instances with ArrayStateID in O(1)
 	 * @note Implementation based of persistent segment tree.
 	 * @note Held values are constructed only once, and nodes hold their id's. This is to allow for
 	 * quick construction of leaf elements and to avoid any assumptions about the hash function of
@@ -26,8 +28,7 @@ namespace vm::persistent {
 	class Array {
 		using NodeID = u64;
 
-		static constexpr auto SENTINEL  = NodeID{ 0 };
-		static constexpr auto ORIG_ROOT = NodeID{ 1 };
+		static constexpr auto SENTINEL = NodeID{ 0 };
 
 		struct NodeEntry {
 			NodeID left = 0;
@@ -72,6 +73,7 @@ namespace vm::persistent {
 			auto node = root;
 			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
 				auto& entry = node_entries.atRight(node);
+				auto  orig  = node;
 				if (idx & max_bit) {
 					dir  = Dir::Right;
 					node = entry.rght;
@@ -79,7 +81,7 @@ namespace vm::persistent {
 					dir  = Dir::Left;
 					node = entry.left;
 				}
-				ans.emplace_back(dir, node);
+				ans.emplace_back(dir, orig);
 			}
 
 			return ans;
@@ -107,7 +109,7 @@ namespace vm::persistent {
 			return (dir == Dir::Left) ? entry.left : entry.rght;
 		}
 
-		NodeID getRootAndValidateIdx(ArrayStateID state_id, usize idx) {
+		NodeID getRootAndValidateIdx(ArrayStateID state_id, usize idx) const {
 			auto node = NodeID{ u64(state_id) };
 
 			if (!roots.contains(node))
@@ -119,7 +121,7 @@ namespace vm::persistent {
 			return node;
 		}
 
-		NodeID getNodeAt(NodeID root, usize idx) {
+		NodeID getNodeAt(NodeID root, usize idx) const {
 			auto node = root;
 			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
 				auto& entry = node_entries.atRight(node);
@@ -148,7 +150,7 @@ namespace vm::persistent {
 			return held_values.atRight(val_id);
 		}
 
-		ArrayStateID insert(ArrayStateID state_id, usize idx, const VarT& var) {
+		ArrayStateID change(ArrayStateID state_id, usize idx, const VarT& var) {
 			auto prev_root = getRootAndValidateIdx(state_id, idx);
 
 			auto prev_path = getNodePath(prev_root, idx);
@@ -171,15 +173,15 @@ namespace vm::persistent {
 
 			roots.insert(node);
 
-			return ArrayStateID{ u64(prev_root) };
+			return ArrayStateID{ u64(node) };
 		}
 
 		std::pair<bool, ArrayStateID> emplace(ArrayStateID state_id, usize idx, const VarT& var) {
 			auto prev_root = getRootAndValidateIdx(state_id, idx);
 
-			auto prev_path      = getNodePath(prev_root, idx);
-			auto [dir, node_id] = prev_path.back();
-			auto prev_node      = getChild(node_id, dir);
+			auto prev_path                = getNodePath(prev_root, idx);
+			auto [last_dir, last_node_id] = prev_path.back();
+			auto prev_node                = getChild(last_node_id, last_dir);
 
 			if (prev_node != SENTINEL) return { false, state_id };
 
@@ -207,11 +209,13 @@ namespace vm::persistent {
 		ArrayStateID erase(ArrayStateID state_id, usize idx) {
 			auto prev_root = getRootAndValidateIdx(state_id, idx);
 
-			auto prev_path      = getNodePath(prev_root, idx);
-			auto [dir, node_id] = prev_path.back();
-			auto node           = getChild(node_id, dir);
+			auto prev_path                = getNodePath(prev_root, idx);
+			auto [prev_dir, prev_node_id] = prev_path.back();
+			auto node                     = getChild(prev_node_id, prev_dir);
 
 			if (node == SENTINEL) return state_id;
+
+			node = SENTINEL;
 
 			using namespace std::views;
 			for (auto [dir, node_id]: prev_path | reverse) {
@@ -230,18 +234,17 @@ namespace vm::persistent {
 
 			roots.insert(node);
 
-			return ArrayStateID{ u64(prev_root) };
+			return ArrayStateID{ u64(node) };
 		}
 
 		[[nodiscard]]
 		ArrayStateID getEmpty() const {
-			return ArrayStateID{ u64(ORIG_ROOT) };
+			return ArrayStateID{ u64(SENTINEL) };
 		}
 
-		Array(usize root_height = 16): height(root_height), next_node_id(2) {
+		Array(usize root_height = 16): height(root_height) {
 			node_entries.emplaceByLeft(NodeEntry{ .left = SENTINEL, .rght = SENTINEL }, SENTINEL);
-			node_entries.emplaceByLeft(NodeEntry{ .left = SENTINEL, .rght = SENTINEL }, ORIG_ROOT);
-			roots.emplace(ORIG_ROOT);
+			roots.emplace(SENTINEL);
 		}
 	};
 }

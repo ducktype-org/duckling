@@ -18,10 +18,10 @@ namespace vm::persistent {
 
 	/**
 	 * @brief Class implementing a STL vector with time-persistency aka control version. You can
-	 * modify any of the previous instances of the vector, by using `VectorStateID` which is unique
-	 * to the state of the vector.
+	 * modify any of the previous instances of the vector, by using `VectorStateID`.
 	 *
 	 * @note Implementation based of persistent segment tree.
+	 * @note Allows for (==) comparison of two instances with ArrayStateID in O(1)
 	 * @note Held values are constructed only once, and nodes hold their id's. This is to allow for
 	 * quick construction of leaf elements and to avoid any assumptions about the hash function of
 	 * values.
@@ -130,7 +130,8 @@ namespace vm::persistent {
 			return std::make_tuple(NodeID{ u64(state_id) }, entry.size, entry.height);
 		}
 
-		NodeID getNodeAt(NodeID root, usize height, usize idx) {
+		[[nodiscard]]
+		NodeID getNodeAt(NodeID root, usize height, usize idx) const {
 			auto node = root;
 			for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
 				auto& entry = node_entries.atRight(node);
@@ -142,20 +143,24 @@ namespace vm::persistent {
 		void advancePath(Path& path) const {
 			const auto orig_size = path.size();
 
-			while (path.size() && path.back().first == Dir::Left) path.pop_back();
+			while (path.size() && path.back().first == Dir::Right) path.pop_back();
 
-			CORE_ASSERT(path.size(), "We require that at least node on path is left son");
+			CORE_ASSERT(
+				path.size() && path.back().first == Dir::Left,
+				"We require that at least node on path is left son"
+			);
 
 			NodeID node       = path.back().second;
 			path.back().first = Dir::Right;
 
 			while (path.size() < orig_size) {
-				node = getChild(node, Dir::Right);
-				path.emplace_back(Dir::Right, node);
+				auto [dir, node_id] = path.back();
+				node = getChild(node_id, dir);
+				path.emplace_back(Dir::Left, node);
 			}
 		}
 
-		const VarT& getLeafValue(NodeID node) {
+		const VarT& getLeafValue(NodeID node) const {
 			auto var_id = leaf_entries.atRight(node).var_id;
 
 			return held_values.atRight(var_id);
@@ -261,12 +266,9 @@ namespace vm::persistent {
 			auto path = getNodePath(prev_root, left);
 
 			for (usize idx = left; idx <= right; idx++) {
-
 				NodeID leaf;
-				{
-					auto [dir, last] = path.back();
-					leaf = getChild(last, dir);
-				}
+				auto [dir, last] = path.back();
+				leaf             = getChild(last, dir);
 
 				ans.emplace_back(getLeafValue(leaf));
 
@@ -278,7 +280,7 @@ namespace vm::persistent {
 			return ans;
 		}
 
-		VectorStateID take(VectorStateID state_id, usize prefix_size) {
+		VectorStateID getPrefix(VectorStateID state_id, usize prefix_size) {
 			auto [prev_root, size, root_height] = getRootInfo(state_id);
 
 			if (prefix_size == 0) return VectorStateID{ SENTINEL };
@@ -291,8 +293,13 @@ namespace vm::persistent {
 			for (usize exp = 1; exp <= prefix_size; exp *= 2, new_height++);
 
 			using namespace std::views;
-			auto path = getNodePath(prev_root, prefix_size) | reverse | take(new_height)
-			          | std::ranges::to<std::vector>;
+			Path prev_path = getNodePath(prev_root, prefix_size);
+
+			Path path = {};
+			for (usize i = 0; i < new_height; i++) {
+				path.push_back(prev_path.back());
+				prev_path.pop_back();
+			}
 
 			auto node = getChild(path[0].second, path[0].first);
 
@@ -312,7 +319,7 @@ namespace vm::persistent {
 
 			root_info.put(node, RootEntry{ .height = new_height, .size = prefix_size });
 
-			return VectorStateID{ node };
+			return VectorStateID(node);
 		}
 
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
@@ -321,11 +328,7 @@ namespace vm::persistent {
 			if (size < how_many_pop)
 				throw std::invalid_argument("stack at given state is empty - cannot pop from it");
 
-			return take(state_id, size - how_many_pop);
-		}
-
-		std::vector<VarT> slice(VectorStateID state_id, usize idx_L, usize idx_R) {
-			auto [prev_var_root, size, height] = getRootInfo(state_id);
+			return getPrefix(state_id, size - how_many_pop);
 		}
 
 		[[nodiscard]]
@@ -335,7 +338,7 @@ namespace vm::persistent {
 
 		Vector() {
 			root_info.put(SENTINEL, RootEntry{ .height = 0, .size = 0 });
-			node_entries.addLink(NodeEntry{ .left = SENTINEL, .rght = SENTINEL }, SENTINEL);
+			node_entries.emplaceByLeft(NodeEntry{ .left = SENTINEL, .rght = SENTINEL }, SENTINEL);
 		}
 	};
 }

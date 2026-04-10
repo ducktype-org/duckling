@@ -22,14 +22,20 @@ namespace vm::persistent::detail {
 		base::HashMap<R, L, HashR> right_left;
 
 	public:
-		base::Optional<R> atLeftOpt(L left) const {
+		base::Optional<R> atLeftOpt(const L& left) const {
 			auto it = left_right.find(left);
-			return (it == left_right.end()) ? std::nullopt : it->second;
+			if (it == left_right.end())
+				return std::nullopt;
+
+			return it->second;
 		}
 
-		base::Optional<L> atRightOpt(R rght) const {
+		base::Optional<L> atRightOpt(const R& rght) const {
 			auto it = right_left.find(rght);
-			return (it == right_left.end()) ? std::nullopt : it->second;
+			if (it == right_left.end())
+				return std::nullopt;
+
+			return it->second;
 		}
 
 		const R& atLeft(const L& left) const { return left_right.at(left); }
@@ -45,30 +51,30 @@ namespace vm::persistent::detail {
 			return left_right.size();
 		}
 
-		std::pair<bool, const R&> emplaceByLeft(const L& left, const R& rght) {
+		std::pair<bool, R> emplaceByLeft(L left, R rght) {
+			if (auto it = left_right.find(left); it != left_right.end())
+				return { false, it->second };
+
 			if (right_left.find(rght) != right_left.end())
 				throw std::invalid_argument("right element is already bound");
 
-			auto itl = left_right.find(left);
-			if (itl != left_right.end()) return { false, itl->second };
+			right_left.put(rght, left);
+			left_right.put(left, rght);
 
-			right_left.emplace(rght, left);
-			auto [_, it] = left_right.emplace(left, rght);
-
-			return { true, it->second };
+			return { true, left_right[left] };
 		}
 
-		std::pair<bool, const L&> emplaceByRight(const L& left, const R& rght) {
+		std::pair<bool, L> emplaceByRight(L left, R rght) {
+			if (auto it = right_left.find(rght); it != right_left.end())
+				return { false, it->second };
+
 			if (left_right.find(left) != left_right.end())
 				throw std::invalid_argument("left element is already bound");
 
-			auto itr = right_left.find(rght);
-			if (itr != right_left.end()) return { false, itr->second };
+			left_right.put(left, rght);
+			right_left.put(rght, left);
 
-			left_right.emplace(left, rght);
-			auto [_, it] = right_left.emplace(rght, left);
-
-			return { true, it->second };
+			return { true, right_left[rght] };
 		}
 
 		auto leftToRight() const { return left_right; }

@@ -12,7 +12,8 @@ namespace vm::persistent {
 	/**
 	 * @brief Persistent data structure which simulates STL hashmap
 	 *
-	 * @note currently a wrapper for persistant arrau and bijective map value~idx
+	 * @note currently a wrapper for persistant array and bijective map value~idx.
+	 * @note Allows for (==) comparison of two instances with ArrayStateID in O(1)
 	 *
 	 * @tparam KeyT
 	 * @tparam ValT
@@ -47,7 +48,7 @@ namespace vm::persistent {
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
 			auto inner     = ArrayStateID{ u64(state_id) };
 			auto idx       = getIdxOfkey(key);
-			auto new_state = buffer.insert(inner, idx, var);
+			auto new_state = buffer.change(inner, idx, var);
 
 			return HashMapStateID{ u64{ new_state } };
 		}
