@@ -5,6 +5,8 @@ namespace N {
 
     expand " expand \" var c = 3;  \"  ";
 
+    expand " namespace M { expand \" var c = 3;  \" } ";
+
     expand " namespace N { } ";
 }
 

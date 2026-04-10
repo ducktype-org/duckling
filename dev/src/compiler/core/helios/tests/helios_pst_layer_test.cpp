@@ -3,6 +3,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
@@ -26,7 +27,31 @@ public:
 	}
 
 private:
-	void testPstForAll() {}
+	void testPstForAll() {
+        auto [module_id, root_scope] = getModule(fs::File(path("test_modules/pst_layer/for_all")));
+
+
+        query::utils::withContextDo([&](query::Context& ctx) {
+	        auto module_file = ctx.query<compiler::frontend::QueryMainSourceFile>(module_id);
+			auto pst = getFilePST(ctx, module_file);
+
+			auto root_element = pst->getRootElement().unlock(ctx);
+
+			std::map<pst::ElementKind, u64> element_types_count;
+
+			compiler::helios::pstForAll(ctx, root_element, [&](const auto& element) {
+				element_types_count[element->getElementKind()]++;
+			});
+
+
+			ASSERT_EQUAL(element_types_count[pst::ElementKind::Namespace], 3);
+			ASSERT_EQUAL(element_types_count[pst::ElementKind::Variable], 4);
+			ASSERT_EQUAL(element_types_count[pst::ElementKind::Fun], 1);
+
+			// Expands are transparent to pstForAll, so they shouldn't be counted as elements.
+			ASSERT_EQUAL(element_types_count[pst::ElementKind::Expand], 0);
+        });
+    }
 
 	void testGetStmtsFromStmtAggregate() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/pst_layer/get_stmts")));
