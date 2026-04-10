@@ -17,13 +17,7 @@ namespace vm::jit::cf {
             i64 arg0 = function.bc[index].arg0;
 
             switch(opcode) {
-                case low::MicroOpcode::jmp_label: {
-                    block_beginnings.push_back(index + 1); // Next block starts after jump
-                    if (index + arg0 < function.bc.size()) {
-                        block_beginnings.push_back(index + arg0 + 1); // Jump destination starts a new block
-                    }
-                    break;
-                }
+                case low::MicroOpcode::jmp_label:
                 case low::MicroOpcode::jmpIf_label:
                 case low::MicroOpcode::jmpIfNot_label: {
                     block_beginnings.push_back(index + 1); // Next block starts after jump
