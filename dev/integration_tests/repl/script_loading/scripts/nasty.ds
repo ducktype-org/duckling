@@ -1,0 +1,28 @@
+const BASE: i32 = 7;
+
+namespace Deep {
+    const OFFSET: i32 = BASE + 5;
+}
+
+# NYI in current DVM backend path: class layout lowering.
+#class Box {
+#    value: i32 = Deep.OFFSET;
+#}
+
+fun nasty_value() = {
+    var i: i32 = 0;
+    var acc: i32 = 0;
+
+    while (i < 3) {
+        acc = acc + i;
+        i = i + 1;
+    }
+
+    if (true) {
+        return acc + Deep.OFFSET; #consts don't work for now, so this returns 3...
+    }
+
+    return 0;
+}
+
+builtin_output_i64(nasty_value());

@@ -13,4 +13,8 @@ SubDirs:
   - fundamentals
   - intermediate_statements
   - declarations
+  - basic_expressions
+  - decl_of_functions
+  # - multiline
+  - script_loading
   - variable_assignment

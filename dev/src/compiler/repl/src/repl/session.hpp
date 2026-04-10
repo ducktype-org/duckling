@@ -39,6 +39,17 @@ namespace compiler::repl {
 		explicit ReplSession(bool completions_enabled = true);
 
 		/**
+		 * @brief Load a script file and execute its statements in the current REPL session.
+		 *
+		 * Statements are executed in source order and become part of the current session state.
+		 * This means loaded definitions and variables can be used by subsequent interactive input.
+		 *
+		 * @param file_path Path to a .ds file
+		 * @return ReplResult indicating success or an error message
+		 */
+		ReplResult loadScriptFile(std::string_view file_path);
+
+		/**
 		 * Run the main REPL loop (blocking).
 		 * @return Exit code (0 for normal exit)
 		 */
@@ -201,6 +212,13 @@ namespace compiler::repl {
 		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
 		 */
 		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
+		/**
+		 * Suppresses REPL echo while a preload script is being loaded into the session.
+		 *
+		 * This keeps /load and `duckc repl <script>` quiet so only script-authored output
+		 * reaches the user, instead of REPL bookkeeping messages.
+		 */
+		bool m_suppress_output = false;
 	};
 
 }  // namespace compiler::repl

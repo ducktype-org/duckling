@@ -1,0 +1,85 @@
+# REPL preload tests (duckc repl <script>) plus extra /load interactions.
+
+Tests:
+  # Category: preloaded scripts that print during startup execution.
+  preload-side-effect-output:
+    Cases:
+      preload-basic-script:
+        Run: "@{build_dir}/bin//duckc repl @{script-basic}"
+        Input:
+          File: "query_loaded_value.rtf"
+        Output:
+          String: "13\n@{begining}\n=> 10\n@{end}"
+
+      preload-mixed-script:
+        Run: "@{build_dir}/bin//duckc repl @{script-mixed}"
+        Input:
+          File: "query_add_two.rtf"
+        Output:
+          String: "4\n@{begining}\n=> 4\n@{end}"
+
+      preload-print-burst-script:
+        Run: "@{build_dir}/bin//duckc repl @{script-print-burst}"
+        Input:
+          File: "query_math_expr.rtf"
+        Output:
+          String: "4\n6\n6\n@{begining}\n=> 2\n@{end}"
+
+      preload-nested-functions-script:
+        Run: "@{build_dir}/bin//duckc repl @{script-nested-functions}"
+        Input:
+          File: "query_nested_g.rtf"
+        Output:
+          String: "42\n@{begining}\n=> 42\n@{end}"
+
+  # Category: preloaded scripts with no startup stdout.
+  preload-silent-load:
+    Cases:
+      preload-silent-state-script:
+        Run: "@{build_dir}/bin//duckc repl @{script-silent-state}"
+        Input:
+          File: "query_silent_sx.rtf"
+        Output:
+          String: "@{begining}\n=> 12\n@{end}"
+
+      preload-silent-functions-script:
+        Run: "@{build_dir}/bin//duckc repl @{script-silent-functions}"
+        Input:
+          File: "query_silent_twice_base.rtf"
+        Output:
+          String: "@{begining}\n=> 12\n@{end}"
+
+      preload-nasty-script:
+        Run: "@{build_dir}/bin//duckc repl @{script-nasty}"
+        Input:
+          File: "query_nasty_value.rtf"
+        Output:
+          String: "3\n@{begining}\n=> 3\n@{end}"
+
+
+  # Category: multiple /load commands issued after startup (with and without preload side effects).
+  preload-multi-load:
+    Cases:
+      multiple-loads-after-preload:
+        Run: "@{build_dir}/bin//duckc repl @{script-basic}"
+        Input:
+          String: |
+            /load @{script-if-flow}
+            /load @{script-mixed}
+            x
+            y
+            add_two()
+        Output:
+          String: "13\n@{begining}\n14\nScript loaded: @{script-if-flow}\n4\nScript loaded: @{script-mixed}\n=> 10\n=> 10\n=> 4\n@{end}"
+
+      multiple-loads-after-silent-preload:
+        Run: "@{build_dir}/bin//duckc repl @{script-silent-state}"
+        Input:
+          String: |
+            /load @{script-basic}
+            /load @{script-silent-functions}
+            sx
+            x
+            twice_base()
+        Output:
+          String: "@{begining}\n13\nScript loaded: @{script-basic}\nScript loaded: @{script-silent-functions}\n=> 12\n=> 10\n=> 12\n@{end}"

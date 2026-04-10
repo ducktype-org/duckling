@@ -626,13 +626,16 @@ clah::Clah getClahForMain() {
 							   }
 							   return run_result->exit_code;
 						   }))
-	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
-	                       .add(clah::ParamBuilder::ofFlag()
-	                                .addLongName("no-completions")
-	                                .addShortDesc("Disable REPL autocompletions and hints.")
-	                                .build())
-	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   auto init_result = compiler::driver::initializeTheCompiler(
+	    .addSubcommand(
+			clah::Clah("repl", "Start an interactive REPL session")
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-completions")
+	                     .addShortDesc("Disable REPL autocompletions and hints.")
+	                     .build())
+				.setDefaultValueParser(clah::FileParser::make("script")
+	            )  // for optional script path.
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 									   .execution_options = {
@@ -640,16 +643,35 @@ clah::Clah getClahForMain() {
 									   },
 								   }
 							   );
-							   if (init_result.status().isBad()) {
-								   compiler::driver::exit();
-								   return 1;
-							   }
-							   compiler::repl::ReplSession session(!options.isFlag("no-completions")
-		                       );
-							   int                         result = session.run();
-							   compiler::driver::exit();
-							   return result;
-						   }))
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+					compiler::repl::ReplSession session(!options.isFlag("no-completions"));
+
+					if (options.getExtraParameterCount() > 1) {
+						std::cerr << "Error: repl accepts at most one script path. "
+									 "Usage: duckc repl [script.ds]\n";
+						compiler::driver::exit();
+						return 1;
+					}
+
+					if (options.getExtraParameterCount() == 1) {
+						auto script_file = options.getExtra<fs::File>(0).value();
+						auto load_result
+							= session.loadScriptFile(script_file.getFilePath().string());
+						if (load_result.status == compiler::repl::ReplResult::Status::Error) {
+							std::cerr << load_result.message << "\n";
+							compiler::driver::exit();
+							return 1;
+						}
+					}
+
+					int result = session.run();
+					compiler::driver::exit();
+					return result;
+				})
+		)
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   (void) compiler::driver::initializeTheCompiler(
