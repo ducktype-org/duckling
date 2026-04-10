@@ -176,7 +176,7 @@ metadata:
     }
 
     #[test]
-    fn founds_from_directory() {
+    fn finds_from_directory() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         file.touch().unwrap();
@@ -191,7 +191,7 @@ metadata:
     }
 
     #[test]
-    fn founds_at_parent() {
+    fn finds_at_parent() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         file.touch().unwrap();
@@ -208,7 +208,7 @@ metadata:
     }
 
     #[test]
-    fn founds_at_exact_directory() {
+    fn finds_at_exact_directory() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         file.touch().unwrap();
@@ -222,7 +222,7 @@ metadata:
     }
 
     #[test]
-    fn founds_at_exact_directory_notadir() {
+    fn finds_at_exact_directory_notadir() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("xd");
         assert!(!file.exists());
