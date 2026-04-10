@@ -1,0 +1,7 @@
+
+
+fun main() = {
+    # @TODO: #2465 make this test better 
+    if NamedIf (2 <= 1) { }
+    while NamedWhile (2 <= 1) { }    
+}
