@@ -30,4 +30,17 @@ namespace compiler::mir {
 		ShadowedDeclarationNote(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
+
+	class IllegalComptimeTypeError final : public dia_int::MessageWithCodeFragmentAndCause {
+    dia_int::Metadata getMetadata() const final {
+        return { .template_type = "message",
+                 .type          = "error",
+                 .family        = "type_system",  
+                 .name          = "illegal_comptime_type" };
+    }
+
+public:
+    IllegalComptimeTypeError(dia::SourcePosition source_position):
+          MessageWithCodeFragmentAndCause(source_position) {}
+};
 }

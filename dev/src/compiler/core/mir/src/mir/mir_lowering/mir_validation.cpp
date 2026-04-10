@@ -197,8 +197,56 @@ namespace compiler::mir {
 		return base::OK;
 	}
 
+	base::OkBad validateNoComptimeTypes(query::Context& ctx, const Function& fun) {
+		auto isIllegal = [](const tsh::SymbolType<>& type) {
+			// Propably this should be changed later.
+			using enum tsh::Kind;
+			auto k = type.getType().getKind();
+			return k == Meta || k == Namespace || k == Module || k == TypeTemplate;
+		};
+
+		auto get_pos = [&](helios::SymID id) {
+			return helios::symbolPst(id).value().unlock(ctx)->getSourcePosition();
+		};
+
+		auto get_fun_pos = [&]() {
+			return std::visit(
+				[&](auto&& arg) {
+					if constexpr (requires { arg.id; })
+						return get_pos(arg.id);
+					else
+						return get_pos(arg.global_var_id);
+				},
+				fun.helios_id
+			);
+		};
+
+		bool ok = true;
+
+		if (isIllegal(fun.return_type)) {
+			ctx.logInt(base::makeBox<IllegalComptimeTypeError>(get_fun_pos()));
+			ok = false;
+		}
+
+		for (const auto& local: fun.local_list) {
+			if (isIllegal(local.type)) {
+				if (local.helios_id.has_value()) {
+					ctx.logInt(
+						base::makeBox<IllegalComptimeTypeError>(get_pos(local.helios_id.value()))
+					);
+				} else {
+					ctx.logInt(base::makeBox<IllegalComptimeTypeError>(get_fun_pos()));
+				}
+				ok = false;
+			}
+		}
+
+		return ok ? base::OK : base::BAD;
+	}
+
 	base::OkBad validateFunction(query::Context& ctx, const Function& fun) {
-		bool all_ok = validateMoves(ctx, fun).isOk() && validateShadowing(ctx, fun).isOk();
+		bool all_ok = validateMoves(ctx, fun).isOk() && validateShadowing(ctx, fun).isOk()
+		           && validateNoComptimeTypes(ctx, fun).isOk();
 		return all_ok ? base::OK : base::BAD;
 	}
 }
