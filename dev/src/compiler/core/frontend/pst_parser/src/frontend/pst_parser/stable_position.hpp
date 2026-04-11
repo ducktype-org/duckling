@@ -51,6 +51,12 @@ namespace pst {
 		[[nodiscard]] dia::SourcePosition getActiveSourcePosition(query::Context& ctx) const;
 
 		/**
+		 * @brief Same as  `getActiveSourcePosition` but uses illegalAccess, so only to be used
+		 * outside query.
+		 */
+		[[nodiscard]] dia::SourcePosition getActiveSourcePositionIllegalAccess() const;
+
+		/**
 		 * @brief Inplace extend the position to include the position of another StablePosition.
 		 * @warning This method assumes that the order of the nodes will never change after
 		 * recompilation.

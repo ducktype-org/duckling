@@ -40,11 +40,9 @@ namespace lsp {
 		base::Optional<dia::SourcePosition> getOriginPosition(
 			const compiler::helios::code::ElementOrigin& origin
 		) {
-			base::Optional<dia::SourcePosition> result;
-			query::utils::withContextDo([&](query::Context& ctx) {
-				if_opt_some(origin.getSourcePosition(ctx), pos) { result = pos; }
+			return origin.getStablePosition().map([](const pst::StablePosition& stable_pos) {
+				return stable_pos.getActiveSourcePositionIllegalAccess();
 			});
-			return result;
 		}
 	}
 

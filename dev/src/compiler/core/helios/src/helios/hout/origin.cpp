@@ -9,7 +9,7 @@
 
 namespace compiler::helios::code {
 	base::Optional<dia::SourcePosition> ElementOrigin::getSourcePosition(query::Context& ctx) const {
-		return source_position.map([&](const pst::StablePosition& stable_pos) {
+		return source_position.map([&ctx](const pst::StablePosition& stable_pos) {
 			return stable_pos.getActiveSourcePosition(ctx);
 		});
 	}

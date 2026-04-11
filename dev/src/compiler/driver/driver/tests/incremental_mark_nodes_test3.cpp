@@ -71,9 +71,9 @@ private:
 				    == query::internal::QueryState::PrevColor::Green)
 					green_count++;
 				else if (*prev_colors->atMaybe(node).value()
-				         == query::internal::QueryState::PrevColor::Red) {
+				         == query::internal::QueryState::PrevColor::Red)
 					red_count++;
-				} else
+				else
 					ASSERT_TRUE(false);
 			}
 		}

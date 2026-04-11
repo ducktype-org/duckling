@@ -5,7 +5,7 @@
 #include <query_framework/input_query/query_input_impl.hpp>
 
 namespace pst {
-	struct FileSourceCode {
+	struct KeyOf_FileSourcePositions {
 		[[nodiscard]]
 		query::QueryStableHash queryStablePerfectHash() const {
 			// 4 random numbers
@@ -21,11 +21,11 @@ namespace pst {
 	 *
 	 * @note It will always be invalidated, which is for now what we want.
 	 */
-	DECLARE_QUERY_SIDE_INPUT(FileSourcePositions, FileSourceCode);
-	IMPLEMENT_QUERY_SIDE_INPUT(FileSourcePositions);
+	DECLARE_QUERY_SIDE_INPUT(FileSourcePositionsSideInput, KeyOf_FileSourcePositions);
+	IMPLEMENT_QUERY_SIDE_INPUT(FileSourcePositionsSideInput);
 
 	dia::SourcePosition SourcePositionLocked::unlock(query::Context& ctx) const {
-		ctx.query<FileSourcePositions>(FileSourceCode{});
+		ctx.query<FileSourcePositionsSideInput>(KeyOf_FileSourcePositions{});
 		return source_position;
 	}
 

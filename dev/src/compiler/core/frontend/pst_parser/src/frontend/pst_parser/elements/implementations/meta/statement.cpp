@@ -346,8 +346,7 @@ namespace pst {
 		}
 
 		if (prefixes.attributes.size() > 0)
-			setFirstToken(prefixes.attributes.front().internal()->getSourcePosition().illegalAccess(
-			));
+			setFirstToken(prefixes.attributes.front().internal()->source_position);
 
 		// Move specifiers
 		prefixes.specifiers.resize(specifiers.size());
@@ -358,7 +357,6 @@ namespace pst {
 		}
 
 		if (prefixes.specifiers.size() > 0)
-			setFirstToken(prefixes.specifiers.front().internal()->getSourcePosition().illegalAccess(
-			));
+			setFirstToken(prefixes.specifiers.front().internal()->source_position);
 	}
 }

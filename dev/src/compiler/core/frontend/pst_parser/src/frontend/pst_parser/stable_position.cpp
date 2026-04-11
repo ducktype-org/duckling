@@ -23,6 +23,25 @@ namespace pst {
 		}
 	}
 
+	dia::SourcePosition StablePosition::getActiveSourcePositionIllegalAccess() const {
+		auto first_pos = LangElement::getByStableHash(begin_scope_node)
+		                     .illegalAccess()
+		                     .value()
+		                     ->getSourcePosition()
+		                     .illegalAccess();
+
+		if (end_scope_node.has_value()) {
+			auto last_pos = LangElement::getByStableHash(end_scope_node.value())
+			                    .illegalAccess()
+			                    .value()
+			                    ->getSourcePosition()
+			                    .illegalAccess();
+			return dia::SourcePosition::merge(first_pos, last_pos);
+		} else {
+			return first_pos;
+		}
+	}
+
 	void StablePosition::extendWithSubsequentPos(const StablePosition& other) {
 		// Get the source position of the 4 hashes we need to compare
 		// and store the two that are the furthest apart (the one with the smallest start and the
