@@ -359,7 +359,7 @@ namespace compiler::repl {
 
 	void FrontendReplxxImplementation::clearHistory() { m_replxx.history_clear(); }
 
-	void FrontendReplxxImplementation::clearTerminal() { m_replxx.print("\033[2J\033[H"); }
+	void FrontendReplxxImplementation::clearScreen() { m_replxx.clear_screen(); }
 
 	void FrontendReplxxImplementation::printHelp() const {
 		std::cout << "\n=== REPL Commands ===\n";

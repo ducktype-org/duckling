@@ -17,7 +17,7 @@ namespace compiler::repl {
 		std::string readLine();
 		void        printHistory() const;
 		void        clearHistory();
-		void        clearTerminal();
+		void        clearScreen();
 		void        printHelp() const;
 
 	private:

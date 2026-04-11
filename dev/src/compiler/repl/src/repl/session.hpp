@@ -92,11 +92,6 @@ namespace compiler::repl {
 		}
 
 		/**
-		 * @brief Clear the terminal screen.
-		 */
-		void clearTerminal();
-
-		/**
 		 * @brief Clear the REPL session history.
 		 *
 		 * Removes all previously entered statements from the session history

@@ -61,7 +61,7 @@ namespace compiler::repl {
 		/**
 		 * @brief Clears the terminal screen.
 		 */
-		void clearTerminal();
+		void clearScreen();
 
 		/**
 		 * @brief Clears the history of previously entered inputs.
