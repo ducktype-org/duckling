@@ -296,7 +296,6 @@ private:
 			}
 			ASSERT_TRUE(found_y);
 		});
-
 	}
 
 	void functionParametersTest() {

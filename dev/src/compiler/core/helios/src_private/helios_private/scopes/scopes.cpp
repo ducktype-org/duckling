@@ -719,7 +719,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);
 
-
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			UNPACK_QRESULT_CREF(auto result =, ctx.query<QueryLookupInScope>(key));
