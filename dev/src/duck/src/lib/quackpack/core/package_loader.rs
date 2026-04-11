@@ -69,7 +69,7 @@ impl PackageLoader {
             trace!("checking the path `{}`", path.display());
             if path.is_file() {
                 debug!("found a package at `{}`", path.display());
-                return PackageCtx::new(potential_location.to_path_buf(), ctx);
+                return PackageCtx::new_not_global(potential_location.to_path_buf(), ctx);
             }
             current = potential_location;
         }
@@ -88,6 +88,7 @@ impl PackageLoader {
     ///
     /// Unlike [`find_from_directory`](Self::find_from_directory) this function __does not__ walk up
     /// `path`'s ancestors.
+    /// It also does not check if the venv name conflicts with the global venv name (it may be used to load the global venv).
     pub fn find_at_exact_directory<'duck>(
         path: &Path,
         ctx: &'duck DuckCtx,

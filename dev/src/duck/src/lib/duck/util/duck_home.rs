@@ -14,6 +14,7 @@ use crate::{
     quackpack::core::PackageLoader,
     util::{env::Env, path_ops_ext::PathOpsExt},
 };
+use const_format::concatcp;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
@@ -223,13 +224,17 @@ impl DuckHome {
         ensure_file
     }
 
+    pub const GLOBAL_PACKAGE_NAME: &str = "__global__";
+
     /// Default minimal manifest for the global package.
-    const DEFAULT_GLOBAL_MANIFEST: &str = "\
-    metadata:\
-      name: __global__\
-      version: 0.1\
-      authors: []\
-      licence: \"\"";
+    const DEFAULT_GLOBAL_MANIFEST: &str = concatcp!(
+        "metadata:\n",
+        "  name: ",
+        DuckHome::GLOBAL_PACKAGE_NAME,
+        "\n  version: 0.1\n",
+        "authors: []\n",
+        "licence: \"\""
+    );
 
     /// Assure that the global package root folder exists and there is a manifest in it.
     pub fn ensure_and_populate_global_dir(&self) -> QuackResult<&Path> {
