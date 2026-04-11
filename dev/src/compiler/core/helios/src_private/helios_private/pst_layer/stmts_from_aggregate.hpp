@@ -1,5 +1,5 @@
 /**
- * @file pst_walkers.hpp
+ * @file stmts_from_aggregate.hpp
  * @brief Functions that perform some walks over PST
  */
 
@@ -22,6 +22,8 @@ namespace compiler::helios {
 	 *  * For ClassBlock return all children statements of the class block
 	 *    Including onces in access blocks
 	 *  * For other it panics
+	 *
+	 * @note It expands and handles macros.
 	 *
 	 * @return StmtList
 	 */

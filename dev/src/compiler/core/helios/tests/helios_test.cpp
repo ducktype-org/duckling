@@ -2312,9 +2312,9 @@ private:
 			const auto& hout_unit
 				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
+			ASSERT_EQUAL(hout_unit.glob_data.size(), 4);
 
-			std::vector<char> globals = { 'A', 'B', 'C' };
+			std::vector<std::string> globals = { "A", "B", "C", "A_in_expand" };
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
 					ASSERT_TRUE(compiler::helios::isGlobalVar(
