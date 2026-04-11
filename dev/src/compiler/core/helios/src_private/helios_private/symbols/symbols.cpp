@@ -103,7 +103,6 @@ namespace compiler::helios {
 				case pst::ElementKind::Expand:
 				case pst::ElementKind::StmtSpecifier: {
 					// @TODO: #2452 unify this logic
-				    // we panic if there is no parent:
 					if (el->getParent().has_value()) {
 						return self(el->getParent().value().unlock(ctx));
 					} else {
