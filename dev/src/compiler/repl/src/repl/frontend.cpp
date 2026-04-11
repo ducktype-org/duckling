@@ -13,6 +13,8 @@ namespace compiler::repl {
 
 	void ReplFrontend::printHistory() const { m_impl.printHistory(); }
 
+	void ReplFrontend::clearTerminal() { m_impl.clearTerminal(); }
+
 	void ReplFrontend::clearHistory() { m_impl.clearHistory(); }
 
 	void ReplFrontend::printHelp() const { m_impl.printHelp(); }

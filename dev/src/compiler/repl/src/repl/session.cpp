@@ -110,8 +110,8 @@ namespace compiler::repl {
 		}
 
 		if (line == "/clear" || line == "/c") {
-			clearHistory();
-			std::cout << "History cleared.\n";
+			clearTerminal();
+			std::cout << "clean terminal\n";
 			return true;
 		}
 
@@ -119,6 +119,8 @@ namespace compiler::repl {
 		std::cerr << "Type /help to see available commands.\n";
 		return false;
 	}
+
+	void ReplSession::clearTerminal() {}
 
 	void ReplSession::clearHistory() {
 		m_frontend.clearHistory();

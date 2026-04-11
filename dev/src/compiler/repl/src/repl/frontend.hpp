@@ -59,6 +59,11 @@ namespace compiler::repl {
 		void printHistory() const;
 
 		/**
+		 * @brief Clears the terminal screen.
+		 */
+		void clearTerminal();
+
+		/**
 		 * @brief Clears the history of previously entered inputs.
 		 */
 		void clearHistory();

@@ -309,7 +309,7 @@ namespace compiler::repl {
 	void FrontendReplxxImplementation::printWelcome() const {
 		std::cout << "Duckling REPL\n";
 		std::cout << "Type /help for available commands, /exit to quit.\n";
-		std::cout << "Press Enter for new line, Alt+Enter to submit.\n\n";
+		std::cout << "Press Enter to submit. Press Alt+Enter for new line.\n\n";
 	}
 
 	std::string FrontendReplxxImplementation::readLine() {
@@ -359,13 +359,16 @@ namespace compiler::repl {
 
 	void FrontendReplxxImplementation::clearHistory() { m_replxx.history_clear(); }
 
+	void FrontendReplxxImplementation::clearTerminal() { m_replxx.print("\033[2J\033[H"); }
+
 	void FrontendReplxxImplementation::printHelp() const {
 		std::cout << "\n=== REPL Commands ===\n";
 		std::cout << "  /help, /?           - Show this help message\n";
 		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
 		std::cout << "  /history, /h        - Show all executed statements\n";
-		std::cout << "  /clear, /c          - Clear statement history\n";
+		std::cout << "  /clear, /c          - Clear terminal\n";
 		std::cout << "\n=== Editing ===\n";
+		std::cout << "  Enter               - Submit\n";
 		std::cout << "  Alt + Enter         - Insert a new line\n";
 		std::cout << "  Tab                 - Autocomplete keywords / identifiers\n";
 		std::cout << "  Up / Down           - Navigate input history\n";
