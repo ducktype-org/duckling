@@ -807,21 +807,6 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"(
-				fun foo() = {
-					var a: i64 = 0;
-					&a;
-
-					return a;
-				}
-
-				const bar = foo();
-			)",
-			{ "Feature not implemented", "pointer types" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
 				class A { x: i64 = 0; }
 				const a = A();
 

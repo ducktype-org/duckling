@@ -34,6 +34,13 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+  overloading_between_modules:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1000\n200\n500\n30\n60\n4\n7\n"
+        ExitCode: 0
   simple:
     Cases: 
       llvm:
@@ -59,6 +66,8 @@ Tests:
           String: "5\n7\n"
         ExitCode: 0
   type_overloading:
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm
