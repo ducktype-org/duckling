@@ -425,7 +425,7 @@ private:
 
 		// ========================== Lexer errors ==========================
 
-		// // We don't see errors here, because they are produced by the lexer, not query:
+		// We don't see errors here, because they are produced by the lexer, not query:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
@@ -437,6 +437,20 @@ private:
 			0
 		);
 
+		// ========================== Parsing errors ==========================
+
+		// We don't see errors here, because they are produced by the parser, not query:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					if Loop <= 1 { # no parenthesis around condition
+					
+					}
+				}
+			)",
+			{},
+			0
+		);
 
 		// ========================== Comp time errors ==========================
 
