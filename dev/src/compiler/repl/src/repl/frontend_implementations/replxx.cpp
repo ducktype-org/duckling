@@ -188,8 +188,8 @@ namespace compiler::repl {
 				if (std::isalpha(static_cast<unsigned char>(input[i])) || input[i] == '_') {
 					size_t start = i;
 					while (i < len
-					       && (std::isalnum(static_cast<unsigned char>(input[i])) || input[i] == '_'
-					       ))
+					       && (std::isalnum(static_cast<unsigned char>(input[i]))
+					           || input[i] == '_'))
 						++i;
 					std::string word = input.substr(start, i - start);
 
