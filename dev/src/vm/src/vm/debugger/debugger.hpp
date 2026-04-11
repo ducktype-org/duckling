@@ -16,7 +16,7 @@ namespace vm::debugger {
 	 * @TODO: #2454 Implement CLI
 	 * @TODO: #2455 Implement DAP
 	 */
-	class Debugger {
+	class Debugger final {
 	private:
 		vm::PID                  pid;
 		std::vector<std::string> main_args;
