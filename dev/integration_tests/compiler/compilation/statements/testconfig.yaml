@@ -42,15 +42,15 @@ Tests:
         ExitCode: 0
         TimeOut: 1 # 10^8/3 loops should definitely be done in this time.
 
-    named_statements:
-      Cases:
-        llvm:
-          backend: llvm
-          Output:
-            String: ""
-          ExitCode: 0
-        dvm:
-          backend: dvm
-          Output:
-            String: ""
-          ExitCode: 0
+  named_statements:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0

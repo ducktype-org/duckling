@@ -363,31 +363,9 @@ namespace compiler::helios {
 			// CodeDecl include things like named ifs, whiles, fors and code blocks.
 			// Note that this function should only be called if the statement creates a symbol, so
 			// we can assume that it is only named ones.
-			base::Optional<base::StrID> decl_name;
-			switch (stmt->getElementKind()) {
-			case pst::ElementKind::If: {
-				auto if_stmt = stmt.dynamicCast<pst::If>().value();
-				decl_name    = if_stmt->getDeclSymbolName();
-				break;
-			}
-			case pst::ElementKind::While: {
-				auto while_stmt = stmt.dynamicCast<pst::While>().value();
-				decl_name       = while_stmt->getDeclSymbolName();
-				break;
-			}
-			case pst::ElementKind::For: {
-				auto for_stmt = stmt.dynamicCast<pst::For>().value();
-				decl_name     = for_stmt->getDeclSymbolName();
-				break;
-			}
-			default:
-				CORE_PANIC(base::strConcat(
-					"makeSymbolFromStatement unhandled CodeDecl kind, stmt: ", stmt->elementType()
-				));
-			}
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = decl_name.value(),
+					.name = stmt->getDeclSymbolName().value(),
 					.kind = SymbolKind::NamedCodeElement,
 				},
 				pst_data
