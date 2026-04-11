@@ -27,12 +27,10 @@ pub fn get_parser() -> Command {
         )
         .add_jobs()
         .arg(flag("frozen", "Don't update the freezefile"))
-        .arg(
-            flag(
-                "overwrite",
-                "Overwrite any existing virtual environments with the same name",
-            )
-        )
+        .arg(flag(
+            "overwrite",
+            "Overwrite any existing virtual environments with the same name",
+        ))
         .arg(flag(
             "external-errors",
             "Halt computation after encountering errors in foreign manifests",

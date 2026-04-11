@@ -232,8 +232,8 @@ impl DuckHome {
         "  name: ",
         DuckHome::GLOBAL_PACKAGE_NAME,
         "\n  version: 0.1\n",
-        "authors: []\n",
-        "licence: \"\""
+        "  authors: []\n",
+        "  licence: \"\""
     );
 
     /// Assure that the global package root folder exists and there is a manifest in it.
