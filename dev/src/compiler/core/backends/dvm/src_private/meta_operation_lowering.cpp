@@ -7,7 +7,7 @@ namespace compiler::backend_vm::internal {
 	void MetaOperationLowerer::lower(
 		const MetaOperation&            meta_operation,
 		const std::deque<DVMValue>&     args,
-		const base::Optional<DVMValue>& output
+		const base::Optional<DVMPlace>& output
 	) {
 		switch (meta_operation.meta_op) {
 		case lir::Operation::MetaCreateBox:
@@ -40,7 +40,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void MetaOperationLowerer::lowerCreateBox(
-		const DVMValue& type_arg, const base::Optional<DVMValue>& output
+		const DVMValue& type_arg, const base::Optional<DVMPlace>& output
 	) {
 		func_ctx.handleCall(
 			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
@@ -52,7 +52,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void MetaOperationLowerer::lowerCreateRef(
-		const DVMValue& type_arg, const base::Optional<DVMValue>& output
+		const DVMValue& type_arg, const base::Optional<DVMPlace>& output
 	) {
 		func_ctx.handleCall(
 			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
@@ -64,7 +64,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void MetaOperationLowerer::lowerCreateConst(
-		const DVMValue& type_arg, const base::Optional<DVMValue>& output
+		const DVMValue& type_arg, const base::Optional<DVMPlace>& output
 	) {
 		func_ctx.handleCall(
 			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
@@ -76,7 +76,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void MetaOperationLowerer::lowerCreateTuple(
-		const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+		const std::deque<DVMValue>& type_args, const base::Optional<DVMPlace>& output
 	) {
 		lowerBuilderPattern(
 			BuilderSequence{ .new_func  = base::StrID(comptime_func_names::TUPLE_BUILDER_NEW),
@@ -89,7 +89,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void MetaOperationLowerer::lowerCreateVariant(
-		const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+		const std::deque<DVMValue>& type_args, const base::Optional<DVMPlace>& output
 	) {
 		lowerBuilderPattern(
 			BuilderSequence{ .new_func  = base::StrID(comptime_func_names::VARIANT_BUILDER_NEW),
@@ -102,7 +102,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void MetaOperationLowerer::lowerTypesEqual(
-		const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+		const std::deque<DVMValue>& type_args, const base::Optional<DVMPlace>& output
 	) {
 		CORE_ASSERT(type_args.size() == 2, "MetaEq should have two arguments");
 		func_ctx.handleCall(
@@ -112,12 +112,10 @@ namespace compiler::backend_vm::internal {
 			type_args,
 			output
 		);
-
-		func_ctx.pushInstruction({ OpKind::cmov, output.value(), DVMValue(1).asArgument() });
 	}
 
 	void MetaOperationLowerer::lowerTypesNotEqual(
-		const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+		const std::deque<DVMValue>& type_args, const base::Optional<DVMPlace>& output
 	) {
 		CORE_ASSERT(type_args.size() == 2, "MetaNeq should have two arguments");
 		func_ctx.handleCall(
@@ -127,24 +125,23 @@ namespace compiler::backend_vm::internal {
 			type_args,
 			output
 		);
-		func_ctx.pushInstruction({ OpKind::cmov, output.value(), DVMValue(1).asArgument() });
 	}
 
 	void MetaOperationLowerer::lowerBuilderPattern(
 		const BuilderSequence&          builder_sequence,
 		const std::deque<DVMValue>&     type_args,
-		const base::Optional<DVMValue>& output
+		const base::Optional<DVMPlace>& output
 	) {
 		auto builder = func_ctx.pushTempLocal(
 			vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "variant_builder"
 		);
-		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
+		DVMValue builder_value = { builder, DVMPlace::AccessKind::Direct };
 		func_ctx.handleCall(
 			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
 				builder_sequence.new_func, func_ctx.program_context
 			),
 			{},
-			builder_value
+			DVMPlace{ builder, DVMPlace::AccessKind::Direct }
 		);
 
 		for (const auto& type_arg: type_args) {
@@ -169,6 +166,7 @@ namespace compiler::backend_vm::internal {
 
 	DVMValue MetaOperationLowerer::getQueryContext() {
 		return DVMValue{ DVMGlobal{ .name = base::StrID(comptime_func_names::GLOBAL_QUERY_CONTEXT),
-			                        .type = vm::code::OpaqueType(base::StrID("opaque_ptr"), 8) } };
+			                        .type = vm::code::OpaqueType(base::StrID("opaque_ptr"), 8) },
+			             DVMPlace::AccessKind::Direct };
 	}
 }

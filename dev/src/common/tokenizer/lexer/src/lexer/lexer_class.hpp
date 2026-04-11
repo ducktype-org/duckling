@@ -66,6 +66,8 @@ namespace lexer {
 		void operatorHandler(Tokens& output);
 		void nameHandler(Tokens& output);
 		void stringHandler(Tokens& output);
+		void formatStringHandler(Tokens& output);
+		void formatSubStringHandler(Tokens& output);
 		void charHandler(Tokens& output);
 		void specialHandler(Tokens& output);
 
@@ -101,6 +103,8 @@ namespace lexer {
 		bool isBlockCommentEnd() const;
 		[[nodiscard]]
 		bool isStringBegin() const;
+		[[nodiscard]]
+		bool isFormatStringBegin() const;
 		[[nodiscard]]
 		bool isCharBegin() const;
 		/**@}*/

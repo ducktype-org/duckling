@@ -181,12 +181,14 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         let Some(root_freeze) = freeze.package_freezes.get(&freeze.main_pkg) else {
             qp_bail_internal!("Maximal valid freeze without main package freeze")
         };
-        for dep in root_freeze.dependencies_realization.keys() {
-            root_manifest
-                .dependencies_mut()
-                .all_dependencies_mut()
-                .remove(dep);
-        }
+        root_manifest
+            .dependencies_mut()
+            .all_dependencies_mut()
+            .retain(|dep| {
+                !root_freeze
+                    .dependencies_realization
+                    .contains_key(&dep.effective_name())
+            });
         Ok(root_manifest)
     }
 }

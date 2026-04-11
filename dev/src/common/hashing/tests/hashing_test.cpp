@@ -128,6 +128,8 @@ struct type3 {
 
 struct type4 {
 	std::array<int, 2> a{ 123, 456 };
+
+	static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
 };
 
 template<typename From, typename To>

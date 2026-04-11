@@ -126,6 +126,7 @@ namespace compiler::driver {
 		 * instead of executing immediately.
 		 *
 		 * Like ReplMode, does not set up a main package or incremental compilation.
+		 * The script file is extracted to global_state::ScriptContext during initialization.
 		 */
 		struct ScriptMode final {
 			fs::File                        script_file;

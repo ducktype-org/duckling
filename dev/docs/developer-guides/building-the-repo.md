@@ -28,7 +28,7 @@ sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g+
 #### Arch linux
 
 ```bash
-sudo pacman -Sy python python-pip python-click doxygen graphviz lcov --noconfirm
+sudo pacman -S python python-pip python-click doxygen graphviz lcov --noconfirm
 ```
 
 > **Note**  

@@ -6,17 +6,17 @@
  * called through QueryModuleHOUT.
  */
 
+#include <../src_private/helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
+#include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -110,7 +110,7 @@ private:
 																tsh::Mutability::Mutable,
 															};
 
-		return houtgen::compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
+		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
 
 	/**

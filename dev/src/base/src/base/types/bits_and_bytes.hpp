@@ -26,6 +26,8 @@ namespace base {
 		);
 		return Bytes(usize(bits) / 8);
 	}
+
+	constexpr Bytes bits2bytesRoundUp(Bits bits) { return Bytes((usize(bits) + 7) / 8); }
 }
 
 namespace base::internal {

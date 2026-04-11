@@ -10,8 +10,8 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/lower/queries.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsl/queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -147,7 +147,7 @@ private:
 			for (auto& local: foo_lir->local_list) {
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
-						local.layout->getSourceType(),
+						local.layout->getSourceType().getType(),
 						getIntegralType(
 							ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
@@ -155,7 +155,7 @@ private:
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
-						local.layout->getSourceType(),
+						local.layout->getSourceType().getType(),
 						getIntegralType(
 							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
@@ -199,6 +199,22 @@ private:
 			foo_mir->debugPrint(std::cerr);
 		});
 	}
+
+/**
+ * @brief Helper macro to assert position information with concise syntax.
+ * Extracts line/column info from position and validates against expected values.
+ */
+#define ASSERT_POSITION(                                                              \
+	pos, expected_start_line, expected_start_col, expected_end_line, expected_end_col \
+)                                                                                     \
+	do {                                                                              \
+		auto [start_line, start_col] = (pos).getStartLineColumn();                    \
+		auto [end_line, end_col]     = (pos).getEndLineColumn();                      \
+		ASSERT_EQUAL(start_line, expected_start_line);                                \
+		ASSERT_EQUAL(start_col, expected_start_col);                                  \
+		ASSERT_EQUAL(end_line, expected_end_line);                                    \
+		ASSERT_EQUAL(end_col, expected_end_col);                                      \
+	} while (false)
 
 	/**
 	 * @brief Test if the stable positions in LIR metadata are correct.
@@ -259,20 +275,28 @@ private:
 			ASSERT_EQUAL(first_end_line, 5);
 			ASSERT_EQUAL(first_end_col, 21);
 
-			auto [second_start_line, second_start_col] = second_pos.getStartLineColumn();
-			auto [second_end_line, second_end_col]     = second_pos.getEndLineColumn();
-			ASSERT_EQUAL(second_start_line, 7);
-			ASSERT_EQUAL(second_start_col, 18);
-			ASSERT_EQUAL(second_end_line, 7);
-			ASSERT_EQUAL(second_end_col, 24);
+			ASSERT_POSITION(second_pos, 7, 18, 7, 24);
+			ASSERT_POSITION(fourth_pos, 7, 5, 7, 30);
 
-			auto [fourth_start_line, fourth_start_col] = fourth_pos.getStartLineColumn();
-			auto [fourth_end_line, fourth_end_col]     = fourth_pos.getEndLineColumn();
-			ASSERT_EQUAL(fourth_start_line, 7);
-			ASSERT_EQUAL(fourth_start_col, 5);
-			ASSERT_EQUAL(fourth_end_line, 7);
-			ASSERT_EQUAL(fourth_end_col, 30);
+			// Test local variable metadata
+			bool found_y = false;
+			for (const auto& local: foo_lir->local_list) {
+				if (!local.helios_id.has_value()) continue;
+
+				auto name = helios::name(local.helios_id.value());
+				if (name == base::StrID("y")) {
+					found_y = true;
+					ASSERT_EQUAL(local.metadata.source_code_name.value(), name);
+
+					// Verify source position matches variable declaration on line 7
+					ASSERT_POSITION(
+						local.metadata.position.value().getActiveSourcePosition(ctx), 7, 5, 7, 30
+					);
+				}
+			}
+			ASSERT_TRUE(found_y);
 		});
+
 	}
 
 	void functionParametersTest() {
@@ -346,7 +370,7 @@ private:
 				if (local.helios_id.has_value() && helios::name(local.helios_id.value()) == "a") {
 					found_a = true;
 					ASSERT_EQUAL(
-						local.layout->getSourceType(),
+						local.layout->getSourceType().getType(),
 						getIntegralType(
 							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)

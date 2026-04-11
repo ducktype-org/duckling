@@ -8,7 +8,6 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
@@ -17,9 +16,10 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/pst_layer/for_all.hpp>
+#include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -178,6 +178,11 @@ namespace compiler::helios {
 		case pst::ElementKind::ParamList:
 			return ElementScopeKind::Transparent;
 
+		case pst::ElementKind::Expand:
+			// This is a bit of a special case, we treat it as transparent, since it is
+			// basically just a wrapper around the expanded element.
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::KindNotSet:
 			CORE_UNREACHABLE();
 
@@ -234,11 +239,41 @@ namespace compiler::helios {
 				));
 			}
 
-			ScopeID parent = element->getParent().has_value()
-			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent().value())
-			                   : ctx.query<QueryRootScopeOf>(
-									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
-								 );
+			ScopeID parent = [&]() {
+				// @TODO: #2452 this logic should be unified
+
+				auto maybe_element_parent = element->getParent();
+				if (maybe_element_parent.has_value()) {
+					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());
+				} else {
+					// If there is no parent, we inspect the additional root data,
+					// as we might be in a macro expansion.
+					// @TODO: #2397 revisit and adjust this logic, we could perhaps move it into PST
+					// layer.
+
+					const auto& additional_root_data = element->getAdditionalRootData();
+
+					variant_match(additional_root_data.pst_parent) {
+						variant_case(pst::AdditionalRootData::MacroExpansionParent, macro_parent) {
+							return ctx.query<QueryPrimaryCodeScopeFor>(macro_parent.expand_element);
+						}
+						variant_case(pst::AdditionalRootData::ModuleParent, module_parent) {
+							auto module_id_any = module_parent.module_id;
+							auto module_id     = base::anyCast<frontend::ModuleID>(module_id_any);
+							return ctx.query<QueryRootScopeOf>(module_id);
+						}
+						variant_default {
+							CORE_PANIC(
+								"Element has no parent and no additional root data, cannot "
+								"determine "
+								"scope parent."
+							);
+						}
+					}
+					CORE_UNREACHABLE();
+				}
+			}();
+
 
 			// here we essentially return the same scope as the parent
 			// scope, with the same unstable hash, but we still create a new ScopeData object
@@ -322,45 +357,6 @@ namespace compiler::helios {
 			bool                 failed = false;
 		};
 
-		/**
-		 * @brief Gets scopes in a module.
-		 */
-		struct ScopeGrabPseudoVisitor final {
-			ScopeGrabPseudoVisitor(Ref<Output> out, Context& ctx): out(out), ctx(ctx) {}
-
-			Ref<Output> out;
-			Context&    ctx;
-
-			template<class T>
-			ScopeID scopeOf(pst::Access<T> element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>(element);
-			}
-
-			// @todo
-			// handling lambdas, expand statements, templates, etc. might be much more tricky and
-			// require a different approach
-			template<class T>
-			void visit(pst::Access<T> element) {
-				// @todo
-				// some elements don't have a well defined scope yet leading to a panic
-				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->scopes.emplace_back(scopeOf(element));
-
-				for (auto child: element->viewChildren()) {
-					auto child_unlocked = child.unlockOpt(ctx);
-
-					// Note: we might use out->failed here, when implementing
-					// custom logic for most common PST elements (it might improve performance)
-					CORE_ASSERT(
-						child_unlocked.has_value(),
-						"View children should only contain valid element (no null ptrs)"
-					);
-
-					this->visit(child_unlocked.value());
-				}
-			}
-		};
-
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<Output> out) {
 			auto root          = getFilePST(ctx, file)->getRootElement();
 			auto root_unlocked = root.unlockOpt(ctx);
@@ -370,8 +366,14 @@ namespace compiler::helios {
 				return;
 			}
 
-			ScopeGrabPseudoVisitor scope_grab(out, ctx);
-			scope_grab.visit(root_unlocked.value());
+			auto grab_scopes_function = [&ctx, &out](pst::AccessLocked<pst::LangElement> element) {
+				// handling lambdas, templates, etc. might be much more tricky and
+				// require a different approach
+				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
+					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
+			};
+
+			pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -498,10 +500,10 @@ namespace compiler::helios {
 				for (auto params: *meth->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
 
-				out.emplace_back(ctx.query<houtgen::QueryGeneratedSymbol>({
+				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::SelfParameter{
+					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameter{
 						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
 						.scope         = key } },
 				}));
@@ -633,7 +635,18 @@ namespace compiler::helios {
 			auto scope_data = getScopeRef(key.scope);
 			if (scope_data->is_root) {
 				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
-				return builtin::lookupGlobalBuiltins(ctx, key.name);
+
+				auto       module_id      = scope_data->parent_module;
+				const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(module_id);
+				const bool repl_has_parent
+					= is_repl_module
+				   && ctx.query<frontend::QueryReplModuleParent>(module_id).has_value();
+
+				if (!repl_has_parent) return builtin::lookupGlobalBuiltins(ctx, key.name);
+
+				// For REPL modules with parents, skip duplicating builtins here.
+				// They will be resolved via the parent chain in QueryLookupInScopeAndParents.
+				return LookupResult{};
 			}
 
 			LookupResult result{ .leaves = {}, .children = {} };
@@ -706,6 +719,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);
 
+
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			UNPACK_QRESULT_CREF(auto result =, ctx.query<QueryLookupInScope>(key));
@@ -725,50 +739,43 @@ namespace compiler::helios {
 				return parent_result;
 			} else {
 				// At root scope - check if this is a REPL module with a parent
-				auto current_module_id = key.scope.ref->parent_module;
-				auto current_module    = frontend::GetModuleID_Functor::get(current_module_id);
+				auto       current_module_id = key.scope.ref->parent_module;
+				const bool is_repl_module
+					= ctx.query<frontend::QueryIsReplModule>(current_module_id);
+				auto repl_parent_opt
+					= ctx.query<frontend::QueryReplModuleParent>(current_module_id);
 
 				CORE_DEV_LOG(
 					REPL,
 					"At root scope, module #",
 					current_module_id.queryUnstablePerfectHash(),
 					", isRepl=",
-					current_module->isReplModule(),
+					is_repl_module,
 					", hasParent=",
-					current_module->getReplModuleParent().has_value(),
+					repl_parent_opt.has_value(),
 					"\n"
 				);
 
-				if (current_module->isReplModule()) {
-					auto repl_parent_opt = current_module->getReplModuleParent();
-					if (repl_parent_opt.has_value()) {
-						// Query the parent REPL module's TopLevel scope.
-						auto parent_module_id = repl_parent_opt.value();
-						auto parent_toplevel_scope
-							= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
+				if (is_repl_module && repl_parent_opt.has_value()) {
+					// Query the parent REPL module's TopLevel scope.
+					auto parent_module_id = repl_parent_opt.value();
+					auto parent_toplevel_scope
+						= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
 
-						CORE_DEV_LOG(
-							REPL,
-							"Recursively searching parent module #",
-							parent_module_id.queryUnstablePerfectHash(),
-							" TopLevel scope\n"
-						);
+					UNPACK_QRESULT_CREF(
+						LookupResult parent_result =,
+						ctx.query<QueryLookupInScopeAndParents>(
+							{ parent_toplevel_scope, key.name, key.with_wildcards }
+						)
+					);
 
-						// Recursively lookup in parent REPL module's TopLevel scope.
-						UNPACK_QRESULT_CREF(
-							LookupResult parent_result =,
-							ctx.query<QueryLookupInScopeAndParents>(
-								{ parent_toplevel_scope, key.name, key.with_wildcards }
-							)
-						);
+					parent_result.merge(std::move(result));
 
-						parent_result.merge(std::move(result));
-						return parent_result;
-					}
+					return parent_result;
 				}
-
-				return result;
 			}
+
+			return result;
 		}
 
 		QUERY_AUTO_CACHE_CREF

@@ -14,7 +14,7 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
+#include <tsh/queries/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -101,7 +101,16 @@ namespace compiler::helios {
 			auto sym_ref = getSymRef(key);
 
 			// Builtin functions are implemented in C/C++ and use the C ABI.
-			if (std::holds_alternative<builtin::BuiltinFunctionData>(sym_ref->other)) return CAbi{};
+			variant_match(sym_ref->other) {
+				variant_case_novalue(builtin::BuiltinFunctionData) { return CAbi{}; }
+				variant_case(defgen::GeneratedSymbolData, gen_data) {
+					variant_match(gen_data.data) {
+						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+							return CAbi{};
+						}
+					}
+				}
+			}
 
 			// @TODO: #895 fix it when we add script based package targets
 			if (name(key) == "main" && isGlobalFun(key)) {

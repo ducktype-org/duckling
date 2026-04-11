@@ -15,7 +15,7 @@ either in the scheme or it's implementation, they should be reflected here.
 <scheme-version> ::= <compact-number>                       // version of the mangling scheme
 
 <encoding> ::= <path>                                       // variables and constants
-             | <path> <function-type>                       // functions
+             | <path> <function>                            // functions
              | <repl-expression-wrapper>                    // REPL expressions
 
 // REPL expression wrappers use simplified mangling for now. @TODO: #1768 decide
@@ -28,15 +28,21 @@ either in the scheme or it's implementation, they should be reflected here.
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>
 
-<path-prefix> ::= "P" <package-name> <module-name>                  // module in a package
+<path-prefix> ::= "P" <package-name> <module-name>+                 // module-path of the module in a package
                 | "S" <script-name>                                 // standalone script
                 | "M" <module-name>                                 // standalone module
-                | "R" <package-name> <module-name> <script-name>    // script in a package
+                | "R" <package-name> <module-name>+ <script-name>   // script in a package
                 | <back-reference>
 <package-name> ::= <identifier>                                     // package name
 <module-name> ::= <identifier>                                      // module name
                 | <identifier> "I" <templ-arg>* "E"                 // templated module instantiation
 <script-name> ::= <identifier>                                      // script name
+
+// note that function symbols nad function types are different
+<function> ::= <function-type> <parameter-name>* "E"
+               where <fumction-type>.<argument-type>.count == <parameter-name>.count
+
+<parameter-name> ::= <identifier>
 
 // base-10-number - the length in bytes of the raw identifier
 // raw-identifier - the actual name of the symbol encoded according to the encoding-identifier
@@ -64,6 +70,7 @@ either in the scheme or it's implementation, they should be reflected here.
               | <value-arg>
 
 <type> ::= <builtin-type>
+         | <pointer-type>
          | <variant-type>
          | <tuple-type>
          | <array-type>
@@ -73,39 +80,41 @@ either in the scheme or it's implementation, they should be reflected here.
          | <type-modifier>* <type>
          | <back-reference>
 // there could possibly be more qualifiers
-// should not repeat, sorted lexicographically
+// should not repeat
 <type-modifier> ::= "N"                                     // const
-                  | "P"                                     // pointer
+                  | "M"                                     // unique
+                  | "L"                                     // leaking
                   | "R"                                     // reference
-                  | "M"                                     // atomic
-                  | "W"                                     // volatile
                   | "X"                                     // box
 
 // more types could be added in the future
-<builtin-type> ::= "i"                                      // i64
-                 | "u"                                      // u64
-                 | "f"                                      // f32
-                 | "d"                                      // f64
+<builtin-type> ::= "u"                                      // unit
+                 | "v"                                      // void
+                 | "y"                                      // byte
                  | "b"                                      // bool
                  | "c"                                      // char
+                 | "i" <base-10-number>                     // i64 etc.
+                 | "j" <base-10-number>                     // u64 etc.
+                 | "f" <base-10-number>                     // f64 etc.
                  | "s"                                      // string
-                 | "v"                                      // void
+                 | "t"                                      // meta (type type)
+
+<pointer-type> ::= "P"                                      // raw pointer
+                 | "P" <type> "E"                           // pointer
 
 <variant-type> ::= "V" <type>* "E"                          // variant type
 
 <tuple-type> ::= "T" <type>* "E"                            // tuple type
 
-<array-type> ::= "A" <base-10-number> <type> "E"            // array type
-
+<array-type> ::= "A" <base-10-number> <type> "E"            // static array type
+               | "D" <type> "E"                             // dynamic array type
 <class-type> ::= "C" <path>                                 // class-like types (class, enum, etc.)
 
-<function-type> ::= "F" <function-qualifier>* <return-type> <function-argument>* "E"
+<function-type> ::= "F" <function-qualifier>* <return-type> <argument-type>* "E"
 
 <return-type> ::= <type>
 
-<function-argument> := <type> <function-argument-name>
-
-<function-argument-name> := <identifier>
+<argument-type> ::= <type>
 
 // additional qualifiers for functions including member functions
 // more qualifiers should be added in the future
@@ -115,7 +124,7 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "V"                               // virtual function
 
 <unnamed-type-name> ::= "Y" <path> "E" <disambiguator>      // unnamed type
-                      | "L" <captures> "G" <return-type> <type>* "E" <disambiguator>  // closure type
+                      | "W" <captures> "G" <return-type> <type>* "E" <disambiguator>  // closure type
 <captures> ::= <type>*                                      // types of captured variables
 // first unnamed symbol in the scope uses no disambiguator, second gets "_"
 // subsequent ones get "(n-2)_" represented in base 62
@@ -151,6 +160,10 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "md"                              // module destructor
                         | "gc"                              // global variable constructor
                         | "gd"                              // global variable destructor
+                        | "ic" <function-type>              // implicit class constructor
+                        | "dc" <function-type>              // default class constructor
+                        | "ds" <function-type>              // default static array constructor
+                        | "dt" <function-type>              // default tuple constructor
 //                      | ...                               // @future: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node
