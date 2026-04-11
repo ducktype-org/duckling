@@ -376,6 +376,18 @@ namespace compiler::helios {
 				pst_data
 			);
 		}
+		case pst::StmtKind::CodeDecl: {
+			// CodeDecl include things like named ifs, whiles, fors and code blocks.
+			// Note that this function should only be called if the statement creates a symbol, so
+			// we can assume that it is only named ones.
+			return SymbolData::makePSTSymbolData(
+				{
+					.name = stmt->getDeclSymbolName().value(),
+					.kind = SymbolKind::NamedCodeElement,
+				},
+				pst_data
+			);
+		}
 		default:
 			break;
 		}
