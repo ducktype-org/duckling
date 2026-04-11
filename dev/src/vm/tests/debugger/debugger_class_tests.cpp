@@ -38,7 +38,7 @@ private:
 		debugger.runMain();
 		std::unique_lock lk(m);
 		// timeout for the test
-		cv.wait_for(lk, std::chrono::seconds(1), [&] {
+		cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return counter == expected_statuses.size();
 		});
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), counter);

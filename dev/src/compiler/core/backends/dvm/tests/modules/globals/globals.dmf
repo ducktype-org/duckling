@@ -1,8 +1,65 @@
-var g: i64 = 48;
+var g_a: i32 = 10;
+var g_b: i32 = 20;
+var g_c: i64 = 300;
+var g_f: f64 = 3.14;
+var g_bool: bool = false;
+
+fun modifyGlobal(r: ref i32, newValue: i32) -> () = {
+    r = newValue;
+}
+
+fun swap(a: ref i32, b: ref i32) -> () = {
+    let tmp: i32 = a;
+    a = b;
+    b = tmp;
+}
+
+fun testGlobals() -> () = {
+    var r_ga = &g_a;
+    builtin_output_i64(g_a);      # 10
+    r_ga = 42;
+    builtin_output_i64(g_a);      # 42
+
+    modifyGlobal(&g_b, 99);
+    builtin_output_i64(g_b);      # 99
+
+    swap(&g_a, &g_b);
+    builtin_output_i64(g_a);      # 99
+    builtin_output_i64(g_b);      # 42
+
+    var local_big: i64 = 0;
+    var r_local_big = &local_big;
+    r_local_big = g_a;					# Cast from global i32
+    builtin_output_i64(local_big); 		# 99
+
+	g_a = g_b + 1;
+    builtin_output_i64(g_a); 			# 43
+	g_a = -g_b;
+    builtin_output_i64(g_a); 			# -42
+
+    r_ga = r_ga + 1;
+    builtin_output_i64(r_ga);      		# -41
+
+    r_ga = -r_ga;
+    builtin_output_i64(g_a);      		# 41
+
+    var local_val: i32 = 777;
+    var r_local = &local_val;
+    r_ga = r_local;
+    builtin_output_i64(g_a);      		# 777
+    
+    g_bool = g_a > g_b;
+    builtin_output_i64(g_bool);      	# 1
+    
+    var r_gb = &g_b;
+    var r_gbool = &g_bool; 
+    r_gbool = r_ga < r_gb;
+    builtin_output_i64(r_gbool);      	# 0
+
+
+}
 
 fun main() -> i64 = {
-	var a: i64 = g;
-	a = 48;
-	g = a;
-	return a;
+	testGlobals();
+	return 0;
 }
