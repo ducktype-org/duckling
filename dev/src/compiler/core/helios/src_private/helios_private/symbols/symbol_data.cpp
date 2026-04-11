@@ -241,25 +241,25 @@ namespace compiler::helios {
 		}
 	}
 
+	SymbolData::SymbolData(CommonSymbolData common, OtherData other):
+		  common(common),
+		  other(other),
+		  id(SymbolDataID::next()) {}
+
 	SymbolData SymbolData::makePSTSymbolData(
 		const CommonSymbolData common_data, PstSymbolData pst_data
 	) {
-		return SymbolData{
-			.common = common_data,
-			.other  = pst_data,
-		};
+		return { common_data, pst_data };
 	}
 
 	SymbolData SymbolData::makeBuiltinFunction(
 		const base::StrID name, builtin::BuiltinFunctionData builtin_data
 	) {
-		return SymbolData{
-			.common = {
-				.name = name,
-				.kind = SymbolKind::Function,
-			},
-			.other  = builtin_data,
-		};
+		return { {
+					 .name = name,
+					 .kind = SymbolKind::Function,
+				 },
+			     builtin_data };
 	}
 
 	SymbolData SymbolData::makeGeneratedSymbol(
@@ -296,12 +296,10 @@ namespace compiler::helios {
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
-		return SymbolData{
-			.common = {
-				.name = name,
-				.kind = kind,
-			},
-			.other  = generated_data,
-		};
+		return { {
+					 .name = name,
+					 .kind = kind,
+				 },
+			     generated_data };
 	}
 }
