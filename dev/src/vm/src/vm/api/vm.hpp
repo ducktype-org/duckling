@@ -4,7 +4,6 @@
  */
 #pragma once
 
-#include <events/emitter.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/response.hpp>

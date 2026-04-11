@@ -1,6 +1,5 @@
 #include "vm.hpp"
 
-#include <events/emitter.hpp>
 
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>

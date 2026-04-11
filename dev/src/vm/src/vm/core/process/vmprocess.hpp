@@ -2,8 +2,6 @@
 
 #include "interface_types.hpp"
 
-#include <events/emitter.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>

@@ -103,7 +103,7 @@ private:
 			debugger.runMain();
 			std::unique_lock lk(m);
 			// Test timeout
-			cv.wait_for(lk, std::chrono::seconds(1), [&] {
+			cv.wait_for(lk, std::chrono::miliseconds(100), [&] {
 				return counter == expected_statuses.size();
 			});
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), counter);
