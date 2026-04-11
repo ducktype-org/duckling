@@ -23,19 +23,20 @@
 namespace {
 	inline constexpr std::string_view CURSOR_LEFT_SEQ
 		= ESC "[D";  // \x1b is start of ANSI escape sequence - needed to control terminal.
-	inline constexpr std::string_view CURSOR_RIGHT_SEQ     = ESC "[C";
-	inline constexpr std::string_view CURSOR_UP_SEQ        = ESC "[A";
-	inline constexpr char             BACKSPACE_CHAR       = 0x7f;  // DEL
-	inline constexpr char             NEWLINE_CHAR         = '\n';
-	inline constexpr char             CARRIAGE_RETURN_CHAR = '\r';
-	inline constexpr char             ESC_CHAR             = 0x1b;
-	inline constexpr char             ARROW_SEQ_LEAD       = '[';
-	inline constexpr char             ARROW_UP_CODE        = 'A';
-	inline constexpr char             ARROW_DOWN_CODE      = 'B';
-	inline constexpr char             ARROW_LEFT_CODE      = 'D';
-	inline constexpr char             ARROW_RIGHT_CODE     = 'C';
-	inline constexpr char             PRINTABLE_MIN        = 0x20;  // Space
-	inline constexpr char             PRINTABLE_MAX        = 0x7e;  // ~
+	inline constexpr std::string_view CURSOR_RIGHT_SEQ        = ESC "[C";
+	inline constexpr std::string_view CURSOR_UP_SEQ           = ESC "[A";
+	inline constexpr char             BACKSPACE_CHAR          = 0x7f;  // DEL
+	inline constexpr char             NEWLINE_CHAR            = '\n';
+	inline constexpr char             CARRIAGE_RETURN_CHAR    = '\r';
+	inline constexpr char             ESC_CHAR                = 0x1b;
+	inline constexpr char             ARROW_SEQ_LEAD          = '[';
+	inline constexpr char             ARROW_UP_CODE           = 'A';
+	inline constexpr char             ARROW_DOWN_CODE         = 'B';
+	inline constexpr char             ARROW_LEFT_CODE         = 'D';
+	inline constexpr char             ARROW_RIGHT_CODE        = 'C';
+	inline constexpr char             PRINTABLE_MIN           = 0x20;  // Space
+	inline constexpr char             PRINTABLE_MAX           = 0x7e;  // ~
+	inline constexpr std::string_view CLEAR_ENTIRE_SCREEN_SEQ = "\033c\033[H\033[2J\033[0m";
 
 #ifndef _WIN32
 	void writeStr(std::string_view str) { ::write(STDOUT_FILENO, str.data(), str.size()); }
@@ -459,5 +460,5 @@ namespace compiler::repl {
 		m_editor_state.prev_state_col = m_editor_state.col;
 	}
 
-	void FrontendMinImplementation::clearScreen() {}
+	void FrontendMinImplementation::clearScreen() { writeStr(CLEAR_ENTIRE_SCREEN_SEQ); }
 }  // namespace compiler::repl

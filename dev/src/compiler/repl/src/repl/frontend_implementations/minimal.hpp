@@ -44,6 +44,7 @@ namespace compiler::repl {
 		std::string readLine();
 		void        printHistory() const;
 		void        clearHistory();
+		void        clearScreen();
 		void        printHelp() const;
 
 	private:
@@ -80,8 +81,6 @@ namespace compiler::repl {
 		void historyScrollDown();
 
 		void saveToHistory();
-
-		void clearScreen();
 
 		void refreshLinesFromCursorAndBelow();
 
