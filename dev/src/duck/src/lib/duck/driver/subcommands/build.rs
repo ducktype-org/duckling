@@ -32,14 +32,6 @@ pub fn get_parser() -> Command {
                 "overwrite",
                 "Overwrite any existing virtual environments with the same name",
             )
-            .conflicts_with("global"),
-        )
-        .arg(
-            flag(
-                "global",
-                "Build the package in the global virtual environment",
-            )
-            .conflicts_with("overwrite"),
         )
         .arg(flag(
             "external-errors",
@@ -49,12 +41,9 @@ pub fn get_parser() -> Command {
 
 /// Logic for executing the `build` subcommand.
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
-    let global = matches.get_flag("global");
-    let package = if global {
-        PackageLoader::global_package(ctx)?
-    } else {
-        PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
-    };
+    // We do not allow to build the global package.
+    // It has no src folder and is purely for running scripts.
+    let package = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
     let features = features_from_matches(matches, package.package());
     let profile = profile_from_matches(matches);
     let opts = BuildOptions {
