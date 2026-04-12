@@ -1,4 +1,5 @@
 # Tests for imports
+# @TODO: #2476 Enable DVM cases.
 
 Tests:
   named_simple_imports:
@@ -17,6 +18,3 @@ Tests:
           String: "1\n"
         ExitCode: 0
         
-
-
-
