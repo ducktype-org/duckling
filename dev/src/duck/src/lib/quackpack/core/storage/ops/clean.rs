@@ -95,7 +95,7 @@ pub fn clean_storage(ctx: &DuckCtx, storage_root: &Path) -> QuackResult<CleanOut
         )?;
     }
     locks::cleanup_locks(&storage)?;
-    debug!("all stashed deps are `{all_deps:?}");
+    debug!("all used dependencies are `{all_deps:?}");
     let all_pkgs = storage.iter_pkgs()?.collect::<Result<Vec<_>, _>>()?;
     let pgks_to_remove = all_pkgs
         .into_iter()
@@ -132,6 +132,12 @@ fn clean_venv_from_storage(
     let venv = Venv::fix_and_load(storage, venv_id)?;
     let Some(mut venv) = venv else {
         debug!("failed to fix and load venv `{venv_id}`, will clean the venv");
+        dir.path().rmtree().with_context(|| {
+            format!(
+                "while removing venv `{venv_id}` at `{}`",
+                dir.path().display()
+            )
+        })?;
         removed_venvs.push(venv_id);
         return Ok(());
     };
