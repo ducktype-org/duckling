@@ -17,4 +17,3 @@ Tests:
         Output:
           String: "1\n"
         ExitCode: 0
-        
