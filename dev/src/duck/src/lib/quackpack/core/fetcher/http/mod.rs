@@ -42,7 +42,7 @@ impl<'duck> HttpClient<'duck> {
     }
 
     /// Perform a general HTTP GET request.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, url), fields(url = url.as_str()))]
     pub fn get(&self, url: &Url) -> QuackResult<ResponseCollector> {
         let mut easy = Self::create_easy(ResponseCollector::default())?;
         easy.get(true)?;
@@ -55,7 +55,7 @@ impl<'duck> HttpClient<'duck> {
     }
 
     /// Perform a general HTTP GET request, and save response to a file at `path`.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, url), fields(url = url.as_str()))]
     pub fn get_to_file(&self, url: &Url, path: &Path) -> QuackResult<()> {
         let mut easy = Self::create_easy(FileWriter::new(path)?)?;
         easy.get(true)?;

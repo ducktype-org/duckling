@@ -72,7 +72,7 @@ impl AsRef<Location> for InternedLocation {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub enum Location {
     Registry {
         url: Url,
@@ -86,6 +86,29 @@ pub enum Location {
     Local {
         path: PathBuf,
     },
+}
+
+impl std::fmt::Debug for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Registry { url, real_name } => f
+                .debug_struct("Registry")
+                .field("url", &url.as_str())
+                .field("real_name", real_name)
+                .finish(),
+            Self::Git {
+                url,
+                branch_or_tag,
+                rev,
+            } => f
+                .debug_struct("Git")
+                .field("url", &url.as_str())
+                .field("branch_or_tag", branch_or_tag)
+                .field("rev", rev)
+                .finish(),
+            Self::Local { path } => f.debug_struct("Local").field("path", path).finish(),
+        }
+    }
 }
 
 impl From<&Dependency> for Location {

@@ -44,7 +44,7 @@ impl<'duck> DucknestClient<'duck> {
     }
 
     /// Retrieve all metadata for a specific package from a Ducknest instance.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, url), fields(url = url.as_str()))]
     pub fn get_multi_metadata(
         &self,
         url: &Url,
@@ -58,7 +58,7 @@ impl<'duck> DucknestClient<'duck> {
     }
 
     /// Publish a package to a Ducknest instance.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, url), fields(url = url.as_str()))]
     pub fn publish_package(
         &self,
         url: &Url,

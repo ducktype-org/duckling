@@ -116,7 +116,7 @@ impl<'duck> Fetcher<'duck> {
     /// Otherwise __no__ lookup is performed.
     /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, url), fields(url = url.as_str()))]
     pub fn get_package_all_metadata(
         &mut self,
         url: &Url,
