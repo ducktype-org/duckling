@@ -18,13 +18,10 @@
 namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		// static inline concurrent::ConHashMap<KHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			// In the future calculate resulting string in comp time
 			auto expand       = key.element.unlock(ctx);
-			// auto value_holder = expand->getValue().unlock(ctx);
-
+		
 			auto expand_hout = getHoutOfExprWithExpectedType(
 				ctx,
 				 expand->getValue().unlock(ctx)->getExpr(),
@@ -32,11 +29,7 @@ namespace compiler::helios {
 			).valueOrThrow();
 			auto expand_ctv = ctx.query<QueryEvaluateHOUTExpression>({ expand_hout.ref() }).valueOrThrow();
 
-			
-
-			// auto value = value_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
-
-
+	
 			if (expand_ctv.has<base::StrID>()) {
 				auto expand_str = expand_ctv.get<base::StrID>().value();
 
@@ -47,7 +40,8 @@ namespace compiler::helios {
 
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
 					expand->getSourcePosition(),
-					expand_str.str(), // PR: strView here leads to read of more data, investigate
+					// @TODO: #2471 change to strView, once it is fixed
+					expand_str.str(),
 					makeBox<pst::LangParserContext>(expand->getContext())
 				);
 
@@ -55,12 +49,6 @@ namespace compiler::helios {
 					pst.setAdditionalRootData(pst::AdditionalRootData{
 						pst::AdditionalRootData::MacroExpansionParent{ .expand_element = expand } });
 				}
-				// std::cerr<< "\n================\n\n";
-				// std::cerr << "Macro expansion for: "<< "\n";
-				// expand->dprint(std::cerr);
-				// std::cerr << "\nExpanded to:\n";
-				// pst.dprint(std::cerr);
-				// std::cerr << "\n================\n\n";
 				return pst;
 			} else {
 				CORE_PANIC("Expand argument is not exactly a single string.");
@@ -74,18 +62,6 @@ namespace compiler::helios {
 				return ExpansionError<pst::Stmt>(pst_ref->getRootElement(), pst_ref->getLogger());
 		}
 
-		// static auto load(KHash key) -> LoadResult {
-		// 	if (const auto& value = cache.atMaybe(key))
-		// 		return QResWithACD{ extractResult(value.value()->data), (value.value())->acd };
-		// 	return {};
-		// }
-
-		// static auto store(KHash key, PResult res, query::ACD acd) -> QResult {
-		// 	cache.put(key, { .data = std::move(res), .acd = acd });
-		// 	return extractResult(cache.at(key)->data);
-		// }
-
-		// static auto erase(KHash key) -> bool { return cache.erase(key); }
 
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(extractResult)
