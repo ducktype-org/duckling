@@ -60,6 +60,11 @@ impl<'duck> PackageCtx<'duck> {
     pub fn ctx(&self) -> &DuckCtx {
         self.ctx
     }
+
+    /// Is this the global package.
+    pub fn is_global(&self) -> bool {
+        self.package.is_global()
+    }
 }
 
 impl From<PackageCtx<'_>> for Package {

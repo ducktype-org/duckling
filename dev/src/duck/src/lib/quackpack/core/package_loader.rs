@@ -4,7 +4,9 @@ use std::{io, marker::PhantomData, path::Path};
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_err,
+    DuckCtx, QuackResult, QuackResultContext,
+    duck::util::duck_home::DuckHome,
+    qp_bail, qp_err,
     quackpack::core::{
         PackageCtx,
         storage::{paths::Storage, venv::Venv, venv_id::VenvId},
@@ -46,7 +48,15 @@ impl PackageLoader {
     /// Get the global package.
     pub fn global_package<'duck>(ctx: &'duck DuckCtx) -> QuackResult<PackageCtx<'duck>> {
         let global_package_path = ctx.duck_home().ensure_and_populate_global_dir()?;
-        PackageCtx::new(global_package_path.to_path_buf(), ctx)
+        let global_package = PackageCtx::new(global_package_path.to_path_buf(), ctx)?;
+        if !global_package.is_global() {
+            qp_bail!(
+                "Global package should be named {}",
+                DuckHome::GLOBAL_PACKAGE_NAME
+            );
+        } else {
+            Ok(global_package)
+        }
     }
 
     /// Find a [`PackageCtx`] from the given `start`.
