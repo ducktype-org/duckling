@@ -255,11 +255,13 @@ namespace compiler::helios {
 	SymbolData SymbolData::makeBuiltinFunction(
 		const base::StrID name, builtin::BuiltinFunctionData builtin_data
 	) {
-		return { {
-					 .name = name,
-					 .kind = SymbolKind::Function,
-				 },
-			     builtin_data };
+		return {
+			{
+				.name = name,
+				.kind = SymbolKind::Function,
+			},
+			builtin_data,
+		};
 	}
 
 	SymbolData SymbolData::makeGeneratedSymbol(
@@ -296,10 +298,12 @@ namespace compiler::helios {
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
-		return { {
-					 .name = name,
-					 .kind = kind,
-				 },
-			     generated_data };
+		return {
+			{
+				.name = name,
+				.kind = kind,
+			},
+			generated_data,
+		};
 	}
 }
