@@ -27,7 +27,7 @@ namespace compiler::helios {
 
 			auto expand_hout = getHoutOfExprWithExpectedType(
 				ctx,
-				 expand->getValue(),
+				 expand->getValue().unlock(ctx)->getExpr(),
 				  tsh::SymbolType<>::withDefaults(tsh::getStringType())
 			).valueOrThrow();
 			auto expand_ctv = ctx.query<QueryEvaluateHOUTExpression>({ expand_hout.ref() }).valueOrThrow();
@@ -40,9 +40,14 @@ namespace compiler::helios {
 			if (expand_ctv.has<base::StrID>()) {
 				auto expand_str = expand_ctv.get<base::StrID>().value();
 
+				std::cerr << "\n================\n\n";
+				std::cerr << "Macro expansion for: " << expand_str.str() << "\n";
+				std::cerr << "\n";
+
+
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
 					expand->getSourcePosition(),
-					expand_str.strView(),
+					expand_str.str(), // PR: strView here leads to read of more data, investigate
 					makeBox<pst::LangParserContext>(expand->getContext())
 				);
 

@@ -66,6 +66,10 @@ namespace compiler::helios {
 		// Inherits scope from its parent:
 		Transparent,
 
+		// Gets parent scope of what transparent scope would be.
+		// This is used for expand expressions, where the lookup should happen higher than the expand statement itself.
+		ParentTransparent, 
+
 		// Does not have a scope:
 		Invalid,
 
@@ -78,6 +82,7 @@ namespace compiler::helios {
 
 	/**
 	 * Determines scope kind for given PST element.
+	 * @TODO: #2407 this could take unlocked access
 	 */
 	ElementScopeKind getScopeKind(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
 		// @TODO: move it to different file?
@@ -166,12 +171,21 @@ namespace compiler::helios {
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
-			// note: top expr creates a scope for lifetimes
-			auto as_expr_holder = element.dynamicCast<pst::ExprHolder>().value();
-			if (as_expr_holder->isTopLevel())
-				return ElementScopeKind::Standard;
-			else
-				return ElementScopeKind::Transparent;
+			// // note: top expr creates a scope for lifetimes
+			// auto as_expr_holder = element.dynamicCast<pst::ExprHolder>().value();
+			// if (as_expr_holder->isTopLevel())
+			// 	return ElementScopeKind::Standard;
+			// else
+			// 	return ElementScopeKind::Transparent;
+
+			// SELF NOTE: the above was the old logic, that is now not needed after custom MIR lifetime scope structure was implemented. 
+			auto expr_parent = element->getParent().value().unlockOpt(ctx);
+			if (expr_parent.has_value() && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
+				// This is a special case.
+				// Elements in macro expansions should have their scope parent be the grandparent.
+				return ElementScopeKind::ParentTransparent;
+			}
+			return ElementScopeKind::Transparent;
 		}
 
 		case pst::ElementKind::Param:
@@ -239,10 +253,10 @@ namespace compiler::helios {
 				));
 			}
 
-			ScopeID parent = [&]() {
+			auto get_parent = [&ctx](pst::Access<pst::LangElement> parent_of) -> ScopeID {
 				// @TODO: #2452 this logic should be unified
 
-				auto maybe_element_parent = element->getParent();
+				auto maybe_element_parent = parent_of->getParent();
 				if (maybe_element_parent.has_value()) {
 					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());
 				} else {
@@ -251,7 +265,7 @@ namespace compiler::helios {
 					// @TODO: #2397 revisit and adjust this logic, we could perhaps move it into PST
 					// layer.
 
-					const auto& additional_root_data = element->getAdditionalRootData();
+					const auto& additional_root_data = parent_of->getAdditionalRootData();
 
 					variant_match(additional_root_data.pst_parent) {
 						variant_case(pst::AdditionalRootData::MacroExpansionParent, macro_parent) {
@@ -272,25 +286,29 @@ namespace compiler::helios {
 					}
 					CORE_UNREACHABLE();
 				}
-			}();
+			};
+
+			ScopeID parent = get_parent(element);
 
 
 			// here we essentially return the same scope as the parent
 			// scope, with the same unstable hash, but we still create a new ScopeData object
 			// that is kept in our cache:
-			if (element_scope_kind == ElementScopeKind::Transparent)
+			if (element_scope_kind == ElementScopeKind::Transparent) {
 				return parent.ref->perfectClone();
+			}
+			else if (element_scope_kind == ElementScopeKind::ParentTransparent) {
+				return parent.ref->parent->ref->perfectClone();
+			}
+			
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
 			// clang-format off
-			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID())) {
-				CORE_ASSERT(*scope_in_map == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
-			}
-			else {
-				parent_map.put(element->getID(), parent);
-			}
+			parent_map.maybePutAndUpdate(element->getID(), parent, [&](CRef<ScopeID> existing) {
+				CORE_ASSERT(*existing == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
+			});
 			// clang-format on
 
 			return ScopeData{
