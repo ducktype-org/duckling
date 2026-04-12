@@ -170,10 +170,10 @@ mod test {
     use crate::{
         DuckCtx,
         quackpack::core::{
-            parse_manifest,
+            PackageLoader, parse_manifest,
             types_common::{ExpandedLocation, InternedExpandedLocation},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
     use tempfile::{TempDir, tempdir};
     use url::Url;
@@ -182,7 +182,7 @@ mod test {
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
-        let manifest = dir.path().join("quackconfig.yml");
+        let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
         dir.path().try_fsync_dir().unwrap();

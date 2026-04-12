@@ -6,7 +6,7 @@ use url::Url;
 use crate::{
     DuckCtx,
     quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::git::GitClient},
-    util_common::path_ops_ext::PathOpsExt,
+    util::path_ops_ext::PathOpsExt,
 };
 
 fn generate_local_git_repo() -> TempDir {

@@ -6,11 +6,11 @@ Tests:
       dvm:
         backend: dvm
         Output:
-          String: "9\n9\n9\n18\n4\n"
+          String: "9\n9\n9\n18\n4\n2\n"
       llvm:
         backend: llvm
         Output:
-          String: "9\n9\n9\n18\n4\n"
+          String: "9\n9\n9\n18\n4\n2\n"
   single-comparison: # Any type of comparison between two values.
     Cases:
       dvm:
@@ -24,14 +24,13 @@ Tests:
           String: ""
         ExitCode: 0
 
-  comparison-chain:
+  comparison_chain:
     Cases:
-#      @TODO: #2179 Re-enable when ops on globals are implemented.
-#      dvm:
-#        backend: dvm
-#        Output:
-#          String: ""
-#        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -163,7 +162,7 @@ Tests:
         Input:
           String: "Test"
         Output:
-          String: "Test\nHello, world!\n"
+          String: "Test\nHello, world!\nab\nbcd\nHello, world!\n"
 
   chars:
     Cases:

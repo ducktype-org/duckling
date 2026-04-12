@@ -103,10 +103,16 @@ DEF_MICRO_INSTR(mov_l8_g8, vm::low::opargs::StackLocal8, vm::low::opargs::Global
 DEF_MICRO_INSTR(mov_lptr_gptr, vm::low::opargs::StackLocalPtr, vm::low::opargs::GlobalPtr)
 
 DEF_MICRO_INSTR(
-	mov_lste_lste, vm::low::opargs::StackLocalStructure, vm::low::opargs::StackLocalStructure
+	mov_blste_blste,
+	vm::low::opargs::BlockStackLocalStructure,
+	vm::low::opargs::BlockStackLocalStructure
 )
-DEF_MICRO_INSTR(mov_lste_gste, vm::low::opargs::StackLocalStructure, vm::low::opargs::GlobalStructure)
-DEF_MICRO_INSTR(mov_gste_lste, vm::low::opargs::GlobalStructure, vm::low::opargs::StackLocalStructure)
+DEF_MICRO_INSTR(
+	mov_blste_gste, vm::low::opargs::BlockStackLocalStructure, vm::low::opargs::GlobalStructure
+)
+DEF_MICRO_INSTR(
+	mov_gste_blste, vm::low::opargs::GlobalStructure, vm::low::opargs::BlockStackLocalStructure
+)
 DEF_MICRO_INSTR(mov_gste_gste, vm::low::opargs::GlobalStructure, vm::low::opargs::GlobalStructure)
 
 // does a shallow pointer copy
@@ -115,6 +121,8 @@ DEF_MICRO_INSTR(mov_lptr_lptr, vm::low::opargs::StackLocalPtr, vm::low::opargs::
 // sets pointer to null
 DEF_MICRO_INSTR(setNull_lptr, vm::low::opargs::StackLocalPtr)
 
+// It requires a `ext_imm` after this instruction as third argument, defining the size of the opaque
+// type in bytes.
 DEF_MICRO_INSTR(mov_lopq_lopq, vm::low::opargs::StackLocalOpq, vm::low::opargs::StackLocalOpq)
 DEF_MICRO_INSTR(mov_gopq_lopq, vm::low::opargs::GlobalOpq, vm::low::opargs::StackLocalOpq)
 DEF_MICRO_INSTR(mov_lopq_gopq, vm::low::opargs::StackLocalOpq, vm::low::opargs::GlobalOpq)
@@ -364,8 +372,8 @@ DEF_MICRO_INSTR(cmpNull_lptr, vm::low::opargs::StackLocalPtr)
  * @note `ext_type` required to know the variant type quickly at runtime.
  */
 DEF_MICRO_INSTR(
-	variantSetInner_lvnt_type,
-	vm::low::opargs::StackLocalVnt /* variant */,
+	variantSetInner_blvnt_type,
+	vm::low::opargs::BlockStackLocalVariant /* variant */,
 	vm::low::opargs::Type /* 		 inner_type
     vm::low::opargs::Type 			 variant_type */
 )
@@ -375,9 +383,9 @@ DEF_MICRO_INSTR(
  * @note `ext_type_type` required to know the expected alternative and the variant type.
  */
 DEF_MICRO_INSTR(
-	variantGetInner_lptr_lvnt,
+	variantGetInner_lptr_blvnt,
 	vm::low::opargs::StackLocalPtr /* destination */,
-	vm::low::opargs::StackLocalVnt /* variant,
+	vm::low::opargs::BlockStackLocalVariant /* variant,
     vm::low::opargs::Type 			 expected_type
     vm::low::opargs::Type 			 variant_type */
 )
@@ -415,25 +423,25 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
 
 // ========= FUNCTION OPERATIONS ========
 
-DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionName)
+DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
 #ifdef ENABLE_JIT
 // call a function, with the possibility to compile it later
-DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::FunctionName)
+DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::FunctionID)
 #endif
-DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionName)
-DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunctionName)
+DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
+DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
 
-DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionName)
+DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
 
 // return while performing a tail call
-DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionName)
+DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionID)
 // return
 DEF_MICRO_INSTR(ret)
 
 // ========= STACK OPERATIONS ========
 
 // initialize local variable on local stack with given type
-DEF_MICRO_INSTR(init_lany_type, vm::low::opargs::StackLocalAny, vm::low::opargs::Type)
+DEF_MICRO_INSTR(init_blany_type, vm::low::opargs::BlockStackLocalAny, vm::low::opargs::Type)
 // pop variable from local stack
 DEF_MICRO_INSTR(deinit)
 
@@ -468,12 +476,12 @@ DEF_MICRO_INSTR(free_lptr, vm::low::opargs::StackLocalPtr)
 
 
 // stores local data at pointer
-DEF_MICRO_INSTR(store_lptr_lany, vm::low::opargs::StackLocalPtr, vm::low::opargs::StackLocalAny)
+DEF_MICRO_INSTR(store_lptr_blany, vm::low::opargs::StackLocalPtr, vm::low::opargs::BlockStackLocalAny)
 // dereferences pointer and stores into local
-DEF_MICRO_INSTR(load_lany_lptr, vm::low::opargs::StackLocalAny, vm::low::opargs::StackLocalPtr)
+DEF_MICRO_INSTR(load_blany_lptr, vm::low::opargs::BlockStackLocalAny, vm::low::opargs::StackLocalPtr)
 
 // stores reference to local object of any type T in pointer<T>
-DEF_MICRO_INSTR(ref_lptr_lany, vm::low::opargs::StackLocalPtr, vm::low::opargs::StackLocalAny)
+DEF_MICRO_INSTR(ref_lptr_blany, vm::low::opargs::StackLocalPtr, vm::low::opargs::BlockStackLocalAny)
 // stores reference to global object of any type T in pointer<T>
 DEF_MICRO_INSTR(ref_lptr_gany, vm::low::opargs::StackLocalPtr, vm::low::opargs::GlobalAny)
 
@@ -489,16 +497,16 @@ DEF_MICRO_INSTR(
 )
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
-	structLoad_lany_lptr,
-	vm::low::opargs::StackLocalAny /* destination */,
+	structLoad_blany_lptr,
+	vm::low::opargs::BlockStackLocalAny /* destination */,
 	vm::low::opargs::StackLocalPtr /* data_ptr,
     vm::low::opargs::Field 			 field */
 )
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
-	structStore_lptr_lany,
+	structStore_lptr_blany,
 	vm::low::opargs::StackLocalPtr /* data_ptr */,
-	vm::low::opargs::StackLocalAny /* source ,
+	vm::low::opargs::BlockStackLocalAny /* source ,
     vm::low::opargs::Field 			 field */
 )
 
@@ -506,25 +514,25 @@ DEF_MICRO_INSTR(
 
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
-	structLea_lptr_lste,
+	structLea_lptr_blste,
 	vm::low::opargs::StackLocalPtr /* destination */,
-	vm::low::opargs::StackLocalStructure /* source,
+	vm::low::opargs::BlockStackLocalStructure /* source,
     vm::low::opargs::Field 			 field */
 )
 
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
-	structLoad_lany_lste,
-	vm::low::opargs::StackLocalAny /* destination */,
-	vm::low::opargs::StackLocalStructure /* data_struct,
+	structLoad_blany_blste,
+	vm::low::opargs::BlockStackLocalAny /* destination */,
+	vm::low::opargs::BlockStackLocalStructure /* data_struct,
     vm::low::opargs::Field 			 field */
 )
 
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
-	structStore_lste_lany,
-	vm::low::opargs::StackLocalStructure /* data_struct */,
-	vm::low::opargs::StackLocalAny /* source ,
+	structStore_blste_blany,
+	vm::low::opargs::BlockStackLocalStructure /* data_struct */,
+	vm::low::opargs::BlockStackLocalAny /* source ,
     vm::low::opargs::Field 			 field */
 )
 
@@ -539,17 +547,17 @@ DEF_MICRO_INSTR(
 )
 // expects `ext_l64` to be the next instruction
 DEF_MICRO_INSTR(
-	fixedSizeTableLoad_lany_lptr,
-	vm::low::opargs::StackLocalAny /* destination */,
+	fixedSizeTableLoad_blany_lptr,
+	vm::low::opargs::BlockStackLocalAny /* destination */,
 	vm::low::opargs::StackLocalPtr /* table_ptr,
     vm::low::opargs::StackLocal64 	 index */
 )
 
 // expects `ext_l64` to be the next instruction
 DEF_MICRO_INSTR(
-	fixedSizeTableStore_lptr_lany,
+	fixedSizeTableStore_lptr_blany,
 	vm::low::opargs::StackLocalPtr /* table_ptr */,
-	vm::low::opargs::StackLocalAny /* source,
+	vm::low::opargs::BlockStackLocalAny /* source,
     vm::low::opargs::StackLocal64 	 index */
 )
 
@@ -562,17 +570,17 @@ DEF_MICRO_INSTR(
 )
 // expects `ext_l64` to be the next instruction
 DEF_MICRO_INSTR(
-	dynTableLoad_lany_lptr,
-	vm::low::opargs::StackLocalAny /* destination */,
+	dynTableLoad_blany_lptr,
+	vm::low::opargs::BlockStackLocalAny /* destination */,
 	vm::low::opargs::StackLocalPtr /* table_ptr,
     vm::low::opargs::StackLocal64 	 index */
 )
 
 // expects `ext_l64` to be the next instruction
 DEF_MICRO_INSTR(
-	dynTableStore_lptr_lany,
+	dynTableStore_lptr_blany,
 	vm::low::opargs::StackLocalPtr /* table_ptr */,
-	vm::low::opargs::StackLocalAny /* source,
+	vm::low::opargs::BlockStackLocalAny /* source,
     vm::low::opargs::StackLocal64 	 index */
 )
 
@@ -669,6 +677,7 @@ DEF_MICRO_INSTR(fpext_l64_l32, vm::low::opargs::StackLocal64, vm::low::opargs::S
 
 // passes additional argument to preceding instruction
 DEF_MICRO_INSTR(ext_l64, vm::low::opargs::StackLocal64)
+DEF_MICRO_INSTR(ext_imm, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(ext_type, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_field, vm::low::opargs::Field)
 DEF_MICRO_INSTR(ext_type_field, vm::low::opargs::Type, vm::low::opargs::Field)

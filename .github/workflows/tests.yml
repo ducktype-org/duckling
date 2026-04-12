@@ -8,7 +8,7 @@ on:
   push:
     branches: [ "main", "dev" ]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
   workflow_dispatch:
 
 env:
@@ -24,24 +24,50 @@ env:
   BUILD_SYSTEM: Ninja
 
 jobs:
+  # Determines the build matrix based on the event type.
+  # On regular PRs only Dev/gcc runs; on push, workflow_dispatch or approved reviews the full matrix runs.
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Determine build matrix
+        id: set-matrix
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          MATRIX=$(python3 .github/workflows/setup-build-matrix.py \
+            --event-name "${{ github.event_name }}" \
+            --branch "${{ env.BRANCH_NAME }}" \
+            --repo "${{ github.repository }}" \
+            --pr-number "${{ github.event.pull_request.number || 0 }}" \
+            --github-token "${{ secrets.QUACKER_PAT }}")
+          echo "Determined build matrix: $MATRIX"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
   build:
-    if: github.event.pull_request.draft == false
+    needs: [setup]
+    # This if condition is quite complex, so let's break it down:
+    # 1. Run on push or workflow_dispatch events (these are not related to PRs).
+    # 2. Run on pull_request events only if the PR is not a draft, and either
+    #    it is not a labeling event or it is a labeling event but the label is
+    #    "Override Coverage Check"/"Run All Workflows". This allows to re-run the workflow on PRs
+    #    that were just labeled with the above labels, which is useful for
+    #    re-running the workflow.
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
+      ||
+      (
+        github.event.pull_request.draft == false &&
+        github.event_name == 'pull_request' &&
+        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check' || github.event.label.name == 'Run All Workflows')
+      )
 
     strategy:
-      matrix:
-        build-type: [Dev, DevOpt]  # (Release, Dev, RelWithDebInfo, etc.)
-        compiler:
-          - name: gcc
-            cxx: g++-14
-            cc: gcc-14
-            gcov: gcov-14
-            linker: mold
-            cache-prefix: gcc-build
-          - name: clang
-            cxx: clang++-19
-            cc: clang-19
-            linker: mold
-            cache-prefix: clang-build
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
       fail-fast: false
 
     outputs:
@@ -110,9 +136,9 @@ jobs:
         run: sudo apt -y install llvm-19 llvm-19-dev
 
       - name: Install clang
-        # Necessary to compile Duckling builtins to LLVM bitcode
+        # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
-        run: sudo apt -y install clang-19
+        run: sudo apt -y install clang-19 clang-tools-19
 
       - name: Install xxd
         # Necessary to embed LLVM bitcode into duckc source files.
@@ -200,7 +226,6 @@ jobs:
               -D CMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
-              -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               -D STRIP_SYMBOL_INFORMATION=ON \
               ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
@@ -304,18 +329,13 @@ jobs:
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --duckc-worker-count 1
-
-      - name: Integration Tests Multithreaded (Only Compiler)
-        id: integration-tests-multithreaded-only-compiler
-        working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --filter "integration_tests/compiler" --duckc-worker-count 4
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
 
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
       # runs when at least one of the integration test steps actually failed.
       - name: Cat itests log file on failure
-        if: ${{ failure() && (steps.integration-tests.outcome == 'failure' || steps.integration-tests-multithreaded-only-compiler.outcome == 'failure') }}
+        if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
         run: cat /tmp/dit.log
 
       - name: Test Coverage After Integration Tests

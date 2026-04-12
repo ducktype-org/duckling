@@ -23,9 +23,14 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
-		base::StrID           name;
-		MicroBytecode         bc;
-		usize                 local_stack_size;
+		base::StrID   name;
+		MicroBytecode bc;
+
+		/// The maximum size of the local variables on stack required by the function frame.
+		usize local_stack_size;
+		/// The maximum count of blocks required by the function frame.
+		usize local_block_count;
+
 		usize                 arg_size;
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
@@ -63,7 +68,7 @@ namespace vm::low {
 			= 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
 			= 0;
 
 		[[nodiscard]]
@@ -99,7 +104,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return extern_c_functions;
 		}
 
@@ -115,7 +120,7 @@ namespace vm::low {
 		LowVMProgram()                                  = default;
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
-		ObjIdNameMap<LowExternCFunction>          extern_c_functions{};
+		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
@@ -124,6 +129,10 @@ namespace vm::low {
 
 	/**
 	 * @brief Overlay over `LowVMProgram` with its own and therefore modifiable copy of functions.
+	 * @note Only the functions can be copied and modified, the types and extern C
+	 * functions are shared with the original program and are not modifiable through this structure
+	 * because of the way instruction arguments are currently being lowered - they contain direct
+	 * pointers to types.
 	 *
 	 * @note Needs updating via `selfUpdate()` to make new functions visible.
 	 * @note Program with current everything except functions is still a valid program.
@@ -139,7 +148,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return original_program->getExternCFunctions();
 		}
 

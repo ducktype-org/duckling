@@ -1,6 +1,7 @@
 #include "mangler.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -15,7 +16,7 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/types.hpp>
+#include <tsh/types.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -106,35 +107,59 @@ namespace compiler::helios::mangler {
 		 * it will be prefixed with 'U' and punnycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string identifier(std::string name) {
+		void identifier(std::stringstream& ss, std::string_view name) {
 			// @future: use punnycode for unicode strings
 			if (/* hasCharsOnlyFromAllowedCharacterSet */ true) {
-				name = std::to_string(name.size()) + name;
-				return name;
+				ss << name.size() << name;
+				return;
 			} else {
-				constexpr char UNICODE_PREFIX = 'U';
-				std::string    punny_string   = name;  // @future: convert to punnycode
-				return base::strConcat(UNICODE_PREFIX, punny_string.size(), punny_string);
+				constexpr char   UNICODE_PREFIX = 'U';
+				std::string_view punny_string   = name;  // @future: convert to punnycode
+				ss << UNICODE_PREFIX << punny_string.size() << punny_string;
 			}
+		}
+
+		/**
+		 * @brief Returns bare identifier of the symbol prefixed with its size
+		 * If the name contains characters outside of the allowed set,
+		 * it will be prefixed with 'U' and punnycode-encoded.
+		 * @note: See mangling-scheme.md for details
+		 */
+		std::string identifier(std::string_view name) {
+			std::stringstream ss;
+			identifier(ss, name);
+			return ss.str();
 		}
 
 		/**
 		 * @brief Returns package/module/script prefix for the symbol
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string pathPrefix(SymID symbol_id) {
-			auto enclosing_scope  = scope(symbol_id);
-			auto enclosing_module = module(enclosing_scope);
+		std::string pathPrefix(query::Context& ctx, SymID symbol_id) {
+			// @future
+			// currently package_id is a random string
+			// package name should be added when we start using it
+			// auto package = curr->getPackageID().strView();
 
-			// note: only the enclosing module is used for mangling. This is intentional,
-			// as modules are supposed to be self-contained and this would make moving them
-			// a more breaking (ABI-wise) change than it should be
-
-			// "M" <module-name>                                 // standalone module
+			// "M" <module-name>+                                // standalone module
 			// @future: templated modules
 			if (/* standalone module */ true) {
-				auto module_identifier = identifier(frontend::moduleName(enclosing_module).str());
-				return base::strConcat("M", module_identifier);
+				auto enclosing_scope = scope(symbol_id);
+
+				std::vector<std::string_view> modules;
+				auto                          curr = module(enclosing_scope);
+				modules.push_back(frontend::moduleName(curr).strView());
+
+				while (auto parent = ctx.query<frontend::QueryParentModule>(curr)) {
+					curr = parent.value();
+					modules.push_back(frontend::moduleName(curr).strView());
+				}
+
+				std::stringstream ret;
+				ret << "M";
+				for (auto& mod: modules | std::views::reverse) identifier(ret, mod);
+
+				return ret.str();
 			}
 
 			// @future: add support for packages & scripts when they are implemented
@@ -157,15 +182,16 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string unscopedName(SymID symbol_id) {
-			return identifier(compiler::helios::name(symbol_id).str());
+			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
 		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
 		 * @note: See mangling-scheme.md for details
 		 *
-		 * @todo: This is still a little simplified, there should probably be at least an additional
-		 * layer for things like macros and there will probably be other elements that create scopes.
+		 * @TODO: #2464 This is still a little simplified, there should probably be at least an
+		 * additional layer for things like macros and there will probably be other elements that
+		 * create scopes.
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
@@ -185,13 +211,13 @@ namespace compiler::helios::mangler {
 
 						if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
 							auto nmsp = ancestor.dynamicCast<pst::Namespace>().value();
-							path_parts.push_back(identifier(nmsp->getName().str()));
+							path_parts.push_back(identifier(nmsp->getName().strView()));
 							current_pst = pst::Access<pst::LangElement>(ancestor);
 							break;
 						}
 						if (ancestor->getElementKind() == pst::ElementKind::Class) {
 							auto nmsp = ancestor.dynamicCast<pst::Class>().value();
-							path_parts.push_back(identifier(nmsp->getName().str()));
+							path_parts.push_back(identifier(nmsp->getName().strView()));
 							current_pst = pst::Access<pst::LangElement>(ancestor);
 							break;
 						}
@@ -217,7 +243,8 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
-			return base::strConcat(pathPrefix(symbol_id), symbolName(ctx, symbol_id));
+			auto prefix = pathPrefix(ctx, symbol_id);
+			return base::strConcat(std::move(prefix), symbolName(ctx, symbol_id));
 		}
 
 		/**
@@ -237,7 +264,7 @@ namespace compiler::helios::mangler {
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
 
-				for (const auto& param: fun_decl.parameters) ret << identifier(param.name.str());
+				for (const auto& param: fun_decl.parameters) identifier(ret, param.name.strView());
 
 				ret << "E";
 			} else {

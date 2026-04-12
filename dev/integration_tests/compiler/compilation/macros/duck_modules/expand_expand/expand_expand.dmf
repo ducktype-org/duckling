@@ -1,0 +1,6 @@
+expand "expand \" fun foo() = 1; \"";
+
+fun main() -> i64 = {
+    builtin_output_i64(foo());
+    return 0;
+}

@@ -1,4 +1,5 @@
 #include <diagnostic_interactive/logger.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
@@ -29,9 +30,9 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/mutability.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <tsh/mutability.hpp>
+#include <tsh/queries/types.hpp>
+#include <tsh/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -80,6 +81,7 @@ public:
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testBuiltinFunctions);
@@ -1770,6 +1772,56 @@ private:
 		}
 	}
 
+	void testStrings() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/strings")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function   = hout.functions.at(0);
+		auto& statements = function->body->statements;
+		using namespace compiler::helios::code;
+
+		{
+			// let ab = 'a' +: b;
+			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
+			const auto  prepended_expr
+				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.value().get());
+			const auto prepended_callee
+				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(prepended_callee->symbol),
+				base::StrID("builtin_string_prepended"),
+				"The prepended expression should call builtin_string_prepended"
+			);
+		}
+
+		{
+			// let bcd = b :+ 'c' :+ 'd';
+			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
+			const auto  appended_expr
+				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.value().get());
+			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(appended_callee->symbol),
+				base::StrID("builtin_string_appended"),
+				"The appended expression should call builtin_string_appended"
+			);
+		}
+
+		{
+			// let helloWorld = hello ++ world;
+			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
+			const auto  concatenated_expr
+				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.value().get());
+			const auto concatenated_callee
+				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(concatenated_callee->symbol),
+				base::StrID("builtin_string_concatenated"),
+				"The prepended expression should call builtin_string_concatenated"
+			);
+		}
+	}
+
 	void testStaticArrays() {
 		auto [module, top_scope] = getModule(fs::File(path("test_modules/static_arrays")));
 		auto& hout
@@ -2118,9 +2170,18 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
 
-		auto        sub_module = getModule(fs::File(path("test_modules/mangling/sub")));
+
+		auto sub_module_a = query::utils::withContextCompute([&](query::Context& ctx) {
+			return compiler::frontend::getModuleRef(module)
+			    ->getSubmoduleByName(base::StrID{ "sub" })
+			    .unlock(ctx)
+			    ->unlock(ctx)
+			    .getID();
+		});
+		auto sub_module   = std::any_cast<compiler::frontend::ModuleID>(sub_module_a);
+
 		const auto& sub_hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first)->valueOrPanic();
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module)->valueOrPanic();
 
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
 		std::cerr << "\nSub function name: " << sub_fun->declaration->original_name.strView()
@@ -2152,8 +2213,8 @@ private:
 
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
 
-		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32EE$metadata_v5", mangled_sub_fun.str());
-		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
+		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFi32EE$metadata_v5", mangled_sub_fun.str());
+		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
 	}
 
 	void testManglerSpecialMembers() {
@@ -2251,9 +2312,9 @@ private:
 			const auto& hout_unit
 				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
+			ASSERT_EQUAL(hout_unit.glob_data.size(), 4);
 
-			std::vector<char> globals = { 'A', 'B', 'C' };
+			std::vector<std::string> globals = { "A", "B", "C", "A_in_expand" };
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
 					ASSERT_TRUE(compiler::helios::isGlobalVar(

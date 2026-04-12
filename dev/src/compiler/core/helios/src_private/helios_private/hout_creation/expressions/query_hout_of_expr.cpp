@@ -17,7 +17,7 @@
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <typesystem/higher/queries.hpp>
+#include <tsh/queries.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -547,9 +547,13 @@ namespace compiler::helios::code {
 			}
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
-				auto condition_res = fromPST(ctx, stmt->getCondition());
-				auto if_true_res   = fromPST(ctx, stmt->getIfTrue());
-				auto if_false_res  = fromPST(ctx, stmt->getIfFalse());
+				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+				// @TODO: #2063 Change that to subExprFromPSTWithType :)
+				auto condition_res
+					= getHoutOfExprWithExpectedType(ctx, stmt->getCondition(), bool_type);
+
+				auto if_true_res  = fromPST(ctx, stmt->getIfTrue());
+				auto if_false_res = fromPST(ctx, stmt->getIfFalse());
 
 				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;

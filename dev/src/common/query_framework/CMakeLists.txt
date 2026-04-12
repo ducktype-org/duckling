@@ -33,3 +33,4 @@ duck_add_test(common query_framework tests/query_framework_test.cpp USES QueryFr
 duck_add_test(common active_graph tests/active_graph_test.cpp USES QueryFramework)
 duck_add_test(common concurrent_metadata_storage tests/concurrent_metadata_storage_test.cpp USES QueryFramework)
 duck_add_test(common query_invalidation tests/query_invalidation_test.cpp USES QueryFramework)
+duck_add_test(common task_pool tests/task_pool_test.cpp USES QueryFramework)

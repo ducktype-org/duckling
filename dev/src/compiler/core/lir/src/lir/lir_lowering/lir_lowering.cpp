@@ -22,9 +22,9 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <typesystem/higher/queries.hpp>
-#include <typesystem/lower/queries.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsh/queries.hpp>
+#include <tsl/queries.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 

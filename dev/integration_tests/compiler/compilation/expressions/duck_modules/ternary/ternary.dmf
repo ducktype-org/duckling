@@ -40,6 +40,12 @@ fun expressionAsValue() -> i64 = {
     return sub1 + sub2; # 18  (10010)
 }
 
+fun conditionCoercions() -> i64 = {
+    var a: i64 = 1;
+    let sub1: i64 = if a then 1i64 + 1i64 else 4i64;  # sub1 = 2
+    return sub1; # 2
+}
+
 fun nestedTernaryValue() -> i64 = {
     let sub1: i64 = 
     if true then (
@@ -65,6 +71,7 @@ fun main() -> i64 = {
     builtin_output_i64(localVariableAsValue());
     builtin_output_i64(expressionAsValue());
     builtin_output_i64(nestedTernaryValue());
+    builtin_output_i64(conditionCoercions());
 
     return 0i64;
 }

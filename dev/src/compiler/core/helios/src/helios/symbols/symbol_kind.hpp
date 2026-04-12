@@ -17,6 +17,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, int, SymbolKind
 		Import,
 		Parameter,
 
+		NamedCodeElement, ///< named ifs, whiles, fors, code blocks and similar
+
 		// Class-specific Symbols
 		Method,
 		Field,
