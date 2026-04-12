@@ -17,6 +17,16 @@
 
 namespace compiler::helios {
 	/**
+	 * @brief The unique ID of a symbol that is always increasing.
+	 *
+	 * The SymbolID should use this ID to implement its queryUnstablePerfectHash  so that it always
+	 * generates a unique ID for each symbol. The previous approach of using the pointer to the
+	 * SymbolData in cache was not working, because when we deallocate a SymbolData (LS can do that)
+	 * some new SymbolData can be allocated at the same address.
+	 */
+	STRONG_TYPEDEF_ID(SymbolDataID);
+
+	/**
 	 * Symbol data shared by all symbols.
 	 */
 	struct CommonSymbolData final {
@@ -66,8 +76,11 @@ namespace compiler::helios {
 		using OtherData
 			= std::variant<PstSymbolData, builtin::BuiltinFunctionData, defgen::GeneratedSymbolData>;
 
+		SymbolData(CommonSymbolData common, OtherData other);
+
 		CommonSymbolData common;
 		OtherData        other;
+		SymbolDataID     id;
 
 		static SymbolData makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data);
 
