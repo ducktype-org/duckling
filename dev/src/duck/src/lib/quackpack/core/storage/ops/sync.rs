@@ -4,6 +4,7 @@ use std::{fs::File, io, path::PathBuf, time::SystemTime};
 
 use flate2::read::GzDecoder;
 use tar::Archive;
+use tracing::debug;
 
 use crate::{
     QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
@@ -44,6 +45,7 @@ pub struct StorageSyncOptions {
 }
 
 /// Synchronize virtual environment for package, and return information required to build it.
+#[tracing::instrument(skip(package), fields(%root = package.package().root_directory().display()))]
 pub fn sync(
     package: &PackageCtx<'_>,
     options: StorageSyncOptions,
@@ -190,6 +192,7 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Prepares the input and runs [`SolverGathererData::prepare_solving`].
+#[tracing::instrument(skip(package, fetcher, git_access, input_freeze))]
 fn get_solver_answer(
     package: &PackageCtx<'_>,
     fetcher: &mut Fetcher<'_>,
@@ -215,6 +218,7 @@ fn get_solver_answer(
         .lock(ShouldBlock::Yes)?;
     let should_run_engine = solver.prepare_solving(fetcher, git_access)?;
     drop(fetcher_lock);
+    debug!("will run solver engine: {should_run_engine}");
     match should_run_engine {
         ShouldRunSolverEngine::No(answer) => Ok(answer),
         ShouldRunSolverEngine::Yes(solver) => solver.solve(),
@@ -224,6 +228,7 @@ fn get_solver_answer(
 /// Helper for [`sync`].
 /// Fetches source codes of packages which have been decided to be part of the freeze,
 /// but their source codes have not yet been fetched.
+#[tracing::instrument(skip_all)]
 fn fetch_source_codes(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
@@ -245,6 +250,7 @@ fn fetch_source_codes(
 
 /// Helper for [`fetch_source_codes`].
 /// Fetches the source code of a package if it is not yet stored in the storage.
+#[tracing::instrument(skip(storage, fetcher))]
 fn fetch_source_code(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
@@ -281,14 +287,19 @@ fn fetch_source_code(
             let mut successfully_fetched = false;
             let mut blob_path = PathBuf::new();
             for _ in 0..MAX_BLOB_RETRY_COUNT {
-                if let Ok(path) = fetcher.fetch_package_blob(&PackageWithUrl {
+                match fetcher.fetch_package_blob(&PackageWithUrl {
                     id: *real_name,
                     version,
                     url: url.clone(),
                 }) {
-                    blob_path = path;
-                    successfully_fetched = true;
-                    break;
+                    Ok(path) => {
+                        blob_path = path;
+                        successfully_fetched = true;
+                        break;
+                    }
+                    Err(e) => {
+                        debug!("failed to fetch: {e}");
+                    }
                 }
             }
             if !successfully_fetched {

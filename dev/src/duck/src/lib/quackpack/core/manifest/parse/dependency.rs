@@ -2,8 +2,7 @@
 use std::path::Path;
 
 use super::source;
-use tracing::Level;
-use tracing::span;
+use tracing::debug;
 use tracing::trace;
 
 use super::Scope;
@@ -24,6 +23,7 @@ use crate::util::error::QuackResultContext;
 use crate::{QuackResult, quackpack::core::Dependencies};
 
 /// Parse [`Dependencies`] from the [`DependenciesSchema`].
+#[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
@@ -36,8 +36,6 @@ pub(crate) fn parse(
     let mut dependencies = Vec::new();
     for (name, dep_schema) in schema {
         let name = name.into();
-        let span = span!(Level::DEBUG, "dependency", name = %name);
-        let _guard = span.enter();
         scope.push(name);
         dependencies.push(parse_single_dependency(
             name,
@@ -52,6 +50,7 @@ pub(crate) fn parse(
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
+#[tracing::instrument(skip(ctx, scope, package_root))]
 fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
@@ -101,6 +100,7 @@ fn parse_single_dependency(
 }
 
 /// Parse dependency's features
+#[tracing::instrument(skip(scope))]
 fn parse_features(
     schema: Option<&Vec<FeatureSchema>>,
     scope: &mut Scope,
@@ -110,6 +110,7 @@ fn parse_features(
     };
     let mut result = vec![];
     for feature in schema {
+        debug!("parsing {feature:?}");
         match feature {
             FeatureSchema::Simple(name) => {
                 result.push(DependencyFeature::new(name.into(), None));

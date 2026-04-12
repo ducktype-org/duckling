@@ -61,6 +61,7 @@ impl SolverFreeze {
     /// This can be used to either generate:
     ///     * the new freeze (main_pkg_features equals to all manifest-specified main package features).
     ///     * a compilation graph from the new freeze (main_pkg_features equals to features provided by the build command).
+    #[tracing::instrument(skip_all)]
     pub fn find_minimal_dep_solution(
         self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,

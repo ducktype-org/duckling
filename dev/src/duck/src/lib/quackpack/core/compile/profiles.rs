@@ -118,6 +118,7 @@ macro_rules! determine_field {
         /// -----
         /// Field in [`manifest::Profile`] should implement [`Into::into`] for the appropriate [`Profile`] field type.
         /// It should also implement [`std::marker::Copy`].
+        #[tracing::instrument]
         fn $fun_name(profile_name: StrId, profiles: &manifest::Profiles) -> QuackResult<$ret> {
             // The profile should be either defined in the manifest or predefined.
             // We always prioritize the manifest, since a predefined profile can be redefined in the manifest.
@@ -138,6 +139,7 @@ macro_rules! determine_field {
         }
 
         #[doc = concat!("Recursive helper for [`", stringify!($fun_name),"`]")]
+        #[tracing::instrument]
         fn $fun_name_help(
             cur_profile_name: StrId,
             cur_profile: &manifest::Profile,
@@ -207,6 +209,7 @@ determine_field!(
 impl Profile {
     /// Constructs a [`Profile`], given the profile's name and [`manifest::Profiles`].
     /// Unwinds the inheritance structure to determine each field of the profile.
+    #[tracing::instrument]
     pub fn construct_profile(
         profile_name: StrId,
         manifest_profiles: &manifest::Profiles,

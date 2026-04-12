@@ -48,6 +48,7 @@ macro_rules! delegate_getter {
         CastFunctionName: $yaml_value_fn:ident $(,)?
     ) => {
         #[doc = concat!("Get [`", stringify!($doc), "`] at the dotted key.")]
+        #[tracing::instrument(skip(self))]
         pub fn $name(&self, key: &str) -> QuackResult<Option<$ret>> {
             let value = self.get(key)?;
             let Some(value) = value else {
@@ -71,6 +72,7 @@ macro_rules! delegate_setter {
         InputType: $value:ty $(,)?
     ) => {
         #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
+        #[tracing::instrument(skip(self, value))]
         pub fn $name(&mut self, key: &str, value: $value) -> QuackResult<()> {
             let value: Value = value.into();
             self.set(key, value)
@@ -78,11 +80,19 @@ macro_rules! delegate_setter {
     };
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 /// YAML config manager.
 pub struct YamlConfig {
     content: Mapping,
     source: Option<PathBuf>,
+}
+
+impl fmt::Debug for YamlConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YamlConfig")
+            .field("where", &self.source)
+            .finish_non_exhaustive()
+    }
 }
 
 impl YamlConfig {
@@ -139,6 +149,7 @@ impl YamlConfig {
 
     #[track_caller]
     /// Get the value from the dotted key.
+    #[tracing::instrument(skip(self))]
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
         debug!(
             "getting the key `{key}` from config at `{}`",
@@ -187,6 +198,7 @@ impl YamlConfig {
 
     #[track_caller]
     /// Set the value at the dotted key.
+    #[tracing::instrument(skip(self))]
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         if key.is_empty() {
             qp_bail_internal!("empty key")

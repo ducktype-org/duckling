@@ -35,6 +35,7 @@ pub struct SolverInput {
 impl SolverInput {
     /// Creates the solver input, based on the previous freeze, its packages' manifests and information gathered
     /// in the gathering phase.
+    #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
         prev_freeze_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
@@ -100,6 +101,7 @@ pub struct SolverEngine<'a> {
 impl<'a> SolverEngine<'a> {
     /// Main entry point.
     /// Creates an engine and runs it.
+    #[tracing::instrument(skip_all)]
     pub fn run_engine(
         input: SolverInput,
         main_pkg: &(ExpandedPackage, HashSet<FeatureName>),

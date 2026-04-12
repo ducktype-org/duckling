@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 
 use tempfile::TempDir;
-use tracing::{Level, debug, span};
+use tracing::debug;
 use url::Url;
 
 use crate::{
@@ -82,12 +82,11 @@ impl<'duck> Fetcher<'duck> {
     /// Retrieve metadata for `package` from a given Ducknest instance.
     ///
     /// Exact cache hit takes precedence over HTTP requests.
+    #[tracing::instrument(skip(self))]
     pub fn get_package_metadata(
         &self,
         package: &types::PackageWithUrl,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
-        let span = span!(Level::DEBUG, "metadata", package = ?package);
-        let _guard = span.enter();
         if let Some(cached) = self.cache.get_manifest(package)? {
             debug!("cache hit");
             return Ok(FetcherResponse::Some(cached));
@@ -117,13 +116,12 @@ impl<'duck> Fetcher<'duck> {
     /// Otherwise __no__ lookup is performed.
     /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
+    #[tracing::instrument(skip(self))]
     pub fn get_package_all_metadata(
         &mut self,
         url: &Url,
         package_name: StrId,
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
-        let span = span!(Level::DEBUG, "all metadata", package = %package_name, url = %url);
-        let _guard = span.enter();
         if self.ctx.is_offline() {
             let package = PackageWithUrl {
                 id: package_name,
@@ -145,9 +143,8 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Fetch a source of a `package`. Returns a path to the file where the blob has been saved.
+    #[tracing::instrument(skip(self))]
     pub fn fetch_package_blob(&self, package: &types::PackageWithUrl) -> QuackResult<PathBuf> {
-        let span = span!(Level::DEBUG, "blob", package = ?package);
-        let _guard = span.enter();
         let destination = self
             .download_cache_path
             .join(package.id)
@@ -175,13 +172,12 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Clone a git repository pointed by `source` to the `destination_directory`.
+    #[tracing::instrument(skip(self))]
     pub fn clone_from_git_to_directory(
         &self,
         source: &Git,
         destination_directory: &std::path::Path,
     ) -> QuackResult<types::GitCloneResponse> {
-        let span = span!(Level::DEBUG, "git clone", source = ?source, to = %destination_directory.display());
-        let _guard = span.enter();
         git::GitClient::clone_blocking(source, destination_directory, self.ctx)
     }
 
@@ -190,6 +186,7 @@ impl<'duck> Fetcher<'duck> {
     ///
     /// This is needed because storage paths depend on a commit, which we can only get after
     /// cloning a repository.
+    #[tracing::instrument(skip(self))]
     pub fn clone_from_git(&self, source: &Git) -> QuackResult<(types::GitCloneResponse, TempDir)> {
         let dir = tempfile::tempdir().context("failed to create a temporary directory")?;
         let result = self.clone_from_git_to_directory(source, dir.path())?;

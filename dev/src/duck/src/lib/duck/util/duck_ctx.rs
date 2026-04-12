@@ -122,12 +122,18 @@ impl DuckCtx {
 #[cfg(test)]
 impl Default for DuckCtx {
     fn default() -> Self {
+        use crate::duck::util::terminal::Verbosity;
+
         let env = Default::default();
         let user_home = home_dir().unwrap();
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home).unwrap(), &env);
+        let mut console = Terminal::stdout();
+        let mut error_console = Terminal::stderr();
+        console.set_verbosity(Verbosity::Quiet);
+        error_console.set_verbosity(Verbosity::Quiet);
         Self {
-            console: Terminal::stdout(),
-            error_console: Terminal::stderr(),
+            console,
+            error_console,
             duck_cfg: Default::default(),
             env,
             cwd: current_dir().unwrap(),

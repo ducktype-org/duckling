@@ -3,7 +3,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use serde::Deserialize;
-use tracing::{Level, debug, span};
+use tracing::debug;
 
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -25,9 +25,8 @@ mod tests;
 /// 1. Read the entire YAML string.
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
+#[tracing::instrument(skip(ctx))]
 pub fn parse_manifest(path: &Path, ctx: &DuckCtx) -> QuackResult<Package> {
-    let span = span!(Level::DEBUG, "manifest", path = %path.display());
-    let _guard = span.enter();
     debug!("starting parsing...");
     parse_inner(path, ctx).with_context(|| {
         format!(

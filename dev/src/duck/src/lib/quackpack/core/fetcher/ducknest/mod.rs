@@ -31,11 +31,12 @@ impl<'duck> DucknestClient<'duck> {
     }
 
     /// Retrieve metadata for a specific package from a Ducknest instance.
+    #[tracing::instrument(skip(self))]
     pub fn get_exact_metadata(
         &self,
         package: &types::PackageWithUrl,
     ) -> QuackResult<registry::Manifest> {
-        debug!("fetching {package:?}");
+        debug!("fetching...");
         let url = package.url.for_exact_metadata(&package.into())?;
 
         let response = self.client.get(&url)?;
@@ -43,12 +44,13 @@ impl<'duck> DucknestClient<'duck> {
     }
 
     /// Retrieve all metadata for a specific package from a Ducknest instance.
+    #[tracing::instrument(skip(self))]
     pub fn get_multi_metadata(
         &self,
         url: &Url,
         package: StrId,
     ) -> QuackResult<types::MultiMetadata> {
-        debug!("fetching all metadata of `{package}` from `{url}`");
+        debug!("fetching...");
         let req_url = url.for_multi_metadata(package)?;
 
         let response = self.client.get(&req_url)?;
@@ -56,30 +58,29 @@ impl<'duck> DucknestClient<'duck> {
     }
 
     /// Publish a package to a Ducknest instance.
+    #[tracing::instrument(skip(self))]
     pub fn publish_package(
         &self,
         url: &Url,
         schema: &registry::Manifest,
         path: &Path,
     ) -> QuackResult<()> {
-        debug!(
-            "publishing package `{}` version `{}` to `{url}`",
-            schema.metadata.name,
-            path.display()
-        );
+        debug!("publishing...");
         qp_bail_internal!("publishing is not yet implemented")
     }
 
     /// Download a package blob from a Ducknest instance and save it to a file.
+    #[tracing::instrument(skip(self))]
     pub fn fetch_blob(&self, package: &types::PackageWithUrl, target: &Path) -> QuackResult<()> {
-        debug!("fetching a blob of `{package:?}` to `{}`", target.display());
+        debug!("fetching...");
         let url = package.url.for_blob(&package.into())?;
         self.client.get_to_file(&url, target)
     }
 
     /// Search the Ducknest instance for all packages that match the provided query.
+    #[tracing::instrument(skip(self))]
     pub fn search(&self, url: &Url, query: &str) -> QuackResult<types::SearchResult> {
-        debug!("searching `{query}` on `{url}`");
+        debug!("searching...");
         let req_url = url.for_search(query)?;
 
         let response = self.client.get(&req_url)?;

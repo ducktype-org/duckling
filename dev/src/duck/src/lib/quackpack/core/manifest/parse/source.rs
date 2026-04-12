@@ -22,6 +22,7 @@ use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 /// Parse given [`DependencySchema`] into [`Source`].
 ///
 /// It's the most important and complex part of current parsing process.
+#[tracing::instrument(skip(ctx, scope, package_root))]
 pub(crate) fn parse(
     schema: &DependencySchema,
     package_root: &Path,
@@ -175,6 +176,7 @@ fn make_could_not_determine_error<const N: usize>(
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Git`] source.
+#[tracing::instrument(skip(scope))]
 fn check_no_git(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
     let fields = [
         (source.git_url.as_ref(), "git-url"),
@@ -198,6 +200,7 @@ fn check_no_git(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Local`] source.
+#[tracing::instrument(skip(scope))]
 fn check_no_local(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
     let fields = [(source.path.as_ref(), "path")];
     for (field, name) in fields {
@@ -216,6 +219,7 @@ fn check_no_local(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()>
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Registry`] source.
+#[tracing::instrument(skip(scope))]
 fn check_no_registry(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
     let fields = [(source.registry_url.as_ref(), "registry-url")];
     for (field, name) in fields {
@@ -234,6 +238,7 @@ fn check_no_registry(source: &DetailedSource, scope: &mut Scope) -> QuackResult<
 }
 
 /// Resolve [`BranchOrTag`] from the given `source`.
+#[tracing::instrument(skip(scope))]
 fn resolve_git_branch_or_tag(source: &DetailedSource, scope: &Scope) -> QuackResult<BranchOrTag> {
     match (source.branch.as_ref(), source.tag.as_ref()) {
         (None, None) => Ok(BranchOrTag::Default),

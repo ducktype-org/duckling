@@ -10,7 +10,10 @@
 //! └── storage/ <root of the storage internal files>
 
 use crate::{QuackResult, util::env::Env};
-use std::path::{Path, PathBuf};
+use std::{
+    fmt,
+    path::{Path, PathBuf},
+};
 use tracing::debug;
 
 macro_rules! getter {
@@ -137,7 +140,6 @@ macro_rules! call_on_dirs {
     };
 }
 
-#[derive(Debug)]
 /// Implementation of the above layout
 // We keep all of the paths, because then we don't have to do any allocations later.
 pub struct DuckHome {
@@ -150,6 +152,14 @@ pub struct DuckHome {
     user_config: PathBuf,
     storage_dir: PathBuf,
     global_venv_dir: PathBuf,
+}
+
+impl fmt::Debug for DuckHome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DuckHome")
+            .field("root", &self.root)
+            .finish_non_exhaustive()
+    }
 }
 
 impl DuckHome {

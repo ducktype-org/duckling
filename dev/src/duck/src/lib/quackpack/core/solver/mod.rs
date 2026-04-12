@@ -27,6 +27,7 @@ pub mod util;
 #[cfg(test)]
 mod tests;
 
+use core::fmt;
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
@@ -70,6 +71,16 @@ pub enum ShouldRunSolverEngine {
     Yes(Box<SolverEngineData>),
 }
 
+impl fmt::Display for ShouldRunSolverEngine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            Self::No(..) => "no",
+            Self::Yes(..) => "yes",
+        };
+        f.write_str(text)
+    }
+}
+
 impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     /// Creates a new [`SolverGathererData`] instance.
     pub fn new(
@@ -100,6 +111,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
 
     /// Determines if all the transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`SolverEngineData`] for running the engine by constructing [`SolverInput`].
+    #[tracing::instrument(skip_all)]
     pub fn prepare_solving<Access: GitAccess>(
         self,
         fetcher: &mut Fetcher<'_>,
@@ -159,6 +171,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
 
     /// Helper for [`Self::prepare_solving`].
     /// Runs the [`Gatherer`], to fetch all potentially necessary manifests.
+    #[tracing::instrument(skip_all)]
     fn run_solver_gatherer<Access: GitAccess>(
         gatherer: &mut Gatherer<'_, '_, '_, Access>,
         root_manifest: Manifest,
@@ -207,6 +220,7 @@ pub struct SolverEngineData {
 impl SolverEngineData {
     /// Finds dependency resolution of a given package.
     /// Returns a [`SolverAnswer`].
+    #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<SolverAnswer> {
         let manifests = self.input.gathered_manifests.clone();
         let solver_output =

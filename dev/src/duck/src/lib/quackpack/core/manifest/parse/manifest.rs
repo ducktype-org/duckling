@@ -18,6 +18,7 @@ use crate::{
 use super::Scope;
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
+#[tracing::instrument(skip_all)]
 pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: &DuckCtx) -> QuackResult<Manifest> {
     let Some(ref metadata) = schema.metadata else {
         qp_bail!("missing the obligatory section `metadata`")

@@ -37,8 +37,9 @@ pub struct BuildContext<'duck, 'ctx> {
 }
 
 /// Compile project inside the [`BuildContext`].
+#[tracing::instrument(skip(bcx), fields(%profile = bcx.profile.name, %package = bcx.package.package().manifest().name()))]
 pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<()> {
-    debug!("compiling `{bcx:?}`");
+    debug!("compiling...");
     let mut graph = EarlyDag::new_early(&bcx)?;
     graph.populate_features(&bcx.used_features)?;
     graph.remove_disabled_dependencies();

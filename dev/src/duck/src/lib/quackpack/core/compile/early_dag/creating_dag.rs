@@ -1,7 +1,5 @@
 //! Entrypoints for creating a new [`EarlyDag`] and friends.
 
-use tracing::debug;
-
 use crate::{
     DuckCtx, QuackResultContext, qp_bail, qp_bail_internal,
     quackpack::core::{
@@ -21,6 +19,7 @@ impl DependencyDag {
     /// Create new [`DependencyDag`] from the given freeze.
     ///
     /// This method checks that the graph is complete, and that it is, in fact, a DAG.
+    #[tracing::instrument(skip_all)]
     pub fn new(freeze: &VenvFreeze) -> QuackResult<Self> {
         let root = freeze.root();
         let mut dag = HashMap::new();
@@ -47,6 +46,7 @@ impl DependencyDag {
     }
 
     /// Checks, whether `graph` rooted at `root` is complete.
+    #[tracing::instrument]
     fn check_is_complete_graph(
         root: FreezeDep,
         graph: &HashMap<FreezeDep, DependencyNode>,
@@ -59,7 +59,6 @@ impl DependencyDag {
                     } else {
                         PackageType::TransitiveDependency
                     };
-                    debug!("graph is `{graph:?}`");
                     qp_bail_internal!("malformed freezefile: missing {dep_type} `{dep}`")
                 }
             }
@@ -68,6 +67,7 @@ impl DependencyDag {
     }
 
     /// Checks, that the `graph` rooted at `root` doesn't have cycles.
+    #[tracing::instrument]
     fn check_no_cycles(
         root: FreezeDep,
         dag: &HashMap<FreezeDep, DependencyNode>,
@@ -124,6 +124,7 @@ impl DependencyNode {
 }
 
 /// Parses the dependency from the freezefile using data in the storage.
+#[tracing::instrument(skip(storage, ctx))]
 fn parse_dependency(
     dep: &FreezePackage,
     storage: &Storage,
@@ -184,6 +185,7 @@ impl EarlyDag {
     /// Also note that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
+    #[tracing::instrument(skip(ctx))]
     pub fn new_early(ctx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
         let graph = DependencyDag::new(&ctx.freeze)?;

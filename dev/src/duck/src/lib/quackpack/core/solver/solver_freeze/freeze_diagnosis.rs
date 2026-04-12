@@ -59,6 +59,7 @@ impl SolverFreeze {
     /// Then the information about being flawed is propagated upwards (if child is flawed then so is parent who depends on it).
     ///
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
+    #[tracing::instrument(skip_all)]
     pub fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
