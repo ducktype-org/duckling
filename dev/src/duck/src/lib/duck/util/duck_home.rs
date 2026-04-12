@@ -10,11 +10,10 @@
 //! └── storage/ <root of the storage internal files>
 
 use crate::{
-    QuackResult,
+    QuackResult, StrId,
     quackpack::core::PackageLoader,
     util::{env::Env, path_ops_ext::PathOpsExt},
 };
-use const_format::concatcp;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
@@ -227,20 +226,24 @@ impl DuckHome {
     pub const GLOBAL_PACKAGE_NAME: &str = "__global__";
 
     /// Default minimal manifest for the global package.
-    const DEFAULT_GLOBAL_MANIFEST: &str = concatcp!(
-        "metadata:\n",
-        "  name: ",
-        DuckHome::GLOBAL_PACKAGE_NAME,
-        "\n  version: 0.1\n",
-        "  authors: []\n",
-    );
+    pub fn default_global_manifest() -> StrId {
+        format!(
+            "\
+metadata:
+  name: {}
+  version: '0.1'
+  authors: []",
+            Self::GLOBAL_PACKAGE_NAME
+        )
+        .into()
+    }
 
     /// Assure that the global package root folder exists and there is a manifest in it.
     pub fn ensure_and_populate_global_dir(&self) -> QuackResult<&Path> {
         let global_pkg_dir = self.ensure_global_dir()?;
         let manifest_path = global_pkg_dir.join(PackageLoader::MANIFEST_NAME);
         if !manifest_path.exists() {
-            manifest_path.write(Self::DEFAULT_GLOBAL_MANIFEST)?;
+            manifest_path.write(Self::default_global_manifest().as_bytes())?;
         }
         Ok(global_pkg_dir)
     }
