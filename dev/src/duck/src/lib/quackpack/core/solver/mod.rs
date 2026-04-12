@@ -33,6 +33,8 @@ use std::{
     path::PathBuf,
 };
 
+use tracing::debug;
+
 use crate::{
     QuackResult, qp_bail, qp_bail_internal,
     quackpack::core::{
@@ -156,6 +158,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             &maximal_valid_freeze,
             self.mode,
         )?;
+        debug!("gathered {gathered_info:?}");
         let solver_input = SolverInput::from_freeze_and_gathered_info(
             &maximal_valid_freeze,
             prev_freeze_manifests,
