@@ -13,6 +13,7 @@ Tests:
         Output:
           String: "101\n105\n109\n"
         ExitCode: 0
+
   named_arguments_overloading:
     Cases:
       llvm:
@@ -20,6 +21,12 @@ Tests:
         Output:
           String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
         ExitCode: 54
+      dvm:
+        backend: dvm
+        Output:
+          String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
+        ExitCode: 54
+
   named_default_args:
     Cases:
       dvm:
@@ -32,6 +39,7 @@ Tests:
         Output:
           String: "1\n2\n1\n2\n3\n2\n4\n5\n1\n3\n1\n2\n2\n3\n4\n5\n1\n5\n4\n2\n"
         ExitCode: 0
+
   numeric:
     Cases:
       llvm:
@@ -44,6 +52,20 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+
+  overloading_between_modules:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1000\n200\n500\n30\n60\n4\n7\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1000\n200\n500\n30\n60\n4\n7\n"
+        ExitCode: 0
+
   simple:
     Cases: 
       llvm:
@@ -56,6 +78,7 @@ Tests:
         Output:
           String: "5\n7\n"
         ExitCode: 0
+
   single_stmt_body:
     Cases:
       llvm:
@@ -68,6 +91,7 @@ Tests:
         Output:
           String: "5\n7\n"
         ExitCode: 0
+
   type_overloading:
     # @TODO: #2448 Investigate why deterministic compilation check fails for this test
     enable_conc_deterministic_tests: "false"

@@ -4,11 +4,13 @@
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
+#include "tsl/type_layout.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include <string_id/string_id.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -146,10 +148,11 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 	// If a place is global, we load a pointer to it to a local.
 	if (place.hasProjections() && current_place.is<DVMGlobal>()) {
-		auto global             = current_place.get<DVMGlobal>();
-		auto ptr_to_global_type = program_context.getOrInsertPointerType(global.type);
+		auto                        global = current_place.get<DVMGlobal>();
+		const vm::code::TypeOfData& ptr_to_global_type
+			= program_context.getOrInsertPointerType(global.type);
 
-		auto addr_tmp = pushTempLocal(ptr_to_global_type, "global_addr_ref");
+		DVMLocal addr_tmp = pushTempLocal(ptr_to_global_type, "global_addr_ref");
 		pushInstruction({ vm::code::builders::OpKind::ref, addr_tmp, current_place.asAnyArgument() }
 		);
 		current_place = { addr_tmp, DVMPlace::AccessKind::Pointer };
@@ -176,9 +179,10 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					// Dereferencing means we now treat the local as a pointer.
 					current_place.setAccessKind(DVMPlace::AccessKind::Pointer);
 				} else {
-					auto vm_loaded_type = program_context.lowerAndKeepTslType(current_layout);
+					vm::code::TypeOfData vm_loaded_type
+						= program_context.lowerAndKeepTslType(current_layout);
 
-					auto loaded_val_tmp = pushTempLocal(vm_loaded_type, "deref_tmp");
+					DVMLocal loaded_val_tmp = pushTempLocal(vm_loaded_type, "deref_tmp");
 
 					// Emit the load instruction.
 					pushInstruction({ vm::code::builders::OpKind::load,
@@ -200,21 +204,24 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// Prepare the class type.
 				const auto& class_layout
 					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
-				const auto vm_class_type = program_context.lowerAndKeepTslType(current_layout);
+				const vm::code::TypeOfData& vm_class_type
+					= program_context.lowerAndKeepTslType(current_layout);
 
 				// Prepare the pointer to field type.
 				const usize field_index
 					= class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
-				const auto field_layout  = class_layout.getFieldLayoutOfLayoutIndex(field_index);
-				const auto vm_field_type = program_context.lowerAndKeepTslType(field_layout);
+				CRef<tsl::TypeLayout> field_layout
+					= class_layout.getFieldLayoutOfLayoutIndex(field_index);
+				const vm::code::TypeOfData vm_field_type
+					= program_context.lowerAndKeepTslType(field_layout);
 
 				auto vm_field_name = base::strConcat("_", field_index);
 
-				const auto& ptr_to_field_type
+				const vm::code::TypeOfData& ptr_to_field_type
 					= program_context.getOrInsertPointerType(vm_field_type);
 
 				// Create a temporary to the field
-				auto field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
+				DVMLocal field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
 
 				// Emit the pointer move instruction. Based on the `current_place` type,
 				// `structLea_lptr_lptr_field` or `structLea_lptr_lste_field` will be picked.
@@ -251,8 +258,9 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 				return { resolved };
 			} else {
 				// Otherwise it's indirect. We have to load it from memory into a stack variable.
-				auto val_type = program_context.lowerAndKeepTslType(place.layout);
-				auto tmp      = pushTempLocal(val_type, "deref_load");
+				const vm::code::TypeOfData& val_type
+					= program_context.lowerAndKeepTslType(place.layout);
+				DVMLocal tmp = pushTempLocal(val_type, "deref_load");
 				pushInstruction(
 					{ vm::code::builders::OpKind::load, tmp.asAnyArgument(), resolved.asArgument() }
 				);

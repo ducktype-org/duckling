@@ -1,0 +1,14 @@
+type fixed_size_table: tablei64 i64 42
+
+function main {} -> i64 {
+
+	init_lany_type     x, i64;
+	mov_l64_imm        x, 1;
+	deinit; # x
+	
+	init_lany_type     y, i64;
+	deinit; # y
+
+
+	ret;
+}

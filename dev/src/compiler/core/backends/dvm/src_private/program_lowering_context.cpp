@@ -7,6 +7,9 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
+#include "string_id/string_id.hpp"
+
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
@@ -32,8 +35,8 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 	if (auto maybe_name = type_storage.tsl_type_to_dvm_type_name.atMaybe(layout))
 		return type_storage.dvm_types.at(**maybe_name);
 
-	auto dvm_type  = lowerTslTypeInternal(layout);
-	auto type_name = vm::code::typeName(dvm_type);
+	vm::code::TypeOfData dvm_type  = lowerTslTypeInternal(layout);
+	base::StrID          type_name = vm::code::typeName(dvm_type);
 
 
 	IF_BUILD_TYPE_DEV({
@@ -57,8 +60,8 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 	const vm::code::TypeOfData& pointee_type
 ) {
-	auto pointee_name = vm::code::typeName(pointee_type);
-	auto pointer_name = base::StrID(base::strConcat("ptr_", pointee_name));
+	base::StrID pointee_name = vm::code::typeName(pointee_type);
+	auto        pointer_name = base::StrID(base::strConcat("ptr_", pointee_name));
 
 	if (auto maybe_type = type_storage.dvm_types.atMaybe(pointer_name)) return **maybe_type;
 
@@ -230,9 +233,9 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			/*
 			Class types are lowered to:
 			type data: <name> {
-			    _0: <type_of_field_1>
-			    _1: <type_of_field_2>
-			    _2: <type_of_field_3>
+			    _0: <type_of_field_0>
+			    _1: <type_of_field_1>
+			    _2: <type_of_field_2>
 			}
 			*/
 			// @TODO: #2100 Change that to indexes.
@@ -304,7 +307,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	std::ranges::sort(
 		collection.types,
 		[](const vm::code::TypeOfData& lhs, const vm::code::TypeOfData& rhs) {
-			return vm::code::typeName(lhs).str() < vm::code::typeName(rhs).str();
+			return vm::code::typeName(lhs).strView() < vm::code::typeName(rhs).strView();
 		}
 	);
 
