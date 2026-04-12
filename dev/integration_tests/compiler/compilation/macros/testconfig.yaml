@@ -48,9 +48,8 @@ Tests:
         Output:
           String: "177\n"
         ExitCode: 0
-      # @TODO: #1560 reenable it.
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: "177\n"
-      #   ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "177\n"
+        ExitCode: 0

@@ -7,9 +7,6 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
-#include "string_id/string_id.hpp"
-
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
