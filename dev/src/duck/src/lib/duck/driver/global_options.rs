@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::{QuackResult, duck::driver::cli_ext::ArgMatchesExt, qp_bail, qp_internal};
 use clap::ArgMatches;
 
-use crate::{DuckCtx, duck::util::terminal::Verbosity};
+use crate::{DuckContext, duck::util::terminal::Verbosity};
 
 /// Struct containing all global duck options, adjustable from cli.
 #[derive(Debug)]
@@ -44,7 +44,7 @@ impl GlobalOptions {
 
     /// Updates [`DuckCtx`], so that values of the global options specified by the user
     /// can be read in different parts of the program.
-    pub fn update_context(&self, ctx: &mut DuckCtx) -> QuackResult<()> {
+    pub fn update_context(&self, ctx: &mut DuckContext) -> QuackResult<()> {
         if self.verbose && self.quiet {
             qp_bail!("cannot specify both `--verbose` and `--quiet`")
         }

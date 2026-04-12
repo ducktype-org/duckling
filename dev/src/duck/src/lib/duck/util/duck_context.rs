@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct DuckCtx {
+pub struct DuckContext {
     console: Terminal,
     error_console: Terminal,
     duck_cfg: DuckCfg,
@@ -22,8 +22,8 @@ pub struct DuckCtx {
     offline: bool,
 }
 
-impl DuckCtx {
-    /// Create a new [`DuckCtx`].
+impl DuckContext {
+    /// Create a new [`DuckContext`].
     pub fn new() -> QuackResult<Self> {
         let env = Env::default();
         let console = Terminal::stdout();
@@ -120,7 +120,7 @@ impl DuckCtx {
 }
 
 #[cfg(test)]
-impl Default for DuckCtx {
+impl Default for DuckContext {
     fn default() -> Self {
         use crate::duck::util::terminal::Verbosity;
 
@@ -152,7 +152,7 @@ mod tests {
     fn assert_send_sync_package() {
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
-        assert_send::<DuckCtx>();
-        assert_sync::<DuckCtx>();
+        assert_send::<DuckContext>();
+        assert_sync::<DuckContext>();
     }
 }

@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     StrId,
-    quackpack::core::{Manifest, Package, PackageCtx},
+    quackpack::core::{Manifest, Package, PackageContext},
 };
 
 /// A unique venv's identifier.
@@ -98,7 +98,7 @@ impl ToVenvId for StrId {
     }
 }
 
-impl ToVenvId for PackageCtx<'_> {
+impl ToVenvId for PackageContext<'_> {
     fn to_venv_id(&self) -> VenvId {
         self.package().to_venv_id()
     }

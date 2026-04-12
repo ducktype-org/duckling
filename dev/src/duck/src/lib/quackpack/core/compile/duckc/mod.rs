@@ -21,7 +21,7 @@ use super::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_dag::EarlyDag;
 use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
-use crate::{DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 #[derive(Debug)]
 /// Data holder of all required in order to execute the compiler.
@@ -31,7 +31,7 @@ pub struct Duckc {
 
 impl Duckc {
     /// Create new [`Duckc`] from the [`DuckCtx`].
-    pub fn new(ctx: &DuckCtx) -> Self {
+    pub fn new(ctx: &DuckContext) -> Self {
         let _ = ctx;
         Self {
             program_name: "duckc".into(),
@@ -39,7 +39,7 @@ impl Duckc {
     }
 
     /// A helper for starting a REPL session from [`DuckCtx`].
-    pub fn start_repl_with(ctx: &DuckCtx) -> QuackResult<Infallible> {
+    pub fn start_repl_with(ctx: &DuckContext) -> QuackResult<Infallible> {
         let this = Self::new(ctx);
         this.start_repl()
     }
@@ -94,7 +94,7 @@ impl Duckc {
             .update_with_profile(&bcx.profile);
         // We need to lock a file, we can't lock a directory.
         let _lock = this.artifacts_directory().join(".duck_lock").lock(ShouldBlock::Yes).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
-        bcx.package
+        bcx.pcx
             .ctx()
             .console()
             .info_verbose(format!("Running `{}`", builder));

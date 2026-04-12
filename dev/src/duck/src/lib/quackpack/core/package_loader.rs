@@ -4,9 +4,9 @@ use std::{io, marker::PhantomData, path::Path};
 use tracing::{debug, trace};
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, qp_bail, qp_err, qp_internal,
+    DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err, qp_internal,
     quackpack::core::{
-        PackageCtx,
+        PackageContext,
         storage::{paths::Storage, venv::Venv, venv_id::VenvId},
     },
     util::path_ops_ext::PathOpsExt,
@@ -44,7 +44,7 @@ impl PackageLoader {
     pub const VENV_CONFIG_NAME: &str = "venvconfig.yaml";
 
     /// Get the global package.
-    pub fn global_package<'duck>(_ctx: &'duck DuckCtx) -> QuackResult<PackageCtx<'duck>> {
+    pub fn global_package<'duck>(_ctx: &'duck DuckContext) -> QuackResult<PackageContext<'duck>> {
         Err(qp_internal!("@TODO: #1394 it needs the EditableManifest"))
     }
 
@@ -54,9 +54,9 @@ impl PackageLoader {
     /// Also, it walks up the chain of path's ancestors.
     pub fn find_from_directory<'duck>(
         start: &Path,
-        ctx: &'duck DuckCtx,
+        ctx: &'duck DuckContext,
         allow_global_package: AllowGlobalPackage,
-    ) -> QuackResult<PackageCtx<'duck>> {
+    ) -> QuackResult<PackageContext<'duck>> {
         let start = start.expand_user()?.resolve()?;
         if !start.is_dir() {
             let err = qp_err!("the path `{}` is not a directory", start.display());
@@ -68,7 +68,7 @@ impl PackageLoader {
             trace!("checking the path `{}`", path.display());
             if path.is_file() {
                 debug!("found a package at `{}`", path.display());
-                return PackageCtx::new(potential_location.to_path_buf(), ctx);
+                return PackageContext::new(potential_location.to_path_buf(), ctx);
             }
             current = potential_location;
         }
@@ -89,8 +89,8 @@ impl PackageLoader {
     /// `path`'s ancestors.
     pub fn find_at_exact_directory<'duck>(
         path: &Path,
-        ctx: &'duck DuckCtx,
-    ) -> QuackResult<PackageCtx<'duck>> {
+        ctx: &'duck DuckContext,
+    ) -> QuackResult<PackageContext<'duck>> {
         if !path.is_dir() {
             let err = qp_err!("the path `{}` is not a directory", path.display());
             return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());
@@ -100,23 +100,23 @@ impl PackageLoader {
             let err = qp_err!("the directory `{}` has no manifest", path.display());
             return Err(io::Error::new(io::ErrorKind::NotFound, err).into());
         }
-        PackageCtx::new(path.to_path_buf(), ctx)
+        PackageContext::new(path.to_path_buf(), ctx)
     }
 
     /// A convenient helper.
     pub fn find_from_cwd<'duck>(
-        ctx: &'duck DuckCtx,
+        ctx: &'duck DuckContext,
         allow_global_package: AllowGlobalPackage,
-    ) -> QuackResult<PackageCtx<'duck>> {
+    ) -> QuackResult<PackageContext<'duck>> {
         let cwd = ctx.cwd();
         Self::find_from_directory(cwd, ctx, allow_global_package)
     }
 
     /// Find the root of the venv with the given name.
     pub fn find_venv_by_name<'duck>(
-        ctx: &'duck DuckCtx,
+        ctx: &'duck DuckContext,
         venv_id: VenvId,
-    ) -> QuackResult<PackageCtx<'duck>> {
+    ) -> QuackResult<PackageContext<'duck>> {
         let storage_loc = ctx.default_storage_root();
         let storage = Storage::new(storage_loc);
         let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
@@ -133,7 +133,7 @@ mod tests {
     use tempfile::tempdir;
 
     use crate::{
-        DuckCtx,
+        DuckContext,
         quackpack::core::PackageLoader,
         util::path_ops_ext::{MkdirOptions, PathOpsExt},
     };
@@ -147,7 +147,7 @@ metadata:
     #[test]
     fn no_package_from_directory() {
         let tmp_file = tempdir().unwrap();
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let err =
             PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap_err();
         assert_eq!(
@@ -163,7 +163,7 @@ metadata:
     fn not_a_dir() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("x");
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let err = PackageLoader::find_from_directory(&file, &ctx, false.into()).unwrap_err();
         assert_eq!(
             format!("{err}"),
@@ -180,7 +180,7 @@ metadata:
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         file.touch().unwrap();
         file.write(BASIC_MANIFEST).unwrap();
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let package =
             PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap();
         assert_eq!(
@@ -198,7 +198,7 @@ metadata:
         let child = tmp_file.path().join("foo");
         child.mkdir(MkdirOptions::WithoutParents).unwrap();
         assert!(child.is_dir());
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let package = PackageLoader::find_from_directory(&child, &ctx, false.into()).unwrap();
         assert_eq!(
             package.package().root_directory().resolve().unwrap(),
@@ -212,7 +212,7 @@ metadata:
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         file.touch().unwrap();
         file.write(BASIC_MANIFEST).unwrap();
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let package = PackageLoader::find_at_exact_directory(tmp_file.path(), &ctx).unwrap();
         assert_eq!(
             package.package().root_directory().resolve().unwrap(),
@@ -225,7 +225,7 @@ metadata:
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("xd");
         assert!(!file.exists());
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let err = PackageLoader::find_at_exact_directory(&file, &ctx).unwrap_err();
         assert_eq!(
             format!("{err}"),

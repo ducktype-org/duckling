@@ -36,7 +36,7 @@ use std::{
 use crate::{
     QuackResult, qp_bail, qp_bail_internal,
     quackpack::core::{
-        FeatureName, Manifest, PackageCtx,
+        FeatureName, Manifest, PackageContext,
         fetcher::Fetcher,
         gathering::{gatherer::Gatherer, gatherer_state::GatheredInfo},
         git_access::GitAccess,
@@ -49,7 +49,7 @@ use crate::{
 
 /// A struct designated to finding the full dependency graph of a given package.
 pub struct SolverGathererData<'duck, 'ctx> {
-    root_package_ctx: &'ctx PackageCtx<'duck>,
+    root_pcx: &'ctx PackageContext<'duck>,
     root_pkg: ExpandedPackage,
     root_pkg_features: HashSet<FeatureName>,
     current_freeze: SolverFreeze,
@@ -84,19 +84,19 @@ impl fmt::Display for ShouldRunSolverEngine {
 impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     /// Creates a new [`SolverGathererData`] instance.
     pub fn new(
-        package_ctx: &'ctx PackageCtx<'duck>,
+        pcx: &'ctx PackageContext<'duck>,
         current_freeze: SolverFreeze,
         mode: SolverMode,
     ) -> Self {
         Self {
-            root_package_ctx: package_ctx,
+            root_pcx: pcx,
             root_pkg: ExpandedPackage {
                 location: InternedExpandedLocation::new(ExpandedLocation::Local {
-                    absolute_path: package_ctx.package().root_directory().to_path_buf(),
+                    absolute_path: pcx.package().root_directory().to_path_buf(),
                 }),
                 version: None,
             },
-            root_pkg_features: package_ctx
+            root_pkg_features: pcx
                 .package()
                 .manifest()
                 .features()
@@ -119,7 +119,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     ) -> QuackResult<ShouldRunSolverEngine> {
         let mut gatherer = Gatherer::new(fetcher, git_access);
 
-        let root_manifest = self.root_package_ctx.package().manifest().clone();
+        let root_manifest = self.root_pcx.package().manifest().clone();
         let root_features = root_manifest
             .features()
             .all_features()
@@ -147,7 +147,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             )
         }
 
-        let root_path = self.root_package_ctx.package().root_directory().into();
+        let root_path = self.root_pcx.package().root_directory().into();
         let gathered_info = Self::run_solver_gatherer(
             &mut gatherer,
             root_manifest,

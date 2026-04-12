@@ -3,7 +3,7 @@ use std::path::Path;
 use tempfile::TempDir;
 
 use crate::{
-    DuckCtx,
+    DuckContext,
     quackpack::core::{
         PackageLoader, Version,
         fetcher::Fetcher,
@@ -16,7 +16,7 @@ use crate::{
     util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
-pub fn setup_mock_storage() -> (DuckCtx, TempDir) {
+pub fn setup_mock_storage() -> (DuckContext, TempDir) {
     let setup = || {
         let tmpdir_root = TempDir::new().unwrap();
         setup_mock_packages(&tmpdir_root.path().join("storage"));
@@ -27,7 +27,7 @@ pub fn setup_mock_storage() -> (DuckCtx, TempDir) {
             std::env::set_var("DUCK_STORAGE_DIR", tmpdir_root.path().join("storage"));
             std::env::set_var("DUCK_HOME", tmpdir_root.path());
         }
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_STORAGE_DIR");

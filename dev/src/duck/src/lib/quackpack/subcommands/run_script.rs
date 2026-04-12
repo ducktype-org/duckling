@@ -6,7 +6,7 @@ use std::{
 use clap::ArgMatches;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, qp_bail_internal,
+    DuckContext, QuackResult, QuackResultContext, qp_bail_internal,
     quackpack::core::{
         AllowGlobalPackage, PackageLoader,
         storage::{
@@ -18,7 +18,7 @@ use crate::{
 
 pub struct RunScriptOptions<'duck> {
     /// Current [`DuckCtx`].
-    pub ctx: &'duck DuckCtx,
+    pub ctx: &'duck DuckContext,
     /// Name of the script to run.
     pub script_name: &'duck OsStr,
     /// Path to the folder where the script is located.
@@ -40,7 +40,7 @@ pub struct RunScriptOptions<'duck> {
 impl<'duck> RunScriptOptions<'duck> {
     /// Create [`RunScriptOptions`] from a given [`Path`] and [`ArgMatches`].
     pub fn from_path_and_matches(
-        ctx: &'duck DuckCtx,
+        ctx: &'duck DuckContext,
         path: &'duck Path,
         matches: &ArgMatches,
     ) -> QuackResult<Self> {
@@ -71,7 +71,7 @@ impl<'duck> RunScriptOptions<'duck> {
     /// Create [`RunScriptOptions`] from a given [`Path`] and a list of arguments to pass to the script.
     /// Supplies default values for other fields.
     pub fn from_path_and_args_with_defaults(
-        ctx: &'duck DuckCtx,
+        ctx: &'duck DuckContext,
         path: &'duck Path,
         args: Vec<OsString>,
     ) -> QuackResult<Self> {

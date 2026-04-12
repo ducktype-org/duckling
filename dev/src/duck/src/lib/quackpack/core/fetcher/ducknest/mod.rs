@@ -4,7 +4,7 @@ use std::path::Path;
 use tracing::debug;
 use url::Url;
 
-use crate::{DuckCtx, StrId, qp_bail_internal};
+use crate::{DuckContext, StrId, qp_bail_internal};
 use crate::{QuackResult, quackpack::core::fetcher::types};
 
 use super::http::HttpClient;
@@ -24,7 +24,7 @@ pub struct DucknestClient<'duck> {
 
 impl<'duck> DucknestClient<'duck> {
     /// Construct a new [`DucknestClient`].
-    pub fn new(ctx: &'duck DuckCtx) -> Self {
+    pub fn new(ctx: &'duck DuckContext) -> Self {
         Self {
             client: HttpClient::new(ctx),
         }

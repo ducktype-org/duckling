@@ -6,7 +6,7 @@ use tracing::debug;
 use url::Url;
 
 use crate::quackpack::core::fetcher::http::handlers::{FileWriter, ResponseCollector};
-use crate::{DuckCtx, qp_bail};
+use crate::{DuckContext, qp_bail};
 use crate::{QuackResult, QuackResultContext};
 
 mod defaults;
@@ -15,12 +15,12 @@ mod handlers;
 #[derive(Debug, Clone)]
 /// Our implementation of a curl-backed HTTP client.
 pub struct HttpClient<'duck> {
-    _ctx: &'duck DuckCtx,
+    _ctx: &'duck DuckContext,
 }
 
 impl<'duck> HttpClient<'duck> {
     /// Construct a new [`HttpClient`].
-    pub fn new(ctx: &'duck DuckCtx) -> Self {
+    pub fn new(ctx: &'duck DuckContext) -> Self {
         Self { _ctx: ctx }
     }
 

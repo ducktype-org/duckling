@@ -9,7 +9,7 @@ use url::Url;
 
 use super::Scope;
 use crate::{
-    DuckCtx, QpCtx, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
+    DuckContext, QpCtx, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
     quackpack::{
         core::{BranchOrTag, Git, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
@@ -26,7 +26,7 @@ use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 pub(crate) fn parse(
     schema: &DependencySchema,
     package_root: &Path,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     scope: &mut Scope,
 ) -> QuackResult<Source> {
     let Some(ref source) = schema.source else {
@@ -259,7 +259,7 @@ fn resolve_git_branch_or_tag(source: &DetailedSource, scope: &Scope) -> QuackRes
 fn resolve_local_dep_root(
     manifest_root: &str,
     package_root: &Path,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
 ) -> QuackResult<(PathBuf, bool)> {
     let home = ctx.user_home();
     let Some(home) = home.to_str() else {
@@ -283,7 +283,11 @@ fn resolve_local_dep_root(
 }
 
 /// Parse a url of a git dependency.
-fn parse_git_url(manifest_git_url: &str, package_root: &Path, ctx: &DuckCtx) -> QuackResult<Url> {
+fn parse_git_url(
+    manifest_git_url: &str,
+    package_root: &Path,
+    ctx: &DuckContext,
+) -> QuackResult<Url> {
     let git_url = Url::parse(manifest_git_url);
     let mut err: QuackError = match git_url {
         Ok(parsed) => return Ok(parsed),

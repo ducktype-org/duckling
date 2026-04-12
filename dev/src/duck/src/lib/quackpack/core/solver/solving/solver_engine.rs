@@ -338,7 +338,7 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx,
+        DuckContext,
         quackpack::core::{
             parse_manifest,
             types_common::{ExpandedLocation, Location},
@@ -378,7 +378,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
@@ -475,7 +475,7 @@ dependencies:
     - xd
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
@@ -584,7 +584,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
@@ -679,7 +679,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
@@ -789,7 +789,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();

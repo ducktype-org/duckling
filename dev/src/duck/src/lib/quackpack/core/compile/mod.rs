@@ -9,7 +9,7 @@ use tracing::debug;
 use crate::{
     QuackResult,
     quackpack::core::{
-        FeatureName, PackageCtx,
+        FeatureName, PackageContext,
         compile::profiles::Profile,
         storage::{freeze::VenvFreeze, paths::Storage},
     },
@@ -29,7 +29,7 @@ const MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE: &str =
 #[derive(Debug)]
 /// All informations required to compile a project.
 pub struct BuildContext<'duck, 'ctx> {
-    pub package: &'ctx PackageCtx<'duck>,
+    pub pcx: &'ctx PackageContext<'duck>,
     pub freeze: VenvFreeze,
     pub storage: Storage,
     pub used_features: Vec<FeatureName>,
@@ -37,13 +37,13 @@ pub struct BuildContext<'duck, 'ctx> {
 }
 
 /// Compile project inside the [`BuildContext`].
-#[tracing::instrument(skip(bcx), fields(%profile = bcx.profile.name, %package = bcx.package.package().manifest().name()))]
+#[tracing::instrument(skip(bcx), fields(%profile = bcx.profile.name, %package = bcx.pcx.package().manifest().name()))]
 pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<()> {
     debug!("compiling...");
     let mut graph = EarlyDag::new_early(&bcx)?;
     graph.populate_features(&bcx.used_features)?;
     graph.remove_disabled_dependencies();
-    let duckc = Duckc::new(bcx.package.ctx());
+    let duckc = Duckc::new(bcx.pcx.ctx());
     duckc.compile(&graph, CompilationType::OnlyRootPackage, &bcx)?;
     Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::{DuckCtx, QuackResult};
+use crate::{DuckContext, QuackResult};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
@@ -48,7 +48,7 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `build` subcommand.
-pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let global = matches.get_flag("global");
     let package = if global {
         PackageLoader::global_package(ctx)?

@@ -7,7 +7,7 @@ use tracing::trace;
 
 use super::Scope;
 
-use crate::DuckCtx;
+use crate::DuckContext;
 use crate::StrId;
 use crate::quackpack::core::Conditions;
 use crate::quackpack::core::Dependency;
@@ -27,7 +27,7 @@ use crate::{QuackResult, quackpack::core::Dependencies};
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     scope: &mut Scope,
 ) -> QuackResult<Dependencies> {
     let Some(schema) = schema else {
@@ -55,7 +55,7 @@ fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
     package_root: &Path,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     scope: &mut Scope,
 ) -> QuackResult<Dependency> {
     trace!("parsing a dependency");

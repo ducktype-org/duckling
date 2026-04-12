@@ -169,7 +169,7 @@ mod test {
     use std::path::PathBuf;
 
     use crate::{
-        DuckCtx,
+        DuckContext,
         quackpack::core::{
             PackageLoader, parse_manifest,
             types_common::{ExpandedLocation, InternedExpandedLocation},
@@ -311,7 +311,7 @@ features:
   f_a: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_root = parse_manifest(&path_root, &ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();

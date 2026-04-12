@@ -15,7 +15,7 @@ pub mod duck;
 pub mod quackpack;
 pub mod util;
 
-pub use duck::{main, util::duck_ctx::DuckCtx};
+pub use duck::{main, util::duck_context::DuckContext};
 pub use quackpack::util::{qp_ctx::QpCtx, str_id::*};
 pub use util::error::{QuackError, QuackResultContext};
 

@@ -4,7 +4,7 @@ use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
 use url::Url;
 
 use crate::{
-    DuckCtx,
+    DuckContext,
     quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::git::GitClient},
     util::path_ops_ext::PathOpsExt,
 };
@@ -62,7 +62,7 @@ fn clone_local_repo() {
         None,
     );
 
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     assert!(target.exists());
@@ -85,7 +85,7 @@ fn clone_local_repo_with_branch() {
         None,
     );
 
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
@@ -103,7 +103,7 @@ fn clone_local_repo_with_tag() {
         None,
     );
 
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
@@ -129,7 +129,7 @@ fn clone_local_repo_with_rev() {
         BranchOrTag::Default,
         Some(original_commit.id().to_string().into()),
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();

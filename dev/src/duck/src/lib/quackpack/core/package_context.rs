@@ -2,22 +2,22 @@
 use std::path::PathBuf;
 
 use crate::{
-    DuckCtx, QuackResult,
+    DuckContext, QuackResult,
     quackpack::core::{self, Package, package_loader::PackageLoader, venv_config::VenvConfig},
 };
 
 #[derive(Debug)]
 /// A context of a package  parsed from the disk.
-pub struct PackageCtx<'duck> {
+pub struct PackageContext<'duck> {
     package: Package,
     venv_config: VenvConfig,
-    ctx: &'duck DuckCtx,
+    ctx: &'duck DuckContext,
 }
 
-impl<'duck> PackageCtx<'duck> {
+impl<'duck> PackageContext<'duck> {
     /// Create new [`PackageCtx`]
     #[tracing::instrument]
-    pub fn new(project_root: PathBuf, ctx: &'duck DuckCtx) -> QuackResult<Self> {
+    pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
         let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);
         let venv_config = VenvConfig::new(venv_config_path)?;
@@ -44,13 +44,13 @@ impl<'duck> PackageCtx<'duck> {
     }
 
     /// Get [`DuckCtx`] used to create this [`PackageCtx`]
-    pub fn ctx(&self) -> &DuckCtx {
+    pub fn ctx(&self) -> &DuckContext {
         self.ctx
     }
 }
 
-impl From<PackageCtx<'_>> for Package {
-    fn from(value: PackageCtx<'_>) -> Self {
+impl From<PackageContext<'_>> for Package {
+    fn from(value: PackageContext<'_>) -> Self {
         value.package
     }
 }

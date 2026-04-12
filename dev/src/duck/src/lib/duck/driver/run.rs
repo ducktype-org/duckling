@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext,
+    DuckContext, QuackResult, QuackResultContext,
     duck::driver::subcommands::run_script::{check_is_script, possible_script_path_subcmd},
     qp_bail,
     quackpack::core::compile::duckc::Duckc,
@@ -24,7 +24,7 @@ use crate::duck::driver::{
 };
 
 /// Run the duck with the given [`DuckCtx`].
-pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
+pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
     debug!(
         "found the external subcommands `{}`",
@@ -59,7 +59,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
 ///
 /// In the returned map, keys are stripped from prefixes and suffixes; in other words, keys are
 /// valid duck subcommands names.
-fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
+fn gather_external_subcmds(ctx: &DuckContext) -> HashMap<String, PathBuf> {
     use std::env;
     const PREFIX: &str = "duck-";
     const SUFFIX: &str = env::consts::EXE_SUFFIX;
@@ -93,7 +93,7 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
 
 /// Execute fully fixed, parsed, and expanded subcommand.
 fn run_subcmd(
-    ctx: &mut DuckCtx,
+    ctx: &mut DuckContext,
     args: ArgMatches,
     external: &HashMap<String, PathBuf>,
 ) -> QuackResult<()> {

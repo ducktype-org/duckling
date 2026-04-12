@@ -9,8 +9,8 @@ use tracing::debug;
 use crate::{
     QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
     quackpack::core::{
-        BranchOrTag, Git, Package, PackageCtx, PackageLoader, ShouldRunSolverEngine, SolverAnswer,
-        SolverGathererData,
+        BranchOrTag, Git, Package, PackageContext, PackageLoader, ShouldRunSolverEngine,
+        SolverAnswer, SolverGathererData,
         fetcher::{Fetcher, types::PackageWithUrl},
         git_access::GitAccess,
         solver_freeze::SolverFreeze,
@@ -45,21 +45,21 @@ pub struct StorageSyncOptions {
 }
 
 /// Synchronize virtual environment for package, and return information required to build it.
-#[tracing::instrument(skip(package), fields(%root = package.package().root_directory().display()))]
+#[tracing::instrument(skip(pcx), fields(%root = pcx.package().root_directory().display()))]
 pub fn sync(
-    package: &PackageCtx<'_>,
+    pcx: &PackageContext<'_>,
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
-    let venv_config = package.venv_config();
+    let venv_config = pcx.venv_config();
     let storage_localization = venv_config
         .storage_path()?
-        .unwrap_or(package.ctx().default_storage_root());
+        .unwrap_or(pcx.ctx().default_storage_root());
     let storage = Storage::new(storage_localization);
-    let mut fetcher = Fetcher::new(package.ctx())?;
+    let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
     let expose_freezefile = venv_config.is_freezefile_exposed()?;
-    let user_exposed_freeze = load_external_freezefile(package, expose_freezefile)?;
-    let id = package.to_venv_id();
+    let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
+    let id = pcx.to_venv_id();
 
     let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)
         .context("failed to acquire try sync lock")?;
@@ -67,7 +67,7 @@ pub fn sync(
     let venv = Venv::fix_and_load(&storage, id)?;
 
     if !options.overwrite {
-        check_if_overwrites(package, venv.as_ref(), id)?;
+        check_if_overwrites(pcx, venv.as_ref(), id)?;
     }
 
     let input_freeze = user_exposed_freeze
@@ -75,7 +75,7 @@ pub fn sync(
         .or(venv.as_ref().map(|venv| venv.data().freeze()));
 
     let solver_answer = get_solver_answer(
-        package,
+        pcx,
         &mut fetcher,
         &mut git_access,
         input_freeze,
@@ -99,13 +99,13 @@ pub fn sync(
         let data = venv.data_mut();
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
-        data.set_last_known_directory(package.package().root_directory().to_path_buf());
+        data.set_last_known_directory(pcx.package().root_directory().to_path_buf());
         venv
     } else {
         let data = VenvData::new(
             new_freeze,
             venv_config.is_ephemeral()?,
-            package.package().root_directory().to_path_buf(),
+            pcx.package().root_directory().to_path_buf(),
             now,
             now,
         );
@@ -115,10 +115,9 @@ pub fn sync(
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
-        freeze_name(package.package()).write(json)?;
+        freeze_name(pcx.package()).write(json)?;
     }
-    package
-        .ctx()
+    pcx.ctx()
         .console()
         .info(format!("successfully synchronized venv `{id}`"));
     Ok((_sync_lock, venv, storage))
@@ -129,18 +128,18 @@ pub fn sync(
 /// and there is a manifest in that location.
 /// This would override that manifest's venv.
 fn check_if_overwrites(
-    pkg_ctx: &PackageCtx<'_>,
+    pcx: &PackageContext<'_>,
     venv: Option<&Venv>,
     id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pkg_ctx.package().root_directory() == venv.data().last_known_directory()
+    if pcx.package().root_directory() == venv.data().last_known_directory()
         || !venv.data().last_known_directory().exists()
     {
         return Ok(());
     }
     let package =
-        PackageLoader::find_at_exact_directory(venv.data().last_known_directory(), pkg_ctx.ctx());
+        PackageLoader::find_at_exact_directory(venv.data().last_known_directory(), pcx.ctx());
     let replaces = match package {
         Ok(package) => package.package().manifest().name() == id.name() && !id.is_global(),
         Err(e) => {
@@ -173,13 +172,13 @@ fn freeze_name(package: &Package) -> PathBuf {
 /// Helper for [`sync`].
 /// If there is a freeze in the venv's root directory, deserializes it.
 fn load_external_freezefile(
-    ctx: &PackageCtx,
+    pcx: &PackageContext<'_>,
     is_exposed: bool,
 ) -> QuackResult<Option<storage::freeze::VenvFreeze>> {
     if !is_exposed {
         return Ok(None);
     }
-    let freeze_path = freeze_name(ctx.package());
+    let freeze_path = freeze_name(pcx.package());
     if !freeze_path.is_file() {
         return Ok(None);
     }
@@ -192,9 +191,9 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Prepares the input and runs [`SolverGathererData::prepare_solving`].
-#[tracing::instrument(skip(package, fetcher, git_access, input_freeze))]
+#[tracing::instrument(skip(pcx, fetcher, git_access, input_freeze))]
 fn get_solver_answer(
-    package: &PackageCtx<'_>,
+    pcx: &PackageContext<'_>,
     fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
     input_freeze: Option<&VenvFreeze>,
@@ -202,7 +201,7 @@ fn get_solver_answer(
 ) -> QuackResult<SolverAnswer> {
     let root_pkg = ExpandedPackage {
         location: InternedExpandedLocation::new(ExpandedLocation::Local {
-            absolute_path: package.package().root_directory().to_path_buf(),
+            absolute_path: pcx.package().root_directory().to_path_buf(),
         }),
         version: None,
     };
@@ -210,8 +209,8 @@ fn get_solver_answer(
         Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
-    let solver = SolverGathererData::new(package, solver_freeze, mode);
-    let fetcher_lock = package
+    let solver = SolverGathererData::new(pcx, solver_freeze, mode);
+    let fetcher_lock = pcx
         .ctx()
         .duck_home()
         .ensure_fetcher_lockfile()?

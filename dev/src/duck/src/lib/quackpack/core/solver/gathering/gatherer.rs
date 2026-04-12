@@ -393,9 +393,9 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         path: &Path,
     ) -> GathererComputation<FetchResponse> {
         debug!("fetching local");
-        let pkg_ctx = PackageLoader::find_at_exact_directory(path, self.fetcher.ctx());
-        match pkg_ctx {
-            Ok(pkg_ctx) => {
+        let pcx = PackageLoader::find_at_exact_directory(path, self.fetcher.ctx());
+        match pcx {
+            Ok(pcx) => {
                 let exp_pkg = ExpandedPackage {
                     location: InternedExpandedLocation::new(ExpandedLocation::Local {
                         absolute_path: path.to_path_buf(),
@@ -407,7 +407,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                         origin_location: request.location,
                         fetched_manifests: HashMap::from([(
                             exp_pkg,
-                            Box::new(pkg_ctx.package().manifest().clone()),
+                            Box::new(pcx.package().manifest().clone()),
                         )]),
                     },
                 )))

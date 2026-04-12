@@ -10,7 +10,7 @@ use tracing::debug;
 use url::Url;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
+    DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal,
     quackpack::{
         core::{
             Git,
@@ -33,7 +33,7 @@ mod tests;
 #[derive(Debug)]
 /// A class for managing HTTP and Git clients, and caching metadata.
 pub struct Fetcher<'duck> {
-    ctx: &'duck DuckCtx,
+    ctx: &'duck DuckContext,
     ducknest_client: ducknest::DucknestClient<'duck>,
     #[allow(unused)] // @TODO: #1737 Remove this
     git_client: git::GitClient,
@@ -56,7 +56,7 @@ impl<'duck> Fetcher<'duck> {
     /// 1. failed to create any of the internal files,
     /// 2. failed to initialize any of the underlying clients,
     /// 3. failed to initialize cache manager.
-    pub fn new(ctx: &'duck DuckCtx) -> QuackResult<Self> {
+    pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
         let metadata_path = ctx.duck_home().ensure_metadata_db()?;
         let artifacts_cache_path = ctx.duck_home().ensure_artifacts_dir()?;
         let download_cache_path = ctx.duck_home().ensure_downloads_dir()?;
@@ -194,7 +194,7 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Get the [`DuckCtx`] used to construct this [`Fetcher`] instance.
-    pub fn ctx(&self) -> &DuckCtx {
+    pub fn ctx(&self) -> &DuckContext {
         self.ctx
     }
 }

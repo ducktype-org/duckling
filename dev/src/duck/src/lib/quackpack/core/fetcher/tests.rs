@@ -7,7 +7,7 @@ use crate::{quackpack::core::Version, util::test_utils::setup_test};
 
 use super::*;
 
-fn setup_duck_ctx() -> (DuckCtx, TempDir) {
+fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without
         // worrying about leaving traces of tests in FS.
@@ -16,7 +16,7 @@ fn setup_duck_ctx() -> (DuckCtx, TempDir) {
         unsafe {
             std::env::set_var("DUCK_CACHE_DIR", dir.path());
         }
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_CACHE_DIR");

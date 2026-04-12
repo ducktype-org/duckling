@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId,
+    DuckContext, QuackResult, QuackResultContext, StrId,
     quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
 };
 
@@ -25,7 +25,7 @@ impl GitClient {
     pub fn clone_blocking(
         source: &Git,
         destination: &Path,
-        ctx: &DuckCtx,
+        ctx: &DuckContext,
     ) -> QuackResult<GitCloneResponse> {
         let mut builder = RepoBuilder::new();
 
