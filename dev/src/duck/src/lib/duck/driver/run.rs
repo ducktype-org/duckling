@@ -23,7 +23,7 @@ use crate::duck::driver::{
     subcommands::exec_for,
 };
 
-/// Run the duck with the given [`DuckCtx`].
+/// Run the duck with the given [`DuckContext`].
 pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
     debug!(

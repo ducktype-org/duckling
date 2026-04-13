@@ -59,13 +59,13 @@ fn setup_mock_storage() -> (DuckContext, TempDir) {
         setup_mock_venvs(storage_root.path());
         setup_mock_locks(storage_root.path());
         // Also overwrite DUCK_HOME, so we'll use the default configuration options.
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::set_var("DUCK_STORAGE_DIR", storage_root.path());
             std::env::set_var("DUCK_HOME", storage_root.path());
         }
         let ctx = DuckContext::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_STORAGE_DIR");
             std::env::remove_var("DUCK_HOME");

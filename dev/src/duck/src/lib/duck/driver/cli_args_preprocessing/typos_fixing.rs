@@ -197,7 +197,7 @@ mod tests {
     // #[test]
     // fn test_multiple_targets() {
     //     let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
-    //     let mut ctx = DuckCtx::new().unwrap();
+    //     let mut ctx = DuckContext::new().unwrap();
     //     ctx.duck_cfg_mut().set_fixes_enabled(true);
     //     ctx.duck_cfg_mut().set_max_fix_dist(100);
     //     let external_cmds = HashMap::new();

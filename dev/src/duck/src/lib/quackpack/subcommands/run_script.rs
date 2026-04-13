@@ -17,7 +17,7 @@ use crate::{
 };
 
 pub struct RunScriptOptions<'duck> {
-    /// Current [`DuckCtx`].
+    /// Current [`DuckContext`].
     pub ctx: &'duck DuckContext,
     /// Name of the script to run.
     pub script_name: &'duck OsStr,

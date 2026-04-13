@@ -59,7 +59,7 @@ impl PackageLoader {
         }
     }
 
-    /// Find a [`PackageCtx`] from the given `start`.
+    /// Find a [`PackageContext`] from the given `start`.
     ///
     /// This function __expands tildes__ and __resolves__ path fully.
     /// Also, it walks up the chain of path's ancestors.

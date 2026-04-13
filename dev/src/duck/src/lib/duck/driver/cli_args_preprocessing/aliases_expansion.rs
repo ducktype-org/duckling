@@ -130,7 +130,7 @@ fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatc
 /// Expand single user alias.
 ///
 /// `alias` is alias we're expanding, `alias_args` are [`ArgMatches`] for that `alias`, `alias_expansion`
-/// is expanded alias (taken from [`DuckCtx`]), and `visited` is a vector of already expanded
+/// is expanded alias (taken from [`DuckContext`]), and `visited` is a vector of already expanded
 /// aliases (in order to detect cycles).
 fn expand_single_alias(
     alias: &str,

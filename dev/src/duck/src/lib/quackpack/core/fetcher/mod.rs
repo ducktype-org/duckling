@@ -194,7 +194,7 @@ impl<'duck> Fetcher<'duck> {
         Ok((result, dir))
     }
 
-    /// Get the [`DuckCtx`] used to construct this [`Fetcher`] instance.
+    /// Get the [`DuckContext`] used to construct this [`Fetcher`] instance.
     pub fn ctx(&self) -> &DuckContext {
         self.ctx
     }

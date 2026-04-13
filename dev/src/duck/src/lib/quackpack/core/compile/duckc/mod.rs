@@ -30,7 +30,7 @@ pub struct Duckc {
 }
 
 impl Duckc {
-    /// Create new [`Duckc`] from the [`DuckCtx`].
+    /// Create new [`Duckc`] from the [`DuckContext`].
     pub fn new(ctx: &DuckContext) -> Self {
         let _ = ctx;
         Self {
@@ -38,7 +38,7 @@ impl Duckc {
         }
     }
 
-    /// A helper for starting a REPL session from [`DuckCtx`].
+    /// A helper for starting a REPL session from [`DuckContext`].
     pub fn start_repl_with(ctx: &DuckContext) -> QuackResult<Infallible> {
         let this = Self::new(ctx);
         this.start_repl()

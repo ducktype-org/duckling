@@ -42,7 +42,7 @@ impl GlobalOptions {
         }
     }
 
-    /// Updates [`DuckCtx`], so that values of the global options specified by the user
+    /// Updates [`DuckContext`], so that values of the global options specified by the user
     /// can be read in different parts of the program.
     pub fn update_context(&self, ctx: &mut DuckContext) -> QuackResult<()> {
         if self.verbose && self.quiet {

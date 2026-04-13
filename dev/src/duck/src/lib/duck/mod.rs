@@ -1,5 +1,5 @@
 //! Main duck driver implementation.
-//! Mainly, a home of the [`driver`] module, and [`DuckCtx`](util::duck_ctx::DuckCtx) struct.
+//! Mainly, a home of the [`driver`] module, and [`DuckContext`](util::duck_context::DuckContext) struct.
 pub mod driver;
 mod main;
 pub mod util;
