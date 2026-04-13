@@ -17,6 +17,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == 1) return vm::opargs::StackLocal8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::StackLocalPtr(name); }
+		variant_case(vm::code::DataType, data) { return vm::opargs::StackLocalStructure(name); }
 		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::StackLocalOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMLocal type not supported for argument: ", typeName(type));
@@ -40,6 +41,7 @@ DVMLocal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 			if (primitive.size == 1) return vm::opargs::Global8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::GlobalPtr(name); }
+		variant_case(vm::code::DataType, data) { return vm::opargs::GlobalStructure(name); }
 		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::GlobalOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMGlobal type not supported for argument: ", typeName(type));

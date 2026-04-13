@@ -48,7 +48,7 @@ Tests:
         Output:
           String: "177\n"
         ExitCode: 0
-      # @TODO: #1560 reenable it.
+      # @TODO: #2476 Enable DVM case.
       # dvm:
       #   backend: dvm
       #   Output:

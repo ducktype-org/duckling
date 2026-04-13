@@ -354,12 +354,12 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 		auto true_block  = lowerLirValue(lir_terminator.arguments.at(1));
 		auto false_block = lowerLirValue(lir_terminator.arguments.at(2));
 
-		cleanUpRegisteredTemps();
 
 		variant_match(lir_terminator.arguments.at(0).getVariant()) {
 			variant_case(lir::LIRConstant, constant) {
 				auto bool_val
 					= constant.value.get<bool>().expect("Expected boolean in LIRConstant");
+				cleanUpRegisteredTemps();
 				if (bool_val)
 					pushInstruction({ OpKind::jmp, true_block });
 				else
@@ -367,6 +367,7 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 			}
 			variant_default {
 				pushInstruction({ OpKind::cmpEq, bool_arg, vm::opargs::Immediate{ 1 } });
+				cleanUpRegisteredTemps();
 				pushInstruction({ OpKind::jmpIf, true_block });
 				pushInstruction({ OpKind::jmpIfNot, false_block });
 			}
