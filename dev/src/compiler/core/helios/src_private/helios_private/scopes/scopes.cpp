@@ -295,11 +295,9 @@ namespace compiler::helios {
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
-			// clang-format off
 			parent_map.maybePutAndUpdate(element->getID(), parent, [&](CRef<ScopeID> existing) {
 				CORE_ASSERT(*existing == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
 			});
-			// clang-format on
 
 			return ScopeData{
 				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
