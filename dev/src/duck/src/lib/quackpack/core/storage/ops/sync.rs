@@ -288,7 +288,7 @@ fn fetch_source_code(
             }
             let mut successfully_fetched = false;
             let mut blob_path = PathBuf::new();
-            for _ in 0..MAX_BLOB_RETRY_COUNT {
+            for attempt in 1..=MAX_BLOB_RETRY_COUNT {
                 match fetcher.fetch_package_blob(&PackageWithUrl {
                     id: *real_name,
                     version,
@@ -300,7 +300,11 @@ fn fetch_source_code(
                         break;
                     }
                     Err(e) => {
-                        debug!("failed to fetch: {e}");
+                        if attempt != MAX_BLOB_RETRY_COUNT {
+                            debug!(?pkg, "retrying fetch...");
+                        } else {
+                            debug!(?pkg, "failed to fetch: {e}");
+                        }
                     }
                 }
             }
