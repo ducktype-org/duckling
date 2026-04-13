@@ -74,7 +74,7 @@ private:
 	}
 
 	void classConstructabilityTest() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/class_definitions")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/tsh/class_definitions")));
 
 		const auto trivial_class_sym = getChain("TrivialClass", root_scope).back();
 		const auto my_class_sym      = getChain("MyClass", root_scope).back();
