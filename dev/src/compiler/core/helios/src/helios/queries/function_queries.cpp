@@ -345,7 +345,7 @@ namespace compiler::helios {
 				                                .value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
-					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
+					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
 						const auto field_type = field.getType(ctx);
 						auto       expr
 							= getHoutOfExprWithExpectedType(

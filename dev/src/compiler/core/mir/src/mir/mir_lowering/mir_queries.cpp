@@ -210,7 +210,7 @@ namespace compiler::mir {
 				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
 
 			auto global_init_expr
-				= std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value->ref();
+				= std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value.ref();
 
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},

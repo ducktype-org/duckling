@@ -1,4 +1,5 @@
 #include <base/pointers/box.hpp>
+#include <base/pointers/box_or_ref.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
@@ -578,6 +579,117 @@ private:
 			Box b = std::move(ib).toOptBox().value();
 		}
 		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 2);
+	}
+
+	struct BoxOrRefCounterBase {
+		static inline int ctor_count = 0;
+		static inline int dtor_count = 0;
+
+		int value = 0;
+
+		BoxOrRefCounterBase() { ctor_count++; }
+
+		explicit BoxOrRefCounterBase(int value): value(value) { ctor_count++; }
+
+		BoxOrRefCounterBase(const BoxOrRefCounterBase& other): value(other.value) { ctor_count++; }
+
+		BoxOrRefCounterBase(BoxOrRefCounterBase&& other) noexcept: value(other.value) {
+			ctor_count++;
+		}
+
+		virtual ~BoxOrRefCounterBase() { dtor_count++; }
+	};
+
+	struct BoxOrRefCounterDerived: public BoxOrRefCounterBase {
+		using BoxOrRefCounterBase::BoxOrRefCounterBase;
+	};
+
+	void testBoxOrCRef() {
+		// Reset counters
+		BoxOrRefCounterBase::ctor_count = 0;
+		BoxOrRefCounterBase::dtor_count = 0;
+
+		// Construct from derived Box<T>, verify methods and panics:
+		{
+			Box<BoxOrRefCounterDerived> derived_box = makeBox<BoxOrRefCounterDerived>(11);
+			ASSERT_EQUAL(BoxOrRefCounterBase::ctor_count, 1);
+
+			BoxOrCRef<BoxOrRefCounterBase> from_box = std::move(derived_box);
+
+			ASSERT_TRUE(from_box.isBox());
+			ASSERT_TRUE(not from_box.isRef());
+
+			ASSERT_EQUAL(from_box->value, 11);
+			ASSERT_EQUAL((*from_box).value, 11);
+			ASSERT_EQUAL(from_box.ref()->value, 11);
+			ASSERT_EQUAL(from_box.getBox()->value, 11);
+
+			assertThrows<base::Panic>(
+				[&]() { (void) from_box.getRef(); }, "getRef() on Box variant should throw"
+			);
+		}
+		ASSERT_EQUAL(BoxOrRefCounterBase::ctor_count, 1);
+		ASSERT_EQUAL(BoxOrRefCounterBase::dtor_count, 1);
+
+		// Construct from derived Ref<T>, verify methods and panics:
+		BoxOrRefCounterBase::ctor_count = 0;
+		BoxOrRefCounterBase::dtor_count = 0;
+
+		{
+			BoxOrRefCounterDerived obj(22);
+			ASSERT_EQUAL(BoxOrRefCounterBase::ctor_count, 1);
+
+			Ref<const BoxOrRefCounterDerived> derived_ref = &obj;
+			BoxOrCRef<BoxOrRefCounterBase>    from_ref    = derived_ref;
+
+			ASSERT_TRUE(from_ref.isRef());
+			ASSERT_TRUE(not from_ref.isBox());
+
+			ASSERT_EQUAL(from_ref->value, 22);
+			ASSERT_EQUAL((*from_ref).value, 22);
+			ASSERT_EQUAL(from_ref.ref()->value, 22);
+			ASSERT_EQUAL(from_ref.getRef().get(), static_cast<const BoxOrRefCounterBase*>(&obj));
+
+			assertThrows<base::Panic>(
+				[&]() { (void) from_ref.getBox(); }, "getBox() on Ref variant should throw"
+			);
+		}
+		ASSERT_EQUAL(BoxOrRefCounterBase::ctor_count, 1);
+		ASSERT_EQUAL(BoxOrRefCounterBase::dtor_count, 1);
+
+		// Cross-type move constructor and assignment (BoxOrCRef<U> -> BoxOrCRef<T>):
+		BoxOrRefCounterBase::ctor_count = 0;
+		BoxOrRefCounterBase::dtor_count = 0;
+
+		{
+			BoxOrCRef<BoxOrRefCounterDerived> src_box(makeBox<BoxOrRefCounterDerived>(33));
+			BoxOrCRef<BoxOrRefCounterBase>    moved_box(std::move(src_box));
+			ASSERT_TRUE(moved_box.isBox());
+			ASSERT_EQUAL(moved_box->value, 33);
+
+			BoxOrRefCounterDerived            obj(44);
+			BoxOrCRef<BoxOrRefCounterDerived> src_ref{ CRef<BoxOrRefCounterDerived>(&obj) };
+			BoxOrCRef<BoxOrRefCounterBase>    moved_ref(std::move(src_ref));
+			ASSERT_TRUE(moved_ref.isRef());
+			ASSERT_EQUAL(moved_ref->value, 44);
+
+			BoxOrRefCounterBase            seed(55);
+			BoxOrCRef<BoxOrRefCounterBase> assigned{ CRef<BoxOrRefCounterBase>(&seed) };
+
+			BoxOrCRef<BoxOrRefCounterDerived> assign_src_box(makeBox<BoxOrRefCounterDerived>(66));
+			assigned = std::move(assign_src_box);
+			ASSERT_TRUE(assigned.isBox());
+			ASSERT_EQUAL(assigned->value, 66);
+
+			BoxOrRefCounterDerived            assign_ref_obj(77);
+			BoxOrCRef<BoxOrRefCounterDerived> assign_src_ref{
+				CRef<BoxOrRefCounterDerived>(&assign_ref_obj)
+			};
+			assigned = std::move(assign_src_ref);
+			ASSERT_TRUE(assigned.isRef());
+			ASSERT_EQUAL(assigned->value, 77);
+		}
+		ASSERT_EQUAL(BoxOrRefCounterBase::ctor_count, BoxOrRefCounterBase::dtor_count);
 	}
 };
 

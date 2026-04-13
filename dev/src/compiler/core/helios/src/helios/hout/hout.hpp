@@ -14,6 +14,7 @@
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/pointers/box.hpp>
+#include <base/pointers/box_or_ref.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -140,13 +141,16 @@ namespace compiler::helios {
 		ctv::CompileTimeValue value;
 	};
 
-	struct HOUTGlobalVariable final {
-		// We cannot use Box<code::Expr> here because we use AUTO_CACHE_COPY,
-		// and the HOUTUnit is copied during runtime. Also, the problem with the
-		// copy constructor will go away once we pass HOUT expressions around as
-		// references.
-		// @TODO: Make this better.
-		std::shared_ptr<Box<code::Expr>> initial_value;  ///< The initial value of the variable.
+	class HOUTGlobalVariable final {
+	public:
+		BoxOrCRef<code::Expr> initial_value;  ///< The initial value of the variable.
+
+		HOUTGlobalVariable(BoxOrCRef<code::Expr> initial_value):
+			  initial_value(std::move(initial_value)) {}
+
+		// @TODO #1958: remove this when we have a query for global values
+		HOUTGlobalVariable(const HOUTGlobalVariable& other):
+			  initial_value(other.initial_value->clone()) {}
 	};
 
 	/**

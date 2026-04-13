@@ -643,7 +643,7 @@ namespace compiler::helios::code {
 						node = makeBox<ListPushExpr>(
 							pstOrigin(stmt),
 							std::move(location_expr),
-							value_expr_coerced_qresult.valueOrThrow()->clone()
+							std::move(value_expr_coerced_qresult).valueOrThrow()
 						);
 						return;
 					}
@@ -666,7 +666,7 @@ namespace compiler::helios::code {
 						node = makeBox<ListPopExpr>(
 							pstOrigin(stmt),
 							std::move(location_expr),
-							value_expr_coerced_qresult.valueOrThrow()->clone()
+							std::move(value_expr_coerced_qresult).valueOrThrow()
 						);
 						return;
 					}
@@ -754,7 +754,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
 
-	ExprConstructionResult getHoutOfExprWithExpectedType(
+	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedType(
 		query::Context&                                      ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
 		const tsh::SymbolType<>                              expected_type,
@@ -762,7 +762,7 @@ namespace compiler::helios {
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
-		UNPACK_QRESULT_CREF_TO_BOX(auto expr_hout =, expr_hout_qresult);
+		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
 
 		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
 		const auto source_position    = pst_expr.element.unlock(ctx)->getSourcePosition();
@@ -770,7 +770,12 @@ namespace compiler::helios {
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerce(ctx, expr_hout->clone()); }
+			variant_case(Coercion, coercion) {
+				if (coercion.isEmptyCoercion())
+					return expr_hout;
+				else
+					return coercion.coerce(ctx, expr_hout->clone());
+			}
 			variant_default {
 				logCoercionFailure(
 					ctx,

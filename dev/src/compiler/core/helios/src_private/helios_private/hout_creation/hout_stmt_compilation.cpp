@@ -101,21 +101,23 @@ namespace compiler::helios {
 			if (op != base::StrID("=")) {
 				auto assignment_expr
 					= ctx.query<QueryHoutOfExpr>({ assignment })->valueOrThrow().ref();
-				output(code::ExprStmt(code::pstOrigin(assignment), assignment_expr->clone()));
+				output(code::ExprStmt(code::pstOrigin(assignment), assignment_expr));
 				return;
 			}
 
 			auto var = assignment->getVariables();
 			auto val = assignment->getValue();
 
-			auto location_expr = ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow()->clone();
+			BoxOrCRef<code::Expr> location_expr
+				= ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow().ref();
+
 
 			// If left side of the assignment is a ref/box, we have to dereference it and store
 			// the value in the memory pointed by the ref/box.
 			auto location_type = location_expr->expression_type.getSymbolType();
 			if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
 				location_expr = makeBox<code::DerefExpr>(
-					ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
+					ctx, location_expr->origin.generatedFrom(), location_expr->clone()
 				);
 
 			auto location_value_category
@@ -197,8 +199,8 @@ namespace compiler::helios {
 
 			// else just create an expression statement:
 
-			auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })->valueOrThrow()->clone();
-			output(code::ExprStmt(code::pstOrigin(stmt), std::move(expr)));
+			auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })->valueOrThrow().ref();
+			output(code::ExprStmt(code::pstOrigin(stmt), expr));
 		}
 
 		void visitIf(pst::Access<pst::If> stmt) override {
@@ -263,16 +265,16 @@ namespace compiler::helios {
 					return;
 				}
 
-				auto initial_value
+				auto initial_value_qresult
 					= defgen::getDefaultInitializerExpr(ctx, symbol_type, stmt->getSourcePosition());
-				if (initial_value.hasFailed()) {
+				if (initial_value_qresult.hasFailed()) {
 					is_failed = true;
 					return;
 				}
+				auto initial_value = initial_value_qresult.valueOrThrow();
 
-				output(code::VariableStmt(
-					code::pstOrigin(stmt), std::move(initial_value.valueOrPanic()), symbol_type, symbol
-				));
+				output(code::VariableStmt(code::pstOrigin(stmt), initial_value, symbol_type, symbol)
+				);
 			} else {
 				auto initial_value_coerced
 					= getHoutOfExprWithExpectedType(

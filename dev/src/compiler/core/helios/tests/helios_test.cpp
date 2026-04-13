@@ -2284,13 +2284,9 @@ private:
 			auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
 
 			Ref<const compiler::helios::code::Expr> expr1
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value)
-			          .initial_value.get()
-			          ->ref();
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value).initial_value->ref();
 			Ref<const compiler::helios::code::Expr> expr2
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value)
-			          .initial_value.get()
-			          ->ref();
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value).initial_value->ref();
 
 			ASSERT_EQUAL(
 				compiler::helios::code::BuiltinBinary::IntegerAdd,
