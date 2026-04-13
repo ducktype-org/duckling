@@ -43,6 +43,11 @@ Tests:
         Output:
           String: "1\n1\n"
         ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n1\n"
+        ExitCode: 0
   unit_simple_multiple_modules:
     Cases:
       llvm:
@@ -147,12 +152,12 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "0\n0\n"
+          String: "0\n0\n0\n0\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "0\n0\n"
+          String: "0\n0\n0\n0\n"
         ExitCode: 0
 
   strings:
