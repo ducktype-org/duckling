@@ -5,7 +5,7 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <tsh/queries/types.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <tsl/queries.hpp>
 
 #include <base/collections/maps.hpp>

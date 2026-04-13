@@ -11,7 +11,7 @@
 #include "abstract_type.hpp"
 #include "expression_type.hpp"
 
-#include <tsh/abstract_type_impl.hpp>
+#include <helios_private/tsh/abstract_type_impl.hpp>
 
 #include <base/except/exceptions.hpp>
 

@@ -4,11 +4,11 @@
 
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <tsh/abstract_type.hpp>
-#include <tsh/kind.hpp>
-#include <tsh/mutability.hpp>
-#include <tsh/type_interface.hpp>
-#include <tsh/types.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/kind.hpp>
+#include <helios/tsh/mutability.hpp>
+#include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>

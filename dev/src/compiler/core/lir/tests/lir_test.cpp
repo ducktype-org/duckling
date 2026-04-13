@@ -10,7 +10,7 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <tsh/queries/types.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <tsl/queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>

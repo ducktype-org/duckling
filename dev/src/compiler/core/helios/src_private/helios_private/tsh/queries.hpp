@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tsh/type_interface.hpp>
+#include <helios/tsh/type_interface.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>

@@ -10,12 +10,12 @@
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/type_interface.hpp>
 
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>

@@ -1,6 +1,6 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <tsh/type_interface.hpp>
+#include <helios/tsh/type_interface.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -23,7 +23,7 @@ public:
 
 private:
 	void classInterfaceTest() {
-		auto [_, root_scope] = getModule(fs::File(path("class_definitions")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/class_definitions")));
 		const compiler::helios::SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
 		const AbstractType my_class_type
@@ -74,7 +74,7 @@ private:
 	}
 
 	void classConstructabilityTest() {
-		auto [_, root_scope] = getModule(fs::File(path("class_definitions")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/class_definitions")));
 
 		const auto trivial_class_sym = getChain("TrivialClass", root_scope).back();
 		const auto my_class_sym      = getChain("MyClass", root_scope).back();
@@ -151,4 +151,4 @@ public:
 	~TypeSystemClassFieldsTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/src/compiler/core/tsh/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/helios/tests/")
