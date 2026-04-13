@@ -310,5 +310,25 @@ namespace query {
 		 * Can be safely used outside query framework.
 		 */
 		static const internal::QueryState& getState() { return main_query_state; }
+
+		/**
+		 * @brief Returns true if we are currently executing query code.
+		 */
+		[[nodiscard]]
+		static bool areWeInsideQuery();
+
+		/**
+		 * @brief Returns true when any query is currently active in any thread.
+		 */
+		[[nodiscard]]
+		static bool isAnyQueryCurrentlyRunning();
+
+	private:
+		friend struct query::internal::ContextAccess;
+
+		/**
+		 * @brief Sets whether the current thread is executing query code.
+		 */
+		static void setAreWeInsideQuery(bool value);
 	};
 }

@@ -60,6 +60,9 @@ namespace query::internal {
 		auto node_id = makeNodeID<QueryIntType>(key);
 		auto context = ContextAccess::make(node_id);
 
+		ContextAccess::setAreWeInsideQuery(true);
+		defer({ ContextAccess::setAreWeInsideQuery(false); });
+
 		// @FUTURE: provide legit acd here
 		ACD acd;
 
