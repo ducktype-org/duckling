@@ -6,6 +6,7 @@
 #include <iostream>
 #include <tuple>
 #include <variant>
+#include <numeric>
 
 template<class T>
 concept IsState = requires(T t) {
@@ -39,6 +40,14 @@ requires(IsState<States> && ...) struct StateMachine {
 		);
 	}
 
+    template<class NextState, class... Args>
+    void transitionTo(Args&&... constructor_args) {
+        if (!tryTransitionTo<NextState, Args...>(std::forward<Args>(constructor_args)...)) {
+            CORE_PANIC("Invalid state transition attempted");
+        }
+    }
+
+
 	template<class... GoodStates>
 	requires(IS_IN<GoodStates, States...> && ...) bool isInState() {
 		return (std::holds_alternative<std::decay_t<GoodStates>>(current_state) || ...);
@@ -57,9 +66,8 @@ requires(IsState<States> && ...) struct StateMachine {
 	}
 };
 
-template<class T, class... States>
-concept StateMachineEvent = requires(T t, StateMachine<States...> state_machine) {
-    {t.handleEvent(state_machine) } -> base::IsInstantiationOf<std::expected>;
+template<class T, class... Args>
+concept StateMachineEvent = requires(T t, Args&&... args) {
     typename T::RequiredStates;
 };
 
@@ -68,15 +76,14 @@ template<class StateTuple, class EventTuple>
 requires(base::IsInstantiationOf<StateTuple, std::tuple> && base::IsInstantiationOf<EventTuple, std::tuple>)
 struct EventDrivenStateMachine;
 
+// During event handler addition we specify which states are acceptable for this event.
 template<class... States, class... Events>
 requires((StateMachineEvent<Events> && ...))
 struct EventDrivenStateMachine<std::tuple<States...>, std::tuple<Events...>>: public StateMachine<States...> {
     using StateMachine<States...>::StateMachine;
 
-	template<class EvT>
-	requires(IS_IN<EvT, Events...>) auto processEvent(EvT&& event) -> base::Optional<
-			decltype(std::declval<EvT>().handleEvent(std::declval<StateMachine<States...>&>()))
-		> {
+	template<class EvT, class OperatingClass>
+	requires(IS_IN<EvT, Events...>) auto processEvent(EvT&& event, OperatingClass& operating_class) -> std::conditional_t<std::is_void_v<decltype(operating_class.handleEvent(event))>, bool, base::Optional<decltype(operating_class.handleEvent(event))>> {
         bool is_state_acceptable = std::visit(
             [&](const auto& state) -> bool {
                 using StateT = std::decay_t<decltype(state)>;
@@ -84,10 +91,17 @@ struct EventDrivenStateMachine<std::tuple<States...>, std::tuple<Events...>>: pu
             },
             this->current_state
         );
-        if (!is_state_acceptable) return std::nullopt;
-        return event.handleEvent(*this);
+        if constexpr(std::is_void_v<decltype(operating_class.handleEvent(event))>) {
+            if (!is_state_acceptable) return false;
+            operating_class.handleEvent(event);
+            return true;
+        } else {
+            if (!is_state_acceptable) return std::nullopt;
+            return operating_class.handleEvent(event);
+        }
     }
 };
+
 
 struct Process {
 	struct EmptyProcess;
@@ -118,10 +132,6 @@ struct Process {
 	struct Done {
 		using NextStates = std::tuple<>;
 	};
-    static_assert(IsState<EmptyProcess>);
-    static_assert(IsState<LoadedCode>);
-    static_assert(IsState<Running>);
-    static_assert(IsState<Done>);
 
 
     ///////// Events /////////
@@ -130,38 +140,26 @@ struct Process {
         using RequiredStates = std::tuple<LoadedCode, EmptyProcess>;
 
         std::string file;
-
-        template<class... States>
-        std::expected<void, std::string> handleEvent(
-            StateMachine<States...>& state_machine
-        ) {
-            // Handle event assumes we are in one of the required states,
-            // so we don't check that here. We just perform the event logic.
-            if(file == "bad_program")
-                return std::unexpected("Failed to load file: " + file);
-
-            if(!state_machine.template isInState<LoadedCode>())
-                state_machine.template tryTransitionTo<LoadedCode>();
-
-            auto& loaded_state = state_machine.template getState<LoadedCode>();
-            loaded_state.files.push_back(file);
-            std::cout << "Loaded file: " << file << '\n';
-
-            return {};
-        }
     };
-    static_assert(StateMachineEvent<LoadFilesEvent>);
+    std::expected<void, std::string> handleEvent(const LoadFilesEvent& event) {
+        if(state_machine.isInState<EmptyProcess>())
+            CORE_ASSERT(state_machine.tryTransitionTo<LoadedCode>(), "Transition should work, because we are in the right state");
 
-	EventDrivenStateMachine<
-        std::tuple<EmptyProcess, LoadedCode, Running, Done>,
-        std::tuple<LoadFilesEvent>
-    > state_machine{ EmptyProcess{} };
+        auto& state = state_machine.getState<LoadedCode>();
+        std::cout << "Loading file: " << event.file << '\n';
+        state.files.push_back(event.file);
+        return {};
+    }
 
-	std::expected<void, std::string> run() {
-		if (!state_machine.tryTransitionTo<Running>("good_program"))
-			return std::unexpected("Failed to switch state to running");
-
-		return {};
+    struct RunEvent {
+        using RequiredStates = std::tuple<LoadedCode>;
+    };
+	void handleEvent(const RunEvent&) {
+        std::vector<std::string> loaded_files = std::move(state_machine.getState<LoadedCode>().files);
+        std::string program = std::accumulate(
+            loaded_files.begin(), loaded_files.end(), std::string{}, std::plus<>()
+        );
+		state_machine.transitionTo<Running>(program);
 	}
 
 	bool step() {
@@ -180,6 +178,17 @@ struct Process {
 		}
 		CORE_UNREACHABLE();
 	}
+
+    template<class Ev>
+    auto processEvent(Ev&& event) {
+        return state_machine.processEvent(std::forward<Ev>(event), *this);
+    }
+
+private:
+	EventDrivenStateMachine<
+            std::tuple<EmptyProcess, LoadedCode, Running, Done>,
+            std::tuple<LoadFilesEvent, RunEvent>
+    > state_machine{ EmptyProcess{} };
 };
 
 int main() {
@@ -193,22 +202,22 @@ int main() {
 
     // 2. State -> LoadedCode
     // Load a file
-    base::Optional<std::expected<void, std::string>> load_result = process.state_machine.processEvent(Process::LoadFilesEvent{ "good_program" });
+    base::Optional<std::expected<void, std::string>> load_result = process.processEvent(Process::LoadFilesEvent{ "good_program" });
     CORE_ASSERT(load_result.has_value(), "Loading did not work");
     CORE_ASSERT(load_result->has_value(), "Loading did not work: ", "Loading failed: ", load_result->error());
 
     // 3. Load more files
-    load_result = process.state_machine.processEvent(Process::LoadFilesEvent{ "another_file" });
+    load_result = process.processEvent(Process::LoadFilesEvent{ "another_file" });
     CORE_ASSERT(load_result.has_value(), "Loading did not work");
     CORE_ASSERT(load_result->has_value(), "Loading did not work: ", "Loading failed: ", load_result->error());
 
 	// 4. State -> Running
-	std::expected run_result = process.run();
-	CORE_ASSERT(run_result.has_value(), "Running did not work: ", run_result.error());
+	auto ran = process.processEvent(Process::RunEvent{});
+    CORE_ASSERT(ran, "Running did not work");
 
     // 5. State == Running
     // Loading should not work, because we are in the wrong state.
-    load_result = process.state_machine.processEvent(Process::LoadFilesEvent{ "file3" });
+    load_result = process.processEvent(Process::LoadFilesEvent{ "file3" });
     CORE_ASSERT(!load_result.has_value(), "Loading worked");
 
 	// 6. State == Running
@@ -217,9 +226,8 @@ int main() {
 	CORE_ASSERT(progress.has_value(), "getProgress did not work: ", progress.error());
 	std::cout << "Progress: " << progress.value() << '\n';
 	// run should not work
-	std::expected run_result2 = process.run();
-	CORE_ASSERT(!run_result2.has_value(), "Running did not work");
-	std::cout << "Error: " << run_result2.error() << '\n';
+	bool run_result2 = process.processEvent(Process::RunEvent{});
+	CORE_ASSERT(!run_result2, "Running did not work");
 
 
 	return 0;
