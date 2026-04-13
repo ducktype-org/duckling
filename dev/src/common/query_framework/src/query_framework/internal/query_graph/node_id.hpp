@@ -44,6 +44,12 @@ namespace query::internal {
 		[[nodiscard]] base::Optional<std::string_view> debugString() const;
 
 		void setDebugString(std::string str) const;
+
+		[[nodiscard]] base::Optional<bool> isSuccess() const;
+
+		void setResult(bool success) const;
+
+		std::string hashString() const;
 	};
 }
 

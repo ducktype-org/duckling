@@ -127,10 +127,20 @@ namespace query::internal {
 			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK && QueryImplType::USES_QRESULT) {
 				auto provide_result = QueryImplType::provide(context, key);
 				if (provide_result.hasFailed()) {
+					node_id.setResult(false);
 					// Here we need to delete artifact from disk
 					QueryImplType::deleteFromDisc(key);
+				} else {
+					node_id.setResult(true);
 				}
 				return QueryImplType::store(perfect_hash, provide_result, acd);
+			} else if constexpr (QueryImplType::USES_QRESULT) {
+				auto provide_result = QueryImplType::provide(context, key);
+				if (provide_result.hasFailed())
+					node_id.setResult(false);
+				else
+					node_id.setResult(true);
+				return QueryImplType::store(perfect_hash, std::move(provide_result), acd);
 			} else {
 				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
 			}
@@ -142,6 +152,7 @@ namespace query::internal {
 				"\"]: Caught failed exception.\n",
 				qfe.what()
 			);
+			node_id.setResult(false);
 			// If provide throws we need to delete artifact from disk from prev compilation
 			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK)
 				QueryImplType::deleteFromDisc(key);

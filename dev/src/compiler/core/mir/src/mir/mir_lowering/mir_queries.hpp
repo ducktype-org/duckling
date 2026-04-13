@@ -15,6 +15,10 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
+
+		std::string debugString() const {
+			return function->declaration->original_symbol.debugString();
+		}
 	};
 
 	using LowerToMIRFunctionResult = query::QResult<Function>;
@@ -33,6 +37,10 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
+
+		std::string debugString() const {
+			return global_data.helios_symbol.debugString();
+		}
 	};
 
 	using LowerGlobalDataToMIRFunctionResult = query::QResult<Function>;

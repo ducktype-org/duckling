@@ -32,6 +32,8 @@ namespace compiler::helios {
 			hashing::addToHash(hash_alg, id.queryUnstablePerfectHash());
 		}
 
+		std::string debugString() const;
+
 	private:
 		CRef<SymbolData> ref;
 

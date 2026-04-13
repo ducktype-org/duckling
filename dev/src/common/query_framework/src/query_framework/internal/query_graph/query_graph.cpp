@@ -112,21 +112,20 @@ namespace query::internal {
 		out << "Dep Graph: \n";
 		out << node_deps->size() << "\n";
 
-		std::map<NodeID, u64> index;
-		u64                   id = 0;
 		for (auto& [k, _]: *node_deps) {
-			index[k] = id;
-			out << id  << " " << k.q_id.getData().name;
+			
+			out << k.hashString() << " " << k.q_id.getData().name;
+			auto success = k.isSuccess().copyValueOr(true);
+			out << " " << std::boolalpha << success;
 			if(k.debugString()) {
 				out << " " << k.debugString().value();
 			}
 			out << "\n";
-			id++;
 		}
 
 		for (auto& [k, v]: *node_deps) {
 			auto children_holder = v.getHolder();
-			for (auto& dep: *children_holder) out << index[k] << " " << index[dep] << "\n";
+			for (auto& dep: *children_holder) out << k.hashString() << " " << dep.hashString() << "\n";
 		}
 	}
 

@@ -11,7 +11,7 @@ fun foo(condition: i64) -> i64 = {
 }
 
 fun doSomethingWithAType(typ: ref type) -> () = {
-    typ = i64;
+    typ = f64;
 }
 
 fun getType() -> type = {

@@ -5,4 +5,6 @@
 namespace compiler::helios {
 
 	u64 SymID::queryUnstablePerfectHash() const { return ref->id.asInt(); }
+
+	std::string SymID::debugString() const { return ref->common.name.str(); }
 }
