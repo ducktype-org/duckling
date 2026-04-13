@@ -2,13 +2,12 @@
 use std::path::Path;
 
 use super::source;
-use tracing::Level;
-use tracing::span;
+use tracing::debug;
 use tracing::trace;
 
 use super::Scope;
 
-use crate::DuckCtx;
+use crate::DuckContext;
 use crate::StrId;
 use crate::quackpack::core::Conditions;
 use crate::quackpack::core::Dependency;
@@ -24,10 +23,11 @@ use crate::util::error::QuackResultContext;
 use crate::{QuackResult, quackpack::core::Dependencies};
 
 /// Parse [`Dependencies`] from the [`DependenciesSchema`].
+#[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     scope: &mut Scope,
 ) -> QuackResult<Dependencies> {
     let Some(schema) = schema else {
@@ -36,8 +36,6 @@ pub(crate) fn parse(
     let mut dependencies = Vec::new();
     for (name, dep_schema) in schema {
         let name = name.into();
-        let span = span!(Level::DEBUG, "dependency", name = %name);
-        let _guard = span.enter();
         scope.push(name);
         dependencies.push(parse_single_dependency(
             name,
@@ -52,14 +50,15 @@ pub(crate) fn parse(
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
+#[tracing::instrument(skip_all, fields(name = %manifest_name))]
 fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
     package_root: &Path,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     scope: &mut Scope,
 ) -> QuackResult<Dependency> {
-    trace!("parsing a dependency");
+    trace!(?schema, "parsing a dependency");
     scope.push("source".into());
     let source = source::parse(schema, package_root, ctx, scope)?;
     scope.pop();
@@ -101,6 +100,7 @@ fn parse_single_dependency(
 }
 
 /// Parse dependency's features
+#[tracing::instrument(skip_all)]
 fn parse_features(
     schema: Option<&Vec<FeatureSchema>>,
     scope: &mut Scope,
@@ -108,8 +108,10 @@ fn parse_features(
     let Some(schema) = schema else {
         return Ok(vec![]);
     };
+    debug!(?schema);
     let mut result = vec![];
     for feature in schema {
+        debug!("parsing {feature:?}");
         match feature {
             FeatureSchema::Simple(name) => {
                 result.push(DependencyFeature::new(name.into(), None));

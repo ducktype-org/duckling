@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use tracing::debug;
+
 use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
@@ -14,6 +16,7 @@ impl SolverFreeze {
     /// Generates a new freeze from the previous one and the solution found by solver.
     /// Trims the resulting freeze to contain only the necessary packages and features.
     /// The new freeze assumes that the main package is compiled with all its manifest-listed features.
+    #[tracing::instrument(skip_all)]
     pub fn new_freeze(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
@@ -61,6 +64,7 @@ impl SolverFreeze {
     /// This can be used to either generate:
     ///     * the new freeze (main_pkg_features equals to all manifest-specified main package features).
     ///     * a compilation graph from the new freeze (main_pkg_features equals to features provided by the build command).
+    #[tracing::instrument(skip_all)]
     pub fn find_minimal_dep_solution(
         self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
@@ -96,9 +100,11 @@ impl SolverFreeze {
             .get(&base_pkg)
             .context_internal("Freeze package with no manifest")?;
         let base_pkg_features = self.current_pkg_features(new_pkg_freezes, &base_pkg)?;
+        debug!(?base_pkg);
 
         for dependency in base_manifest.dependencies().all_dependencies() {
             if !dependency.is_enabled_for(base_pkg_features.clone()) {
+                debug!(dep = %dependency.name(), root = ?base_pkg, root_features = ?base_pkg_features, "is not enabled");
                 continue;
             }
             let dep_name = dependency.effective_name();
@@ -184,7 +190,7 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, StrId,
+        DuckContext, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
@@ -236,7 +242,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
@@ -342,7 +348,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
@@ -445,7 +451,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();

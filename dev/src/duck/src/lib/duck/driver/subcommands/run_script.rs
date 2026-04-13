@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    DuckCtx, QuackError, QuackResult,
+    DuckContext, QuackError, QuackResult,
     duck::driver::cli_ext::{flag, optional},
     qp_bail,
     quackpack::subcommands::run_script::{RunScriptOptions, run_script},
@@ -55,7 +55,7 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `run_script` subcommand.
-pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let path = matches
         .get_one::<PathBuf>("path")
         .expect("guarded by the parser");

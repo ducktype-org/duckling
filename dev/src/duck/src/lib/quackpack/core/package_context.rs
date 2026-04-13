@@ -2,7 +2,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    DuckCtx, QuackResult,
+    DuckContext, QuackResult,
     duck::util::duck_home::DuckHome,
     qp_bail,
     quackpack::core::{self, Package, package_loader::PackageLoader, venv_config::VenvConfig},
@@ -10,15 +10,16 @@ use crate::{
 
 #[derive(Debug)]
 /// A context of a package  parsed from the disk.
-pub struct PackageCtx<'duck> {
+pub struct PackageContext<'duck> {
     package: Package,
     venv_config: VenvConfig,
-    ctx: &'duck DuckCtx,
+    ctx: &'duck DuckContext,
 }
 
-impl<'duck> PackageCtx<'duck> {
-    /// Create new [`PackageCtx`].
-    pub fn new(project_root: PathBuf, ctx: &'duck DuckCtx) -> QuackResult<Self> {
+impl<'duck> PackageContext<'duck> {
+    /// Create new [`PackageContext`].
+    #[tracing::instrument(skip_all)]
+    pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
         let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);
         let venv_config = VenvConfig::new(venv_config_path)?;
@@ -29,16 +30,16 @@ impl<'duck> PackageCtx<'duck> {
         })
     }
 
-    /// Create new [`PackageCtx`] and ensure its name does not conflict with the global package name.
-    pub fn new_not_global(project_root: PathBuf, ctx: &'duck DuckCtx) -> QuackResult<Self> {
-        let this = Self::new(project_root, ctx)?;
-        if this.package.is_global() {
+    /// Create new [`PackageContext`] and ensure its name does not conflict with the global package name.
+    pub fn new_not_global(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
+        let pcx = Self::new(project_root, ctx)?;
+        if pcx.package.is_global() {
             qp_bail!(
                 "The name {} is restricted to the global package",
                 DuckHome::GLOBAL_PACKAGE_NAME
             );
         }
-        Ok(this)
+        Ok(pcx)
     }
 
     /// Get underlying [`Package`]
@@ -51,13 +52,13 @@ impl<'duck> PackageCtx<'duck> {
         self.package
     }
 
-    /// Get [`VenvConfig`] of this [`PackageCtx`]
+    /// Get [`VenvConfig`] of this [`PackageContext`]
     pub fn venv_config(&self) -> &VenvConfig {
         &self.venv_config
     }
 
-    /// Get [`DuckCtx`] used to create this [`PackageCtx`]
-    pub fn ctx(&self) -> &DuckCtx {
+    /// Get [`DuckContext`] used to create this [`PackageContext`]
+    pub fn ctx(&self) -> &DuckContext {
         self.ctx
     }
 
@@ -67,8 +68,8 @@ impl<'duck> PackageCtx<'duck> {
     }
 }
 
-impl From<PackageCtx<'_>> for Package {
-    fn from(value: PackageCtx<'_>) -> Self {
+impl From<PackageContext<'_>> for Package {
+    fn from(value: PackageContext<'_>) -> Self {
         value.package
     }
 }

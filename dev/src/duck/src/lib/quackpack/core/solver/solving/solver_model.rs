@@ -9,6 +9,7 @@ use russcip::{
     Model, ProblemCreated, Solution, Variable, WithSolutions,
     prelude::{cons, var},
 };
+use tracing::debug;
 
 use crate::{
     QuackResult, QuackResultContext, StrId,
@@ -333,6 +334,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 }
 
 /// Output of the solver model, contains new packages to be put into the freeze, with their features.
+#[derive(Debug)]
 pub struct FoundSolution {
     pub new_packages: HashSet<ExpandedPackage>,
     pub new_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
@@ -342,6 +344,7 @@ pub struct FoundSolution {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
+    #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<FoundSolution> {
         let solution = self
             .model
@@ -349,6 +352,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .solve()
             .best_sol()
             .context("Failed to find a solution")?;
+        debug!(?solution);
         let new_packages = new_packages(self.package_vars, self.preexisting_packages, &solution);
         let new_features = new_features(
             &self.package_to_feature_vars,
@@ -367,12 +371,14 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 }
 
 /// Helper for determining which new packages have been chosen by the model.
+#[tracing::instrument(skip_all)]
 fn new_packages(
     package_vars: HashMap<ExpandedPackage, Rc<Variable>>,
     preexisting_packages: &HashSet<ExpandedPackage>,
     solution: &Solution,
 ) -> HashSet<ExpandedPackage> {
-    package_vars
+    debug!(?preexisting_packages, ?package_vars);
+    let new_packages = package_vars
         .into_iter()
         .filter_map(|(pkg, var)| {
             if is_one(&var, solution) {
@@ -384,10 +390,13 @@ fn new_packages(
         .collect::<HashSet<ExpandedPackage>>()
         .difference(preexisting_packages)
         .cloned()
-        .collect::<HashSet<ExpandedPackage>>()
+        .collect::<HashSet<ExpandedPackage>>();
+    debug!(?new_packages);
+    new_packages
 }
 
 /// Helper for determining which new features of all the packages have been chosen by the model.
+#[tracing::instrument(skip_all)]
 fn new_features(
     package_to_feature_vars: &HashMap<ExpandedPackage, FeaturesToVars>,
     new_packages: &HashSet<ExpandedPackage>,
@@ -422,6 +431,7 @@ fn new_features(
 }
 
 /// Helper for determining what new realisations of any dependencies have been chosen by the model.
+#[tracing::instrument(skip_all)]
 fn new_edges(
     dependency_to_version_vars: HashMap<DependencyEdge, ChildVersionsToVars>,
     solution: &Solution,

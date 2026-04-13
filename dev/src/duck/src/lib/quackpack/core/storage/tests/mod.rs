@@ -21,7 +21,7 @@ use tempfile::TempDir;
 use url::Url;
 
 use crate::{
-    DuckCtx,
+    DuckContext,
     quackpack::core::{
         Version,
         storage::{
@@ -52,20 +52,20 @@ fn registry_url_hash() -> String {
 /// 1. remove foo, because no package references it,
 /// 2. remove root3, because it's too old,
 /// 3. remove bar, because it was only references by root3.
-fn setup_mock_storage() -> (DuckCtx, TempDir) {
+fn setup_mock_storage() -> (DuckContext, TempDir) {
     let setup = || {
         let storage_root = TempDir::new().unwrap();
         setup_mock_packages(storage_root.path());
         setup_mock_venvs(storage_root.path());
         setup_mock_locks(storage_root.path());
         // Also overwrite DUCK_HOME, so we'll use the default configuration options.
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::set_var("DUCK_STORAGE_DIR", storage_root.path());
             std::env::set_var("DUCK_HOME", storage_root.path());
         }
-        let ctx = DuckCtx::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        let ctx = DuckContext::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_STORAGE_DIR");
             std::env::remove_var("DUCK_HOME");
