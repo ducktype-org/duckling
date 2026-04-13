@@ -33,16 +33,15 @@ namespace compiler::helios {
 			if (expand_ctv.has<base::StrID>()) {
 				auto expand_str = expand_ctv.get<base::StrID>().value();
 
-				std::cerr << "\n================\n\n";
-				std::cerr << "Macro expansion for: " << expand_str.str() << "\n";
-				std::cerr << "\n";
-
-
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
 					expand->getSourcePosition(),
 					// @TODO: #2471 change to strView, once it is fixed
 					expand_str.str(),
-					makeBox<pst::LangParserContext>(expand->getContext())
+					makeBox<pst::LangParserContext>(expand->getContext()),
+					
+					// This is a little weird, we create a path context hash by hashing the string
+					// representation of the expand argument bit256 hash.
+					hashing::ComponentHash({}, expand->getHash().toStringHex())
 				);
 
 				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
