@@ -14,6 +14,11 @@
 
 #include <set>
 
+/**
+ * @TODO: Make lexer arguments explicit
+ * @TODO: remove tokenizeFile from lexer.hpp
+ * @TODO: Add better comments for builder-like things (Lexer ...)
+ */
 namespace tokenizer {
 	/**
 	 * @brief Class managing source file data access and token metadata
