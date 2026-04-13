@@ -148,7 +148,7 @@ namespace compiler::helios {
 		HOUTGlobalVariable(BoxOrCRef<code::Expr> initial_value):
 			  initial_value(std::move(initial_value)) {}
 
-		// @TODO #1958: remove this when we have a query for global values
+		// @TODO: #1958 remove this when we have a query for global values
 		HOUTGlobalVariable(const HOUTGlobalVariable& other):
 			  initial_value(other.initial_value->clone()) {}
 	};
