@@ -3,6 +3,8 @@ use std::path::PathBuf;
 
 use crate::{
     DuckContext, QuackResult,
+    duck::util::duck_home::DuckHome,
+    qp_bail,
     quackpack::core::{self, Package, package_loader::PackageLoader, venv_config::VenvConfig},
 };
 
@@ -15,7 +17,7 @@ pub struct PackageContext<'duck> {
 }
 
 impl<'duck> PackageContext<'duck> {
-    /// Create new [`PackageCtx`]
+    /// Create new [`PackageContext`].
     #[tracing::instrument(skip_all)]
     pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
@@ -28,6 +30,18 @@ impl<'duck> PackageContext<'duck> {
         })
     }
 
+    /// Create new [`PackageContext`] and ensure its name does not conflict with the global package name.
+    pub fn new_not_global(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
+        let pcx = Self::new(project_root, ctx)?;
+        if pcx.package.is_global() {
+            qp_bail!(
+                "The name {} is restricted to the global package",
+                DuckHome::GLOBAL_PACKAGE_NAME
+            );
+        }
+        Ok(pcx)
+    }
+
     /// Get underlying [`Package`]
     pub fn package(&self) -> &Package {
         &self.package
@@ -38,14 +52,19 @@ impl<'duck> PackageContext<'duck> {
         self.package
     }
 
-    /// Get [`VenvConfig`] of this [`PackageCtx`]
+    /// Get [`VenvConfig`] of this [`PackageContext`]
     pub fn venv_config(&self) -> &VenvConfig {
         &self.venv_config
     }
 
-    /// Get [`DuckCtx`] used to create this [`PackageCtx`]
+    /// Get [`DuckContext`] used to create this [`PackageContext`]
     pub fn ctx(&self) -> &DuckContext {
         self.ctx
+    }
+
+    /// Is this the global package.
+    pub fn is_global(&self) -> bool {
+        self.package.is_global()
     }
 }
 

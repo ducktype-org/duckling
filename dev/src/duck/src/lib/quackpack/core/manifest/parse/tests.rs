@@ -4,7 +4,7 @@ use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
 use crate::{
-    DuckContext, QpCtx, StrId,
+    DuckContext, QpContext, StrId,
     quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version},
     util::path_ops_ext::PathOpsExt,
 };

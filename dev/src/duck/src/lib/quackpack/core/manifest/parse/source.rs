@@ -9,7 +9,7 @@ use url::Url;
 
 use super::Scope;
 use crate::{
-    DuckContext, QpCtx, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
+    DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
     quackpack::{
         core::{BranchOrTag, Git, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},

@@ -20,6 +20,7 @@ pub use source::*;
 
 use crate::{
     QuackError, StrId,
+    duck::util::duck_home::DuckHome,
     quackpack::{core::Version, schemas::registry},
 };
 
@@ -95,6 +96,11 @@ impl Manifest {
     /// Get the compiler specific options for profile.
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
+    }
+
+    /// Check if this is the manifest of the global venv.
+    pub fn is_global(&self) -> bool {
+        self.name == DuckHome::GLOBAL_PACKAGE_NAME
     }
 }
 

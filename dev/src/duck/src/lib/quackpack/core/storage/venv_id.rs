@@ -8,6 +8,7 @@ use std::{
 
 use crate::{
     StrId,
+    duck::util::duck_home::DuckHome,
     quackpack::core::{Manifest, Package, PackageContext},
 };
 
@@ -15,6 +16,7 @@ use crate::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VenvId {
     Named(StrId),
+    Global,
 }
 
 impl VenvId {
@@ -22,6 +24,7 @@ impl VenvId {
     pub fn name(&self) -> StrId {
         match self {
             Self::Named(name) => *name,
+            Self::Global => StrId::new(DuckHome::GLOBAL_PACKAGE_NAME),
         }
     }
 
@@ -32,7 +35,7 @@ impl VenvId {
 
     /// Check, if this [`VenvId`] corresponds to the global venv.
     pub fn is_global(&self) -> bool {
-        false
+        matches!(self, Self::Global)
     }
 }
 
@@ -94,7 +97,11 @@ impl<T: ToVenvId> ToVenvId for Rc<T> {
 
 impl ToVenvId for StrId {
     fn to_venv_id(&self) -> VenvId {
-        VenvId::Named(*self)
+        if self == DuckHome::GLOBAL_PACKAGE_NAME {
+            VenvId::Global
+        } else {
+            VenvId::Named(*self)
+        }
     }
 }
 
@@ -112,8 +119,12 @@ impl ToVenvId for Package {
 
 impl ToVenvId for Manifest {
     fn to_venv_id(&self) -> VenvId {
-        // VenvId of a manifest is a package's name.
-        self.name().to_venv_id()
+        if self.is_global() {
+            VenvId::Global
+        } else {
+            // VenvId of a manifest is a package's name.
+            self.name().to_venv_id()
+        }
     }
 }
 

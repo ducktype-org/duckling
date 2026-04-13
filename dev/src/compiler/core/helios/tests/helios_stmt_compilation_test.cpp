@@ -13,10 +13,10 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 

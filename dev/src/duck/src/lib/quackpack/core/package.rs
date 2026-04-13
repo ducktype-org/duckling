@@ -84,6 +84,11 @@ impl Package {
     pub fn as_freeze_dep(&self) -> FreezeDep {
         FreezeDep::new(self.manifest().name(), self.manifest().version())
     }
+
+    /// Is this the global package.
+    pub fn is_global(&self) -> bool {
+        self.manifest().is_global()
+    }
 }
 
 struct PackageInner {

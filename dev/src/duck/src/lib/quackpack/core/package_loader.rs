@@ -4,7 +4,9 @@ use std::{io, marker::PhantomData, path::Path};
 use tracing::{debug, trace};
 
 use crate::{
-    DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err, qp_internal,
+    DuckContext, QuackResult, QuackResultContext,
+    duck::util::duck_home::DuckHome,
+    qp_bail, qp_err,
     quackpack::core::{
         PackageContext,
         storage::{paths::Storage, venv::Venv, venv_id::VenvId},
@@ -44,8 +46,17 @@ impl PackageLoader {
     pub const VENV_CONFIG_NAME: &str = "venvconfig.yaml";
 
     /// Get the global package.
-    pub fn global_package<'duck>(_ctx: &'duck DuckContext) -> QuackResult<PackageContext<'duck>> {
-        Err(qp_internal!("@TODO: #1394 it needs the EditableManifest"))
+    pub fn global_package<'duck>(ctx: &'duck DuckContext) -> QuackResult<PackageContext<'duck>> {
+        let global_package_path = ctx.duck_home().ensure_and_populate_global_dir()?;
+        let global_package = PackageContext::new(global_package_path.to_path_buf(), ctx)?;
+        if !global_package.is_global() {
+            qp_bail!(
+                "Global package should be named {}",
+                DuckHome::GLOBAL_PACKAGE_NAME
+            );
+        } else {
+            Ok(global_package)
+        }
     }
 
     /// Find a [`PackageCtx`] from the given `start`.
@@ -68,7 +79,7 @@ impl PackageLoader {
             trace!("checking the path `{}`", path.display());
             if path.is_file() {
                 debug!("found a package at `{}`", path.display());
-                return PackageContext::new(potential_location.to_path_buf(), ctx);
+                return PackageContext::new_not_global(potential_location.to_path_buf(), ctx);
             }
             current = potential_location;
         }
@@ -87,6 +98,7 @@ impl PackageLoader {
     ///
     /// Unlike [`find_from_directory`](Self::find_from_directory) this function __does not__ walk up
     /// `path`'s ancestors.
+    /// It also does not check if the venv name conflicts with the global venv name (it may be used to load the global venv).
     pub fn find_at_exact_directory<'duck>(
         path: &Path,
         ctx: &'duck DuckContext,
@@ -175,7 +187,7 @@ metadata:
     }
 
     #[test]
-    fn founds_from_directory() {
+    fn finds_from_directory() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         file.touch().unwrap();
@@ -190,7 +202,7 @@ metadata:
     }
 
     #[test]
-    fn founds_at_parent() {
+    fn finds_at_parent() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         file.touch().unwrap();
@@ -207,7 +219,7 @@ metadata:
     }
 
     #[test]
-    fn founds_at_exact_directory() {
+    fn finds_at_exact_directory() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         file.touch().unwrap();
@@ -221,7 +233,7 @@ metadata:
     }
 
     #[test]
-    fn founds_at_exact_directory_notadir() {
+    fn finds_at_exact_directory_notadir() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("xd");
         assert!(!file.exists());

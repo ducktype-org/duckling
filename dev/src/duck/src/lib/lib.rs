@@ -16,7 +16,7 @@ pub mod quackpack;
 pub mod util;
 
 pub use duck::{main, util::duck_context::DuckContext};
-pub use quackpack::util::{qp_ctx::QpCtx, str_id::*};
+pub use quackpack::util::{qp_context::QpContext, str_id::*};
 pub use util::error::{QuackError, QuackResultContext};
 
 /// A common [`Result`] type used widely throughout the project.

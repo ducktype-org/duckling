@@ -90,13 +90,12 @@ impl SolverFreeze {
                 );
             }
         }
-        self.package_freezes
-            .retain(|pkg, _| {
-                let is_root_package = *pkg == self.main_pkg;
-                let is_satisfied = still_satisfied_pkgs.contains(pkg);
-                debug!(?pkg, is_root_package, is_satisfied);
-                is_root_package || is_satisfied
-            });
+        self.package_freezes.retain(|pkg, _| {
+            let is_root_package = *pkg == self.main_pkg;
+            let is_satisfied = still_satisfied_pkgs.contains(pkg);
+            debug!(?pkg, is_root_package, is_satisfied);
+            is_root_package || is_satisfied
+        });
         Ok(())
     }
 
