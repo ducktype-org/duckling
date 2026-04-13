@@ -18,6 +18,8 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
@@ -29,8 +31,6 @@
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

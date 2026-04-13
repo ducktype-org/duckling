@@ -1,8 +1,8 @@
-#include <tsh/abstract_type.hpp>
-#include <tsh/expression_type.hpp>
-#include <tsh/queries/implicit_coercibility.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/types.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/expression_type.hpp>
+#include <helios/tsh/queries/implicit_coercibility.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
