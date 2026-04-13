@@ -41,6 +41,8 @@ namespace compiler::helios {
 
 					// This is a little weird, we create a path context hash by hashing the string
 				    // representation of the expand argument bit256 hash.
+					// Note that this is generally correct since hash(hash) keeps all the necessary properties we need,
+					// and the expand argument hash includes the bits related to the expand path.
 					hashing::ComponentHash({}, expand->getHash().toStringHex())
 				);
 
