@@ -152,6 +152,7 @@ impl<'duck> Fetcher<'duck> {
             .join(Self::DEFAULT_BLOB_FILENAME);
 
         if destination.exists() {
+            debug!("cache hit");
             return Ok(destination);
         }
 
