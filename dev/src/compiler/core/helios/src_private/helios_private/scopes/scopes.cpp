@@ -253,10 +253,10 @@ namespace compiler::helios {
 				));
 			}
 
-			auto get_parent = [&ctx](pst::Access<pst::LangElement> parent_of) -> ScopeID {
+			ScopeID parent = [&]() -> ScopeID {
 				// @TODO: #2452 this logic should be unified
 
-				auto maybe_element_parent = parent_of->getParent();
+				auto maybe_element_parent = element->getParent();
 				if (maybe_element_parent.has_value()) {
 					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());
 				} else {
@@ -265,7 +265,7 @@ namespace compiler::helios {
 					// @TODO: #2397 revisit and adjust this logic, we could perhaps move it into PST
 					// layer.
 
-					const auto& additional_root_data = parent_of->getAdditionalRootData();
+					const auto& additional_root_data = element->getAdditionalRootData();
 
 					variant_match(additional_root_data.pst_parent) {
 						variant_case(pst::AdditionalRootData::MacroExpansionParent, macro_parent) {
@@ -286,9 +286,7 @@ namespace compiler::helios {
 					}
 					CORE_UNREACHABLE();
 				}
-			};
-
-			ScopeID parent = get_parent(element);
+			}();
 
 
 			// here we essentially return the same scope as the parent

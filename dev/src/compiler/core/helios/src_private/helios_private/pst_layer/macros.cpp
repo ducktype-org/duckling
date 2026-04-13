@@ -48,6 +48,7 @@ namespace compiler::helios {
 					pst.setAdditionalRootData(pst::AdditionalRootData{
 						pst::AdditionalRootData::MacroExpansionParent{ .expand_element = expand } });
 				}
+
 				return pst;
 			} else {
 				CORE_PANIC("Expand argument is not exactly a single string.");
