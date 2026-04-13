@@ -12,7 +12,9 @@ use crate::{
     quackpack::{
         core::{
             BranchOrTag, Dependency, Source, Version,
-            types_common::{ExpandedLocation, ExpandedPackage, expanded::InternedExpandedLocation},
+            solver::types_common::{
+                ExpandedLocation, ExpandedPackage, expanded::InternedExpandedLocation,
+            },
             version::CompatibilityCheck,
         },
         util::PANIC_MESSAGE,

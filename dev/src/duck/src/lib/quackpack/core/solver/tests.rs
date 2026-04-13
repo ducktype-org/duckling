@@ -6,7 +6,7 @@ use tempfile::{TempDir, tempdir};
 use crate::{
     DuckContext,
     quackpack::{
-        core::{PackageLoader, Version, fetcher::types, git_access::GitAccess},
+        core::{PackageLoader, Version, fetcher::types, solver::git_access::GitAccess},
         schemas::registry,
     },
     util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
@@ -15,11 +15,13 @@ use crate::{
 use url::Url;
 
 use crate::quackpack::core::{
-    PackageContext, ShouldRunSolverEngine, SolverGathererData,
+    PackageContext,
     fetcher::Fetcher,
-    solver_freeze::{SolverFreeze, SolverPackageFreeze},
-    solver_mode::SolverMode,
-    types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
+    solver::ShouldRunSolverEngine,
+    solver::SolverGathererData,
+    solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
+    solver::solver_mode::SolverMode,
+    solver::types_common::{ExpandedLocation, ExpandedPackage},
 };
 
 struct MockGitAccess();

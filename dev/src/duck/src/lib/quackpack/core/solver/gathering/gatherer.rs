@@ -15,7 +15,7 @@ use crate::{
                 Fetcher,
                 types::{FetcherResponse, GitCloneResponse, MultiMetadata, PackageWithUrl},
             },
-            gathering::{
+            solver::gathering::{
                 error_surpression::{GathererComputation, GathererResult},
                 fetch_types::{
                     FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
@@ -24,9 +24,9 @@ use crate::{
                 },
                 gatherer_state::{GatheredInfo, GathererState, RequestAction},
             },
-            git_access::GitAccess,
-            solver_mode::SolverMode,
-            types_common::{ExpandedLocation, ExpandedPackage, InternedLocation, Location},
+            solver::git_access::GitAccess,
+            solver::solver_mode::SolverMode,
+            solver::types_common::{ExpandedLocation, ExpandedPackage, InternedLocation, Location},
         },
         schemas::registry,
     },

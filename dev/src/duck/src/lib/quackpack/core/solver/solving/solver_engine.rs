@@ -9,13 +9,13 @@ use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
         Dependency, FeatureName, Manifest, Version,
-        gathering::gatherer_state::GatheredInfo,
-        solver_freeze::SolverFreeze,
-        solving::solver_model::{FoundSolution, SolverModel},
-        types_common::{
+        solver::gathering::gatherer_state::GatheredInfo,
+        solver::solver_freeze::SolverFreeze,
+        solver::solving::solver_model::{FoundSolution, SolverModel},
+        solver::types_common::{
             DependencyEdge, ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
         },
-        util::get_possible_realizations,
+        solver::util::get_possible_realizations,
     },
 };
 
@@ -341,7 +341,7 @@ mod test {
         DuckContext,
         quackpack::core::{
             parse_manifest,
-            types_common::{ExpandedLocation, Location},
+            solver::types_common::{ExpandedLocation, Location},
         },
         util::path_ops_ext::PathOpsExt,
     };

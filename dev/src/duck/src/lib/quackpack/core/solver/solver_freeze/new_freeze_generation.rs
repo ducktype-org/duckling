@@ -6,9 +6,9 @@ use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
         FeatureName, Manifest,
-        solver_freeze::{SolverFreeze, SolverPackageFreeze},
-        solving::FoundSolution,
-        types_common::ExpandedPackage,
+        solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
+        solver::solving::FoundSolution,
+        solver::types_common::ExpandedPackage,
     },
 };
 
@@ -193,11 +193,9 @@ mod test {
         DuckContext, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
-            solver_freeze::{SolverFreeze, SolverPackageFreeze},
-            solving::FoundSolution,
-            types_common::{
-                DependencyEdge, ExpandedLocation, ExpandedPackage, InternedExpandedLocation,
-            },
+            solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
+            solver::solving::FoundSolution,
+            solver::types_common::{DependencyEdge, ExpandedLocation, ExpandedPackage},
         },
         util::path_ops_ext::PathOpsExt,
     };

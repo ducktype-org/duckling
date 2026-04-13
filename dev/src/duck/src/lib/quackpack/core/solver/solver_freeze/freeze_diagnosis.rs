@@ -6,13 +6,13 @@ use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
         Dependency, FeatureName, Manifest,
-        gathering::{
+        solver::gathering::{
             fetch_types::{FetchResponse, FetchSuccess},
             gatherer::Gatherer,
         },
-        git_access::GitAccess,
-        solver_freeze::{SolverFreeze, SolverPackageFreeze},
-        types_common::ExpandedPackage,
+        solver::git_access::GitAccess,
+        solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
+        solver::types_common::ExpandedPackage,
     },
 };
 
@@ -287,8 +287,8 @@ mod test {
         DuckContext, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
-            solver_freeze::{SolverFreeze, SolverPackageFreeze},
-            types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
+            solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
+            solver::types_common::{ExpandedLocation, ExpandedPackage},
         },
         util::path_ops_ext::PathOpsExt,
     };

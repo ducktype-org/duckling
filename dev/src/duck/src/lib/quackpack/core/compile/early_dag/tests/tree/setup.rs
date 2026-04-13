@@ -7,11 +7,11 @@ use crate::{
     quackpack::core::{
         PackageLoader, Version,
         fetcher::Fetcher,
+        solver::types_common::ExpandedLocation,
         storage::{
             freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
             package_id::{PackageId, RegistryId},
         },
-        types_common::{ExpandedLocation, InternedExpandedLocation},
     },
     util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
@@ -179,30 +179,33 @@ pub fn freeze() -> VenvFreeze {
                 Version::new(1, 0, 0),
                 vec!["use_bar".into(), "use_bar_with_baz".into()],
                 vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "foo".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "bar".into(),
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
                 vec![FreezeDep::new("baz".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "bar".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "baz".into(),
                 Version::new(1, 0, 0),
                 vec![],
                 vec![],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "baz".into(),
-                }),
+                }
+                .into(),
             ),
         ],
     )
@@ -222,30 +225,33 @@ pub fn freeze_with_cycle() -> VenvFreeze {
                 Version::new(1, 0, 0),
                 vec!["use_bar".into(), "use_bar_with_baz".into()],
                 vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "foo".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "bar".into(),
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
                 vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "bar".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "baz".into(),
                 Version::new(1, 0, 0),
                 vec![],
                 vec![],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "baz".into(),
-                }),
+                }
+                .into(),
             ),
         ],
     )
@@ -276,10 +282,11 @@ pub fn freeze_without_transitive_dep() -> VenvFreeze {
             Version::new(1, 0, 0),
             vec!["use_bar".into(), "use_bar_with_baz".into()],
             vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-            InternedExpandedLocation::new(ExpandedLocation::Registry {
+            ExpandedLocation::Registry {
                 url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                 real_name: "foo".into(),
-            }),
+            }
+            .into(),
         )],
     )
 }

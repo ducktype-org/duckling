@@ -5,7 +5,7 @@ use url::Url;
 
 use crate::{
     QuackResult, StrId,
-    quackpack::core::git_access::GitAccess,
+    quackpack::core::solver::git_access::GitAccess,
     util::path_ops_ext::{MkdirOptions, PathOpsExt},
 };
 

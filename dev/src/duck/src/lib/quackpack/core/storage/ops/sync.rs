@@ -9,12 +9,15 @@ use tracing::debug;
 use crate::{
     QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
     quackpack::core::{
-        BranchOrTag, Git, Package, PackageContext, PackageLoader, ShouldRunSolverEngine,
-        SolverAnswer, SolverGathererData,
+        BranchOrTag, Git, Package, PackageContext, PackageLoader,
         fetcher::{Fetcher, types::PackageWithUrl},
-        git_access::GitAccess,
-        solver_freeze::SolverFreeze,
-        solver_mode::SolverMode,
+        solver::ShouldRunSolverEngine,
+        solver::SolverAnswer,
+        solver::SolverGathererData,
+        solver::git_access::GitAccess,
+        solver::solver_freeze::SolverFreeze,
+        solver::solver_mode::SolverMode,
+        solver::types_common::{ExpandedLocation, ExpandedPackage},
         storage::{
             freeze::VenvFreeze,
             git_access::StorageGitAccess,
@@ -24,7 +27,6 @@ use crate::{
             venv::{Venv, VenvData},
             venv_id::{ToVenvId, VenvId},
         },
-        types_common::{ExpandedLocation, ExpandedPackage},
     },
     util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };

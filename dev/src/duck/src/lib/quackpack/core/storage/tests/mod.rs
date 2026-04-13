@@ -6,6 +6,7 @@ use std::{
 use crate::{
     quackpack::core::{
         fetcher::Fetcher,
+        solver::types_common::ExpandedLocation,
         storage::{
             freeze::{FreezeDep, FreezePackage},
             package_id::{PackageId, RegistryId},
@@ -13,7 +14,6 @@ use crate::{
             venv::Venv,
             venv_id::ToVenvId,
         },
-        types_common::ExpandedLocation,
     },
     util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };

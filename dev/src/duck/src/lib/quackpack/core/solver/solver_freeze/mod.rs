@@ -9,8 +9,8 @@ use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
         FeatureName, Manifest,
+        solver::types_common::ExpandedPackage,
         storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
-        types_common::ExpandedPackage,
     },
 };
 
@@ -177,10 +177,7 @@ mod test {
 
     use crate::{
         DuckContext,
-        quackpack::core::{
-            PackageLoader, parse_manifest,
-            types_common::{ExpandedLocation, InternedExpandedLocation},
-        },
+        quackpack::core::{PackageLoader, parse_manifest, solver::types_common::ExpandedLocation},
         util::path_ops_ext::PathOpsExt,
     };
     use tempfile::{TempDir, tempdir};

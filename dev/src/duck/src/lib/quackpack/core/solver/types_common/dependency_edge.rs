@@ -5,7 +5,7 @@ use crate::{
     quackpack::core::{
         Dependency,
         solver::types_common::ExpandedPackage,
-        types_common::{InternedExpandedLocation, InternedLocation, Location},
+        solver::types_common::{InternedExpandedLocation, InternedLocation, Location},
     },
 };
 

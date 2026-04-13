@@ -12,8 +12,8 @@ use crate::{
     QuackResult, QuackResultContext, StrId, qp_bail_internal,
     quackpack::core::{
         BranchOrTag, Dependency, Registry, Source, Version,
-        gathering::fetch_types::{ManifestsRequest, NotPinnedRequest, PinnedRequest},
-        types_common::{InternedLocation, Location},
+        solver::gathering::fetch_types::{ManifestsRequest, NotPinnedRequest, PinnedRequest},
+        solver::types_common::{InternedLocation, Location},
         version::CompatibilityCheck,
     },
 };

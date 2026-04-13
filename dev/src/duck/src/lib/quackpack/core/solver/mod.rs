@@ -40,12 +40,12 @@ use crate::{
     quackpack::core::{
         FeatureName, Manifest, PackageContext,
         fetcher::Fetcher,
-        gathering::{gatherer::Gatherer, gatherer_state::GatheredInfo},
-        git_access::GitAccess,
-        solver_freeze::SolverFreeze,
-        solver_mode::SolverMode,
-        solving::solver_engine::{SolverEngine, SolverInput},
-        types_common::{ExpandedLocation, ExpandedPackage},
+        solver::gathering::{gatherer::Gatherer, gatherer_state::GatheredInfo},
+        solver::git_access::GitAccess,
+        solver::solver_freeze::SolverFreeze,
+        solver::solver_mode::SolverMode,
+        solver::solving::solver_engine::{SolverEngine, SolverInput},
+        solver::types_common::{ExpandedLocation, ExpandedPackage},
     },
 };
 

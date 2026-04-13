@@ -4,7 +4,7 @@ use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
         Dependency, Version,
-        types_common::{
+        solver::types_common::{
             ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
         },
         version::CompatibilityCheck,
@@ -85,11 +85,8 @@ mod test {
         DuckContext, StrId,
         quackpack::core::{
             Version, parse_manifest,
-            types_common::{
-                ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
-                Location,
-            },
-            util::get_possible_realizations,
+            solver::types_common::{ExpandedLocation, ExpandedPackage, Location},
+            solver::util::get_possible_realizations,
         },
         util::path_ops_ext::PathOpsExt,
     };
