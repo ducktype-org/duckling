@@ -4,10 +4,10 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/types.hpp>
 
 #include <base/except/exceptions.hpp>
 

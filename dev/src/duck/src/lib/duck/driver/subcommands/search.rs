@@ -1,4 +1,4 @@
-use crate::{DuckCtx, QuackResult, qp_bail};
+use crate::{DuckContext, QuackResult, qp_bail};
 use clap::{Arg, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::subcommand;
@@ -11,6 +11,6 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `search` subcommand.
-pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
+pub fn execute(_ctx: &DuckContext, _matches: &ArgMatches) -> QuackResult<()> {
     qp_bail!("implement search")
 }

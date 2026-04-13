@@ -836,8 +836,9 @@ namespace vm {
 			auto       src    = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto       offset = static_cast<usize>(instr[1].arg0);
 
-			const Pointer new_dst
-				= thread.process_memory.updatePointerAssignment(dst, { src.getBlock(), offset });
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, { src.getBlock(), src.getOffset() + offset }
+			);
 			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
@@ -933,7 +934,7 @@ namespace vm {
 			auto data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst, { tbl_pointer.getBlock(), data_offset }
+				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
 			);
 			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
@@ -949,7 +950,7 @@ namespace vm {
 			auto data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst, { tbl_pointer.getBlock(), data_offset }
+				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
 			);
 			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}

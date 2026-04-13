@@ -2,14 +2,14 @@ use std::backtrace::Backtrace;
 
 use crate::duck::util::indent::indent;
 use crate::util::error::{DisplayPlace, ErrorExt, ErrorType, InternalError};
-use crate::{DuckCtx, duck::util::terminal::Terminal};
+use crate::{DuckContext, duck::util::terminal::Terminal};
 use crate::{QuackError, QuackResult, qp_bail_internal};
 use tracing::debug;
 
 /// Actual main entry point for the duck-binary.
 pub fn main() {
     setup_logger();
-    let mut ctx = match DuckCtx::new() {
+    let mut ctx = match DuckContext::new() {
         Ok(ctx) => ctx,
         Err(err) => {
             let stdout = Terminal::stdout();

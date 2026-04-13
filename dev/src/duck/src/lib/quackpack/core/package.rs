@@ -4,14 +4,21 @@ use crate::quackpack::{
     schemas::manifest::Manifest as ManifestSchema,
 };
 use std::{
+    fmt,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 /// High-level abstraction over a package we are currently working on.
 pub struct Package {
     inner: Arc<PackageInner>,
+}
+
+impl fmt::Debug for Package {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fmt::Debug::fmt(&*self.inner, f)
+    }
 }
 
 impl Package {
@@ -77,9 +84,13 @@ impl Package {
     pub fn as_freeze_dep(&self) -> FreezeDep {
         FreezeDep::new(self.manifest().name(), self.manifest().version())
     }
+
+    /// Is this the global package.
+    pub fn is_global(&self) -> bool {
+        self.manifest().is_global()
+    }
 }
 
-#[derive(Debug)]
 struct PackageInner {
     original_content: String,
     original_schema: ManifestSchema,
@@ -88,6 +99,18 @@ struct PackageInner {
     manifest_path: PathBuf,
     artifacts_dir: PathBuf,
     source_dir: PathBuf,
+}
+
+impl fmt::Debug for PackageInner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Package")
+            .field("manifest", &self.manifest)
+            .field("root", &self.root)
+            .field("manifest_path", &self.manifest_path)
+            .field("artifacts_dir", &self.artifacts_dir)
+            .field("source_dir", &self.source_dir)
+            .finish_non_exhaustive()
+    }
 }
 
 #[cfg(test)]
