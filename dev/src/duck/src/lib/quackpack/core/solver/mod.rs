@@ -137,6 +137,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             .find_maximal_correct_dep_solution(&prev_freeze_manifests)?;
 
         if is_root_satisfied {
+            debug!("root has been satisfied");
             let trimmed = maximal_valid_freeze
                 .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
             return Ok(ShouldRunSolverEngine::No(SolverAnswer {
@@ -228,6 +229,7 @@ impl SolverEngineData {
         let manifests = self.input.gathered_manifests.clone();
         let solver_output =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
+        debug!(?solver_output);
         let new_freeze = self.current_freeze.new_freeze(&manifests, solver_output)?;
         Ok(SolverAnswer {
             new_freeze,

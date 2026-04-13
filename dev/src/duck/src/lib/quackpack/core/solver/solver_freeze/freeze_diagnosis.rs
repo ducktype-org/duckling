@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use tracing::debug;
+
 use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
@@ -89,7 +91,12 @@ impl SolverFreeze {
             }
         }
         self.package_freezes
-            .retain(|pkg, _| *pkg == self.main_pkg || still_satisfied_pkgs.contains(pkg));
+            .retain(|pkg, _| {
+                let is_root_package = *pkg == self.main_pkg;
+                let is_satisfied = still_satisfied_pkgs.contains(pkg);
+                debug!(?pkg, is_root_package, is_satisfied);
+                is_root_package || is_satisfied
+            });
         Ok(())
     }
 
