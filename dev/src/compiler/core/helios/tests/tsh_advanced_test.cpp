@@ -23,7 +23,7 @@ public:
 
 private:
 	void classInterfaceTest() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/class_definitions")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/tsh/class_definitions")));
 		const compiler::helios::SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
 		const AbstractType my_class_type
