@@ -74,13 +74,17 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
+		// We go up the PST until we find a statement that determines whether the variable is global
+		// or not.
 		return std::invoke(
 			[&ctx](this auto self, const pst::Access<pst::LangElement>& el) -> bool {
 				switch (el->getElementKind()) {
+				// Variables inside Top-level and namespace are global:
 				case pst::ElementKind::TopLevel:
 				case pst::ElementKind::Namespace:
 					return true;
 
+				// Variables inside classes, functions and some statements are not global:
 				case pst::ElementKind::Class:
 				case pst::ElementKind::Fun:
 				case pst::ElementKind::ClassBlock:
@@ -92,13 +96,25 @@ namespace compiler::helios {
 				case pst::ElementKind::For:
 					return false;
 
+				// For other elements we go up the PST tree:
 				case pst::ElementKind::CodeBlock:
 				case pst::ElementKind::CodeBlockOrStmt:
 				case pst::ElementKind::Variable:
-				case pst::ElementKind::StmtSpecifier:
-					// we panic if there is no parent:
-					return self(el->getParent().value().unlock(ctx));
-
+				case pst::ElementKind::Expand:
+				case pst::ElementKind::StmtSpecifier: {
+					// @TODO: #2452 unify this logic
+					if (el->getParent().has_value()) {
+						return self(el->getParent().value().unlock(ctx));
+					} else {
+						// we hit an expand!
+					    // note that here, we should never hit an element without parent that is not
+					    // an expand
+						return self(std::get<pst::AdditionalRootData::MacroExpansionParent>(
+										el->getAdditionalRootData().pst_parent
+						)
+					                    .expand_element.unlock(ctx));
+					}
+				}
 				default:
 					CORE_PANIC(base::strConcat(
 						"Unexpected element kind for variable symbol: ", el->elementType()
@@ -359,6 +375,18 @@ namespace compiler::helios {
 				pst_data
 			);
 		}
+		case pst::StmtKind::CodeDecl: {
+			// CodeDecl include things like named ifs, whiles, fors and code blocks.
+			// Note that this function should only be called if the statement creates a symbol, so
+			// we can assume that it is only named ones.
+			return SymbolData::makePSTSymbolData(
+				{
+					.name = stmt->getDeclSymbolName().value(),
+					.kind = SymbolKind::NamedCodeElement,
+				},
+				pst_data
+			);
+		}
 		default:
 			break;
 		}
@@ -393,12 +421,30 @@ namespace compiler::helios {
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
 		 * @note This has to be consistent with QuerySymbolsInScope
+		 * @TODO: #2407 this could take unlocked Access
 		 */
 		static ScopeID getPSTElementParentScope(
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 		) {
-			// note: this might become more complicated in the future:
-			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent().value());
+			// Note: This has to be consistent with QuerySymbolsInScope logic.
+			// @TODO: #2397 maybe move it into a single place
+
+			// @TODO: #2452 this logic should be unified
+
+			auto unlocked = element.unlock(ctx);
+
+			if (unlocked->getParent().has_value()) {
+				return ctx.query<QueryPrimaryCodeScopeFor>(unlocked->getParent().value());
+			} else {
+				// we hit an expand!
+				// note that here, we should never hit an element without parent that is not an expand
+				return ctx.query<QueryPrimaryCodeScopeFor>(
+					std::get<pst::AdditionalRootData::MacroExpansionParent>(
+						unlocked->getAdditionalRootData().pst_parent
+					)
+						.expand_element
+				);
+			}
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
