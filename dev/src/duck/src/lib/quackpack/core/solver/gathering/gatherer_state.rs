@@ -603,6 +603,7 @@ where {
 }
 
 /// A struct containing all the information gathered by the gatherer.
+#[derive(Debug)]
 pub struct GatheredInfo {
     /// The gathered manifests of the packages referenced in requests.
     pub gathered_manifests: HashMap<ExpandedPackage, Box<Manifest>>,

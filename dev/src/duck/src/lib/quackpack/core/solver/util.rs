@@ -82,7 +82,7 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, StrId,
+        DuckContext, StrId,
         quackpack::core::{
             Version, parse_manifest,
             types_common::{
@@ -117,7 +117,7 @@ dependencies:
     pinned: true
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
@@ -168,7 +168,7 @@ dependencies:
     version: 1.0.3
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest

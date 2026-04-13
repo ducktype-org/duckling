@@ -131,10 +131,18 @@ impl From<Git> for Source {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
     url: Url,
+}
+
+impl std::fmt::Debug for Registry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Registry")
+            .field("url", &self.url.as_str())
+            .finish()
+    }
 }
 
 impl Registry {
@@ -187,12 +195,22 @@ impl Local {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// Represents a source of a dependency cloned from git.
 pub struct Git {
     url: Url,
     branch_or_tag: BranchOrTag,
     rev: Option<StrId>,
+}
+
+impl std::fmt::Debug for Git {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Git")
+            .field("url", &self.url.as_str())
+            .field("branch_or_tag", &self.branch_or_tag)
+            .field("rev", &self.rev)
+            .finish()
+    }
 }
 
 impl Git {
