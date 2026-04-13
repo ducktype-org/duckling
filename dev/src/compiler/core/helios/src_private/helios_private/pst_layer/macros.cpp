@@ -5,7 +5,6 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <frontend/pst_parser/pst.hpp>
-
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <tsh/queries.hpp>
@@ -18,18 +17,19 @@
 namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			auto expand       = key.element.unlock(ctx);
-		
-			auto expand_hout = getHoutOfExprWithExpectedType(
-				ctx,
-				 expand->getValue().unlock(ctx)->getExpr(),
-				  tsh::SymbolType<>::withDefaults(tsh::getStringType())
-			).valueOrThrow();
-			auto expand_ctv = ctx.query<QueryEvaluateHOUTExpression>({ expand_hout.ref() }).valueOrThrow();
+			auto expand = key.element.unlock(ctx);
 
-	
+			auto expand_hout = getHoutOfExprWithExpectedType(
+								   ctx,
+								   expand->getValue().unlock(ctx)->getExpr(),
+								   tsh::SymbolType<>::withDefaults(tsh::getStringType())
+			)
+			                       .valueOrThrow();
+			auto expand_ctv
+				= ctx.query<QueryEvaluateHOUTExpression>({ expand_hout.ref() }).valueOrThrow();
+
+
 			if (expand_ctv.has<base::StrID>()) {
 				auto expand_str = expand_ctv.get<base::StrID>().value();
 
@@ -38,9 +38,9 @@ namespace compiler::helios {
 					// @TODO: #2471 change to strView, once it is fixed
 					expand_str.str(),
 					makeBox<pst::LangParserContext>(expand->getContext()),
-					
+
 					// This is a little weird, we create a path context hash by hashing the string
-					// representation of the expand argument bit256 hash.
+				    // representation of the expand argument bit256 hash.
 					hashing::ComponentHash({}, expand->getHash().toStringHex())
 				);
 
@@ -61,7 +61,6 @@ namespace compiler::helios {
 			else
 				return ExpansionError<pst::Stmt>(pst_ref->getRootElement(), pst_ref->getLogger());
 		}
-
 
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(extractResult)

@@ -67,8 +67,9 @@ namespace compiler::helios {
 		Transparent,
 
 		// Gets parent scope of what transparent scope would be.
-		// This is used for expand expressions, where the lookup should happen higher than the expand statement itself.
-		ParentTransparent, 
+		// This is used for expand expressions, where the lookup should happen higher than the
+		// expand statement itself.
+		ParentTransparent,
 
 		// Does not have a scope:
 		Invalid,
@@ -171,16 +172,9 @@ namespace compiler::helios {
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
-			// // note: top expr creates a scope for lifetimes
-			// auto as_expr_holder = element.dynamicCast<pst::ExprHolder>().value();
-			// if (as_expr_holder->isTopLevel())
-			// 	return ElementScopeKind::Standard;
-			// else
-			// 	return ElementScopeKind::Transparent;
-
-			// SELF NOTE: the above was the old logic, that is now not needed after custom MIR lifetime scope structure was implemented. 
 			auto expr_parent = element->getParent().value().unlockOpt(ctx);
-			if (expr_parent.has_value() && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
+			if (expr_parent.has_value()
+			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
 				// This is a special case.
 				// Elements in macro expansions should have their scope parent be the grandparent.
 				return ElementScopeKind::ParentTransparent;
@@ -292,13 +286,11 @@ namespace compiler::helios {
 			// here we essentially return the same scope as the parent
 			// scope, with the same unstable hash, but we still create a new ScopeData object
 			// that is kept in our cache:
-			if (element_scope_kind == ElementScopeKind::Transparent) {
+			if (element_scope_kind == ElementScopeKind::Transparent)
 				return parent.ref->perfectClone();
-			}
-			else if (element_scope_kind == ElementScopeKind::ParentTransparent) {
+			else if (element_scope_kind == ElementScopeKind::ParentTransparent)
 				return parent.ref->parent->ref->perfectClone();
-			}
-			
+
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
