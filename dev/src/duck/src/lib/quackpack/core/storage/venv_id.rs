@@ -142,3 +142,15 @@ macro_rules! forward_to_strid {
 }
 
 forward_to_strid!(str String Path OsStr OsString);
+
+impl ToVenvId for &str {
+    fn to_venv_id(&self) -> VenvId {
+        StrId::from(*self).to_venv_id()
+    }
+}
+
+impl ToVenvId for &OsStr {
+    fn to_venv_id(&self) -> VenvId {
+        StrId::from(*self).to_venv_id()
+    }
+}

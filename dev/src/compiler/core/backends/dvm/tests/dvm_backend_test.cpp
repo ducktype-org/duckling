@@ -30,6 +30,10 @@ public:
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
 		TESTER_ADD_TEST(referencesTest);
+		// @TODO: #2246 This test works well when compiled with `duckc dvm_run` although fails when
+		// tested here because constructors aren't inserted properly. When this pipeline is unified,
+		// uncomment this test.
+		// TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(unitsTest);
 	}
 
@@ -135,6 +139,16 @@ private:
 			{},
 			"10\n20\n20\n20\n20\n21\n16\n20\n-20\n-20\n-40\n-"
 			"30\n222\n111\n222\n400\n400\n400\n500\n",
+			{},
+			0
+		);
+	}
+
+	void recordsTest() {
+		runTest(
+			"modules/records",
+			{},
+			"10\n20\n-1\n-2\n5\n15\n42\n50\n100\n101\n0\n300\n99\n2000\n0\n1\n",
 			{},
 			0
 		);
