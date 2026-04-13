@@ -12,21 +12,13 @@
 
 #include <expected>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 namespace state_machine {
-	struct PairHash {
-		template<class T1, class T2>
-		usize operator()(const std::pair<T1, T2>& p) const {
-			auto h1 = std::hash<T1>{}(p.first);
-			auto h2 = std::hash<T2>{}(p.second);
-			return h1 ^ (h2 + 0x9e'37'79'b9 + (h1 << 6) + (h1 >> 2));
-		}
-	};
-
 	template<typename T>
 	concept IsVariant = requires(T t) { std::visit([](auto&&) {}, t); };
 
@@ -45,26 +37,28 @@ namespace state_machine {
 	requires IsVariant<States> && IsVariant<Events> class StateMachineDefinition {
 	private:
 		// Type erased handlers, to store them in one map.
-		using RawAction = std::function<States(const States&, const Events&)>;
-		using RawGuard  = std::function<bool(const States&, const Events&)>;
+		using RawAction
+			= std::function<std::expected<States, std::string>(const States&, const Events&)>;
+		using RawGuard = std::function<bool(const States&, const Events&)>;
 
 		struct TransitionEntry {
 			RawAction action;
 			RawGuard  guard;
 		};
 
-		// Index of state and event in the variant.
-		using KEY_T = std::pair<usize, usize>;
+		static constexpr usize NUM_STATES = std::variant_size_v<States>;
+		static constexpr usize NUM_EVENTS = std::variant_size_v<Events>;
+
 		// (State, Event) -> (Action, Guard)
-		base::HashMap<KEY_T, TransitionEntry, PairHash> transitions;
-		// TODOP: Pozbyc sie hashmapy
+		std::array<std::array<base::Optional<TransitionEntry>, NUM_EVENTS>, NUM_STATES> transitions;
 
 	public:
 		// TypeSafe definition of a transition.
 		template<typename FromState, typename OnEvent>
 		struct Transition {
-			using Action = std::function<States(const FromState&, const OnEvent&)>;
-			using Guard  = std::function<bool(const FromState&, const OnEvent&)>;
+			using Action
+				= std::function<std::expected<States, std::string>(const FromState&, const OnEvent&)>;
+			using Guard = std::function<bool(const FromState&, const OnEvent&)>;
 		};
 
 		// Adds a allowed transition from the FromState(member of the States variant) and for a
@@ -79,8 +73,9 @@ namespace state_machine {
 			usize event_idx = variantIndex<Events, Event>();
 
 			// Not so strongly typed wrapper over action so they can be stored in one map.
-			RawAction raw_action
-				= [action = std::move(action)](const States& s, const Events& e) -> States {
+			RawAction raw_action = [action = std::move(action)](
+									   const States& s, const Events& e
+								   ) -> std::expected<States, std::string> {
 				return action(std::get<State>(s), std::get<Event>(e));
 			};
 
@@ -91,16 +86,20 @@ namespace state_machine {
 				return (*guard)(std::get<State>(s), std::get<Event>(e));
 			};
 
-			KEY_T key = std::make_pair(state_idx, event_idx);
-			transitions.put(key, { std::move(raw_action), std::move(raw_guard) });
+			transitions.at(state_idx).at(event_idx)
+				= TransitionEntry{ std::move(raw_action), std::move(raw_guard) };
 		}
 
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
 		[[nodiscard]] base::Optional<CRef<TransitionEntry>> getTransition() const {
-			usize state_idx = variantIndex<States, State>();
-			usize event_idx = variantIndex<Events, Event>();
-			return transitions.atMaybe({ state_idx, event_idx });
+			const usize state_idx = variantIndex<States, State>();
+			const usize event_idx = variantIndex<Events, Event>();
+
+			CORE_ASSERT(state_idx < NUM_STATES && event_idx < NUM_EVENTS, "Index out of bounds");
+			const auto& entry = transitions.at(state_idx).at(event_idx);
+			if (entry.has_value()) return CRef(&entry.value());
+			return {};
 		}
 	};
 
@@ -111,26 +110,30 @@ namespace state_machine {
 			  current_state(std::move(initial_state)),
 			  definition(def) {}
 
-		// TODOP: optional
-		std::expected<void, std::string> handleEvent(const Events& event) {
+		// Optional if the transition doesn't exist. std::expected if the transition succeded,
+		// std::unexpected if the transition failed.
+		base::Optional<std::expected<void, std::string>> handleEvent(const Events& event) {
 			return std::visit(
-				[&](auto&& inner_state, auto&& inner_event) -> std::expected<void, std::string> {
+				[&](auto&& inner_state,
+			        auto&& inner_event) -> base::Optional<std::expected<void, std::string>> {
 					using State           = std::decay_t<decltype(inner_state)>;
 					using Event           = std::decay_t<decltype(inner_event)>;
 					auto maybe_transition = definition.template getTransition<State, Event>();
-					if (maybe_transition.has_value()) {
-						const auto& transition = maybe_transition.value();
+					if (!maybe_transition.has_value()) return std::nullopt;
 
-						// Is guard is satisfied, then perform the action.
-						if (transition->guard(current_state, event)) {
-							current_state = transition->action(current_state, event);
-							return {};
-						} else {
-							return std::unexpected(std::string("Transition guard check failed."));
-						}
+					const auto& transition = maybe_transition.value();
 
+					// Check if the guard is satisfied.
+					if (!transition->guard(current_state, event))
+						return std::unexpected(std::string("Transition guard check failed."));
+
+					// Perform the state transition.
+					auto result = transition->action(current_state, event);
+					if (result.has_value()) {
+						current_state = std::move(result.value());
+						return std::expected<void, std::string>{};
 					} else {
-						return std::unexpected(std::string("Transition not found"));
+						return std::unexpected(std::move(result.error()));
 					}
 				},
 				current_state,
@@ -177,14 +180,13 @@ namespace event {
 
 	struct GetType {};
 
-
 	using VMProcessEvent = std::variant<LoadCode, Run, Pause, GetType>;
 }
 
 class VMProcess {
 private:
-	static const state_machine::StateMachineDefinition<state::VMProcessState, event::VMProcessEvent>&
-		getConfig() {
+	static const state_machine::StateMachineDefinition<state::VMProcessState, event::VMProcessEvent>& getConfig(
+	) {
 		static state_machine::StateMachineDefinition<state::VMProcessState, event::VMProcessEvent>
 			config;
 
@@ -193,10 +195,8 @@ private:
 			[](const state::NotStarted&, const event::LoadCode& code) -> state::VMProcessState {
 				std::cout << "Load code\n";
 				if (code.code[0] == 1) return state::Panicked("error");
-
 				return state::Ready{};
-			}  // TODOP: Guard  for not loading code during execution
-			,
+			},
 			{}
 		);
 
@@ -204,16 +204,14 @@ private:
 			[](const state::Ready&, const event::Run&) -> state::VMProcessState {
 				std::cout << "Running VMThread\n";
 				return state::Running{};
-			}  // TODOP: Guard  for not execution on non loaded code.
-			,
+			},
 			{}
 		);
 		config.addTransition<state::Ready, event::GetType>(
-			[](const state::Ready&, const event::Run&) -> state::VMProcessState {
+			[](const state::Ready&, const event::GetType&) -> state::VMProcessState {
 				std::cout << "Running VMThread\n";
 				return state::Ready{};
-			}  // TODOP: Guard  for not execution on non loaded code.
-			,
+			},
 			{}
 		);
 
@@ -221,8 +219,7 @@ private:
 			[](const state::Running&, const event::Pause&) -> state::VMProcessState {
 				std::cout << "VMThread paused\n";
 				return state::Paused{};
-			}  // TODOP: Guard  for not execution on non loaded code.
-			,
+			},
 			{}
 		);
 
@@ -237,13 +234,22 @@ public:
 	VMProcess(): state_machine(state::NotStarted{}, getConfig()) {}
 
 	ErrorT load(std::vector<i32> code) {
-
-		return state_machine.handleEvent(event::LoadCode{ std::move(code) });
+		auto res = state_machine.handleEvent(event::LoadCode{ std::move(code) });
+		if (res.has_value()) return res.value();
+		return std::unexpected("No transition found");
 	}
 
-	ErrorT start() { return state_machine.handleEvent(event::Run{}); }
+	ErrorT start() {
+		auto res = state_machine.handleEvent(event::Run{});
+		if (res.has_value()) return res.value();
+		return std::unexpected("No transition found");
+	}
 
-	ErrorT pause() { return state_machine.handleEvent(event::Pause{}); }
+	ErrorT pause() {
+		auto res = state_machine.handleEvent(event::Pause{});
+		if (res.has_value()) return res.value();
+		return std::unexpected("No transition found");
+	}
 
 	void printStatus() {
 		variant_match(state_machine.getState()) {
@@ -251,6 +257,7 @@ public:
 			variant_case_novalue(state::Ready) std::cout << "State: Ready\n";
 			variant_case_novalue(state::Running) std::cout << "State: Running\n";
 			variant_case_novalue(state::Paused) std::cout << "State: Paused\n";
+			variant_case_novalue(state::Panicked) std::cout << "State: Panicked\n";
 			variant_default { CORE_UNREACHABLE(); }
 		}
 	}
@@ -263,7 +270,7 @@ int main() {
 	vm.printStatus();  // Not started
 	CORE_ASSERT(!vm.start().has_value(), "Running empty on not code should fail");
 
-	CORE_ASSERT(vm.load({ 1, 2, 3 }).has_value(), "Load should succeed");
+	CORE_ASSERT(vm.load({ 2, 2, 3 }).has_value(), "Load should succeed");
 	vm.printStatus();  // Ready
 
 	CORE_ASSERT(vm.start().has_value(), "Start should succeed");
