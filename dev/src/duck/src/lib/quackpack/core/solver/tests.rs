@@ -174,27 +174,30 @@ dependencies:
     let root_path = manifest_path.parent().unwrap().to_path_buf();
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
     };
 
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
+    }
+    .into();
     let b_pkg = ExpandedPackage {
         location: loc_b,
         version: Some(2.into()),
@@ -285,27 +288,30 @@ dependencies:
     let root_path = manifest_path.parent().unwrap().to_path_buf();
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
     };
 
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
+    }
+    .into();
     let b_pkg = ExpandedPackage {
         location: loc_b,
         version: Some(2.into()),
@@ -401,18 +407,20 @@ dependencies:
     let root_path = manifest_path.parent().unwrap().to_path_buf();
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a1_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),

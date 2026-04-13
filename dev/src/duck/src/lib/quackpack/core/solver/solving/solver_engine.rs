@@ -389,14 +389,16 @@ metadata:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -486,14 +488,16 @@ dependencies:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -595,14 +599,16 @@ features:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -690,14 +696,16 @@ features:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -805,18 +813,21 @@ features:
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("c"),
         });
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_c = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("c"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),

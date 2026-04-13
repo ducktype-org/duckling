@@ -71,9 +71,9 @@ impl<'de> de::Deserialize<'de> for InternedExpandedLocation {
     }
 }
 
-impl From<ExpandedLocation> for InternedExpandedLocation {
-    fn from(value: ExpandedLocation) -> Self {
-        Self::new(value)
+impl<T: Into<ExpandedLocation>> From<T> for InternedExpandedLocation {
+    fn from(value: T) -> Self {
+        Self::new(value.into())
     }
 }
 

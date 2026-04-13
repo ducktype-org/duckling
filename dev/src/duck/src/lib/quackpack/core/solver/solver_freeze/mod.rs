@@ -143,7 +143,7 @@ impl SolverFreeze {
             pkg_freezes.push(FreezePackage::new(
                 package_manifest.name(),
                 package_manifest.version(),
-                freeze.features.into_iter().collect(),
+                freeze.features.into_iter().collect::<Vec<_>>(),
                 dependencies,
                 pkg.location,
             ));
@@ -164,7 +164,7 @@ impl SolverFreeze {
         let root = RootPackage::new(
             root_manifest.name(),
             root_manifest.version(),
-            root_freeze.features.into_iter().collect(),
+            root_freeze.features.into_iter().collect::<Vec<_>>(),
             root_deps,
         );
         Ok(VenvFreeze::new(root, pkg_freezes))
@@ -199,13 +199,15 @@ mod test {
 
     #[test]
     fn storage_to_solver_freeze() {
-        let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let loc_a = ExpandedLocation::Registry {
             url: Url::parse("https://example.net").unwrap(),
             real_name: "a".into(),
-        });
-        let loc_b = InternedExpandedLocation::new(ExpandedLocation::Local {
+        }
+        .into();
+        let loc_b = ExpandedLocation::Local {
             absolute_path: PathBuf::new().join("xdd"),
-        });
+        }
+        .into();
         let pkg_a = ExpandedPackage {
             location: loc_a,
             version: Some(1.into()),
@@ -233,9 +235,10 @@ mod test {
             ],
         );
         let root_pkg = ExpandedPackage {
-            location: InternedExpandedLocation::new(ExpandedLocation::Local {
+            location: ExpandedLocation::Local {
                 absolute_path: PathBuf::new(),
-            }),
+            }
+            .into(),
             version: None,
         };
         let storage_freeze = VenvFreeze::new(root, vec![freeze_pkg_a, freeze_pkg_b]);
@@ -322,16 +325,19 @@ features:
         let manifest_root = parse_manifest(&path_root, &ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let exp_location_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+        let exp_location_root = ExpandedLocation::Local {
             absolute_path: PathBuf::new().join("./root_path"),
-        });
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("https://example.net").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Local {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Local {
             absolute_path: PathBuf::new().join("./sialalala"),
-        });
+        }
+        .into();
         let exp_pkg_root = ExpandedPackage {
             location: exp_location_root,
             version: None,
@@ -399,14 +405,14 @@ features:
         let pkg_freeze_a = FreezePackage::new(
             "a".into(),
             1.into(),
-            ["f_a".into()].into(),
+            vec!["f_a".into()],
             vec![],
             exp_location_a,
         );
         let pkg_freeze_b = FreezePackage::new(
             "b".into(),
             2.into(),
-            ["f_b".into()].into(),
+            vec!["f_b".into()],
             vec![FreezeDep::new("a".into(), 1.into())],
             exp_location_b,
         );

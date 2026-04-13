@@ -407,17 +407,20 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_foo = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_foo = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "foo".into(),
-    });
-    let loc_bar = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_bar = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "bar".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([
@@ -541,17 +544,20 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_xd = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_xd = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "xd".into(),
-    });
-    let loc_dx = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_dx = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "dx".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([
@@ -611,17 +617,20 @@ features:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_xd = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_xd = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "xd".into(),
-    });
-    let loc_dx = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_dx = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "dx".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.possible_features
             == HashMap::from([
@@ -700,21 +709,25 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
-    let loc_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_c = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "c".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([

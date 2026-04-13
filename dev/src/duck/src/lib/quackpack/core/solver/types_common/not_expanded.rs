@@ -52,9 +52,9 @@ impl InternedLocation {
     }
 }
 
-impl From<Location> for InternedLocation {
-    fn from(value: Location) -> Self {
-        Self::new(value)
+impl<T: Into<Location>> From<T> for InternedLocation {
+    fn from(value: T) -> Self {
+        Self::new(value.into())
     }
 }
 

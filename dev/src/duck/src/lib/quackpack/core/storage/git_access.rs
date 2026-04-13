@@ -9,7 +9,7 @@ use crate::{
     util::path_ops_ext::{MkdirOptions, PathOpsExt},
 };
 
-use super::package_id::{GitId, PackageId};
+use super::package_id::GitId;
 
 use super::paths::Storage;
 #[derive(Debug, Clone, Copy)]
@@ -27,16 +27,16 @@ impl<'paths> StorageGitAccess<'paths> {
 
 impl GitAccess for StorageGitAccess<'_> {
     fn git_path(&self, url: Url, commit: StrId) -> PathBuf {
-        self.paths.pkg_dir(&PackageId::Git(GitId::new(url, commit)))
+        self.paths.pkg_dir(&GitId::new(url, commit).into())
     }
 
     fn is_stored(&self, url: Url, commit: StrId) -> bool {
         self.paths
-            .is_package_stored(&PackageId::Git(GitId::new(url, commit)))
+            .is_package_stored(&GitId::new(url, commit).into())
     }
 
     fn store(&mut self, url: Url, commit: StrId, source_path: &Path) -> QuackResult<()> {
-        let id = PackageId::Git(GitId::new(url, commit));
+        let id = GitId::new(url, commit).into();
         let dir = self.paths.pkg_dir(&id);
         if dir.exists() {
             dir.rmtree()?;

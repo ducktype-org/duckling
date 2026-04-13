@@ -26,10 +26,7 @@ use crate::{
             },
             git_access::GitAccess,
             solver_mode::SolverMode,
-            types_common::{
-                ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
-                Location,
-            },
+            types_common::{ExpandedLocation, ExpandedPackage, InternedLocation, Location},
         },
         schemas::registry,
     },
@@ -136,9 +133,10 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 origin_location: root_loc,
                 fetched_manifests: HashMap::from([(
                     ExpandedPackage {
-                        location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                        location: ExpandedLocation::Local {
                             absolute_path: root_path,
-                        }),
+                        }
+                        .into(),
                         version: None,
                     },
                     Box::new(root_manifest),
@@ -192,10 +190,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         let Some(fetcher_response) = fetcher_response.0 else {
             return Ok(GathererComputation(fetch_failure(), fetcher_response.1));
         };
-        let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let expanded_loc = ExpandedLocation::Registry {
             url: url.clone(),
             real_name: *real_name,
-        });
+        }
+        .into();
         let FetcherResponse::Some(registry_manifest) = fetcher_response else {
             return Ok(GathererComputation::only_success(fetch_failure()));
         };
@@ -245,10 +244,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         let FetcherResponse::Some(fetcher_response) = fetcher_response else {
             return GathererComputation::only_success(fetch_failure());
         };
-        let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let expanded_loc = ExpandedLocation::Registry {
             url: url.clone(),
             real_name,
-        });
+        }
+        .into();
         let mut fetch_response = NotPinnedSuccess {
             origin_location: request.location,
             fetched_manifests: HashMap::new(),
@@ -314,10 +314,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
             return GathererComputation(fetch_failure(), fetcher_response.1);
         };
-        let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Git {
+        let expanded_loc = ExpandedLocation::Git {
             url: url.clone(),
             commit: cloned_pkg.commit_hash,
-        });
+        }
+        .into();
         if !self
             .git_access
             .is_stored(url.clone(), cloned_pkg.commit_hash)
@@ -360,10 +361,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 branch_or_tag,
                 rev,
             });
-            let expanded_location = InternedExpandedLocation::new(ExpandedLocation::Git {
+            let expanded_location = ExpandedLocation::Git {
                 url: url.clone(),
                 commit,
-            });
+            }
+            .into();
             let storage_local_request = NotPinnedRequest {
                 location: InternedLocation::new(Location::Local { path: path.clone() }),
                 versions: None,
@@ -398,9 +400,10 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         match pcx {
             Ok(pcx) => {
                 let exp_pkg = ExpandedPackage {
-                    location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                    location: ExpandedLocation::Local {
                         absolute_path: path.to_path_buf(),
-                    }),
+                    }
+                    .into(),
                     version: None,
                 };
                 GathererComputation::only_success(FetchResponse::Success(FetchSuccess::NotPinned(

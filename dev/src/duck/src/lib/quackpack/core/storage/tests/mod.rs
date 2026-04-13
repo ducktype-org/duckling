@@ -13,7 +13,7 @@ use crate::{
             venv::Venv,
             venv_id::ToVenvId,
         },
-        types_common::{ExpandedLocation, InternedExpandedLocation},
+        types_common::ExpandedLocation,
     },
     util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
@@ -132,10 +132,11 @@ fn setup_mock_venvs(root: &Path) {
         dep.version(),
         vec![],
         vec![],
-        InternedExpandedLocation::new(ExpandedLocation::Registry {
+        ExpandedLocation::Registry {
             url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
             real_name: dep.name(),
-        }),
+        }
+        .into(),
     );
     setup_mock_venv(
         root,
@@ -156,10 +157,11 @@ fn setup_mock_venvs(root: &Path) {
         dep.version(),
         vec![],
         vec![],
-        InternedExpandedLocation::new(ExpandedLocation::Registry {
+        ExpandedLocation::Registry {
             url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
             real_name: dep.name(),
-        }),
+        }
+        .into(),
     );
 
     setup_mock_venv(

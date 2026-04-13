@@ -65,6 +65,12 @@ pub trait ToVenvId {
     fn to_venv_id(&self) -> VenvId;
 }
 
+impl ToVenvId for VenvId {
+    fn to_venv_id(&self) -> VenvId {
+        *self
+    }
+}
+
 impl<T: ToVenvId> ToVenvId for &T {
     fn to_venv_id(&self) -> VenvId {
         (*self).to_venv_id()

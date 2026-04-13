@@ -19,12 +19,12 @@ use crate::{
             freeze::VenvFreeze,
             git_access::StorageGitAccess,
             locks::TrySyncLock,
-            package_id::{GitId, PackageId, RegistryId},
+            package_id::{GitId, RegistryId},
             paths::Storage,
             venv::{Venv, VenvData},
             venv_id::{ToVenvId, VenvId},
         },
-        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
+        types_common::{ExpandedLocation, ExpandedPackage},
     },
     util::path_ops_ext::{PathOpsExt, ShouldBlock},
 };
@@ -202,9 +202,10 @@ fn get_solver_answer(
 ) -> QuackResult<SolverAnswer> {
     debug!(?mode);
     let root_pkg = ExpandedPackage {
-        location: InternedExpandedLocation::new(ExpandedLocation::Local {
+        location: ExpandedLocation::Local {
             absolute_path: pcx.package().root_directory().to_path_buf(),
-        }),
+        }
+        .into(),
         version: None,
     };
     let solver_freeze = match input_freeze {
@@ -262,7 +263,7 @@ fn fetch_source_code(
     match pkg.location.as_ref() {
         ExpandedLocation::Local { absolute_path: _ } => Ok(false),
         ExpandedLocation::Git { url, commit } => {
-            let pkg_id = PackageId::Git(GitId::new(url.clone(), *commit));
+            let pkg_id = GitId::new(url.clone(), *commit).into();
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }
@@ -282,7 +283,7 @@ fn fetch_source_code(
             let Some(version) = pkg.version else {
                 qp_bail_internal!("Registry package without version");
             };
-            let pkg_id = PackageId::Registry(RegistryId::new(*real_name, version, url.clone()));
+            let pkg_id = RegistryId::new(*real_name, version, url.clone()).into();
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }

@@ -45,7 +45,7 @@ use crate::{
         solver_freeze::SolverFreeze,
         solver_mode::SolverMode,
         solving::solver_engine::{SolverEngine, SolverInput},
-        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
+        types_common::{ExpandedLocation, ExpandedPackage},
     },
 };
 
@@ -93,9 +93,10 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         Self {
             root_pcx: pcx,
             root_pkg: ExpandedPackage {
-                location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                location: ExpandedLocation::Local {
                     absolute_path: pcx.package().root_directory().to_path_buf(),
-                }),
+                }
+                .into(),
                 version: None,
             },
             root_pkg_features: pcx

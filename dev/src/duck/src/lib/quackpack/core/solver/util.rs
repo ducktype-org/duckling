@@ -124,14 +124,16 @@ dependencies:
             .dependencies()
             .get_by_name(StrId::new("b"))
             .unwrap();
-        let location_b = InternedLocation::new(Location::Registry {
+        let location_b = Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
             exp_location_b,
@@ -175,14 +177,16 @@ dependencies:
             .dependencies()
             .get_by_name(StrId::new("b"))
             .unwrap();
-        let location_b = InternedLocation::new(Location::Registry {
+        let location_b = Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
             exp_location_b,

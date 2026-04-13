@@ -42,6 +42,24 @@ impl PackageId {
     }
 }
 
+impl From<RegistryId> for PackageId {
+    fn from(value: RegistryId) -> Self {
+        Self::Registry(value)
+    }
+}
+
+impl From<GitId> for PackageId {
+    fn from(value: GitId) -> Self {
+        Self::Git(value)
+    }
+}
+
+impl From<LocalId> for PackageId {
+    fn from(value: LocalId) -> Self {
+        Self::Local(value)
+    }
+}
+
 #[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 /// An ID of a stored registry package.
 pub struct RegistryId {
