@@ -87,7 +87,7 @@ namespace vm::loader::compiler {
 			/**
 			 * @brief Total size of the globals compiled up to this point, in bytes.
 			 */
-			usize global_buffer_size = 0;
+			Bytes global_buffer_size = Bytes(0);
 		};
 
 		/**

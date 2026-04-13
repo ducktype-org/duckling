@@ -63,10 +63,8 @@ namespace vm {
 		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
 		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
 
-		std::byte* global_data_buffer_base
-			= nullptr;  /// Pointer to the start of global data buffer.
-		Block** global_block_ref_buffer_base
-			= nullptr;  /// Pointer to the start of global block ref buffer.
+		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
+		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
 		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointers global_buffer_pointers):
 			  frame_stack_base(stack->getFrameStack()->data()),

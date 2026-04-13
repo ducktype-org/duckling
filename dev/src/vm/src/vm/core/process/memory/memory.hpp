@@ -174,18 +174,30 @@ namespace vm {
 		 */
 		void deinitGlobals();
 
-		struct GlobalBlocks {
+		struct GlobalBlocksConfig {
 			std::vector<usize>    global_data_offsets;
 			std::vector<usize>    global_blocks_idxs;
 			std::vector<TypeCRef> global_types;
-			usize                 total_global_data_size = 0;
-			usize                 global_count           = 0;
+			Bytes                 total_global_data_size;
+			usize                 global_count;
 		};
 
 		/**
-		 * @brief Reallocates the buffer and blocks storages for globals.
+		 * @brief Allocates the memory for the global variables based on the provided configuration
+		 * and creates the blocks for them. Works in the incremental setting, so only the new global
+		 * variables are created, and the existing ones are left unchanged. The VMProcess can call
+		 * this function when new global variables are added to the program.
+		 *
+		 * Does not support shrinking of the global buffer or decreasing the global count,
+		 * meaning it can only be used to add new global variables.
+		 *
+		 * @warning It may invalidate the pointers to the global buffer, after calling this function
+		 * always update the obtained pointers.
+		 *
+		 * @param global_blocks The configuration for the global blocks to initialize.
+		 * @return The new pointers to the global data buffer and global blocks buffer.
 		 */
-		void reallocateGlobalBlocks(const GlobalBlocks& global_blocks);
+		GlobalBufferPointers initializeNewGlobalBlocks(const GlobalBlocksConfig& global_blocks);
 
 		// =================== Used by executor ===================
 
@@ -223,8 +235,24 @@ namespace vm {
 		 */
 		void freeBlockData(Ref<Block> block);
 
+		/**
+		 * @brief Checks if the global variable in the block has been initialized (constructor has
+		 * been called).
+		 *
+		 * Should be called from a place where the runtime initialization is happening.
+		 *
+		 * @param global_block The block of the global variable to check.
+		 * @return True if the global variable has been initialized, false otherwise.
+		 */
 		bool isGlobalInitialized(Ref<Block> global_block);
 
+		/**
+		 * @brief Set the global as initialized (the constructor has been called).
+		 *
+		 * Should be called from a place where the runtime initialization is happening.
+		 *
+		 * @param global_block The block of the global variable to set as initialized.
+		 */
 		void setGlobalInitialized(Ref<Block> global_block);
 
 		/**

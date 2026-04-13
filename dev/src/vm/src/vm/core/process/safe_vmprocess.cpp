@@ -351,14 +351,16 @@ namespace vm {
 		auto global_types = program->getGlobals() | views::transform(&low::LowGlobalData::type)
 		                  | to<std::vector>();
 
-		memory.reallocateGlobalBlocks(Memory::GlobalBlocks{
-			.global_data_offsets    = std::move(global_offsets),
-			.global_blocks_idxs     = std::move(global_indices),
-			.global_types           = std::move(global_types),
-			.total_global_data_size = global_buffer_config.buffer_size,
-			.global_count           = global_buffer_config.global_count });
+		auto new_global_buffer_pointers
+			= memory.initializeNewGlobalBlocks(Memory::GlobalBlocksConfig{
+				.global_data_offsets    = std::move(global_offsets),
+				.global_blocks_idxs     = std::move(global_indices),
+				.global_types           = std::move(global_types),
+				.total_global_data_size = global_buffer_config.buffer_size,
+				.global_count           = global_buffer_config.global_count,
+			});
 
 		for (auto& thread: vm_threads)
-			thread.updateGlobalDataBufferPointers(memory.getGlobalDataMemory());
+			thread.updateGlobalDataBufferPointers(new_global_buffer_pointers);
 	}
 }

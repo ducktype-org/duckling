@@ -22,12 +22,14 @@ namespace vm {
 inline static std::byte* getBytePtrFromPlaceArg(
 	std::byte* local_stack, std::byte* global_buffer, u64 arg
 ) {
-	uint64_t offset  = arg & 0x7F'FF'FF'FF'FF'FF'FF'FF;
-	uint64_t on_bit  = arg >> 63;
-	auto     address = (std::byte*) (((uint64_t) global_buffer * on_bit)   // NOLINT
-                                 + ((uint64_t) local_stack * !on_bit)  // NOLINT
-                                 + offset);                            // NOLINT
-	return address;
+	// Extract the highest bit.
+	bool is_global = (arg >> 63) != 0;
+
+	// Mask out the highest bit to get the offset.
+	u64 offset = arg & ~(1ULL << 63);
+	// The compiler will turn this ternary into a fast, branchless `cmov`.
+	std::byte* base = is_global ? global_buffer : local_stack;
+	return base + offset;
 }
 
 /**
@@ -38,14 +40,16 @@ inline static std::byte* getBytePtrFromPlaceArg(
  */
 [[nodiscard]] [[gnu::always_inline]]
 inline static Ref<vm::Block> getBlockRefFromArg(
-	vm::Block** local_stack_blocks, vm::Block** global_buffer_blocks, u64 place_arg
+	vm::Block** local_stack_blocks, vm::Block** global_buffer_blocks, u64 arg
 ) {
-	uint64_t offset = place_arg & 0x7F'FF'FF'FF'FF'FF'FF'FF;
-	uint64_t on_bit = place_arg >> 63;
-	auto     address
-		= (vm::Block**) (((uint64_t) global_buffer_blocks * on_bit)                  // NOLINT
-	                     + ((uint64_t) local_stack_blocks * !on_bit) + offset * 8);  // NOLINT
-	return { *address };
+	// Extract the highest bit.
+	bool is_global = (arg >> 63) != 0;
+
+	// Mask out the highest bit to get the offset.
+	u64 offset = arg & ~(1ULL << 63);
+
+	vm::Block** base = is_global ? global_buffer_blocks : local_stack_blocks;
+	return { base[offset] };
 }
 
 /**
@@ -68,9 +72,7 @@ template<typename T>
 inline static void writeToPlace(
 	std::byte* local_stack, std::byte* global_buffer, u64 place_arg, const T& value
 ) {
-	return vm::safeWriteBytes<T>(
-		getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg), value
-	);
+	vm::safeWriteBytes<T>(getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg), value);
 }
 
 /**

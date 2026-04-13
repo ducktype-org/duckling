@@ -97,7 +97,7 @@ namespace vm::low {
 		 * Used mainly by the VMProcess to determine the amount of memory to allocate for the globals.
 		 */
 		struct GlobalBufferConfig {
-			usize buffer_size;   /// The sum of sizes of all the global variables in the program.
+			Bytes buffer_size;   /// The sum of sizes of all the global variables in the program.
 			usize global_count;  /// The count of global variables in the program
 		};
 
@@ -155,7 +155,7 @@ namespace vm::low {
 		ObjIdNameMap<LowFuncData, usize>          functions{};
 		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
-		usize                                     global_buffer_size = 0;
+		Bytes                                     global_buffer_size = Bytes(0);
 		usize                                     global_count       = 0;
 
 		// Contains all method names in the program. It's used by the executor to determine the

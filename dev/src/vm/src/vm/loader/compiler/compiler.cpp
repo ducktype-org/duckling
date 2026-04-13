@@ -65,7 +65,7 @@ namespace vm::loader::compiler {
 				return compiler.low_program.getGlobals().at(opcode_arg.global_data_name)->global_buffer_offset | (1ULL << 63);
 			}
 			else {
-				return u64(-1);
+				CORE_PANIC("Invalid argument type for PlaceDataArgumentType");
 			}
 		);
 
@@ -79,7 +79,7 @@ namespace vm::loader::compiler {
 				return compiler.low_program.getGlobals().at(opcode_arg.global_data_name)->global_block_idx | (1ULL << 63);
 			}
 			else {
-				return u64(-1);
+				CORE_PANIC("Invalid argument type for PlaceBlockArgumentType");
 			}
 		);
 
@@ -377,13 +377,13 @@ namespace vm::loader::compiler {
 				.type                 = low_program.types->at(global.type),
 				.ctor_name            = ctor_name,
 				.dtor_name            = dtor_name,
-				.global_buffer_offset = program_ctx.global_buffer_size,
+				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
 				.global_block_idx     = program_ctx.global_count,
 			};
 			low_program.global_data.insert(data, global.name);
 
 			program_ctx.global_count += 1;
-			program_ctx.global_buffer_size += data.type->getSize().asInt();
+			program_ctx.global_buffer_size += Bytes(data.type->getSize().asInt());
 		}
 
 		low_program.global_buffer_size = program_ctx.global_buffer_size;
