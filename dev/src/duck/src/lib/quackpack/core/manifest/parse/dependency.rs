@@ -50,7 +50,7 @@ pub(crate) fn parse(
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
-#[tracing::instrument(skip(ctx, scope, package_root))]
+#[tracing::instrument(skip_all, fields(name = %manifest_name))]
 fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
@@ -58,7 +58,7 @@ fn parse_single_dependency(
     ctx: &DuckContext,
     scope: &mut Scope,
 ) -> QuackResult<Dependency> {
-    trace!("parsing a dependency");
+    trace!(?schema, "parsing a dependency");
     scope.push("source".into());
     let source = source::parse(schema, package_root, ctx, scope)?;
     scope.pop();
@@ -100,7 +100,7 @@ fn parse_single_dependency(
 }
 
 /// Parse dependency's features
-#[tracing::instrument(skip(scope))]
+#[tracing::instrument(skip_all)]
 fn parse_features(
     schema: Option<&Vec<FeatureSchema>>,
     scope: &mut Scope,
@@ -108,6 +108,7 @@ fn parse_features(
     let Some(schema) = schema else {
         return Ok(vec![]);
     };
+    debug!(?schema);
     let mut result = vec![];
     for feature in schema {
         debug!("parsing {feature:?}");

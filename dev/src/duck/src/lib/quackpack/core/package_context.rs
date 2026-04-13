@@ -16,7 +16,7 @@ pub struct PackageContext<'duck> {
 
 impl<'duck> PackageContext<'duck> {
     /// Create new [`PackageCtx`]
-    #[tracing::instrument]
+    #[tracing::instrument(skip_all)]
     pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
         let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);

@@ -148,8 +148,9 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
     }
 
     /// Helper for [`Gatherer::explore()`], performs a fetch.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip_all)]
     pub fn fetch(&mut self, request: ManifestsRequest) -> GathererResult<FetchResponse> {
+        debug!(?request);
         match request {
             ManifestsRequest::Pinned(pinned_request) => self.fetch_registry_pinned(pinned_request),
             ManifestsRequest::NotPinned(not_pinned_request) => {

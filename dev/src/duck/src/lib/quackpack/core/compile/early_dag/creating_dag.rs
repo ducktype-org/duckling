@@ -1,5 +1,7 @@
 //! Entrypoints for creating a new [`EarlyDag`] and friends.
 
+use tracing::debug;
+
 use crate::{
     DuckContext, QuackResultContext, qp_bail, qp_bail_internal,
     quackpack::core::{
@@ -46,11 +48,12 @@ impl DependencyDag {
     }
 
     /// Checks, whether `graph` rooted at `root` is complete.
-    #[tracing::instrument]
+    #[tracing::instrument(skip_all)]
     fn check_is_complete_graph(
         root: FreezeDep,
         graph: &HashMap<FreezeDep, DependencyNode>,
     ) -> QuackResult<()> {
+        debug!(%root, ?graph, "checking completeness");
         for (k, v) in graph {
             for dep in v.dependencies() {
                 if !graph.contains_key(dep) {
@@ -67,11 +70,12 @@ impl DependencyDag {
     }
 
     /// Checks, that the `graph` rooted at `root` doesn't have cycles.
-    #[tracing::instrument]
+    #[tracing::instrument(skip_all)]
     fn check_no_cycles(
         root: FreezeDep,
         dag: &HashMap<FreezeDep, DependencyNode>,
     ) -> QuackResult<()> {
+        debug!(%root, graph = ?dag, "checking cycles");
         #[derive(Debug, Eq, PartialEq)]
         enum State {
             Entered,
@@ -124,13 +128,14 @@ impl DependencyNode {
 }
 
 /// Parses the dependency from the freezefile using data in the storage.
-#[tracing::instrument(skip(storage, ctx))]
+#[tracing::instrument(skip_all)]
 fn parse_dependency(
     dep: &FreezePackage,
     storage: &Storage,
     ctx: &DuckContext,
     pkg_type: PackageType,
 ) -> QuackResult<CompilerPackage> {
+    debug!(?dep, type = %pkg_type, "parsing dep");
     let storage_id = dep.to_package_id();
     let directory = storage.pkg_dir(&storage_id);
     let ctx =
@@ -185,7 +190,7 @@ impl EarlyDag {
     /// Also note that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
-    #[tracing::instrument(skip(bcx))]
+    #[tracing::instrument(skip_all)]
     pub fn new_early(bcx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
         let graph = DependencyDag::new(&bcx.freeze)?;

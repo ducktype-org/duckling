@@ -45,11 +45,12 @@ pub struct StorageSyncOptions {
 }
 
 /// Synchronize virtual environment for package, and return information required to build it.
-#[tracing::instrument(skip(pcx), fields(%root = pcx.package().root_directory().display()))]
+#[tracing::instrument(skip_all)]
 pub fn sync(
     pcx: &PackageContext<'_>,
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
+    debug!(root = %pcx.package().root_directory().display(), ?options);
     let venv_config = pcx.venv_config();
     let storage_localization = venv_config
         .storage_path()?
@@ -191,7 +192,7 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Prepares the input and runs [`SolverGathererData::prepare_solving`].
-#[tracing::instrument(skip(pcx, fetcher, git_access, input_freeze))]
+#[tracing::instrument(skip_all)]
 fn get_solver_answer(
     pcx: &PackageContext<'_>,
     fetcher: &mut Fetcher<'_>,
@@ -199,6 +200,7 @@ fn get_solver_answer(
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
+    debug!(?mode);
     let root_pkg = ExpandedPackage {
         location: InternedExpandedLocation::new(ExpandedLocation::Local {
             absolute_path: pcx.package().root_directory().to_path_buf(),
@@ -249,13 +251,14 @@ fn fetch_source_codes(
 
 /// Helper for [`fetch_source_codes`].
 /// Fetches the source code of a package if it is not yet stored in the storage.
-#[tracing::instrument(skip(storage, fetcher))]
+#[tracing::instrument(skip_all)]
 fn fetch_source_code(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
     pkg: ExpandedPackage,
 ) -> QuackResult<bool> {
+    debug!(?pkg);
     match pkg.location.as_ref() {
         ExpandedLocation::Local { absolute_path: _ } => Ok(false),
         ExpandedLocation::Git { url, commit } => {
