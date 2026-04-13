@@ -32,7 +32,7 @@ impl<'duck> PackageCtx<'duck> {
     /// Create new [`PackageCtx`] and ensure its name does not conflict with the global package name.
     pub fn new_not_global(project_root: PathBuf, ctx: &'duck DuckCtx) -> QuackResult<Self> {
         let this = Self::new(project_root, ctx)?;
-        if this.package.manifest().name() == DuckHome::GLOBAL_PACKAGE_NAME {
+        if this.package.is_global() {
             qp_bail!(
                 "The name {} is restricted to the global package",
                 DuckHome::GLOBAL_PACKAGE_NAME

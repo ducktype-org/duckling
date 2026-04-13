@@ -10,7 +10,7 @@
 //! └── storage/ <root of the storage internal files>
 
 use crate::{
-    QuackResult, StrId,
+    QuackResult,
     quackpack::core::PackageLoader,
     util::{env::Env, path_ops_ext::PathOpsExt},
 };
@@ -226,7 +226,7 @@ impl DuckHome {
     pub const GLOBAL_PACKAGE_NAME: &str = "__global__";
 
     /// Default minimal manifest for the global package.
-    pub fn default_global_manifest() -> StrId {
+    pub fn default_global_manifest() -> String {
         format!(
             "\
 metadata:
@@ -235,7 +235,6 @@ metadata:
   authors: []",
             Self::GLOBAL_PACKAGE_NAME
         )
-        .into()
     }
 
     /// Assure that the global package root folder exists and there is a manifest in it.
