@@ -12,15 +12,15 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/symbol_type.hpp>
-#include <tsh/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>

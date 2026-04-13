@@ -1,5 +1,5 @@
-#include <tsh/abstract_type.hpp>
-#include <tsh/queries/types.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -78,4 +78,4 @@ public:
 	~HigherTypeSystemErrorTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/src/compiler/core/tsh/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/helios/tests/")
