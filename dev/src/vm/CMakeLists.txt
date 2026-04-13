@@ -131,22 +131,25 @@ function(add_vm_variant suffix compile_def)
         add_custom_command(
             OUTPUT ${common_bc} ${extracted_func_file}
             # Links all opcodes together, without optimizations.
-            COMMAND ${JIT_LLVM_LINKER}
+            COMMAND ${LLVM_LINK}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
-                $<TARGET_OBJECTS:cp-stencils_bc>
+                # $<TARGET_OBJECTS:cp-stencils_bc>
                 ${vm_dep_objects_bc}
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
         
             # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"            
-            COMMAND bash -c
-            "llvm-nm-19 ${common_bc} | awk '\$2~/[Tt]/ && \$3~/OpFuns/ && \$3~/op_/ && \$3!~/debug/ {print \$3}' > ${extracted_func_file}"
+            COMMAND ${CMAKE_SOURCE_DIR}/.venv/bin/python3
+                ${CMAKE_SOURCE_DIR}/scripts/py/jit/opcodes_interface.py
+                ${LLVM_TOOLS_ARGS}
+                -i ${common_bc}
+                -o ${extracted_func_file}
             
             # Strip global constructors, they are not necessery for jit.
-            COMMAND llvm-extract-19 --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
+            COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
 
-            COMMAND ${JIT_LLVM_OPT}
+            COMMAND ${LLVM_OPT}
                 -passes=globalopt,internalize,attributor,simplifycfg,default<O3>,strip-dead-prototypes,default<O3>
                 --internalize-public-api-file=${extracted_func_file}
                 ${common_bc}
@@ -154,7 +157,8 @@ function(add_vm_variant suffix compile_def)
 
             VERBATIM
             DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
-                    cp-stencils_bc
+                    # cp-stencils_bc
+                    ${CMAKE_SOURCE_DIR}/scripts/py/jit/opcodes_interface.py
                     $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
                     # Here dependency to both bc files and targets is necessery.
                     ${vm_dep_objects_bc} # File dependency ensures each file will tracked and program will be rebuild if it changes.
