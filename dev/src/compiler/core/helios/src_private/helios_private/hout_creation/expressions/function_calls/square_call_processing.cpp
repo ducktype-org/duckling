@@ -7,6 +7,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <tsh/queries/types.hpp>
 
@@ -53,7 +54,7 @@ namespace compiler::helios::code {
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable
 			};
-			auto index_res = getHoutOfExprWithExpectedType(ctx, index_pst, i64_type);
+			auto index_res = subExprFromPSTWithType(ctx, index_pst, i64_type);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> index_expr =, index_res);
 
 			return makeBox<IndexExpr>(
@@ -103,7 +104,7 @@ namespace compiler::helios::code {
 				};
 			}();
 
-			auto arg_res = getHoutOfExprWithExpectedType(ctx, arg_pst, expected_index_arg_type);
+			auto arg_res = subExprFromPSTWithType(ctx, arg_pst, expected_index_arg_type);
 			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
 
 			auto total_origin = pstOrigin(base->origin, arg_pst.unlock(ctx));

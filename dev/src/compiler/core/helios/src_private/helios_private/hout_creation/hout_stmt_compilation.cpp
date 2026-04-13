@@ -98,6 +98,13 @@ namespace compiler::helios {
 				query::throwFailed();
 			}
 
+			if (op != base::StrID("=")) {
+				auto assignment_expr
+					= ctx.query<QueryHoutOfExpr>({ assignment })->valueOrThrow().ref();
+				output(code::ExprStmt(code::pstOrigin(assignment), assignment_expr->clone()));
+				return;
+			}
+
 			auto var = assignment->getVariables();
 			auto val = assignment->getValue();
 
@@ -149,50 +156,6 @@ namespace compiler::helios {
 					std::move(new_value_expr_coerced)
 				));
 				return;
-			} else if (op == base::StrID("+=")) {
-				// @TODO: #1970 This implementation is temporary and should be handled by the
-				// `+=` operator in the future.
-				if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-					auto dyn_array    = location_type.getType().as<tsh::DynamicArrayAbstractType>();
-					auto element_type = dyn_array.getElementType();
-					auto value_expr_coerced
-						= getHoutOfExprWithExpectedType(ctx, val, element_type).valueOrThrow();
-
-					output(code::ExprStmt(
-						code::pstOrigin(assignment),
-						makeBox<code::ListPushExpr>(
-							code::pstOrigin(assignment),
-							std::move(location_expr),
-							std::move(value_expr_coerced)
-						)
-					));
-					return;
-				}
-			} else if (op == base::StrID("-=")) {
-				// @TODO: #1970 This implementation is temporary and should be handled by the
-				// `-=` operator in the future.
-				if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-					auto u64_type = tsh::SymbolType<>{
-						tsh::getIntegralType(
-							ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-						),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					};
-
-					auto value_expr_coerced
-						= getHoutOfExprWithExpectedType(ctx, val, u64_type).valueOrThrow();
-
-					output(code::ExprStmt(
-						code::pstOrigin(assignment),
-						makeBox<code::ListPopExpr>(
-							code::pstOrigin(assignment),
-							std::move(location_expr),
-							std::move(value_expr_coerced)
-						)
-					));
-					return;
-				}
 			}
 
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(

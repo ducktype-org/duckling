@@ -23,6 +23,7 @@
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/square_call_processing.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -390,8 +391,8 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
 			//  @TODO: #1530 This is a temporary mock implementation
-			auto hout_expr_result = query_ctx.query<QueryHoutOfExpr>({ keyword });
-			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, hout_expr_result);
+			auto hout_expr_result = subExprFromPST(query_ctx, keyword);
+			UNPACK_QRESULT_MOVE(auto hout_expr =, hout_expr_result);
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
@@ -406,15 +407,15 @@ namespace compiler::helios::code {
 					}
 
 					auto arg_access      = (*args->begin()).unlock(query_ctx);
-					auto arg_expr_result = query_ctx.query<QueryHoutOfExpr>(
-						arg_access->getArg().unlock(query_ctx)->getExpr()
+					auto arg_expr_result = subExprFromPST(
+						query_ctx, arg_access->getArg().unlock(query_ctx)->getExpr()
 					);
-					UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> arg_expr =, arg_expr_result);
+					UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 					auto cast_expr = makeBox<CastExpr>(
 						query_ctx,
 						multiplePstOrigin({ keyword, call_expr }),
-						arg_expr->clone(),
+						std::move(arg_expr),
 						literal_type_expr->value_type
 					);
 					return ChainState::ofExpr(std::move(cast_expr));
@@ -426,7 +427,8 @@ namespace compiler::helios::code {
 				break;
 			}
 			case lexer::Token::Square: {
-				auto square_call_res = processSquareCall(query_ctx, hout_expr->clone(), call_expr);
+				auto square_call_res
+					= processSquareCall(query_ctx, std::move(hout_expr), call_expr);
 				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 				return ChainState::ofExpr(std::move(expr));
 			}
@@ -469,12 +471,12 @@ namespace compiler::helios::code {
 		 * is a more complicated expression like (NS1.NS2).a.b.c
 		 */
 		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr) -> query::QResult<ChainState> {
-			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
-			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, expr);
-			auto symbol = getIdentifierExprSymID(hout_expr);
+			auto expr_result = subExprFromPST(query_ctx, pst_expr);
+			UNPACK_QRESULT_MOVE(auto expr =, expr_result);
+			auto symbol = getIdentifierExprSymID(expr.ref());
 			if (symbol.has_value())
 				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr), pst_expr);
-			return ChainState::ofExpr(hout_expr->clone());
+			return ChainState::ofExpr(std::move(expr));
 		}
 
 		/**
