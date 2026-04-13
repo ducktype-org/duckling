@@ -24,17 +24,13 @@
 //!         ├── <package id>
 //!         └── ...
 
-use std::{
-    fs::ReadDir,
-    path::{Path, PathBuf},
-};
-
-use crate::{
-    QuackResult, qp_bail_internal, quackpack::core::storage::venv_id::VenvId,
-    util::path_ops_ext::PathOpsExt,
-};
+use std::fs::ReadDir;
+use std::path::{Path, PathBuf};
 
 use super::package_id::PackageId;
+use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{QuackResult, qp_bail_internal};
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";
 const VENV_SYNC_LOCK_FILENAME: &str = "venv_sync";

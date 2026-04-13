@@ -1,15 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{
-    QuackResult, QuackResultContext,
-    quackpack::core::{
-        Dependency, Version,
-        solver::types_common::{
-            ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
-        },
-        version::CompatibilityCheck,
-    },
+use crate::quackpack::core::solver::types_common::{
+    ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
 };
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{Dependency, Version};
+use crate::{QuackResult, QuackResultContext};
 
 /// For a given dpendency entry from the manifest and
 /// given all the found versions of a package from some location,
@@ -73,23 +69,19 @@ pub fn get_possible_realizations(
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        path::PathBuf,
-    };
+    use std::collections::{HashMap, HashSet};
+    use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
-    use crate::{
-        DuckContext, StrId,
-        quackpack::core::{
-            Version, parse_manifest,
-            solver::types_common::{ExpandedLocation, ExpandedPackage, Location},
-            solver::util::get_possible_realizations,
-        },
-        util::path_ops_ext::PathOpsExt,
+    use crate::quackpack::core::solver::types_common::{
+        ExpandedLocation, ExpandedPackage, Location,
     };
+    use crate::quackpack::core::solver::util::get_possible_realizations;
+    use crate::quackpack::core::{Version, parse_manifest};
+    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

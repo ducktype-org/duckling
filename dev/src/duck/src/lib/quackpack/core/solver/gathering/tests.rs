@@ -1,31 +1,24 @@
-use std::{collections::HashMap, path::PathBuf, time::Duration};
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::time::Duration;
 
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
-
-use crate::{
-    DuckContext,
-    quackpack::{
-        core::{Version, fetcher::types, solver::git_access::GitAccess},
-        schemas::{
-            OneEntryMap,
-            registry::{self, DependencyCondition, DependencyFeature},
-        },
-    },
-    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
-
-use std::collections::HashSet;
-
 use url::Url;
 
-use crate::quackpack::core::{
-    fetcher::Fetcher,
-    parse_manifest,
-    solver::gathering::gatherer::Gatherer,
-    solver::solver_mode::SolverMode,
-    solver::types_common::{ExpandedLocation, ExpandedPackage, InternedLocation, Location},
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::{Fetcher, types};
+use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::types_common::{
+    ExpandedLocation, ExpandedPackage, InternedLocation, Location,
 };
+use crate::quackpack::core::{Version, parse_manifest};
+use crate::quackpack::schemas::OneEntryMap;
+use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {

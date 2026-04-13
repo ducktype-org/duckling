@@ -1,21 +1,15 @@
 //! Parsing of the manifest from its schema.
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
+use std::path::Path;
 
 use tracing::debug;
 
-use super::dependency;
-
-use crate::{
-    DuckContext, QuackResult, QuackResultContext, StrId, qp_bail,
-    quackpack::{
-        core::{Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles},
-        schemas::manifest::{
-            Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
-        },
-    },
+use super::{Scope, dependency};
+use crate::quackpack::core::{Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles};
+use crate::quackpack::schemas::manifest::{
+    Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
 };
-
-use super::Scope;
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
 #[tracing::instrument(skip_all)]

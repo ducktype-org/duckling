@@ -1,13 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        Dependency,
-        solver::types_common::ExpandedPackage,
-        solver::types_common::{InternedExpandedLocation, InternedLocation, Location},
-    },
+use crate::quackpack::core::Dependency;
+use crate::quackpack::core::solver::types_common::{
+    ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
 };
+use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 /// A struct describing a dependency of a package on some location.

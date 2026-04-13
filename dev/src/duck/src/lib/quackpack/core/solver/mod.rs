@@ -28,26 +28,21 @@ pub mod util;
 mod tests;
 
 use core::fmt;
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
 use tracing::debug;
 
-use crate::{
-    QuackResult, qp_bail, qp_bail_internal,
-    quackpack::core::{
-        FeatureName, Manifest, PackageContext,
-        fetcher::Fetcher,
-        solver::gathering::{gatherer::Gatherer, gatherer_state::GatheredInfo},
-        solver::git_access::GitAccess,
-        solver::solver_freeze::SolverFreeze,
-        solver::solver_mode::SolverMode,
-        solver::solving::solver_engine::{SolverEngine, SolverInput},
-        solver::types_common::{ExpandedLocation, ExpandedPackage},
-    },
-};
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
+use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::solving::solver_engine::{SolverEngine, SolverInput};
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::{FeatureName, Manifest, PackageContext};
+use crate::{QuackResult, qp_bail, qp_bail_internal};
 
 /// A struct designated to finding the full dependency graph of a given package.
 pub struct SolverGathererData<'duck, 'ctx> {

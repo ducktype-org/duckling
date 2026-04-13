@@ -4,20 +4,18 @@
 use std::path::{Path, PathBuf};
 
 use tracing::debug;
-
 use url::Url;
 
 use super::Scope;
+use crate::quackpack::core::{BranchOrTag, Git, Local, Registry, Source};
+use crate::quackpack::schemas::manifest::{
+    Dependency as DependencySchema, DependencySource as SourceSchema, DetailedSource,
+};
+use crate::util::error::MessageError;
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{
     DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
-    quackpack::{
-        core::{BranchOrTag, Git, Local, Registry, Source},
-        schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
-    },
-    util::{error::MessageError, path_ops_ext::PathOpsExt},
 };
-
-use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 
 /// Parse given [`DependencySchema`] into [`Source`].
 ///

@@ -1,35 +1,20 @@
-use std::{
-    path::{Path, PathBuf},
-    time::{Duration, SystemTime},
-};
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
-use crate::{
-    quackpack::core::{
-        fetcher::Fetcher,
-        solver::types_common::ExpandedLocation,
-        storage::{
-            freeze::{FreezeDep, FreezePackage},
-            package_id::{PackageId, RegistryId},
-            paths::Storage,
-            venv::Venv,
-            venv_id::ToVenvId,
-        },
-    },
-    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
 use tempfile::TempDir;
 use url::Url;
 
-use crate::{
-    DuckContext,
-    quackpack::core::{
-        Version,
-        storage::{
-            freeze::{RootPackage, VenvFreeze},
-            venv::VenvData,
-        },
-    },
-};
+use crate::DuckContext;
+use crate::quackpack::core::Version;
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::solver::types_common::ExpandedLocation;
+use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::storage::package_id::{PackageId, RegistryId};
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv::{Venv, VenvData};
+use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
 mod basic;
 mod concurrent;

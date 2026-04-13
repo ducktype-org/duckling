@@ -1,26 +1,17 @@
 //! Parsing of the {dev-,}dependencies fields in a manifest.
 use std::path::Path;
 
-use super::source;
-use tracing::debug;
-use tracing::trace;
+use tracing::{debug, trace};
 
-use super::Scope;
-
-use crate::DuckContext;
-use crate::StrId;
-use crate::quackpack::core::Conditions;
-use crate::quackpack::core::Dependency;
-use crate::quackpack::core::DependencyFeature;
+use super::{Scope, source};
+use crate::quackpack::core::{Conditions, Dependencies, Dependency, DependencyFeature};
 use crate::quackpack::schemas::OneEntryMap;
-use crate::quackpack::schemas::manifest::Dependencies as DependenciesSchema;
-use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
-use crate::quackpack::schemas::manifest::DependencyCondition as ConditionSchema;
-use crate::quackpack::schemas::manifest::DependencyFeature as FeatureSchema;
-use crate::quackpack::schemas::manifest::DependencySource;
+use crate::quackpack::schemas::manifest::{
+    Dependencies as DependenciesSchema, Dependency as DependencySchema,
+    DependencyCondition as ConditionSchema, DependencyFeature as FeatureSchema, DependencySource,
+};
 use crate::util::error::QuackResultContext;
-
-use crate::{QuackResult, quackpack::core::Dependencies};
+use crate::{DuckContext, QuackResult, StrId};
 
 /// Parse [`Dependencies`] from the [`DependenciesSchema`].
 #[tracing::instrument(skip_all)]

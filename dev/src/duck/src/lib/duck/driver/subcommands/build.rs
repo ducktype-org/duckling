@@ -1,12 +1,11 @@
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::{DuckContext, QuackResult};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
     CommandExt, features_from_matches, flag, profile_from_matches, subcommand,
 };
-
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
 use crate::quackpack::subcommands::build::{BuildOptions, compile};
+use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `build` subcommand.
 pub fn get_parser() -> Command {

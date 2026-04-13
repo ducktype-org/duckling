@@ -1,37 +1,31 @@
 //! Synchronize a given venv.
 //! This includes: creating a venv, resolving dependencies, downloading them.
-use std::{fs::File, io, path::PathBuf, time::SystemTime};
+use std::fs::File;
+use std::io;
+use std::path::PathBuf;
+use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
 use tar::Archive;
 use tracing::debug;
 
-use crate::{
-    QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
-    quackpack::core::{
-        BranchOrTag, Git, Package, PackageContext, PackageLoader,
-        fetcher::{Fetcher, types::PackageWithUrl},
-        solver::ShouldRunSolverEngine,
-        solver::SolverAnswer,
-        solver::SolverGathererData,
-        solver::git_access::GitAccess,
-        solver::solver_freeze::SolverFreeze,
-        solver::solver_mode::SolverMode,
-        solver::types_common::{ExpandedLocation, ExpandedPackage},
-        storage::{
-            freeze::VenvFreeze,
-            git_access::StorageGitAccess,
-            locks::TrySyncLock,
-            package_id::{GitId, RegistryId},
-            paths::Storage,
-            venv::{Venv, VenvData},
-            venv_id::{ToVenvId, VenvId},
-        },
-    },
-    util::path_ops_ext::{PathOpsExt, ShouldBlock},
-};
-
-use crate::quackpack::core::storage;
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::fetcher::types::PackageWithUrl;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, SolverGathererData};
+use crate::quackpack::core::storage::freeze::VenvFreeze;
+use crate::quackpack::core::storage::git_access::StorageGitAccess;
+use crate::quackpack::core::storage::locks::TrySyncLock;
+use crate::quackpack::core::storage::package_id::{GitId, RegistryId};
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv::{Venv, VenvData};
+use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::quackpack::core::{BranchOrTag, Git, Package, PackageContext, PackageLoader, storage};
+use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
+use crate::{QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
 

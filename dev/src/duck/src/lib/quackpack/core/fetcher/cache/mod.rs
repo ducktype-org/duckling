@@ -1,11 +1,11 @@
 //! Fetcher cache for a fetched manifest.
 use std::path::Path;
 
-use crate::quackpack::schemas::registry;
 use tracing::debug;
 use url::Url;
 
 use super::types;
+use crate::quackpack::schemas::registry;
 
 #[cfg(test)]
 mod tests;

@@ -1,22 +1,18 @@
-use std::{
-    collections::HashSet,
-    ops::Deref,
-    path::PathBuf,
-    sync::{Mutex, OnceLock},
-};
+use std::collections::HashSet;
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize, de, ser};
 use url::Url;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::core::{
-        BranchOrTag, Dependency, Registry, Source, Version,
-        solver::gathering::fetch_types::{ManifestsRequest, NotPinnedRequest, PinnedRequest},
-        solver::types_common::{InternedLocation, Location},
-        version::CompatibilityCheck,
-    },
+use crate::quackpack::core::solver::gathering::fetch_types::{
+    ManifestsRequest, NotPinnedRequest, PinnedRequest,
 };
+use crate::quackpack::core::solver::types_common::{InternedLocation, Location};
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{BranchOrTag, Dependency, Registry, Source, Version};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
     OnceLock::new();

@@ -1,10 +1,11 @@
 //! A [`Deserializer`](serde::Deserializer) support for [`YamlConfig`].
-use crate::{QuackError, util::error::MessageError};
-
-use super::YamlConfig;
 use std::fmt;
 
 use serde::de;
+
+use super::YamlConfig;
+use crate::QuackError;
+use crate::util::error::MessageError;
 
 /// A deserializer for [`YamlConfig`].
 pub(super) struct YamlDeserializer<'config, 'key> {

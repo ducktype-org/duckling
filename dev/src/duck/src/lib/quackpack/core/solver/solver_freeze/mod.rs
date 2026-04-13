@@ -5,14 +5,10 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        FeatureName, Manifest,
-        solver::types_common::ExpandedPackage,
-        storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
-    },
-};
+use crate::quackpack::core::solver::types_common::ExpandedPackage;
+use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::{FeatureName, Manifest};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverFreeze {
@@ -175,15 +171,14 @@ impl SolverFreeze {
 mod test {
     use std::path::PathBuf;
 
-    use crate::{
-        DuckContext,
-        quackpack::core::{PackageLoader, parse_manifest, solver::types_common::ExpandedLocation},
-        util::path_ops_ext::PathOpsExt,
-    };
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
     use super::*;
+    use crate::DuckContext;
+    use crate::quackpack::core::solver::types_common::ExpandedLocation;
+    use crate::quackpack::core::{PackageLoader, parse_manifest};
+    use crate::util::path_ops_ext::PathOpsExt;
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

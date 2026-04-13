@@ -1,16 +1,12 @@
-use std::{
-    ffi::{OsStr, OsString},
-    fmt,
-    path::Path,
-    rc::Rc,
-    sync::Arc,
-};
+use std::ffi::{OsStr, OsString};
+use std::fmt;
+use std::path::Path;
+use std::rc::Rc;
+use std::sync::Arc;
 
-use crate::{
-    StrId,
-    duck::util::duck_home::DuckHome,
-    quackpack::core::{Manifest, Package, PackageContext},
-};
+use crate::StrId;
+use crate::duck::util::duck_home::DuckHome;
+use crate::quackpack::core::{Manifest, Package, PackageContext};
 
 /// A unique venv's identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

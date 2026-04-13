@@ -2,19 +2,14 @@ use std::path::Path;
 
 use tempfile::TempDir;
 
-use crate::{
-    DuckContext,
-    quackpack::core::{
-        PackageLoader, Version,
-        fetcher::Fetcher,
-        solver::types_common::ExpandedLocation,
-        storage::{
-            freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
-            package_id::{PackageId, RegistryId},
-        },
-    },
-    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::solver::types_common::ExpandedLocation;
+use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::storage::package_id::RegistryId;
+use crate::quackpack::core::{PackageLoader, Version};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
 pub fn setup_mock_storage() -> (DuckContext, TempDir) {
     let setup = || {
@@ -40,11 +35,11 @@ pub fn setup_mock_storage() -> (DuckContext, TempDir) {
 
 pub fn setup_mock_packages(root: &Path) {
     for (name, manifest) in packages_names_and_manifests() {
-        let pkg_id = PackageId::Registry(RegistryId::new(
+        let pkg_id = RegistryId::new(
             (*name).into(),
             Version::new(1, 0, 0),
             Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-        ));
+        );
         root.join("pkg")
             .join(pkg_id.storage_name())
             .join("src")

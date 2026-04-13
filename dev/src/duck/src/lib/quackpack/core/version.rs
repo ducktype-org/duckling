@@ -1,5 +1,6 @@
 //! Packages' and dependencies' versions.
-use std::{fmt, str::FromStr};
+use std::fmt;
+use std::str::FromStr;
 
 use serde::{de, ser};
 

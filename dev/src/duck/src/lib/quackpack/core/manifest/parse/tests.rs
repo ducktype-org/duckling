@@ -1,13 +1,13 @@
-use std::{collections::HashMap, env::home_dir, path::PathBuf};
+use std::collections::HashMap;
+use std::env::home_dir;
+use std::path::PathBuf;
 
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
-use crate::{
-    DuckContext, QpContext, StrId,
-    quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version},
-    util::path_ops_ext::PathOpsExt,
-};
+use crate::quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QpContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();

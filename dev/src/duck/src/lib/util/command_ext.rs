@@ -6,8 +6,7 @@ use std::process::Command;
 
 use itertools::Itertools;
 
-use crate::QuackResult;
-use crate::QuackResultContext;
+use crate::{QuackResult, QuackResultContext};
 
 /// Adds a portable [`exec_replace`](CommandExt::exec_replace) method to the [`Command`].
 pub trait CommandExt {

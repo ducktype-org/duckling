@@ -2,19 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::{
-    QuackResult, QuackResultContext,
-    quackpack::core::{
-        Dependency, FeatureName, Manifest,
-        solver::gathering::{
-            fetch_types::{FetchResponse, FetchSuccess},
-            gatherer::Gatherer,
-        },
-        solver::git_access::GitAccess,
-        solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
-        solver::types_common::ExpandedPackage,
-    },
-};
+use crate::quackpack::core::solver::gathering::fetch_types::{FetchResponse, FetchSuccess};
+use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::solver::types_common::ExpandedPackage;
+use crate::quackpack::core::{Dependency, FeatureName, Manifest};
+use crate::{QuackResult, QuackResultContext};
 
 impl SolverFreeze {
     /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
@@ -275,23 +269,17 @@ impl SolverFreeze {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        path::PathBuf,
-    };
+    use std::collections::{HashMap, HashSet};
+    use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
-    use crate::{
-        DuckContext, StrId,
-        quackpack::core::{
-            FeatureName, Version, parse_manifest,
-            solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
-            solver::types_common::{ExpandedLocation, ExpandedPackage},
-        },
-        util::path_ops_ext::PathOpsExt,
-    };
+    use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+    use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+    use crate::quackpack::core::{FeatureName, Version, parse_manifest};
+    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

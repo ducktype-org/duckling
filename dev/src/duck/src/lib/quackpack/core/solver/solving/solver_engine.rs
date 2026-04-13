@@ -1,23 +1,17 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter::once,
-};
+use std::collections::{HashMap, HashSet};
+use std::iter::once;
 
 use russcip::ProblemCreated;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        Dependency, FeatureName, Manifest, Version,
-        solver::gathering::gatherer_state::GatheredInfo,
-        solver::solver_freeze::SolverFreeze,
-        solver::solving::solver_model::{FoundSolution, SolverModel},
-        solver::types_common::{
-            DependencyEdge, ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
-        },
-        solver::util::get_possible_realizations,
-    },
+use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
+use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
+use crate::quackpack::core::solver::types_common::{
+    DependencyEdge, ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
 };
+use crate::quackpack::core::solver::util::get_possible_realizations;
+use crate::quackpack::core::{Dependency, FeatureName, Manifest, Version};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 /// Struct with all the necessary information for the solver to be run.
 #[derive(Debug)]
@@ -337,16 +331,11 @@ mod test {
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
-    use crate::{
-        DuckContext,
-        quackpack::core::{
-            parse_manifest,
-            solver::types_common::{ExpandedLocation, Location},
-        },
-        util::path_ops_ext::PathOpsExt,
-    };
-
     use super::*;
+    use crate::DuckContext;
+    use crate::quackpack::core::parse_manifest;
+    use crate::quackpack::core::solver::types_common::{ExpandedLocation, Location};
+    use crate::util::path_ops_ext::PathOpsExt;
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

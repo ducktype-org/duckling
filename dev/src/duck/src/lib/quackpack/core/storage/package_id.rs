@@ -3,7 +3,9 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{StrId, quackpack::core::Version, util::hash::sha256_string};
+use crate::StrId;
+use crate::quackpack::core::Version;
+use crate::util::hash::sha256_string;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Hash, PartialEq, Eq)]
 /// An ID of a stored package.

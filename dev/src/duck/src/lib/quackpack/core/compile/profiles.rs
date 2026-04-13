@@ -1,9 +1,12 @@
-use std::{collections::HashMap, fmt::Display, sync::LazyLock};
-
-use crate::util::error::MessageError;
-use crate::{QuackError, QuackResult, QuackResultContext, StrId, quackpack::core::manifest};
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::sync::LazyLock;
 
 use tracing::debug;
+
+use crate::quackpack::core::manifest;
+use crate::util::error::MessageError;
+use crate::{QuackError, QuackResult, QuackResultContext, StrId};
 
 pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::new(|| {
     [

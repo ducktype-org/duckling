@@ -1,36 +1,32 @@
-use std::{
-    collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
-};
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+
 use tempfile::TempDir;
 use tracing::debug;
 use url::Url;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::{
-        core::{
-            BranchOrTag, FeatureName, Git, Manifest, PackageLoader,
-            fetcher::{
-                Fetcher,
-                types::{FetcherResponse, GitCloneResponse, MultiMetadata, PackageWithUrl},
-            },
-            solver::gathering::{
-                error_surpression::{GathererComputation, GathererResult},
-                fetch_types::{
-                    FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
-                    NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest,
-                    PinnedSuccess,
-                },
-                gatherer_state::{GatheredInfo, GathererState, RequestAction},
-            },
-            solver::git_access::GitAccess,
-            solver::solver_mode::SolverMode,
-            solver::types_common::{ExpandedLocation, ExpandedPackage, InternedLocation, Location},
-        },
-        schemas::registry,
-    },
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::fetcher::types::{
+    FetcherResponse, GitCloneResponse, MultiMetadata, PackageWithUrl,
 };
+use crate::quackpack::core::solver::gathering::error_surpression::{
+    GathererComputation, GathererResult,
+};
+use crate::quackpack::core::solver::gathering::fetch_types::{
+    FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
+    NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
+};
+use crate::quackpack::core::solver::gathering::gatherer_state::{
+    GatheredInfo, GathererState, RequestAction,
+};
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::types_common::{
+    ExpandedLocation, ExpandedPackage, InternedLocation, Location,
+};
+use crate::quackpack::core::{BranchOrTag, FeatureName, Git, Manifest, PackageLoader};
+use crate::quackpack::schemas::registry;
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, 'fetcher, 'access, Access: GitAccess> {

@@ -2,15 +2,11 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        FeatureName, Manifest,
-        solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
-        solver::solving::FoundSolution,
-        solver::types_common::ExpandedPackage,
-    },
-};
+use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::solver::solving::FoundSolution;
+use crate::quackpack::core::solver::types_common::ExpandedPackage;
+use crate::quackpack::core::{FeatureName, Manifest};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 impl SolverFreeze {
     /// Generates a new freeze from the previous one and the solution found by solver.
@@ -181,24 +177,20 @@ impl SolverFreeze {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        path::PathBuf,
-    };
+    use std::collections::{HashMap, HashSet};
+    use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
-    use crate::{
-        DuckContext, StrId,
-        quackpack::core::{
-            FeatureName, Version, parse_manifest,
-            solver::solver_freeze::{SolverFreeze, SolverPackageFreeze},
-            solver::solving::FoundSolution,
-            solver::types_common::{DependencyEdge, ExpandedLocation, ExpandedPackage},
-        },
-        util::path_ops_ext::PathOpsExt,
+    use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+    use crate::quackpack::core::solver::solving::FoundSolution;
+    use crate::quackpack::core::solver::types_common::{
+        DependencyEdge, ExpandedLocation, ExpandedPackage,
     };
+    use crate::quackpack::core::{FeatureName, Version, parse_manifest};
+    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

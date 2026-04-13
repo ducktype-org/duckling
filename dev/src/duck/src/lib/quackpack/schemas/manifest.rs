@@ -1,12 +1,12 @@
 //! Local manifest schemas.
-use crate::quackpack::core::Version;
-use crate::quackpack::schemas::OneEntryMap;
 use std::collections::HashMap;
 use std::fmt;
 
-use serde::Deserialize;
-use serde::de;
+use serde::{Deserialize, de};
 use serde_untagged::UntaggedEnumVisitor;
+
+use crate::quackpack::core::Version;
+use crate::quackpack::schemas::OneEntryMap;
 
 pub type Dependencies = HashMap<String, Dependency>;
 
@@ -269,8 +269,9 @@ impl<'de> de::Deserialize<'de> for OptLevel {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json;
+
+    use super::*;
 
     #[test]
     fn test_ored_semver_deserialization() {

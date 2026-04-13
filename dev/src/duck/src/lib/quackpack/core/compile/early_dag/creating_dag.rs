@@ -2,20 +2,14 @@
 
 use tracing::debug;
 
-use crate::{
-    DuckContext, QuackResultContext, qp_bail, qp_bail_internal,
-    quackpack::core::{
-        PackageLoader,
-        compile::{BuildContext, compiler_package::PackageType},
-        storage::{
-            freeze::{FreezePackage, VenvFreeze},
-            package_id::PackageId,
-            paths::Storage,
-        },
-    },
-};
-
 use super::*;
+use crate::quackpack::core::PackageLoader;
+use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::compiler_package::PackageType;
+use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
+use crate::quackpack::core::storage::package_id::PackageId;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal};
 
 impl DependencyDag {
     /// Create new [`DependencyDag`] from the given freeze.

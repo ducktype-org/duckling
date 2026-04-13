@@ -2,12 +2,12 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::quackpack::core::storage;
+use storage::paths;
 
 use crate::QuackResult;
+use crate::quackpack::core::storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use storage::paths;
 
 /// Get a snapshot of all virtual environments' states.
 ///

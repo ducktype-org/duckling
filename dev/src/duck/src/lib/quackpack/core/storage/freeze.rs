@@ -1,16 +1,13 @@
 //! A storage freezefile format.
-use std::{fmt, str::FromStr};
+use std::fmt;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de, ser};
 
-use crate::{
-    QuackError, QuackResultContext, StrId, qp_bail,
-    quackpack::core::{
-        FeatureName, Version,
-        solver::types_common::{ExpandedLocation, InternedExpandedLocation},
-        storage::package_id::{GitId, LocalId, PackageId, RegistryId},
-    },
-};
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, InternedExpandedLocation};
+use crate::quackpack::core::storage::package_id::{GitId, LocalId, PackageId, RegistryId};
+use crate::quackpack::core::{FeatureName, Version};
+use crate::{QuackError, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// General storage/venv freezefile.

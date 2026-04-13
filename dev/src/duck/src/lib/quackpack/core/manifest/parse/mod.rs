@@ -5,10 +5,10 @@ use itertools::Itertools;
 use serde::Deserialize;
 use tracing::debug;
 
+use crate::quackpack::core::Package;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResultContext, StrId, qp_internal};
-use crate::{QuackResult, quackpack::core::Package};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_internal};
 
 mod dependency;
 mod manifest;

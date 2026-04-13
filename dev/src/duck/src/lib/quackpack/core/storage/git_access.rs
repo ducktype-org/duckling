@@ -3,15 +3,11 @@ use std::path::{Path, PathBuf};
 
 use url::Url;
 
-use crate::{
-    QuackResult, StrId,
-    quackpack::core::solver::git_access::GitAccess,
-    util::path_ops_ext::{MkdirOptions, PathOpsExt},
-};
-
 use super::package_id::GitId;
-
 use super::paths::Storage;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::{QuackResult, StrId};
 #[derive(Debug, Clone, Copy)]
 /// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {

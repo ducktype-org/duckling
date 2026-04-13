@@ -9,10 +9,8 @@ pub mod subcommands;
 
 use cli_ext::CommandExt;
 
-use crate::duck::driver::{
-    cli_ext::{flag, optional},
-    styles::get_styles,
-};
+use crate::duck::driver::cli_ext::{flag, optional};
+use crate::duck::driver::styles::get_styles;
 
 /// Create main cli parser.
 fn cli() -> Command {
