@@ -2283,10 +2283,10 @@ private:
 			auto glob1 = find_global(hout_unit, base::StrID("B")).value();
 			auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
 
-			Ref<const compiler::helios::code::Expr> expr1
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value).initial_value->ref();
-			Ref<const compiler::helios::code::Expr> expr2
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value).initial_value->ref();
+			CRef<compiler::helios::code::Expr> expr1
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value).initial_value.ref();
+			CRef<compiler::helios::code::Expr> expr2
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value).initial_value.ref();
 
 			ASSERT_EQUAL(
 				compiler::helios::code::BuiltinBinary::IntegerAdd,
@@ -2972,7 +2972,7 @@ private:
 			auto var_pst           = var_opt.value();
 			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
 			auto initial_value_expr
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value->ref();
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value.ref();
 
 			dia::SourcePosition expr_pos_from_origin
 				= initial_value_expr->origin.getSourcePosition().value();

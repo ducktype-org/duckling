@@ -22,9 +22,8 @@ namespace base {
 		template<typename U>  // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
 		requires std::is_base_of_v<T, U> BoxOrCRef(BoxOrCRef<U>&& other):
 			  storage(
-				  other.isBox()
-					  ? StorageType(Box<T>(std::move(other.getBox())))
-					  : StorageType(other.getRef())
+				  other.isBox() ? StorageType(Box<T>(std::move(other.getBox())))
+								: StorageType(other.getRef())
 			  ) {}
 
 		template<typename U>  // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
@@ -75,7 +74,7 @@ namespace base {
 
 		const T& operator*() const { return *ref(); }
 
-		T* get() { return ref().get(); }
+		const T* get() const { return ref().get(); }
 
 		bool operator==(const BoxOrCRef& other) const {
 			if (isBox() && other.isBox())
