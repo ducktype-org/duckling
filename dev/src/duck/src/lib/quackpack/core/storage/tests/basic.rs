@@ -4,8 +4,11 @@ use crate::{
     StrId,
     quackpack::core::{
         Version,
-        storage::{self, venv_id::ToVenvId},
+        fetcher::Fetcher,
+        storage::{self, freeze::FreezePackage, paths::Storage, venv::Venv, venv_id::ToVenvId},
+        types_common::{ExpandedLocation, InternedExpandedLocation},
     },
+    util::path_ops_ext::PathOpsExt,
 };
 
 use super::registry_url_hash;
@@ -220,4 +223,61 @@ fn info() {
             .dependencies()
             .is_empty()
     );
+}
+
+fn assert_can_load_after_save(venv: &Venv, storage: &Storage) -> Venv {
+    venv.save_to(storage).unwrap();
+    let id = venv.id();
+    let metadata = storage.venv_metadata(id);
+    let backup = storage.venv_backup_metadata(id);
+    let metadata_contents = metadata.read_to_string().unwrap();
+    let backup_contents = backup.read_to_string().unwrap();
+    assert_eq!(
+        metadata_contents,
+        backup_contents,
+        "different contents of venv `{id}`; (metadata: `{}`, backup: `{}`)",
+        metadata.display(),
+        backup.display()
+    );
+    Venv::fix_and_load(storage, id)
+        .expect("an error occured")
+        .expect("failed to load venv")
+}
+
+#[test]
+fn save_trims_files() {
+    let (ctx, _root) = setup_mock_storage();
+    let id = "root1".to_venv_id();
+    let storage = Storage::new(ctx.default_storage_root());
+    let mut venv = Venv::fix_and_load(&storage, id)
+        .expect("an error occured")
+        .expect("failed to load venv");
+    let original_venv = venv.clone();
+    // Firstly, add a lot of dependencies, to make a file longer (have more bytes).
+    let number_of_new_packages = 5;
+    for _ in 0..number_of_new_packages {
+        let package = FreezePackage::new(
+            "dep".into(),
+            Version::new(1, 0, 0),
+            vec![],
+            vec![],
+            InternedExpandedLocation::new(ExpandedLocation::Registry {
+                url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
+                real_name: "dep".into(),
+            }),
+        );
+        venv.data_mut()
+            .freeze_mut()
+            .dependencies_mut()
+            .push(package);
+    }
+    let mut venv = assert_can_load_after_save(&venv, &storage);
+    // Secondly, remove all dependencies, to make a file shorter, so we'll leave trailing bytes (which should be truncated).
+    venv.data_mut().freeze_mut().dependencies_mut().clear();
+    let mut new_venv = assert_can_load_after_save(&venv, &storage);
+    // The first and last state should only differ in access time. Copy one from the other.
+    new_venv
+        .data_mut()
+        .set_last_access(original_venv.data().last_access());
+    assert_eq!(new_venv, original_venv);
 }
