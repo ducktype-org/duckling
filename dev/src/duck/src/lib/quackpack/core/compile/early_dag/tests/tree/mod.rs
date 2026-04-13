@@ -21,7 +21,7 @@ fn creates_valid_initial_graph() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec![],
@@ -57,7 +57,7 @@ fn expands_valid_features1() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec!["use_bar".into()],
@@ -98,7 +98,7 @@ fn expands_valid_features2() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec!["full".into()],
@@ -145,7 +145,7 @@ fn expands_valid_features3() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec!["baz_without_bar".into()],
@@ -189,7 +189,7 @@ fn errors_with_nonexistent_features() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec!["nonexistent".into()],
@@ -212,7 +212,7 @@ fn removes_inactive_deps1() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec![],
@@ -244,7 +244,7 @@ fn removes_inactive_deps2() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec!["use_bar".into()],
@@ -279,7 +279,7 @@ fn removes_inactive_deps3() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec!["full".into()],
@@ -317,7 +317,7 @@ fn removes_inactive_deps4() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec!["baz_without_bar".into()],
@@ -355,7 +355,7 @@ fn cycle_in_freeze() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze_with_cycle(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec![],
@@ -376,7 +376,7 @@ fn missing_direct_dep_in_freeze() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze_without_direct_dep(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec![],
@@ -397,7 +397,7 @@ fn missing_transitive_dep_in_freeze() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze_without_transitive_dep(),
         storage: Storage::new(ctx.default_storage_root()),
         used_features: vec![],

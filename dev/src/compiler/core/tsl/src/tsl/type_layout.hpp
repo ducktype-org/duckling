@@ -2,9 +2,9 @@
 
 #include "size_constants.hpp"
 
-#include <tsh/abstract_type.hpp>
-#include <tsh/symbol_type.hpp>
-#include <tsh/types.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>

@@ -5,7 +5,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <tsh/queries/types.hpp>
+#include <helios/tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 

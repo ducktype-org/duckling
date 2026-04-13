@@ -4,6 +4,6 @@ add_library(TypeSystemLower STATIC
         src/tsl/queries.cpp
 )
 
-make_module(TypeSystemLower USES Base QueryFramework TypeSystemHigher)
+make_module(TypeSystemLower USES Base QueryFramework HELIOS)
 
-duck_add_test(compiler tsl_simple tests/tsl_simple_test.cpp USES TypeSystemLower)
+duck_add_test(compiler tsl_simple tests/tsl_simple_test.cpp USES HELIOS)
