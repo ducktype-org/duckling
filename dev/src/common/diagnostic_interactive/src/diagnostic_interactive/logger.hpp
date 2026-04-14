@@ -47,7 +47,7 @@ namespace dia_int {
 		 * with the positions updated using the provided function and node PST hashes.
 		 * @param[out] out_messages Vector to collect diagnostics into.
 		 */
-		void collectPositionUpdatedDiagnostics(
+		void collectAndUpdatePositionDiagnostics(
 			std::vector<CRef<dia_args::Diagnostic>>& out_messages,
 			const UpdatePositionFunc&                update_func
 		);

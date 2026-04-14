@@ -71,7 +71,7 @@ namespace dia_int {
 		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.ref());
 	}
 
-	void Logger::collectPositionUpdatedDiagnostics(
+	void Logger::collectAndUpdatePositionDiagnostics(
 		std::vector<CRef<dia_args::Diagnostic>>& out_messages, const UpdatePositionFunc& update_func
 	) {
 		for (const auto& msg: diagnostics) {

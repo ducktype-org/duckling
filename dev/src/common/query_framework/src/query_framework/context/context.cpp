@@ -32,6 +32,14 @@ namespace query {
 		for (auto& [_, logger]: *main_query_state.getDiagnosticLoggers())
 			logger->collectDiagnostics(output);
 	}
+	
+	void Context::collectAndUpdateAllDiagnostic(
+		std::vector<CRef<dia_int::dia_args::Diagnostic>>& output,
+		const dia_int::UpdatePositionFunc&                update_func
+	) {
+		for (auto& [_, logger]: *main_query_state.getDiagnosticLoggers())
+			logger->collectAndUpdatePositionDiagnostics(output, update_func);
+	}
 
 	Box<dia_int::Logger> Context::dumpToOneLoggerAndClear() {
 		Box<dia_int::Logger>          combined_logger = makeBox<dia_int::Logger>();

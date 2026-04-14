@@ -1,15 +1,14 @@
 #include "validation.hpp"
 
 #include <diagnostic_interactive/core/common_classes.hpp>
-#include <diagnostic_interactive/stable_position.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
-
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic_interactive/lsp_ui/lsp_ui.hpp>
 #include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/queries/queries.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -48,9 +47,7 @@ namespace lsp {
 				module->getMainSourceFile().illegalAccess().getID()
 			);
 		auto main_pst = main_file->getPST();
-		main_pst->getLogger()->collectPositionUpdatedDiagnostics(
-			out, updatePositionWithHashCodeLocation
-		);
+		main_pst->getLogger()->collectDiagnostics(out);
 
 		for (const auto& file_ref: module->getSourceFiles().illegalAccess()) {
 			auto file
@@ -58,9 +55,7 @@ namespace lsp {
 					file_ref.illegalAccess().getID()
 				);
 			auto pst = file->getPST();
-			pst->getLogger()->collectPositionUpdatedDiagnostics(
-				out, updatePositionWithHashCodeLocation
-			);
+			pst->getLogger()->collectDiagnostics(out);
 		}
 
 		// Recurse into submodules
@@ -182,7 +177,7 @@ namespace lsp {
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-		query::Context::collectAllDiagnostic(diagnostics);
+		query::Context::collectAndUpdateAllDiagnostic(diagnostics, updatePositionWithHashCodeLocation);
 
 		dia_int::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());
 

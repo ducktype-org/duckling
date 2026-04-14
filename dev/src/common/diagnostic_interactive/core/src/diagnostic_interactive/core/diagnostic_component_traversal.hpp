@@ -3,6 +3,7 @@
 #include "diagnostic_arguments.hpp"
 
 #include <concepts>
+#include <iostream>
 
 namespace dia_int::dia_args {
 	template<typename TargetComponent>
@@ -37,6 +38,7 @@ namespace dia_int::dia_args {
 	template<typename TargetComponent>
 	requires std::derived_from<TargetComponent, Component>
 	void forEachComponentInMessage(Message& message, std::invocable<TargetComponent&> auto&& func) {
+		std::cerr << "Visiting message: " << message.metadata.name << "\n";
 		for (auto& [_, argument]: message.arguments)
 			forEachComponentRecursive<TargetComponent>(*argument, func);
 
