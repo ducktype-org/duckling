@@ -7,9 +7,10 @@
 #include <query_framework/internal/query_graph/query_state.hpp>
 
 namespace {
-	// Variable to track whether we are inside a query.
-	// This is set inside the standardQueryEntry
-	// and is used to prevent calling entry points from within queries
+	/**
+	 * @brief Tracks whether the current thread is inside a query.
+	 * Set inside standardQueryEntry and used to prevent calling entry points from within queries.
+	 */
 	thread_local bool current_thread_inside_query = false;
 }
 

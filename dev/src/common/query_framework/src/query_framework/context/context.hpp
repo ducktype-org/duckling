@@ -60,6 +60,11 @@ namespace query {
 		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
 		/**
+		 * @brief Sets whether the current thread is executing query code.
+		 */
+		static void setAreWeInsideQuery(bool value);
+
+		/**
 		 * @brief Helper RAII object to handle query graph, active graph, and cycle checks logic
 		 * when calling another query. Used in query and await.
 		 */
@@ -312,7 +317,7 @@ namespace query {
 		static const internal::QueryState& getState() { return main_query_state; }
 
 		/**
-		 * @brief Returns true if we are currently executing query code.
+		 * @brief Returns true if the current thread is executing query code.
 		 */
 		[[nodiscard]]
 		static bool areWeInsideQuery();
@@ -322,13 +327,5 @@ namespace query {
 		 */
 		[[nodiscard]]
 		static bool isAnyQueryCurrentlyRunning();
-
-	private:
-		friend struct query::internal::ContextAccess;
-
-		/**
-		 * @brief Sets whether the current thread is executing query code.
-		 */
-		static void setAreWeInsideQuery(bool value);
 	};
 }

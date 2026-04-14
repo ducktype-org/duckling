@@ -44,6 +44,9 @@ namespace query::internal {
 		typename QueryImplType::QResult {
 		using QueryIntType = QueryImplType::QueryType;
 
+		ContextAccess::setAreWeInsideQuery(true);
+		defer({ ContextAccess::setAreWeInsideQuery(false); });
+
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Enter.\n");
 
 		const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
@@ -59,9 +62,6 @@ namespace query::internal {
 
 		auto node_id = makeNodeID<QueryIntType>(key);
 		auto context = ContextAccess::make(node_id);
-
-		ContextAccess::setAreWeInsideQuery(true);
-		defer({ ContextAccess::setAreWeInsideQuery(false); });
 
 		// @FUTURE: provide legit acd here
 		ACD acd;
