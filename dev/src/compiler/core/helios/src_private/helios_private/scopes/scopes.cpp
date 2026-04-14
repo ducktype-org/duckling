@@ -292,7 +292,7 @@ namespace compiler::helios {
 				CORE_ASSERT(
 					parent.ref->parent.has_value(),
 					"Parent transparent scope kind used on element of which transparent scope that "
-				    "has no parent."
+					"has no parent."
 				);
 				return parent.ref->parent->ref->perfectClone();
 			}
