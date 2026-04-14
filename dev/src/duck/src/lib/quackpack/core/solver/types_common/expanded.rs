@@ -91,7 +91,7 @@ impl AsRef<ExpandedLocation> for InternedExpandedLocation {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
 /// Type describing a localization of a dependency.
 /// Can either be:
 /// * registry - a dependency with a given name from a given server;
@@ -110,6 +110,27 @@ pub enum ExpandedLocation {
     Registry { url: Url, real_name: StrId },
     Git { url: Url, commit: StrId },
     Local { absolute_path: PathBuf },
+}
+
+impl std::fmt::Debug for ExpandedLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Registry { url, real_name } => f
+                .debug_struct("Registry")
+                .field("url", &url.as_str())
+                .field("real_name", real_name)
+                .finish(),
+            Self::Git { url, commit } => f
+                .debug_struct("Git")
+                .field("url", &url.as_str())
+                .field("commit", commit)
+                .finish(),
+            Self::Local { absolute_path } => f
+                .debug_struct("Local")
+                .field("absolute_path", absolute_path)
+                .finish(),
+        }
+    }
 }
 
 impl ExpandedLocation {
@@ -175,7 +196,7 @@ impl ExpandedPackage {
 
     /// Assuming that [`self`] was a realization of some dependency, checks whether we can be certain it is still true.
     pub fn still_satisfies_dep(&self, dependency: &Dependency) -> QuackResult<bool> {
-        match (self.location.as_ref(), dependency.desc().source().as_ref()) {
+        match (self.location.as_ref(), dependency.source().as_ref()) {
             (ExpandedLocation::Local { absolute_path }, Source::Local(local_source)) => {
                 Ok(absolute_path == local_source.absolute())
             }
@@ -186,7 +207,7 @@ impl ExpandedPackage {
                     && *commit == required_commit
                     && url == git_source.url()
                 {
-                    if let Some(required_version) = dependency.desc().versions().first() {
+                    if let Some(required_version) = dependency.versions().first() {
                         Ok(self.version == Some(*required_version))
                     } else {
                         Ok(true)
@@ -196,7 +217,7 @@ impl ExpandedPackage {
                 }
             }
             (ExpandedLocation::Registry { url, real_name }, Source::Registry(registry_source)) => {
-                self.check_satisfaction_for_registry(url, real_name, registry_source, dependency)
+                self.check_satisfaction_for_registry(url, *real_name, registry_source, dependency)
             }
             _ => Ok(false),
         }
@@ -206,18 +227,16 @@ impl ExpandedPackage {
     fn check_satisfaction_for_registry(
         &self,
         url: &Url,
-        real_name: &StrId,
+        real_name: StrId,
         registry_source: &Registry,
         dependency: &Dependency,
     ) -> QuackResult<bool> {
-        let location_agreement =
-            (url == registry_source.url()) && (dependency.real_name() == *real_name);
+        let location_agreement = (url == registry_source.url()) && (dependency.name() == real_name);
         let self_version = self
             .version
             .context_internal("Registry package with no version")?;
         if dependency.is_pinned() {
             let required_version = dependency
-                .desc()
                 .versions()
                 .first()
                 .context_internal("Pinned dependency without specified version")?;
@@ -225,7 +244,6 @@ impl ExpandedPackage {
         } else {
             Ok(location_agreement
                 && dependency
-                    .desc()
                     .versions()
                     .iter()
                     .any(|required| required.can_be_upgraded_to(&self_version)))

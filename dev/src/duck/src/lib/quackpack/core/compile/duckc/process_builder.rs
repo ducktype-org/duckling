@@ -1,7 +1,6 @@
 //! [`Command`]-based backend communicating with the compiler.
 
-use itertools::Itertools;
-use std::{ffi::OsStr, fmt, process::Command};
+use std::{convert::Infallible, fmt, process::Command};
 
 use crate::{
     QuackResult, QuackResultContext, qp_bail,
@@ -9,6 +8,7 @@ use crate::{
         Package,
         compile::profiles::{OptLevel, Profile},
     },
+    util::command_ext::CommandExt,
 };
 
 use super::Duckc;
@@ -18,12 +18,14 @@ use super::Duckc;
 /// Supported subcommands passed to the duckc.
 pub enum DuckcSubcommand {
     CompilePackage,
+    Repl,
 }
 
 impl DuckcSubcommand {
     fn as_argument(&self) -> &'static str {
         match self {
             Self::CompilePackage => "compile_package",
+            Self::Repl => "repl",
         }
     }
 }
@@ -50,7 +52,7 @@ impl DuckcProcessBuilder {
 
     /// Set package name of the currently compiling package.
     pub fn set_package_name(&mut self, package: &Package) -> &mut Self {
-        let name = package.manifest().root_description().name();
+        let name = package.manifest().name();
         self.inner.arg("-n").arg(name);
         self
     }
@@ -112,23 +114,26 @@ impl DuckcProcessBuilder {
     }
 
     /// Execute the built command.
-    pub fn execute(&mut self, package_name: impl fmt::Display) -> QuackResult<()> {
+    pub fn execute<F, T>(&mut self, on_error_message: F) -> QuackResult<()>
+    where
+        T: fmt::Display,
+        F: FnOnce() -> T,
+    {
         let code = self.inner.status().context("failed to spawn duckc")?;
         if !code.success() {
-            qp_bail!("failed to compile package `{package_name}`")
+            qp_bail!("{}", on_error_message())
         }
         Ok(())
+    }
+
+    /// Execute the built command by replacing current process.
+    pub fn execute_and_replace(&mut self) -> QuackResult<Infallible> {
+        self.inner.exec_replace().context("failed to spawn duckc")
     }
 }
 
 impl fmt::Display for DuckcProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let command_name = self.inner.get_program().display();
-        let args = self.inner.get_args().map(OsStr::display).join(" ");
-        if !args.is_empty() {
-            write!(f, "{command_name} {args}")
-        } else {
-            write!(f, "{command_name}")
-        }
+        self.inner.display().fmt(f)
     }
 }

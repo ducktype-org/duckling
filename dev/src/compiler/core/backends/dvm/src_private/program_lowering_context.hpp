@@ -2,8 +2,9 @@
 
 #include "dvm_value.hpp"
 
+#include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
@@ -35,8 +36,7 @@ namespace compiler::backend_vm::internal {
 		 * This constructor is provided for backward compatibility with existing call sites.
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
-		explicit ProgramLoweringContext(query::Context& query_ctx):
-			  query_ctx_for_errors(&query_ctx) {}
+		explicit ProgramLoweringContext(query::Context& query_ctx, bool build_debug_info);
 
 		/**
 		 * @brief Set the query context for error reporting during compilation.
@@ -81,6 +81,12 @@ namespace compiler::backend_vm::internal {
 		const vm::code::TypeOfData& lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
+		 * @brief Creates and inserts a pointer type into the program lowering context.
+		 * It caches the result, so inserts the type into the program only if needed.
+		 */
+		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
+
+		/**
 		 * @brief Retrieves the DVM global variable corresponding to the given LIR global.
 		 * @note The LIR global must have been previously declared using insertLirGlobal,
 		 * panics otherwise.
@@ -112,14 +118,31 @@ namespace compiler::backend_vm::internal {
 		 */
 		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
 
+		/**
+		 * @brief Builds the debug info for the module
+		 * if the class was constructed with debug info building enabled,
+		 * returns nullopt otherwise.
+		 * @note It leaves the internal debug info builder in an empty state,
+		 * so subsequent calls to this method will return nullopt.
+		 */
+		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
+
 	private:
 		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
 		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
 
-		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
+		struct TypeStorage {
+			// Mapping from TSL layouts to names of DVM types which exist in `dvm_types`.
+			base::Map<CRef<tsl::TypeLayout>, base::StrID> tsl_type_to_dvm_type_name;
+			// Main container for all types in the module.
+			base::HashMap<base::StrID, vm::code::TypeOfData> dvm_types;
+		};
 
-		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
+		// A set of types allowing for insertion of both TSL types and manual insertion of types.
+		TypeStorage type_storage;
+
+		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
@@ -130,5 +153,8 @@ namespace compiler::backend_vm::internal {
 		// Using names as keys to avoid issues with CRef hash/equality.
 		base::HashMap<base::StrID, DVMGlobal>            global_name_to_dvm;
 		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
+
+		// Optional debug info builder.
+		base::Optional<debug_info::DebugInfoBuilder> debug_info_builder;
 	};
 }

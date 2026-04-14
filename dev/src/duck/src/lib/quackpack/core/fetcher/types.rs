@@ -10,7 +10,7 @@ use url::Url;
 
 use crate::quackpack::core;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 /// Represents exact informations required to fetch some data of a package `id` in version
 /// `version` from repository at `url`.
 pub struct PackageWithUrl {
@@ -20,6 +20,16 @@ pub struct PackageWithUrl {
     pub version: Version,
     /// Url pointing to a Ducknest instance with this package.
     pub url: Url,
+}
+
+impl std::fmt::Debug for PackageWithUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PackageWithUrl")
+            .field("id", &self.id)
+            .field("version", &self.version)
+            .field("url", &self.url.as_str())
+            .finish()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

@@ -1,7 +1,10 @@
-#include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#pragma once
 
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
+
+#include <hashing/hash_algorithm_utils.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <string_id/string_id.hpp>
@@ -13,6 +16,8 @@ namespace compiler::helios::mangler {
 			base::StrID id;
 
 			constexpr auto operator<=>(const LIRModuleID& other) const = default;
+
+			friend auto hashDecompose(const LIRModuleID& self) { return std::tie(self.id); }
 		};
 	}
 
@@ -35,13 +40,11 @@ namespace compiler::helios::mangler {
 		u64                         mangling_scheme_version = 0;
 		base::Optional<std::string> additional_metadata     = std::nullopt;
 
-		/**
-		 * @TODO: #2027 likely remove, it is used only by the hash map.
-		 */
-		constexpr auto operator==(const KeyOf_MangledSymbol& other) const;
+		friend void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k)
+			RELEASE_NOEXCEPT;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const;
+		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
 	/**
@@ -83,12 +86,3 @@ namespace compiler::helios::mangler {
 		query::Context& ctx, SymID sym_id
 	);
 }
-
-/**
- * Hashed used for the perfect hash of KeyOf_MangledSymbol.
- * @TODO: #2027 likely remove.
- */
-template<>
-struct std::hash<compiler::helios::mangler::KeyOf_MangledSymbol> final {
-	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledSymbol& key) const;
-};

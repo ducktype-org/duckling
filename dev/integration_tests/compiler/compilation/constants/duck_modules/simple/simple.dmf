@@ -11,7 +11,7 @@ fun fib_on_i32(n: i32) -> i32 = {
 }
 fun takeUnit(u: ()) -> i64 = 42i64;
 
-fun unitIDentity(u: ()) -> () = u;
+fun unitIdentity(u: ()) -> () = u;
 
 const one = 1;
 const two = one + one;
@@ -48,7 +48,7 @@ fun main() -> i64 = {
     if (not boolean) { builtin_output_i64(123123); }
 
     builtin_output_i64(takeUnit(unit));
-    builtin_output_i64(takeUnit(unitIDentity(unit)));
+    builtin_output_i64(takeUnit(unitIdentity(unit)));
 
     builtin_output_i64(i64(AREA_F32)); # 314
     builtin_output_i64(i64(U16_OVERFLOW)); # 0

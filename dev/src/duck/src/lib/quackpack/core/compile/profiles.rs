@@ -1,6 +1,9 @@
 use std::{collections::HashMap, fmt::Display, sync::LazyLock};
 
+use crate::util::error::MessageError;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, quackpack::core::manifest};
+
+use tracing::debug;
 
 pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::new(|| {
     [
@@ -117,7 +120,9 @@ macro_rules! determine_field {
         /// -----
         /// Field in [`manifest::Profile`] should implement [`Into::into`] for the appropriate [`Profile`] field type.
         /// It should also implement [`std::marker::Copy`].
+        #[tracing::instrument(skip_all)]
         fn $fun_name(profile_name: StrId, profiles: &manifest::Profiles) -> QuackResult<$ret> {
+            debug!(profile = %profile_name, ?profiles, "getting a profile from manifest");
             // The profile should be either defined in the manifest or predefined.
             // We always prioritize the manifest, since a predefined profile can be redefined in the manifest.
             let Some(starting_profile) = profiles.get_profiles().get(&profile_name) else {
@@ -128,18 +133,22 @@ macro_rules! determine_field {
                         QuackError::hint(
                             "In order to use a profile you have to define it in the manifest first",
                         )
-                        .context(format!("Unknown profile `{}`", profile_name))
+                        .context(MessageError(
+                            format!("Unknown profile `{}`", profile_name).into(),
+                        ))
                     });
             };
             $fun_name_help(profile_name, starting_profile, profiles)
         }
 
         #[doc = concat!("Recursive helper for [`", stringify!($fun_name),"`]")]
+        #[tracing::instrument(skip_all)]
         fn $fun_name_help(
             cur_profile_name: StrId,
             cur_profile: &manifest::Profile,
             profiles: &manifest::Profiles,
         ) -> QuackResult<$ret> {
+            debug!(profile.name = %cur_profile_name, profile = ?cur_profile, ?profiles, "getting a profile from manifest");
             if let Some(result) = cur_profile.$name {
                 // Manifest profile `cur_profile` has the field defined, so it overwrites all of its ancestors.
                 // Since we have got here, none of the descendants defines this field.
@@ -204,10 +213,12 @@ determine_field!(
 impl Profile {
     /// Constructs a [`Profile`], given the profile's name and [`manifest::Profiles`].
     /// Unwinds the inheritance structure to determine each field of the profile.
+    #[tracing::instrument(skip_all)]
     pub fn construct_profile(
         profile_name: StrId,
         manifest_profiles: &manifest::Profiles,
     ) -> QuackResult<Self> {
+        debug!(profile = %profile_name, profiles = ?manifest_profiles, "getting a profile from manifest");
         Ok(Self {
             name: profile_name,
             opt_level: determine_opt_level(profile_name, manifest_profiles)?,

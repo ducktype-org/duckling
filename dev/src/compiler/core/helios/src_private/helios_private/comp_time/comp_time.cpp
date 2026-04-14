@@ -9,14 +9,14 @@
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <typesystem/higher/queries/types.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -625,7 +625,15 @@ namespace compiler::helios {
 				}
 				const auto& ctv     = expr_to_cast.valueOrThrow();
 				const auto& numeric = ctv.get<NumericValue>();
-				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
+				if (!numeric) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Casts of non-numeric compile-time values are not yet implemented.",
+						cast.origin.getSourcePosition()
+					));
+					result = query::Failed();
+					return;
+				}
+
 
 				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
 

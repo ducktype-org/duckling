@@ -1,6 +1,8 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use crate::{DuckCtx, QuackResult, qp_bail};
+use serde::{Deserialize, de};
+
+use crate::{DuckContext, QuackResult, qp_bail};
 use clap::ArgMatches;
 use itertools::chain;
 use tracing::debug;
@@ -9,6 +11,40 @@ use crate::duck::driver::{
     cli,
     cli_args_preprocessing::builtin::{get_builtin_alias_expansion, is_builtin_subcommand},
 };
+
+/// A single configuration alias.
+/// Can be a string ("build --release"), or a list (["build", "--release"]).
+#[derive(Debug)]
+pub enum Alias {
+    ToSplit(String),
+    Splitted(Vec<String>),
+}
+
+impl Alias {
+    pub fn split(&self) -> Vec<String> {
+        match self {
+            Self::ToSplit(joined) => joined.split(' ').map(String::from).collect(),
+            Self::Splitted(splitted) => splitted.clone(),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for Alias {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        serde_untagged::UntaggedEnumVisitor::new()
+            .expecting("a string or a list of strings")
+            .string(|alias| Ok(Self::ToSplit(alias.into())))
+            .seq(|seq| seq.deserialize().map(Self::Splitted))
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(transparent)]
+pub struct Aliases(pub HashMap<String, Alias>);
 
 /// Recursively replace current subcommand with an expanded user alias.
 ///
@@ -20,7 +56,7 @@ use crate::duck::driver::{
 /// __NOTE:__ Global CLI flags may be lost during this process. You should extract them beforehand.
 pub fn expand_aliases(
     args: ArgMatches,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     external_cmds: &HashMap<String, PathBuf>,
     mut visited: Vec<String>,
 ) -> QuackResult<ArgMatches> {
@@ -94,16 +130,16 @@ fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatc
 /// Expand single user alias.
 ///
 /// `alias` is alias we're expanding, `alias_args` are [`ArgMatches`] for that `alias`, `alias_expansion`
-/// is expanded alias (taken from [`DuckCtx`]), and `visited` is a vector of already expanded
+/// is expanded alias (taken from [`DuckContext`]), and `visited` is a vector of already expanded
 /// aliases (in order to detect cycles).
 fn expand_single_alias(
     alias: &str,
     alias_args: &ArgMatches,
-    alias_expansion: &str,
+    alias_expansion: &Alias,
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
     let new_cli_args = args_from_alias(alias_expansion, alias_args);
-    debug!("replaced the alias `{alias}` with `{alias_expansion}`");
+    debug!("replaced the alias `{alias}` with `{alias_expansion:?}`");
     let parsed = parse_alias_args(new_cli_args)?;
     let Some(new_subcmd) = parsed.subcommand_name() else {
         qp_bail!("user-defined alias `{alias}` does not have a subcommand")
@@ -117,8 +153,8 @@ fn expand_single_alias(
 ///
 /// For example, for alias `foo = "bar -1"`, and command `duck foo a -b`, you should pass
 /// `alias = "bar -1"`, and args for `foo a -b`, and get `"bar", "-1", "a", "-b"` in return.
-fn args_from_alias(alias: &str, subcmd_args: &ArgMatches) -> impl Iterator<Item = OsString> {
-    let split = alias.split(' ').map(OsString::from);
+fn args_from_alias(alias: &Alias, subcmd_args: &ArgMatches) -> impl Iterator<Item = OsString> {
+    let split = alias.split().into_iter().map(OsString::from);
     chain(
         split,
         subcmd_args
@@ -151,7 +187,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        DuckCtx,
+        DuckContext,
         duck::driver::{cli, cli_args_preprocessing::aliases_expansion::expand_aliases},
     };
 
@@ -164,7 +200,7 @@ mod tests {
         ]);
 
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = HashMap::new();
         let visited = Vec::new();
@@ -189,7 +225,7 @@ mod tests {
         ]);
 
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = HashMap::new();
         let visited = Vec::new();

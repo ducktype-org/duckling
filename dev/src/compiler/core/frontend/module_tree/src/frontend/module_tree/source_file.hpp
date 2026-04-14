@@ -164,8 +164,4 @@ namespace compiler::frontend {
 		SourceFile(SourceFile&&) noexcept        = default;
 	};
 
-	/**
-	 * @brief Returns FileID for a parsed PST root element if known.
-	 */
-	base::Optional<FileID> getFileIDOfPSTRoot(pst::PstID root_element_id);
 }

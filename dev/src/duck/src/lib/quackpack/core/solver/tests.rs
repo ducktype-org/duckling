@@ -4,18 +4,18 @@ use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
 use crate::{
-    DuckCtx,
+    DuckContext,
     quackpack::{
         core::{PackageLoader, Version, fetcher::types, git_access::GitAccess},
         schemas::registry,
     },
-    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
+    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
 };
 
 use url::Url;
 
 use crate::quackpack::core::{
-    PackageCtx, ShouldRunSolverEngine, SolverGathererData,
+    PackageContext, ShouldRunSolverEngine, SolverGathererData,
     fetcher::Fetcher,
     solver_freeze::{SolverFreeze, SolverPackageFreeze},
     solver_mode::SolverMode,
@@ -42,17 +42,17 @@ impl GitAccess for MockGitAccess {
     }
 }
 
-fn setup_duck_ctx() -> (DuckCtx, TempDir) {
+fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without
         // worrying about leaving traces of tests in FS.
         let dir = tempdir().unwrap();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::set_var("DUCK_CACHE_DIR", dir.path());
         }
-        let ctx = DuckCtx::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        let ctx = DuckContext::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_CACHE_DIR");
         }
@@ -162,17 +162,17 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
 "#,
         &url, &url,
     ));
     let root_path = manifest_path.parent().unwrap().to_path_buf();
-    let pkg_ctx = PackageCtx::new(root_path.clone(), &ctx).unwrap();
+    let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
     let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
         absolute_path: root_path.clone(),
@@ -221,7 +221,7 @@ dependencies:
         .into(),
     };
 
-    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, SolverMode::default());
+    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default());
     let ShouldRunSolverEngine::Yes(solver) = solver
         .prepare_solving(&mut fetcher, &mut MockGitAccess())
         .unwrap()
@@ -277,13 +277,13 @@ metadata:
 dependencies:
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
 "#,
         &url,
     ));
     let root_path = manifest_path.parent().unwrap().to_path_buf();
-    let pkg_ctx = PackageCtx::new(root_path.clone(), &ctx).unwrap();
+    let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
     let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
         absolute_path: root_path.clone(),
@@ -339,7 +339,7 @@ dependencies:
         .into(),
     };
 
-    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, SolverMode::default());
+    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default());
     let ShouldRunSolverEngine::No(answer) = solver
         .prepare_solving(&mut fetcher, &mut MockGitAccess())
         .unwrap()
@@ -392,14 +392,14 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
     features: [a]
 "#,
         &url,
     ));
     let root_path = manifest_path.parent().unwrap().to_path_buf();
-    let pkg_ctx = PackageCtx::new(root_path.clone(), &ctx).unwrap();
+    let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
     let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
         absolute_path: root_path.clone(),
@@ -447,7 +447,7 @@ dependencies:
         supress_foreign_manifests_errors: true,
         frozen: false,
     };
-    let solver = SolverGathererData::new(&pkg_ctx, previous_freeze, mode);
+    let solver = SolverGathererData::new(&pcx, previous_freeze, mode);
     let ShouldRunSolverEngine::Yes(solver) = solver
         .prepare_solving(&mut fetcher, &mut MockGitAccess())
         .unwrap()

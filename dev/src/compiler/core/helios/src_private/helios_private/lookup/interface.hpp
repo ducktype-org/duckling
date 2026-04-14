@@ -3,7 +3,7 @@
 #include "lookup_result.hpp"
 
 #include <helios/scope_id.hpp>
-#include <typesystem/higher/abstract_type.hpp>
+#include <helios/tsh/abstract_type.hpp>
 
 #include <base/pointers/box.hpp>
 

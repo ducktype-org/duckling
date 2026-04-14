@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use tracing::debug;
+
 use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
@@ -59,6 +61,7 @@ impl SolverFreeze {
     /// Then the information about being flawed is propagated upwards (if child is flawed then so is parent who depends on it).
     ///
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
+    #[tracing::instrument(skip_all)]
     pub fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
@@ -87,8 +90,12 @@ impl SolverFreeze {
                 );
             }
         }
-        self.package_freezes
-            .retain(|pkg, _| *pkg == self.main_pkg || still_satisfied_pkgs.contains(pkg));
+        self.package_freezes.retain(|pkg, _| {
+            let is_root_package = *pkg == self.main_pkg;
+            let is_satisfied = still_satisfied_pkgs.contains(pkg);
+            debug!(?pkg, is_root_package, is_satisfied);
+            is_root_package || is_satisfied
+        });
         Ok(())
     }
 
@@ -108,8 +115,9 @@ impl SolverFreeze {
                 continue;
             };
             let mut is_every_dep_satisfied = true;
-            for (name, dep) in manifest.dependencies().all_dependencies().iter() {
-                let Some(realization) = freeze.dependencies_realization.get(name) else {
+            for dep in manifest.dependencies().all_dependencies().iter() {
+                let Some(realization) = freeze.dependencies_realization.get(&dep.effective_name())
+                else {
                     is_every_dep_satisfied = false;
                     break;
                 };
@@ -149,7 +157,7 @@ impl SolverFreeze {
             return None;
         }
         if let Some(pkg_version) = pkg.version {
-            if manifest.root_description().version() == pkg_version {
+            if manifest.version() == pkg_version {
                 Some(manifest)
             } else {
                 None
@@ -166,10 +174,7 @@ impl SolverFreeze {
         realization_freeze: &SolverPackageFreeze,
         dep: &Dependency,
     ) -> QuackResult<bool> {
-        let Some(realisation) = freeze
-            .dependencies_realization
-            .get(&dep.desc().manifest_name())
-        else {
+        let Some(realisation) = freeze.dependencies_realization.get(&dep.name()) else {
             // We do not have a realization of such dependency so the answer is negative.
             return Ok(false);
         };
@@ -234,7 +239,7 @@ impl SolverFreeze {
         // Check which main package dependencies are still satisfied.
         let mut still_satisfied_root_deps = HashSet::new();
         for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
-            if let Some(dependency) = main_manifest.dependencies().get_dependency(*alias)
+            if let Some(dependency) = main_manifest.dependencies().get_by_effective_name(*alias)
                 && let Some(realization_freeze) = self.package_freezes.get(realization)
                 && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
             {
@@ -252,8 +257,12 @@ impl SolverFreeze {
         let all_main_pkg_deps_satisfied = main_manifest
             .dependencies()
             .all_dependencies()
-            .keys()
-            .all(|alias| main_pkg_freeze.dependencies_realization.contains_key(alias));
+            .iter()
+            .all(|dep| {
+                main_pkg_freeze
+                    .dependencies_realization
+                    .contains_key(&dep.effective_name())
+            });
         // Change the previous main package to the new root package.
         let main_pkg_freeze = self
             .package_freezes
@@ -275,13 +284,13 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, StrId,
+        DuckContext, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
             types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -323,7 +332,7 @@ features:
   xd: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
@@ -395,7 +404,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
@@ -474,7 +483,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
@@ -576,7 +585,7 @@ metadata:
   version: '4'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();

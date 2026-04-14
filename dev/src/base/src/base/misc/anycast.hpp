@@ -25,19 +25,15 @@ namespace base {
 	constexpr T anyCast(const std::any& value) {
 		try {
 			return std::any_cast<T>(value);
-		} catch (std::bad_any_cast&) {
+		} catch (std::bad_any_cast& err) {
 			throw base::LogicError(base::strConcat(
 				"Bad any_cast: Value is of ",
-#ifdef _MSC_VER
 				"type : \"",
-				value.type().name(),  // This function works very poorly in gcc/clang - displays
-			                          // only the first letter of the type - for i64 == 'l'
+				value.type().name(),
 				"\" instead of \"",
-#else
-				"different type than \"",
-#endif
 				base::typeName<T>(),
-				"\""
+				"\" \n STD exception message: ",
+				err.what()
 			));
 		}
 	}

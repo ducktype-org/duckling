@@ -2,13 +2,13 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail, quackpack::core::PackageLoader,
-    util_common::path_ops_ext::PathOpsExt,
+    DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, quackpack::core::PackageLoader,
+    util::path_ops_ext::PathOpsExt,
 };
 
 /// Options for initializing a new project.
 pub struct InitOptions<'duck> {
-    pub ctx: &'duck DuckCtx,
+    pub ctx: &'duck DuckContext,
     /// Root of the project.
     pub at: PathBuf,
     /// Name of the project.
@@ -53,11 +53,11 @@ pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
 }
 
 /// Error, if we were to override an existing project.
-fn bail_if_would_override_project(ctx: &DuckCtx, root: &Path) -> QuackResult<()> {
+fn bail_if_would_override_project(ctx: &DuckContext, root: &Path) -> QuackResult<()> {
     if let Ok(package) = PackageLoader::find_at_exact_directory(root, ctx) {
         qp_bail!(
             "cannot reinitialize project `{}` at `{}`",
-            package.package().manifest().root_description().name(),
+            package.package().manifest().name(),
             package.package().root_directory().display()
         )
     }

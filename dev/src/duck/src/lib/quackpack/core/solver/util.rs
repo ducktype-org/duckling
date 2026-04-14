@@ -22,7 +22,6 @@ pub fn get_possible_realizations(
     if dependency_description.is_pinned() {
         // For a pinned dependency only one package can be a realization.
         let version = dependency_description
-            .desc()
             .versions()
             .first()
             .context_internal("Pinned dependency should have exactly one version specified")?;
@@ -44,7 +43,6 @@ pub fn get_possible_realizations(
             vec![None]
         } else {
             dependency_description
-                .desc()
                 .versions()
                 .iter()
                 .copied()
@@ -84,7 +82,7 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, StrId,
+        DuckContext, StrId,
         quackpack::core::{
             Version, parse_manifest,
             types_common::{
@@ -93,7 +91,7 @@ mod test {
             },
             util::get_possible_realizations,
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -119,13 +117,12 @@ dependencies:
     pinned: true
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
-            .all_dependencies()
-            .get(&StrId::new("b"))
+            .get_by_name(StrId::new("b"))
             .unwrap();
         let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
@@ -171,13 +168,12 @@ dependencies:
     version: 1.0.3
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
-            .all_dependencies()
-            .get(&StrId::new("b"))
+            .get_by_name(StrId::new("b"))
             .unwrap();
         let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),

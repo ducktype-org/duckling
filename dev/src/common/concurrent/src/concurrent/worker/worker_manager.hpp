@@ -50,12 +50,21 @@ namespace concurrent::worker {
 		[[nodiscard]] std::vector<WRef> getFreeWorkers(usize max_count) const;
 
 		/**
+		 * @brief Waits until all workers are free at the same time.
+		 * @param sleep_duration Delay between repeated snapshots when at least one worker is busy.
+		 * @warning This cannot be called from a worker thread, as it will cause a deadlock.
+		 */
+		void waitForAllWorkersFree(
+			std::chrono::milliseconds sleep_duration = std::chrono::milliseconds(1)
+		) const;
+
+		/**
 		 * @brief Schedules a task on any worker, while preferring free workers.
 		 * If no free worker is available, the task is scheduled on a random worker.
 		 * @param task The task to be executed.
 		 * @return The reference of the worker the task was scheduled on.
 		 */
-		WRef scheduleTaskOnAnyWorker(const Task& task);
+		WRef scheduleTaskOnAnyWorker(Task&& task);
 
 		/**
 		 * @brief Checks if a worker is free.
@@ -73,15 +82,16 @@ namespace concurrent::worker {
 		 * if the worker has no tasks - once in the method call, and later when the worker
 		 * loop checks for tasks. If the first call adds tasks, then the second call will not
 		 * happen.
+		 * @warning The lifetime of the variables used in the callback must be guaranteed to be
+		 * longer than the lifetime of a callback inside a worker. This means that you need to make
+		 * sure to reset the callback before the destruction of the variables
 		 */
-		void setNoTasksCallback(WRef worker, const NoTasksCallback& callback);
+		void setNoTasksCallback(WRef worker, NoTasksCallback&& callback);
 
 		/**
 		 * @brief Same as above, but sets the same callback for all workers sequentially.
 		 */
-		void setNoTasksCallback(const NoTasksCallback& callback) {
-			for (auto& worker: getAllWorkers()) worker->setNoTasksCallback(callback);
-		}
+		void setNoTasksCallback(NoTasksCallback&& callback);
 
 	private:
 		WorkerManager();

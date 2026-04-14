@@ -2,8 +2,8 @@
 
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
@@ -11,7 +11,7 @@
 
 #include <variant>
 
-namespace compiler::helios::houtgen {
+namespace compiler::helios::defgen {
 	/**
 	 * Represents any data associated with a compiler-generated symbol. See the inner classes.
 	 */

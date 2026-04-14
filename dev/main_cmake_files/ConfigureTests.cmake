@@ -80,14 +80,6 @@ function(duck_add_test_custom test_pack test_name test_source)
 	add_dependencies(build_${test_pack}_tests ${test_name})
 	set_property(TEST "${test_name}" PROPERTY LABELS "${test_pack}")
 
-	# This adds LD_LIBRARY_PATH pointing to downloaded ICU when using DOWNLOAD_UBUNTU_ICU_BUILD.
-	# In general it should be only used in workflows.
-	if(DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
-		set_property(TEST "${test_name}"
-			PROPERTY ENVIRONMENT
-			"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local/lib/")
-	endif()
-
 	set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	add_to_coverage(${test_name})
 endfunction()

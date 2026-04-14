@@ -7,9 +7,12 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/concurrency/synchronization_primitives.hpp>
+#include <vm/core/process/proc_io.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/vmprocess.hpp>
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/core/process/concurrency/deadlock_detection.hpp>
 #include <thread>
@@ -19,7 +22,7 @@ namespace vm::builtins {
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), TypeCRef vm_return_type, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -55,10 +58,10 @@ namespace vm::builtins {
 		 */
 		template<class Ret, class... FunArgs>
 		base::Optional<Box<VmValue>> callUnpackArgs(
-			Ret (*function)(VMThread&, FunArgs...),
+			Ret (*function)(SafeVMThread&, FunArgs...),
 			TypeCRef                         vm_return_type,
-			VMProcess&                       process,
-			VMThread&                        thread,
+			IVMProcess&                      process,
+			SafeVMThread&                    thread,
 			const std::vector<Box<VmValue>>& args
 		) {
 			CORE_ASSERT(
@@ -73,29 +76,29 @@ namespace vm::builtins {
 
 	// ============================== BUILTIN IMPLEMENTATIONS ==============================
 
-	i64 FunctionHandlers::builtinInputI64(VMThread& thread) {
-		thread.setProcessStatus(api::WaitingForInput{});
-		auto return_value = thread.process.getIO().getInput<i64>(thread);
+	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
+		thread.setProcessStatus(api::Sleeping{});
+		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
 		thread.setProcessStatus(api::Running{});
 		return return_value;
 	}
 
-	i64 FunctionHandlers::builtinOutputI64(VMThread& thread, i64 arg) {
+	i64 FunctionHandlers::builtinOutputI64(SafeVMThread& thread, i64 arg) {
 		const std::string output = std::to_string(arg) + "\n";
-		thread.process.getIO().writeOutput(output);
+		thread.safe_process.getIO().writeOutput(output);
 
 		return base::safeIntConv<i64>(output.size());
 	}
 
-	void FunctionHandlers::builtinOutputString(VMThread& thread, Pointer ptr) {
+	void FunctionHandlers::builtinOutputString(SafeVMThread& thread, Pointer ptr) {
 		auto block      = ptr.getBlock();
 		auto block_id   = thread.process_memory.requestBlockID(block);
 		auto block_data = thread.process_memory.requestBlockData(block_id);
 		auto str_data   = block_data.stdString();
-		thread.process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1) + "\n");
+		thread.safe_process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1) + "\n");
 	}
 
-	i64 FunctionHandlers::builtinStoi(VMThread& thread, Pointer ptr) {
+	i64 FunctionHandlers::builtinStoi(SafeVMThread& thread, Pointer ptr) {
 		auto block      = ptr.getBlock();
 		auto block_id   = thread.process_memory.requestBlockID(block);
 		auto block_data = thread.process_memory.requestBlockData(block_id);
@@ -104,23 +107,25 @@ namespace vm::builtins {
 		return std::stoll(str_data);
 	}
 
-	i64 FunctionHandlers::builtinStartThread(VMThread& thread) {
-		return i64{ vm::api::runFunction(thread.process.getPID(), thread.getThreadCtx()).value() };
+	u64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
+		return u64{
+			vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx()).value()
+		};
 	}
 
-	void FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
+	void FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
 		thread.releaseGil();
-		vm::api::join(thread.process.getPID(), api::ThreadID{ thread_id });
-		thread.keepOrAcquireGil();
+		vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
+		thread.acquireGil();
 	}
 
-	u64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
-		return thread.process.getSynchronizationPrimitives().addMutex();
+	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
+		return thread.safe_process.getSynchronizationPrimitives().addMutex();
 	}
 
-	void FunctionHandlers::builtinLockMutex(VMThread& thread, u64 mutex_id) {
-		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
-		
+	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+
 		if (!mutex->try_lock()) {
 			std::thread::id thread_id = std::this_thread::get_id();
 			DeadlockDetector::checkForDeadlock(thread_id, mutex_id);
@@ -136,8 +141,8 @@ namespace vm::builtins {
 		}
 	}
 
-	void FunctionHandlers::builtinUnlockMutex(VMThread& thread, u64 mutex_id) {
-		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
+	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 		
 		std::thread::id thread_id = std::this_thread::get_id();
 		DeadlockDetector::markThreadReleasedMutex(thread_id, mutex_id);
@@ -145,8 +150,53 @@ namespace vm::builtins {
 		mutex->unlock();
 	}
 
-	void FunctionHandlers::builtinDestroyMutex(VMThread& thread, u64 mutex_id) {
-		thread.process.getSynchronizationPrimitives().removeMutex(mutex_id);
+	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
+		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
+	}
+
+	u64 FunctionHandlers::builtinCreateCV(SafeVMThread& thread) {
+		return thread.safe_process.getSynchronizationPrimitives().addCV();
+	}
+
+	void FunctionHandlers::builtinWaitCV(SafeVMThread& thread, u64 cv_id, u64 mutex_id) {
+		auto cv    = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+
+		thread.releaseGil();
+		try {
+			cv->wait(*mutex);
+		} catch (const vm::exceptions::VMRuntimeException&) {
+			// Ensure the GIL is held again before propagating VM runtime exceptions.
+			thread.acquireGil();
+			throw;
+		} catch (const std::exception& e) {
+			// Reacquire GIL and wrap standard exceptions so the VM can report ExecutionPanicked.
+			thread.acquireGil();
+			std::string msg = "builtinWaitCV failed during condition variable wait: ";
+			msg += e.what();
+			throw vm::exceptions::VMRuntimeException(std::move(msg));
+		} catch (...) {
+			// Reacquire GIL and convert unknown exceptions into a VMRuntimeException.
+			thread.acquireGil();
+			throw vm::exceptions::VMRuntimeException(
+				"builtinWaitCV failed during condition variable wait with an unknown exception"
+			);
+		}
+		thread.acquireGil();
+	}
+
+	void FunctionHandlers::builtinNotifyCV(SafeVMThread& thread, u64 cv_id) {
+		auto cv = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
+		cv->notifyOne();
+	}
+
+	void FunctionHandlers::builtinNotifyAllCV(SafeVMThread& thread, u64 cv_id) {
+		auto cv = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
+		cv->notifyAll();
+	}
+
+	void FunctionHandlers::builtinDestroyCV(SafeVMThread& thread, u64 cv_id) {
+		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
 	u64 FunctionHandlers::builtinCreateCV(VMThread& thread) {
@@ -197,8 +247,8 @@ namespace vm::builtins {
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
-		VMProcess&                       process,
-		VMThread&                        thread,
+		IVMProcess&                      process,
+		SafeVMThread&                    thread,
 		const std::vector<Box<VmValue>>& arguments
 	) {
 		switch (id) {

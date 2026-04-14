@@ -10,7 +10,7 @@
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <typesystem/higher/queries.hpp>
+#include <helios/tsh/queries.hpp>
 
 #include <query_framework/context/context.hpp>
 
