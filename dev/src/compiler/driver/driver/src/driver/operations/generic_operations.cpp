@@ -529,17 +529,20 @@ namespace compiler::driver {
 		if (build_debug_info) debug_info_handles.reserve(modules_to_compile.size());
 
 		for (usize i = 0; i < modules_to_compile.size(); ++i) {
-			auto module_id     = modules_to_compile[i];
-			auto module_result = query::awaitEntryPoint<CompileModule>(compile_handles[i]);
+			auto module_result = query::awaitEntryPoint<CompileModule>(compile_handles.at(i));
+
 			if (module_result->hasValue()) {
 				objects.emplace_back(module_result->valueOrPanic().object_art);
+
 				if (build_debug_info) {
+					auto module_id = modules_to_compile.at(i);
 					debug_info_handles.push_back(
 						query::scheduleEntryPoint<DebugInfoForModule>({ module_id, backend })
 					);
 				}
-			} else
+			} else {
 				result = base::BAD;
+			}
 		}
 
 		for (auto handle: debug_info_handles) query::awaitEntryPoint<DebugInfoForModule>(handle);

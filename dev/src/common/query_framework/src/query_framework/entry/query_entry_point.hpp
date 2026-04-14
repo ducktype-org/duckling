@@ -18,9 +18,8 @@ namespace query {
 	 * @brief Opaque handle to a scheduled entry-point task.
 	 *
 	 * Returned by `query::scheduleEntryPoint` and consumed by `query::awaitEntryPoint`.
-	 * Currently it is a thin wrapper over `internal::NodeID` (which the task pool already
-	 * treats as a unique identifier), but the wrapper exists so the handle can grow into
-	 * something richer in the future without touching call sites.
+	 * Currently it is a thin wrapper over `internal::NodeID`, but it can be extended in the future
+	 * if needed.
 	 */
 	struct EntryTaskHandle final {
 		internal::NodeID node_id;
@@ -69,10 +68,9 @@ namespace query {
 	 * @brief Schedules @p QueryType for @p key as an entry-point task on the task pool
 	 * and returns a handle that can be awaited later.
 	 *
-	 * @details Unlike `entryPoint`, this function does not block. Use it to fan out
-	 * many independent entry-point queries (e.g. per-module compilations) so that
-	 * worker threads can execute them concurrently, then `awaitEntryPoint` each handle
-	 * to collect results.
+	 * This function doeas not block and can be called from any thread, but must not be called from
+	 * within a query This is default way to call queries from "outside world" (e.g. from the
+	 * compiler driver)
 	 */
 	template<typename QueryType>
 	auto scheduleEntryPoint(const typename QueryType::QKey& key) -> EntryTaskHandle {
