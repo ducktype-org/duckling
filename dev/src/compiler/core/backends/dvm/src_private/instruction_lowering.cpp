@@ -1,9 +1,9 @@
-#include "cast_operation_lowering.hpp"
 #include "debug_info_utils.hpp"
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
-#include "meta_operation_lowering.hpp"
+#include "operations/cast_operation_lowering.hpp"
+#include "operations/meta_operation_lowering.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 #include <program_lowering_context.hpp>
