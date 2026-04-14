@@ -25,7 +25,7 @@
 #include <variant>
 
 namespace dia_int {
-	class HashSourcePosition;
+	class StablePosition;
 }
 
 namespace pst {
@@ -115,10 +115,11 @@ namespace pst {
 		 * @brief The stable position of an element.
 		 */
 		[[nodiscard]]
-		dia_int::HashSourcePosition getHashSourcePosition() const;
-		static dia::SourcePosition  getActiveSourcePositionIllegalAccess(
-			 const dia_int::HashSourcePosition& pos
-		 );
+		dia_int::StablePosition getStablePosition() const;
+
+		static dia::SourcePosition getActiveSourcePositionIllegalAccess(
+			const dia_int::StablePosition& pos
+		);
 
 		/**
 		 * @brief Get pst node the by stable hash. Throws on non-existent hash.

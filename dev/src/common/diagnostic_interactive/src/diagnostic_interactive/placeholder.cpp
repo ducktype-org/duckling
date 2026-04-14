@@ -1,6 +1,6 @@
 #include "placeholder.hpp"
 
-#include <diagnostic_interactive/hash_source_position.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 
 #include <logger/logger.hpp>
 

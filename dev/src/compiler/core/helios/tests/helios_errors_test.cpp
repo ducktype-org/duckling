@@ -1,5 +1,5 @@
 
-#include <diagnostic_interactive/hash_source_position.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
@@ -1087,7 +1087,7 @@ private:
 
 			// ImmutableVariableNoInitError
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
-				ss, dia_int::HashSourcePosition::fakePosition()
+				ss, dia_int::StablePosition::fakePosition()
 			);
 		});
 	}

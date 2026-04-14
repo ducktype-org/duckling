@@ -8,9 +8,9 @@
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <tsh/queries/types.hpp>
 #include <tsl/queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -227,13 +227,13 @@ private:
 		// withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
 
 		auto print_stable_position
-			= [](const base::Optional<pst::StablePosition>& stable, std::string_view label) {
+			= [](const base::Optional<dia_int::StablePosition>& stable, std::string_view label) {
 				  if (!stable.has_value()) {
 					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
 					  return;
 				  }
 
-				  auto position                   = stable.value().getActiveSourcePosition();
+				  auto position = stable.value().getActiveSourcePositionIllegalAccess();
 				  auto [start_line, start_column] = position.getStartLineColumn();
 				  auto [end_line, end_column]     = position.getEndLineColumn();
 				  auto source_start               = position.getStart();
@@ -262,9 +262,12 @@ private:
 		print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
 		print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
 
-		auto first_pos  = first_instr.metadata.position.value().getActiveSourcePosition();
-		auto second_pos = second_instr.metadata.position.value().getActiveSourcePosition();
-		auto fourth_pos = fourth_instr.metadata.position.value().getActiveSourcePosition();
+		auto first_pos
+			= first_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
+		auto second_pos
+			= second_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
+		auto fourth_pos
+			= fourth_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
 
 		ASSERT_POSITION(first_pos, 5, 5, 5, 21);
 		ASSERT_POSITION(second_pos, 7, 18, 7, 24);
@@ -282,7 +285,7 @@ private:
 
 				// Verify source position matches variable declaration on line 7
 				ASSERT_POSITION(
-					local.metadata.position.value().getActiveSourcePosition(), 7, 5, 7, 30
+					local.metadata.position.value().getActiveSourcePositionIllegalAccess(), 7, 5, 7, 30
 				);
 			}
 		}

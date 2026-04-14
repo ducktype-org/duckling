@@ -1,7 +1,12 @@
 #include "validation.hpp"
 
+#include <diagnostic_interactive/core/common_classes.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic_interactive/lsp_ui/lsp_ui.hpp>
+#include <diagnostic_interactive/message.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
@@ -20,6 +25,20 @@ namespace lsp {
 		return module;
 	}
 
+	dia_int::CodeLocation updatePositionWithHashCodeLocation(
+		dia_int::HashCodeLocation hash_code_location
+	) {
+		dia_int::StablePosition stable_position(
+			pst::LangElement::getActiveSourcePositionIllegalAccess,
+			hash_code_location.begin_node,
+			hash_code_location.end_node
+		);
+		auto updated_source_pos = stable_position.getActiveSourcePositionIllegalAccess();
+		auto updated_code_location
+			= dia_int::CodeLocationArgument::FileLocation::fromSourcePosition(updated_source_pos);
+		return updated_code_location.toCodeLocation();
+	}
+
 	void collectErrorsFromModuleTree(
 		base::CRef<frontend::ModuleTree>                  module,
 		std::vector<CRef<dia_int::dia_args::Diagnostic>>& out
@@ -29,7 +48,9 @@ namespace lsp {
 				module->getMainSourceFile().illegalAccess().getID()
 			);
 		auto main_pst = main_file->getPST();
-		main_pst->getLogger()->collectDiagnostics(out);
+		main_pst->getLogger()->collectPositionUpdatedDiagnostics(
+			out, updatePositionWithHashCodeLocation
+		);
 
 		for (const auto& file_ref: module->getSourceFiles().illegalAccess()) {
 			auto file
@@ -37,7 +58,9 @@ namespace lsp {
 					file_ref.illegalAccess().getID()
 				);
 			auto pst = file->getPST();
-			pst->getLogger()->collectDiagnostics(out);
+			pst->getLogger()->collectPositionUpdatedDiagnostics(
+				out, updatePositionWithHashCodeLocation
+			);
 		}
 
 		// Recurse into submodules

@@ -3,7 +3,7 @@
 #include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
-#include <diagnostic_interactive/hash_source_position.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -143,8 +143,8 @@ namespace compiler::lir {
 	 * Used by the backends for the DebugInfo.
 	 */
 	struct LIRLocalMetadata {
-		base::Optional<base::StrID>                 source_code_name;
-		base::Optional<dia_int::HashSourcePosition> position;
+		base::Optional<base::StrID>             source_code_name;
+		base::Optional<dia_int::StablePosition> position;
 	};
 
 	/**
@@ -481,7 +481,7 @@ namespace compiler::lir {
 		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<dia_int::HashSourcePosition> position;
+		base::Optional<dia_int::StablePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
@@ -530,8 +530,8 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<dia_int::HashSourcePosition> position;
-		base::Optional<base::StrID>                 source_code_name;
+		base::Optional<dia_int::StablePosition> position;
+		base::Optional<base::StrID>             source_code_name;
 	};
 
 	/**

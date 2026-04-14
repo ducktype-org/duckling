@@ -1,4 +1,5 @@
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/core/diagnostic_component_traversal.hpp>
 #include <diagnostic_interactive/core/template_evaluation.hpp>
 #include <diagnostic_interactive/core/template_file.hpp>
 #include <yaml-cpp/yaml.h>
@@ -22,6 +23,7 @@ public:
 		// JSON string round trip tests
 		TESTER_ADD_TEST(jsonStringRoundTrip);
 		TESTER_ADD_TEST(codeLocationHashDeserialization);
+		TESTER_ADD_TEST(componentTraversalAndCodeLocationUpdate);
 
 		// YAML template deserialization tests
 		TESTER_ADD_TEST(yamlTemplateDeserialization);
@@ -375,6 +377,83 @@ private:
 
 		json j2 = component->toJson();
 		ASSERT_EQUAL(j.dump(2), j2.dump(2));
+	}
+
+	void componentTraversalAndCodeLocationUpdate() {
+		auto diagnostic = dia_args::Diagnostic::fromJson(json::parse(R"json({
+			"main_message": {
+				"metadata": {
+					"template_type": "message",
+					"type": "error",
+					"family": "test",
+					"name": "main"
+				},
+				"params": {
+					"location_direct": {
+						"type": "code_location",
+						"file": "a.dmf",
+						"line": 1,
+						"column": 1,
+						"hash_location": {
+							"begin_node": [11, 0, 0, 0]
+						}
+					},
+					"nested": {
+						"type": "concat",
+						"content": [
+							{ "type": "code", "content": "x" },
+							{
+								"type": "link",
+								"target_messages": ["note_1"],
+								"content": {
+									"type": "code_location",
+									"file": "a.dmf",
+									"line": 2,
+									"column": 2
+								}
+							}
+						]
+					}
+				},
+				"explore_links": []
+			},
+			"linked_messages": {
+				"note_1": {
+					"metadata": {
+						"template_type": "message",
+						"type": "note",
+						"family": "test",
+						"name": "linked"
+					},
+					"params": {
+						"location_linked": {
+							"type": "code_location",
+							"file": "b.dmf",
+							"line": 3,
+							"column": 3,
+							"hash_location": {
+								"begin_node": [22, 0, 0, 0]
+							}
+						},
+						"some_code": { "type": "code", "content": "y" }
+					}
+				}
+			}
+		})json"));
+
+		usize code_location_count = 0;
+		usize code_count          = 0;
+
+		dia_args::forEachComponentInDiagnostic<dia_args::CodeLocationComponent>(
+			diagnostic,
+			[&code_location_count](dia_args::CodeLocationComponent&) { ++code_location_count; }
+		);
+		dia_args::forEachComponentInDiagnostic<dia_args::CodeComponent>(
+			diagnostic, [&code_count](dia_args::CodeComponent&) { ++code_count; }
+		);
+
+		ASSERT_EQUAL(3, code_location_count);
+		ASSERT_EQUAL(2, code_count);
 	}
 
 	// ========================================

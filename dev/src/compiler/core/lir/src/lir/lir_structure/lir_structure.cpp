@@ -25,7 +25,7 @@ namespace compiler::lir {
 		if_opt_some(mir_local->helios_id, helios_id) {
 			metadata.source_code_name = helios::name(helios_id);
 			if_opt_some(helios::symbolPst(helios_id), pst_elem) {
-				metadata.position = pst_elem.unlock(ctx)->getHashSourcePosition();
+				metadata.position = pst_elem.unlock(ctx)->getStablePosition();
 			}
 		}
 		return LIRLocal{ mir_local->helios_id, type_layout, new_parameter_index, metadata };

@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include <diagnostic_interactive/core/common_classes.hpp>
+
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic_interactive/message_fwd.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>  // IWYU pragma: export
@@ -38,7 +40,17 @@ namespace dia_int {
 		 * @brief Collect all logged diagnostics into the provided output vector.
 		 * @param[out] out_messages Vector to collect diagnostics into.
 		 */
-		void collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages);
+		void collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) const;
+
+		/**
+		 * @brief Collect all logged diagnostics into the provided output vector
+		 * with the positions updated using the provided function and node PST hashes.
+		 * @param[out] out_messages Vector to collect diagnostics into.
+		 */
+		void collectPositionUpdatedDiagnostics(
+			std::vector<CRef<dia_args::Diagnostic>>& out_messages,
+			const UpdatePositionFunc&                update_func
+		);
 
 		/**
 		 * @brief Use it for testing purposes only,

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <diagnostic_interactive/core/common_classes.hpp>
 #include "template_file.hpp"
 
 #include <base/collections/maps.hpp>
@@ -183,14 +184,6 @@ namespace dia_int::state {
 		void reset() final {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const override;
-	};
-
-	struct CodeLocation {
-		std::string         file;
-		u64                 line;
-		u64                 column;
-		base::Optional<u64> end_line;
-		base::Optional<u64> end_column;
 	};
 
 	class CodeBlockComponent final: public Component {

@@ -204,12 +204,12 @@ namespace pst {
 		return *pst_hash_map.at(stable_hash);
 	}
 
-	dia_int::HashSourcePosition LangElement::getHashSourcePosition() const {
+	dia_int::StablePosition LangElement::getStablePosition() const {
 		return { LangElement::getActiveSourcePositionIllegalAccess, getHash(), {} };
 	}
 
 	dia::SourcePosition LangElement::getActiveSourcePositionIllegalAccess(
-		const dia_int::HashSourcePosition& pos
+		const dia_int::StablePosition& pos
 	) {
 		auto first_pos = LangElement::getByStableHash(pos.begin_node)
 		                     .illegalAccess()

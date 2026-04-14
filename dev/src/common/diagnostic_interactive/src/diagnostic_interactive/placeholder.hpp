@@ -17,7 +17,7 @@
 
 #include "message.hpp"
 
-#include <diagnostic_interactive/hash_source_position.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 
 namespace dia_int {
 	/**
