@@ -18,9 +18,10 @@ fn generate_local_git_repo() -> TempDir {
     manifest
         .as_path()
         .write(
-            "metadata:
+            "\
+metadata:
   name: fixtured_git_dependency
-  version: 1",
+  version: '1'",
         )
         .unwrap();
 

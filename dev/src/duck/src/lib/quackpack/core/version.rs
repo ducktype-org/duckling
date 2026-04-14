@@ -173,8 +173,10 @@ impl<'de> de::Deserialize<'de> for Version {
     where
         D: de::Deserializer<'de>,
     {
-        let as_str = <&'de str>::deserialize(deserializer)?;
-        Version::from_str(as_str).map_err(de::Error::custom)
+        serde_untagged::UntaggedEnumVisitor::new()
+            .expecting("a semver string")
+            .string(|s| Self::from_str(s).map_err(de::Error::custom))
+            .deserialize(deserializer)
     }
 }
 

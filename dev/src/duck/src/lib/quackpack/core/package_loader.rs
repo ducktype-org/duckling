@@ -150,7 +150,7 @@ mod tests {
     const BASIC_MANIFEST: &str = r"
 metadata:
   name: foo
-  version: 0.1
+  version: '0.1'
 ";
 
     #[test]

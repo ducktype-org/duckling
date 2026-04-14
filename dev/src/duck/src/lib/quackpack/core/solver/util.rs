@@ -98,7 +98,7 @@ mod test {
             r#"
 metadata:
   name: a
-  version: 1
+  version: '1'
 
 dependencies:
   b:
@@ -152,7 +152,7 @@ dependencies:
             r#"
 metadata:
   name: a
-  version: 1
+  version: '1'
 
 dependencies:
   b:
