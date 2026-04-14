@@ -46,7 +46,7 @@ namespace compiler::helios {
 		ScopeInternalID unstable_id;
 
 		ScopeData(
-			base::Optional<ScopeID>        parent,
+			base::Optional<ScopeID>       parent,
 			bool                          is_root,
 			base::Optional<pst::HashType> related_pst_element_hash,
 			frontend::ModuleID            parent_module,

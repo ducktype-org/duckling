@@ -288,11 +288,11 @@ namespace compiler::helios {
 			// that is kept in our cache:
 			if (element_scope_kind == ElementScopeKind::Transparent) {
 				return parent.ref->perfectClone();
-			}
-			else if (element_scope_kind == ElementScopeKind::ParentTransparent) {
+			} else if (element_scope_kind == ElementScopeKind::ParentTransparent) {
 				CORE_ASSERT(
 					parent.ref->parent.has_value(),
-					"Parent transparent scope kind used on element of which transparent scope that has no parent."
+					"Parent transparent scope kind used on element of which transparent scope that "
+				    "has no parent."
 				);
 				return parent.ref->parent->ref->perfectClone();
 			}
