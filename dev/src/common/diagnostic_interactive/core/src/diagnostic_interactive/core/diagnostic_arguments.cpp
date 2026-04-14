@@ -1,10 +1,11 @@
 #include "diagnostic_arguments.hpp"
-#include <iostream>
 
 #include "diagnostic_arguments_forward.hpp"
 #include "diagnostic_component_traversal.hpp"
 
 #include <base/pointers/box.hpp>
+
+#include <iostream>
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Component);
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Diagnostic);
@@ -148,8 +149,8 @@ namespace dia_int::dia_args {
 	}
 
 	void CodeLocationComponent::updatePosition(const UpdatePositionFunc& func) {
-		std::cerr << "Updating position for code location: " << location.file << ":" << location.line
-		          << ":" << location.column << "\n";
+		std::cerr << "Updating position for code location: " << location.file << ":"
+				  << location.line << ":" << location.column << "\n";
 		std::cerr << "Has hash location: " << (hash_location.has_value() ? "yes" : "no") << "\n";
 		if (hash_location.has_value()) location = func(hash_location.value());
 	}

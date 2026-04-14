@@ -1,7 +1,8 @@
 #pragma once
 #include "diagnostic_arguments_forward.hpp"
-#include <diagnostic_interactive/core/common_classes.hpp>
 #include "utils.hpp"
+
+#include <diagnostic_interactive/core/common_classes.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>

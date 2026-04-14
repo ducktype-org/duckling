@@ -1,7 +1,8 @@
 #pragma once
 
-#include <diagnostic_interactive/core/common_classes.hpp>
 #include "template_file.hpp"
+
+#include <diagnostic_interactive/core/common_classes.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/visitor.hpp>

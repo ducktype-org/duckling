@@ -32,7 +32,7 @@ namespace query {
 		for (auto& [_, logger]: *main_query_state.getDiagnosticLoggers())
 			logger->collectDiagnostics(output);
 	}
-	
+
 	void Context::collectAndUpdateAllDiagnostic(
 		std::vector<CRef<dia_int::dia_args::Diagnostic>>& output,
 		const dia_int::UpdatePositionFunc&                update_func

@@ -2,7 +2,6 @@
 
 
 #include <diagnostic_interactive/core/common_classes.hpp>
-
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic_interactive/message_fwd.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>  // IWYU pragma: export

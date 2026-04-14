@@ -177,7 +177,9 @@ namespace lsp {
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-		query::Context::collectAndUpdateAllDiagnostic(diagnostics, updatePositionWithHashCodeLocation);
+		query::Context::collectAndUpdateAllDiagnostic(
+			diagnostics, updatePositionWithHashCodeLocation
+		);
 
 		dia_int::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());
 
