@@ -5,6 +5,7 @@
 
 #ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
 	#include "opcodes_bitcode_source.hpp"
+	#include "absolute_symbols.hpp"
 
 	#include "llvm_init.hpp"
 
@@ -14,12 +15,15 @@
 
 	#include <cstddef>
 	#include <cstring>
+	#include <array>
 
 LLVM_INCLUDE_BEGIN()
 	#include <llvm/Bitcode/BitcodeReader.h>
 	#include <llvm/Demangle/Demangle.h>
 	#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
 	#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+	#include <llvm/ExecutionEngine/Orc/Core.h>
+	#include <llvm/ExecutionEngine/JITSymbol.h>
 	#include <llvm/IR/Function.h>
 	#include <llvm/IR/LLVMContext.h>
 	#include <llvm/IR/Module.h>
@@ -85,7 +89,20 @@ namespace {
 			if (func_name == vm::low::OPCODE_NAMES[i]) return static_cast<vm::low::MicroOpcode>(i);
 		CORE_PANIC("Function name does not correspond to any MicroOpcode", func_name);
 	}
+
+	constexpr auto constructNonExecOpcodeArray() {
+		std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> non_exec_opcodes;
+		size_t j = 0;
+		for (size_t i = 0; i < vm::low::OPCODE_NAMES.size(); ++i) {
+			if (vm::low::OPCODE_NAMES[i].starts_with("ext_")) {
+				non_exec_opcodes[j++] = static_cast<vm::low::MicroOpcode>(i);
+			}
+		}
+		return non_exec_opcodes;
+	}
 }
+
+static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> NON_EXEC_OPCODES = constructNonExecOpcodeArray();
 
 void llvmInit() {
 	llvm::InitializeNativeTarget();
@@ -101,6 +118,8 @@ void llvmInit() {
 	jd.addGenerator(cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
 		lljit_instance->getDataLayout().getGlobalPrefix()
 	)));
+
+	registerAbsoluteJITSymbols(*lljit_instance);
 
 	// Load embedded BC into module
 	auto buffer = MemoryBuffer::getMemBuffer(StringRef(OPCODES, sizeof(OPCODES)), "", false);
@@ -137,13 +156,26 @@ llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun) {
 	return func_map.at(fun);
 }
 
-std::string llvmGetFunName(const vm::low::MicroOpcode& fun) {
-	CORE_ASSERT(lfunc_name_map.contains(fun), "Opcode function not found in LLVM module");
-	return lfunc_name_map.at(fun);
+base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode& fun) {
+	auto fun_name_iter = lfunc_name_map.find(fun);
+	if (fun_name_iter != lfunc_name_map.end()) {
+		return fun_name_iter->second;
+	}
+	return {};
+	
 }
 
 llvm::orc::ThreadSafeContext* llvmGetTSCtx() { return g_context.get(); }
 
 llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }
+
+bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
+	for (const auto& mo: NON_EXEC_OPCODES) {
+		if (mo == opcode) {
+			return true;
+		}
+	}
+	return false;
+}
 
 #endif

@@ -8,6 +8,8 @@
 
 #include <vm/core/thread/low_program/instruction.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -115,8 +117,21 @@ namespace vm::jit {
 			usize                   end
 		) {
 			for (usize instr_idx = start; instr_idx < end; ++instr_idx) {
-				const vm::MicroInstruction& mi = function_to_compile.bc[instr_idx];
-				std::string opfun_name         = llvmGetFunName(vm::getInstructionOpcode(mi));
+				const vm::MicroInstruction& mi = function_to_compile.bc.at(instr_idx);
+				std::string opfun_name;
+				
+				auto opcode = vm::getInstructionOpcode(mi);
+				if (isOpcodeNonExecutable(opcode)) {
+					continue;
+				}
+				match_optional(llvmGetFunName(opcode)) {
+					opt_some(op_name) {
+						opfun_name = op_name;
+					}
+					opt_none {
+						opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode));
+					}
+				}
 
 				ir_builder.CreateCall(
 					opfun_ty,
