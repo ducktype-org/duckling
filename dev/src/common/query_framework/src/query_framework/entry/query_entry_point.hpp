@@ -77,8 +77,7 @@ namespace query {
 	template<typename QueryType>
 	auto scheduleEntryPoint(const typename QueryType::QKey& key) -> EntryTaskHandle {
 		CORE_ASSERT(
-			!Context::areWeInsideQuery(),
-			"query::scheduleEntryPoint called from within query!"
+			!Context::areWeInsideQuery(), "query::scheduleEntryPoint called from within query!"
 		);
 		return internal::EntryPointHelper::scheduleQuery<QueryType>(key);
 	}
@@ -90,8 +89,7 @@ namespace query {
 	template<typename QueryType>
 	auto awaitEntryPoint(EntryTaskHandle handle) -> decltype(auto) {
 		CORE_ASSERT(
-			!Context::areWeInsideQuery(),
-			"query::awaitEntryPoint called from within query!"
+			!Context::areWeInsideQuery(), "query::awaitEntryPoint called from within query!"
 		);
 		return internal::EntryPointHelper::awaitTask<QueryType>(handle);
 	}
