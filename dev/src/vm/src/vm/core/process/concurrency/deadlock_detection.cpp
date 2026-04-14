@@ -8,23 +8,23 @@
 
 namespace vm {
 
-    std::map<std::thread::id, usize> DeadlockDetector::thread_waiting_for_mutex;
-    std::map<usize, std::thread::id> DeadlockDetector::mutex_owners;
+    std::map<std::pair<u64, std::thread::id>, usize> DeadlockDetector::thread_waiting_for_mutex;
+    std::map<std::pair<u64, usize>, std::thread::id> DeadlockDetector::mutex_owners;
 
-    void DeadlockDetector::checkForDeadlock(std::thread::id thread_id, usize mutex_id) {
+    void DeadlockDetector::checkForDeadlock(u64 process_id, std::thread::id thread_id, usize mutex_id) {
         // Check if there is a cycle in resource allocation graph if we add edge thread_id -> mutex_id
         
         // If the mutex is not owned by anyone, no deadlock possible from this acquisition
-        auto owner_it = mutex_owners.find(mutex_id);
+        auto owner_it = mutex_owners.find({ process_id, mutex_id });
         if (owner_it == mutex_owners.end()) {
             return;
         }
 
         std::thread::id owner_thread_id = owner_it->second;
 
-        // If the thread already owns the mutex, it's a recursive lock.
+        // std::mutex is non-recursive. Locking it again in the same thread deadlocks.
         if (owner_thread_id == thread_id) {
-            return; // Recursive locks are allowed, we can just return here.
+            throw exceptions::VMDeadlockException();
         }
 
         // DFS to find if owner_thread_id can reach thread_id in the wait-for graph
@@ -47,12 +47,12 @@ namespace vm {
             }
 
             // Find what mutex current_thread is waiting for
-            auto wait_it = thread_waiting_for_mutex.find(current_thread);
+            auto wait_it = thread_waiting_for_mutex.find({ process_id, current_thread });
             if (wait_it != thread_waiting_for_mutex.end()) {
                 usize waiting_for_mutex = wait_it->second;
                 
                 // Find who owns that mutex
-                auto next_owner_it = mutex_owners.find(waiting_for_mutex);
+                auto next_owner_it = mutex_owners.find({ process_id, waiting_for_mutex });
                 if (next_owner_it != mutex_owners.end()) {
                     std::thread::id next_thread = next_owner_it->second;
                     
@@ -68,17 +68,17 @@ namespace vm {
         }
     }
 
-    void DeadlockDetector::markThreadWaitingForMutex(std::thread::id thread_id, usize mutex_id) {
-        thread_waiting_for_mutex[thread_id] = mutex_id;
+    void DeadlockDetector::markThreadWaitingForMutex(u64 process_id, std::thread::id thread_id, usize mutex_id) {
+        thread_waiting_for_mutex[{ process_id, thread_id }] = mutex_id;
     }
 
-    void DeadlockDetector::markThreadAcquiredMutex(std::thread::id thread_id, usize mutex_id) {
-        thread_waiting_for_mutex.erase(thread_id);
-        mutex_owners[mutex_id] = thread_id;
+    void DeadlockDetector::markThreadAcquiredMutex(u64 process_id, std::thread::id thread_id, usize mutex_id) {
+        thread_waiting_for_mutex.erase({ process_id, thread_id });
+        mutex_owners[{ process_id, mutex_id }] = thread_id;
     }
 
-    void DeadlockDetector::markThreadReleasedMutex(std::thread::id thread_id, usize mutex_id) {
-        auto it = mutex_owners.find(mutex_id);
+    void DeadlockDetector::markThreadReleasedMutex(u64 process_id, std::thread::id thread_id, usize mutex_id) {
+        auto it = mutex_owners.find({ process_id, mutex_id });
         if (it != mutex_owners.end() && it->second == thread_id) {
             mutex_owners.erase(it);
         }

@@ -125,29 +125,30 @@ namespace vm::builtins {
 
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		u64 process_id = static_cast<u64>(thread.safe_process.getPID());
 
 		if (!mutex->try_lock()) {
 			std::thread::id thread_id = std::this_thread::get_id();
-			DeadlockDetector::checkForDeadlock(thread_id, mutex_id);
-			DeadlockDetector::markThreadWaitingForMutex(thread_id, mutex_id);
+			DeadlockDetector::checkForDeadlock(process_id, thread_id, mutex_id);
+			DeadlockDetector::markThreadWaitingForMutex(process_id, thread_id, mutex_id);
 			
 			thread.releaseGil();
 			mutex->lock();
-			thread.keepOrAcquireGil();
-			DeadlockDetector::markThreadAcquiredMutex(thread_id, mutex_id);
+			thread.acquireGil();
+			DeadlockDetector::markThreadAcquiredMutex(process_id, thread_id, mutex_id);
 		} else {
 			std::thread::id thread_id = std::this_thread::get_id();
-			DeadlockDetector::markThreadAcquiredMutex(thread_id, mutex_id);
+			DeadlockDetector::markThreadAcquiredMutex(process_id, thread_id, mutex_id);
 		}
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		u64 process_id = static_cast<u64>(thread.safe_process.getPID());
 		
 		std::thread::id thread_id = std::this_thread::get_id();
-		DeadlockDetector::markThreadReleasedMutex(thread_id, mutex_id);
-
 		mutex->unlock();
+		DeadlockDetector::markThreadReleasedMutex(process_id, thread_id, mutex_id);
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
@@ -197,51 +198,6 @@ namespace vm::builtins {
 
 	void FunctionHandlers::builtinDestroyCV(SafeVMThread& thread, u64 cv_id) {
 		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
-	}
-
-	u64 FunctionHandlers::builtinCreateCV(VMThread& thread) {
-		return thread.process.getSynchronizationPrimitives().addCV();
-	}
-
-	void FunctionHandlers::builtinWaitCV(VMThread& thread, u64 cv_id, u64 mutex_id) {
-		auto cv    = thread.process.getSynchronizationPrimitives().getCV(cv_id);
-		auto mutex = thread.process.getSynchronizationPrimitives().getMutex(mutex_id);
-
-		thread.releaseGil();
-		try {
-			cv->wait(*mutex);
-		} catch (const vm::exceptions::VMRuntimeException&) {
-			// Ensure the GIL is held again before propagating VM runtime exceptions.
-			thread.keepOrAcquireGil();
-			throw;
-		} catch (const std::exception& e) {
-			// Reacquire GIL and wrap standard exceptions so the VM can report ExecutionPanicked.
-			thread.keepOrAcquireGil();
-			std::string msg = "builtinWaitCV failed during condition variable wait: ";
-			msg += e.what();
-			throw vm::exceptions::VMRuntimeException(std::move(msg));
-		} catch (...) {
-			// Reacquire GIL and convert unknown exceptions into a VMRuntimeException.
-			thread.keepOrAcquireGil();
-			throw vm::exceptions::VMRuntimeException(
-				"builtinWaitCV failed during condition variable wait with an unknown exception"
-			);
-		}
-		thread.keepOrAcquireGil();
-	}
-
-	void FunctionHandlers::builtinNotifyCV(VMThread& thread, u64 cv_id) {
-		auto cv = thread.process.getSynchronizationPrimitives().getCV(cv_id);
-		cv->notifyOne();
-	}
-
-	void FunctionHandlers::builtinNotifyAllCV(VMThread& thread, u64 cv_id) {
-		auto cv = thread.process.getSynchronizationPrimitives().getCV(cv_id);
-		cv->notifyAll();
-	}
-
-	void FunctionHandlers::builtinDestroyCV(VMThread& thread, u64 cv_id) {
-		thread.process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(

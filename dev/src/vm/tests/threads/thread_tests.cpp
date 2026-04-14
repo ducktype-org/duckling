@@ -33,12 +33,6 @@ private:
 		runTestOnVm("cv_simple_barrier_all_test.dbc", "", "22020201", {});
 		runTestOnVm("producer_consumer.dbc", "", "20000200000221", {});
 	}
-
-	void cvTest() {
-		runTestOnVm("cv_permit_barrier_test.dbc", "", "20000221", {});
-		runTestOnVm("cv_simple_barrier_all_test.dbc", "", "22020201", {});
-		runTestOnVm("producer_consumer.dbc", "", "20000200000221", {});
-	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/threads/");
