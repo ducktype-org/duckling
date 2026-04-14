@@ -5,7 +5,9 @@ use std::path::Path;
 use tracing::debug;
 
 use super::{Scope, dependency};
-use crate::quackpack::core::{Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles};
+use crate::quackpack::core::{
+    Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles, ScopeGuard,
+};
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
 };
@@ -29,23 +31,18 @@ pub(crate) fn parse(
     };
     debug!("package name is `{name}`, version is `{version}`");
     let mut scope = Scope::new();
-    scope.push("dependencies".into());
-    let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, &mut scope)?;
-    scope.pop();
+    let guard = scope.push("dependencies".into());
+    let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, guard)?;
 
-    scope.push("dev-dependencies".into());
-    let dev_deps = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, &mut scope)?;
-    scope.pop();
+    let guard = scope.push("dev-dependencies".into());
+    let dev_deps = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, guard)?;
 
-    scope.push("features".into());
-    let features =
-        parse_features(schema.features.as_ref()).with_context(|| scope.make_context_string())?;
-    scope.pop();
+    let guard = scope.push("features".into());
+    let features = parse_features(schema.features.as_ref())
+        .with_context(move || guard.make_context_string())?;
 
-    scope.push("profiles".into());
-    let profiles = parse_profiles(schema.profiles.as_ref(), &mut scope)
-        .with_context(|| scope.make_context_string())?;
-    scope.pop();
+    let guard = scope.push("profiles".into());
+    let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
 
     let authors = metadata
         .authors
@@ -84,23 +81,24 @@ fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResul
 /// Parse [`Profiles`] from the given compiler flags mapping.
 fn parse_profiles(
     input: Option<&HashMap<String, ProfileSchema>>,
-    scope: &mut Scope,
+    mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Profiles> {
     let Some(input) = input else {
         return Ok(Profiles::default());
     };
-    let profiles_map: QuackResult<HashMap<StrId, Profile>> = input
-        .iter()
-        .map(|(k, v)| {
-            scope.push(k.into());
-            let result = (parse_profile(v))
-                .map(|new_v| (k.into(), new_v))
-                .with_context(|| scope.make_context_string());
-            scope.pop();
-            result
-        })
-        .collect();
-    Profiles::new(profiles_map?)
+    (|| {
+        let profiles_map: QuackResult<HashMap<StrId, Profile>> = input
+            .iter()
+            .map(|(k, v)| {
+                let guard = scope.push(k.into());
+                (parse_profile(v))
+                    .map(|new_v| (k.into(), new_v))
+                    .with_context(move || guard.make_context_string())
+            })
+            .collect();
+        Profiles::new(profiles_map?)
+    })()
+    .with_context(move || scope.make_context_string())
 }
 
 fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {

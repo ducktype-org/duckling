@@ -1,4 +1,5 @@
 //! Main entry to parsing a manifest at the given path.
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 use itertools::Itertools;
@@ -49,13 +50,13 @@ impl Scope {
     }
 
     /// Push a `name` onto this [`Scope`].
-    pub fn push(&mut self, name: StrId) {
-        self.inner.push(name)
+    pub fn push(&mut self, name: StrId) -> ScopeGuard<'_> {
+        ScopeGuard::new(self, name)
     }
 
     /// Pop last item from this [`Scope`].
-    pub fn pop(&mut self) -> Option<StrId> {
-        self.inner.pop()
+    pub fn pop(&mut self) -> StrId {
+        self.inner.pop().unwrap()
     }
 
     /// Turn this [`Scope`] into a human friendly [`String`].
@@ -66,6 +67,54 @@ impl Scope {
     /// A helper for creating common context messages.
     pub fn make_context_string(&self) -> String {
         format!("when parsing the field `{}`", self.format())
+    }
+}
+
+/// A [`Scope`] guard.
+/// Will automatically `pop` when going out of scope, unless disarmed.
+pub(crate) struct ScopeGuard<'scope> {
+    scope: &'scope mut Scope,
+    armed: bool,
+}
+
+impl<'scope> ScopeGuard<'scope> {
+    pub fn new(scope: &'scope mut Scope, name: StrId) -> Self {
+        scope.inner.push(name);
+        Self { scope, armed: true }
+    }
+
+    /// Disarm this guard.
+    /// Droping it will have no effect.
+    pub fn disarm(&mut self) {
+        self.armed = false;
+    }
+
+    /// Disarm this guard, and return a result of a manual pop.
+    pub fn disarm_and_pop(&mut self) -> StrId {
+        self.disarm();
+        self.pop()
+    }
+}
+
+impl Drop for ScopeGuard<'_> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.scope.inner.pop();
+        }
+    }
+}
+
+impl Deref for ScopeGuard<'_> {
+    type Target = Scope;
+
+    fn deref(&self) -> &Self::Target {
+        self.scope
+    }
+}
+
+impl DerefMut for ScopeGuard<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.scope
     }
 }
 
