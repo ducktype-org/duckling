@@ -112,7 +112,7 @@ impl fmt::Display for CorruptedVenvError {
 
 impl std::error::Error for CorruptedVenvError {}
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
 /// State of virtual environment in the storage. Stores the freeze for the given
 /// virtual environment, copy of manifest's metadata, and additional info
 /// required for storage functioning: last location and access info.
@@ -285,7 +285,7 @@ impl From<Venv> for VenvFreeze {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// A virtual environment.
 pub struct Venv {
     id: VenvId,
