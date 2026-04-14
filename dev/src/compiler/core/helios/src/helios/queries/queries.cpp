@@ -91,10 +91,16 @@ namespace compiler::helios {
 				run_no_interrupt([&] { register_ctor_if_needed(sym); });
 			};
 
-			for (auto scope: *scopes_to_process) {
-				Ref symbols_in_scope = &ctx.query<QuerySymbolsInScope>(scope)->valueOrThrow();
+			std::cerr << "---- -1\n";
 
-				for (auto sym: *symbols_in_scope) {
+			for (auto scope: *scopes_to_process) {
+				Ref symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+				if (symbols_in_scope->hasFailed()) {
+					is_failed = true;
+					continue;
+				}
+
+				for (auto sym: symbols_in_scope->valueOrPanic()) {
 					// Register default constructors for all symbols that need them.
 					const auto sym_kind = kind(sym);
 					if (sym_kind == SymbolKind::Variable || sym_kind == SymbolKind::Const)
@@ -117,6 +123,8 @@ namespace compiler::helios {
 				}
 			}
 
+			std::cerr << "---- 0\n";
+
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as
 				// appendClassConstructors may be time consuming.
@@ -130,7 +138,11 @@ namespace compiler::helios {
 				);
 			}
 
+			std::cerr << "---- 1\n";
+
 			run_no_interrupt([&]{ appendDefaultConstructors(out.functions, default_ctors, ctx); });
+
+			std::cerr << "---- 2\n";
 
 			for (auto handler: scheduled_tasks) {
 				// we "catch" failure here to continue gathering other functions:
