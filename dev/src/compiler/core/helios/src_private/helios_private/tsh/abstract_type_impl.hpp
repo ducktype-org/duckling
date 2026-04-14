@@ -109,7 +109,9 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		virtual bool isTriviallyCopyable(query::Context& ctx) const
-			= 0;
+			{
+				CORE_PANIC("isTriviallyCopyable is not implemented for this type: ", toString());
+			};
 
 		/**
 		 * @brief Get the text representation of this type.
