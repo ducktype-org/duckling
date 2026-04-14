@@ -34,10 +34,13 @@ namespace compiler::helios {
 			if (expand_ctv.has<base::StrID>()) {
 				auto expand_str = expand_ctv.get<base::StrID>().value();
 
+				auto string = new std::string(expand_str.str()); // leak it for now!
+				std::cerr << "Macro expansion with string: " << *string << "\n";
+
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
 					expand->getSourcePosition(),
 					// @TODO: #2471 change to strView, once it is fixed
-					expand_str.str(),
+					*string,
 					makeBox<pst::LangParserContext>(expand->getContext()),
 
 					// This is a little weird, we create a path context hash by hashing the string
@@ -55,6 +58,9 @@ namespace compiler::helios {
 						"Macro expansion produced code with parsing errors (see other diagnostics for details)",
 						expand->getSourcePosition()
 					));
+
+					new pst::PST<pst::Stmt>(std::move(pst));  // leak it here!
+
 					return query::Failed();
 				}
 
