@@ -106,6 +106,7 @@ namespace compiler::driver {
 			.used_hashes             = query::UsedHashes::StableHash,
 			.can_be_loaded_from_disk = true,
 			.preserve_in_graph       = true,
+			.catch_exceptions_if_using_qresult = false, // See #2496
 		})
 	);
 }

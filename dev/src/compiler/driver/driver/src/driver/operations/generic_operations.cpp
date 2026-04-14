@@ -531,7 +531,7 @@ namespace compiler::driver {
 			std::cerr << "THE END!\n";
 
 			// TEST CODE:
-			// concurrent::worker::WorkerManager::get().waitForAllWorkersFree(std::chrono::milliseconds(10));
+			concurrent::worker::WorkerManager::get().waitForAllWorkersFree(std::chrono::milliseconds(10));
 			return result;
 		}
 

@@ -21,7 +21,14 @@ namespace compiler::helios {
 	 * \parallel key helpers like isGlobalVar don’t modify globals
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
+	DECLARE_QUERY(
+		QueryModuleHOUT,
+		frontend::ModuleID,
+		CRef<query::QResult<HOUTUnit>>,
+		({
+			.catch_exceptions_if_using_qresult = false, // See #2496
+		})
+	)
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
