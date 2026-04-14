@@ -37,6 +37,10 @@ endif()
 # Dependencies
 add_subdirectory(dependencies)
 
+# Temp:
+find_package(mimalloc 3.2 REQUIRED) 
+
+
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureTests.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigurePlaygrounds.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureGlobalCleanTargets.cmake)
@@ -60,3 +64,6 @@ add_subdirectory(src/playground)
 add_subdirectory(scripts/cmake)
 
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureDocs.cmake)
+
+
+# target_link_libraries(duckc PUBLIC mimalloc)

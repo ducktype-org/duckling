@@ -38,6 +38,8 @@
 
 #include <iostream>
 
+#include "mimalloc-new-delete.h";
+
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
