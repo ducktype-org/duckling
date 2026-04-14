@@ -342,38 +342,31 @@ namespace vm {
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
 		  loaded_program(loader.getProgram()) {
-		vm_threads.emplace_back(*this);
+        addNewThread();
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
-
-
 	VMThread& VMProcess::getVMThreadByID(api::ThreadID thread_id) {
-		if (thread_id == api::ThreadID{ 0 }) return getMainVMThread();
-		for (auto& thread: vm_threads) {
-			if (thread.exec_thread) {
-				api::ThreadID id = static_cast<api::ThreadID>(
-					std::hash<std::thread::id>{}(thread.exec_thread->get_id())
-				);
-				if (id == thread_id) return thread;
-			}
-		}
-		return getMainVMThread();
+        // @TODO: This case should throw an error / return optional
+        if(thread_id.asInt() >= next_thread_id){
+            return getMainVMThread();
+        }
+        return vm_threads.at(thread_id.asInt());
 	}
 
     VMThread& VMProcess::addNewThread(){
-
+		vm_threads.emplace_back(*this);
+        return vm_threads.back();
     }
 
 	VMThread& VMProcess::getEmptyThread() {
 		for (auto& thread: vm_threads)
 			if (!thread.exec_thread) return thread;
 
-		vm_threads.emplace_back(*this);
-		return vm_threads.back();
+		return addNewThread();
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::attach(
@@ -440,4 +433,8 @@ namespace vm {
 	SynchronizationPrimitives& VMProcess::getSynchronizationPrimitives() {
 		return synchronization_primitives;
 	}
+
+    i64 VMProcess::getNextThreadId(){
+        return next_thread_id++;
+    }
 }

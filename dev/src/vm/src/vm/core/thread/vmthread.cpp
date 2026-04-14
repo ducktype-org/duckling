@@ -35,9 +35,11 @@ namespace vm {
 	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	VMThread::VMThread(VMProcess& process):
+		  thread_id(process.getNextThreadId()),
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),
-		  process_memory(process.getMemory()) {}
+          process_memory(process.getMemory())
+    {}
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
@@ -756,4 +758,8 @@ namespace vm {
 	void VMThread::setThreadCtx(std::string name) { thread_ctx = std::move(name); }
 
 	std::string VMThread::getThreadCtx() { return thread_ctx; }
+
+    api::ThreadID VMThread::getThreadId(){
+        return thread_id;
+    }
 }

@@ -4,5 +4,5 @@
 #include <base/types/ints.hpp>
 
 namespace vm::api {
-	STRONG_TYPEDEF_INT(ThreadID, i64);
+	STRONG_TYPEDEF_INT(ThreadID, u64);
 }

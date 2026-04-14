@@ -57,6 +57,8 @@ namespace vm {
 		GIL                       gil;
 		SynchronizationPrimitives synchronization_primitives;
 
+        u64 next_thread_id = 0;
+
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
@@ -236,5 +238,6 @@ namespace vm {
 
 		GIL&                       getGIL();
 		SynchronizationPrimitives& getSynchronizationPrimitives();
+        i64 getNextThreadId();
 	};
 }

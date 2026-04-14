@@ -335,5 +335,10 @@ namespace vm {
 		 * @brief Gets name of the function that will be used in builtin spawn thread.
 		 */
 		std::string getThreadCtx();
+
+		/**
+		 * @brief Gets threadID; 
+		 */
+        api::ThreadID getThreadId();
 	};
 }
