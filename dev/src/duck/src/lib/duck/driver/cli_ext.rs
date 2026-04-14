@@ -76,7 +76,10 @@ pub fn optional(name: &'static str, help: &'static str) -> Arg {
 
 /// Create an argument which takes multiple values.
 pub fn multi(name: &'static str, help: &'static str) -> Arg {
-    Arg::new(name).help(help).action(ArgAction::Append)
+    Arg::new(name)
+        .help(help)
+        .long(name)
+        .action(ArgAction::Append)
 }
 
 /// Create a new subcommand.
