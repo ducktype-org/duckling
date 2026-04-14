@@ -5,10 +5,10 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <helios/tsh/queries.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <tsh/queries.hpp>
-#include <tsh/symbol_type.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -28,7 +28,6 @@ namespace compiler::helios {
 			                       .valueOrThrow();
 			auto expand_ctv
 				= ctx.query<QueryEvaluateHOUTExpression>({ expand_hout.ref() }).valueOrThrow();
-
 
 			if (expand_ctv.has<base::StrID>()) {
 				auto expand_str = expand_ctv.get<base::StrID>().value();
