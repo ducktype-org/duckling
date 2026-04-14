@@ -29,7 +29,6 @@
 #include <string_view>
 
 namespace compiler::repl {
-	// @TODO: #1784 decide if we want to do it here or in the main.cpp.
 	void ReplSession::initDVM() {
 		auto spawn_result = vm::api::spawn();
 		CORE_ASSERT(spawn_result.has_value(), "ReplSession::initDVM: Failed to spawn DVM process");
@@ -480,6 +479,13 @@ namespace compiler::repl {
 			}
 
 			auto result = processLine(line);
+			if (result.status == ReplResult::Status::Error) {
+				if (!result.message.empty()) std::cerr << result.message << "\n";
+				continue;
+			}
+
+			if (result.status == ReplResult::Status::Success && !result.message.empty())
+				std::cout << result.message << "\n";
 
 			if (result.status == ReplResult::Status::Exit) {
 				std::cout << result.message << "\n";
