@@ -10,19 +10,35 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/task_pool/task_pool.hpp>
 #include <query_framework/utils/simple_keys.hpp>
 
 namespace query {
+
+	namespace internal {
+		struct EntryPointHelper;
+	}
 
 	/**
 	 * @brief Opaque handle to a scheduled entry-point task.
 	 *
 	 * Returned by `query::scheduleEntryPoint` and consumed by `query::awaitEntryPoint`.
-	 * Currently it is a thin wrapper over `internal::NodeID`, but it can be extended in the future
-	 * if needed.
+	 * The constructor is private — only `internal::EntryPointHelper` (befriended below) may
+	 * produce handles, which guarantees every handle corresponds to a task that was actually
+	 * scheduled on the task pool.
 	 */
-	struct EntryTaskHandle final {
-		internal::NodeID node_id;
+	class EntryTaskHandle final {
+	public:
+		/** @brief Returns the NodeID of the scheduled task. */
+		[[nodiscard]] internal::NodeID getID() const { return task_id; }
+
+	private:
+		EntryTaskHandle(internal::TaskPool& pool, internal::NodeID id): pool(pool), task_id(id) {}
+
+		internal::TaskPool& pool;
+		internal::NodeID    task_id;
+
+		friend struct internal::EntryPointHelper;
 	};
 
 	namespace internal {
@@ -42,14 +58,15 @@ namespace query {
 					"entryPoint cannot be used to call input queries"
 				);
 
-				auto node_id = makeNodeID<QueryType>(key);
+				auto  node_id = makeNodeID<QueryType>(key);
+				auto& pool    = *Context::getState().getTaskPool();
 
-				Context::getState().getTaskPool()->addTask(internal::Task{
+				pool.addTask(internal::Task{
 					node_id,
 					[key](concurrent::worker::WRef) { QueryType::internal_query(key); },
 				});
 
-				return EntryTaskHandle{ node_id };
+				return EntryTaskHandle{ pool, node_id };
 			}
 
 			/**
@@ -58,8 +75,8 @@ namespace query {
 			 */
 			template<typename QueryType>
 			auto static awaitTask(EntryTaskHandle handle) -> decltype(auto) {
-				Context::getState().getTaskPool()->waitForTask(handle.node_id);
-				return QueryType::internal_load(handle.node_id.hash.val);
+				handle.pool.waitForTask(handle.task_id);
+				return QueryType::internal_load(handle.task_id.hash.val);
 			}
 		};
 	}
