@@ -175,7 +175,7 @@ impl PathOpsExt for Path {
         let to = to.as_ref();
         let mut target = {
             let mut opts = OpenOptions::new();
-            opts.write(true).create(true).open(to)
+            opts.write(true).create(true).truncate(true).open(to)
         }
         .with_context(|| format!("failed to open `{}` write-only", to.display()))?;
         let mut buffer = [0; BUFFER_SIZE];
