@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../block_detection.hpp"
+#include "../cf_analyzer.hpp"
 #include "../jit_compiler.hpp"
 #include "opcodes_bitcode_source.hpp"
 
@@ -44,7 +44,7 @@ namespace vm::jit {
 		llvm::Value* frame_arg;
 		llvm::Value* thread_arg;
 
-		std::vector<usize>             block_beginnings;
+		cf::ControlFlowGraph           cfg;
 		std::vector<llvm::BasicBlock*> llvm_blocks;
 
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx):
@@ -141,27 +141,13 @@ namespace vm::jit {
 			}
 		}
 
-		[[nodiscard]] usize instrToBlock(usize instr_index) const {
-			auto it = std::ranges::lower_bound(block_beginnings, instr_index);
-			if (it == block_beginnings.end()) return llvm_blocks.size() - 1;
-
-			usize block_idx = std::distance(block_beginnings.begin(), it);
-			if (block_idx == llvm_blocks.size()) return llvm_blocks.size() - 1;
-
-			return block_idx;
-		}
-
 		void lowerConditionalJump(
-			const vm::MicroInstruction& last_instr,
-			low::MicroOpcode            last_opcode,
-			usize                       end,
-			usize                       block_idx,
-			llvm::IRBuilder<>&          ir_builder
+			const cf::BasicBlock& block,
+			llvm::IRBuilder<>&    ir_builder
 		) {
 			CORE_ASSERT(frame_ty, "Frame struct type should be defined in the module");
 			CORE_ASSERT(!flag_data_ty->isOpaque(), "FlagData struct type should be defined by now");
 
-			usize target_block_idx  = instrToBlock(end + last_instr.arg0);
 			u32   flags_field_index = 0;
 
 			llvm::Value* frame_ptr = ir_builder.CreateLoad(frame_ptr_ty, frame_arg);
@@ -171,60 +157,45 @@ namespace vm::jit {
 			llvm::Value* flag_ptr   = ir_builder.CreateStructGEP(flag_data_ty, flags_ptr, 0);
 			llvm::Value* flag_value = ir_builder.CreateLoad(ir_builder.getInt1Ty(), flag_ptr);
 
-			if (last_opcode == low::MicroOpcode::jmpIfNot_label)
+			if (block.edgeKind() == cf::OutEdges::Kind::JmpIfNot) {
 				flag_value = ir_builder.CreateNot(flag_value);
+			}
 
 			ir_builder.CreateCondBr(
-				flag_value, llvm_blocks[target_block_idx], llvm_blocks[block_idx + 1]
+				flag_value, llvm_blocks[block.successTarget()], llvm_blocks[block.failTarget()]
 			);
 		}
 
-		void lowerBlock(const low::LowFuncData& function_to_compile, usize block_idx) {
-			usize start = block_beginnings[block_idx];
-			usize end   = block_beginnings[block_idx + 1];
+		void lowerBlock(const low::LowFuncData& function_to_compile, const cf::BasicBlock& block) {
+			llvm::IRBuilder<> ir_builder(llvm_blocks[block.id]);
+			lowerBasicBlock(function_to_compile, ir_builder, block.start, block.end);
 
-			llvm::IRBuilder<> ir_builder(llvm_blocks[block_idx]);
-			lowerBasicBlock(function_to_compile, ir_builder, start, end);
-
-			const vm::MicroInstruction& last_instr  = function_to_compile.bc[end - 1];
-			low::MicroOpcode            last_opcode = getInstructionOpcode(last_instr);
-
-			switch (last_opcode) {
-			case low::MicroOpcode::jmp_label: {
-				usize target_block_idx = instrToBlock(end + last_instr.arg0);
-				ir_builder.CreateBr(llvm_blocks[target_block_idx]);
+			switch (block.edgeKind()) {
+			case cf::OutEdges::Kind::Default: {
+				ir_builder.CreateBr(llvm_blocks[block.next()]);
 				break;
 			}
-			case low::MicroOpcode::jmpIf_label:
-			case low::MicroOpcode::jmpIfNot_label: {
-				if (block_idx + 1 < llvm_blocks.size())
-					lowerConditionalJump(last_instr, last_opcode, end, block_idx, ir_builder);
+			case cf::OutEdges::Kind::JmpIf:
+			case cf::OutEdges::Kind::JmpIfNot: {
+				lowerConditionalJump(block, ir_builder);
 				break;
 			}
-			case low::MicroOpcode::ret:
-			case low::MicroOpcode::ret_tailcall_func: {
-				ir_builder.CreateRetVoid();
-				break;
-			}
+			case cf::OutEdges::Kind::End:
 			default: {
-				if (block_idx + 1 < llvm_blocks.size())
-					ir_builder.CreateBr(llvm_blocks[block_idx + 1]);
-				else
-					ir_builder.CreateRetVoid();
+				ir_builder.CreateRetVoid();
 				break;
 			}
 			}
 		}
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
-
-			// Get basic block boundaries
-			block_beginnings = collectBasicBlockBeginnings(function_to_compile);
+			cf::ControlFlowAnalyzer cf_analyzer{};
+			cfg = cf_analyzer.controlFlowGraph(function_to_compile);
 
 			// Create LLVM basic blocks for each VM block
-			for (usize block_idx = 0; block_idx < block_beginnings.size(); ++block_idx) {
+			for (usize block_idx = 0; block_idx < cfg.size(); ++block_idx) {
 				llvm::BasicBlock* block = llvm::BasicBlock::Create(
-					llvm_ctx, "block_at_" + std::to_string(block_idx), user_func_wrapper
+					llvm_ctx, "block_" + std::to_string(block_idx), user_func_wrapper
 				);
 				llvm_blocks.push_back(block);
 			}
@@ -238,7 +209,7 @@ namespace vm::jit {
 			}
 
 			for (usize block_idx = 0; block_idx < llvm_blocks.size(); ++block_idx)
-				lowerBlock(function_to_compile, block_idx);
+				lowerBlock(function_to_compile, cfg.getBlock(block_idx));
 		}
 	};
 }  // namespace vm::jit

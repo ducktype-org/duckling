@@ -122,7 +122,7 @@ function(add_vm_variant suffix compile_def)
         target_include_directories(${lib_thread_vm_name}_bc PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name}_bc ${llvm_libs})
         target_compile_options(${lib_thread_vm_name}_bc PRIVATE -emit-llvm)
-        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE ${compile_def})
+        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE ${compile_def} IGNORE_NOT_JITABLE)
 
         set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.bc)
         set(extracted_func_file ${CMAKE_CURRENT_BINARY_DIR}/extracted_function_${suffix}.txt)
@@ -134,7 +134,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND ${LLVM_LINK}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
-                $<TARGET_OBJECTS:cp-stencils_bc>
+                # $<TARGET_OBJECTS:cp-stencils_bc>
                 ${vm_dep_objects_bc}
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
@@ -157,7 +157,7 @@ function(add_vm_variant suffix compile_def)
 
             VERBATIM
             DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
-                    cp-stencils_bc
+                    # cp-stencils_bc
                     ${CMAKE_SOURCE_DIR}/scripts/py/jit/opcodes_interface.py
                     $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
                     # Here dependency to both bc files and targets is necessery.

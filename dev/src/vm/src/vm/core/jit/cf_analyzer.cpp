@@ -1,0 +1,52 @@
+#include "cf_analyzer.hpp"
+
+#include <algorithm>
+
+#include <vm/bytecode/instructions.hpp>
+#include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
+
+using namespace vm::code::instructions;
+
+namespace vm::jit::cf {
+    std::vector<usize> ControlFlowAnalyzer::basicBlockBeginnings(const low::LowFuncData& function) {
+        std::vector<usize> block_beginnings = {0}; // First block always starts at position 0
+
+        for (usize index = 0; index < function.bc.size(); ++index) {
+            low::MicroOpcode opcode = getInstructionOpcode(function.bc[index]);
+            i64 arg0 = function.bc[index].arg0;
+
+            switch(opcode) {
+                case low::MicroOpcode::jmp_label:
+                case low::MicroOpcode::jmpIf_label:
+                case low::MicroOpcode::jmpIfNot_label: {
+                    block_beginnings.push_back(index + 1); // Next block starts after jump
+                    if (index + arg0 < function.bc.size()) {
+                        block_beginnings.push_back(index + arg0 + 1); // Jump destination starts a new block
+                    }
+                    break;
+                }
+                case low::MicroOpcode::ret:
+                case low::MicroOpcode::ret_tailcall_func: {
+                    block_beginnings.push_back(index + 1); // Next block starts after ret 
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        }
+
+        // Remove duplicates (occur if there are many jumps to the same destination)
+        std::sort(block_beginnings.begin(), block_beginnings.end());
+        block_beginnings.erase(
+            std::unique(block_beginnings.begin(), block_beginnings.end()),
+            block_beginnings.end()
+        );
+
+        if (block_beginnings.back() == function.bc.size()) {
+            block_beginnings.pop_back(); // Remove the last block beginning if it points to the end of the bytecode
+        }
+        return block_beginnings;
+    }
+} // namespace vm::jit
