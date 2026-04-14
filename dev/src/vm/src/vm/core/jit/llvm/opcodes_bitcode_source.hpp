@@ -17,11 +17,6 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 /**
- * @brief For MicroOpcode returns llvm::Function* of corresponding function.
- */
-llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun);
-
-/**
  * @brief Returns the name of the corresponding LLVM function for the given opcode.
  * @note Required because LLVM modules "disappear" upon materialization.
  */
@@ -42,5 +37,10 @@ llvm::orc::ThreadSafeContext* llvmGetTSCtx();
  * @note For now it is stored in opcodes_bitcode_source but it will change.
  */
 llvm::orc::LLJIT* llvmGetLljit();
+
+/**
+ * @brief Returns a pointer to the master IR cache module.
+ */
+llvm::Module* llvmGetMasterModule();
 
 #endif

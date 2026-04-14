@@ -1,5 +1,6 @@
 add_files(
 	llvm_compiler.cpp
+	jit_utils.cpp
 	absolute_symbols.cpp
 )
 

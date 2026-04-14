@@ -59,7 +59,6 @@
 	(__VA_ARGS__)
 #endif
 
-
 // ========= MOV OPERATIONS ========
 
 DEF_MICRO_INSTR(mov_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)

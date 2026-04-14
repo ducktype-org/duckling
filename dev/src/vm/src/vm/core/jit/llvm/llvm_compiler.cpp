@@ -2,6 +2,7 @@
 #include "../jit_compiler.hpp"
 #include "llvm_lowering.hpp"
 #include "opcodes_bitcode_source.hpp"
+#include "jit_utils.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -30,7 +31,7 @@ namespace vm::jit {
 
 
 		auto new_module
-			= std::make_unique<llvm::Module>(base::toString(function_to_compile.name), ctx);
+			= setupModule(base::toString(function_to_compile.name), ctx);
 
 		LLVMBuilder(new_module.get(), ctx).lowerFunction(function_to_compile);
 
