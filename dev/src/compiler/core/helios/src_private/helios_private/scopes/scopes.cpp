@@ -794,8 +794,7 @@ namespace compiler::helios {
 		// this implementation is fragile, adjust if needed.
 
 		CORE_ASSERT(
-			query::Context::getState().activeQueryCount() == 0,
-			"getAllHeliosScopes called from within query!"
+			!query::Context::areWeInsideQuery(), "getAllHeliosScopes called from within query!"
 		);
 
 		auto root_scopes = ImplementationOf_QueryRootScopeOf::getAllCachedScopes();
