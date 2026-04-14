@@ -8,6 +8,8 @@ add_library(DVMBackend STATIC
     src_private/dvm_operation.cpp
     src_private/operations/meta_operation_lowering.cpp
     src_private/operations/cast_operation_lowering.cpp
+    src_private/operations/comparison_operation_lowering.cpp
+    src_private/operations/arithmetic_operation_lowering.cpp
     src_private/repl_lowering.cpp
 )
 

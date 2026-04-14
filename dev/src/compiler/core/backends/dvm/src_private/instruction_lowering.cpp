@@ -2,11 +2,16 @@
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
+#include "operations/arithmetic_operation_lowering.hpp"
 #include "operations/cast_operation_lowering.hpp"
+#include "operations/comparison_operation_lowering.hpp"
 #include "operations/meta_operation_lowering.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 #include <program_lowering_context.hpp>
+
+#include "base/except/exceptions.hpp"
+#include "base/extend_cpp/variant_match.hpp"
 
 #include <logger/logger.hpp>
 
@@ -17,133 +22,6 @@ using namespace compiler::backend_vm::internal;
 using namespace vm::code;
 using namespace compiler;
 using namespace vm::code::builders;
-
-namespace {
-
-	bool isComparison(OpKind op) {
-		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpLt
-		    || op == OpKind::cmpLe || op == OpKind::cmpGt || op == OpKind::cmpGe
-		    || op == OpKind::ucmpLt || op == OpKind::ucmpLe || op == OpKind::ucmpGt
-		    || op == OpKind::ucmpGe || op == OpKind::fcmpEq || op == OpKind::fcmpNeq
-		    || op == OpKind::fcmpLt || op == OpKind::fcmpLe || op == OpKind::fcmpGt
-		    || op == OpKind::fcmpGe;
-	}
-
-	bool isUnaryOperation(OpKind op) {
-		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
-	}
-
-	/**
-	 * @brief Helper used to evaluate comparison operations at compile-time.
-	 * @note Keep the same semantics as in the compiler's comp_time and VM.
-	 * @return The result of the comparison.
-	 */
-	bool compTimeEvaluateComparison(
-		OpKind                       operation,
-		const ctv::CompileTimeValue& lhs_value,
-		const ctv::CompileTimeValue& rhs_value
-	) {
-		auto lhs_numeric_opt = lhs_value.get<ctv::NumericValue>();
-		auto rhs_numeric_opt = rhs_value.get<ctv::NumericValue>();
-		CORE_ASSERT(
-			lhs_numeric_opt.has_value() && rhs_numeric_opt.has_value(),
-			"Comparison between non-numeric immediates is not supported"
-		);
-		auto lhs_numeric = lhs_numeric_opt.value();
-		auto rhs_numeric = rhs_numeric_opt.value();
-		auto result      = std::visit(
-            [&](auto&& lhs_num) -> bool {
-                using LhsNumT    = std::decay_t<decltype(lhs_num)>;
-                auto rhs_num_opt = rhs_numeric.template get<LhsNumT>();
-                CORE_ASSERT(
-                    rhs_num_opt.has_value(),
-                    "Comparison between different numeric types is not supported"
-                );
-                auto rhs_num = rhs_num_opt.value();
-                switch (operation) {
-                case OpKind::cmpEq:
-                case OpKind::fcmpEq:
-                    return lhs_num == rhs_num;
-                case OpKind::cmpNeq:
-                case OpKind::fcmpNeq:
-                    return lhs_num != rhs_num;
-                case OpKind::cmpGt:
-                case OpKind::fcmpGt:
-                case OpKind::ucmpGt:
-                    return lhs_num > rhs_num;
-                case OpKind::cmpGe:
-                case OpKind::fcmpGe:
-                case OpKind::ucmpGe:
-                    return lhs_num >= rhs_num;
-                case OpKind::cmpLt:
-                case OpKind::fcmpLt:
-                case OpKind::ucmpLt:
-                    return lhs_num < rhs_num;
-                case OpKind::cmpLe:
-                case OpKind::fcmpLe:
-                case OpKind::ucmpLe:
-                    return lhs_num <= rhs_num;
-                default:
-                    CORE_PANIC("Unhandled comparison operation");
-                }
-            },
-            lhs_numeric.getStorage()
-        );
-		return result;
-	}
-
-	/**
-	 * @brief Gets the opposite direction of a comparison operation, e.g `a < b` becomes `b > a`.
-	 */
-	OpKind getComparisonOppositeDirection(OpKind operation) {
-		switch (operation) {
-		case OpKind::cmpEq:
-			return OpKind::cmpEq;
-
-		case OpKind::cmpNeq:
-			return OpKind::cmpNeq;
-
-		case OpKind::fcmpEq:
-			return OpKind::fcmpEq;
-
-		case OpKind::fcmpNeq:
-			return OpKind::fcmpNeq;
-
-		case OpKind::cmpGt:
-			return OpKind::cmpLt;
-
-		case OpKind::cmpGe:
-			return OpKind::cmpLe;
-
-		case OpKind::ucmpGt:
-			return OpKind::ucmpLt;
-
-		case OpKind::ucmpGe:
-			return OpKind::ucmpLe;
-
-		case OpKind::cmpLt:
-			return OpKind::cmpGt;
-
-		case OpKind::cmpLe:
-			return OpKind::cmpGe;
-
-		case OpKind::fcmpGt:
-			return OpKind::fcmpLt;
-
-		case OpKind::fcmpGe:
-			return OpKind::fcmpLe;
-
-		case OpKind::fcmpLt:
-			return OpKind::fcmpGt;
-
-		case OpKind::fcmpLe:
-			return OpKind::fcmpGe;
-
-		default:
-			CORE_PANIC("Unhandled comparison operation");
-		}
-	}
-}
 
 void FunctionLoweringContext::handleCall(
 	const FunctionCallInfo&     call_info,
@@ -229,115 +107,52 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 
 	const auto dvm_operation = lirInstrToDVMOperation(lir_instruction);
 
+	// TODOP: All of the outputs should be optional.
 	variant_match(dvm_operation) {
 		variant_case(MetaOperation, operation) {
 			MetaOperationLowerer(*this).lower(operation, args, maybe_output);
 			return;
 		}
 		variant_case(CastOperation, operation) {
-			CastOperationLowerer::lowerCastOperation(operation, args, maybe_output.value(), *this);
+			CastOperationLowerer::lowerCastOperation(*this, operation, args, maybe_output.value());
+			return;
+		}
+		variant_case(ComparisonOperation, operation) {
+			ComparisonOperationLowerer::lower(
+				*this, operation, args, maybe_output.value(), lir_instruction
+			);
+			return;
+		}
+		variant_case(UnaryOperation, operation) {
+			ArithmeticOperationLowerer::lowerUnary(*this, operation, args, maybe_output.value());
+			return;
+		}
+		variant_case(BinaryOperation, operation) {
+			ArithmeticOperationLowerer::lowerBinary(*this, operation, args, maybe_output.value());
+			return;
+		}
+		variant_case(CallOperation, operation) {
+			auto called_function = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+			args.pop_front();
+			handleCall(
+				FunctionCallInfo::fromLirFunction(called_function, program_context),
+				args,
+				maybe_output
+			);
+			return;
+		}
+		variant_case_novalue(MoveOperation) {
+			// TODOP: Move this somewhere.
+			// Otherwise, it's a simple assignment.
+			storeResult(maybe_output.value(), args[0]);
 			return;
 		}
 		variant_case_novalue(NoOpOperation) { return; }
-	}
-	auto operation = std::get<SimpleOperation>(dvm_operation).op;
-
-	if (isComparison(operation)) {
-		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
-		CORE_ASSERT(
-			maybe_output.has_value(), "Comparison operations must have an output destination"
-		);
-		auto output = maybe_output.value();
-
-		DVMValue result_val = [&]() -> DVMValue {
-			if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
-				auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
-				auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
-				auto res       = compTimeEvaluateComparison(operation, lhs_value, rhs_value);
-				return { DVMImmediate::boolean(res) };
-			} else {
-				if (args[0].is<DVMImmediate>()) {
-					// Swap arguments to place immediate on the right side.
-					std::swap(args[0], args[1]);
-					operation = getComparisonOppositeDirection(operation);
-				}
-
-				// Force globals into locals if needed.
-				auto lhs = forceToLocal(args[0], "lhs_temp");
-				auto rhs = args[1].is<DVMGlobal>() ? DVMValue{ forceToLocal(args[1], "rhs_temp"),
-					                                           DVMPlace::AccessKind::Direct }
-				                                   : args[1];
-
-				// This resolves e.g. `x = a CMP b;`
-				// by splitting it into three instructions:
-				// a CMP b;
-				// mov x, 0;
-				// cmov x, 1;
-				auto tmp_res
-					= pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
-				pushInstruction({ operation, lhs, rhs });
-				pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
-				pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
-				return { tmp_res, DVMPlace::AccessKind::Direct };
-			}
-		}();
-
-		storeResult(output, result_val);
-	} else if (operation == OpKind::call) {
-		auto called_function = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-		args.pop_front();
-		handleCall(
-			FunctionCallInfo::fromLirFunction(called_function, program_context), args, maybe_output
-		);
-	} else if (isUnaryOperation(operation)) {
-		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
-		auto output = maybe_output.value();
-		// If instruction is of the form: a = OP b, then
-		// we transform it to:
-		// a = b;
-		// a = OP a;
-
-		if (output.isDirect() && output.is<DVMLocal>()) {
-			// If output is a direct place we just use it.
-			storeResult(output, args[0]);
-			pushInstruction({ operation, output });
-		} else {
-			// Otherwise it's a global or indirect. We perform the operations on the
-			// temporary and then store it in the indirect place.
-			auto tmp = forceToLocal(args[0]);
-			pushInstruction({ operation, tmp });
-			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
-		}
-	} else if (args.size() == 2) {
-		// In this case we assume we have a very general quadruple of the form:
-		// output = arg1 OP arg2;
-		auto output = maybe_output.value();
-
-		// Force globals into locals. Immediates are allowed.
-		DVMValue rhs = args[1].is<DVMGlobal>() ? DVMValue{ forceToLocal(args[1], "bin_rhs_tmp"),
-			                                               DVMPlace::AccessKind::Direct }
-		                                       : args[1];
-
-		if (output.isDirect() && output.is<DVMLocal>()) {
-			// If instruction is of the form: a = b OP c, then
-			// we transform it to:
-			// a = b;
-			// a = a OP c;
-			storeResult(output, args[0]);
-			pushInstruction({ operation, output, rhs });
-		} else {
-			// Force globals into locals if needed.
-			auto tmp = forceToLocal(args[0], "bin_tmp");
-			pushInstruction({ operation, tmp, rhs });
-			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
-		}
-		return;
-	} else {
-		// Otherwise, it's a simple assignment.
-		storeResult(maybe_output.value(), args[0]);
+		variant_default { CORE_UNREACHABLE(); }
 	}
 }
 
+// TODOP: Mov to TerminatorOperationLowering
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
 	pushInstruction(instructions::Comment(base::StrID(
 		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()

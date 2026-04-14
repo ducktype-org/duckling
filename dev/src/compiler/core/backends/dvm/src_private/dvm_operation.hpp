@@ -13,11 +13,38 @@ namespace compiler::backend_vm::internal {
 	struct NoOpOperation {};
 
 	/**
-	 * @brief Represents a simple DVM operation that trivially maps to a DVM OpKind.
+	 * @brief Represents a unary DVM operation.
 	 */
-	struct SimpleOperation {
+	struct UnaryOperation {
 		OpKind op;
-		bool   operator==(const SimpleOperation& other) const = default;
+	};
+
+	/**
+	 * @brief Represents a binary DVM operation.
+	 */
+	struct BinaryOperation {
+		OpKind op;
+	};
+
+	/**
+	 * @brief Represents a comparison DVM operation.
+	 */
+	struct CallOperation {};
+
+	struct MoveOperation {};  // TODOP: Probably remove.
+
+	/**
+	 * @brief Represents a comparison DVM operation.
+	 */
+	struct ComparisonOperation {
+		OpKind op;
+	};
+
+	/**
+	 * @brief Represents an AddressOf DVM operation.
+	 */
+	struct AddressOfOperation {
+		OpKind op;
 	};
 
 	/**
@@ -39,7 +66,16 @@ namespace compiler::backend_vm::internal {
 		lir::CastParameters cast_params;
 	};
 
-	using DVMOperation = std::variant<NoOpOperation, SimpleOperation, MetaOperation, CastOperation>;
+	using DVMOperation = std::variant<
+		NoOpOperation,
+		UnaryOperation,
+		BinaryOperation,
+		MoveOperation,
+		ComparisonOperation,
+		CallOperation,
+		AddressOfOperation,
+		CastOperation,
+		MetaOperation>;
 
 
 	/**

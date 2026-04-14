@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dvm_value.hpp"
+#include "operations/arithmetic_operation_lowering.hpp"
 
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -21,6 +22,8 @@ namespace compiler::backend_vm::internal {
 	public:
 		friend class MetaOperationLowerer;
 		friend class CastOperationLowerer;
+		friend class ComparisonOperationLowerer;
+		friend class ArithmeticOperationLowerer;
 
 		FunctionLoweringContext(
 			ProgramLoweringContext&                     program_context,

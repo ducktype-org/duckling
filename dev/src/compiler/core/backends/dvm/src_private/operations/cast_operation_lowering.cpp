@@ -84,17 +84,16 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void CastOperationLowerer::lowerCastOperation(
+		FunctionLoweringContext&    ctx,
 		const CastOperation&        cast_operation,
 		const std::deque<DVMValue>& args,
-		const DVMPlace&             output,
-		FunctionLoweringContext&    function_context
+		const DVMPlace&             output
 	) {
 		// Operation in form a = OP b (like mov)
 		CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
-		auto operation   = getOpKindFromLIRLayouts(cast_operation.cast_params);
-		auto target_type = function_context.program_context.lowerAndKeepTslType(
-			cast_operation.cast_params.target_layout
-		);
+		auto operation = getOpKindFromLIRLayouts(cast_operation.cast_params);
+		auto target_type
+			= ctx.program_context.lowerAndKeepTslType(cast_operation.cast_params.target_layout);
 
 		// The cast operations are only supported between local stack values.
 		// So if we have a non-local source (like immediate value or global),
@@ -102,20 +101,20 @@ namespace compiler::backend_vm::internal {
 
 		// If the destination is non-local, we put the result in a temporary local
 		// and then move the result to the final destination.
-		DVMLocal src_arg = function_context.forceToLocal(args[0], "cast_src_tmp");
+		DVMLocal src_arg = ctx.forceToLocal(args[0], "cast_src_tmp");
 
 		if (output.isDirect() && output.is<DVMLocal>()) {
 			// If output is a direct (not a local storing a pointer to the output place) local,
 			// we optimize the cast to work directly on the local.
 			auto dst_local = output.get<DVMLocal>();
-			function_context.pushInstruction({ operation, dst_local, src_arg });
+			ctx.pushInstruction({ operation, dst_local, src_arg });
 		} else {
 			// Otherwise, if the output place is not direct or a global we have to create a
 			// temporary to perform the operation on.
-			DVMLocal dst_temp = function_context.pushTempLocal(target_type, "cast_dst_tmp");
+			DVMLocal dst_temp = ctx.pushTempLocal(target_type, "cast_dst_tmp");
 
-			function_context.pushInstruction({ operation, dst_temp, src_arg });
-			function_context.storeResult(output, { dst_temp, DVMPlace::AccessKind::Direct });
+			ctx.pushInstruction({ operation, dst_temp, src_arg });
+			ctx.storeResult(output, { dst_temp, DVMPlace::AccessKind::Direct });
 		}
 	}
 }

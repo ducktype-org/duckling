@@ -22,104 +22,98 @@ namespace compiler::backend_vm::internal {
 		using enum lir::Operation;
 
 		switch (operation) {
-		/// Non-simple operations ///
+		/// Special operations ///
 		case Cast: {
 			const auto cast_params = std::get_if<lir::CastParameters>(&instr.extra_params);
 			CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
 			return CastOperation{ *cast_params };
 		}
-
-		/// Integer operations ///
-		case IntegerAdd:
-			return SimpleOperation{ OpKind::add };
-		case IntegerSub:
-			return SimpleOperation{ OpKind::sub };
-		case IntegerNeg:
-			return SimpleOperation{ OpKind::neg };
-		case IntegerMul:
-			return SimpleOperation{ OpKind::mul };
-		case IntegerSDiv:
-			return SimpleOperation{ OpKind::div };
-		case IntegerSMod:
-			return SimpleOperation{ OpKind::mod };
-		case IntegerUDiv:
-			return SimpleOperation{ OpKind::udiv };
-		case IntegerUMod:
-			return SimpleOperation{ OpKind::umod };
-
-		/// Floating point operations ///
-		case FloatAdd:
-			return SimpleOperation{ OpKind::fadd };
-		case FloatSub:
-			return SimpleOperation{ OpKind::fsub };
-		case FloatMul:
-			return SimpleOperation{ OpKind::fmul };
-		case FloatDiv:
-			return SimpleOperation{ OpKind::fdiv };
-		case FloatNeg:
-			return SimpleOperation{ OpKind::fneg };
-
-		/// Signed integer comparisons ///
-		case IntegerEq:
-			return SimpleOperation{ OpKind::cmpEq };
-		case IntegerNeq:
-			return SimpleOperation{ OpKind::cmpNeq };
-		case IntegerSLt:
-			return SimpleOperation{ OpKind::cmpLt };
-		case IntegerSLteq:
-			return SimpleOperation{ OpKind::cmpLe };
-		case IntegerSGt:
-			return SimpleOperation{ OpKind::cmpGt };
-		case IntegerSGteq:
-			return SimpleOperation{ OpKind::cmpGe };
-
-		/// Unsigned integer comparisons ///
-		case IntegerULt:
-			return SimpleOperation{ OpKind::ucmpLt };
-		case IntegerULteq:
-			return SimpleOperation{ OpKind::ucmpLe };
-		case IntegerUGt:
-			return SimpleOperation{ OpKind::ucmpGt };
-		case IntegerUGteq:
-			return SimpleOperation{ OpKind::ucmpGe };
-
-		/// Floating point comparisons ///
-		case FloatLt:
-			return SimpleOperation{ OpKind::fcmpLt };
-		case FloatGt:
-			return SimpleOperation{ OpKind::fcmpGt };
-		case FloatLteq:
-			return SimpleOperation{ OpKind::fcmpLe };
-		case FloatGteq:
-			return SimpleOperation{ OpKind::fcmpGe };
-		case FloatEq:
-			return SimpleOperation{ OpKind::fcmpEq };
-		case FloatNeq:
-			return SimpleOperation{ OpKind::fcmpNeq };
-
-		/// Logical operations ///
-		case BooleanAnd:
-			return SimpleOperation{ OpKind::log_and };
-		case BooleanOr:
-			return SimpleOperation{ OpKind::log_or };
-		case BooleanNot:
-			return SimpleOperation{ OpKind::log_not };
-
-		/// Other ///
-		case Assign:
-			return SimpleOperation{ OpKind::mov };
-		case AddressOf:
-			return SimpleOperation{ OpKind::ref };
-		case ZeroInitialize:
-			return NoOpOperation{};
 		case Call:
-			return SimpleOperation{ OpKind::call };
+			return CallOperation{};
+		case AddressOf:
+			return AddressOfOperation{};
+		case ZeroInitialize:
+			// Data in DVM is zeroinitialized by default, so this is a NoOp.
+			return NoOpOperation{};
+		case Assign:  // TODOP: Special operation?
+			return MoveOperation{};
+
+		/// Unary operations ///
+		case IntegerNeg:
+			return UnaryOperation{ OpKind::neg };
+		case FloatNeg:
+			return UnaryOperation{ OpKind::fneg };
+		case BooleanNot:
+			return UnaryOperation{ OpKind::log_not };
+
+		/// Binary operations ///
+		case IntegerAdd:
+			return BinaryOperation{ OpKind::add };
+		case IntegerSub:
+			return BinaryOperation{ OpKind::sub };
+		case IntegerMul:
+			return BinaryOperation{ OpKind::mul };
+		case IntegerSDiv:
+			return BinaryOperation{ OpKind::div };
+		case IntegerSMod:
+			return BinaryOperation{ OpKind::mod };
+		case IntegerUDiv:
+			return BinaryOperation{ OpKind::udiv };
+		case IntegerUMod:
+			return BinaryOperation{ OpKind::umod };
+
+		case FloatAdd:
+			return BinaryOperation{ OpKind::fadd };
+		case FloatSub:
+			return BinaryOperation{ OpKind::fsub };
+		case FloatMul:
+			return BinaryOperation{ OpKind::fmul };
+		case FloatDiv:
+			return BinaryOperation{ OpKind::fdiv };
+
+		case BooleanAnd:
+			return BinaryOperation{ OpKind::log_and };
+		case BooleanOr:
+			return BinaryOperation{ OpKind::log_or };
+
+		/// Comparison operations ///
+		case IntegerEq:
+			return ComparisonOperation{ OpKind::cmpEq };
+		case IntegerNeq:
+			return ComparisonOperation{ OpKind::cmpNeq };
+		case IntegerSLt:
+			return ComparisonOperation{ OpKind::cmpLt };
+		case IntegerSLteq:
+			return ComparisonOperation{ OpKind::cmpLe };
+		case IntegerSGt:
+			return ComparisonOperation{ OpKind::cmpGt };
+		case IntegerSGteq:
+			return ComparisonOperation{ OpKind::cmpGe };
+
+		case IntegerULt:
+			return ComparisonOperation{ OpKind::ucmpLt };
+		case IntegerULteq:
+			return ComparisonOperation{ OpKind::ucmpLe };
+		case IntegerUGt:
+			return ComparisonOperation{ OpKind::ucmpGt };
+		case IntegerUGteq:
+			return ComparisonOperation{ OpKind::ucmpGe };
+
+		case FloatLt:
+			return ComparisonOperation{ OpKind::fcmpLt };
+		case FloatGt:
+			return ComparisonOperation{ OpKind::fcmpGt };
+		case FloatLteq:
+			return ComparisonOperation{ OpKind::fcmpLe };
+		case FloatGteq:
+			return ComparisonOperation{ OpKind::fcmpGe };
+		case FloatEq:
+			return ComparisonOperation{ OpKind::fcmpEq };
+		case FloatNeq:
+			return ComparisonOperation{ OpKind::fcmpNeq };
 
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
 		}
-		CORE_UNREACHABLE();
 	}
-
-
 }
