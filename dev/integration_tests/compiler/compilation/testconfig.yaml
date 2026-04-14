@@ -83,4 +83,5 @@ SubDirs:
   - boxes
   - globals
   - imports
+  - macros
   - diagnostics

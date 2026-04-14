@@ -130,12 +130,6 @@ namespace compiler::frontend {
 	 */
 	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id);
 
-	/**
-	 * @brief Returns ModuleID
-	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend
-	 * module.
-	 */
-	ModuleID extendQueryModuleIDOfPST(query::Context&, pst::AccessLocked<pst::LangElement> element);
 
 	/**
 	 * @brief Query extension used to

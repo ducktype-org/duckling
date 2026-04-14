@@ -1,18 +1,17 @@
 //! Various (for us mostly unneeded) metadata of the root package.
-use crate::StrId;
 
 #[derive(Clone, Debug)]
 /// Various package metadata.
 /// This is mostly useless information for us, but it may be useful for a user.
 pub struct PackageMetadata {
-    authors: Vec<StrId>,
-    license: Option<StrId>,
-    description: Option<StrId>,
+    authors: Vec<String>,
+    license: Option<String>,
+    description: Option<String>,
 }
 
 impl PackageMetadata {
     /// Create a new [`PackageMetadata`].
-    pub fn new(authors: Vec<StrId>, license: Option<StrId>, description: Option<StrId>) -> Self {
+    pub fn new(authors: Vec<String>, license: Option<String>, description: Option<String>) -> Self {
         Self {
             authors,
             license,
@@ -21,21 +20,21 @@ impl PackageMetadata {
     }
 
     /// Get the package license
-    pub fn license(&self) -> Option<StrId> {
-        self.license
+    pub fn license(&self) -> Option<&str> {
+        self.license.as_deref()
     }
 
     /// Get the package authors
-    pub fn authors(&self) -> &[StrId] {
+    pub fn authors(&self) -> &[String] {
         &self.authors
     }
 
     /// Get the package description
-    pub fn description(&self) -> Option<StrId> {
-        self.description
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 
-    pub fn into_authors(self) -> Vec<StrId> {
+    pub fn into_authors(self) -> Vec<String> {
         self.authors
     }
 }

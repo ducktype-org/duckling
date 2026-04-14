@@ -3,6 +3,8 @@ mod new_freeze_generation;
 
 use std::collections::{HashMap, HashSet};
 
+use tracing::debug;
+
 use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
@@ -41,7 +43,9 @@ impl Default for SolverPackageFreeze {
 
 impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
+    #[tracing::instrument(skip_all)]
     pub fn try_from_venv_freeze(root: ExpandedPackage, value: &VenvFreeze) -> QuackResult<Self> {
+        debug!(root = ?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = ExpandedPackage {
@@ -100,17 +104,21 @@ impl SolverFreeze {
 }
 
 impl SolverFreeze {
+    #[tracing::instrument(skip_all)]
     pub fn empty_with_root(root: ExpandedPackage) -> QuackResult<Self> {
+        debug!(?root);
         Ok(Self {
             main_pkg: root,
             package_freezes: [(root, SolverPackageFreeze::default())].into(),
         })
     }
 
+    #[tracing::instrument(skip_all)]
     pub fn generate_storage_freeze(
         self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
     ) -> QuackResult<VenvFreeze> {
+        debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
         let root_freeze = self
             .package_freezes
@@ -168,7 +176,7 @@ mod test {
     use std::path::PathBuf;
 
     use crate::{
-        DuckCtx,
+        DuckContext,
         quackpack::core::{
             PackageLoader, parse_manifest,
             types_common::{ExpandedLocation, InternedExpandedLocation},
@@ -310,7 +318,7 @@ features:
   f_a: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_root = parse_manifest(&path_root, &ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();

@@ -1,4 +1,4 @@
-use crate::{DuckCtx, QuackResult};
+use crate::{DuckContext, QuackResult};
 use clap::{ArgMatches, Command};
 
 // @TODO: #1650 Restore removed subcommands once they are implemented.
@@ -24,7 +24,7 @@ pub fn subcommands() -> Vec<Command> {
 }
 
 /// Function signature which subcommands execution logic follows.
-pub type ExecFn = fn(&DuckCtx, &ArgMatches) -> QuackResult<()>;
+pub type ExecFn = fn(&DuckContext, &ArgMatches) -> QuackResult<()>;
 
 /// Get the [`ExecFn`] for the given subcommand name.
 ///

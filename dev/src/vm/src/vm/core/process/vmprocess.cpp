@@ -118,6 +118,11 @@ namespace vm {
 
 			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
 
+			variant_case(api::request::AttachStatusListener, request) {
+				on_status_change.attachListener(request.listener);
+				return api::Response(api::response::Empty());
+			}
+
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 
@@ -145,6 +150,7 @@ namespace vm {
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			status = new_status;
+			on_status_change.emitEvent(status);
 		}
 		status_cv.notify_all();
 	}

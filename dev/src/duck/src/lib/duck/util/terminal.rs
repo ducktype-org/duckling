@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{self, Display};
 use std::io::Read;
 use std::io::Write;
 
@@ -6,12 +6,20 @@ use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 
 use crate::duck::util::indent::indent;
 
-#[derive(Debug)]
 /// A struct which is responsible for printing to stdout/stderr.
 pub struct Terminal {
     term: Term,
     verbosity: Verbosity,
     colors_enabled: bool,
+}
+
+impl fmt::Debug for Terminal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Terminal")
+            .field("verbosity", &self.verbosity)
+            .field("colors_enabled", &self.colors_enabled)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Default)]

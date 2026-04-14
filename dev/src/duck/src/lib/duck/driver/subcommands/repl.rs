@@ -1,4 +1,4 @@
-use crate::{DuckCtx, QuackResult, quackpack::core::compile::duckc::Duckc};
+use crate::{DuckContext, QuackResult, quackpack::core::compile::duckc::Duckc};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::subcommand;
@@ -9,6 +9,6 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `repl` subcommand.
-pub fn execute(ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
+pub fn execute(ctx: &DuckContext, _matches: &ArgMatches) -> QuackResult<()> {
     Duckc::start_repl_with(ctx).map(|_| ())
 }
