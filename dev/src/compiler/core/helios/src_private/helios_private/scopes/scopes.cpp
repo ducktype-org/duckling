@@ -286,10 +286,16 @@ namespace compiler::helios {
 			// here we essentially return the same scope as the parent
 			// scope, with the same unstable hash, but we still create a new ScopeData object
 			// that is kept in our cache:
-			if (element_scope_kind == ElementScopeKind::Transparent)
+			if (element_scope_kind == ElementScopeKind::Transparent) {
 				return parent.ref->perfectClone();
-			else if (element_scope_kind == ElementScopeKind::ParentTransparent)
+			}
+			else if (element_scope_kind == ElementScopeKind::ParentTransparent) {
+				CORE_ASSERT(
+					parent.ref->parent.has_value(),
+					"Parent transparent scope kind used on element of which transparent scope that has no parent."
+				);
 				return parent.ref->parent->ref->perfectClone();
+			}
 
 
 			// simple parent sanity check:
