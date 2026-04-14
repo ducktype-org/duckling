@@ -3087,7 +3087,7 @@ private:
 			auto maybe_scope = compiler::helios::maybeScope(symbol);
 			if (maybe_scope.empty()) continue;
 			auto scope            = maybe_scope.value();
-			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
+			Ref symbols_in_scope = &query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope)->valueOrPanic();
 
 			auto found = false;
 			for (auto s: *symbols_in_scope) {

@@ -78,7 +78,7 @@ namespace compiler::helios {
 			};
 
 			for (auto scope: *scopes_to_process) {
-				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+				Ref symbols_in_scope = &ctx.query<QuerySymbolsInScope>(scope)->valueOrThrow();
 
 				for (auto sym: *symbols_in_scope) {
 					// Register default constructors for all symbols that need them.
@@ -307,7 +307,7 @@ namespace compiler::helios {
 
 			auto main_file_root_scope = queryRootScopeOfMainModuleFile(ctx, key);
 
-			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
+			Ref symbols_in_module_root = &ctx.query<QuerySymbolsInScope>(main_file_root_scope)->valueOrThrow();
 
 			HOUTUnit out;
 

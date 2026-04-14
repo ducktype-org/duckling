@@ -129,7 +129,7 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
+		QuerySymbolsInScope, ScopeID, CRef<query::QResult<std::vector<SymID>>>, ({  })
 	);
 
 	/**
