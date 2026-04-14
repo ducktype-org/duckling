@@ -2,7 +2,7 @@ use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
 use serde::{Deserialize, de};
 
-use crate::{DuckCtx, QuackResult, qp_bail};
+use crate::{DuckContext, QuackResult, qp_bail};
 use clap::ArgMatches;
 use itertools::chain;
 use tracing::debug;
@@ -56,7 +56,7 @@ pub struct Aliases(pub HashMap<String, Alias>);
 /// __NOTE:__ Global CLI flags may be lost during this process. You should extract them beforehand.
 pub fn expand_aliases(
     args: ArgMatches,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     external_cmds: &HashMap<String, PathBuf>,
     mut visited: Vec<String>,
 ) -> QuackResult<ArgMatches> {
@@ -130,7 +130,7 @@ fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatc
 /// Expand single user alias.
 ///
 /// `alias` is alias we're expanding, `alias_args` are [`ArgMatches`] for that `alias`, `alias_expansion`
-/// is expanded alias (taken from [`DuckCtx`]), and `visited` is a vector of already expanded
+/// is expanded alias (taken from [`DuckContext`]), and `visited` is a vector of already expanded
 /// aliases (in order to detect cycles).
 fn expand_single_alias(
     alias: &str,
@@ -187,7 +187,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        DuckCtx,
+        DuckContext,
         duck::driver::{cli, cli_args_preprocessing::aliases_expansion::expand_aliases},
     };
 
@@ -200,7 +200,7 @@ mod tests {
         ]);
 
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = HashMap::new();
         let visited = Vec::new();
@@ -225,7 +225,7 @@ mod tests {
         ]);
 
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = HashMap::new();
         let visited = Vec::new();

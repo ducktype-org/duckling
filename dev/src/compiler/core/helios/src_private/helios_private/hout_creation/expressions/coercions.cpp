@@ -2,8 +2,8 @@
 
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <tsh/queries/implicit_coercibility.hpp>
-#include <tsh/queries/types.hpp>
+#include <helios/tsh/queries/implicit_coercibility.hpp>
+#include <helios/tsh/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
 

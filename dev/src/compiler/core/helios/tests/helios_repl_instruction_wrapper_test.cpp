@@ -6,9 +6,9 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 

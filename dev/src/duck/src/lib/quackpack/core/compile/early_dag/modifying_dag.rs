@@ -7,7 +7,8 @@ use crate::quackpack::core::{FeatureName, compile::MISSING_DEPENDENCY_IN_MANIFES
 use super::*;
 
 impl DependencyDag {
-    /// Same as [`CompilerDag::remove_disabled_dependencies`].
+    /// Same as [`EarlyDag::remove_disabled_dependencies`].
+    #[tracing::instrument(skip_all)]
     pub fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
         for (k, v) in self.dag.iter_mut() {
             let mut to_remove = HashSet::new();
@@ -36,10 +37,13 @@ impl DependencyDag {
 
 impl EarlyDag {
     /// Recursively populate enabled features, starting from the root of the graph.
+    #[tracing::instrument(skip_all)]
     pub fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
+        debug!(root = %self.dag.root(), features = ?root_features, "populating root");
         let root_package = self.package_mut(&self.dag.root());
         root_package.add_new_features(root_features.iter().copied())?;
 
+        #[tracing::instrument(skip_all)]
         fn populate_impl(
             current: FreezeDep,
             dag: &HashMap<FreezeDep, DependencyNode>,
@@ -60,6 +64,7 @@ impl EarlyDag {
                         .expect(MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE);
                     entry_in_dep_manifest.enabled_features(this_features.iter().copied())
                 };
+                debug!(node = %dep, features = ?enabled_features, "populating node");
                 let entry = packages.package_mut(dep);
                 entry.add_new_features(enabled_features)?;
             }
@@ -82,6 +87,7 @@ impl EarlyDag {
     /// should point at them.
     ///
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
+    #[tracing::instrument(skip_all)]
     pub fn remove_disabled_dependencies(&mut self) {
         self.dag.remove_disabled_dependencies(&self.packages)
     }

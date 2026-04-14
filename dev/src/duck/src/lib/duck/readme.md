@@ -5,7 +5,7 @@ On the very high level, duck code execution can be broken into three steps: perf
 ## General setup
 
 The very first function which is called is [`main.rs`](main.rs).
-It's responsible only for four things: setting up debug loggers, creating the global [`DuckCtx`](util/duck_ctx.rs), calling [`driver/run.rs`](driver/run.rs), and catching any returned `Err`.
+It's responsible only for four things: setting up debug loggers, creating the global [`DuckContext`](util/duck_context.rs), calling [`driver/run.rs`](driver/run.rs), and catching any returned `Err`.
 
 ## Parsing
 

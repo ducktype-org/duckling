@@ -1,5 +1,5 @@
 use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::{DuckCtx, QuackResult};
+use crate::{DuckContext, QuackResult};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
@@ -27,20 +27,10 @@ pub fn get_parser() -> Command {
         )
         .add_jobs()
         .arg(flag("frozen", "Don't update the freezefile"))
-        .arg(
-            flag(
-                "overwrite",
-                "Overwrite any existing virtual environments with the same name",
-            )
-            .conflicts_with("global"),
-        )
-        .arg(
-            flag(
-                "global",
-                "Build the package in the global virtual environment",
-            )
-            .conflicts_with("overwrite"),
-        )
+        .arg(flag(
+            "overwrite",
+            "Overwrite any existing virtual environments with the same name",
+        ))
         .arg(flag(
             "external-errors",
             "Halt computation after encountering errors in foreign manifests",
@@ -48,13 +38,10 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `build` subcommand.
-pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
-    let global = matches.get_flag("global");
-    let package = if global {
-        PackageLoader::global_package(ctx)?
-    } else {
-        PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
-    };
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
+    // We do not allow to build the global package.
+    // It has no src folder and is purely for running scripts.
+    let package = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
     let features = features_from_matches(matches, package.package());
     let profile = profile_from_matches(matches);
     let opts = BuildOptions {

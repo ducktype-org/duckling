@@ -1,7 +1,7 @@
 #include "types.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
-#include <tsh/abstract_type_impl.hpp>
+#include <helios_private/tsh/abstract_type_impl.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 

@@ -6,7 +6,7 @@ use crate::quackpack::core::storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
-use crate::{DuckCtx, QuackResult, QuackResultContext, StrId};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 use std::collections::HashSet;
 use std::fs::DirEntry;
 use std::path::Path;
@@ -25,7 +25,7 @@ pub struct CleanOutput {
 }
 
 /// Delete a virtual environment from storage.
-pub fn delete_venv(ctx: &DuckCtx, storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
+pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
     debug!("deleting venv `{}`", venv.to_venv_id());
     let storage = paths::Storage::new(storage_root);
     let venv_id = venv.to_venv_id();
@@ -71,7 +71,7 @@ pub fn delete_venv(ctx: &DuckCtx, storage_root: &Path, venv: impl ToVenvId) -> Q
 }
 
 /// Remove orphaned packages and expired temporary virtual environments from storage.
-pub fn clean_storage(ctx: &DuckCtx, storage_root: &Path) -> QuackResult<CleanOutput> {
+pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<CleanOutput> {
     debug!("cleaning storage");
     let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
     let storage = paths::Storage::new(storage_root);
