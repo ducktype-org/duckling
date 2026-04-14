@@ -27,6 +27,7 @@
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/query_result.hpp>
+#include <query_framework/utils/query_failed_try.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
@@ -384,8 +385,16 @@ namespace compiler::helios {
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
-
-			pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			
+			auto for_all_ok = query::runFuncWithQueryFailedHandling([&]() {
+					pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+				}
+			);
+			if (for_all_ok.isBad()) {
+				// if the pstForAll failed, we mark the whole query as failed, but we still return the scopes that we managed to obtain.
+				out->failed = true;
+			}
+			
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
