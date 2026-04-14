@@ -117,6 +117,30 @@ namespace compiler::tsh {
 			  leakage(leakage),
 			  uniqueness(uniqueness) {}
 
+		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type.
+		/**
+		 * @brief Creates a SymbolType from an AbstractType with a set of default symbol properties.
+		 *
+		 * This static factory method makes a SylbolType<> that has Direct reference kind, is
+		 * Mutable, NonLeaking and NonUnique and wrpas the given abstract type.
+		 *
+		 * @warning Do not wrap this method in "convenience" functions or implicit conversions.
+		 * Hiding this call behind a shorter or automated wrapper defeats its purpose of making the
+		 * transition from AbstractType to SymbolType explicit and conscious decision.
+		 *
+		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
+		 * @return A SymbolType<ABSTRACT_TYPE> with default symbol properties.
+		 */
+		static SymbolType<ABSTRACT_TYPE> withDefaults(const ABSTRACT_TYPE abstract_type) {
+			return SymbolType<ABSTRACT_TYPE>(
+				abstract_type,
+				ReferenceKind::Direct,
+				Mutability::Mutable,
+				Leakage::NonLeaking,
+				Uniqueness::NonUnique
+			);
+		}
+
 		/**
 		 * @brief Gets the underlying abstract type.
 		 * @return The underlying abstract type.

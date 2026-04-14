@@ -230,55 +230,31 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
-		 * @TODO: #1568 Remove this. I really needed it.
-		 */
-		std::string mangleType(const tsh::SymbolType<>& type) {
-			std::string s = type.toString();
-			std::ranges::replace(s, ' ', '_');
-			std::ranges::replace(s, '[', 'A');
-			std::ranges::replace(s, ']', 'E');
-			return s;
-		}
-
-		/**
-		 * @TODO: #1568 Remove this. I really needed it.
-		 */
-		std::string mangleType(const tsh::AbstractType& abs_type) {
-			std::string s = abs_type.toString();
-			std::ranges::replace(s, ' ', '_');
-			std::ranges::replace(s, '[', 'A');
-			std::ranges::replace(s, ']', 'E');
-			return s;
-		}
-
-		/**
 		 * @brief Returns mangled name of a function or method
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string funcType(query::Context& ctx, SymID symbol_id) {
-			// @TODO: #1568 use type mangling for parameter and return types.
-			std::string ret;
+		std::string func(query::Context& ctx, SymID symbol_id) {
+			std::stringstream ret;
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
 			    or kind(symbol_id) == SymbolKind::Method) {
-				ret = "F";
+				// @TODO: #2255 Function qualifiers?
+
+				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
+				ret << ctx.query<QueryMangledType>({ function_type })->valueOrThrow().str();
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
-				ret += mangleType(fun_decl.return_type);
 
-				for (const auto& param: fun_decl.parameters) {
-					ret += mangleType(param.type);
-					ret += identifier(param.name.str());
-				}
+				for (const auto& param: fun_decl.parameters) ret << identifier(param.name.str());
 
-				ret += "E";
+				ret << "E";
 			} else {
 				CORE_USER_LOG("Tried to mangle non function-like symbol as a function-like.");
 				CORE_UNREACHABLE();
 			}
 
-			return ret;
+			return ret.str();
 		}
 
 		/**
@@ -299,7 +275,7 @@ namespace compiler::helios::mangler {
 				variant_match(getSymRef(symbol_id)->other) {
 					variant_case_novalue(PstSymbolData) {
 						// If the symbol originates from the PST, use its path.
-						return path(ctx, symbol_id) + funcType(ctx, symbol_id);
+						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
 					variant_case_novalue(builtin::BuiltinFunctionData) {
 						// Builtins have a C linkage (CAbi), so they are handled by the
@@ -311,21 +287,26 @@ namespace compiler::helios::mangler {
 						variant_match(gen_data.data) {
 							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-
-								const auto ctor_suffix = "Hic" + funcType(ctx, symbol_id) + "E";
+								const auto ctor_suffix   = "Hic" + func(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor
 							) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "Hdc" + funcType(ctx, symbol_id) + "E";
+								const auto ctor_suffix   = "Hdc" + func(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 							) {
-								return "Hds" + mangleType(ctor.array_type) + "E";
+								return "Hds"
+								     + ctx.query<QueryMangledType>(
+											  tsh::SymbolType<>::withDefaults(ctor.array_type)
+									 )
+								           ->valueOrThrow()
+								           .str()
+								     + "E";
 							}
 							variant_case(
 								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
@@ -347,8 +328,7 @@ namespace compiler::helios::mangler {
 				CORE_UNREACHABLE();
 			}
 			case SymbolKind::Class: {
-				// @TODO: #1568 generalise type mangling?
-				return path(ctx, symbol_id);
+				return "C" + path(ctx, symbol_id);
 			}
 			default:
 				throw base::LogicError{
@@ -481,6 +461,155 @@ namespace compiler::helios::mangler {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledSymbol);
+
+	struct IMPLEMENT_QUERY(QueryMangledType, query::QResult<base::StrID>) {
+		static std::string mangle(query::Context&, tsh::UnitAbstractType) { return "u"; }
+
+		static std::string mangle(query::Context&, tsh::VoidAbstractType) { return "v"; }
+
+		static std::string mangle(query::Context&, tsh::ByteAbstractType) { return "y"; }
+
+		static std::string mangle(query::Context&, tsh::BoolAbstractType) { return "b"; }
+
+		static std::string mangle(query::Context&, tsh::CharAbstractType) { return "c"; }
+
+		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
+			if (type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed)
+				return base::strConcat("i", type.getSize().asInt());
+			else
+				return base::strConcat("j", type.getSize().asInt());
+		}
+
+		static std::string mangle(query::Context&, tsh::FloatAbstractType type) {
+			return base::strConcat("f", type.getSize().asInt());
+		}
+
+		static std::string mangle(query::Context&, tsh::RawPointerAbstractType) { return "p"; }
+
+		static std::string mangle(query::Context& ctx, tsh::PointerAbstractType type) {
+			return base::strConcat(
+				"P", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
+
+		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
+
+		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
+			std::stringstream res;
+			res << "F"
+				<< ctx.query<QueryMangledType>({ type.getResultType() })->valueOrThrow().str();
+			// @TODO: #2255 Function qualifiers?
+			for (auto& param: type.getParameterTypes())
+				res << ctx.query<QueryMangledType>({ param })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::DynamicArrayAbstractType type) {
+			return base::strConcat(
+				"D",
+				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
+				"E"
+			);
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::StaticArrayAbstractType type) {
+			return base::strConcat(
+				"A",
+				base::toString(type.getSize()),
+				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
+				"E"
+			);
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::TupleAbstractType type) {
+			std::stringstream res;
+			res << "T";
+			for (auto& elem: type.getComponents())
+				res << ctx.query<QueryMangledType>({ elem })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::VariantAbstractType type) {
+			std::stringstream res;
+			res << "V";
+			for (auto& elem: type.getUnderlyingTypes())
+				res << ctx.query<QueryMangledType>({ elem })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::ClassAbstractType type) {
+			return getSimpleMangledName(ctx, type.getSymbol()).str();
+		}
+
+		static std::string mangle(query::Context&, tsh::MetaAbstractType) { return "t"; }
+
+		static query::QResult<std::string> mangle(query::Context& ctx, tsh::AbstractType type) {
+			using enum tsh::Kind;
+			switch (type.getKind()) {
+			case Unit:
+				return mangle(ctx, type.as<tsh::UnitAbstractType>());
+			case Void:
+				return mangle(ctx, type.as<tsh::VoidAbstractType>());
+			case Byte:
+				return mangle(ctx, type.as<tsh::ByteAbstractType>());
+			case Bool:
+				return mangle(ctx, type.as<tsh::BoolAbstractType>());
+			case Char:
+				return mangle(ctx, type.as<tsh::CharAbstractType>());
+			case Integral:
+				return mangle(ctx, type.as<tsh::IntegralAbstractType>());
+			case Float:
+				return mangle(ctx, type.as<tsh::FloatAbstractType>());
+			case RawPointer:
+				return mangle(ctx, type.as<tsh::RawPointerAbstractType>());
+			case Pointer:
+				return mangle(ctx, type.as<tsh::PointerAbstractType>());
+			case String:
+				return mangle(ctx, type.as<tsh::StringAbstractType>());
+			case Function:
+				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
+			case DynamicArray:
+				return mangle(ctx, type.as<tsh::DynamicArrayAbstractType>());
+			case StaticArray:
+				return mangle(ctx, type.as<tsh::StaticArrayAbstractType>());
+			case Tuple:
+				return mangle(ctx, type.as<tsh::TupleAbstractType>());
+			case Variant:
+				return mangle(ctx, type.as<tsh::VariantAbstractType>());
+			case Class:
+				return mangle(ctx, type.as<tsh::ClassAbstractType>());
+			case Meta:
+				return mangle(ctx, type.as<tsh::MetaAbstractType>());
+			default:
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
+				));
+				return query::Failed();
+			}
+		}
+
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return base::StrID{ base::strConcat(
+				key.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
+				key.getLeakage() == tsh::Leakage::Leaking ? "L" : "",
+				key.getMutability() == tsh::Mutability::Mutable ? "" : "N",
+				key.getRefKind() == tsh::ReferenceKind::Direct ? ""
+				: key.getRefKind() == tsh::ReferenceKind::Box  ? "X"
+															   : "R",
+				mangle(ctx, key.getType()).valueOrThrow()
+			) };
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledType);
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id) {
 		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ .symbol_key = sym_id });

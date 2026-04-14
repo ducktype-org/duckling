@@ -3,6 +3,7 @@
 #include "size_constants.hpp"
 
 #include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/maps.hpp>
@@ -31,8 +32,18 @@ namespace compiler::tsl {
 
 		/**
 		 * @brief The source type of a memory layout.
+		 *
+		 * @note Most layouts are created from abstract type wrapped with default values. But
+		 * pointer types might be created directly from symbol type. This is important, because it
+		 * allows to distinguish `T` from `ref T` from `box T` even at the memory layout level.
 		 */
-		tsh::AbstractType source_type;
+		tsh::SymbolType<> source_type;
+
+
+		/**
+		 * @brief Compact textual representation of the underlying AbstractType.
+		 */
+		base::StrID mangled_name;
 
 	public:
 		// Needed for default generation of copy constructor in deriving classes.
@@ -61,8 +72,17 @@ namespace compiler::tsl {
 		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
-		tsh::AbstractType getSourceType() const {
+		tsh::SymbolType<> getSourceType() const {
 			return source_type;
+		}
+
+		/**
+		 * @brief Get the mangled name of the source type of a layout.
+		 * @return The mangled name of the source type of a layout.
+		 */
+		[[nodiscard]]
+		base::StrID getMangledName() const {
+			return mangled_name;
 		}
 
 		/**
@@ -91,9 +111,7 @@ namespace compiler::tsl {
 		virtual ~TypeLayoutABC() = default;
 
 	protected:
-		TypeLayoutABC(const Bits size, const tsh::AbstractType source_type):
-			  size(size),
-			  source_type(source_type) {}
+		TypeLayoutABC(const Bits size, const tsh::SymbolType<> source_type, query::Context& ctx);
 
 		[[nodiscard]]
 		static auto getIndent(const u32 indent) {
@@ -111,8 +129,8 @@ namespace compiler::tsl {
 	 * whatsoever, so considering a layout for it is invalid and should not be "useful".
 	 */
 	class EmptyTypeLayout final: public TypeLayoutABC {
-		explicit EmptyTypeLayout(const tsh::UnitAbstractType unit_type):
-			  TypeLayoutABC(Bits(0), unit_type) {}
+		explicit EmptyTypeLayout(const tsh::UnitAbstractType unit_type, query::Context& ctx):
+			  TypeLayoutABC(Bits(0), tsh::SymbolType<>::withDefaults(unit_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -132,8 +150,8 @@ namespace compiler::tsl {
 	 * @TODO: #1709 take a look at this as well - maybe some adjustments will have to be made.
 	 */
 	class MetaTypeLayout final: public TypeLayoutABC {
-		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type):
-			  TypeLayoutABC(META_SIZE, meta_type) {}
+		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type, query::Context& ctx):
+			  TypeLayoutABC(META_SIZE, tsh::SymbolType<>::withDefaults(meta_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -150,17 +168,21 @@ namespace compiler::tsl {
 	 * Valid candidates include, of course, integers, but also bytes, bools, and characters.
 	 */
 	class IntegralTypeLayout final: public TypeLayoutABC {
-		explicit IntegralTypeLayout(const tsh::ByteAbstractType byte_type):
-			  TypeLayoutABC(BYTE_SIZE, byte_type) {}
+		explicit IntegralTypeLayout(const tsh::ByteAbstractType byte_type, query::Context& ctx):
+			  TypeLayoutABC(BYTE_SIZE, tsh::SymbolType<>::withDefaults(byte_type), ctx) {}
 
-		explicit IntegralTypeLayout(const tsh::BoolAbstractType bool_type):
-			  TypeLayoutABC(BOOL_SIZE, bool_type) {}
+		explicit IntegralTypeLayout(const tsh::BoolAbstractType bool_type, query::Context& ctx):
+			  TypeLayoutABC(BOOL_SIZE, tsh::SymbolType<>::withDefaults(bool_type), ctx) {}
 
-		explicit IntegralTypeLayout(const tsh::CharAbstractType char_type):
-			  TypeLayoutABC(CHAR_SIZE, char_type) {}
+		explicit IntegralTypeLayout(const tsh::CharAbstractType char_type, query::Context& ctx):
+			  TypeLayoutABC(CHAR_SIZE, tsh::SymbolType<>::withDefaults(char_type), ctx) {}
 
-		explicit IntegralTypeLayout(const tsh::IntegralAbstractType integral_type):
-			  TypeLayoutABC(integral_type.getSize(), integral_type) {}
+		explicit IntegralTypeLayout(
+			const tsh::IntegralAbstractType integral_type, query::Context& ctx
+		):
+			  TypeLayoutABC(
+				  integral_type.getSize(), tsh::SymbolType<>::withDefaults(integral_type), ctx
+			  ) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -176,8 +198,9 @@ namespace compiler::tsl {
 	 * @brief Layout of a type that has float-like low level behaviour.
 	 */
 	class FloatTypeLayout final: public TypeLayoutABC {
-		explicit FloatTypeLayout(const tsh::FloatAbstractType float_type):
-			  TypeLayoutABC(float_type.getSize(), float_type) {}
+		explicit FloatTypeLayout(const tsh::FloatAbstractType float_type, query::Context& ctx):
+			  TypeLayoutABC(float_type.getSize(), tsh::SymbolType<>::withDefaults(float_type), ctx) {
+		}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -204,8 +227,12 @@ namespace compiler::tsl {
 		 */
 		static constexpr auto METADATA_SIZE = Bytes(8);
 
-		explicit StringTypeLayout(const tsh::StringAbstractType string_type):
-			  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(METADATA_SIZE) * 3, string_type) {}
+		explicit StringTypeLayout(const tsh::StringAbstractType string_type, query::Context& ctx):
+			  TypeLayoutABC(
+				  POINTER_SIZE + base::bytes2bits(METADATA_SIZE) * 3,
+				  tsh::SymbolType<>::withDefaults(string_type),
+				  ctx
+			  ) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -447,7 +474,9 @@ namespace compiler::tsl {
 		std::vector<CRef<TypeLayout>> layout_idx_to_layout;
 
 		// Delegate constructor.
-		explicit TupleTypeLayout(struct TupleTypeLayoutConstructionHelper&& helper);
+		explicit TupleTypeLayout(
+			struct TupleTypeLayoutConstructionHelper&& helper, query::Context& ctx
+		);
 
 		TupleTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
 
@@ -540,8 +569,6 @@ namespace compiler::tsl {
 		 */
 		std::vector<CRef<TypeLayout>> layout_idx_to_layout;
 
-		base::StrID mangled_name;
-
 		// Delegate constructor.
 		explicit ClassTypeLayout(
 			struct ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx
@@ -602,11 +629,6 @@ namespace compiler::tsl {
 		}
 
 		[[nodiscard]]
-		base::StrID getMangledName() const {
-			return mangled_name;
-		}
-
-		[[nodiscard]]
 		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
 			const override;
 	};
@@ -616,8 +638,10 @@ namespace compiler::tsl {
 	 */
 	class FunctionalTypeLayout final: public TypeLayoutABC {
 		// @TODO: Add support for function objects
-		explicit FunctionalTypeLayout(const tsh::FunctionAbstractType function_type):
-			  TypeLayoutABC(POINTER_SIZE, function_type) {}
+		explicit FunctionalTypeLayout(
+			const tsh::FunctionAbstractType function_type, query::Context& ctx
+		):
+			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -641,8 +665,10 @@ namespace compiler::tsl {
 		 * @brief Construct a PointerLayout for a RawPointer.
 		 * @param raw_pointer_type The source RawPointer.
 		 */
-		explicit PointerTypeLayout(const tsh::RawPointerAbstractType raw_pointer_type):
-			  TypeLayoutABC(POINTER_SIZE, raw_pointer_type) {}
+		explicit PointerTypeLayout(
+			const tsh::RawPointerAbstractType raw_pointer_type, query::Context& ctx
+		):
+			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(raw_pointer_type), ctx) {}
 
 		/**
 		 * @brief Construct a PointerLayout from a typed Pointer.
@@ -750,7 +776,7 @@ namespace compiler::tsl {
 		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
-		tsh::AbstractType getSourceType() const;
+		tsh::SymbolType<> getSourceType() const;
 
 		/**
 		 * @brief Get a string describing the layout in a human-friendly format.
@@ -770,5 +796,12 @@ namespace compiler::tsl {
 		 */
 		[[nodiscard]]
 		std::string toStringIdentification() const;
+
+		/**
+		 * @brief Get the mangled name of the source type of a layout.
+		 * @return The mangled name of the source type of a layout.
+		 */
+		[[nodiscard]]
+		base::StrID getMangledName() const;
 	};
 }
