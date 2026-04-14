@@ -9,7 +9,7 @@ use tracing::debug;
 use crate::quackpack::core::Package;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_internal};
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_internal};
 
 mod dependency;
 mod manifest;
@@ -40,7 +40,7 @@ pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
 #[derive(Debug)]
 /// Scope representing, which item in [`ManifestSchema`] we are currently working on.
 pub(crate) struct Scope {
-    inner: Vec<StrId>,
+    inner: Vec<String>,
 }
 
 impl Scope {
@@ -50,12 +50,12 @@ impl Scope {
     }
 
     /// Push a `name` onto this [`Scope`].
-    pub fn push(&mut self, name: StrId) -> ScopeGuard<'_> {
+    pub fn push(&mut self, name: String) -> ScopeGuard<'_> {
         ScopeGuard::new(self, name)
     }
 
     /// Pop last item from this [`Scope`].
-    pub fn pop(&mut self) -> StrId {
+    pub fn pop(&mut self) -> String {
         self.inner.pop().unwrap()
     }
 
@@ -78,7 +78,7 @@ pub(crate) struct ScopeGuard<'scope> {
 }
 
 impl<'scope> ScopeGuard<'scope> {
-    pub fn new(scope: &'scope mut Scope, name: StrId) -> Self {
+    pub fn new(scope: &'scope mut Scope, name: String) -> Self {
         scope.inner.push(name);
         Self { scope, armed: true }
     }
@@ -90,7 +90,7 @@ impl<'scope> ScopeGuard<'scope> {
     }
 
     /// Disarm this guard, and return a result of a manual pop.
-    pub fn disarm_and_pop(&mut self) -> StrId {
+    pub fn disarm_and_pop(&mut self) -> String {
         self.disarm();
         self.pop()
     }

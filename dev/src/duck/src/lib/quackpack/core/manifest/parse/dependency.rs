@@ -26,10 +26,9 @@ pub(crate) fn parse(
     };
     let mut dependencies = Vec::new();
     for (name, dep_schema) in schema {
-        let name = name.into();
-        let guard = scope.push(name);
+        let guard = scope.push(name.into());
         dependencies.push(parse_single_dependency(
-            name,
+            name.into(),
             dep_schema,
             package_root,
             ctx,
@@ -108,11 +107,10 @@ fn parse_features(
                     key: ref name,
                     value: ref conditions,
                 } = detailed_feature.0;
-                let name = name.into();
-                let mut name_guard = scope.push(name);
+                let mut name_guard = scope.push(name.into());
                 let guard = name_guard.push("conditions".into());
                 result.push(DependencyFeature::new(
-                    name,
+                    name.into(),
                     Some(parse_conditions(conditions, guard)?),
                 ));
             }
