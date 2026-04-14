@@ -515,19 +515,43 @@ namespace compiler::driver {
 		// @TODO: #2354 This is temporary.
 		const bool build_debug_info = backend == BackendType::DVM;
 
-		std::function<void(frontend::ModuleID)> handle_module
-			= [&](frontend::ModuleID module_id) -> void {
-			auto module_result
-				= query::entryPoint<CompileModule>({ module_id, backend, build_debug_info });
-			if (module_result->hasValue()) {
-				objects.emplace_back(module_result->valueOrPanic().object_art);
-				if (build_debug_info) query::entryPoint<DebugInfoForModule>({ module_id, backend });
-			} else
-				result = base::BAD;
-		};
-		for (const auto& module_id: modules_to_compile) handle_module(module_id);
 
-		if (result.isBad()) return result;
+		std::atomic_flag modules_failed;
+		modules_failed.clear();
+
+		// std::function<void(frontend::ModuleID)> handle_module
+		// 	= [&](frontend::ModuleID module_id) -> void {
+		// 	auto module_result
+		// 		= query::entryPoint<CompileModule>({ module_id, backend, build_debug_info });
+		// 	if (module_result->hasValue()) {
+		// 		objects.emplace_back(module_result->valueOrPanic().object_art);
+		// 		if (build_debug_info) query::entryPoint<DebugInfoForModule>({ module_id, backend });
+		// 	} else
+		// 		result = base::BAD;
+		// };
+		// for (const auto& module_id: modules_to_compile) handle_module(module_id);
+
+		// if (result.isBad()) return result;
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			std::vector<query::internal::TaskHandle> handles;
+			handles.reserve(modules_to_compile.size());
+			for (const auto& module_id: modules_to_compile) {
+				handles.push_back(ctx.schedule<CompileModule>({ module_id, backend, build_debug_info }));
+			}
+			for (auto& handle: handles) {
+				auto module_result = ctx.await<CompileModule>(handle);
+				if (module_result->hasValue())
+					objects.emplace_back(module_result->valueOrPanic().object_art);
+				else
+					modules_failed.test_and_set();
+			}
+		});
+
+
+		if (modules_failed.test()) return base::BAD;
+
+
 
 		if (backend == BackendType::LLVM) {
 			// Link all outputs into a single binary.

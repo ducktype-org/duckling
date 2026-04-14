@@ -38,6 +38,7 @@ endif()
 add_subdirectory(dependencies)
 
 # Temp:
+add_subdirectory(external/abseil)
 find_package(mimalloc 3.2 REQUIRED) 
 
 
