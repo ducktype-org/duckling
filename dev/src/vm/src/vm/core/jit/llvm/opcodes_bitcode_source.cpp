@@ -16,7 +16,6 @@
 	#include <cstddef>
 	#include <cstring>
 	#include <array>
-	#include <iostream>
 
 LLVM_INCLUDE_BEGIN()
 	#include <llvm/Bitcode/BitcodeReader.h>

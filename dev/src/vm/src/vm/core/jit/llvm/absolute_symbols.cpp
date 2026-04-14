@@ -4,6 +4,8 @@
 
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
 
+#include <ranges>
+
 
 LLVM_INCLUDE_BEGIN()
 
@@ -14,11 +16,13 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
+static constexpr usize UNJITABLE_OPCODES_COUNT = 10;
+
 void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
     auto& jd = lljit.getMainJITDylib();
     llvm::orc::SymbolMap host_symbols;
 
-    std::array<std::string_view, 10> hard_symbols = {"jmp_label",
+    std::array<std::string_view, UNJITABLE_OPCODES_COUNT> hard_symbols = {"jmp_label",
         "jmpIfNot_label",
         "jmpIf_label",
         "jit_call_entrypoint",
@@ -29,7 +33,7 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
         "breakpoint",
         "ret"};
     
-    std::array<vm::OpFun*, 10> addresses = {
+    std::array<vm::OpFun*, UNJITABLE_OPCODES_COUNT> addresses = {
         &vm::OpFuns::op_jmp_label,
         &vm::OpFuns::op_jmpIfNot_label,
         &vm::OpFuns::op_jmpIf_label,
@@ -42,20 +46,14 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
         &vm::OpFuns::op_ret
     };
 
-    for (usize i = 0; i < 10; ++i) {
+    // Once Clang 21 is compatible with Ubuntu, this can (and should) be changed
+    // to use structured bindings and `std::ranges::views::zip`.
+    for (usize i = 0; i < addresses.size(); ++i) {
         host_symbols[lljit.mangleAndIntern(hard_symbols.at(i))] = llvm::orc::ExecutorSymbolDef(
             llvm::orc::ExecutorAddr::fromPtr(addresses.at(i)),
             llvm::JITSymbolFlags::Exported | llvm::JITSymbolFlags::Callable
         );
     }
 
-    // host_symbols[lljit.mangleAndIntern("ret")] = llvm::orc::ExecutorSymbolDef (
-    //     llvm::orc::ExecutorAddr::fromPtr(&vm::OpFuns::op_ret),
-    //     llvm::JITSymbolFlags::Exported | llvm::JITSymbolFlags::Callable
-    // );
-    // host_symbols[lljit.mangleAndIntern("jmp_label")] = llvm::orc::ExecutorSymbolDef (
-    //     llvm::orc::ExecutorAddr::fromPtr(&vm::OpFuns::op_jmp_label),
-    //     llvm::JITSymbolFlags::Exported | llvm::JITSymbolFlags::Callable
-    // );
     cantFail(jd.define(llvm::orc::absoluteSymbols(std::move(host_symbols))));
 }
