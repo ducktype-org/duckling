@@ -9,7 +9,18 @@
 #include <concepts>
 #include <type_traits>
 
+#include "absl/container/node_hash_map.h"
+
 namespace concurrent {
+
+	inline int testfun() {
+		using T = absl::node_hash_map<int, int, std::hash<int>>;
+		T map;
+		auto a = map.insert({1, 2});
+		// T::node_type a;
+
+		// map::
+	}
 
 	/**
 	 * A sharded concurrent StableHashMap implementation.
@@ -31,7 +42,10 @@ namespace concurrent {
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
 	class ConHashMap final {
-		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
+
+
+		// using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
+		using HashMapType = absl::node_hash_map<KEY_T, DATA_T, HASH_T>;
 
 		using KeyHash = u64;
 
@@ -103,7 +117,7 @@ namespace concurrent {
 
 
 	public:
-		using KeyValuePair = typename HashMapType::KeyValuePair;
+		// using KeyValuePair = typename HashMapType::KeyValuePair;
 
 		ConHashMap(): shards(SHARD_COUNT) {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
@@ -156,9 +170,13 @@ namespace concurrent {
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
+
 			auto          result
-				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
-			elements_count.fetch_add(1, std::memory_order_relaxed);
+			= shards[lock.shard_index].insert({std::forward<K>(key), std::forward<D>(value)});
+				// = shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
+			
+				elements_count.fetch_add(1, std::memory_order_relaxed);
+			
 			return result;
 		}
 
@@ -169,15 +187,20 @@ namespace concurrent {
 		 * @param value The data
 		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
 		 * already existed.
+		 *
+		 * PR
 		 */
 		template<typename K, typename D = DATA_T>
 		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
-		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
+		void maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto result
-				= shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
-			if (result != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
+				= shards.at(lock.shard_index).insert({std::forward<K>(key), std::forward<D>(value)});
+				// = shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
+
+			if (result.second) elements_count.fetch_add(1, std::memory_order_relaxed);
+			
 			return result;
 		}
 
@@ -192,7 +215,9 @@ namespace concurrent {
 				shards[lock.shard_index][key] = std::forward<D>(value);
 				return;
 			}
-			shards[lock.shard_index].maybePut(key, std::forward<D>(value));
+			// shards[lock.shard_index].maybePut(key, std::forward<D>(value));
+			shards.at(lock.shard_index).insert({std::forward<K>(key), std::forward<D>(value)});
+
 			elements_count.fetch_add(1, std::memory_order_relaxed);
 		}
 
@@ -205,7 +230,7 @@ namespace concurrent {
 		 */
 		template<typename K, typename D = DATA_T, typename Func>
 		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
-		MRef<KeyValuePair> maybePutAndUpdate(K&& key, D&& value, Func&& f) RELEASE_NOEXCEPT {
+		/*PR*/ void maybePutAndUpdate(K&& key, D&& value, Func&& f) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto inserted = shards[lock.shard_index].maybePutAndUpdate(

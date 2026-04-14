@@ -38,8 +38,29 @@ endif()
 add_subdirectory(dependencies)
 
 # Temp:
-add_subdirectory(external/abseil)
 find_package(mimalloc 3.2 REQUIRED) 
+
+
+
+
+# Save your strict flags
+set(OLD_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+# Disable warnings for third-party
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+add_subdirectory(dependencies/abseil)
+# Restore strict flags for your code
+set(CMAKE_CXX_FLAGS "${OLD_CXX_FLAGS}")
+
+
+# get_property(absl_targets DIRECTORY dependencies/abseil PROPERTY BUILDSYSTEM_TARGETS)
+# foreach(t ${absl_targets})
+#     message(STATUS "Abseil target: ${t}")
+# endforeach()
+# foreach(t ${absl_targets})
+#     if(t MATCHES "^absl")
+#         target_compile_options(${t} PRIVATE -Wno-error)
+#     endif()
+# endforeach()
 
 
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureTests.cmake)
