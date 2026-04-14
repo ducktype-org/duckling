@@ -1,3 +1,4 @@
+#include <diagnostic_interactive/logger.hpp>
 #pragma once
 
 #include "lang_parser_context.hpp"

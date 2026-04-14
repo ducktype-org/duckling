@@ -1,3 +1,4 @@
+#include <frontend/pst_parser/lang_parser_element.hpp>
 /**
  * @file lir_tests.cpp
  * @brief Tests in this file are very bad right now, because MIR
@@ -227,13 +228,13 @@ private:
 		// withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
 
 		auto print_stable_position
-			= [](const base::Optional<pst::StablePosition>& stable, std::string_view label) {
+			= [](const base::Optional<dia_int::HashCodePosition>& stable, std::string_view label) {
 				  if (!stable.has_value()) {
 					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
 					  return;
 				  }
 
-				  auto position                   = stable.value().getActiveSourcePosition();
+				  auto position                   = pst::LangElement::getActiveSourcePosition(stable.value());
 				  auto [start_line, start_column] = position.getStartLineColumn();
 				  auto [end_line, end_column]     = position.getEndLineColumn();
 				  auto source_start               = position.getStart();
@@ -262,9 +263,9 @@ private:
 		print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
 		print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
 
-		auto first_pos  = first_instr.metadata.position.value().getActiveSourcePosition();
-		auto second_pos = second_instr.metadata.position.value().getActiveSourcePosition();
-		auto fourth_pos = fourth_instr.metadata.position.value().getActiveSourcePosition();
+		auto first_pos  = pst::LangElement::getActiveSourcePosition(first_instr.metadata.position.value());
+		auto second_pos = pst::LangElement::getActiveSourcePosition(second_instr.metadata.position.value());
+		auto fourth_pos = pst::LangElement::getActiveSourcePosition(fourth_instr.metadata.position.value());
 
 		ASSERT_POSITION(first_pos, 5, 5, 5, 21);
 		ASSERT_POSITION(second_pos, 7, 18, 7, 24);
@@ -282,7 +283,7 @@ private:
 
 				// Verify source position matches variable declaration on line 7
 				ASSERT_POSITION(
-					local.metadata.position.value().getActiveSourcePosition(), 7, 5, 7, 30
+					pst::LangElement::getActiveSourcePosition(local.metadata.position.value()), 7, 5, 7, 30
 				);
 			}
 		}

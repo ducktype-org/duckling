@@ -1,11 +1,11 @@
 #pragma once
 
-#include <frontend/pst_parser/stable_position.hpp>
+#include <diagnostic_interactive/hash_code_position.hpp>
 
 #include <base/collections/optional.hpp>
 
 namespace compiler::mir {
 	struct InstructionMetadata {
-		base::Optional<pst::StablePosition> position;
+		base::Optional<dia_int::HashCodePosition> position;
 	};
 }

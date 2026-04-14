@@ -3,7 +3,7 @@
 #include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
-#include <frontend/pst_parser/stable_position.hpp>
+#include <diagnostic_interactive/hash_code_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -144,7 +144,7 @@ namespace compiler::lir {
 	 */
 	struct LIRLocalMetadata {
 		base::Optional<base::StrID>         source_code_name;
-		base::Optional<pst::StablePosition> position;
+		base::Optional<dia_int::HashCodePosition> position;
 	};
 
 	/**
@@ -481,7 +481,7 @@ namespace compiler::lir {
 		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<pst::StablePosition> position;
+		base::Optional<dia_int::HashCodePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
@@ -530,7 +530,7 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<pst::StablePosition> position;
+		base::Optional<dia_int::HashCodePosition> position;
 		base::Optional<base::StrID>         source_code_name;
 	};
 

@@ -64,8 +64,8 @@ namespace compiler::helios::code {
 			return id;
 		}
 
-		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const {
-			return origin.getStablePosition();
+		[[nodiscard]] base::Optional<dia_int::HashCodePosition> getPosition() const {
+			return origin.getHashCodePosition();
 		}
 
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "hash_code_position.hpp"
+
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 
 #include <diagnostic/location.hpp>
@@ -90,11 +92,12 @@ namespace dia_int {
 	class CodeLocationArgument final: public Argument {
 	public:
 		struct FileLocation {
-			std::string         file;
-			u64                 line;
-			u64                 column;
-			base::Optional<u64> end_line{};
-			base::Optional<u64> end_column{};
+			std::string                      file;
+			u64                              line;
+			u64                              column;
+			base::Optional<u64>              end_line{};
+			base::Optional<u64>              end_column{};
+			base::Optional<HashCodePosition> hash_location{};
 
 			static FileLocation fromSourcePosition(const dia::SourcePosition& pos) {
 				auto [line, column]         = pos.getStartLineColumn();

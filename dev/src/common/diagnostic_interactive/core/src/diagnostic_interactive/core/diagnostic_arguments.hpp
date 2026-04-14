@@ -2,6 +2,7 @@
 #include "diagnostic_arguments_forward.hpp"
 #include "utils.hpp"
 
+#include "base/types/bit256.hpp"
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/visitor.hpp>
@@ -109,25 +110,33 @@ namespace dia_int::dia_args {
 		static Box<CodeComponent> fromJson(const json& elem);
 	};
 
+	struct HashCodeLocation {
+		base::Bit256                 begin_node;
+		base::Optional<base::Bit256> end_node;
+	};
+
 	struct CodeLocationComponent final: public Component {
-		std::string         file;
-		u64                 line;
-		u64                 column;
-		base::Optional<u64> end_line;
-		base::Optional<u64> end_column;
+		std::string                      file;
+		u64                              line;
+		u64                              column;
+		base::Optional<u64>              end_line;
+		base::Optional<u64>              end_column;
+		base::Optional<HashCodeLocation> hash_location;
 
 		CodeLocationComponent(
-			std::string         file,
-			u64                 line,
-			u64                 column,
-			base::Optional<u64> end_line   = {},
-			base::Optional<u64> end_column = {}
+			std::string                      file,
+			u64                              line,
+			u64                              column,
+			base::Optional<u64>              end_line      = {},
+			base::Optional<u64>              end_column    = {},
+			base::Optional<HashCodeLocation> hash_location = {}
 		):
 			  file(std::move(file)),
 			  line(line),
 			  column(column),
 			  end_line(end_line),
-			  end_column(end_column) {}
+			  end_column(end_column),
+			  hash_location(hash_location) {}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitCodeLocationComponent(*this);
