@@ -527,7 +527,13 @@ namespace compiler::driver {
 		};
 		for (const auto& module_id: modules_to_compile) handle_module(module_id);
 
-		if (result.isBad()) return result;
+		if (result.isBad()) {
+			std::cerr << "THE END!\n";
+
+			// TEST CODE:
+			// concurrent::worker::WorkerManager::get().waitForAllWorkersFree(std::chrono::milliseconds(10));
+			return result;
+		}
 
 		if (backend == BackendType::LLVM) {
 			// Link all outputs into a single binary.
@@ -544,6 +550,8 @@ namespace compiler::driver {
 				return base::BAD;
 			}
 		}
+
+		
 
 		return result;
 	}

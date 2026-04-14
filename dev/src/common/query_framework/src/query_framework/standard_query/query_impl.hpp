@@ -156,6 +156,10 @@ namespace query::internal {
 				CORE_PANIC(qfe.what());
 			}
 		}
+		catch (...) {
+			// temporary, we want to let panics pass:
+			CORE_PANIC("Unexpected exception thrown in standardQueryEntry.");
+		}
 	}
 
 	/**
