@@ -1,7 +1,6 @@
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
 
-
 #include <base/collections/maps.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -23,8 +22,21 @@ namespace dia_int {
 	}
 
 	Box<dia_args::Component> CodeLocationArgument::getValue(MessageBase&) {
+		base::Optional<dia_args::HashCodeLocation> hash_location = {};
+
+		if (location.hash_location) {
+			hash_location
+				= dia_args::HashCodeLocation{ .begin_node = location.hash_location->begin_node,
+				                              .end_node   = location.hash_location->end_node };
+		}
+
 		return base::makeBox<dia_args::CodeLocationComponent>(
-			location.file, location.line, location.column, location.end_line, location.end_column
+			location.file,
+			location.line,
+			location.column,
+			location.end_line,
+			location.end_column,
+			hash_location
 		);
 	}
 
@@ -247,8 +259,21 @@ namespace dia_int {
 		addArgument<CodeLocationArgument>("code_location", source_position);
 	}
 
+	MessageWithCodeFragment::MessageWithCodeFragment(dia_int::HashSourcePosition source_position) {
+		addArgument<CodeArgument>("code", source_position);
+		addArgument<CodeLocationArgument>("code_location", source_position);
+	}
+
 	MessageWithCodeFragmentAndCause::MessageWithCodeFragmentAndCause(
 		dia::SourcePosition source_position
+	) {
+		addArgument<CodeArgument>("code", source_position);
+		addArgument<CodeLocationArgument>("code_location", source_position);
+		addPointerMessage({ "cause", source_position });
+	}
+
+	MessageWithCodeFragmentAndCause::MessageWithCodeFragmentAndCause(
+		dia_int::HashSourcePosition source_position
 	) {
 		addArgument<CodeArgument>("code", source_position);
 		addArgument<CodeLocationArgument>("code_location", source_position);

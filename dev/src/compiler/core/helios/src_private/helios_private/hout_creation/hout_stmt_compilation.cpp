@@ -258,7 +258,7 @@ namespace compiler::helios {
 				// no initial value case
 
 				if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
-					ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getSourcePosition()));
+					ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getHashSourcePosition()));
 					is_failed = true;
 					return;
 				}

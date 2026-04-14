@@ -21,6 +21,7 @@ public:
 
 		// JSON string round trip tests
 		TESTER_ADD_TEST(jsonStringRoundTrip);
+		TESTER_ADD_TEST(codeLocationHashDeserialization);
 
 		// YAML template deserialization tests
 		TESTER_ADD_TEST(yamlTemplateDeserialization);
@@ -342,6 +343,38 @@ private:
 		})",
 			dia_args::Diagnostic::fromJson
 		);
+	}
+
+	void codeLocationHashDeserialization() {
+		const std::string code_location_with_hash_json = R"({
+			"type": "code_location",
+			"file": "main.cpp",
+			"line": 10,
+			"column": 5,
+			"hash_location": {
+				"begin_node": [1, 2, 3, 4],
+				"end_node": [5, 6, 7, 8]
+			}
+		})";
+
+		json  j             = json::parse(code_location_with_hash_json);
+		auto  component     = dia_args::Component::fromJson(j);
+		auto* code_location = dynamic_cast<dia_args::CodeLocationComponent*>(component.get());
+
+		ASSERT_EQUAL(false, code_location == nullptr);
+		ASSERT_EQUAL(true, code_location->hash_location.has_value());
+		ASSERT_EQUAL(1, code_location->hash_location->begin_node.data[0]);
+		ASSERT_EQUAL(2, code_location->hash_location->begin_node.data[1]);
+		ASSERT_EQUAL(3, code_location->hash_location->begin_node.data[2]);
+		ASSERT_EQUAL(4, code_location->hash_location->begin_node.data[3]);
+		ASSERT_EQUAL(true, code_location->hash_location->end_node.has_value());
+		ASSERT_EQUAL(5, code_location->hash_location->end_node->data[0]);
+		ASSERT_EQUAL(6, code_location->hash_location->end_node->data[1]);
+		ASSERT_EQUAL(7, code_location->hash_location->end_node->data[2]);
+		ASSERT_EQUAL(8, code_location->hash_location->end_node->data[3]);
+
+		json j2 = component->toJson();
+		ASSERT_EQUAL(j.dump(2), j2.dump(2));
 	}
 
 	// ========================================

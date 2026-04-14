@@ -1,5 +1,6 @@
 #pragma once
 
+#include <diagnostic_interactive/hash_source_position.hpp>
 #include <diagnostic_interactive/message.hpp>
 
 namespace compiler::helios {
@@ -25,7 +26,7 @@ namespace compiler::helios {
 		}
 
 	public:
-		ImmutableVariableNoInitError(dia::SourcePosition source_position):
+		ImmutableVariableNoInitError(dia_int::HashSourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

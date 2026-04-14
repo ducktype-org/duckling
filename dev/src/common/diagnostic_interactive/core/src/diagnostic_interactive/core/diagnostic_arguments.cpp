@@ -70,6 +70,17 @@ namespace dia_int::dia_args {
 		result["column"] = column;
 		if (end_line.has_value()) result["end_line"] = end_line.value();
 		if (end_column.has_value()) result["end_column"] = end_column.value();
+		if (hash_location.has_value()) {
+			auto serialize_bit256 = [](const base::Bit256& bit) {
+				return json::array({ bit.data[0], bit.data[1], bit.data[2], bit.data[3] });
+			};
+
+			json hash_location_json;
+			hash_location_json["begin_node"] = serialize_bit256(hash_location->begin_node);
+			if (hash_location->end_node.has_value())
+				hash_location_json["end_node"] = serialize_bit256(hash_location->end_node.value());
+			result["hash_location"] = std::move(hash_location_json);
+		}
 		return result;
 	}
 
@@ -78,11 +89,12 @@ namespace dia_int::dia_args {
 		ASSUME_UINT(elem, "line");
 		ASSUME_UINT(elem, "column");
 
-		std::string         file   = elem["file"];
-		u64                 line   = elem["line"];
-		u64                 column = elem["column"];
-		base::Optional<u64> end_line{};
-		base::Optional<u64> end_column{};
+		std::string                      file   = elem["file"];
+		u64                              line   = elem["line"];
+		u64                              column = elem["column"];
+		base::Optional<u64>              end_line{};
+		base::Optional<u64>              end_column{};
+		base::Optional<HashCodeLocation> hash_location{};
 		if (elem.contains("end_line")) {
 			ASSUME_UINT(elem, "end_line");
 			end_line = elem["end_line"];
@@ -91,8 +103,43 @@ namespace dia_int::dia_args {
 			ASSUME_UINT(elem, "end_column");
 			end_column = elem["end_column"];
 		}
+		if (elem.contains("hash_location")) {
+			const json& hash_location_json = elem["hash_location"];
+			ASSUME_OBJ(hash_location_json);
+
+			auto deserialize_bit256
+				= [](const json& hash_json, const char* field_name) -> base::Bit256 {
+				ASSUME_HAS(hash_json, field_name);
+				ASSUME_ARR(hash_json, field_name);
+				if (hash_json[field_name].size() != 4)
+					throw ParsingDiagnosticFileError(base::strConcat(
+						"hash_location[ ", field_name, " ] must be an array of 4 unsigned integers"
+					));
+
+				std::array<u64, 4> data = {};
+				for (usize i = 0; i < 4; ++i) {
+					if (!hash_json[field_name][i].is_number_unsigned())
+						throw ParsingDiagnosticFileError(base::strConcat(
+							"hash_location[ ",
+							field_name,
+							" ][ ",
+							std::to_string(i),
+							" ] is not an unsigned integer"
+						));
+					data.at(i) = hash_json[field_name][i].get<u64>();
+				}
+				return base::Bit256(data);
+			};
+
+			HashCodeLocation location;
+			location.begin_node = deserialize_bit256(hash_location_json, "begin_node");
+			if (hash_location_json.contains("end_node"))
+				location.end_node = deserialize_bit256(hash_location_json, "end_node");
+
+			hash_location = location;
+		}
 		return base::makeBox<CodeLocationComponent>(
-			std::move(file), line, column, end_line, end_column
+			std::move(file), line, column, end_line, end_column, hash_location
 		);
 	}
 

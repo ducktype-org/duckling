@@ -31,8 +31,8 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
 
-		[[nodiscard]] base::Optional<dia_int::HashCodePosition> getPosition() const {
-			return origin.getHashCodePosition();
+		[[nodiscard]] base::Optional<dia_int::HashSourcePosition> getPosition() const {
+			return origin.getHashSourcePosition();
 		}
 	};
 

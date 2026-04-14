@@ -1,5 +1,7 @@
 #include "placeholder.hpp"
 
+#include <diagnostic_interactive/hash_source_position.hpp>
+
 #include <logger/logger.hpp>
 
 namespace dia_int {

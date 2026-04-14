@@ -17,6 +17,8 @@
 
 #include "message.hpp"
 
+#include <diagnostic_interactive/hash_source_position.hpp>
+
 namespace dia_int {
 	/**
 	 * @brief A Placeholder message with a header only and no code snippet.

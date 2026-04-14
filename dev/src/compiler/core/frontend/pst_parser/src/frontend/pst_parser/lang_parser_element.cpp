@@ -204,9 +204,13 @@ namespace pst {
 		return *pst_hash_map.at(stable_hash);
 	}
 
-	dia_int::HashCodePosition LangElement::getHashCodePosition() const { return { LangElement::getActiveSourcePositionIllegalAccess, getHash(), {} }; }
+	dia_int::HashSourcePosition LangElement::getHashSourcePosition() const {
+		return { LangElement::getActiveSourcePositionIllegalAccess, getHash(), {} };
+	}
 
-	dia::SourcePosition LangElement::getActiveSourcePositionIllegalAccess(const dia_int::HashCodePosition& pos) {
+	dia::SourcePosition LangElement::getActiveSourcePositionIllegalAccess(
+		const dia_int::HashSourcePosition& pos
+	) {
 		auto first_pos = LangElement::getByStableHash(pos.begin_node)
 		                     .illegalAccess()
 		                     .value()
