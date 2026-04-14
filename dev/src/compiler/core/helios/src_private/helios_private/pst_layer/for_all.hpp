@@ -17,20 +17,14 @@ namespace compiler::helios {
 	template<typename ElementT, typename FunctionT>
 	void pstForAll(query::Context& ctx, pst::Access<ElementT> element, FunctionT function) {
 		if (element->getElementKind() == pst::ElementKind::Expand) {
+			// note: valueOrThrow might be suboptimal here.
+			
 			auto expansion_result = ctx.query<QueryMacroExpansion>({
 				element.template dynamicCast<pst::Expand>().value(),
-			});
+			}).valueOrThrow();
 
-			// note: valueOrThrow might be suboptimal here.
-			variant_match(expansion_result.valueOrThrow()) {
-				variant_case(pst::AccessLocked<pst::Stmt>, expanded_stmt) {
-					pstForAll(ctx, expanded_stmt.unlock(ctx), function);
-				}
-				variant_case(ExpansionError<pst::Stmt>, error) {
-					// @TODO: #2406 deal with this panic
-					CORE_PANIC("Error in macro expanded code not handled");
-				}
-			}
+			pstForAll(ctx, expansion_result.unlock(ctx), function);
+			
 			return;
 		}
 
