@@ -151,6 +151,9 @@ namespace compiler::helios::defgen {
 			 *
 			 * @note For detailed explanation see docs for the buildScriptMainWrapper function in
 			 * helios/repl_utils/script_helpers.hpp.
+			 *
+			 * @TODO: #895 When entry points become explicit (not inferred from global `main`),
+			 * reevaluate whether this stored scope is still required for ScriptMainWrapper.
 			 */
 			ScopeID scope;
 
