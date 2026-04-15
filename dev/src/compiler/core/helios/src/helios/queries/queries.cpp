@@ -144,7 +144,7 @@ namespace compiler::helios {
 			return out;
 		}
 
-/**
+		/**
 		 * @brief Appends the default constructors and all the default constructors they call to
 		 * the HOUT unit.
 		 *
