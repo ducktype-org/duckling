@@ -176,7 +176,7 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(ReplInstructionWrapper, repl) {
+				variant_case_novalue(ReplInstructionWrapper) {
 					// Unit (not Void) is the correct return type for procedures.
 					// Per the language spec: "void ... cannot be returned from a function".
 					const auto void_type = tsh::SymbolType<>{
@@ -192,7 +192,7 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(ScriptMainWrapper, script) {
+				variant_case_novalue(ScriptMainWrapper) {
 					const auto return_type = tsh::SymbolType<>{
 						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,

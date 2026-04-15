@@ -433,6 +433,9 @@ namespace compiler::driver {
 			return compiled_script.value();
 		}
 
+		// @TODO: #2246 Unify backend-neutral script pipeline stages
+		// (HOUT -> MIR -> LIR orchestration) with regular module compilation paths.
+		// Backend selection should happen only after shared LIR is produced.
 		std::expected<LIRModuleData, std::string> compileScriptToLLVMLIRModuleData(query::Context& ctx
 		) {
 			auto& script_context = global_state::getScriptContext();
@@ -544,6 +547,8 @@ namespace compiler::driver {
 			return merged;
 		}
 
+		// @TODO: #2246 After HOUT/MIR/LIR flow is unified, keep this function as
+		// LLVM-only backend emission (object + link) while reusing shared pipeline output.
 		base::OkBad compileScriptToLLVMExecutable(const linker::LinkingOptions& linking_options) {
 			auto& script_context = global_state::getScriptContext();
 

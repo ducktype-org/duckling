@@ -1,12 +1,13 @@
 #include "script_helpers.hpp"
 
+#include <frontend/module_tree/functors.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/type_interface.hpp>
 
 #include <logger/logger.hpp>
 
@@ -74,8 +75,14 @@ namespace compiler::repl {
 		}
 	};
 
-	helios::ScopeID queryScriptMainRootScope(query::Context& ctx, frontend::ModuleID main_module_id) {
-		return helios::queryRootScopeOfMainModuleFile(ctx, main_module_id);
+	helios::ScopeID queryScriptMainRootScope(
+		query::Context& ctx, frontend::ModuleID terminal_module_id
+	) {
+		CORE_ASSERT(
+			frontend::getModuleRef(terminal_module_id)->isReplModule(),
+			"queryScriptMainRootScope expects a REPL/script module"
+		);
+		return helios::queryRootScopeOfMainModuleFile(ctx, terminal_module_id);
 	}
 
 	helios::HOUTFunction buildScriptMainWrapper(

@@ -145,8 +145,12 @@ namespace compiler::helios::defgen {
 			base::StrID script_id;
 
 			/**
-			 * Stored so QuerySymbolABI can treat the symbol as global `main`.
-			 * Without a root scope, generated symbols default to non-global linkage.
+			 * Root scope assigned to the generated script `main` symbol.
+			 *
+			 * This scope is required so `isGlobalFun` recognizes the symbol as global.
+			 *
+			 * @note For detailed explanation see docs for the buildScriptMainWrapper function in
+			 * helios/repl_utils/script_helpers.hpp.
 			 */
 			ScopeID scope;
 

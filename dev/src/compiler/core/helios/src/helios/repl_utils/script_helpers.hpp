@@ -10,12 +10,28 @@
 
 namespace compiler::repl {
 	/**
-	 * @brief Resolve root scope of a script module main file.
+	 * @brief Resolve the canonical root scope used for generated script `main`.
+	 *
+	 * Script compilation creates a chain of ephemeral REPL modules, one per statement,
+	 * where each next module points to the previous one as REPL parent. The last module
+	 * in that chain represents the full accumulated script context.
+	 *
+	 * Even though these modules are ephemeral, each of them still has a real main source file:
+	 * createEphemeralChainedStatementModule() assigns one via createRandomVirtualFile(input).
+	 * That virtual file is parsed into PST just like regular files, so querying
+	 * queryRootScopeOfMainModuleFile() is the correct way to obtain the module's top-level scope.
+	 *
+	 * This helper returns the primary scope for that module's main source file root PST node.
+	 * Using that exact scope lets the generated wrapper symbol be treated as global `main`
+	 * by ABI/mangling logic (through global-function checks based on scope depth).
 	 *
 	 * @param ctx Active query context.
-	 * @param main_module_id Module whose main source file root scope should be used.
+	 * @param terminal_module_id The terminal module in the statement chain.
+	 * @return Root scope of the module's main source file, suitable for generated script `main`.
 	 */
-	helios::ScopeID queryScriptMainRootScope(query::Context& ctx, frontend::ModuleID main_module_id);
+	helios::ScopeID queryScriptMainRootScope(
+		query::Context& ctx, frontend::ModuleID terminal_module_id
+	);
 
 	/**
 	 * @brief Build synthetic global `main` wrapper for LLVM script compilation.
