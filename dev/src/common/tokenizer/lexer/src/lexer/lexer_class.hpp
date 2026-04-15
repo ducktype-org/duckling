@@ -11,11 +11,13 @@
 namespace lexer {
 
 	/**
-	 * @brief Class used to manage lexing. 
-	 * 
-	 * Takes a reference to a source in constructor for ease of use, it only uses the logger and decoding data.
+	 * @brief Class used to manage lexing.
 	 *
-	 * Usage: Construct using the TokenSource then use tokenize() to get back the token data. It is meant to only be used by TokenSource.
+	 * Takes a reference to a source in constructor for ease of use, it only uses the logger and
+	 * decoding data.
+	 *
+	 * Usage: Construct using the TokenSource then use tokenize() to get back the token data. It is
+	 * meant to only be used by TokenSource.
 	 *
 	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format
 	 * controls)

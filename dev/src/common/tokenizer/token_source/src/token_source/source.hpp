@@ -22,7 +22,8 @@ namespace tokenizer {
 	/**
 	 * @brief Class managing source file data access and token metadata
 	 *
-	 * In normal usage it is created using makeTokenSource, then built using the tokenize() method which: decodes, splits into lines then lexes. After that the data is ready to be used.
+	 * In normal usage it is created using makeTokenSource, then built using the tokenize() method
+	 * which: decodes, splits into lines then lexes. After that the data is ready to be used.
 	 *
 	 */
 	class TokenSource final {
