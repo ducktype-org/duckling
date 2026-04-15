@@ -138,14 +138,13 @@ namespace tokenizer {
 
 	template<>
 	lexer::CharArray TokenSource::internalDecode<fs::UsAscii>() {
-		auto             file  = Ref(this);
-		auto             log   = file->getIntLogger();
-		auto             bytes = file->getContent().view();
+		auto             log   = getIntLogger();
+		auto             bytes = getContent().view();
 		lexer::CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			// Check if valid ascii byte
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
-				log->log(makeBox<AsciiByteError>(file, i + 1, (usize) bytes[i]));
+				log->log(makeBox<AsciiByteError>(this, i + 1, (usize) bytes[i]));
 				continue;
 			}
 			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, i);
@@ -157,16 +156,15 @@ namespace tokenizer {
 
 	template<>
 	lexer::CharArray TokenSource::internalDecode<fs::UTF8>() {
-		auto             file  = Ref(this);
-		auto             log   = file->getIntLogger();
-		auto             bytes = file->getContent().view();
+		auto             log   = this->getIntLogger();
+		auto             bytes = this->getContent().view();
 		lexer::CharArray out;
 
 		usize pos = 0;
 		while (pos < bytes.size()) {
 			// Check if current byte is not a continuation byte
 			if (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
-				log->log(makeBox<Utf8UnexpectedContinuationError>(file, pos + 1, (usize) bytes[pos])
+				log->log(makeBox<Utf8UnexpectedContinuationError>(this, pos + 1, (usize) bytes[pos])
 				);
 				pos++;
 				continue;
@@ -187,7 +185,7 @@ namespace tokenizer {
 				size = 4;
 				value &= 0b00000111;
 			} else {
-				log->log(makeBox<Utf8BadByteStartError>(file, pos + 1, (usize) bytes[pos]));
+				log->log(makeBox<Utf8BadByteStartError>(this, pos + 1, (usize) bytes[pos]));
 				pos++;
 				continue;
 			}
@@ -199,7 +197,7 @@ namespace tokenizer {
 				if ((bytes[new_pos] & byte{ 0b11000000u }) != byte{ 0b10000000 }) {
 					are_bytes_ok = false;
 					log->log(makeBox<Utf8BadNonContinuationError>(
-						file, new_pos + 1, (usize) bytes[new_pos], pos + 1
+						this, new_pos + 1, (usize) bytes[new_pos], pos + 1
 					));
 					size = new_pos - pos;
 					break;
@@ -214,7 +212,7 @@ namespace tokenizer {
 			}
 
 			if (pos + size - 1 >= bytes.size()) {
-				log->log(makeBox<Utf8BadEofError>(file, bytes.size(), pos + 1));
+				log->log(makeBox<Utf8BadEofError>(this, bytes.size(), pos + 1));
 				pos = bytes.size();
 				continue;
 			}
@@ -222,7 +220,7 @@ namespace tokenizer {
 			// Check if value is a valid unicode code point
 			if (!U_IS_UNICODE_CHAR(value)
 			    || (U_GET_GC_MASK(value) & (U_GC_CN_MASK | U_GC_CO_MASK | U_GC_CS_MASK))) {
-				log->log(makeBox<Utf8UndefinedCodepointError>(file, pos + 1, value));
+				log->log(makeBox<Utf8UndefinedCodepointError>(this, pos + 1, value));
 				pos += size;
 				continue;
 			}
