@@ -1,0 +1,53 @@
+name: "Copilot Setup Steps"
+
+# Run automatically when this file changes, and allow manual testing.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: false  # handled by toolbox init below
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            python3 python3-click \
+            doxygen graphviz-dev \
+            cmake ninja-build \
+            g++-14 gcc-14 \
+            lcov \
+            llvm-19 llvm-19-dev \
+            clang-19 clang++-19 \
+            clang-tidy-19 clang-format-19 \
+            libzstd-dev zlib1g-dev \
+            mold
+
+      - name: Initialize repository (submodules and Python venv)
+        working-directory: dev
+        run: python3 toolbox.py init
+        continue-on-error: true  # binary downloads may fail in restricted environments
+
+      - name: Setup build directory
+        working-directory: dev
+        run: |
+          printf '\n\n\n' | python3 toolbox.py setup-build \
+            -x g++-14 -c gcc-14 \
+            --gcov-version gcov-14 \
+            -t Dev

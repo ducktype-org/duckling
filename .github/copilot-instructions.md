@@ -131,16 +131,26 @@ Duckling is a C++23 programming language project with a comprehensive build syst
 ### Toolbox Commands Reference
 ```bash
 python3 toolbox.py --help              # Show all available commands
-python3 toolbox.py init                # Initialize repository
+python3 toolbox.py init                # Initialize repository (submodules, venv, binaries)
 python3 toolbox.py setup-build         # Create build directory
+python3 toolbox.py setup-venv          # Set up Python virtual environment only
 python3 toolbox.py test                # Run unit tests
 python3 toolbox.py itest               # Run integration tests
 python3 toolbox.py coverage            # Run coverage analysis
+python3 toolbox.py fix-coverage        # Fix stale coverage data issues
 python3 toolbox.py docs                # Build documentation
-python3 toolbox.py cpp-linter           # Run clang-tidy-19 and clang-format-19
-python3 toolbox.py duck-linter          # Run custom C++ linting
-python3 toolbox.py pr-validate          # Validate branch for PR
-python3 toolbox.py clean-init           # Clean initialization artifacts
+python3 toolbox.py cpp-linter          # Run clang-tidy-19 and clang-format-19
+python3 toolbox.py duck-linter         # Run custom C++ linting
+python3 toolbox.py issue-checker       # Check for #issue_number references in source
+python3 toolbox.py todo-counter        # Print counts of TODO comments in the code
+python3 toolbox.py todo-validate       # Validate TODO comments in source files
+python3 toolbox.py list-files          # List files in the repository
+python3 toolbox.py run-preprocessor    # Run the C preprocessor on a file via CMake
+python3 toolbox.py download-binaries   # Download necessary binary files (e.g. ccache)
+python3 toolbox.py download-llvm       # Download a specific version of LLVM
+python3 toolbox.py install-llvm        # Compile and install LLVM from source
+python3 toolbox.py pr-validate         # Validate branch for PR
+python3 toolbox.py clean-init          # Clean initialization artifacts
 ```
 
 ### Pre-commit Validation
@@ -164,10 +174,11 @@ python3 toolbox.py pr-validate   # Comprehensive PR validation
 - **TIMING**: Takes 20-30 minutes to complete all validations. NEVER CANCEL. Set timeout to 45+ minutes.
 
 ### CI Workflow Compatibility
-- The project uses GitHub Actions with 25-minute timeout for build+test
+- The project uses GitHub Actions with 40-minute timeout per matrix run
 - Self-hosted runners use 6 threads for Dev builds, 3 for DevOpt builds
 - GitHub runners use 2 threads
 - CI validates: build, test, integration tests, linting, documentation
+- On PRs, only Dev/gcc runs by default; full matrix (Dev+DevOpt, gcc+clang) runs on main/dev branches, non-PR events, PR labeled "Run All Workflows", or PR with an approved review
 
 ## Memory and Performance Notes
 
