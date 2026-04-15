@@ -53,6 +53,7 @@ namespace compiler::helios {
 
 			std::vector<query::TaskHandle> scheduled_tasks;
 			std::vector<SymID>             class_symbols;
+			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
 
 			auto register_ctor_if_needed = [&](SymID sym) {
@@ -78,12 +79,12 @@ namespace compiler::helios {
 					const auto& arr_ctor
 						= ctx.query<defgen::QueryDefaultStaticArrayConstructor>(arr_type)
 					          ->valueOrThrow();
-					additional_ctors.insert(arr_ctor.declaration->original_symbol);
+					default_ctors.insert(arr_ctor.declaration->original_symbol);
 				} else if (type.getKind() == tsh::Kind::Class) {
 					auto        class_type = type.as<tsh::ClassAbstractType>();
 					const auto& class_ctor
 						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
-					additional_ctors.insert(class_ctor.declaration->original_symbol);
+					default_ctors.insert(class_ctor.declaration->original_symbol);
 				}
 			};
 
@@ -121,7 +122,11 @@ namespace compiler::helios {
 				}
 			}
 
-			appendAdditinalConstructors(out.functions, additional_ctors, ctx);
+			appendDefaultConstructors(out.functions, default_ctors, ctx);
+			for (SymID ctor_sym: additional_ctors) {
+				const auto& hout_res = ctx.query<QueryCodeOfFun>(ctor_sym)->valueOrThrow();
+				out.functions.emplace_back(&hout_res);
+			}
 
 			for (auto handler: scheduled_tasks) {
 				// we "catch" failure here to continue gathering other functions:
@@ -139,28 +144,28 @@ namespace compiler::helios {
 			return out;
 		}
 
-		/**
-		 * @brief Appends the constructors and all the constructors they call to
+/**
+		 * @brief Appends the default constructors and all the default constructors they call to
 		 * the HOUT unit.
 		 *
 		 * @param out_functions The vector of functions to be modified.
-		 * @param ctors Symbol IDs of the top level constructors generated for the symbols
+		 * @param ctors Symbol IDs of the top level default constructors generated for the symbols
 		 * in scope.
 		 * @param ctx The query context.
 		 */
-		static void appendAdditinalConstructors(
+		static void appendDefaultConstructors(
 			std::vector<CRef<HOUTFunction>>& out_functions,
 			const std::set<SymID>&           ctors,
 			Context&                         ctx
 		) {
 			std::set<SymID> all_required_functions;
 
-			// Collect all dependencies - ctors called by the ctor, and eliminate
-			// duplicates. This is needed to handle constructors of types like `T[5][3]`,
-			// for which the top level constructor recursively calls the constructor
+			// Collect all dependencies - default ctors called by the default ctor, and eliminate
+			// duplicates. This is needed to handle default constructors of types like `T[5][3]`,
+			// for which the top level default constructor recursively calls the default constructor
 			// of `T[3]`. The inner `T[3]` constructor isn't included in the `ctors` set since there
 			// are no symbols in scope of type `T[3]`, thus we retrieve it by checking transitive
-			// functions calls of the top-level constructor.
+			// functions calls of the top-level default constructor.
 			for (SymID ctor_sym: ctors) {
 				auto transitive = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
 				for (SymID dependency: transitive) {
@@ -176,10 +181,6 @@ namespace compiler::helios {
 					const auto gsd_data = std::get<defgen::GeneratedSymbolData>(sym_ref->other);
 					// Insert only other default constructors to not insert implicit constructors twice.
 					if (gsd_data.isDefaultConstructor()) all_required_functions.insert(dependency);
-					if (std::holds_alternative<defgen::GeneratedSymbolData::ImplicitConstructor>(
-							gsd_data.data
-						))
-						all_required_functions.insert(dependency);
 				}
 			}
 
