@@ -81,6 +81,10 @@ namespace query {
 			 */
 			template<typename QueryType>
 			auto static awaitTask(EntryTaskHandle handle) -> decltype(auto) {
+				CORE_ASSERT(
+					QueryType::getID() == handle.task_id.q_id,
+					"query::awaitEntryPoint called with handle for different query type!"
+				);
 				handle.pool->waitForTask(handle.task_id);
 				return QueryType::internal_load(handle.task_id.hash.val);
 			}
@@ -91,9 +95,9 @@ namespace query {
 	 * @brief Schedules @p QueryType for @p key as an entry-point task on the task pool
 	 * and returns a handle that can be awaited later.
 	 *
-	 * This function doeas not block and can be called from any thread, but must not be called from
-	 * within a query This is default way to call queries from "outside world" (e.g. from the
-	 * compiler driver)
+	 * This function does not block and can be called from any thread, but must not be called from
+	 * within a query. This is the default way to call queries from the "outside world" (e.g. from
+	 * the compiler driver).
 	 */
 	template<typename QueryType>
 	auto scheduleEntryPoint(const typename QueryType::QKey& key) -> EntryTaskHandle {
