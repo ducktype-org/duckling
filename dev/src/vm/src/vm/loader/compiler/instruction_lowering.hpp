@@ -466,6 +466,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_load_lany_lptr, i) { addLow<Op_load_bany_pptr>(i.dst, i.src_ptr); }
 			instr_case(high::Op_ref_lptr_lany, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
 			instr_case(high::Op_ref_lptr_gany, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
+			instr_case(high::Op_ref_lptr_gvnt, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
 			instr_case(high::Op_structLea_lptr_lptr_field, i) {
 				addLow<Op_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);
 				addLow<Op_ext_field>(i.field);

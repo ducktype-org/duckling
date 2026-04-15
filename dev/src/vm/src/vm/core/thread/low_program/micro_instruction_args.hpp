@@ -80,7 +80,9 @@ namespace vm::low::opargs {
 	 */
 	/** @brief Stores index of type-erased local data in the frame local block reference stack or
 	 * the global blocks buffer. */
-	DEFINE_MICRO_ARG_TYPE(PlaceBlockAny, "bany", vm::opargs::StackLocalAny, vm::opargs::GlobalAny);
+	DEFINE_MICRO_ARG_TYPE(
+		PlaceBlockAny, "bany", vm::opargs::StackLocalAny, vm::opargs::GlobalAny, vm::opargs::GlobalVnt
+	);
 	/** @brief Stores index of local struct storage in Frame::block_ref_stack (not a byte offset) or
 	 * the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(
@@ -89,7 +91,7 @@ namespace vm::low::opargs {
 	/** @brief Stores index of local variant storage in Frame::block_ref_stack (not a byte offset)
 	 * or the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(
-		PlaceBlockVariant, "bvnt", vm::opargs::StackLocalVnt /*, vm::opargs::GlobalVnt*/
+		PlaceBlockVariant, "bvnt", vm::opargs::StackLocalVnt, vm::opargs::GlobalVnt
 	);
 
 #define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant

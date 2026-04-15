@@ -91,6 +91,16 @@ namespace vm {
 		 */
 		void moveBlockDataAndEraseSuffix(Ref<Block> dst, Ref<Block> src, usize byte_count);
 
+
+		/**
+		 * @brief Replaces the block data memory view with the new one,
+		 * taking care of the children blocks.
+		 *
+		 * @param block The block to update the data view for.
+		 * @param new_view The new view to set for the block.
+		 */
+		void updateBlockDataView(Ref<Block> block, base::ModRawView new_view);
+
 		/**
 		 * @brief Executes destructors on individual objects that are in the block.
 		 * @param block The block to source the data from.
@@ -240,6 +250,7 @@ namespace vm {
 		 * been called).
 		 *
 		 * Should be called from a place where the runtime initialization is happening.
+		 * If the global variable has no constructor this function shouldn't be called.
 		 *
 		 * @param global_block The block of the global variable to check.
 		 * @return True if the global variable has been initialized, false otherwise.
@@ -250,6 +261,7 @@ namespace vm {
 		 * @brief Set the global as initialized (the constructor has been called).
 		 *
 		 * Should be called from a place where the runtime initialization is happening.
+		 * If the global variable has no constructor this function shouldn't be called.
 		 *
 		 * @param global_block The block of the global variable to set as initialized.
 		 */

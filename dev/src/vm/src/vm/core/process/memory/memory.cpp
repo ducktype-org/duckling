@@ -443,10 +443,33 @@ namespace vm {
 				global_data_blocks[block_idx] = block.get();
 			} else {
 				// We have to update the view of the data block
-				block_ref->data.view = { global_data_buffer.data() + off, type_size };
+				updateBlockDataView(
+					block_ref.toOpt().value(), { global_data_buffer.data() + off, type_size }
+				);
 			}
 		}
 
 		return getGlobalDataMemory();
+	}
+
+	void Memory::updateBlockDataView(Ref<Block> block, base::ModRawView new_view) {
+		CORE_ASSERT(
+			block->data.element_type->getSize().asInt() == new_view.size(),
+			"New view size must match the block's type size"
+		);
+		base::ModRawView old_root_view = block->data.view;
+
+		std::function<void(Ref<Block>)> update_block_data_recursively
+			= [&](Ref<Block> current_block) -> void {
+			base::ModRawView current_view      = current_block->data.view;
+			auto             offset_from_start = current_view.getBegin() - old_root_view.getBegin();
+			current_block->data.view
+				= { new_view.getBegin() + offset_from_start, current_view.size() };
+
+			for (auto& child: current_block->children_blocks | std::views::values)
+				update_block_data_recursively(child);
+		};
+
+		update_block_data_recursively(block);
 	}
 }

@@ -40,7 +40,7 @@ namespace vm {
 	constexpr u64 STACK_LENGTH = ThreadStack::STACK_LENGTH;
 
 	/**
-	 * @brief This structure holds pointers to `frame_stack`, `local_stack_reserved`
+	 * @brief This structure holds pointers to `frame_stack`, `local_stack`, `block_ref_stack`
 	 * and global buffer vectors for fast access during runtime.
 	 *
 	 * Note that these pointers are non-owning and just for easier access (less dereferencing)
