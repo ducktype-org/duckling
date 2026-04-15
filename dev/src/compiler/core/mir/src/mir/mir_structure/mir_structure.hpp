@@ -86,7 +86,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	BooleanOr,
 	BooleanNot,
 
-	
+
 	/** Operations on meta types for compile time function evaluation */
 	MetaCreateBox,
 	MetaCreateRef,
