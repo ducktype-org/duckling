@@ -68,12 +68,6 @@ namespace tokenizer {
 		template<fs::Encoding encoding>
 		lexer::CharArray internalDecode();
 
-		template<>
-		lexer::CharArray internalDecode<fs::UsAscii>();
-
-		template<>
-		lexer::CharArray internalDecode<fs::UTF8>();
-
 	public:
 		TokenSource(const TokenSource&) = delete;
 		TokenSource()                   = delete;
@@ -141,6 +135,12 @@ namespace tokenizer {
 			return not int_log.hasErrors();
 		}
 	};
+
+	template<>
+	lexer::CharArray TokenSource::internalDecode<fs::UsAscii>();
+
+	template<>
+	lexer::CharArray TokenSource::internalDecode<fs::UTF8>();
 
 	template<class... Ts>
 	Box<TokenSource> makeTokenSource(Ts&&... args) {
