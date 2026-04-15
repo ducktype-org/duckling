@@ -21,6 +21,12 @@ namespace pst {
 	 * This helper centralizes the common "unlock root -> inspect children -> enforce single item"
 	 * sequence used by statement classification utilities in the REPL and script handling code.
 	 *
+	 * @note This is a generic helper that extracts ANY single statement without filtering by type
+	 * (expression, instruction, definition, action, or any other statement kind).
+	 * Unlike the more specific functions in this file (extractSingleExpression,
+	 * extractSingleInstruction, extractSingleDefinition), this function does not apply
+	 * statement-kind restrictions.
+	 *
 	 * @param ctx  Query context for PST access
 	 * @param root The PST root element to examine
 	 * @return The single statement if present, empty otherwise
