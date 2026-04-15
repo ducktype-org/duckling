@@ -35,10 +35,9 @@ namespace dia_int::term_ui_view {
 	};
 
 	struct CodeSection final {
+		CodeLocation                       location;
 		std::vector<CodeLine>              lines;
 		base::HashMap<u64, PointerMessage> pointers;
-
-		CodeLocation location;
 	};
 
 	using TextSection = std::string;
