@@ -70,6 +70,33 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  to(to) {}
 
+			static Box<code::TupleExpr> makeTupleExpr(query::Context& ctx, const code::Expr& expr) {
+				auto source_type = expr.expression_type.getType().as<tsh::TupleAbstractType>();
+				std::vector<Box<code::Expr>> elements;
+				elements.reserve(source_type.getComponents().size());
+				u32 order = 0;
+				for (const auto& component: source_type.getComponents()) {
+					// We create a tuple expression with the correct type, and then let the
+					// TupleExpr coercion handler handle the coercion to the target tuple type.
+					elements.emplace_back(makeBox<code::AccessExpr>(
+						ctx,
+						expr.origin.generatedFrom(),
+						expr.clone(),
+						ctx.query<defgen::QueryGeneratedSymbol>(
+							{ .name = base::StrID{ base::strConcat("_", order + 1) },
+					          .generated_symbol_data
+					          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
+								  .parent_type = source_type,
+								  .field_type  = component,
+								  .index       = order } } }
+						)
+					));
+					order++;
+				}
+
+				return makeBox<code::TupleExpr>(ctx, expr.origin.generatedFrom(), std::move(elements));
+			}
+
 			void output(Box<code::Expr> lowering_result) {
 				CORE_ASSERT(out.empty(), "Output already set.");
 				out.emplace(std::move(lowering_result));
@@ -106,31 +133,11 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
-				auto source_type = expr.expression_type.getType().as<tsh::TupleAbstractType>();
-				std::vector<Box<code::Expr>> elements;
-				elements.reserve(source_type.getComponents().size());
-				u32 order = 0;
-				for (const auto& component: source_type.getComponents()) {
-					// We create a tuple expression with the correct type, and then let the
-					// TupleExpr coercion handler handle the coercion to the target tuple type.
-					elements.emplace_back(makeBox<code::AccessExpr>(
-						ctx,
-						expr.origin.generatedFrom(),
-						expr.clone(),
-						ctx.query<defgen::QueryGeneratedSymbol>(
-							{ .name = base::StrID{ base::strConcat("_", order + 1) },
-					          .generated_symbol_data
-					          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-								  .parent_type = source_type,
-								  .field_type  = component,
-								  .index       = order } } }
-						)
-					));
-					order++;
-				}
+				makeTupleExpr(ctx, expr)->acceptVisitor(*this);
+			}
 
-				code::TupleExpr(ctx, expr.origin.generatedFrom(), std::move(elements))
-					.acceptVisitor(*this);
+			void visitAccessExpr(const code::AccessExpr& expr) override {
+				makeTupleExpr(ctx, expr)->acceptVisitor(*this);
 			}
 		};
 	}
