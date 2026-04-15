@@ -1,0 +1,40 @@
+{
+  "root": {
+    "name": "duck",
+    "version": "1.0.0",
+    "features": [
+      "g"
+    ],
+    "dependencies": [
+      "graph_algorithms 2.0.0"
+    ]
+  },
+  "dependencies": [
+    {
+      "name": "data_structures",
+      "version": "3.1.0",
+      "features": [],
+      "dependencies": [],
+      "source": {
+        "Registry": {
+          "url": "http://localhost:9001/",
+          "real_name": "data_structures"
+        }
+      }
+    },
+    {
+      "name": "graph_algorithms",
+      "version": "2.0.0",
+      "features": [],
+      "dependencies": [
+        "data_structures 3.1.0"
+      ],
+      "source": {
+        "Registry": {
+          "url": "http://localhost:9001/",
+          "real_name": "graph_algorithms"
+        }
+      }
+    }
+  ]
+}
