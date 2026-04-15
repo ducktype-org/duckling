@@ -1,8 +1,11 @@
 #pragma once
 
-#include <base/extend_cpp/strongly_typed_int.hpp>
+#include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/types/ints.hpp>
 
 namespace vm::api {
-	STRONG_TYPEDEF_INT(ThreadID, i64);
+	/**
+	 * @brief VMThread's ID.
+	 */
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(ThreadID);
 }

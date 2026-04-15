@@ -4,9 +4,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/lower/queries.hpp>
+#include <tsl/queries.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>

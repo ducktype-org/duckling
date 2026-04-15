@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
-use crate::{QuackResult, qp_internal};
+use crate::{QuackResult, duck::driver::cli_ext::ArgMatchesExt, qp_bail, qp_internal};
 use clap::ArgMatches;
 
-use crate::{DuckCtx, duck::util::terminal::Verbosity};
+use crate::{DuckContext, duck::util::terminal::Verbosity};
 
 /// Struct containing all global duck options, adjustable from cli.
 #[derive(Debug)]
@@ -16,25 +16,38 @@ pub struct GlobalOptions {
 
 impl GlobalOptions {
     /// Parses the cli input to retrieve the values of the global options.
-    pub fn from_matches(matches: &ArgMatches) -> QuackResult<Self> {
+    pub fn from_matches(matches: &ArgMatches) -> Self {
         let quiet = matches.get_flag("quiet");
         let verbose = matches.get_flag("verbose");
         let offline = matches.get_flag("offline");
         let color = matches
             .get_one::<String>("color")
-            .ok_or_else(|| qp_internal!("this should be guarded by a default color in the parser"))
-            .and_then(|color| Color::from_str(color))?;
-        Ok(Self {
+            .map(|color| color.parse().expect("guarded by the parser"))
+            .unwrap_or(Color::Auto);
+        Self {
             verbose,
             quiet,
             color,
             offline,
-        })
+        }
     }
 
-    /// Updates [`DuckCtx`], so that values of the global options specified by the user
+    /// Update this [`GlobalOptions`] with global flags gathered inside a subcommand.
+    pub fn update_with_subcommand_matches(&mut self, matches: &ArgMatches) {
+        self.quiet |= matches.safe_get_flag("quiet");
+        self.verbose |= matches.safe_get_flag("verbose");
+        self.offline |= matches.safe_get_flag("offline");
+        if let Ok(color) = matches.safe_get_one::<String>("color").parse() {
+            self.color = color;
+        }
+    }
+
+    /// Updates [`DuckContext`], so that values of the global options specified by the user
     /// can be read in different parts of the program.
-    pub fn update_context(&self, ctx: &mut DuckCtx) {
+    pub fn update_context(&self, ctx: &mut DuckContext) -> QuackResult<()> {
+        if self.verbose && self.quiet {
+            qp_bail!("cannot specify both `--verbose` and `--quiet`")
+        }
         if self.verbose {
             ctx.console_mut().set_verbosity(Verbosity::Verbose);
             ctx.error_console_mut().set_verbosity(Verbosity::Verbose);
@@ -55,6 +68,7 @@ impl GlobalOptions {
             ctx.error_console_mut().set_color(true);
         }
         ctx.set_offline(self.offline);
+        Ok(())
     }
 }
 

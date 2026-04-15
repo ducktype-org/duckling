@@ -4,7 +4,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <query_framework/context/context.hpp>
 

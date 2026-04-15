@@ -18,8 +18,8 @@
 
 #include "meta_type_memory_manager.hpp"
 
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -162,7 +162,7 @@ namespace compiler::helios::comptime_ops {
 
 	DEF_VM_EXT_C_FUNC(
 		bool,
-		"byte",
+		"i8",
 		comptime_types_not_equal,
 		(tsh::SymbolType<>*, "opaque_ptr", left),
 		(tsh::SymbolType<>*, "opaque_ptr", right)

@@ -1,12 +1,63 @@
-use std::{rc::Rc, sync::Arc};
+use std::{
+    ffi::{OsStr, OsString},
+    fmt,
+    path::Path,
+    rc::Rc,
+    sync::Arc,
+};
 
 use crate::{
     StrId,
-    quackpack::core::{Manifest, Package, PackageCtx},
+    duck::util::duck_home::DuckHome,
+    quackpack::core::{Manifest, Package, PackageContext},
 };
 
 /// A unique venv's identifier.
-pub type VenvId = StrId;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum VenvId {
+    Named(StrId),
+    Global,
+}
+
+impl VenvId {
+    /// Get the name of this [`VenvId`].
+    pub fn name(&self) -> StrId {
+        match self {
+            Self::Named(name) => *name,
+            Self::Global => StrId::new(DuckHome::GLOBAL_PACKAGE_NAME),
+        }
+    }
+
+    /// Get the static ref from [`name`](Self::name).
+    pub fn static_name(&self) -> &'static str {
+        self.name().as_str()
+    }
+
+    /// Check, if this [`VenvId`] corresponds to the global venv.
+    pub fn is_global(&self) -> bool {
+        matches!(self, Self::Global)
+    }
+}
+
+macro_rules! forward_to_asref {
+    ($($type:ty)*) => {
+        $(
+            impl AsRef<$type> for VenvId {
+                fn as_ref(&self) -> &$type {
+                    self.static_name().as_ref()
+                }
+            }
+        )*
+    };
+}
+
+forward_to_asref!(OsStr str Path);
+
+impl fmt::Display for VenvId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.name().fmt(f)
+    }
+}
 
 /// Create [`VenvId`] from self.
 pub trait ToVenvId {
@@ -46,11 +97,15 @@ impl<T: ToVenvId> ToVenvId for Rc<T> {
 
 impl ToVenvId for StrId {
     fn to_venv_id(&self) -> VenvId {
-        *self
+        if self == DuckHome::GLOBAL_PACKAGE_NAME {
+            VenvId::Global
+        } else {
+            VenvId::Named(*self)
+        }
     }
 }
 
-impl ToVenvId for PackageCtx<'_> {
+impl ToVenvId for PackageContext<'_> {
     fn to_venv_id(&self) -> VenvId {
         self.package().to_venv_id()
     }
@@ -64,7 +119,38 @@ impl ToVenvId for Package {
 
 impl ToVenvId for Manifest {
     fn to_venv_id(&self) -> VenvId {
-        // VenvId of a manifest is a package's name.
-        self.name()
+        if self.is_global() {
+            VenvId::Global
+        } else {
+            // VenvId of a manifest is a package's name.
+            self.name().to_venv_id()
+        }
+    }
+}
+
+macro_rules! forward_to_strid {
+    ($($type:ty)*) => {
+        $(
+            impl ToVenvId for $type {
+                fn to_venv_id(&self) -> VenvId {
+                    let id = StrId::from(self);
+                    id.to_venv_id()
+                }
+            }
+        )*
+    };
+}
+
+forward_to_strid!(str String Path OsStr OsString);
+
+impl ToVenvId for &str {
+    fn to_venv_id(&self) -> VenvId {
+        StrId::from(*self).to_venv_id()
+    }
+}
+
+impl ToVenvId for &OsStr {
+    fn to_venv_id(&self) -> VenvId {
+        StrId::from(*self).to_venv_id()
     }
 }

@@ -1,11 +1,11 @@
 #include "interface.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/lookup/errors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 

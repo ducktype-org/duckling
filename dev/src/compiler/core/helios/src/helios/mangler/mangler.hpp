@@ -1,8 +1,8 @@
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <hashing/hash_algorithm_utils.hpp>
 #include <query_framework/query_int.hpp>
@@ -16,6 +16,8 @@ namespace compiler::helios::mangler {
 			base::StrID id;
 
 			constexpr auto operator<=>(const LIRModuleID& other) const = default;
+
+			friend auto hashDecompose(const LIRModuleID& self) { return std::tie(self.id); }
 		};
 	}
 

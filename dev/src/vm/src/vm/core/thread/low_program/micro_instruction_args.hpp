@@ -77,20 +77,23 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_STACK_LOCAL(32, "l32", vm::opargs::StackLocal32);
 	/** @brief Stores byte offset of 64-bit local on the frame local stack. */
 	DEFINE_MICRO_STACK_LOCAL(64, "l64", vm::opargs::StackLocal64);
-	/** @brief Stores byte offset of type-erased local data on the frame local stack. */
-	DEFINE_MICRO_STACK_LOCAL(Any, "lany", vm::opargs::StackLocalAny);
 	/** @brief Stores byte offset of local Pointer value on the frame local stack. */
 	DEFINE_MICRO_STACK_LOCAL(Ptr, "lptr", vm::opargs::StackLocalPtr);
 	/** @brief Stores byte offset of local opaque value on the frame local stack. */
 	DEFINE_MICRO_STACK_LOCAL(Opq, "lopq", vm::opargs::StackLocalOpq);
-	/** @brief Stores byte offset of local struct storage on the frame local stack. */
-	DEFINE_MICRO_STACK_LOCAL(Structure, "lste", vm::opargs::StackLocalStructure);
-	/** @brief Stores byte offset of local variant storage on the frame local stack. */
-	DEFINE_MICRO_STACK_LOCAL(Vnt, "lvnt", vm::opargs::StackLocalVnt);
 
-#define VM_MICRO_INSTR_ARG_LOCAL_TYPES                                                   \
-	StackLocal8, StackLocal16, StackLocal32, StackLocal64, StackLocalAny, StackLocalPtr, \
-		StackLocalVnt, StackLocalOpq, StackLocalStructure
+#define VM_MICRO_INSTR_ARG_LOCAL_STACK_TYPES \
+	StackLocal8, StackLocal16, StackLocal32, StackLocal64, StackLocalPtr, StackLocalOpq
+
+	/** @brief Stores index of type-erased local data in the frame local block reference stack. */
+	DEFINE_MICRO_ARG_TYPE(BlockStackLocalAny, "blany", vm::opargs::StackLocalAny);
+	/** @brief Stores index of local struct storage in Frame::block_ref_stack (not a byte offset). */
+	DEFINE_MICRO_ARG_TYPE(BlockStackLocalStructure, "blste", vm::opargs::StackLocalStructure);
+	/** @brief Stores index of local variant storage in Frame::block_ref_stack (not a byte offset). */
+	DEFINE_MICRO_ARG_TYPE(BlockStackLocalVariant, "blvnt", vm::opargs::StackLocalVnt);
+
+#define VM_MICRO_INSTR_ARG_LOCAL_BLOCK_STACK_TYPES \
+	BlockStackLocalAny, BlockStackLocalStructure, BlockStackLocalVariant
 
 	/** @brief Stores ID/index of 8-bit global variable in LowVMProgram globals map. */
 	DEFINE_MICRO_GLOBAL(8, "g8", vm::opargs::Global8);
@@ -110,18 +113,18 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_GLOBAL(Structure, "gste", vm::opargs::GlobalStructure);
 
 #define VM_MICRO_INSTR_ARG_GLOBAL_TYPES \
-	Global64, Global32, Global16, Global8, GlobalPtr, GlobalOpq, GlobalStructure
+	Global64, Global32, Global16, Global8, GlobalPtr, GlobalAny, GlobalOpq, GlobalStructure
 
-	/** @brief Stores TypeID (u64) used by runtime type metadata lookups. */
+	/** @brief Stores TypeCRef (pointer) from type metadata. */
 	DEFINE_MICRO_ARG_TYPE(Type, "type", vm::opargs::Type);
 	/** @brief Stores byte offset of a field within its containing type layout. */
 	DEFINE_MICRO_ARG_TYPE(Field, "field", vm::opargs::Field);
-	/** @brief Stores function ID/index in LowVMProgram functions map. */
-	DEFINE_MICRO_ARG_TYPE(FunctionName, "func", vm::opargs::FunctionName);
+	/** @brief Stores function ID from LowVMProgram functions map. */
+	DEFINE_MICRO_ARG_TYPE(FunctionID, "func", vm::opargs::FunctionName);
 	/** @brief Stores underlying numeric value of builtins::BuiltinFunctionID. */
-	DEFINE_MICRO_ARG_TYPE(BuiltinFunctionName, "builtinfunc", vm::opargs::BuiltinFunctionName);
-	/** @brief Stores extern C function ID/index in LowVMProgram extern C functions map. */
-	DEFINE_MICRO_ARG_TYPE(ExtCFunctionName, "cfunc", vm::opargs::ExtCFunctionName);
+	DEFINE_MICRO_ARG_TYPE(BuiltinFunctionID, "builtinfunc", vm::opargs::BuiltinFunctionName);
+	/** @brief Stores extern C function pointer in LowVMProgram extern C functions map. */
+	DEFINE_MICRO_ARG_TYPE(ExtCFunction, "cfunc", vm::opargs::ExtCFunctionName);
 	/** @brief Stores lowered method identifier used for virtual dispatch lookup. */
 	DEFINE_MICRO_ARG_TYPE(MethodName, "method", vm::opargs::MethodName);
 	/** @brief Stores relative instruction jump offset after label linking. */
@@ -131,22 +134,36 @@ namespace vm::low::opargs {
 	 * @brief Storage class for any kind of micro instruction argument.
 	 */
 	using InstructionArg = std::variant<
-		VM_MICRO_INSTR_ARG_LOCAL_TYPES,
+		VM_MICRO_INSTR_ARG_LOCAL_STACK_TYPES,
+		VM_MICRO_INSTR_ARG_LOCAL_BLOCK_STACK_TYPES,
 		VM_MICRO_INSTR_ARG_GLOBAL_TYPES,
 		Immediate,
 		Type,
 		Field,
-		FunctionName,
-		BuiltinFunctionName,
-		ExtCFunctionName,
+		FunctionID,
+		BuiltinFunctionID,
+		ExtCFunction,
 		MethodName,
 		Label>;
-	using InstructionArgCRef  = base::CRefifyParams<InstructionArg>;
-	using InstructionLocalArg = std::variant<VM_MICRO_INSTR_ARG_LOCAL_TYPES>;
-	using InstructionFunctionArg
-		= std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
+	using InstructionArgCRef = base::CRefifyParams<InstructionArg>;
+
+	using InstructionLocalStackArg      = std::variant<VM_MICRO_INSTR_ARG_LOCAL_STACK_TYPES>;
+	using InstructionLocalBlockStackArg = std::variant<VM_MICRO_INSTR_ARG_LOCAL_BLOCK_STACK_TYPES>;
+	using InstructionGlobalArg          = std::variant<VM_MICRO_INSTR_ARG_GLOBAL_TYPES>;
+
+	using InstructionFunctionArg = std::variant<FunctionID, BuiltinFunctionID, ExtCFunction>;
 	using InstructionPrimitiveArg
 		= std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;
+
+	template<typename T>
+	concept ArgumentType = base::IsVariantMember<T, InstructionArg>;
+
+	template<typename T>
+	concept LocalStackArgumentType = base::IsVariantMember<T, InstructionLocalStackArg>;
+	template<typename T>
+	concept LocalBlockStackArgumentType = base::IsVariantMember<T, InstructionLocalBlockStackArg>;
+	template<typename T>
+	concept GlobalArgumentType = base::IsVariantMember<T, InstructionGlobalArg>;
 }
 
 #undef DEFINE_MICRO_ARG_TYPE
