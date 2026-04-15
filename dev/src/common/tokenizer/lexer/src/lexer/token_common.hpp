@@ -7,16 +7,16 @@ namespace lexer {
 	/**
 	 * @brief Simple wrapper for an operator.
 	 */
-	struct OperatorValue final {
+	struct Operator final {
 		const base::StrID value;
 
-		OperatorValue() = delete;
+		Operator() = delete;
 
-		OperatorValue(const base::StrID id): value(id) {}
+		Operator(const base::StrID id): value(id) {}
 
-		OperatorValue(const lang_def::NamedOperator op): value(lang_def::operatorToStr(op)) {}
+		Operator(const lang_def::NamedOperator op): value(lang_def::operatorToStr(op)) {}
 
-		OperatorValue(const OperatorValue&) = default;
+		Operator(const Operator&) = default;
 
 		operator base::StrID() { return value; }
 
@@ -36,7 +36,7 @@ namespace lexer {
 		bool isAccessOp() const;
 
 		[[nodiscard]]
-		base::Optional<OperatorValue> filterNotReserved() const;
+		base::Optional<Operator> filterNotReserved() const;
 
 		[[nodiscard]]
 		i64 getGenBinOpPrecedence() const;
@@ -58,8 +58,8 @@ namespace lexer {
 			return lang_def::operatorToStr(op) == value;
 		}
 
-		auto operator<=>(const OperatorValue& other) const = default;
+		auto operator<=>(const Operator& other) const = default;
 
-		friend auto hashDecompose(const OperatorValue& c) { return std::tie(c.value); }
+		friend auto hashDecompose(const Operator& c) { return std::tie(c.value); }
 	};
 }

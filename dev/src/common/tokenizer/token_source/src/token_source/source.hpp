@@ -16,14 +16,14 @@
 
 /**
  * @TODO: Make lexer arguments explicit
- * @TODO: remove tokenizeFile from lexer.hpp
  * @TODO: Add better comments for builder-like things (Lexer ...)
  */
 namespace tokenizer {
 	/**
 	 * @brief Class managing source file data access and token metadata
 	 *
-	 * @note For now it's very minimal and doesn't check proper usage.
+	 * In normal usage it is created using makeTokenSource, then built using the tokenize() method which: decodes, splits into lines then lexes. After that the data is ready to be used.
+	 *
 	 */
 	class TokenSource final {
 	private:
