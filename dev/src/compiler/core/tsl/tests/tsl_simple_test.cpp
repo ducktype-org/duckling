@@ -1,6 +1,6 @@
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <tsh/queries.hpp>
-#include <tsh/type_interface.hpp>
+#include <helios/tsh/queries.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <tsl/all.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>

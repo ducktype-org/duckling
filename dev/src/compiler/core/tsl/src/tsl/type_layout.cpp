@@ -4,7 +4,7 @@
 
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <tsh/type_interface.hpp>
+#include <helios/tsh/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 

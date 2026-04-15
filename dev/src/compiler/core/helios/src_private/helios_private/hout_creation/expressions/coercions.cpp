@@ -4,9 +4,9 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/queries/implicit_coercibility.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/types.hpp>
+#include <helios/tsh/queries/implicit_coercibility.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/except/exceptions.hpp>
 

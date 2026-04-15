@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use tracing::debug;
+
 use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
@@ -59,6 +61,7 @@ impl SolverFreeze {
     /// Then the information about being flawed is propagated upwards (if child is flawed then so is parent who depends on it).
     ///
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
+    #[tracing::instrument(skip_all)]
     pub fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
@@ -87,8 +90,12 @@ impl SolverFreeze {
                 );
             }
         }
-        self.package_freezes
-            .retain(|pkg, _| *pkg == self.main_pkg || still_satisfied_pkgs.contains(pkg));
+        self.package_freezes.retain(|pkg, _| {
+            let is_root_package = *pkg == self.main_pkg;
+            let is_satisfied = still_satisfied_pkgs.contains(pkg);
+            debug!(?pkg, is_root_package, is_satisfied);
+            is_root_package || is_satisfied
+        });
         Ok(())
     }
 
@@ -277,7 +284,7 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx, StrId,
+        DuckContext, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
             solver_freeze::{SolverFreeze, SolverPackageFreeze},
@@ -325,7 +332,7 @@ features:
   xd: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
@@ -397,7 +404,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
@@ -476,7 +483,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
@@ -578,7 +585,7 @@ metadata:
   version: '4'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();

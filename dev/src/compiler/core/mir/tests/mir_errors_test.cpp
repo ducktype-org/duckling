@@ -1,22 +1,15 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
-#include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
-#include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
-#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
-#include <query_framework/internal/query_errors.hpp>
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 

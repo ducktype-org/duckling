@@ -18,8 +18,8 @@
 
 #include "meta_type_memory_manager.hpp"
 
-#include <tsh/queries/types.hpp>
-#include <tsh/symbol_type.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <query_framework/context/context.hpp>
 

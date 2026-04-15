@@ -5,7 +5,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <tsh/queries/types.hpp>
+#include <helios/tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -246,24 +246,26 @@ namespace compiler::helios {
 		}
 	}
 
+	SymbolData::SymbolData(CommonSymbolData common, OtherData other):
+		  common(common),
+		  other(other),
+		  id(SymbolDataID::next()) {}
+
 	SymbolData SymbolData::makePSTSymbolData(
 		const CommonSymbolData common_data, PstSymbolData pst_data
 	) {
-		return SymbolData{
-			.common = common_data,
-			.other  = pst_data,
-		};
+		return { common_data, pst_data };
 	}
 
 	SymbolData SymbolData::makeBuiltinFunction(
 		const base::StrID name, builtin::BuiltinFunctionData builtin_data
 	) {
-		return SymbolData{
-			.common = {
+		return {
+			{
 				.name = name,
 				.kind = SymbolKind::Function,
 			},
-			.other  = builtin_data,
+			builtin_data,
 		};
 	}
 
@@ -302,12 +304,12 @@ namespace compiler::helios {
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
-		return SymbolData{
-			.common = {
+		return {
+			{
 				.name = name,
 				.kind = kind,
 			},
-			.other  = generated_data,
+			generated_data,
 		};
 	}
 }

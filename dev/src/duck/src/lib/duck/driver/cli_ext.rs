@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::{StrId, quackpack::core::Package};
 
@@ -8,12 +8,6 @@ const DEFAULT_PROFILE: &str = "dev";
 
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;
-
-    /// Same as [`add_features`](Self::add_features), but `-F`/`--features` flag conflicts with
-    /// `with`.
-    fn add_features_conflicting(self, help: &'static str, with: &'static str) -> Self {
-        self._arg_impl(multi("features", help).short('F').conflicts_with(with))
-    }
 
     /// Adds `--profile` flag, conflicting with `--release`.
     fn add_profile(self) -> Self {
@@ -25,20 +19,6 @@ pub trait CommandExt: Sized {
     /// Adds `--release` flag, conflicting with `--profile`.
     fn add_release(self) -> Self {
         self._arg_impl(flag("release", "Alias for `--profile=release`").conflicts_with("profile"))
-    }
-
-    /// Adds `-C`/`--directory` flag, for changing the current directory before making any actions.
-    fn add_chdir(self) -> Self {
-        self._arg_impl(
-            optional(
-                "directory",
-                "Change to <DIRECTORY> before performing any actions",
-            )
-            .value_name("DIRECTORY")
-            .value_parser(ValueParser::path_buf())
-            .value_hint(ValueHint::DirPath)
-            .short('C'),
-        )
     }
 
     /// Adds `-j`/`--jobs` flags, for specifying number of threads to use.
@@ -76,7 +56,10 @@ pub fn optional(name: &'static str, help: &'static str) -> Arg {
 
 /// Create an argument which takes multiple values.
 pub fn multi(name: &'static str, help: &'static str) -> Arg {
-    Arg::new(name).help(help).action(ArgAction::Append)
+    Arg::new(name)
+        .help(help)
+        .long(name)
+        .action(ArgAction::Append)
 }
 
 /// Create a new subcommand.
