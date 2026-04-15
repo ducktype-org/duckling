@@ -3,22 +3,19 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/attribute.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/dotted_name.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/type_interface.hpp>
 
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -74,10 +71,10 @@ namespace compiler::repl {
 
 			// This below is just to create a unique symbol for the REPL expression wrapper
 			CORE_DEV_LOG(REPL, "Creating synthetic symbol for wrapper function\n");
-			auto synthetic_symbol = ctx.query<helios::houtgen::QueryGeneratedSymbol>(
+			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID("__repl_expr_wrapper__"),
 			      .generated_symbol_data
-			      = helios::houtgen::GeneratedSymbolData{ helios::houtgen::GeneratedSymbolData::ReplExpressionWrapper{
+			      = helios::defgen::GeneratedSymbolData{ helios::defgen::GeneratedSymbolData::ReplExpressionWrapper{
 					  .counter = key.counter, .return_type = return_type } } }
 			);
 
@@ -115,7 +112,7 @@ namespace compiler::repl {
 
 			CORE_DEV_LOG(REPL, "Compiling instruction into HOUT code block\n");
 			auto code_block = std::make_shared<helios::code::CodeBlock>(
-				helios::houtgen::compileSingleStatement(ctx, key.stmt, void_type)
+				helios::compileSingleStatement(ctx, key.stmt, void_type)
 			);
 
 			// Void functions require an explicit return statement at the end.
@@ -124,10 +121,10 @@ namespace compiler::repl {
 			);
 
 			CORE_DEV_LOG(REPL, "Creating synthetic symbol for instruction wrapper\n");
-			auto synthetic_symbol = ctx.query<helios::houtgen::QueryGeneratedSymbol>(
+			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID("__repl_instr_wrapper__"),
 			      .generated_symbol_data
-			      = helios::houtgen::GeneratedSymbolData{ helios::houtgen::GeneratedSymbolData::ReplInstructionWrapper{
+			      = helios::defgen::GeneratedSymbolData{ helios::defgen::GeneratedSymbolData::ReplInstructionWrapper{
 					  .counter = key.counter } } }
 			);
 

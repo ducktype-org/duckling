@@ -1,6 +1,7 @@
 #include "mangler.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -8,20 +9,19 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/queries/queries.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/types.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <hashing/hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -35,31 +35,23 @@
  */
 namespace compiler::helios::mangler {
 
-	constexpr auto KeyOf_MangledSymbol::operator==(const KeyOf_MangledSymbol& other) const {
-		return std::tie(symbol_key, kind, mangling_scheme_version, additional_metadata)
-		    == std::tie(
-				   other.symbol_key,
-				   other.kind,
-				   other.mangling_scheme_version,
-				   other.additional_metadata
-			);
+	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
+		addToHash(h, k.symbol_key.index());
+		if (k.symbol_key.index() == 0)
+			addToHash(h, std::get<0>(k.symbol_key));
+		else if (k.symbol_key.index() == 1)
+			addToHash(h, std::get<1>(k.symbol_key));
+		else
+			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+
+		addToHash(h, k.kind);
+		addToHash(h, k.mangling_scheme_version);
+		addToHash(h, k.additional_metadata.has_value());
+		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
 	}
 
-	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
-		static concurrent::ConHashMap<KeyOf_MangledSymbol, u64> hashes{};
-		static std::atomic<u64>                                 next
-			= 1;  // start from 1, so that 0 can be used as an "empty value"
-
-		u64 result = 0;
-
-		hashes.maybePutAndUpdate(*this, 0u, [&result](Ref<u64> existing) {
-			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
-			result = *existing;
-		});
-
-		CORE_ASSERT(result != 0, "Hash value not set!");
-
-		return result;
+	base::Bit256 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
+		return hashing::justHash<hashing::SHA256>(*this);
 	}
 
 	namespace internal {
@@ -115,35 +107,59 @@ namespace compiler::helios::mangler {
 		 * it will be prefixed with 'U' and punnycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string identifier(std::string name) {
+		void identifier(std::stringstream& ss, std::string_view name) {
 			// @future: use punnycode for unicode strings
 			if (/* hasCharsOnlyFromAllowedCharacterSet */ true) {
-				name = std::to_string(name.size()) + name;
-				return name;
+				ss << name.size() << name;
+				return;
 			} else {
-				constexpr char UNICODE_PREFIX = 'U';
-				std::string    punny_string   = name;  // @future: convert to punnycode
-				return base::strConcat(UNICODE_PREFIX, punny_string.size(), punny_string);
+				constexpr char   UNICODE_PREFIX = 'U';
+				std::string_view punny_string   = name;  // @future: convert to punnycode
+				ss << UNICODE_PREFIX << punny_string.size() << punny_string;
 			}
+		}
+
+		/**
+		 * @brief Returns bare identifier of the symbol prefixed with its size
+		 * If the name contains characters outside of the allowed set,
+		 * it will be prefixed with 'U' and punnycode-encoded.
+		 * @note: See mangling-scheme.md for details
+		 */
+		std::string identifier(std::string_view name) {
+			std::stringstream ss;
+			identifier(ss, name);
+			return ss.str();
 		}
 
 		/**
 		 * @brief Returns package/module/script prefix for the symbol
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string pathPrefix(SymID symbol_id) {
-			auto enclosing_scope  = scope(symbol_id);
-			auto enclosing_module = module(enclosing_scope);
+		std::string pathPrefix(query::Context& ctx, SymID symbol_id) {
+			// @future
+			// currently package_id is a random string
+			// package name should be added when we start using it
+			// auto package = curr->getPackageID().strView();
 
-			// note: only the enclosing module is used for mangling. This is intentional,
-			// as modules are supposed to be self-contained and this would make moving them
-			// a more breaking (ABI-wise) change than it should be
-
-			// "M" <module-name>                                 // standalone module
+			// "M" <module-name>+                                // standalone module
 			// @future: templated modules
 			if (/* standalone module */ true) {
-				auto module_identifier = identifier(frontend::moduleName(enclosing_module).str());
-				return base::strConcat("M", module_identifier);
+				auto enclosing_scope = scope(symbol_id);
+
+				std::vector<std::string_view> modules;
+				auto                          curr = module(enclosing_scope);
+				modules.push_back(frontend::moduleName(curr).strView());
+
+				while (auto parent = ctx.query<frontend::QueryParentModule>(curr)) {
+					curr = parent.value();
+					modules.push_back(frontend::moduleName(curr).strView());
+				}
+
+				std::stringstream ret;
+				ret << "M";
+				for (auto& mod: modules | std::views::reverse) identifier(ret, mod);
+
+				return ret.str();
 			}
 
 			// @future: add support for packages & scripts when they are implemented
@@ -166,15 +182,16 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string unscopedName(SymID symbol_id) {
-			return identifier(compiler::helios::name(symbol_id).str());
+			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
 		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
 		 * @note: See mangling-scheme.md for details
 		 *
-		 * @todo: This is still a little simplified, there should probably be at least an additional
-		 * layer for things like macros and there will probably be other elements that create scopes.
+		 * @TODO: #2464 This is still a little simplified, there should probably be at least an
+		 * additional layer for things like macros and there will probably be other elements that
+		 * create scopes.
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
@@ -194,13 +211,13 @@ namespace compiler::helios::mangler {
 
 						if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
 							auto nmsp = ancestor.dynamicCast<pst::Namespace>().value();
-							path_parts.push_back(identifier(nmsp->getName().str()));
+							path_parts.push_back(identifier(nmsp->getName().strView()));
 							current_pst = pst::Access<pst::LangElement>(ancestor);
 							break;
 						}
 						if (ancestor->getElementKind() == pst::ElementKind::Class) {
 							auto nmsp = ancestor.dynamicCast<pst::Class>().value();
-							path_parts.push_back(identifier(nmsp->getName().str()));
+							path_parts.push_back(identifier(nmsp->getName().strView()));
 							current_pst = pst::Access<pst::LangElement>(ancestor);
 							break;
 						}
@@ -226,37 +243,36 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
-			return base::strConcat(pathPrefix(symbol_id), symbolName(ctx, symbol_id));
+			auto prefix = pathPrefix(ctx, symbol_id);
+			return base::strConcat(std::move(prefix), symbolName(ctx, symbol_id));
 		}
 
 		/**
 		 * @brief Returns mangled name of a function or method
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string funcType(query::Context& ctx, SymID symbol_id) {
-			// @TODO: #1568 use type mangling for parameter and return types.
-			std::string ret;
+		std::string func(query::Context& ctx, SymID symbol_id) {
+			std::stringstream ret;
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
 			    or kind(symbol_id) == SymbolKind::Method) {
-				ret = "F";
+				// @TODO: #2255 Function qualifiers?
+
+				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
+				ret << ctx.query<QueryMangledType>({ function_type })->valueOrThrow().str();
 
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
-				ret += fun_decl.return_type.toString();
 
-				for (const auto& param: fun_decl.parameters) {
-					ret += param.type.toString();
-					ret += identifier(param.name.str());
-				}
+				for (const auto& param: fun_decl.parameters) identifier(ret, param.name.strView());
 
-				ret += "E";
+				ret << "E";
 			} else {
 				CORE_USER_LOG("Tried to mangle non function-like symbol as a function-like.");
 				CORE_UNREACHABLE();
 			}
 
-			return ret;
+			return ret.str();
 		}
 
 		/**
@@ -277,28 +293,46 @@ namespace compiler::helios::mangler {
 				variant_match(getSymRef(symbol_id)->other) {
 					variant_case_novalue(PstSymbolData) {
 						// If the symbol originates from the PST, use its path.
-						return path(ctx, symbol_id) + funcType(ctx, symbol_id);
+						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
 					variant_case_novalue(builtin::BuiltinFunctionData) {
 						// Builtins have a C linkage (CAbi), so they are handled by the
 						// `shouldMangle` check in `provide()`
 						CORE_UNREACHABLE();
 					}
-					variant_case(houtgen::GeneratedSymbolData, gen_data) {
+					variant_case(defgen::GeneratedSymbolData, gen_data) {
 						// If the symbol is generated, it has no path.
 						variant_match(gen_data.data) {
-							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
+							variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "C" + funcType(ctx, symbol_id) + "E";
+								const auto ctor_suffix   = "Hic" + func(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
-								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
+								defgen::GeneratedSymbolData::DefaultClassConstructor, ctor
+							) {
+								const auto path_to_class = path(ctx, ctor.class_symbol);
+								const auto ctor_suffix   = "Hdc" + func(ctx, symbol_id) + "E";
+								return path_to_class + ctor_suffix;
+							}
+							variant_case(
+								defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
+							) {
+								return "Hds"
+								     + ctx.query<QueryMangledType>(
+											  tsh::SymbolType<>::withDefaults(ctor.array_type)
+									 )
+								           ->valueOrThrow()
+								           .str()
+								     + "E";
+							}
+							variant_case(
+								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
 							) {
 								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
 							}
 							variant_case(
-								houtgen::GeneratedSymbolData::ReplInstructionWrapper,
+								defgen::GeneratedSymbolData::ReplInstructionWrapper,
 								repl_instr_wrapper
 							) {
 								return base::strConcat(
@@ -312,8 +346,7 @@ namespace compiler::helios::mangler {
 				CORE_UNREACHABLE();
 			}
 			case SymbolKind::Class: {
-				// @TODO: #1568 generalise type mangling?
-				return path(ctx, symbol_id);
+				return "C" + path(ctx, symbol_id);
 			}
 			default:
 				throw base::LogicError{
@@ -447,6 +480,155 @@ namespace compiler::helios::mangler {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledSymbol);
 
+	struct IMPLEMENT_QUERY(QueryMangledType, query::QResult<base::StrID>) {
+		static std::string mangle(query::Context&, tsh::UnitAbstractType) { return "u"; }
+
+		static std::string mangle(query::Context&, tsh::VoidAbstractType) { return "v"; }
+
+		static std::string mangle(query::Context&, tsh::ByteAbstractType) { return "y"; }
+
+		static std::string mangle(query::Context&, tsh::BoolAbstractType) { return "b"; }
+
+		static std::string mangle(query::Context&, tsh::CharAbstractType) { return "c"; }
+
+		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
+			if (type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed)
+				return base::strConcat("i", type.getSize().asInt());
+			else
+				return base::strConcat("j", type.getSize().asInt());
+		}
+
+		static std::string mangle(query::Context&, tsh::FloatAbstractType type) {
+			return base::strConcat("f", type.getSize().asInt());
+		}
+
+		static std::string mangle(query::Context&, tsh::RawPointerAbstractType) { return "p"; }
+
+		static std::string mangle(query::Context& ctx, tsh::PointerAbstractType type) {
+			return base::strConcat(
+				"P", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
+
+		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
+
+		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
+			std::stringstream res;
+			res << "F"
+				<< ctx.query<QueryMangledType>({ type.getResultType() })->valueOrThrow().str();
+			// @TODO: #2255 Function qualifiers?
+			for (auto& param: type.getParameterTypes())
+				res << ctx.query<QueryMangledType>({ param })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::DynamicArrayAbstractType type) {
+			return base::strConcat(
+				"D",
+				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
+				"E"
+			);
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::StaticArrayAbstractType type) {
+			return base::strConcat(
+				"A",
+				base::toString(type.getSize()),
+				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
+				"E"
+			);
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::TupleAbstractType type) {
+			std::stringstream res;
+			res << "T";
+			for (auto& elem: type.getComponents())
+				res << ctx.query<QueryMangledType>({ elem })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::VariantAbstractType type) {
+			std::stringstream res;
+			res << "V";
+			for (auto& elem: type.getUnderlyingTypes())
+				res << ctx.query<QueryMangledType>({ elem })->valueOrThrow().str();
+			res << "E";
+
+			return res.str();
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::ClassAbstractType type) {
+			return getSimpleMangledName(ctx, type.getSymbol()).str();
+		}
+
+		static std::string mangle(query::Context&, tsh::MetaAbstractType) { return "t"; }
+
+		static query::QResult<std::string> mangle(query::Context& ctx, tsh::AbstractType type) {
+			using enum tsh::Kind;
+			switch (type.getKind()) {
+			case Unit:
+				return mangle(ctx, type.as<tsh::UnitAbstractType>());
+			case Void:
+				return mangle(ctx, type.as<tsh::VoidAbstractType>());
+			case Byte:
+				return mangle(ctx, type.as<tsh::ByteAbstractType>());
+			case Bool:
+				return mangle(ctx, type.as<tsh::BoolAbstractType>());
+			case Char:
+				return mangle(ctx, type.as<tsh::CharAbstractType>());
+			case Integral:
+				return mangle(ctx, type.as<tsh::IntegralAbstractType>());
+			case Float:
+				return mangle(ctx, type.as<tsh::FloatAbstractType>());
+			case RawPointer:
+				return mangle(ctx, type.as<tsh::RawPointerAbstractType>());
+			case Pointer:
+				return mangle(ctx, type.as<tsh::PointerAbstractType>());
+			case String:
+				return mangle(ctx, type.as<tsh::StringAbstractType>());
+			case Function:
+				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
+			case DynamicArray:
+				return mangle(ctx, type.as<tsh::DynamicArrayAbstractType>());
+			case StaticArray:
+				return mangle(ctx, type.as<tsh::StaticArrayAbstractType>());
+			case Tuple:
+				return mangle(ctx, type.as<tsh::TupleAbstractType>());
+			case Variant:
+				return mangle(ctx, type.as<tsh::VariantAbstractType>());
+			case Class:
+				return mangle(ctx, type.as<tsh::ClassAbstractType>());
+			case Meta:
+				return mangle(ctx, type.as<tsh::MetaAbstractType>());
+			default:
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
+				));
+				return query::Failed();
+			}
+		}
+
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return base::StrID{ base::strConcat(
+				key.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
+				key.getLeakage() == tsh::Leakage::Leaking ? "L" : "",
+				key.getMutability() == tsh::Mutability::Mutable ? "" : "N",
+				key.getRefKind() == tsh::ReferenceKind::Direct ? ""
+				: key.getRefKind() == tsh::ReferenceKind::Box  ? "X"
+															   : "R",
+				mangle(ctx, key.getType()).valueOrThrow()
+			) };
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledType);
+
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id) {
 		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ .symbol_key = sym_id });
 	}
@@ -486,18 +668,4 @@ namespace compiler::helios::mangler {
 		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
 			.symbol_key = sym_id, .kind = ManglingSymbolKind::GlobalVariableDestructor });
 	}
-}
-
-std::size_t std::hash<compiler::helios::mangler::KeyOf_MangledSymbol>::operator()(
-	const compiler::helios::mangler::KeyOf_MangledSymbol& key
-) const {
-	// this does not need to be perfect, just good enough to avoid often collisions in the hash map.
-	variant_match(key.symbol_key) {
-		variant_case(compiler::helios::SymID, sym_id) { return sym_id.queryUnstablePerfectHash(); }
-		variant_case(compiler::helios::mangler::special_symbol_keys::LIRModuleID, mod_id) {
-			return mod_id.id.getInnerID().asInt();
-		}
-		variant_default { CORE_UNREACHABLE(); }
-	}
-	CORE_UNREACHABLE();
 }

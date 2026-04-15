@@ -35,6 +35,7 @@ public:
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(testSyncRun);
+		TESTER_ADD_TEST(structureOperations);
 	}
 
 private:
@@ -59,6 +60,7 @@ private:
 		     { "pointer_to_local.dbc", "pointer_copy.dbc", "pointer_to_passed_blocks.dbc" }) {
 			runTestOnVm(filename, "", "42");
 		}
+		runTestOnVm("pointer_to_global.dbc", {}, "429913371337", {}, 1'337);
 	}
 
 	void commandLineArguments() {
@@ -144,6 +146,8 @@ private:
 			}
 		);
 	}
+
+	void structureOperations() { runTestOnVm("structure_operations.dbc", "", "506", {}); }
 
 	void testSyncRun() {
 		vm::PID pid = initProcess();

@@ -85,15 +85,9 @@ inline static void writeToView(base::ModRawView view, const T& value) {
  * with `0` being the current instruction.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i)                                                              \
-	IF_TC({                                                                        \
-		thread.keepOrAcquireGil();                                                 \
-		MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); \
-	})                                                                             \
-	IF_NOT_TC({                                                                    \
-		thread.keepOrAcquireGil();                                                 \
-		instr += i;                                                                \
-	})
+#define OPFUN_CONT(i)                                                                     \
+	IF_TC({ MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
+	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
 /**
@@ -103,7 +97,7 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 #define OPFUN_CONT_CHECK_STRATEGY(i)                                                  \
 	IF_TC({                                                                           \
 		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                   \
-			if (thread.execution_request_break)                                       \
+			if (thread.getExecutionRequestPendingFlag())                              \
 				return handle_execution_break(&instr[i], local_stack, frame, thread); \
 		}                                                                             \
 		MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread);    \
@@ -111,7 +105,7 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 	IF_NOT_TC({                                                                       \
 		instr += i;                                                                   \
 		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                   \
-			if (thread.execution_request_break) [[unlikely]] {                        \
+			if (thread.getExecutionRequestPendingFlag()) [[unlikely]] {               \
 				return handle_execution_break(instr, local_stack, frame, thread);     \
 			}                                                                         \
 		}                                                                             \

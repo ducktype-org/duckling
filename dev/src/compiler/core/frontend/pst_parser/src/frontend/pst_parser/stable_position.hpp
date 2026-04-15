@@ -18,21 +18,6 @@ namespace pst {
 		using HashType = base::Bit256;
 
 	private:
-		/**
-		 * @brief Node hash that defines one end of the position range.
-		 *
-		 * @note We don't know that this node comes before or after
-		 * the @p end_scope_node, but the resulting position is always defined
-		 * as the inclusive range between these two nodes.
-		 */
-		HashType begin_scope_node;
-
-		/**
-		 * @brief Node hash that defines the other end of the position range.
-		 * If not set, the position is defined as the position of the @p begin_scope_node only.
-		 */
-		base::Optional<HashType> end_scope_node;
-
 		StablePosition(HashType begin_scope_node, base::Optional<HashType> end_scope_node):
 			  begin_scope_node(begin_scope_node),
 			  end_scope_node(end_scope_node) {}
@@ -56,6 +41,21 @@ namespace pst {
 		 * position.
 		 */
 		[[nodiscard]] StablePosition extendedWith(const StablePosition& other) const;
+
+		/**
+		 * @brief Node hash that defines one end of the position range.
+		 *
+		 * @note We don't know that this node comes before or after
+		 * the @p end_scope_node, but the resulting position is always defined
+		 * as the inclusive range between these two nodes.
+		 */
+		HashType begin_scope_node;
+
+		/**
+		 * @brief Node hash that defines the other end of the position range.
+		 * If not set, the position is defined as the position of the @p begin_scope_node only.
+		 */
+		base::Optional<HashType> end_scope_node;
 	};
 
 }

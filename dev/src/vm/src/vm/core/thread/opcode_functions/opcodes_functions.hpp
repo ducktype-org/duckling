@@ -8,11 +8,12 @@
 #include <logger/logger.hpp>  // IWYU pragma: export
 
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/module_flags/module_flags.hpp>
 
 #ifdef USE_TAIL_CALLS
@@ -114,11 +115,11 @@ namespace vm {
 				const MicroInstruction*& instr,
 				std::byte*&              local_stack,
 				Frame*&                  frame,
-				VMThread&                thread,
+				SafeVMThread&            thread,
 				usize                    function_id
 			) {
 			auto&      runtime_data     = thread.runtime_data;
-			auto&      called_func      = thread.executing_program->getFunctions()[function_id];
+			auto&      called_func      = thread.process_program->getFunctions()[function_id];
 			const bool called_rets_void = called_func.result_type->getName() == "void";
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
@@ -127,6 +128,11 @@ namespace vm {
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size
 				= called_func.arg_size + !called_rets_void * called_func.ret_size;
+
+			auto arg_count           = called_func.parameters.size();
+			auto shared_blocks_count = arg_count + !called_rets_void;
+			u64  prev_frame_block_ref_count
+				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 			// Save current registers and flow.
 			frame->instr       = instr + 1;
@@ -146,41 +152,25 @@ namespace vm {
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
 			// up to this point) - the size of ret_val and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
+			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
+			                                  + (prev_frame_block_ref_count - shared_blocks_count);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
+			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
+				throw exceptions::VMStackOverflowException();
+			if (frame->local_block_ref_stack_base + called_func.local_block_count
+			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-			// Move shared blocks into callee's block stack and block_local_offset map.
-			// This is the id of the first shared block in the caller's block_stack. If the called
-			// function is non-void we also count the ret_val block.
-			u64 arg_count              = called_func.parameters.size();
-			u64 shared_block_count     = !called_rets_void ? arg_count + 1 : arg_count;
-			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
-
-			frame->local_stack_head = shared_stack_space_size;
-			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++) {
-				frame->block_stack.push_back(prev_frame->block_stack[i]);
-				auto callers_local_offset = prev_frame->block_idx_to_local_offset[i];
-				// This points to the ret_val offset.
-				auto offset_before_ret_val = prev_frame->local_stack_head - shared_stack_space_size;
-				auto new_offset            = callers_local_offset - offset_before_ret_val;
-
-				frame->local_offset_to_block_idx.put(new_offset, i - shared_blocks_start_ix);
-				frame->block_idx_to_local_offset.put(i - shared_blocks_start_ix, new_offset);
-			}
+			frame->local_stack_head          = shared_stack_space_size;
+			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
 			// the block stack.
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
+			prev_frame->local_block_ref_stack_end -= arg_count;
 			prev_frame->local_stack_head -= called_func.arg_size;
-			for (u64 i = 0; i < arg_count; i++) {
-				prev_frame->block_stack.pop_back();
-				// @note: Removing block_id to local_offset mappings from the frame is not needed,
-				// since a new init (after returning from a called function) to the same
-				// offset/block_idx will overwrite the old values.
-			}
 		}
 
 		static
@@ -192,27 +182,17 @@ namespace vm {
 				[[maybe_unused]] const MicroInstruction*& instr,
 				std::byte*&                               local_stack,
 				Frame*&                                   frame,
-				VMThread&                                 thread,
-				TypeID                                    type_id
+				SafeVMThread&                             thread,
+				TypeCRef                                  type
 			) {
-			auto type     = thread.executing_program->getTypes().at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
-			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
-			// local_offset mappings from the frame when we call a function. In the call, we just
-			// move the local_stack_head and new inits (which will happen after we return from a
-			// called function) will overwrite the old mappings.
-			frame->local_offset_to_block_idx.insert_or_assign(
-				frame->local_stack_head, frame->block_stack.size()
-			);
-			frame->block_idx_to_local_offset.insert_or_assign(
-				frame->block_stack.size(), frame->local_stack_head
-			);
-			frame->block_stack.push_back(block);
+			*frame->local_block_ref_stack_end = block.get();
+			frame->local_block_ref_stack_end += 1;
 			frame->local_stack_head += type->getSize().asInt();
 		}
 
@@ -221,17 +201,14 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			void
-			performDeinit(Frame*& frame, VMThread& thread) {
-			auto block = frame->block_stack.back();
+			performDeinit(Frame*& frame, SafeVMThread& thread) {
+			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
-			frame->block_stack.pop_back();
-
-			// @note: Removing block_id fo local_offset mappings is not needed here, since new inits
-			// will overwrite the old mappings
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
 			frame->local_stack_head -= type->getSize().asInt();
+			frame->local_block_ref_stack_end -= 1;
 		}
 
 		static
@@ -240,15 +217,11 @@ namespace vm {
 #endif
 			void
 			setVariantType(
-				VMThread& thread,
-				Pointer   variant_pointer,
-				TypeID    wanted_type_id,
-				TypeID    variant_type_id
+				SafeVMThread& thread,
+				Pointer       variant_pointer,
+				TypeCRef      wanted_type,
+				TypeCRef      variant_type
 			) {
-
-			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
-			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
-
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block
@@ -260,7 +233,7 @@ namespace vm {
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
 			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt->getID() == wanted_type_id) alternative_index = static_cast<usize>(idx);
+				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -295,13 +268,11 @@ namespace vm {
 #endif
 			Pointer
 			getVariantPtr(
-				VMThread& thread,
-				Pointer   variant_pointer,
-				TypeID    wanted_type_id,
-				TypeID    variant_type_id
+				SafeVMThread& thread,
+				Pointer       variant_pointer,
+				TypeCRef      wanted_type,
+				TypeCRef      variant_type
 			) {
-			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
-			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
 				variant_pointer.movedPointer(static_cast<i64>(*variant_type->getTypeTagSizeBytes())),

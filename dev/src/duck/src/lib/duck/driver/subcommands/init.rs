@@ -1,5 +1,11 @@
-use crate::{DuckCtx, QuackResult, qp_bail};
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use std::path::PathBuf;
+
+use crate::{
+    DuckContext, QuackResult, qp_bail_internal,
+    quackpack::subcommands::init::{InitOptions, init},
+    util::path_ops_ext::PathOpsExt,
+};
+use clap::{Arg, ArgAction, ArgMatches, Command, builder::ValueParser};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
 
@@ -25,11 +31,38 @@ pub fn get_parser() -> Command {
         .arg(
             Arg::new("path")
                 .help("Path to the new package")
+                .value_parser(ValueParser::path_buf())
                 .action(ArgAction::Set),
         )
 }
 
 /// Logic for executing the `init` subcommand.
-pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
-    qp_bail!("implement init")
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
+    let unsupported_flags = [
+        "venv",
+        "full",
+        "ephemeral",
+        "local-storage",
+        "expose-freezefile",
+    ];
+    for flag in unsupported_flags {
+        bail_on_unsupported_flag(matches.get_flag(flag), flag)?;
+    }
+    let at = match matches.get_one::<PathBuf>("path") {
+        Some(at) => at.resolve()?,
+        None => ctx.cwd().to_path_buf(),
+    };
+    let name = match matches.get_one::<String>("name") {
+        Some(name) => name.into(),
+        None => at.file_name().expect("file without filename").into(),
+    };
+    init(InitOptions { ctx, at, name })
+}
+
+/// Return an internal error for unsupported flags.
+fn bail_on_unsupported_flag(flag: bool, name: &str) -> QuackResult<()> {
+    if flag {
+        qp_bail_internal!("init flag `--{name}` is not yet supported")
+    }
+    Ok(())
 }

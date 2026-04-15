@@ -2,6 +2,7 @@
 
 #include "errors.hpp"
 
+#include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -42,6 +43,9 @@ namespace {
 	concept DeinitializingInstruction = base::IsTupleMember<T, DeinitializingInstructions>;
 
 	template<typename T>
+	concept VmType = base::IsVariantMember<T, TypeOfData>;
+
+	template<typename T>
 	concept CallingInstruction = base::IsTupleMember<T, CallingInstructions>;
 
 	template<valid_type::ConcreteType ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
@@ -56,7 +60,7 @@ namespace {
 		);
 	}
 
-	template<class ErrorT = PointerTypeMismatchError, class... Args>
+	template<class ErrorT = FieldTypeMismatchError, class... Args>
 	void validateStructFieldType(
 		const valid_type::ValidType&            type,
 		const valid_type::finalized::Structure& as_struct,
@@ -328,6 +332,10 @@ class FunctionValidator {
 					if (type->isKind<valid_type::finalized::Primitive>())
 						throw InvalidArgumentTypeError(*global);
 				}
+				variant_case(CRef<opargs::GlobalAny>, global) {
+					if (!globals.contains(global->global_data_name))
+						throw UnknownGlobalNameError(*global);
+				}
 				variant_case(CRef<opargs::GlobalOpq>, global_opq) {
 					if (!globals.contains(global_opq->global_data_name))
 						throw UnknownGlobalNameError(*global_opq);
@@ -440,6 +448,23 @@ class FunctionValidator {
 					}
 				}
 
+				variant_case(CRef<opargs::StackLocalStructure>, local_struct) {
+					if (!current_stack.contains(local_struct->var_name))
+						throw UnknownLocalNameError(*local_struct);
+					CRef<valid_type::ValidType> type = current_stack.at(local_struct->var_name);
+					if (!type->isKind<valid_type::finalized::Structure>())
+						throw InvalidArgumentTypeError(*local_struct);
+				}
+
+				variant_case(CRef<opargs::GlobalStructure>, global_struct) {
+					if (!globals.contains(global_struct->global_data_name))
+						throw UnknownGlobalNameError(*global_struct);
+					CRef<GlobalData>            entry = globals.at(global_struct->global_data_name);
+					CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);
+					if (!type->isKind<valid_type::finalized::Structure>())
+						throw InvalidArgumentTypeError(*global_struct);
+				}
+
 				// All possible opargs must be handled. Unhandled opargs panic.
 				variant_default {
 					CORE_PANIC("Unhandled argument case during validation: ", argumentToString(arg));
@@ -503,7 +528,9 @@ class FunctionValidator {
 				if (types_ctx.at(pointer->inner)->getName() != instr.type.type_name)
 					throw PointerTypeMismatchError(instr);
 			}
-			instr_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
+			instr_case(Op_upcast_lptr_lptr, instr) {
+				validateClassCast<InvalidUpcastError>(instr, current_stack);
+			}
 			instr_case(Op_cast_l8_type, instr) {
 				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
@@ -592,7 +619,21 @@ class FunctionValidator {
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case_novalue(Op_mov_g8_imm) {}
-			instr_case_novalue(Op_mov_gptr_lptr) {}
+			instr_case(Op_mov_lptr_lptr, instr) {
+				auto src_type = current_stack.at(instr.src.var_name)->getName();
+				auto dst_type = current_stack.at(instr.dst.var_name)->getName();
+				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_gptr_lptr, instr) {
+				auto src_type = current_stack.at(instr.src.var_name)->getName();
+				auto dst_type = globals.at(instr.dst.global_data_name)->type.str;
+				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_lptr_gptr, instr) {
+				auto src_type = globals.at(instr.src.global_data_name)->type.str;
+				auto dst_type = current_stack.at(instr.dst.var_name)->getName();
+				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
+			}
 			instr_case_novalue(Op_mov_l64_g64) {
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
@@ -605,12 +646,36 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_l8_g8) {
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mov_lptr_gptr) {}
-			instr_case_novalue(Op_mov_lptr_lptr) {}
 			instr_case_novalue(Op_mov_lopq_lopq) {}
 			instr_case_novalue(Op_mov_lopq_gopq) {}
 			instr_case_novalue(Op_mov_gopq_lopq) {}
 			instr_case_novalue(Op_mov_lopq_imm) {}
+
+			instr_case(Op_mov_lste_lste, instr) {
+				// Validate that both sides are the same structs.
+				auto dst_type = current_stack.at(instr.dst.var_name)->getName();
+				auto src_type = current_stack.at(instr.src.var_name)->getName();
+				if (dst_type != src_type) throw StructTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_lste_gste, instr) {
+				// Validate that both sides are the same structs.
+				auto dst_type = current_stack.at(instr.dst.var_name)->getName();
+				auto src_type = globals.at(instr.src.global_data_name)->type.str;
+				if (dst_type != src_type) throw StructTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_gste_lste, instr) {
+				// Validate that both sides are the same structs.
+				auto dst_type = globals.at(instr.dst.global_data_name)->type.str;
+				auto src_type = current_stack.at(instr.src.var_name)->getName();
+				if (dst_type != src_type) throw StructTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_gste_gste, instr) {
+				// Validate that both sides are the same structs.
+				auto dst_type = globals.at(instr.dst.global_data_name)->type.str;
+				auto src_type = globals.at(instr.src.global_data_name)->type.str;
+				if (dst_type != src_type) throw StructTypeMismatchError(instr);
+			}
+
 			instr_case_novalue(Op_setNull_lptr) {}
 
 			// Sign Extension
@@ -1096,9 +1161,7 @@ class FunctionValidator {
 				valid_type::ValidTypeID wanted_type
 					= types_ctx.at(instr.inner_type.type_name)->getID();
 
-				const std::vector<valid_type::ValidTypeID>& alternatives
-					= variant_type->alternatives;
-				if (!std::ranges::contains(alternatives, wanted_type))
+				if (!variant_type->alternatives_set.contains(wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case(Op_variantGetInner_lptr_lvnt_type, instr) {
@@ -1107,9 +1170,7 @@ class FunctionValidator {
 				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				auto wanted_type = types_ctx.at(pointer_type->inner);
-				const std::vector<valid_type::ValidTypeID>& possible_types
-					= variant_type->alternatives;
-				if (!std::ranges::contains(possible_types, wanted_type->getID()))
+				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
 				if (instr.expected_type != wanted_type->getName())
@@ -1124,7 +1185,7 @@ class FunctionValidator {
 				);
 
 				auto wanted_type = types_ctx.at(instr.inner_type.type_name);
-				if (!std::ranges::contains(variant_type->alternatives, wanted_type->getID()))
+				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case(Op_variantGetInner_lptr_lptr_type, instr) {
@@ -1139,7 +1200,7 @@ class FunctionValidator {
 					variant_pointer, types_ctx, instr
 				);
 
-				if (!std::ranges::contains(variant_type->alternatives, wanted_type->getID()))
+				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
 				if (instr.expected_type != wanted_type->getName())
@@ -1188,7 +1249,9 @@ class FunctionValidator {
 				);
 				if (!structure->inheritance_metadata) throw NotAClassTypeError(instr);
 			}
-			instr_case_novalue(Op_downcast_lptr_lptr_type) {}
+			instr_case(Op_downcast_lptr_lptr, instr) {
+				validateClassCast<InvalidDowncastError>(instr, current_stack);
+			}
 			instr_case_novalue(Op_free_lptr) {}
 			instr_case(Op_store_lptr_lany, instr) {
 				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
@@ -1209,6 +1272,14 @@ class FunctionValidator {
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				CRef<valid_type::ValidType> other_type = current_stack.at(instr.src.var_name);
 				if (pointer_type->inner != other_type->getID())
+					throw PointerTypeMismatchError(instr);
+			}
+			instr_case(Op_ref_lptr_gany, instr) {
+				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
+				                              ->getKindAs<valid_type::finalized::Pointer>();
+				const auto&                 global_entry = globals.at(instr.src.global_data_name);
+				CRef<valid_type::ValidType> global_type  = types_ctx.at(global_entry->type);
+				if (pointer_type->inner != global_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_structLea_lptr_lptr_field, instr) {
@@ -1259,6 +1330,39 @@ class FunctionValidator {
 					*types_ctx.at(ztruct_pointer->inner), *ztruct, instr.field, source->getID(), instr
 				);
 			}
+
+			instr_case(Op_structLea_lptr_lste_field, instr) {
+				auto dst = current_stack.at(instr.dst_ptr.var_name)
+				               ->getKindAs<valid_type::finalized::Pointer>();
+				auto src        = current_stack.at(instr.src_data_struct.var_name);
+				auto src_struct = src->getKindAs<valid_type::finalized::Structure>();
+				validateStructFieldType(*src, *src_struct, instr.field, dst->inner, instr);
+			}
+			instr_case(Op_structLoad_lany_lste_field, instr) {
+				auto target_type = types_ctx.at(current_stack.at(instr.dst.var_name)->getID());
+				auto source_type
+					= types_ctx.at(current_stack.at(instr.src_data_struct.var_name)->getID());
+				validateStructFieldType(
+					*source_type,
+					*source_type->getKindAs<valid_type::finalized::Structure>(),
+					instr.field,
+					target_type->getID(),
+					instr
+				);
+			}
+			instr_case(Op_structStore_lste_lany_field, instr) {
+				auto target_type
+					= types_ctx.at(current_stack.at(instr.dst_data_struct.var_name)->getID());
+				auto source_type = types_ctx.at(current_stack.at(instr.src.var_name)->getID());
+				validateStructFieldType(
+					*target_type,
+					*target_type->getKindAs<valid_type::finalized::Structure>(),
+					instr.field,
+					source_type->getID(),
+					instr
+				);
+			}
+
 			instr_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {
 				const auto destination = current_stack.at(instr.dst_ptr.var_name)
 				                             ->getKindAs<valid_type::finalized::Pointer>();
@@ -1368,27 +1472,33 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
-		const {
-		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
-		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
+	template<class Error, class Instr>
+	requires(std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_lptr_lptr>> || std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_lptr_lptr>>)
+	void validateClassCast(const Instr& instruction, const LocalStack& current_stack) const {
+		auto higher_ptr_tod = current_stack.at(instruction.dst.var_name);
+		auto lower_ptr_tod  = current_stack.at(instruction.src.var_name);
+		if constexpr (std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_lptr_lptr>>)
+			std::swap(higher_ptr_tod, lower_ptr_tod);
 
-		auto dst_type
-			= types_ctx.at(dst_ptr_tod->getKindAs<valid_type::finalized::Pointer>()->inner);
-		auto src_type
-			= types_ctx.at(src_ptr_tod->getKindAs<valid_type::finalized::Pointer>()->inner);
+		// Higher or lower in terms of inheritance hierarchy tree, base/superclass is "higher".
+		auto higher_type = types_ctx.at(
+			higher_ptr_tod->template getKindAs<valid_type::finalized::Pointer>()->inner
+		);
+		auto lower_type = types_ctx.at(
+			lower_ptr_tod->template getKindAs<valid_type::finalized::Pointer>()->inner
+		);
 
 		const bool inherits
-			= src_type->maybeGetKindAs<valid_type::finalized::Structure>()
-		          .flatMap([](CRef<valid_type::finalized::Structure> src_struct) {
-					  return src_struct->inheritance_metadata;
+			= lower_type->template maybeGetKindAs<valid_type::finalized::Structure>()
+		          .flatMap([](CRef<valid_type::finalized::Structure> lower_struct) {
+					  return lower_struct->inheritance_metadata;
 				  })
-		          .map([dst_type](const valid_type::finalized::InheritanceMetadata& src_imd) {
-					  return src_imd.super_types.contains(dst_type->getID());
+		          .map([higher_type](const valid_type::finalized::InheritanceMetadata& lower_imd) {
+					  return lower_imd.super_types.contains(higher_type->getID());
 				  })
 		          .copyValueOr(false);
 
-		if (!inherits) throw InvalidUpcastError(instruction);
+		if (!inherits) throw Error(instruction);
 	}
 
 	void validatePrimitiveCast(

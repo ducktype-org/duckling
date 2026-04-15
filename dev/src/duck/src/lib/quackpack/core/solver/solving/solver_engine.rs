@@ -35,6 +35,7 @@ pub struct SolverInput {
 impl SolverInput {
     /// Creates the solver input, based on the previous freeze, its packages' manifests and information gathered
     /// in the gathering phase.
+    #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
         prev_freeze_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
@@ -100,6 +101,7 @@ pub struct SolverEngine<'a> {
 impl<'a> SolverEngine<'a> {
     /// Main entry point.
     /// Creates an engine and runs it.
+    #[tracing::instrument(skip_all)]
     pub fn run_engine(
         input: SolverInput,
         main_pkg: &(ExpandedPackage, HashSet<FeatureName>),
@@ -129,7 +131,7 @@ impl<'a> SolverEngine<'a> {
                 .all_possible_features
                 .get(package)
                 .unwrap_or(&empty_hashset);
-            for dependency in manifest.dependencies().all_dependencies().values() {
+            for dependency in manifest.dependencies().all_dependencies() {
                 if dependency.is_enabled_for(possible_features.iter().cloned()) {
                     self.construct_for_single_dependency(package, dependency)?;
                 }
@@ -336,12 +338,12 @@ mod test {
     use url::Url;
 
     use crate::{
-        DuckCtx,
+        DuckContext,
         quackpack::core::{
             parse_manifest,
             types_common::{ExpandedLocation, Location},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
 
     use super::*;
@@ -376,7 +378,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
@@ -473,7 +475,7 @@ dependencies:
     - xd
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
@@ -582,7 +584,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
@@ -677,7 +679,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let location_a = InternedLocation::new(Location::Registry {
@@ -787,7 +789,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();

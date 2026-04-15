@@ -3,7 +3,7 @@ use url::form_urlencoded::Serializer;
 use url::{Url, UrlQuery};
 
 use crate::quackpack::core::fetcher::types;
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, StrId};
 
 /// A helper trait for getting URLs for communicating with a registry instance.
 pub trait UrlExt: Sized {
@@ -42,9 +42,9 @@ pub trait UrlExt: Sized {
 
     #[allow(dead_code)]
     /// Get the URL for publishing a new package.
-    fn for_new_package(&self) -> QuackResult<Self> {
+    fn for_new_package(&self) -> Self {
         self._join("/packages")
-            .context_internal("we control queries statically...?")
+            .expect("we control queries statically...?")
     }
 
     #[allow(dead_code)]
@@ -103,10 +103,7 @@ mod tests {
             format!("{base}/packages?q=foo+bar")
         );
 
-        assert_eq!(
-            url.for_new_package().unwrap().as_str(),
-            format!("{base}/packages")
-        );
+        assert_eq!(url.for_new_package().as_str(), format!("{base}/packages"));
 
         assert_eq!(
             url.for_new_blob(&package).unwrap().as_str(),

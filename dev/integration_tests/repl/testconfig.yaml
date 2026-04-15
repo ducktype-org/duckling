@@ -1,0 +1,15 @@
+Run: "@{build_dir}/bin//duckc repl"
+
+prompt: "duckling> "
+begining: |
+  Duckling REPL
+  Type /help for available commands, /exit to quit.
+  Press Enter for new line, Alt+Enter to submit.
+
+end: "\nGoodbye!\n"
+
+SubDirs:
+  - basic_expressions
+  - decl_of_functions
+  # - multiline
+  - variable_assignment

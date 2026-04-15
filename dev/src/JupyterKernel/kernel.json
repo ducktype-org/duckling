@@ -1,0 +1,14 @@
+{
+    "argv": [
+        "REPLACE_THIS_WITH_THE_PATH_TO_YOUR_PYTHON_BINARY",
+        "REPLACE_THIS_WITH_YOUR_PATH_TO_THIS_FILE/duck_kernel.py",
+        "-f",
+        "{connection_file}"
+    ],
+    "display_name": "Duckling",
+    "language": "duckling",
+    "name": "duckling",
+    "codemirror_mode": "text/x-duckling",
+    "mimetype": "text/x-duckling",
+    "file_extension": ".duckling"
+}

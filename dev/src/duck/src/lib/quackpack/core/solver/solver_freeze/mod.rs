@@ -3,6 +3,8 @@ mod new_freeze_generation;
 
 use std::collections::{HashMap, HashSet};
 
+use tracing::debug;
+
 use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
@@ -41,7 +43,9 @@ impl Default for SolverPackageFreeze {
 
 impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
+    #[tracing::instrument(skip_all)]
     pub fn try_from_venv_freeze(root: ExpandedPackage, value: &VenvFreeze) -> QuackResult<Self> {
+        debug!(root = ?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = ExpandedPackage {
@@ -100,17 +104,21 @@ impl SolverFreeze {
 }
 
 impl SolverFreeze {
+    #[tracing::instrument(skip_all)]
     pub fn empty_with_root(root: ExpandedPackage) -> QuackResult<Self> {
+        debug!(?root);
         Ok(Self {
             main_pkg: root,
             package_freezes: [(root, SolverPackageFreeze::default())].into(),
         })
     }
 
+    #[tracing::instrument(skip_all)]
     pub fn generate_storage_freeze(
         self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
     ) -> QuackResult<VenvFreeze> {
+        debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
         let root_freeze = self
             .package_freezes
@@ -128,13 +136,13 @@ impl SolverFreeze {
                     .get(&realization)
                     .context_internal("No manifest for realization")?;
                 dependencies.push(FreezeDep::new(
-                    realization_manifest.root_description().name(),
-                    realization_manifest.root_description().version(),
+                    realization_manifest.name(),
+                    realization_manifest.version(),
                 ));
             }
             pkg_freezes.push(FreezePackage::new(
-                package_manifest.root_description().name(),
-                package_manifest.root_description().version(),
+                package_manifest.name(),
+                package_manifest.version(),
                 freeze.features.into_iter().collect(),
                 dependencies,
                 pkg.location,
@@ -149,13 +157,13 @@ impl SolverFreeze {
                 .get(&realization)
                 .context_internal("No manifest for realization")?;
             root_deps.push(FreezeDep::new(
-                realization_manifest.root_description().name(),
-                realization_manifest.root_description().version(),
+                realization_manifest.name(),
+                realization_manifest.version(),
             ));
         }
         let root = RootPackage::new(
-            root_manifest.root_description().name(),
-            root_manifest.root_description().version(),
+            root_manifest.name(),
+            root_manifest.version(),
             root_freeze.features.into_iter().collect(),
             root_deps,
         );
@@ -168,12 +176,12 @@ mod test {
     use std::path::PathBuf;
 
     use crate::{
-        DuckCtx,
+        DuckContext,
         quackpack::core::{
-            parse_manifest,
+            PackageLoader, parse_manifest,
             types_common::{ExpandedLocation, InternedExpandedLocation},
         },
-        util_common::path_ops_ext::PathOpsExt,
+        util::path_ops_ext::PathOpsExt,
     };
     use tempfile::{TempDir, tempdir};
     use url::Url;
@@ -182,7 +190,7 @@ mod test {
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
-        let manifest = dir.path().join("quackconfig.yml");
+        let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
         dir.path().try_fsync_dir().unwrap();
@@ -310,7 +318,7 @@ features:
   f_a: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_root = parse_manifest(&path_root, &ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();

@@ -7,8 +7,9 @@
 
 namespace compiler::backend_vm {
 
-	DVMCodeBuilder::DVMCodeBuilder(query::Context& query_ctx):
-		  program_context(makeBox<internal::ProgramLoweringContext>(query_ctx)) {}
+	DVMCodeBuilder::DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info):
+		  program_context(makeBox<internal::ProgramLoweringContext>(query_ctx, build_debug_info)),
+		  build_debug_info(build_debug_info) {}
 
 	vm::code::CodeCollection DVMCodeBuilder::build() const {
 		match_optional(program_context->validateAndProduceProgram()) {
@@ -16,6 +17,11 @@ namespace compiler::backend_vm {
 			opt_err(error) CORE_PANIC("Failed to validate DVM module: ", error);
 		}
 		CORE_UNREACHABLE();
+	}
+
+	base::Optional<debug_info::DebugInfo> DVMCodeBuilder::buildDebugInfo() {
+		if (build_debug_info) return program_context->buildDebugInfo();
+		return {};
 	}
 
 	void DVMCodeBuilder::insertLirFunction(CRef<lir::Function> lir_function) {

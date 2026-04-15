@@ -11,7 +11,8 @@ use serde_untagged::UntaggedEnumVisitor;
 pub type Dependencies = HashMap<String, Dependency>;
 
 #[derive(Debug, Deserialize)]
-/// Schema of the [`quackconfig.yml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
+#[serde(rename_all = "kebab-case")]
+/// Schema of the [`quackconfig.yaml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
 pub struct Manifest {
     /// `metadata:` root field.
     pub metadata: Option<Metadata>,
@@ -22,10 +23,11 @@ pub struct Manifest {
     /// `features:` root field
     pub features: Option<HashMap<String, Vec<String>>>,
     /// `profiles:` root field
-    pub profiles: Option<HashMap<String, CompilerOptions>>,
+    pub profiles: Option<HashMap<String, Profile>>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
     /// Version of the package.
@@ -41,6 +43,7 @@ pub struct Metadata {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// Single dependency of the package.
 pub struct Dependency {
     /// Dependency's version.
@@ -157,6 +160,7 @@ impl<'de> de::Deserialize<'de> for DependencySource {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// A detailed source of a dependency.
 pub struct DetailedSource {
     /// Overridden registry url.
@@ -193,6 +197,7 @@ impl DetailedSource {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 /// Conditions, from which any has to be true, in order to enable this dependency.
 pub struct DependencyCondition {
     /// Enable this dependency/feature if we build the root package with at least one of the
@@ -201,7 +206,7 @@ pub struct DependencyCondition {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(transparent)]
+#[serde(rename_all = "kebab-case", transparent)]
 /// A feature + its conditions.
 pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
 
@@ -228,8 +233,38 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct CompilerOptions {
-    pub compiler_flags: Option<Vec<String>>,
+#[serde(rename_all = "kebab-case")]
+/// A single compilation profile.
+pub struct Profile {
+    /// Optimization level.
+    pub opt_level: Option<OptLevel>,
+    /// Whether should we emit DVM bytecode.
+    pub dvm_bytecode: Option<bool>,
+    /// Whether to use incremental compilation.
+    pub incremental: Option<bool>,
+    /// Whether to link C STD.
+    pub c_std: Option<bool>,
+    /// Whether this profile inherits other profile.
+    pub inherits: Option<String>,
+}
+
+#[derive(Debug)]
+pub enum OptLevel {
+    Number(u32),
+    String(String),
+}
+
+impl<'de> de::Deserialize<'de> for OptLevel {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("a non-negative number or a string")
+            .u32(|n| Ok(OptLevel::Number(n)))
+            .string(|s| Ok(OptLevel::String(s.to_string())))
+            .deserialize(deserializer)
+    }
 }
 
 #[cfg(test)]

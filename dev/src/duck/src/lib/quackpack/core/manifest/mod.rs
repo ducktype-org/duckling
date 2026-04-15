@@ -1,32 +1,34 @@
 //! High-level abstraction over a manifest and its inner types.
 //!
-//! The most notable members are [`Manifest`], [`Dependency`],
-//! [`DependencyDescription`] and [`RootDescription`].
+//! The most notable members are [`Manifest`], [`Dependency`], and [`DependencyDescription`].
 //!
 //! Parsing is implemented in the [`parse`] module.
-mod compiler_options;
 mod dependency;
 mod features;
 mod metadata;
 mod parse;
-mod root_description;
+mod profiles;
 mod source;
 
 pub use parse::*;
 
-pub use compiler_options::*;
 pub use dependency::*;
 pub use features::*;
 pub use metadata::*;
-pub use root_description::*;
+pub use profiles::*;
 pub use source::*;
 
-use crate::{QuackError, quackpack::schemas::registry};
+use crate::{
+    QuackError, StrId,
+    duck::util::duck_home::DuckHome,
+    quackpack::{core::Version, schemas::registry},
+};
 
 #[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
 pub struct Manifest {
-    root_description: RootDescription,
+    name: StrId,
+    version: Version,
     features: Features,
     metadata: PackageMetadata,
     dependencies: Dependencies,
@@ -37,7 +39,8 @@ pub struct Manifest {
 impl Manifest {
     /// Create a new [`Manifest`].
     pub fn new(
-        root_description: RootDescription,
+        name: StrId,
+        version: Version,
         features: Features,
         metadata: PackageMetadata,
         dependencies: Dependencies,
@@ -45,7 +48,8 @@ impl Manifest {
         profiles: Profiles,
     ) -> Self {
         Self {
-            root_description,
+            name,
+            version,
             features,
             metadata,
             dependencies,
@@ -54,9 +58,14 @@ impl Manifest {
         }
     }
 
-    /// Get the root package description.
-    pub fn root_description(&self) -> &RootDescription {
-        &self.root_description
+    /// Get the package name.
+    pub fn name(&self) -> StrId {
+        self.name
+    }
+
+    /// Get the package version.
+    pub fn version(&self) -> Version {
+        self.version
     }
 
     /// Get the root package exposed features.
@@ -88,6 +97,11 @@ impl Manifest {
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
     }
+
+    /// Check if this is the manifest of the global venv.
+    pub fn is_global(&self) -> bool {
+        self.name == DuckHome::GLOBAL_PACKAGE_NAME
+    }
 }
 
 impl TryFrom<registry::Manifest> for Manifest {
@@ -108,12 +122,11 @@ impl TryFrom<registry::Manifest> for Manifest {
             name,
             description,
         } = metadata;
-        let root_description = RootDescription::new(name.into(), version);
-        let authors = authors.into_iter().map(Into::into).collect();
-        let metadata =
-            PackageMetadata::new(authors, Some(license.into()), Some(description.into()));
+        let authors = authors.into_iter().collect();
+        let metadata = PackageMetadata::new(authors, Some(license), Some(description));
         Ok(Manifest::new(
-            root_description,
+            name.into(),
+            version,
             features.try_into()?,
             metadata,
             dependencies.try_into()?,
@@ -128,7 +141,8 @@ impl TryFrom<Manifest> for registry::Manifest {
 
     fn try_from(value: Manifest) -> Result<Self, Self::Error> {
         let Manifest {
-            root_description,
+            name,
+            version,
             features,
             metadata,
             dependencies,
@@ -137,16 +151,12 @@ impl TryFrom<Manifest> for registry::Manifest {
         } = value;
         let license = metadata.license().map(Into::into).unwrap_or_default();
         let description = metadata.description().map(Into::into).unwrap_or_default();
-        let authors = metadata
-            .into_authors()
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        let authors = metadata.into_authors().into_iter().collect();
         let metadata = registry::Metadata {
-            version: root_description.version(),
+            version,
             authors,
             license,
-            name: root_description.name().into(),
+            name: name.into(),
             description,
         };
         Ok(Self {

@@ -1,18 +1,16 @@
 //! Parsing of the {dev-,}dependencies fields in a manifest.
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 use super::source;
-use tracing::Level;
-use tracing::span;
+use tracing::debug;
 use tracing::trace;
 
 use super::Scope;
 
-use crate::DuckCtx;
+use crate::DuckContext;
 use crate::StrId;
 use crate::quackpack::core::Conditions;
 use crate::quackpack::core::Dependency;
-use crate::quackpack::core::DependencyDescription;
 use crate::quackpack::core::DependencyFeature;
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::manifest::Dependencies as DependenciesSchema;
@@ -20,44 +18,47 @@ use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 use crate::quackpack::schemas::manifest::DependencyCondition as ConditionSchema;
 use crate::quackpack::schemas::manifest::DependencyFeature as FeatureSchema;
 use crate::quackpack::schemas::manifest::DependencySource;
-use crate::util_common::error::QuackResultContext;
+use crate::util::error::QuackResultContext;
 
 use crate::{QuackResult, quackpack::core::Dependencies};
 
 /// Parse [`Dependencies`] from the [`DependenciesSchema`].
+#[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     scope: &mut Scope,
 ) -> QuackResult<Dependencies> {
     let Some(schema) = schema else {
-        return Ok(Dependencies::new(HashMap::new()));
+        return Dependencies::new(Vec::new());
     };
-    let mut dependencies = HashMap::new();
+    let mut dependencies = Vec::new();
     for (name, dep_schema) in schema {
         let name = name.into();
-        let span = span!(Level::DEBUG, "dependency", name = %name);
-        let _guard = span.enter();
         scope.push(name);
-        dependencies.insert(
+        dependencies.push(parse_single_dependency(
             name,
-            parse_single_dependency(name, dep_schema, package_root, ctx, scope)?,
-        );
+            dep_schema,
+            package_root,
+            ctx,
+            scope,
+        )?);
         scope.pop();
     }
-    Ok(Dependencies::new(dependencies))
+    Dependencies::new(dependencies).with_context(|| scope.make_context_string())
 }
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
+#[tracing::instrument(skip_all, fields(name = %manifest_name))]
 fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
     package_root: &Path,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     scope: &mut Scope,
 ) -> QuackResult<Dependency> {
-    trace!("parsing a dependency");
+    trace!(?schema, "parsing a dependency");
     scope.push("source".into());
     let source = source::parse(schema, package_root, ctx, scope)?;
     scope.pop();
@@ -67,14 +68,12 @@ fn parse_single_dependency(
         .as_ref()
         .map(|ored| ored.0.clone())
         .unwrap_or_default();
-    let desc = DependencyDescription::new(manifest_name, versions, source.into())
-        .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
 
     scope.push("features".into());
     let features = parse_features(schema.features.as_ref(), scope)?;
     scope.pop();
     let pinned = schema.pinned.unwrap_or(false);
-    let real_name = parse_real_name(schema).unwrap_or(manifest_name);
+    let name = parse_name(schema).unwrap_or(manifest_name);
 
     scope.push("conditions".into());
     let conditions = schema
@@ -83,11 +82,25 @@ fn parse_single_dependency(
         .map(|conditions| parse_conditions(conditions, scope))
         .transpose()?;
     scope.pop();
-    Dependency::new(desc, features, pinned, conditions, real_name)
-        .with_context(|| format!("when parsing the field `{}`", scope.format()))
+    let explicit_name_in_manifest = if name == manifest_name {
+        None
+    } else {
+        Some(manifest_name)
+    };
+    Dependency::new(
+        name,
+        versions,
+        source,
+        features,
+        pinned,
+        conditions,
+        explicit_name_in_manifest,
+    )
+    .with_context(|| scope.make_context_string())
 }
 
 /// Parse dependency's features
+#[tracing::instrument(skip_all)]
 fn parse_features(
     schema: Option<&Vec<FeatureSchema>>,
     scope: &mut Scope,
@@ -95,8 +108,10 @@ fn parse_features(
     let Some(schema) = schema else {
         return Ok(vec![]);
     };
+    debug!(?schema);
     let mut result = vec![];
     for feature in schema {
+        debug!("parsing {feature:?}");
         match feature {
             FeatureSchema::Simple(name) => {
                 result.push(DependencyFeature::new(name.into(), None));
@@ -129,7 +144,7 @@ fn parse_conditions(schema: &ConditionSchema, scope: &Scope) -> QuackResult<Cond
             .as_ref()
             .map(|vec| vec_string_to_vec_str_id(vec)),
     )
-    .with_context(|| format!("when parsing the field `{}`", scope.format()))
+    .with_context(|| scope.make_context_string())
 }
 
 /// Helper for transforming slice of `&T: Into<StrId>` into `Vec<StrId>`
@@ -141,7 +156,7 @@ where
 }
 
 /// Parse the real name specified by the dependency.
-fn parse_real_name(schema: &DependencySchema) -> Option<StrId> {
+fn parse_name(schema: &DependencySchema) -> Option<StrId> {
     match schema.source.as_ref() {
         Some(DependencySource::Detailed(detailed)) => detailed.name.as_ref().map(<&String>::into),
         _ => None,

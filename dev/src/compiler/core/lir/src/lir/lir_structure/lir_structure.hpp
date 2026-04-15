@@ -9,7 +9,7 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_metadata.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
@@ -139,6 +139,15 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Metadata for LIR local variables or function arguments.
+	 * Used by the backends for the DebugInfo.
+	 */
+	struct LIRLocalMetadata {
+		base::Optional<base::StrID>         source_code_name;
+		base::Optional<pst::StablePosition> position;
+	};
+
+	/**
 	 * @brief Description of a LIR Local variable or function argument.
 	 * @note This structure should only be stored directly in LIR Function, as part of the
 	 * description of a function. Other uses should use LocalRef to reference the variable
@@ -157,15 +166,19 @@ namespace compiler::lir {
 		 */
 		base::Optional<u64> parameter_index;
 
+		LIRLocalMetadata metadata;
+
 	private:
 		LIRLocal(
 			const base::Optional<helios::SymID> helios_id,
 			const CRef<tsl::TypeLayout>         layout,
-			const base::Optional<u64>           parameter_index
+			const base::Optional<u64>           parameter_index,
+			LIRLocalMetadata                    metadata
 		):
 			  helios_id(helios_id),
 			  layout(layout),
-			  parameter_index(parameter_index) {}
+			  parameter_index(parameter_index),
+			  metadata(metadata) {}
 
 		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
 
@@ -174,9 +187,22 @@ namespace compiler::lir {
 
 	public:
 		/**
+		 * @brief Creates LIR local data from MIR local data.
+		 * @important remember that LIRLocal should only be stored in a LIR function.
 		 * @note Do not use this function outside of LIR lowering.
+		 *
+		 * @param ctx
+		 * @param mir_local
+		 * @param new_parameter_index If the local is a parameter, this should be its index in the
+		 * LIR function's parameter list. This is needed to adjust for discarded parameters with
+		 * information-less types.
+		 * @return LIRLocal
 		 */
-		static LIRLocal fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local);
+		static LIRLocal fromMIR(
+			query::Context&     ctx,
+			mir::MIRLocalRef    mir_local,
+			base::Optional<u64> new_parameter_index = {}
+		);
 
 		/**
 		 * @brief Crates unique local with bool-type, and without
@@ -406,6 +432,14 @@ namespace compiler::lir {
 		template<class T>
 		const T& get() const {
 			return std::get<T>(value);
+		}
+
+		/**
+		 * @brief Whether a LIRValue holds a type T.
+		 */
+		template<class T>
+		[[nodiscard]] bool is() const {
+			return std::holds_alternative<T>(value);
 		}
 	};
 

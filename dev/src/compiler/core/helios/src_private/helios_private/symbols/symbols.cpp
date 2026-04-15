@@ -3,28 +3,25 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/queries/types.hpp>
 
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -77,13 +74,17 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
+		// We go up the PST until we find a statement that determines whether the variable is global
+		// or not.
 		return std::invoke(
 			[&ctx](this auto self, const pst::Access<pst::LangElement>& el) -> bool {
 				switch (el->getElementKind()) {
+				// Variables inside Top-level and namespace are global:
 				case pst::ElementKind::TopLevel:
 				case pst::ElementKind::Namespace:
 					return true;
 
+				// Variables inside classes, functions and some statements are not global:
 				case pst::ElementKind::Class:
 				case pst::ElementKind::Fun:
 				case pst::ElementKind::ClassBlock:
@@ -95,13 +96,25 @@ namespace compiler::helios {
 				case pst::ElementKind::For:
 					return false;
 
+				// For other elements we go up the PST tree:
 				case pst::ElementKind::CodeBlock:
 				case pst::ElementKind::CodeBlockOrStmt:
 				case pst::ElementKind::Variable:
-				case pst::ElementKind::StmtSpecifier:
-					// we panic if there is no parent:
-					return self(el->getParent().value().unlock(ctx));
-
+				case pst::ElementKind::Expand:
+				case pst::ElementKind::StmtSpecifier: {
+					// @TODO: #2452 unify this logic
+					if (el->getParent().has_value()) {
+						return self(el->getParent().value().unlock(ctx));
+					} else {
+						// we hit an expand!
+					    // note that here, we should never hit an element without parent that is not
+					    // an expand
+						return self(std::get<pst::AdditionalRootData::MacroExpansionParent>(
+										el->getAdditionalRootData().pst_parent
+						)
+					                    .expand_element.unlock(ctx));
+					}
+				}
 				default:
 					CORE_PANIC(base::strConcat(
 						"Unexpected element kind for variable symbol: ", el->elementType()
@@ -120,7 +133,7 @@ namespace compiler::helios {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
 			variant_case_novalue(builtin::BuiltinFunctionData) { return {}; }
-			variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
+			variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();
@@ -362,6 +375,18 @@ namespace compiler::helios {
 				pst_data
 			);
 		}
+		case pst::StmtKind::CodeDecl: {
+			// CodeDecl include things like named ifs, whiles, fors and code blocks.
+			// Note that this function should only be called if the statement creates a symbol, so
+			// we can assume that it is only named ones.
+			return SymbolData::makePSTSymbolData(
+				{
+					.name = stmt->getDeclSymbolName().value(),
+					.kind = SymbolKind::NamedCodeElement,
+				},
+				pst_data
+			);
+		}
 		default:
 			break;
 		}
@@ -396,12 +421,30 @@ namespace compiler::helios {
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
 		 * @note This has to be consistent with QuerySymbolsInScope
+		 * @TODO: #2407 this could take unlocked Access
 		 */
 		static ScopeID getPSTElementParentScope(
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 		) {
-			// note: this might become more complicated in the future:
-			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent().value());
+			// Note: This has to be consistent with QuerySymbolsInScope logic.
+			// @TODO: #2397 maybe move it into a single place
+
+			// @TODO: #2452 this logic should be unified
+
+			auto unlocked = element.unlock(ctx);
+
+			if (unlocked->getParent().has_value()) {
+				return ctx.query<QueryPrimaryCodeScopeFor>(unlocked->getParent().value());
+			} else {
+				// we hit an expand!
+				// note that here, we should never hit an element without parent that is not an expand
+				return ctx.query<QueryPrimaryCodeScopeFor>(
+					std::get<pst::AdditionalRootData::MacroExpansionParent>(
+						unlocked->getAdditionalRootData().pst_parent
+					)
+						.expand_element
+				);
+			}
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -533,48 +576,47 @@ namespace compiler::helios {
 							tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 						);
 
-					std::array function_data = {
-						std::make_pair(
-							base::StrID("builtin_input_char"),
-							ctx.query<tsh::QueryFunctionType>({ {}, char_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_char"),
-							ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_input_i64"),
-							ctx.query<tsh::QueryFunctionType>({ {}, i64_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_i64"),
-							ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_input_u64"),
-							ctx.query<tsh::QueryFunctionType>({ {}, u64_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_u64"),
-							ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_input_f64"),
-							ctx.query<tsh::QueryFunctionType>({ {}, f64_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_f64"),
-							ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_input_string"),
-							ctx.query<tsh::QueryFunctionType>({ {}, str_type })
-						),
-						std::make_pair(
-							base::StrID("builtin_output_string"),
-							ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
-						),
-					};
+					std::array function_data
+						= { std::make_pair(
+								base::StrID("builtin_input_char"),
+								ctx.query<tsh::QueryFunctionType>({ {}, char_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_char"),
+								ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_input_i64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, i64_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_i64"),
+								ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_input_u64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, u64_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_u64"),
+								ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_input_f64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, f64_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_f64"),
+								ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_input_string"),
+								ctx.query<tsh::QueryFunctionType>({ {}, str_type })
+							),
+						    std::make_pair(
+								base::StrID("builtin_output_string"),
+								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
+							) };
 
 					for (auto& [name, type]: function_data) {
 						auto sym_data
@@ -867,7 +909,7 @@ namespace compiler::helios {
 				return {};
 			}
 
-			if (std::holds_alternative<houtgen::GeneratedSymbolData>(getSymRef(key)->other)) {
+			if (std::holds_alternative<defgen::GeneratedSymbolData>(getSymRef(key)->other)) {
 				// Generated symbols have no specifiers (for now)
 				return {};
 			}
@@ -912,7 +954,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
 
-	namespace houtgen {
+	namespace defgen {
 		base::Bit256 KeyFor_QueryGeneratedSymbol::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
 				std::hash<base::StrID>()(name), generated_symbol_data.queryUnstablePerfectHash()
@@ -1048,37 +1090,31 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
+
+			auto collect_deps = [&]() {
+				const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
+				const auto& function_body   = fun_hout_result.body;
+
+				HoutFunctionCallCollector visitor;
+				for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+				return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+			};
+
 			variant_match(getSymRef(key)->other) {
 				variant_case_novalue(PstSymbolData) {
-					// Just a pst function
-					const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-
-					const auto& function_body = fun_hout_result.body;
-
-					HoutFunctionCallCollector visitor;
-					for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
-					return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+					// Just a PST function.
+					return collect_deps();
 				}
-
 				variant_case(builtin::BuiltinFunctionData, btd_data) {
 					// Builtin functions have no dependencies
 					return {};
 				}
-
-				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"QueryDirectFunctionCalls is not implemented for generated symbols "
-							"yet. ",
-							"The symbol in question is: ",
-							getSymRef(key)->common.name,
-							". "
-							"This usually means that a class was used inside compile time "
-							"evaluation."
-						),
-						std::nullopt
-					));
-					return query::Failed();
+				variant_case(defgen::GeneratedSymbolData, gsd_data) {
+					CORE_ASSERT(
+						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
+						"QueryDirectFunction calls called on a non-function symbol"
+					);
+					return collect_deps();
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}
@@ -1133,15 +1169,14 @@ namespace compiler::helios {
 		// this implementation is fragile, adjust if needed
 
 		CORE_ASSERT(
-			query::Context::getState().activeQueryCount() == 0,
-			"getAllHeliosSymbols called from within query!"
+			!query::Context::areWeInsideQuery(), "getAllHeliosSymbols called from within query!"
 		);
 
 		auto pst_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
 		auto builtin_symbols
 			= builtin::ImplementationOf_QueryGlobalBuiltinSymbols::getAllCachedSymbols();
 		auto generated_symbols
-			= houtgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
+			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 
 		std::vector<SymID> output;
 		output.reserve(pst_symbols.size() + builtin_symbols.size() + generated_symbols.size());

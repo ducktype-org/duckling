@@ -2,6 +2,7 @@
 
 #include "compiler.hpp"
 
+#include <base/comptime/type_traits.hpp>
 #include <base/preproc/for_each.hpp>
 
 #include <vm/bytecode/instructions.hpp>
@@ -9,7 +10,46 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
 
+#include <tuple>
+#include <type_traits>
+
 namespace vm::loader::compiler::detail {
+	/**
+	 * @brief Checks whether a high-level instruction argument type can be translated
+	 * to a specific low-level micro instruction argument type.
+	 *
+	 * A pair is valid when:
+	 * 1) the high arg type is listed in `LowArg::ConstructibleFrom`, and
+	 * 2) the high arg can be lowered by constructing `vm::opargs::OpCodeArg` from it
+	 */
+	template<typename LowArg, typename HighArg>
+	concept IsTranslatableInstructionArgumentPair
+		= base::IsTupleMember<std::remove_cvref_t<HighArg>, typename LowArg::ConstructibleFrom>
+	   && std::constructible_from<vm::opargs::OpCodeArg, std::remove_cvref_t<HighArg>>;
+
+	/**
+	 * @brief Type-level validation of translation for full argument lists.
+	 */
+	template<typename LowArgsTuple, typename... HighArgs>
+	struct AreTranslatableInstructionArgumentLists: std::false_type {};
+
+	template<typename... LowArgs, typename... HighArgs>
+	struct AreTranslatableInstructionArgumentLists<std::tuple<LowArgs...>, HighArgs...>:
+		  std::bool_constant<
+			  (sizeof...(LowArgs) == sizeof...(HighArgs))
+			  && (IsTranslatableInstructionArgumentPair<LowArgs, HighArgs> && ...)> {};
+
+	/**
+	 * @brief Validates that a micro-instruction tag `T` can be constructed from `Args...`
+	 * at lowering call sites.
+	 *
+	 * This checks both argument count and per-position source compatibility declared
+	 * by low arg types.
+	 */
+	template<typename T, typename... Args>
+	concept AreTranslatableInstructionTagArgs
+		= vm::low::instruction_tags::IsMicroInstructionTag<T>
+	   && AreTranslatableInstructionArgumentLists<typename T::ArgTypes, Args...>::value;
 
 	namespace high = vm::code::instructions;
 	using namespace vm::low::instruction_tags;
@@ -50,18 +90,44 @@ namespace vm::loader::compiler::detail {
 
 
 	private:
-		template<IsMicroInstructionTag T, typename... Args>
-		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void addLow(Args... args) {
-			result.push_back(makeLowInstruction(T::OPCODE, compiler.lowerArgument(ctx, args)...));
+		/**
+		 * @brief Whether to add a step Gil instruction before the next low instruction.
+		 */
+		bool push_step_gil_on_next_add_low = true;
+
+		template<typename LowArg, typename HighArg>
+		requires IsTranslatableInstructionArgumentPair<LowArg, HighArg>
+		u64 lowerLowArg(const HighArg& arg) {
+			if constexpr (std::constructible_from<u64, HighArg>) {
+				return u64(arg);
+			} else {
+				return compiler.template lowerArgument<std::remove_cvref_t<HighArg>, LowArg>(
+					ctx, arg
+				);
+			}
+		}
+
+		template<typename T, typename... Args>
+		requires AreTranslatableInstructionTagArgs<T, Args...> void addLow(Args&&... args) {
+			if (push_step_gil_on_next_add_low) {
+				push_step_gil_on_next_add_low = false;
+				addLow<Op_stepGil>();
+			}
+
+			[&]<typename... LowArgs>(std::tuple<LowArgs...>*) {
+				result.push_back(
+					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
+				);
 #if (BUILD_TYPE_DEV_DEBUG)
-			result.back().opcode_id      = T::OPCODE;
-			result.back().representation = current_high_instruction_representation;
+				result.back().opcode_id      = T::OPCODE;
+				result.back().representation = current_high_instruction_representation;
 #endif
-			next_instruction_index++;
+				next_instruction_index++;
+			}(static_cast<T::ArgTypes*>(nullptr));
 		}
 
 		void addLabel(opargs::Label label) {
-			usize lid = compiler.lowerArgument(ctx, label);
+			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(ctx, label);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
 	};
@@ -70,6 +136,9 @@ namespace vm::loader::compiler::detail {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
 #endif
+
+		push_step_gil_on_next_add_low = true;
+
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
 		instr_match(instruction) {
@@ -109,10 +178,18 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_mov_lptr_gptr, i) { addLow<Op_mov_lptr_gptr>(i.dst, i.src); }
 			instr_case(high::Op_mov_lptr_lptr, i) { addLow<Op_mov_lptr_lptr>(i.dst, i.src); }
 			instr_case(high::Op_setNull_lptr, i) { addLow<Op_setNull_lptr>(i.dst); }
-			instr_case(high::Op_mov_lopq_lopq, i) { addLow<Op_mov_lopq_lopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lopq_lopq, i) {
+				auto type_size = ctx.locals_map.at(i.src.var_name).type->getSize().asInt();
+				addLow<Op_mov_lopq_lopq>(i.dst, i.src);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
+			}
 			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_lopq_gopq>(i.dst, i.src); }
 			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_lopq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_gopq_lopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lste_lste, i) { addLow<Op_mov_blste_blste>(i.dst, i.src); }
+			instr_case(high::Op_mov_lste_gste, i) { addLow<Op_mov_blste_gste>(i.dst, i.src); }
+			instr_case(high::Op_mov_gste_lste, i) { addLow<Op_mov_gste_blste>(i.dst, i.src); }
+			instr_case(high::Op_mov_gste_gste, i) { addLow<Op_mov_gste_gste>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_l64, i) { addLow<Op_add_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_imm, i) { addLow<Op_add_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_l32_l32, i) { addLow<Op_add_l32_l32>(i.dst, i.src); }
@@ -312,12 +389,12 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_fcmpLe_l32_imm, i) { addLow<Op_fcmpLe_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNull_lptr, i) { addLow<Op_cmpNull_lptr>(i.ptr); }
 			instr_case(high::Op_variantSetInner_lvnt_type, i) {
-				addLow<Op_variantSetInner_lvnt_type>(i.variant, i.inner_type);
+				addLow<Op_variantSetInner_blvnt_type>(i.variant, i.inner_type);
 				opargs::Type variant_type = ctx.locals_map.at(i.variant.var_name).type->getName();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_lptr_lvnt_type, i) {
-				addLow<Op_variantGetInner_lptr_lvnt>(i.dst_ptr, i.variant);
+				addLow<Op_variantGetInner_lptr_blvnt>(i.dst_ptr, i.variant);
 				opargs::Type variant_type = ctx.locals_map.at(i.variant.var_name).type->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
@@ -353,7 +430,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
-			instr_case(high::Op_init_lany_type, i) { addLow<Op_init_lany_type>(i.var, i.type); }
+			instr_case(high::Op_init_lany_type, i) { addLow<Op_init_blany_type>(i.var, i.type); }
 			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
 			instr_case(high::Op_input_l64, i) { addLow<Op_input_l64>(i.dst); }
 			instr_case(high::Op_output_l64, i) { addLow<Op_output_l64>(i.src); }
@@ -364,9 +441,11 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_resetVTable_lptr, i) { addLow<Op_resetVTable_lptr>(i.object_ptr); }
 			instr_case(high::Op_upcast_lptr_lptr, i) { addLow<Op_upcast_lptr_lptr>(i.dst, i.src); }
-			instr_case(high::Op_downcast_lptr_lptr_type, i) {
+			instr_case(high::Op_downcast_lptr_lptr, i) {
 				addLow<Op_downcast_lptr_lptr>(i.dst, i.src);
-				addLow<Op_ext_type>(i.target_type);
+				opargs::Type variant_type
+					= ctx.locals_map.at(i.dst.var_name).type->getInnerType().value()->getName();
+				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_virtual_call_lptr_method, i) {
 				addLow<Op_virtual_call_lptr_method>(i.object_ptr, i.method);
@@ -374,20 +453,33 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_alloc_lptr_type, i) { addLow<Op_alloc_lptr_type>(i.ptr, i.type); }
 			instr_case(high::Op_free_lptr, i) { addLow<Op_free_lptr>(i.ptr); }
 			instr_case(high::Op_store_lptr_lany, i) {
-				addLow<Op_store_lptr_lany>(i.dst_ptr, i.src);
+				addLow<Op_store_lptr_blany>(i.dst_ptr, i.src);
 			}
-			instr_case(high::Op_load_lany_lptr, i) { addLow<Op_load_lany_lptr>(i.dst, i.src_ptr); }
-			instr_case(high::Op_ref_lptr_lany, i) { addLow<Op_ref_lptr_lany>(i.dst_ptr, i.src); }
+			instr_case(high::Op_load_lany_lptr, i) { addLow<Op_load_blany_lptr>(i.dst, i.src_ptr); }
+			instr_case(high::Op_ref_lptr_lany, i) { addLow<Op_ref_lptr_blany>(i.dst_ptr, i.src); }
+			instr_case(high::Op_ref_lptr_gany, i) { addLow<Op_ref_lptr_gany>(i.dst_ptr, i.src); }
 			instr_case(high::Op_structLea_lptr_lptr_field, i) {
 				addLow<Op_structLea_lptr_lptr>(i.dst_ptr, i.src_data_ptr);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structLoad_lany_lptr_field, i) {
-				addLow<Op_structLoad_lany_lptr>(i.dst, i.src_data_ptr);
+				addLow<Op_structLoad_blany_lptr>(i.dst, i.src_data_ptr);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structStore_lptr_lany_field, i) {
-				addLow<Op_structStore_lptr_lany>(i.dst_data_ptr, i.src);
+				addLow<Op_structStore_lptr_blany>(i.dst_data_ptr, i.src);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structLea_lptr_lste_field, i) {
+				addLow<Op_structLea_lptr_blste>(i.dst_ptr, i.src_data_struct);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structLoad_lany_lste_field, i) {
+				addLow<Op_structLoad_blany_blste>(i.dst, i.src_data_struct);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structStore_lste_lany_field, i) {
+				addLow<Op_structStore_blste_blany>(i.dst_data_struct, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_fixedSizeTableLea_lptr_lptr_l64, i) {
@@ -395,11 +487,11 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_fixedSizeTableLoad_lany_lptr_l64, i) {
-				addLow<Op_fixedSizeTableLoad_lany_lptr>(i.dst, i.src_table_ptr);
+				addLow<Op_fixedSizeTableLoad_blany_lptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_fixedSizeTableStore_lptr_lany_l64, i) {
-				addLow<Op_fixedSizeTableStore_lptr_lany>(i.dst_table_ptr, i.src);
+				addLow<Op_fixedSizeTableStore_lptr_blany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_dynTableLea_lptr_lptr_l64, i) {
@@ -407,11 +499,11 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_dynTableLoad_lany_lptr_l64, i) {
-				addLow<Op_dynTableLoad_lany_lptr>(i.dst, i.src_table_ptr);
+				addLow<Op_dynTableLoad_blany_lptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_dynTableStore_lptr_lany_l64, i) {
-				addLow<Op_dynTableStore_lptr_lany>(i.dst_table_ptr, i.src);
+				addLow<Op_dynTableStore_lptr_blany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_l64>(i.index);
 			}
 			instr_case(high::Op_dynTableReAlloc_lptr_type_l64, i) {
@@ -419,18 +511,13 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_l64>(i.new_elem_count);
 			}
 			instr_case(high::Op_strOutput_lptr, i) { addLow<Op_strOutput_lptr>(i.string_ptr); }
-			instr_case(high::Op_cast_l8_type, i) {
-				addLow<Op_cast_l8_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l16_type, i) {
-				addLow<Op_cast_l16_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l32_type, i) {
-				addLow<Op_cast_l32_type>(i.value, i.target_type);
-			}
-			instr_case(high::Op_cast_l64_type, i) {
-				addLow<Op_cast_l64_type>(i.value, i.target_type);
-			}  // Sign Extension
+
+			instr_case(high::Op_cast_l8_type, i) {}
+			instr_case(high::Op_cast_l16_type, i) {}
+			instr_case(high::Op_cast_l32_type, i) {}
+			instr_case(high::Op_cast_l64_type, i) {}
+
+			// Sign Extension
 			instr_case(high::Op_sext_l16_l8, i) { addLow<Op_sext_l16_l8>(i.dst, i.src); }
 			instr_case(high::Op_sext_l32_l8, i) { addLow<Op_sext_l32_l8>(i.dst, i.src); }
 			instr_case(high::Op_sext_l64_l8, i) { addLow<Op_sext_l64_l8>(i.dst, i.src); }
