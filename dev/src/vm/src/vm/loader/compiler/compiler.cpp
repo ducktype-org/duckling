@@ -56,18 +56,31 @@ namespace vm::loader::compiler {
 		// clang-format off
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
-			low::opargs::LocalStackArgumentType,
-			return static_cast<u64>(ctx.locals_map.at(opcode_arg.var_name).offset);
+			low::opargs::PlaceDataArgumentType,
+			if constexpr (opargs::LocalArgumentType<FromType>) {
+				return ctx.locals_map.at(opcode_arg.var_name).offset;
+			}
+			else if constexpr (opargs::GlobalArgumentType<FromType>) {
+				// Global offsets are stored in the same place as local offsets, but with the highest bit set to 1.
+				return compiler.low_program.getGlobals().at(opcode_arg.global_data_name)->global_buffer_offset | (1ULL << 63);
+			}
+			else {
+				CORE_PANIC("Invalid argument type for PlaceDataArgumentType");
+			}
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
-			low::opargs::GlobalArgumentType,
-			return u64(usize(*compiler.low_program.getGlobals().idOf(opcode_arg.global_data_name)));
-		);
-
-		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
-			low::opargs::LocalBlockStackArgumentType,
-			return static_cast<u64>(ctx.locals_map.at(opcode_arg.var_name).block_idx);
+			low::opargs::PlaceBlockArgumentType,
+			if constexpr (opargs::LocalArgumentType<FromType>) {
+				return ctx.locals_map.at(opcode_arg.var_name).block_idx;
+			}
+			else if constexpr (opargs::GlobalArgumentType<FromType>) {
+				// Global offsets are stored in the same place as local offsets, but with the highest bit set to 1.
+				return compiler.low_program.getGlobals().at(opcode_arg.global_data_name)->global_block_idx | (1ULL << 63);
+			}
+			else {
+				CORE_PANIC("Invalid argument type for PlaceBlockArgumentType");
+			}
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
@@ -361,12 +374,20 @@ namespace vm::loader::compiler {
 			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
 
 			low::LowGlobalData data{
-				.type      = low_program.types->at(global.type),
-				.ctor_name = ctor_name,
-				.dtor_name = dtor_name,
+				.type                 = low_program.types->at(global.type),
+				.ctor_name            = ctor_name,
+				.dtor_name            = dtor_name,
+				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
+				.global_block_idx     = program_ctx.global_count,
 			};
 			low_program.global_data.insert(data, global.name);
+
+			program_ctx.global_count += 1;
+			program_ctx.global_buffer_size += Bytes(data.type->getSize().asInt());
 		}
+
+		low_program.global_buffer_size = program_ctx.global_buffer_size;
+		low_program.global_count       = program_ctx.global_count;
 	}
 
 	void Compiler::compileNewTypes(const code::TypeContext& ctx) {
