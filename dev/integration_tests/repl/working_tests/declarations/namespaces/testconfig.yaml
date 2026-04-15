@@ -7,4 +7,4 @@ Tests:
         Input:
           File: "simple_usage/simple_usage.rtf"
         Output:
-          String: "@{begining}\n=> 42\n@{end}"
+          String: "@{beginning}\n=> 42\n@{end}"

@@ -7,7 +7,7 @@ Tests:
         Input:
           File: "basic_declarations/basic_declarations.rtf"
         Output: 
-          String : "@{begining}\n=> 42\n=> 25\n@{end}"
+          String : "@{beginning}\n=> 42\n=> 25\n@{end}"
 
   interactions:
     Cases:
@@ -15,5 +15,5 @@ Tests:
         Input:
           File: "interactions/using_previously_defined_objects.rtf"
         Output:
-          String: "@{begining}\n=> 12\n@{end}" 
+          String: "@{beginning}\n=> 12\n@{end}" 
 

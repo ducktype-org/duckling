@@ -1,7 +1,7 @@
 Run: "@{build_dir}/bin//duckc repl"
 
 prompt: "duckling> "
-begining: |
+beginning: |
   Duckling REPL
   Type /help for available commands, /exit to quit.
   Press Enter for new line, Alt+Enter to submit.
