@@ -1,0 +1,25 @@
+type primitive: i8 1
+
+type variant: PersistVariant { i64, i8 }
+type pointer: ptr_PersistVariant PersistVariant
+
+global_data persisted_variant PersistVariant {};
+
+function set_global_variant_value {} -> void {
+    init_lany_type variant_ptr, ptr_PersistVariant;
+    ref_lptr_gvnt variant_ptr, persisted_variant;
+
+    variantSetInner_lptr_type variant_ptr, i64;
+
+    init_lany_type value_ptr, ptr_i64;
+    variantGetInner_lptr_lptr_type value_ptr, variant_ptr, i64;
+
+    init_lany_type value, i64;
+    mov_l64_imm value, 735;
+    store_lptr_lany value_ptr, value;
+
+    deinit; # value
+    deinit; # value_ptr
+    deinit; # variant_ptr
+    ret;
+}
