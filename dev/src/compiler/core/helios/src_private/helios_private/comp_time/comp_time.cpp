@@ -794,6 +794,9 @@ namespace compiler::helios {
 
 			for (const SymID& func_id: *dependencies) {
 				if (getSymRef(func_id)->getPSTDataOpt().empty()) {
+					// Skip tuple meta ctor calls, evaluate them to a type instead
+					if (isMetaTupleCtor(ctx, func_id)) continue;
+
 					// This path is not implemented yet.
 					// Figure out how to change this check if you hit this one when adding new feature.
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -825,6 +828,28 @@ namespace compiler::helios {
 				result.functions.push_back(lir_func_result);
 			}
 			return result;
+		}
+
+		/**
+		 * @brief Check weather a function is a call to a ctor of a tuple that is supposed to be
+		 * treated as a type.
+		 */
+		static bool isMetaTupleCtor(query::Context& ctx, const SymID& func_id) {
+			if (getSymRef(func_id)->getDataOpt<defgen::GeneratedSymbolData>().empty()) return false;
+
+			variant_match(getSymRef(func_id)->getDataOpt<defgen::GeneratedSymbolData>().value()->data
+			) {
+				variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
+					if (ctor.class_type.getKind() == tsh::Kind::Tuple) {
+						auto return_type
+							= ctx.query<QueryDeclOfFun>(func_id)->valueOrThrow().return_type;
+						auto coercion = canCoerceToMeta(ctx, return_type).valueOrThrow();
+						return coercion.isValid();
+					}
+				}
+				variant_default { return false; }
+			}
+			CORE_UNREACHABLE();
 		}
 
 		/**
