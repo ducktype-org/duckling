@@ -1,7 +1,11 @@
 #include <artifacts/artifacts.hpp>
+#include <artifacts/build_id.hpp>
 #include <tester/tester.hpp>
 
+#include <filesystem>
 #include <fstream>
+#include <sstream>
+#include <string>
 
 constexpr int VALUE = 42;
 
@@ -10,7 +14,10 @@ class ArtifactsTester: public tester::TestSuite {
 #define TESTER_CLASS ArtifactsTester
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simpleTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(buildIdMismatchWipesArtifacts);
+	}
 
 private:
 	struct SimpleStruct {
@@ -73,6 +80,45 @@ private:
 			auto sub = collection.subCollectionAt(s0);
 			ASSERT_TRUE(sub->blobArtifactAt(b0).getData<decltype(VALUE)>() == VALUE + 1);
 		}
+	}
+
+	void buildIdMismatchWipesArtifacts() {
+		fs::File              fs_root_path = fs::FileManager::createRandomTempDirectory();
+		std::filesystem::path root         = fs_root_path.getFilePath().getPath();
+
+		// Write a stale build id file.
+		{
+			std::ofstream out(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+			out << "stale-build-id-that-cannot-match-a-real-sha256";
+		}
+
+		// Drop a stray file and a stray sub-directory that should be wiped.
+		{
+			std::ofstream out(root / "stray_file");
+			out << "should be deleted";
+		}
+		const auto stray_dir = root / "stray_dir";
+		std::filesystem::create_directory(stray_dir);
+		{
+			std::ofstream out(stray_dir / "inside");
+			out << "should be deleted";
+		}
+
+		// Construct root - should wipe stale contents.
+		{
+			artifacts::ArtifactCollection collection(root);
+			ASSERT_TRUE(!std::filesystem::exists(root / "stray_file"));
+			ASSERT_TRUE(!std::filesystem::exists(stray_dir));
+			ASSERT_TRUE(collection.fileArtifactAtMaybe(base::StrID("stray_file")).empty());
+
+			// Flush should (re)write the .build_id with the current BUILD_ID.
+			collection.flush();
+		}
+
+		std::ifstream     in(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+		std::stringstream ss;
+		ss << in.rdbuf();
+		ASSERT_TRUE(ss.str() == std::string(artifacts::BUILD_ID));
 	}
 };
 

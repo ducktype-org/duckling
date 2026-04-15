@@ -3,6 +3,8 @@
 #include <base/misc/int_conv.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <artifacts/build_id.hpp>
+#include <artifacts/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 
@@ -29,7 +31,49 @@ artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
 	  PATH(std::move(root)) {
 	CORE_ASSERT(std::filesystem::exists(PATH), "ArtifactCollection path does not exist");
 	CORE_ASSERT(std::filesystem::is_directory(PATH), "ArtifactCollection path is not a directory");
+	if constexpr (CHECK_BUILD_ID) validateOrWipeBuildId();
 	loadData();
+}
+
+void artifacts::ArtifactCollection::validateOrWipeBuildId() {
+	const auto  build_id_path = PATH / BUILD_ID_FILE;
+	std::string stored_id;
+	bool        has_file = std::filesystem::exists(build_id_path);
+	if (has_file) {
+		std::ifstream in(build_id_path);
+		std::getline(in, stored_id);
+	}
+
+	if (has_file && stored_id == BUILD_ID) return;
+
+	if (!has_file) {
+		CORE_USER_LOG(
+			"No build id found at '",
+			PATH.string(),
+			"/",
+			std::string(BUILD_ID_FILE),
+			"'. Clearing cache and starting fresh.\n"
+		);
+	} else {
+		CORE_USER_LOG(
+			"Artifacts at '",
+			PATH.string(),
+			"' were produced by a different build of the compiler (stored build id: ",
+			stored_id.empty() ? std::string("<empty>") : stored_id.substr(0, 12) + "...",
+			", current build id: ",
+			std::string(BUILD_ID).substr(0, 12),
+			"...). Clearing cache and starting fresh.\n"
+		);
+	}
+
+	for (const auto& entry: std::filesystem::directory_iterator(PATH))
+		std::filesystem::remove_all(entry.path());
+}
+
+void artifacts::ArtifactCollection::writeBuildIdFile() const {
+	const auto    build_id_path = PATH / BUILD_ID_FILE;
+	std::ofstream out(build_id_path, std::ios::trunc);
+	out << BUILD_ID;
 }
 
 void artifacts::ArtifactCollection::flush() {
@@ -189,7 +233,9 @@ void artifacts::ArtifactCollection::loadData() {
 
 		// Read file artifacts and other sub-collections.
 		for (const auto& inner_path: std::filesystem::directory_iterator(PATH)) {
-			auto name = base::StrID(inner_path.path().filename().c_str());
+			const auto filename = inner_path.path().filename().string();
+			if (filename == BUILD_ID_FILE) continue;
+			auto name = base::StrID(filename.c_str());
 			if (inner_path.is_directory())
 				subCollectionNew(name);
 			else if (inner_path.is_regular_file())
@@ -229,10 +275,12 @@ fs::FilePath artifacts::ArtifactCollection::getArtcFile() const {
 }
 
 void artifacts::ArtifactCollection::flushNoLock() {
-	if (PARENT)
+	if (PARENT) {
 		PARENT.value()->flush();
-	else
+	} else {
 		flushDown();
+		if constexpr (CHECK_BUILD_ID) writeBuildIdFile();
+	}
 }
 
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNewNoLock(
