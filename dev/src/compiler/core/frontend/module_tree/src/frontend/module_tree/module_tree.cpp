@@ -831,8 +831,8 @@ namespace compiler::frontend {
 
 	void parseAllFilesInModuleTree(ModuleID module_id) {
 		CORE_ASSERT(
-			query::Context::getState().activeQueryCount() == 0,
-			"parseAllFilesInModuleTree called from within a query!"
+			!query::Context::isAnyQueryCurrentlyRunning(),
+			"parseAllFilesInModuleTree called when some query is currently running."
 		);
 
 		// First collect all files to be parsed.
@@ -1019,20 +1019,4 @@ namespace compiler::frontend {
 		return file->getPST();
 	}
 
-	ModuleID extendQueryModuleIDOfPST(
-		[[maybe_unused]] query::Context& ctx, pst::AccessLocked<pst::LangElement> element
-	) {
-		// get top-level:
-		while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
-
-		// this access depends on the global state that might
-		// become a problem in incremental compilation:
-		auto maybe_file_id = getFileIDOfPSTRoot(element.unlock(ctx)->getID());
-		CORE_ASSERT(
-			maybe_file_id.has_value(),
-			"PST root element ID does not exist in root-element-to-file map"
-		);
-		auto file_id = maybe_file_id.value();
-		return getFileRef(file_id)->getModule().unlock(ctx).getID();
-	}
 }

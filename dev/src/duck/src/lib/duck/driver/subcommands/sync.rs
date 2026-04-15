@@ -1,5 +1,5 @@
 use crate::{
-    DuckCtx, QuackResult,
+    DuckContext, QuackResult,
     quackpack::subcommands::sync::{SyncOptions, sync},
 };
 use clap::{ArgMatches, Command};
@@ -29,7 +29,7 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `sync` subcommand.
-pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let options = SyncOptions {
         global: matches.get_flag("global"),
         overwrite: matches.get_flag("overwrite"),

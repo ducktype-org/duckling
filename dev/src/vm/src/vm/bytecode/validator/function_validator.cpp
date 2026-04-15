@@ -456,6 +456,15 @@ class FunctionValidator {
 						throw InvalidArgumentTypeError(*local_struct);
 				}
 
+				variant_case(CRef<opargs::GlobalStructure>, global_struct) {
+					if (!globals.contains(global_struct->global_data_name))
+						throw UnknownGlobalNameError(*global_struct);
+					CRef<GlobalData>            entry = globals.at(global_struct->global_data_name);
+					CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);
+					if (!type->isKind<valid_type::finalized::Structure>())
+						throw InvalidArgumentTypeError(*global_struct);
+				}
+
 				// All possible opargs must be handled. Unhandled opargs panic.
 				variant_default {
 					CORE_PANIC("Unhandled argument case during validation: ", argumentToString(arg));

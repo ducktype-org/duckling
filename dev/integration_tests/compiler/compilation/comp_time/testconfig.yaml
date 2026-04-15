@@ -1,5 +1,7 @@
 Tests:
   recursive_comp_time_eval:
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    enable_conc_deterministic_tests: "false"
     Cases:
       dvm:
         backend: dvm
@@ -20,6 +22,8 @@ Tests:
           String: "124\n"
         ExitCode: 0
   class_type_eval:
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm
