@@ -3,6 +3,7 @@
  */
 
 #include <ctv/ctv.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -14,7 +15,6 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include <helios/queries/function_queries.hpp>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -919,9 +919,11 @@ private:
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
 					switch (instr.operation) {
 					case Operation::Call: {
-						auto ctor_id = instr.arguments.at(0).get<MIRFunctionLiteral>().helios_id;
-						auto& fun_decl = ctx.query<compiler::helios::QueryDeclOfFun>(ctor_id)->valueOrThrow();
-						if (fun_decl.return_type.getType().getKind() == compiler::tsh::Kind::Tuple) found_tuple_ctor_call = true;
+						auto  ctor_id = instr.arguments.at(0).get<MIRFunctionLiteral>().helios_id;
+						auto& fun_decl
+							= ctx.query<compiler::helios::QueryDeclOfFun>(ctor_id)->valueOrThrow();
+						if (fun_decl.return_type.getType().getKind() == compiler::tsh::Kind::Tuple)
+							found_tuple_ctor_call = true;
 						break;
 					}
 					default:

@@ -94,7 +94,9 @@ namespace compiler::helios {
 					order++;
 				}
 
-				return makeBox<code::TupleExpr>(ctx, expr.origin.generatedFrom(), std::move(elements));
+				return makeBox<code::TupleExpr>(
+					ctx, expr.origin.generatedFrom(), std::move(elements)
+				);
 			}
 
 			void output(Box<code::Expr> lowering_result) {

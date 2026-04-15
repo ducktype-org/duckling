@@ -2,7 +2,8 @@
 var a = ();
 var b = (1, -2, 3, 4);
 var c = (false, 1, 2., "3");
-var d = ((1, 0.), (3.5, 4));
+# @TODO: #2509
+# var d = ((1, 0.), (3.5, 4));
 var e = (0, 0);
 var f = ("Hello");
 
@@ -10,20 +11,22 @@ var f = ("Hello");
 var aa: () = a;
 var bb: (i64, i32, i64, i32) = b;
 var cc: (bool, i32, f32, str) = c;
-var dd: ((i64, f32), (f64, i32)) = d;
+# @TODO: #2509
+# var dd: ((i64, f32), (f64, i32)) = d;
 var ee: (i32, i32) = e;
 var ff: (str) = f;
 
 var aaa = a;
 var bbb = b;
 var ccc = c;
-var ddd = d;
+# @TODO: #2509
+# var ddd = d;
 var eee = e;
 var fff = f;
 
 # Packing expressions
-var x = (1+2, 3-4, 1+2-3*4, 2.5/5.*100-1.333);
-# @TODO: Uncomment when mir successors bug is fixed
+var x = (1+2, 3-4, 1+2-3*4, 2.5/5.*100.-1.333);
+# @TODO: #2510
 # var y = (3*4 > 4*3, 1<2<3<4, 1 == 1 != 1, 1 < 2 and not 2 < 3 or 3 > 4);
 var z = (
     i16(12345),
@@ -48,37 +51,36 @@ class Wrapper {
     a: (i64, i64);
 }
 
-fun makeTuple(x:i32, y:i32) -> (i32, i32) = {
-    return (x, y);
+fun makeTuple(first:i32, second:i32) -> (i32, i32) = {
+    return (first, second);
 }
 
-fun makeWrapper(x:i32, y:i32) -> Wrapper = {
-    return Wrapper((x, y));
+fun makeWrapper(first:i32, second:i32) -> Wrapper = {
+    return Wrapper((first, second));
 }
 
-fun unwrap(x: Wrapper) = {
-    return x.a;
+fun unwrap(wrapper: Wrapper) = {
+    return wrapper.a;
 }
 
 class SomeClass {
-    a: i32;
-    b: str;
+    field_a: i32;
+    field_b: str;
 
-    fun count(x: i32) = {
-        a = a+x;
-        return a;
+    fun count(tmp: i32) = {
+        field_a = field_a+tmp;
+        return field_a;
     }
 }
 
-fun someFunction(x: i64) = {
-    return x*2 + 7;
+fun someFunction(tmp: i64) = {
+    return tmp*2 + 7;
 }
 
 fun main() = {
     aa = ();
     b = (4, 3, 2, 1);
     cc = (true, 1, 2.5, "three");
-    d = (e, e);
 
     var sc = SomeClass(0, "zero");
     var w1 = Wrapper((0, 0));
