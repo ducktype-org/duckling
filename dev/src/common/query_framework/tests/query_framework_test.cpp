@@ -120,6 +120,17 @@ struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(CallingEntryPoint);
 
 
+DECLARE_QUERY(InsideQueryState, query::U64Key, bool, ({ .uses_qresult = false }));
+
+struct IMPLEMENT_QUERY(InsideQueryState, bool) {
+	static auto provide(Context&, QKey) -> PResult { return Context::areWeInsideQuery(); }
+
+	QUERY_AUTO_CACHE_COPY
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(InsideQueryState);
+
+
 DECLARE_QUERY(ReferenceQuery, query::U64Key, CRef<u64>, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
@@ -728,9 +739,7 @@ public:
 
 private:
 	void simpleTest() {
-		assertTrue(
-			query::Context::getState().activeQueryCount() == 0, "Active graph not empty at start"
-		);
+		assertTrue(!query::Context::isAnyQueryCurrentlyRunning(), "Active graph not empty at start");
 
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
@@ -743,7 +752,7 @@ private:
 		);
 
 		assertTrue(
-			query::Context::getState().activeQueryCount() == 0,
+			!query::Context::isAnyQueryCurrentlyRunning(),
 			"Active graph not empty after some computations"
 		);
 	}
@@ -811,23 +820,34 @@ private:
 	}
 
 	void entryPointSanityTest() {
-		// @TODO: #1933 re-enable this test.
-		return;
-
 #if defined(BUILD_TYPE_DEV)
 		assertTrue(
-			query::Context::getState().activeQueryCount() == 0,
+			!query::Context::isAnyQueryCurrentlyRunning(),
 			"Active graph not empty before some computations"
 		);
 
+		assertTrue(
+			query::entryPoint<InsideQueryState>({ 1 }),
+			"Query execution did not mark the current thread as inside query"
+		);
+
+		struct QueryGuard final {
+			~QueryGuard() { query::internal::ContextAccess::setAreWeInsideQuery(false); }
+		};
+
+		auto context = query::internal::ContextAccess::make(
+			query::internal::makeNodeID<CallingEntryPoint>({ 1 })
+		);
+		query::internal::ContextAccess::setAreWeInsideQuery(true);
+		QueryGuard guard;
+
 		assertThrows<base::Panic>(
-			[&]() { query::entryPoint<CallingEntryPoint>({ 1 }); },
+			[&]() { ImplementationOf_CallingEntryPoint::provide(context, { 1 }); },
 			"Calling entry point from query did not panicked."
 		);
 
 		assertTrue(
-			query::Context::getState().activeQueryCount() == 0,
-			"Active graph not empty after some panics"
+			!query::Context::isAnyQueryCurrentlyRunning(), "Active graph not empty after some panics"
 		);
 #endif
 	}
@@ -835,7 +855,7 @@ private:
 	template<class Query>
 	void resultLifetimeTest() {
 		assertTrue(
-			query::Context::getState().activeQueryCount() == 0,
+			!query::Context::isAnyQueryCurrentlyRunning(),
 			"Active graph not empty before some computations"
 		);
 
@@ -861,7 +881,7 @@ private:
 		});
 
 		assertTrue(
-			query::Context::getState().activeQueryCount() == 0,
+			!query::Context::isAnyQueryCurrentlyRunning(),
 			"Active graph not empty after some computations"
 		);
 	}
@@ -907,7 +927,7 @@ private:
 		return;
 
 		assertTrue(
-			query::Context::getState().activeQueryCount() == 0,
+			!query::Context::isAnyQueryCurrentlyRunning(),
 			"Active graph not empty before some computations"
 		);
 
@@ -916,7 +936,7 @@ private:
 		);
 
 		assertTrue(
-			query::Context::getState().activeQueryCount() == 0,
+			!query::Context::isAnyQueryCurrentlyRunning(),
 			"Active graph not empty after cycle detection"
 		);
 	}
