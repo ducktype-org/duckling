@@ -179,9 +179,7 @@ namespace lexer {
 			else
 				decLiteralHandler(output);
 
-		}
-		// @TODO: for now comments aren't saved as tokens
-		else if (isBlockCommentBegin()) {
+		} else if (isBlockCommentBegin()) {
 			blockCommentHandler(output);
 		} else if (isCommentBegin()) {
 			commentHandler(output);
