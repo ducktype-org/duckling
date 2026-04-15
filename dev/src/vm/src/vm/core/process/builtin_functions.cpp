@@ -198,7 +198,7 @@ namespace vm::builtins {
 #define CASE_FUNC(ID_NAME)                                                                      \
 	case BuiltinFunctionID::ID_NAME: {                                                          \
 		CORE_DEV_LOG(                                                                           \
-			DVMDetails, "builtin, ", #ID_NAME, ", ", thread.getRunningThreadId().asInt(), ";\n" \
+			DVMDetails, "builtin, ", #ID_NAME, ", ", thread.getThreadID().asInt(), ";\n" \
 		);                                                                                      \
 		return callUnpackArgs(                                                                  \
 			FunctionHandlers::builtin##ID_NAME, result_type, process, thread, arguments         \

@@ -416,7 +416,7 @@ namespace vm {
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(                                                                           \
-				DVMDetails, "opcode, ", #opcode_name, ", ", getRunningThreadId().asInt(), ";\n"     \
+				DVMDetails, "opcode, ", #opcode_name, ", ", getThreadID().asInt(), ";\n"     \
 			);                                                                                      \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
@@ -586,14 +586,6 @@ namespace vm {
 
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
 
-<<<<<<< HEAD:dev/src/vm/src/vm/core/thread/vmthread.cpp
-	std::string VMThread::getThreadCtx() { return thread_ctx; }
-
-	api::ThreadID VMThread::getRunningThreadId() {
-		api::ThreadID id
-			= static_cast<api::ThreadID>(std::hash<std::thread::id>{}(exec_thread->get_id()));
-		return id;
-=======
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
 		// +1 because frame_stack_current points to the current frame, not the next free slot.
 		return u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
@@ -601,6 +593,5 @@ namespace vm {
 
 	Frame& SafeVMThread::getStackFrame(u64 frame_index) {
 		return runtime_data.frame_stack_base[frame_index];
->>>>>>> upstream/main:dev/src/vm/src/vm/core/thread/safe_vmthread.cpp
 	}
 }

@@ -128,7 +128,7 @@ namespace vm {
 					"function, ",
 					called_func.name.str(),
 					", ",
-					thread.getRunningThreadId().asInt(),
+					thread.getThreadID().asInt(),
 					";\n"
 				);
 
