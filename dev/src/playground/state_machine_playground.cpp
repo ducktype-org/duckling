@@ -102,7 +102,6 @@ struct EventDrivenStateMachine<std::tuple<States...>, std::tuple<Events...>>: pu
     }
 };
 
-
 struct Process {
 	struct EmptyProcess;
     struct LoadedCode;
@@ -134,39 +133,34 @@ struct Process {
 	};
 
 
-    ///////// Events /////////
+    std::expected<void, std::string> loadFile(const std::string& file) {
+        if(!state_machine.isInState<EmptyProcess, LoadedCode>())
+            return std::unexpected("Cannot load file, because process is not in the right state");
 
-    struct LoadFilesEvent {
-        using RequiredStates = std::tuple<LoadedCode, EmptyProcess>;
-
-        std::string file;
-    };
-    std::expected<void, std::string> handleEvent(const LoadFilesEvent& event) {
         if(state_machine.isInState<EmptyProcess>())
-            CORE_ASSERT(state_machine.tryTransitionTo<LoadedCode>(), "Transition should work, because we are in the right state");
+            state_machine.transitionTo<LoadedCode>();
 
         auto& state = state_machine.getState<LoadedCode>();
-        std::cout << "Loading file: " << event.file << '\n';
-        state.files.push_back(event.file);
+        std::cout << "Loading file: " << file << '\n';
+        state.files.push_back(file);
         return {};
     }
 
-    struct RunEvent {
-        using RequiredStates = std::tuple<LoadedCode>;
-    };
-	void handleEvent(const RunEvent&) {
+	bool run() {
+        if (!state_machine.isInState<LoadedCode>()) return false;
+
         std::vector<std::string> loaded_files = std::move(state_machine.getState<LoadedCode>().files);
         std::string program = std::accumulate(
             loaded_files.begin(), loaded_files.end(), std::string{}, std::plus<>()
         );
 		state_machine.transitionTo<Running>(program);
+        return true;
 	}
 
+
 	bool step() {
-		if (!state_machine.isInState<Running>()) {
-			std::cout << "Process is not running, cannot step.\n";
-			return false;
-		}
+		if (!state_machine.isInState<Running>()) return false;
+
 		state_machine.getState<Running>().progress += 1;
 		return true;
 	}
@@ -179,16 +173,23 @@ struct Process {
 		CORE_UNREACHABLE();
 	}
 
+    struct LoadFilesEvent {
+        std::string file;
+    };
+    struct RunEvent {};
     template<class Ev>
     auto processEvent(Ev&& event) {
-        return state_machine.processEvent(std::forward<Ev>(event), *this);
+        if constexpr(std::is_same_v<Ev, LoadFilesEvent>) {
+            return loadFile(event.file);
+        } else if constexpr(std::is_same_v<Ev, RunEvent>) {
+            return run();
+        } else {
+            CORE_PANIC("Unknown event type");
+        }
     }
 
 private:
-	EventDrivenStateMachine<
-            std::tuple<EmptyProcess, LoadedCode, Running, Done>,
-            std::tuple<LoadFilesEvent, RunEvent>
-    > state_machine{ EmptyProcess{} };
+    StateMachine<EmptyProcess, LoadedCode, Running, Done> state_machine{ EmptyProcess{} };
 };
 
 int main() {
