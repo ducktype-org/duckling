@@ -535,9 +535,9 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @brief Get the offset of a field from the index in which it appears in the layout.
-		 * @param layout_index The index of the field in the layout order.
-		 * @return The offset of the field corresponding to the to the given layout index.
+		 * @brief Get the offset of a field from the original type.
+		 * @param symbol The symbol of a field.
+		 * @return The offset of the field corresponding to the given symbol, in bytes.
 		 */
 		[[nodiscard]]
 		base::Optional<Bytes> getOffsetOfFieldSymbol(const compiler::helios::SymID symbol) const {
