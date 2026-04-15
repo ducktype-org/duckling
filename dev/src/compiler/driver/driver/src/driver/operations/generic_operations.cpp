@@ -12,8 +12,7 @@
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
-#include <driver/repl_utils/script_dvm_helpers.hpp>
-#include <driver/repl_utils/script_llvm_helpers.hpp>
+#include <driver/repl_utils/script_helpers.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
@@ -31,7 +30,6 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/defer.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <hashing/component_hash.hpp>
@@ -43,7 +41,6 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/bytecode/validator/valid_program.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -306,10 +303,10 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	namespace {
-		std::expected<vm::code::CodeCollection, std::string> compileScriptToDVMCollection() {
+		std::expected<LIRModuleData, std::string> compileScriptToLIRModuleData(query::Context& ctx) {
 			auto& script_context = global_state::getScriptContext();
 			auto  script_source  = script_context.script_file.getContent().view().stdString();
-			auto  split_result   = repl::splitInputIntoStatements(script_source);
+			auto  split_result   = repl::splitInputIntoStatements(ctx, script_source);
 			if (!split_result.has_value())
 				return std::unexpected(
 					base::strConcat("Script parsing failed: ", split_result.error())
@@ -319,142 +316,8 @@ namespace compiler::driver {
 				REPL, "compile_script: split into ", split_result->size(), " statement(s)\n"
 			);
 
-			std::expected<vm::code::CodeCollection, std::string> compiled_script;
-
-			query::utils::withContextDo([&](query::Context& ctx) {
-				backend_vm::ReplLoweringContext lowering_context(ctx);
-				lowering_context.setContext(ctx);
-				defer(lowering_context.invalidateContext());
-
-				auto validated_program = vm::code::ValidProgram::withBuiltins();
-				std::vector<repl::ScriptExecutableCall> executable_calls;
-				base::Optional<frontend::ModuleID>      parent_module_id;
-
-				auto try_insert_chunk = [&](const vm::code::CodeCollection& chunk) -> bool {
-					try {
-						validated_program = validated_program.tryInsertCode(chunk);
-						return true;
-					} catch (const std::exception& e) {
-						compiled_script = std::unexpected(base::strConcat(
-							"DVM bytecode validation failed while composing script chunks: ",
-							e.what()
-						));
-						return false;
-					}
-				};
-
-				u64 statement_counter = 0;
-
-				for (const auto& statement_source: *split_result) {
-					auto module_ref = repl::createEphemeralChainedStatementModule(
-						statement_source, parent_module_id, statement_counter, "script_"
-					);
-					auto module_id   = module_ref->getModuleID();
-					parent_module_id = module_id;
-
-					CORE_DEV_LOG(
-						REPL,
-						"compile_script: statement #",
-						statement_counter + 1,
-						", module #",
-						module_id.queryUnstablePerfectHash(),
-						"\n"
-					);
-
-					auto statement_info_result = repl::classifySingleStatement(ctx, module_id);
-					if (!statement_info_result.has_value()) {
-						compiled_script = std::unexpected(statement_info_result.error());
-						return;
-					}
-
-					auto module_name = repl::getStatementModuleName(module_id, "script_module_");
-
-					if (std::holds_alternative<repl::DefinitionSingleStatementInfo>(
-							statement_info_result.value()
-						)) {
-						CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
-						const auto& hout_unit    = repl::getDefinitionHOUTUnit(ctx, module_id);
-						auto        chunk_result = repl::compileHOUTUnitToDVMCode(
-                            ctx, hout_unit, module_name, lowering_context
-                        );
-						if (!chunk_result.has_value()) {
-							compiled_script = std::unexpected(chunk_result.error());
-							return;
-						}
-						if (!try_insert_chunk(chunk_result.value())) return;
-					} else {
-						CORE_DEV_LOG(REPL, "compile_script: classified as executable statement\n");
-
-						auto wrapper_result = repl::buildStatementWrapper(
-							ctx, statement_info_result.value(), statement_counter
-						);
-						if (!wrapper_result.has_value()) {
-							compiled_script = std::unexpected(wrapper_result.error());
-							return;
-						}
-
-						auto hout_unit
-							= repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
-						auto chunk_result = repl::compileHOUTUnitToDVMCode(
-							ctx, hout_unit, module_name, lowering_context
-						);
-						if (!chunk_result.has_value()) {
-							compiled_script = std::unexpected(chunk_result.error());
-							return;
-						}
-
-						auto call_meta = repl::getDvmExecutableCallMetadata(
-							chunk_result.value(), wrapper_result->wrapper_func_name
-						);
-						if (!call_meta.has_value()) {
-							compiled_script = std::unexpected(base::strConcat(
-								"Failed to extract wrapper metadata: ", call_meta.error()
-							));
-							return;
-						}
-
-						executable_calls.push_back(call_meta.value());
-						if (!try_insert_chunk(chunk_result.value())) return;
-					}
-
-					++statement_counter;
-				}
-
-				vm::code::CodeCollection main_collection;
-				// Generate the main entry point that calls all statement wrappers in order.
-				// executable_calls contains the wrapper names + return types collected above.
-				main_collection.functions.push_back(repl::makeDvmScriptMainFunction(executable_calls
-				));
-				if (!try_insert_chunk(main_collection)) return;
-
-				compiled_script = validated_program.produceValidCodeCollection();
-			});
-
-			if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
-			return compiled_script.value();
-		}
-
-		// @TODO: #2246 Unify backend-neutral script pipeline stages
-		// (HOUT -> MIR -> LIR orchestration) with regular module compilation paths.
-		// Backend selection should happen only after shared LIR is produced.
-		std::expected<LIRModuleData, std::string> compileScriptToLLVMLIRModuleData(query::Context& ctx
-		) {
-			auto& script_context = global_state::getScriptContext();
-			auto  script_source  = script_context.script_file.getContent().view().stdString();
-			// Use the context-aware overload to avoid nesting withContextDo() while
-			// the LLVM pipeline already owns a query context.
-			auto split_result = repl::splitInputIntoStatements(ctx, script_source);
-			if (!split_result.has_value())
-				return std::unexpected(
-					base::strConcat("Script parsing failed: ", split_result.error())
-				);
-
-			CORE_DEV_LOG(
-				REPL, "compile_script_llvm: split into ", split_result->size(), " statement(s)\n"
-			);
-
 			LIRModuleData merged{
-				.module_id = repl::getLLVMScriptModuleID(script_context.script_file),
+				.module_id = repl::getScriptModuleID(script_context.script_file),
 				.functions = {},
 				.globals   = {},
 			};
@@ -490,7 +353,7 @@ namespace compiler::driver {
 				if (std::holds_alternative<repl::DefinitionSingleStatementInfo>(
 						statement_info_result.value()
 					)) {
-					CORE_DEV_LOG(REPL, "compile_script_llvm: classified as definition\n");
+					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
 					const auto& hout_unit  = repl::getDefinitionHOUTUnit(ctx, module_id);
 					auto        lir_result = ctx.query<CompileHOUTUnitToLIRModuleData>({
                         &hout_unit,
@@ -498,11 +361,10 @@ namespace compiler::driver {
                     });
 					if (lir_result->hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
-					repl::appendLLVMLIRModuleData(merged, lir_result->valueOrPanic());
+					repl::appendScriptLIRModuleData(merged, lir_result->valueOrPanic());
 				} else {
 					// Executable statements are wrapped into functions so we can sequence them
 					// under a synthetic main while still lowering via the normal pipeline.
-					// This is the same wrapper strategy used by the DVM script path.
 					CORE_DEV_LOG(REPL, "compile_script_llvm: classified as executable statement\n");
 					auto wrapper_result = repl::buildStatementWrapper(
 						ctx, statement_info_result.value(), statement_counter
@@ -520,7 +382,7 @@ namespace compiler::driver {
 					});
 					if (lir_result->hasFailed())
 						return std::unexpected("Failed to compile executable statement to LIR");
-					repl::appendLLVMLIRModuleData(merged, lir_result->valueOrPanic());
+					repl::appendScriptLIRModuleData(merged, lir_result->valueOrPanic());
 				}
 
 				++statement_counter;
@@ -543,19 +405,17 @@ namespace compiler::driver {
 			});
 			if (main_lir->hasFailed())
 				return std::unexpected("Failed to compile script main to LIR");
-			repl::appendLLVMLIRModuleData(merged, main_lir->valueOrPanic());
+			repl::appendScriptLIRModuleData(merged, main_lir->valueOrPanic());
 
 			return merged;
 		}
 
-		// @TODO: #2246 After HOUT/MIR/LIR flow is unified, keep this function as
-		// LLVM-only backend emission (object + link) while reusing shared pipeline output.
 		base::OkBad compileScriptToLLVMExecutable(const linker::LinkingOptions& linking_options) {
 			auto& script_context = global_state::getScriptContext();
 
 			base::Optional<std::string> error_message;
 			query::utils::withContextDo([&](query::Context& ctx) {
-				auto script_lir = compileScriptToLLVMLIRModuleData(ctx);
+				auto script_lir = compileScriptToLIRModuleData(ctx);
 				if (!script_lir.has_value()) {
 					error_message = script_lir.error();
 					return;
@@ -622,34 +482,44 @@ namespace compiler::driver {
 		}
 
 		base::OkBad compileScriptToDVMBytecode() {
-			auto compiled_script = compileScriptToDVMCollection();
-			if (!compiled_script.has_value()) {
-				CORE_USER_LOG(compiled_script.error(), "\n");
-				return base::BAD;
-			}
+			base::Optional<std::string> error_message;
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto script_lir = compileScriptToLIRModuleData(ctx);
+				if (!script_lir.has_value()) {
+					error_message = script_lir.error();
+					return;
+				}
 
-			auto& script_context  = global_state::getScriptContext();
-			auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-                base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
-            );
-			std::ofstream output_file(
-				output_artifact.file.getFilePath().getPath(), std::ios::binary
-			);
-			if (!output_file.is_open()) {
-				CORE_USER_LOG(
-					"Failed to open output file for script bytecode: ",
-					output_artifact.file.getFilePath().string(),
-					"\n"
+				auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+
+				auto& script_context  = global_state::getScriptContext();
+				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+                );
+				std::ofstream output_file(
+					output_artifact.file.getFilePath().getPath(), std::ios::binary
 				);
+				if (!output_file.is_open()) {
+					error_message = base::strConcat(
+						"Failed to open output file for script bytecode: ",
+						output_artifact.file.getFilePath().string()
+					);
+					return;
+				}
+
+				vm::code::serializeCode(dvm_module.code, output_file);
+				output_file.close();
+
+				CORE_USER_LOG(
+					"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
+				);
+			});
+
+			if (error_message.has_value()) {
+				CORE_USER_LOG(error_message.value(), "\n");
 				return base::BAD;
 			}
 
-			vm::code::serializeCode(compiled_script.value(), output_file);
-			output_file.close();
-
-			CORE_USER_LOG(
-				"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
-			);
 			return base::OK;
 		}
 
@@ -669,27 +539,46 @@ namespace compiler::driver {
 	}
 
 	std::expected<RunOutput, std::string> runScriptOnDVM() {
-		auto compiled_script = compileScriptToDVMCollection();
-		if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
+		base::Optional<std::string> error_message;
+		base::Optional<RunOutput>   output;
 
-		vm::PID pid{};
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto script_lir = compileScriptToLIRModuleData(ctx);
+			if (!script_lir.has_value()) {
+				error_message = script_lir.error();
+				return;
+			}
 
-		return vm::api::spawn()
-		    .and_then([&](vm::api::ProcessInfo process) {
-				pid = process.pid;
-				return std::expected<void, vm::api::ApiError>{};
-			})
-		    .and_then([&] { return vm::api::loadCode(pid, compiled_script.value()); })
-		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-		    .and_then([&] { return vm::api::run(pid); })
-		    .and_then([&] { return vm::api::join(pid); })
-		    .and_then([&] { return vm::api::getExitValue(pid); })
-		    .transform_error(vm::api::errorToString)
-		    .transform([](vm::api::ExitValue exit_values) {
-				CORE_ASSERT(exit_values.size() == 1, "Expected single exit value");
-				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
-			});
+			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+
+			vm::PID pid{};
+			auto    run_result
+				= vm::api::spawn()
+			          .and_then([&](vm::api::ProcessInfo process) {
+						  pid = process.pid;
+						  return std::expected<void, vm::api::ApiError>{};
+					  })
+			          .and_then([&] { return vm::api::loadCode(pid, { dvm_module.code }); })
+			          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
+			          .and_then([&] { return vm::api::run(pid); })
+			          .and_then([&] { return vm::api::join(pid); })
+			          .and_then([&] { return vm::api::getExitValue(pid); })
+			          .transform_error(vm::api::errorToString)
+			          .transform([](vm::api::ExitValue exit_values) {
+						  CORE_ASSERT(exit_values.size() == 1, "Expected single exit value");
+						  return RunOutput{ .exit_code = base::safeIntConv<int>(
+												exit_values.at(0)->readBytes<i64>()
+											) };
+					  });
+
+			if (run_result.has_value())
+				output = run_result.value();
+			else
+				error_message = run_result.error();
+		});
+
+		if (error_message.has_value()) return std::unexpected(error_message.value());
+		return output.value();
 	}
 
 	base::OkBad compileEntirePackage(
