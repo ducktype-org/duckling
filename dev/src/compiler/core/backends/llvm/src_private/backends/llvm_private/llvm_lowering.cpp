@@ -150,7 +150,7 @@ namespace {
 				return struct_constant;
 			}
 			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
-				// @TODO: #2506
+				// @TODO: #2506 Implement this
 				throw base::NotYetImplemented(base::strConcat(
 					"Conversion from CTV to LLVM constant for tuples is not implemented yet"
 				));
