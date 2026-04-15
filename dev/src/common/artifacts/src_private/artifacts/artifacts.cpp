@@ -46,15 +46,7 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 
 	if (has_file && stored_id == BUILD_ID) return;
 
-	if (!has_file) {
-		CORE_USER_LOG(
-			"No build id found at '",
-			PATH.string(),
-			"/",
-			std::string(BUILD_ID_FILE),
-			"'. Clearing cache and starting fresh.\n"
-		);
-	} else {
+	if (has_file) {
 		CORE_USER_LOG(
 			"Artifacts at '",
 			PATH.string(),
