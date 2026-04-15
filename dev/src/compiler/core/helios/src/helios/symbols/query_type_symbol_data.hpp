@@ -60,8 +60,6 @@ namespace compiler::helios {
 	 * @brief Struct returned by the `QueryTupleTypeData` query.
 	 */
 	struct TupleTypeData {
-		// @TODO: Add alias for `first`, `second`, `third`
-
 		/**
 		 * @briefTuple's generated fields.
 		 */
