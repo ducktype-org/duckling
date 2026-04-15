@@ -30,7 +30,7 @@ def generate_stencils(llvm_nm: str, binary: str, output_file):
 @click.option(
     '--llvm-nm',
     type=str,
-    default="llvm-nm-19"
+    default="llvm-nm-20"
 )
 @click.option(
     '--output', 

@@ -1,7 +1,7 @@
 # @TODO: #2282 resolve this earlier
-find_program(LLVM_LLC NAMES llc-19 llc REQUIRED)
-find_program(LLVM_NM NAMES llvm-nm-19 llvm-nm REQUIRED)
-find_program(LLVM_OBJCOPY NAMES llvm-objcopy-19 llvm-objcopy REQUIRED)
+find_program(LLVM_LLC NAMES llc-20 llc REQUIRED)
+find_program(LLVM_NM NAMES llvm-nm-20 llvm-nm REQUIRED)
+find_program(LLVM_OBJCOPY NAMES llvm-objcopy-20 llvm-objcopy REQUIRED)
 
 # Analyze and process the `binary_file`, preparing to embed in `destination_file`
 function(process_to_binary binary_file destination_file binary_artifact_prefix)

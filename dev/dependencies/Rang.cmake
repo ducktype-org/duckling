@@ -1,7 +1,7 @@
 include(FetchContent)
 find_package(Git)
 
-set(rang_TAG "22345aa4c468db3bd4a0e64a47722aad3518cc81")
+set(rang_TAG "22345aa4c468db3bd4a0e64a47722aad3518cc81")  # main, commited 2022-07-01
 
 FetchContent_Declare(
   rang

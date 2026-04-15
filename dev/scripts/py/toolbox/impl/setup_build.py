@@ -43,7 +43,7 @@ def setup_build_impl(
             exit_with_error(
                 f"Link-time optimization (LTO) requires Clang compiler. "
                 f"Current compiler: {cxx_compiler}. "
-                f"Please use --cxx-compiler to specify a Clang compiler (e.g., clang++-19)."
+                f"Please use --cxx-compiler to specify a Clang compiler (e.g., clang++-20)."
             )
         if linker != "lld":
             log_info("LTO enabled: Setting linker to lld")

@@ -384,7 +384,7 @@ def infer_gcov_from_compiler(cxx_compiler):
         # Unknown compiler type, default to gcov
         return "gcov"
 
-    # Try to extract version from compiler name (e.g., clang++-19, g++-14)
+    # Try to extract version from compiler name (e.g., clang++-20, g++-14)
     if is_clang:
         match = CLANG_VERSION_PATTERN.search(cxx_compiler)
         if match:

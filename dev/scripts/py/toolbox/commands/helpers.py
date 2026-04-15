@@ -68,8 +68,8 @@ def clang_format(*args, **kwargs):
         "clang_format_path",
         prompt="clang-format path",
         type=str,
-        help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
-        default="clang-format-19",
+        help="Path to clang-format, ex. /usr/bin/clang-format-20 or clang-format",
+        default="clang-format-20",
     )(*args, **kwargs)
 
 
@@ -80,8 +80,8 @@ def clang_tidy(*args, **kwargs):
         "clang_tidy_path",
         prompt="clang-tidy path",
         type=str,
-        help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
-        default="clang-tidy-19",
+        help="Path to clang-tidy, ex. /usr/bin/clang-tidy-20 or clang-tidy",
+        default="clang-tidy-20",
     )(*args, **kwargs)
 
 

@@ -1,7 +1,7 @@
 include(FetchContent)
 find_package(Git)
 
-set(REPLXX_TAG "release-0.0.4")
+set(REPLXX_TAG "release-0.0.4")  # released 2021-10-21
 
 FetchContent_Declare(
 	replxx

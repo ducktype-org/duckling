@@ -2,11 +2,11 @@ include(FetchContent)
 
 # Downloads and sets up tree sitter parser for usage with c++
 
-set(TREE_SITTER_COMMIT "534c4a074cd461ab30d1c8a54bf733d3050221a0")  # 0.26.6, released 2026-02-25
+set(TREE_SITTER_COMMIT "cd5b087cd9f45ca6d93ab1954f6b7c8534f324d2")  # 0.26.8, released 2026-03-31
 set(TREE_SITTER_CPP_COMMIT "f41e1a044c8a84ea9fa8577fdd2eab92ec96de02")  # 0.23.4, released 2024-11-11
 
 set(TS_URL "https://github.com/tree-sitter/tree-sitter/archive/${TREE_SITTER_COMMIT}.zip")
-set(TS_CPP_URL "https://github.com/tree-sitter/tree-sitter-cpp.git")
+set(TS_CPP_URL "https://github.com/tree-sitter/tree-sitter-cpp/archive/${TREE_SITTER_CPP_COMMIT}.zip")
 
 FetchContent_Declare(
 	tree-sitter
@@ -16,8 +16,9 @@ FetchContent_Declare(
 
 FetchContent_Declare(
 	tree-sitter-cpp
-    GIT_REPOSITORY ${TS_CPP_URL}
-    GIT_TAG ${TS_CPP_COMMIT}
+    URL ${TS_CPP_URL}
+    # See the file to know why this is a copy and not an actual patch.
+    PATCH_COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_LIST_DIR}/patches/tree-sitter-cpp-CMakeLists.txt" CMakeLists.txt
     SYSTEM
 )
 
