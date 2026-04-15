@@ -10,17 +10,18 @@
 #include <bit>
 #include <deque>
 #include <ranges>
+#include <unordered_set>
 #include <vector>
 
 namespace vm::persistent::detail {
-	STRONG_TYPEDEF_INT(MemoryStateID, u64);
+	STRONG_TYPEDEF_INT(MemoryStateID, usize);
 }
 
 STRONGLY_TYPED_INT_STD_HASH(vm::persistent::detail::MemoryStateID)
 
 namespace vm::persistent::detail {
 	class Memory {
-		static constexpr auto SENTINEL = MemoryStateID{ 0 };
+		static constexpr auto EMPTY = MemoryStateID{ 0 };
 
 		struct NodeEntry {
 			MemoryStateID left;
@@ -57,7 +58,7 @@ namespace vm::persistent::detail {
 			std::vector<MemoryStateID> trace;
 		};
 
-		detail::BijectiveMap<NodeEntry, MemoryStateID, NodeEntryH> node_entries{};
+		detail::BijectiveMap<NodeEntry, MemoryStateID, NodeEntryH> child_entries{};
 		detail::BijectiveMap<LeafEntry, MemoryStateID, LeafEntryH> leaf_entries{};
 
 		base::HashMap<MemoryStateID, RootEntry> root_info{};
@@ -72,18 +73,23 @@ namespace vm::persistent::detail {
 				return;
 			}
 
-			if (!leaf_entries.atRightOpt(state).has_value())
+			if_opt_none(leaf_entries.atRightOpt(state)) {
 				throw std::invalid_argument("got invalid state");
+			}
 		}
 
 		constexpr RootEntry getRootInfo(MemoryStateID state) const {
 			validateState(state);
 
-			if (auto opt_entry = root_info.atMaybeCopy(state); opt_entry.has_value())
-				return opt_entry.value();
+			if_opt_some(root_info.atMaybeCopy(state), opt_entry) { return opt_entry; }
 
-			if (auto val = leaf_entries.atRightOpt(state); val)
-				return { .size = 1UL, .height = 0UL, .offset = val->idx };
+			if_opt_some(leaf_entries.atRightOpt(state), val) {
+				return RootEntry{
+					.size   = 1UL,
+					.height = 0UL,
+					.offset = val.idx,
+				};
+			}
 
 			throw std::invalid_argument("invalid state id");
 		}
@@ -98,12 +104,10 @@ namespace vm::persistent::detail {
 		}
 
 		constexpr MemoryStateID nodeFromChildren(MemoryStateID left, MemoryStateID right) {
-			CORE_ASSERT(
-				left != SENTINEL || right != SENTINEL, "cannot get a father of two sentinels"
-			);
+			CORE_ASSERT(left || right, "cannot get a father of two sentinels");
 
 			auto children       = NodeEntry{ .left = left, .right = right };
-			auto [is_new, node] = node_entries.emplaceByLeft(children, next_node_id);
+			auto [is_new, node] = child_entries.emplaceByLeft(children, next_node_id);
 
 			if (!is_new) return node;
 
@@ -111,17 +115,17 @@ namespace vm::persistent::detail {
 			auto [sizeR, heightR, offsetR] = getRootInfo(left);
 
 			CORE_ASSERT(
-				heightL == heightR || left == SENTINEL || right == SENTINEL,
+				heightL == heightR || left == EMPTY || right == EMPTY,
 				"Children are of different hights"
 			);
 			auto new_height = heightL + 1;
+			offsetL >>= new_height;
+			offsetR >>= new_height;
 
 			CORE_ASSERT(
-				offsetL >> new_height == offsetR >> new_height || left == SENTINEL
-					|| right == SENTINEL,
-				"nodes have different offset"
+				offsetL == offsetR || left == EMPTY || right == EMPTY, "nodes have different offset"
 			);
-			auto new_offset = (offsetL | offsetR) >> new_height;
+			auto new_offset = offsetL | offsetR;
 
 			CORE_ASSERT(
 				sizeL <= (1 << heightL) && sizeL <= (1 << heightR),
@@ -143,7 +147,10 @@ namespace vm::persistent::detail {
 		}
 
 		constexpr MemoryStateID nodeFromIdxVar(usize idx, usize var_id) {
-			auto leaf           = LeafEntry{ .idx = idx, .value = var_id };
+			auto leaf = LeafEntry{
+				.idx   = idx,
+				.value = var_id,
+			};
 			auto [is_new, node] = leaf_entries.emplaceByLeft(leaf, next_node_id);
 
 			if (is_new) next_node_id++;
@@ -155,9 +162,9 @@ namespace vm::persistent::detail {
 		constexpr MemoryStateID getChild(MemoryStateID state, Dir dir) const {
 			validateState(state);
 
-			if (leaf_entries.atRightOpt(state).has_value()) return SENTINEL;
+			if (leaf_entries.atRightOpt(state).has_value()) return EMPTY;
 
-			auto& entry = node_entries.atRight(state);
+			auto& entry = child_entries.atRight(state);
 			return (dir == Dir::Left) ? entry.left : entry.right;
 		}
 
@@ -169,12 +176,12 @@ namespace vm::persistent::detail {
 				offset <= idx && idx < offset + (1 << height), "idx asked was out of state bounds"
 			);
 
-			if (height != 0)
-				for (u64 max_bit = 1 << (height - 1); max_bit; max_bit /= 2) {
-					auto& entry = node_entries.atRight(state);
-					state       = (idx & max_bit) ? entry.right : entry.left;
-				}
-
+			usize mask = (1 << height);
+			for (usize i = 0; i < height; i++) {
+				mask <<= 1;
+				auto& entry = child_entries.atRight(state);
+				state       = (idx & mask) ? entry.right : entry.left;
+			}
 
 			return state;
 		}
@@ -212,21 +219,21 @@ namespace vm::persistent::detail {
 		[[nodiscard]]
 		constexpr Path getLeftMostPath(MemoryStateID state) const {
 			auto [_, height, offset] = getRootInfo(state);
-			CORE_ASSERT(state != SENTINEL, "Tryig to get path in empty state");
+			CORE_ASSERT(state != EMPTY, "Tryig to get path in empty state");
 
 			usize                      idx   = offset;
 			auto                       node  = state;
 			std::vector<MemoryStateID> trace = { state };
 
-			for (u64 i = 0; i < height; i++) {
-				auto& [left, right] = node_entries.atRight(node);
+			for (usize i = 0; i < height; i++) {
+				auto& [left, right] = child_entries.atRight(node);
 				CORE_ASSERT(
-					left != SENTINEL || right != SENTINEL,
+					left || right,
 					"when going down to the leaves, at least one of children is not empty"
 				);
 
-				if (left == SENTINEL) idx += (1 << (height - 1 - i));
-				node = (left == SENTINEL) ? right : left;
+				if (left) idx += (1 << (height - 1 - i));
+				node = left ? left : right;
 
 				trace.emplace_back(node);
 			}
@@ -240,21 +247,21 @@ namespace vm::persistent::detail {
 		[[nodiscard]]
 		constexpr Path getRightMostPath(MemoryStateID state) const {
 			auto [size, height, offset] = getRootInfo(state);
-			CORE_ASSERT(state != SENTINEL, "Tryig to get path in empty state");
+			CORE_ASSERT(state != EMPTY, "Tryig to get path in empty state");
 
 			usize                      idx   = offset;
 			auto                       node  = state;
 			std::vector<MemoryStateID> trace = { state };
 
-			for (u64 i = 0; i < height; i++) {
-				auto& [left, right] = node_entries.atRight(node);
+			for (usize i = 0; i < height; i++) {
+				auto& [left, right] = child_entries.atRight(node);
 				CORE_ASSERT(
-					left != SENTINEL || right != SENTINEL,
+					left || right,
 					"when going down to the leaves, at least one of children is not empty"
 				);
 
-				if (right != SENTINEL) idx += (1 << (height - 1 - i));
-				node = (right == SENTINEL) ? left : right;
+				if (right) idx += (1 << (height - 1 - i));
+				node = right ? right : left;
 
 				trace.emplace_back(node);
 			}
@@ -276,11 +283,11 @@ namespace vm::persistent::detail {
 
 			for (; path.trace.size(); path.trace.pop_back(), mask <<= 1) {
 				MemoryStateID node_id = path.trace.back();
-				NodeEntry     entry   = node_entries.atRight(node_id);
+				NodeEntry     entry   = child_entries.atRight(node_id);
 
 				if (path.idx & mask)
 					path.idx ^= mask;
-				else if (entry.right != SENTINEL)
+				else if (entry.right)
 					break;
 			}
 
@@ -293,7 +300,7 @@ namespace vm::persistent::detail {
 				Dir dir = (path.idx & mask) ? Dir::Right : Dir::Left;
 
 				MemoryStateID son = getChild(path.trace.back(), dir);
-				Dir dir_son       = (getChild(son, Dir::Left) == SENTINEL) ? Dir::Right : Dir::Left;
+				Dir dir_son       = getChild(son, Dir::Left) ? Dir::Left : Dir::Right;
 
 				path.trace.emplace_back(son);
 
@@ -319,12 +326,12 @@ namespace vm::persistent::detail {
 
 			for (; path.trace.size(); path.trace.pop_back(), mask <<= 1) {
 				MemoryStateID node_id = path.trace.back();
-				NodeEntry     entry   = node_entries.atRight(node_id);
+				NodeEntry     entry   = child_entries.atRight(node_id);
 
 				if ((path.idx & mask) == 0) continue;
 
 				path.idx ^= mask;
-				if (entry.left != SENTINEL) break;
+				if (entry.left) break;
 			}
 
 			if (path.trace.size() == 0) return false;
@@ -335,7 +342,7 @@ namespace vm::persistent::detail {
 				Dir dir = (path.idx & mask) ? Dir::Right : Dir::Left;
 
 				MemoryStateID son = getChild(path.trace.back(), dir);
-				Dir dir_son = (getChild(son, Dir::Right) == SENTINEL) ? Dir::Left : Dir::Right;
+				Dir dir_son       = getChild(son, Dir::Right) ? Dir::Right : Dir::Left;
 
 				path.trace.emplace_back(son);
 
@@ -364,8 +371,8 @@ namespace vm::persistent::detail {
 					states.pop_front();
 
 					usize         next_idx = idx_first / 2;
-					MemoryStateID left     = (idx_first % 2) ? SENTINEL : state_first;
-					MemoryStateID right    = (idx_first % 2) ? state_first : SENTINEL;
+					MemoryStateID left     = (idx_first % 2) ? EMPTY : state_first;
+					MemoryStateID right    = (idx_first % 2) ? state_first : EMPTY;
 
 					if (!states.size() || (idx_first % 2) == 1) {
 						next_layer.emplace_back(next_idx, nodeFromChildren(left, right));
@@ -394,8 +401,8 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(curr_height <= height, "node has to be at smaller height then desired");
 
 			for (; curr_height < height; curr_height++) {
-				MemoryStateID right = (offset & (1 << height)) ? state : SENTINEL;
-				MemoryStateID left  = (offset & (1 << height)) ? SENTINEL : state;
+				MemoryStateID right = (offset & (1 << height)) ? state : EMPTY;
+				MemoryStateID left  = (offset & (1 << height)) ? EMPTY : state;
 
 				state = nodeFromChildren(left, right);
 			}
@@ -439,7 +446,7 @@ namespace vm::persistent::detail {
 				if (vals[i] == vals[i + 1])
 					throw std::invalid_argument("repeating idx at vals to set");
 
-			if (state == SENTINEL) {
+			if (state == EMPTY) {
 				std::deque<std::pair<usize, MemoryStateID>> all = {};
 				for (auto [idx, var_id]: vals) all.emplace_back(idx, nodeFromIdxVar(idx, var_id));
 				return combineStates(all);
@@ -487,11 +494,11 @@ namespace vm::persistent::detail {
 					return state;
 				}
 
-				auto [left, right] = node_entries.atRight(root);
+				auto [left, right] = child_entries.atRight(root);
 				left               = self(left, height - 1, offset);
 				right              = self(right, height - 1, offset + (1 << (height - 1)));
 
-				CORE_ASSERT(left != SENTINEL || right != SENTINEL, "One path down is required");
+				CORE_ASSERT(left || right, "One path down is required");
 				return nodeFromChildren(left, right);
 			};
 
@@ -513,7 +520,7 @@ namespace vm::persistent::detail {
 
 		MemoryStateID eraseMultiple(MemoryStateID state, std::deque<usize> idxs) {
 			auto [_, height, offset] = getRootInfo(state);
-			if (!idxs.size()) return state;
+			if (idxs.empty()) return state;
 
 			std::ranges::sort(idxs);
 
@@ -526,15 +533,15 @@ namespace vm::persistent::detail {
 				"This should always be the case"
 			);
 
-			for (; idxs.size() && idxs.front() < path_left.idx; idxs.pop_front());
-			for (; idxs.size() && idxs.back() > path_right.idx; idxs.pop_back());
+			for (; !idxs.empty() && idxs.front() < path_left.idx; idxs.pop_front());
+			for (; !idxs.empty() && idxs.back() > path_right.idx; idxs.pop_back());
 
 			auto work_copy = idxs;
 
-			for (; work_copy.size() && work_copy.front() == path_left.idx; work_copy.pop_front())
-				if (!pathForward(path_left)) return SENTINEL;
+			for (; !work_copy.empty() && work_copy.front() == path_left.idx; work_copy.pop_front())
+				if (!pathForward(path_left)) return EMPTY;
 
-			for (; work_copy.size() && work_copy.back() == path_right.idx; work_copy.pop_back())
+			for (; !work_copy.empty() && work_copy.back() == path_right.idx; work_copy.pop_back())
 				CORE_ASSERT(
 					!pathBackward(path_right), "there must be at least one el oustide of idxs"
 				);
@@ -547,19 +554,22 @@ namespace vm::persistent::detail {
 				auto [_, _height, _offset] = getRootInfo(root);
 				CORE_ASSERT(_height == height && offset == _offset, "sth went terribly wrong");
 
-				while (idxs.size() && idxs.front() < offset) idxs.pop_front();
+				while (!idxs.empty() && idxs.front() < offset) idxs.pop_front();
 
-				if (!idxs.size()) return root;
+				if (idxs.empty()) return root;
 				if (idxs.front() >= offset + (1 << height)) return root;
-				if (height == 0) return SENTINEL;
+				if (height == 0) return EMPTY;
 
-				auto [left, right] = node_entries.atRight(root);
+				CORE_ASSERT(
+					child_entries.atRightOpt(root).has_value(),
+					"It is a node with nonzero height - it must have children"
+				);
+
+				auto [left, right] = child_entries.atRight(root);
 				left               = self(left, height - 1, offset);
 				right              = self(right, height - 1, offset + (1 << (height - 1)));
 
-				if (left == SENTINEL && right == SENTINEL) return SENTINEL;
-
-				return nodeFromChildren(left, right);
+				return (left || right) ? nodeFromChildren(left, right) : EMPTY;
 			};
 
 			auto [___, final_height, final_offset] = getRootInfo(common);
@@ -567,26 +577,78 @@ namespace vm::persistent::detail {
 			return lambda(common, final_height, final_offset);
 		}
 
+		void pruneHistory(std::vector<MemoryStateID> desired) {
+			std::unordered_set<MemoryStateID> stay{ EMPTY };
+
+			while (desired.size()) {
+				std::vector<MemoryStateID> dfs_queue = { desired.back() };
+				desired.pop_back();
+
+				while (dfs_queue.size()) {
+					auto front = dfs_queue.back();
+					dfs_queue.pop_back();
+
+					if (stay.contains(front)) continue;
+
+					stay.insert(front);
+
+					if_opt_some(child_entries.atRightOpt(front), children) {
+						auto [left, right] = children;
+						dfs_queue.push_back(left);
+						dfs_queue.push_back(right);
+					}
+				}
+			}
+
+			std::unordered_set<MemoryStateID> nodes{};
+			std::unordered_set<MemoryStateID> leafs{};
+
+			for (auto node_id: stay) {
+				CORE_ASSERT(
+					child_entries.atRightOpt(node_id).has_value()
+						|| leaf_entries.atRightOpt(node_id).has_value(),
+					"Node has to be either root or leaf"
+				);
+
+				if_opt_some(child_entries.atRightOpt(node_id), _) {
+					nodes.insert(node_id);
+					continue;
+				}
+
+				if_opt_some(leaf_entries.atRightOpt(node_id), _) {
+					leafs.insert(node_id);
+					continue;
+				}
+
+				CORE_UNREACHABLE();
+			}
+
+			for (auto root: nodes) root_info.erase(root);
+
+			child_entries.pruneByRight(nodes);
+			leaf_entries.pruneByRight(leafs);
+		}
+
 		MemoryStateID slice(MemoryStateID state, usize left_bound, usize right_bound) {
 			validateIdx(state, left_bound);
 			validateIdx(state, right_bound);
 
-			if (state == SENTINEL) return SENTINEL;
+			if (state == EMPTY) return EMPTY;
 
 			auto left_path  = getPathTo(state, left_bound);
 			auto right_path = getPathTo(state, right_bound);
 
-			if (nodeAtHeight(left_path, 0) == SENTINEL) {
+			if (!nodeAtHeight(left_path, 0)) {
 				bool advanced = pathForward(left_path);
-				if (!advanced) return SENTINEL;
+				if (!advanced) return EMPTY;
 			}
 
-			if (nodeAtHeight(right_path, 0) == SENTINEL) {
+			if (!nodeAtHeight(right_path, 0)) {
 				bool decrement = pathBackward(right_path);
-				if (!decrement) return SENTINEL;
+				if (!decrement) return EMPTY;
 			}
 
-			if (left_path.idx > right_path.idx) return SENTINEL;
+			if (left_path.idx > right_path.idx) return EMPTY;
 
 			auto [lca, lca_height] = getLCA(left_path, right_path);
 
@@ -601,7 +663,7 @@ namespace vm::persistent::detail {
 
 				left = right = left_node;
 				if (left_path.idx & mask)
-					left = SENTINEL;
+					left = EMPTY;
 				else
 					right = getChild(nodeAtHeight(left_path, height), Dir::Right);
 
@@ -611,7 +673,7 @@ namespace vm::persistent::detail {
 				if (right_path.idx & mask)
 					left = getChild(nodeAtHeight(right_path, height), Dir::Left);
 				else
-					right = SENTINEL;
+					right = EMPTY;
 
 				right_node = nodeFromChildren(left, right);
 			}
@@ -647,24 +709,24 @@ namespace vm::persistent::detail {
 		bool active(MemoryStateID state, usize idx) const {
 			validateIdx(state, idx);
 
-			return getNodeAt(state, idx) == SENTINEL;
+			return getNodeAt(state, idx) == EMPTY;
 		}
 
 		[[nodiscard]]
 		MemoryStateID getEmpty() const {
-			return SENTINEL;
+			return EMPTY;
 		}
 
 		Memory() {
 			root_info.put(
-				SENTINEL,
+				EMPTY,
 				RootEntry{
 					.size   = 0,
 					.height = 63,
 					.offset = 0,
 				}
 			);
-			node_entries.emplaceByLeft(NodeEntry{ .left = SENTINEL, .right = SENTINEL }, SENTINEL);
+			child_entries.emplaceByLeft(NodeEntry{ .left = EMPTY, .right = EMPTY }, EMPTY);
 		}
 	};
 }

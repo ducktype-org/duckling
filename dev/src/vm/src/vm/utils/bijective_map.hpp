@@ -5,6 +5,8 @@
 #include <functional>
 #include <optional>
 #include <stdexcept>
+#include <unordered_set>
+#include <vector>
 
 namespace vm::persistent::detail {
 	/**
@@ -22,21 +24,9 @@ namespace vm::persistent::detail {
 		base::HashMap<R, L, HashR> right_left;
 
 	public:
-		base::Optional<R> atLeftOpt(const L& left) const {
-			auto it = left_right.find(left);
-			if (it == left_right.end())
-				return std::nullopt;
+		base::Optional<R> atLeftOpt(const L& left) const { return left_right.atMaybeCopy(left); }
 
-			return it->second;
-		}
-
-		base::Optional<L> atRightOpt(const R& rght) const {
-			auto it = right_left.find(rght);
-			if (it == right_left.end())
-				return std::nullopt;
-
-			return it->second;
-		}
+		base::Optional<L> atRightOpt(const R& rght) const { return right_left.atMaybeCopy(rght); }
 
 		const R& atLeft(const L& left) const { return left_right.at(left); }
 
@@ -75,6 +65,30 @@ namespace vm::persistent::detail {
 			right_left.put(rght, left);
 
 			return { true, right_left[rght] };
+		}
+
+		void pruneByRight(std::unordered_set<R> desired) {
+			std::vector<std::pair<L, R>> to_erase;
+
+			for (auto& [l, r]: left_right)
+				if (!desired.contains(r)) to_erase.emplace_back(l, r);
+
+			for (auto& [l, r]: to_erase) {
+				left_right.erase(l);
+				right_left.erase(r);
+			}
+		}
+
+		void pruneByLeft(std::unordered_set<L> desired) {
+			std::vector<std::pair<L, R>> to_erase;
+
+			for (auto& [l, r]: left_right)
+				if (!desired.contains(l)) to_erase.emplace_back(l, r);
+
+			for (auto& [l, r]: to_erase) {
+				left_right.erase(l);
+				right_left.erase(r);
+			}
 		}
 
 		auto leftToRight() const { return left_right; }
