@@ -34,9 +34,9 @@ fun main() -> i64 = {
     builtin_output_i64(c.fld); # 3
 
     # @TODO: #802 Uncomment when implemented.
-    # var d: tuple(T, Z) = (t, z);
-    # builtin_output_i64(d._1.fld);
-    # builtin_output_i64(d._2.fld);
+    var d: tuple(T, Z) = (t, z);
+    builtin_output_i64(d._1.fld); # 1
+    builtin_output_i64(d._2.fld); # 3
 
     var e: tuple(T, T) = T(4);
     builtin_output_i64(e.fld); # 4
