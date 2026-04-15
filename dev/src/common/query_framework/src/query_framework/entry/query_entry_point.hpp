@@ -6,8 +6,10 @@
 #pragma once
 
 #include <base/except/exceptions.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/task_pool/task_pool.hpp>
@@ -33,10 +35,10 @@ namespace query {
 		[[nodiscard]] internal::NodeID getID() const { return task_id; }
 
 	private:
-		EntryTaskHandle(internal::TaskPool& pool, internal::NodeID id): pool(pool), task_id(id) {}
+		EntryTaskHandle(internal::TaskPool& pool, internal::NodeID id): pool(&pool), task_id(id) {}
 
-		internal::TaskPool& pool;
-		internal::NodeID    task_id;
+		base::Ref<internal::TaskPool> pool;
+		internal::NodeID              task_id;
 
 		friend struct internal::EntryPointHelper;
 	};
@@ -63,7 +65,11 @@ namespace query {
 
 				pool.addTask(internal::Task{
 					node_id,
-					[key](concurrent::worker::WRef) { QueryType::internal_query(key); },
+					[key](concurrent::worker::WRef) {
+						ContextAccess::setAreWeInsideQuery(true);
+						defer({ ContextAccess::setAreWeInsideQuery(false); });
+						QueryType::internal_query(key);
+					},
 				});
 
 				return EntryTaskHandle{ pool, node_id };
@@ -75,7 +81,7 @@ namespace query {
 			 */
 			template<typename QueryType>
 			auto static awaitTask(EntryTaskHandle handle) -> decltype(auto) {
-				handle.pool.waitForTask(handle.task_id);
+				handle.pool->waitForTask(handle.task_id);
 				return QueryType::internal_load(handle.task_id.hash.val);
 			}
 		};

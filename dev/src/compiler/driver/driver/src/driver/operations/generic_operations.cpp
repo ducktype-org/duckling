@@ -517,25 +517,31 @@ namespace compiler::driver {
 
 		// Schedule compilation of every module up front so worker threads can run
 		// them concurrently, then collect the results in a second pass.
-		std::vector<query::EntryTaskHandle> compile_handles;
+		struct ScheduledModule {
+			frontend::ModuleID     module_id;
+			query::EntryTaskHandle handle;
+		};
+
+		std::vector<ScheduledModule> compile_handles;
 		compile_handles.reserve(modules_to_compile.size());
 		for (const auto& module_id: modules_to_compile) {
-			compile_handles.push_back(
-				query::scheduleEntryPoint<CompileModule>({ module_id, backend, build_debug_info })
-			);
+			compile_handles.push_back({ module_id,
+			                            query::scheduleEntryPoint<CompileModule>(
+											{ module_id, backend, build_debug_info }
+										) });
 		}
 
 		std::vector<query::EntryTaskHandle> debug_info_handles;
 		if (build_debug_info) debug_info_handles.reserve(modules_to_compile.size());
 
-		for (usize i = 0; i < modules_to_compile.size(); ++i) {
-			auto module_result = query::awaitEntryPoint<CompileModule>(compile_handles.at(i));
+		for (auto& [module_id, handle]: compile_handles) {
+			auto module_result = query::awaitEntryPoint<CompileModule>(handle);
 
 			if (module_result->hasValue()) {
 				objects.emplace_back(module_result->valueOrPanic().object_art);
 
+				// We schedule debug info here, to only schedule it for correctly compiled modules.
 				if (build_debug_info) {
-					auto module_id = modules_to_compile.at(i);
 					debug_info_handles.push_back(
 						query::scheduleEntryPoint<DebugInfoForModule>({ module_id, backend })
 					);
