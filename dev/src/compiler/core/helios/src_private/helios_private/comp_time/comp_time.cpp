@@ -846,6 +846,7 @@ namespace compiler::helios {
 						auto coercion = canCoerceToMeta(ctx, return_type).valueOrThrow();
 						return coercion.isValid();
 					}
+					return false;
 				}
 				variant_default { return false; }
 			}
