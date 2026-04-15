@@ -25,7 +25,7 @@ private:
 
 	void testFibIter() { runTestOnVm("fib_iter.dbc", "1000000 10000", "6875", {}); }
 
-	void testFibRec() { runTestOnVm("fib_rec.dbc", "40", "317811", {}); }
+	void testFibRec() { runTestOnVm("fib_rec.dbc", "28", "317811", {}); }
 
 	void testTailCall() { runTestOnVm("tailcall.dbc", "1000000", "0", {}); }
 };

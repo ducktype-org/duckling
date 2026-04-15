@@ -26,7 +26,7 @@ from click import Choice, option, command, prompt
     help="The build type.",
     default="Debug",
     type=Choice(
-        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
+        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug", "Perf"],
         case_sensitive=False,
     ),
 )
