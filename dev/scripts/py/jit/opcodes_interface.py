@@ -31,8 +31,19 @@ def nonjitable(func_name: str) -> bool:
 
     return any(op in func_name for op in unjitable_opfuncs)
 
+special_functions = {"externalTrampoline": False}
+def is_special_function(func_name: str) -> bool:
+    global special_functions
+
+    if func_name in special_functions:
+        special_functions[func_name] = True
+        return True
+    else:
+        return False
+
+
 def should_remain(func_name: str) -> bool:
-    return (is_opfun(func_name) or is_stencil(func_name)) and not nonjitable(func_name)
+    return is_special_function(func_name) or (is_opfun(func_name) or is_stencil(func_name)) and not nonjitable(func_name)
 
 
 @click.command()
@@ -69,6 +80,11 @@ def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
     for mangled, unmangled in zip(mangled_names, unmangled_names):
         if should_remain(unmangled):
             write(mangled + "\n")
+
+    global special_functions
+    for func_name, used in special_functions.items():
+        if not used:
+            print(f"Function: '{func_name}' not found") 
 
 
 if __name__ == "__main__":

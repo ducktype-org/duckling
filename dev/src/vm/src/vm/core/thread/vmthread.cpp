@@ -24,7 +24,6 @@
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/module_flags/module_flags.hpp>
 
-#include <iostream>
 #include <mutex>
 #include <string>
 #include <variant>
@@ -379,27 +378,18 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	Ref<VmValue> VMThread::executeFunction(
-		const low::LowFuncData& start_function, const low::LowFuncData& func
+	void runInterpreter(
+		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, VMThread& thread
 	) {
-		keepOrAcquireGil();
-		// Frame of the called function.
-		Frame*     frame       = runtime_data.frame_stack_base;
-		std::byte* local_stack = runtime_data.local_stack_base;
-
-		frame->current_function = &start_function;
-
-		const auto* instr = start_function.bc.data();
-
 #ifdef USE_TAIL_CALLS
-		instr->tc_opfun(instr, local_stack, frame, *this);
+		return instr->tc_opfun(instr, local_stack, frame, thread);
 
-#elif defined(USE_SWITCH_CASE)
+#elifdef USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
-		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                            \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                            \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
@@ -411,13 +401,36 @@ namespace vm {
 	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 	#undef HANDLE_MICRO_INSTR
 
-			default: {
+			default:
 				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));
-			}
 			}
 		}
 	End:
 #endif
+	}
+
+	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+	// NOLINTEND(cppcoreguidelines-avoid-goto)
+
+#if defined(__clang__)
+// @TODO: suppress code deduplication in Clang
+#elif defined(__GNUG__)
+	#pragma GCC pop_options
+#endif
+
+	Ref<VmValue> VMThread::executeFunction(
+		const low::LowFuncData& start_function, const low::LowFuncData& func
+	) {
+		keepOrAcquireGil();
+		// Frame of the called function.
+		Frame*     frame       = runtime_data.frame_stack_base;
+		std::byte* local_stack = runtime_data.local_stack_base;
+
+		frame->current_function = &start_function;
+
+		const auto* instr = start_function.bc.data();
+		runInterpreter(instr, local_stack, frame, *this);
+
 		// @note: The return value is the only block left on the block stack.
 		auto block         = frame->block_stack.back();
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
@@ -430,15 +443,6 @@ namespace vm {
 	}
 
 	// executeFunction end
-
-	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
-	// NOLINTEND(cppcoreguidelines-avoid-goto)
-
-#if defined(__clang__)
-// @TODO: suppress code deduplication in Clang
-#elif defined(__GNUG__)
-	#pragma GCC pop_options
-#endif
 
 	/**
 	 * @brief Handles execution request when `execution_request_break` bool is set.
@@ -638,15 +642,19 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = index,  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id  = index,  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();

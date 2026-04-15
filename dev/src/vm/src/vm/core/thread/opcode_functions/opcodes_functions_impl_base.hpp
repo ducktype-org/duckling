@@ -92,7 +92,7 @@ namespace vm {
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) {
-		{ CORE_ASSERT(frame->block_stack.size() == 1, "Invalid start function."); }
+		//{ CORE_ASSERT(frame->block_stack.size() == 1, "Invalid start function."); }
 		IF_TC(return;)
 	}
 

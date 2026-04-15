@@ -1,0 +1,68 @@
+function fibonacci{ i64 } -> i64 {
+    cmpGt_l64_imm           arg0, 1;
+    jmpIf_label             continue;
+    mov_l64_l64             ret_val, arg0;
+    ret;
+    
+label continue;
+    init_lany_type          sub_res1, i64;
+    init_lany_type          sub_arg1, i64;
+
+    mov_l64_l64             sub_arg1, arg0;
+    add_l64_imm             sub_arg1, -1;
+    call_func               fibonacci;
+
+    init_lany_type          sub_res2, i64;
+    init_lany_type          sub_arg2, i64;
+
+    mov_l64_l64             sub_arg2, arg0;
+    add_l64_imm             sub_arg2, -2;
+    call_func               fibonacci;
+
+    mov_l64_l64             ret_val, sub_res1;
+    add_l64_l64             ret_val, sub_res2;
+	deinit; # sub_res2
+	deinit; # sub_res1
+	deinit; # arg0
+	ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    # Read counter from STDIN
+    init_lany_type counter, i64;
+    input_l64 counter;
+
+# Loop until counter equals 0
+label loop_start;
+    
+    cmpEq_l64_imm counter, 0;
+    jmpIf_label loop_end;
+
+	init_lany_type 			fibo_ret, i64;
+    mov_l64_imm             fibo_ret, 0;
+
+	init_lany_type 			fibo_arg, i64;
+	mov_l64_l64             fibo_arg, counter;
+
+	call_func          		fibonacci;
+
+    output_l64              fibo_ret;
+    deinit;               # fibo_ret
+
+    add_l64_imm counter, -1;
+    jmp_label loop_start;
+
+label loop_end;
+    
+    # Return 0
+    mov_l64_imm ret_val, 0;
+    
+    deinit; # counter
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

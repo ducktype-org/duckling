@@ -6,14 +6,14 @@
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
-#include <vm/core/thread/low_program/instruction.hpp>
-
 #include <base/collections/optional.hpp>
+
+#include <vm/core/thread/low_program/instruction.hpp>
 
 #include <algorithm>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 LLVM_INCLUDE_BEGIN()
 
@@ -114,47 +114,55 @@ namespace vm::jit {
 		}
 
 		void lowerBasicBlock(
-			const low::LowFuncData& function_to_compile,
-			llvm::IRBuilder<>&      ir_builder,
-			usize                   start,
-			usize                   end,
+			const low::LowFuncData&          function_to_compile,
+			llvm::IRBuilder<>&               ir_builder,
+			usize                            start,
+			usize                            end,
 			std::unordered_set<std::string>& used_opfuns
 		) {
 			for (usize instr_idx = start; instr_idx < end; ++instr_idx) {
-				const vm::MicroInstruction& mi = function_to_compile.bc.at(instr_idx);
-				std::string opfun_name;
-				
-				auto opcode = vm::getInstructionOpcode(mi);
-				if (isOpcodeNonExecutable(opcode)) {
-					continue;
-				}
-				match_optional(llvmGetFunName(opcode)) {
-					opt_some(op_name) {
-						opfun_name = op_name;
-						used_opfuns.insert(opfun_name);
+				const vm::MicroInstruction& mi     = function_to_compile.bc.at(instr_idx);
+				auto                        opcode = vm::getInstructionOpcode(mi);
+				switch (opcode) {
+				case vm::low::MicroOpcode::jit_call_entrypoint:
+				case vm::low::MicroOpcode::call_func:
+				case vm::low::MicroOpcode::virtual_call_lptr_method:
+				case vm::low::MicroOpcode::ret_tailcall_func: {
+					auto            trampoline = "externalTrampoline";
+					llvm::Function* callee     = module->getFunction(trampoline);
+					if (!callee) {
+						callee = llvm::Function::Create(
+							opfun_ty, llvm::Function::ExternalLinkage, trampoline, module
+						);
 					}
-					opt_none {
-						opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode));
+					ir_builder.CreateCall(
+						opfun_ty, callee, { instr_arg, locals_arg, frame_arg, thread_arg }
+					);
+				} break;
+				default:
+					if (isOpcodeNonExecutable(opcode)) continue;
+					std::string opfun_name;
+					match_optional(llvmGetFunName(opcode)) {
+						opt_some(op_name) {
+							opfun_name = op_name;
+							used_opfuns.insert(opfun_name);
+						}
+						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
+					ir_builder.CreateCall(
+						opfun_ty,
+						getOrCreateOpcodeFunction(opfun_name),
+						{ instr_arg, locals_arg, frame_arg, thread_arg }
+					);
 				}
-				
-
-				ir_builder.CreateCall(
-					opfun_ty,
-					getOrCreateOpcodeFunction(opfun_name),
-					{ instr_arg, locals_arg, frame_arg, thread_arg }
-				);
 			}
 		}
 
-		void lowerConditionalJump(
-			const cf::BasicBlock& block,
-			llvm::IRBuilder<>&    ir_builder
-		) {
+		void lowerConditionalJump(const cf::BasicBlock& block, llvm::IRBuilder<>& ir_builder) {
 			CORE_ASSERT(frame_ty, "Frame struct type should be defined in the module");
 			CORE_ASSERT(!flag_data_ty->isOpaque(), "FlagData struct type should be defined by now");
 
-			u32   flags_field_index = 0;
+			u32 flags_field_index = 0;
 
 			llvm::Value* frame_ptr = ir_builder.CreateLoad(frame_ptr_ty, frame_arg);
 			llvm::Value* flags_ptr
@@ -163,16 +171,19 @@ namespace vm::jit {
 			llvm::Value* flag_ptr   = ir_builder.CreateStructGEP(flag_data_ty, flags_ptr, 0);
 			llvm::Value* flag_value = ir_builder.CreateLoad(ir_builder.getInt1Ty(), flag_ptr);
 
-			if (block.edgeKind() == cf::OutEdges::Kind::JmpIfNot) {
+			if (block.edgeKind() == cf::OutEdges::Kind::JmpIfNot)
 				flag_value = ir_builder.CreateNot(flag_value);
-			}
 
 			ir_builder.CreateCondBr(
 				flag_value, llvm_blocks[block.successTarget()], llvm_blocks[block.failTarget()]
 			);
 		}
 
-		void lowerBlock(const low::LowFuncData& function_to_compile, const cf::BasicBlock& block, std::unordered_set<std::string>& used_opfuns) {
+		void lowerBlock(
+			const low::LowFuncData&          function_to_compile,
+			const cf::BasicBlock&            block,
+			std::unordered_set<std::string>& used_opfuns
+		) {
 			llvm::IRBuilder<> ir_builder(llvm_blocks[block.id]);
 			lowerBasicBlock(function_to_compile, ir_builder, block.start, block.end, used_opfuns);
 
@@ -218,21 +229,28 @@ namespace vm::jit {
 			std::unordered_set<std::string> used_opfuns;
 
 			for (usize block_idx = 0; block_idx < llvm_blocks.size(); ++block_idx)
-				lowerBlock(function_to_compile, cfg.getBlock(block_idx), used_opfuns);// lowerBlock(function_to_compile, block_idx, used_opfuns);
+				lowerBlock(
+					function_to_compile, cfg.getBlock(block_idx), used_opfuns
+				);  // lowerBlock(function_to_compile, block_idx, used_opfuns);
 
 			auto used_opfuns_filter = [&](const llvm::GlobalValue* GV) -> bool {
 				return used_opfuns.contains(GV->getName().str());
 			};
 
-			// At this point, `used_opfuns` contains all used opfunctions' names, so we can clone the appropriate definitions and link them
-			// against the user function module.
-			
-			llvm::ValueToValueMapTy vmap;
-			std::unique_ptr<llvm::Module> used_opfuns_module = llvm::CloneModule(*llvmGetMasterModule(), vmap, used_opfuns_filter);
-			llvm::Linker::linkModules(*module, std::move(used_opfuns_module), llvm::Linker::Flags::LinkOnlyNeeded);
+			// At this point, `used_opfuns` contains all used opfunctions' names, so we can clone
+			// the appropriate definitions and link them against the user function module.
+
+			llvm::ValueToValueMapTy       vmap;
+			std::unique_ptr<llvm::Module> used_opfuns_module
+				= llvm::CloneModule(*llvmGetMasterModule(), vmap, used_opfuns_filter);
+			llvm::Linker::linkModules(
+				*module, std::move(used_opfuns_module), llvm::Linker::Flags::LinkOnlyNeeded
+			);
 			for (auto& F: module->functions()) {
-				if (!F.isDeclaration() && F.getName().str() != base::toString(function_to_compile.name)) {
-					// Set cloned opfuns' linkage to AvailableExternally to avoid double compilation and symbol conflicts.
+				if (!F.isDeclaration()
+				    && F.getName().str() != base::toString(function_to_compile.name)) {
+					// Set cloned opfuns' linkage to AvailableExternally to avoid double compilation
+					// and symbol conflicts.
 					F.setLinkage(llvm::GlobalValue::AvailableExternallyLinkage);
 				}
 			}
