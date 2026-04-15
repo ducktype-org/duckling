@@ -569,10 +569,10 @@ namespace lexer {
 
 		Tokens inner_tokens;
 		next();  // par open
-		constexpr auto is_group_end = [](const Lexer& lexer) {
+		constexpr auto IS_GROUP_END = [](const Lexer& lexer) {
 			return lexer.isEOF() || lexer.peek().is(Class::close_bracket);
 		};
-		parseUntil(inner_tokens, is_group_end);
+		parseUntil(inner_tokens, IS_GROUP_END);
 
 		end = where;
 
