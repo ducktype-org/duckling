@@ -9,7 +9,7 @@ FetchContent_Declare(
 	GIT_TAG        ${REPLXX_TAG}
 	SYSTEM
     PATCH_COMMAND "${GIT_EXECUTABLE}" reset --hard HEAD
-          COMMAND "${GIT_EXECUTABLE}" apply "${CMAKE_CURRENT_LIST_DIR}/replxx-cmake-version.patch"
+          COMMAND "${GIT_EXECUTABLE}" apply "${CMAKE_CURRENT_LIST_DIR}/patches/replxx-cmake-version.patch"
 )
 
 # Build replxx based on the selected mode

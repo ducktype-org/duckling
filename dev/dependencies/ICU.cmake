@@ -77,21 +77,30 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 		set(ICU_UC_LIBRARY "${ICU_PREFIX}/lib/libicuuc.so.${ICU_VERSION_MAJOR}")
 		set(ICU_IO_LIBRARY "${ICU_PREFIX}/lib/libicuio.so.${ICU_VERSION_MAJOR}")
 
-		add_library(icudata IMPORTED SHARED GLOBAL)
-		set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
-		target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
+        add_library(icudata IMPORTED SHARED GLOBAL)
+        set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
+        target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
 
-		add_library(icui18n IMPORTED SHARED GLOBAL)
-		set_target_properties(icui18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
-		target_include_directories(icui18n INTERFACE ${ICU_INCLUDE_DIRS})
+        add_library(icui18n IMPORTED SHARED GLOBAL)
+        set_target_properties(icui18n PROPERTIES
+            IMPORTED_LOCATION ${ICU_I18N_LIBRARY}
+            IMPORTED_LINK_DEPENDENT_LIBRARIES "icudata"   # icui18n.so needs icudata.so
+        )
+        target_include_directories(icui18n INTERFACE ${ICU_INCLUDE_DIRS})
 
-		add_library(icuuc IMPORTED SHARED GLOBAL)
-		set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
-		target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
+        add_library(icuuc IMPORTED SHARED GLOBAL)
+        set_target_properties(icuuc PROPERTIES
+            IMPORTED_LOCATION ${ICU_UC_LIBRARY}
+            IMPORTED_LINK_DEPENDENT_LIBRARIES "icudata;icui18n"  # icuuc.so needs both
+        )
+        target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
 
-		add_library(icuio IMPORTED SHARED GLOBAL)
-		set_target_properties(icuio PROPERTIES IMPORTED_LOCATION ${ICU_IO_LIBRARY})
-		target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
+        add_library(icuio IMPORTED SHARED GLOBAL)
+        set_target_properties(icuio PROPERTIES
+            IMPORTED_LOCATION ${ICU_IO_LIBRARY}
+            IMPORTED_LINK_DEPENDENT_LIBRARIES "icuuc;icudata;icui18n"
+        )
+        target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
 
 	elseif(UNIX)
 		set(ICU_CFLAGS "-w")

@@ -8,7 +8,7 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/agauniyal/rang.git
   GIT_TAG       ${rang_TAG}
   PATCH_COMMAND "${GIT_EXECUTABLE}" reset --hard HEAD
-        COMMAND "${GIT_EXECUTABLE}" apply "${CMAKE_CURRENT_LIST_DIR}/rang-cmake-version.patch"
+        COMMAND "${GIT_EXECUTABLE}" apply "${CMAKE_CURRENT_LIST_DIR}/patches/rang-cmake-version.patch"
 )
 
 FetchContent_MakeAvailable(rang)

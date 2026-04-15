@@ -6,7 +6,7 @@ set(TREE_SITTER_COMMIT "534c4a074cd461ab30d1c8a54bf733d3050221a0")  # 0.26.6, re
 set(TREE_SITTER_CPP_COMMIT "f41e1a044c8a84ea9fa8577fdd2eab92ec96de02")  # 0.23.4, released 2024-11-11
 
 set(TS_URL "https://github.com/tree-sitter/tree-sitter/archive/${TREE_SITTER_COMMIT}.zip")
-set(TS_CPP_URL "https://github.com/tree-sitter/tree-sitter-cpp/archive/${TREE_SITTER_CPP_COMMIT}.zip")
+set(TS_CPP_URL "https://github.com/tree-sitter/tree-sitter-cpp.git")
 
 FetchContent_Declare(
 	tree-sitter
@@ -16,7 +16,8 @@ FetchContent_Declare(
 
 FetchContent_Declare(
 	tree-sitter-cpp
-	URL ${TS_CPP_URL}
+    GIT_REPOSITORY ${TS_CPP_URL}
+    GIT_TAG ${TS_CPP_COMMIT}
     SYSTEM
 )
 
