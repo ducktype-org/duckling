@@ -10,5 +10,7 @@ end: "\nGoodbye!\n"
 instruction_prompt: "Instruction executed.\n"
 
 SubDirs:
-  - working_tests
-  # - TO_BE_ADDED
+  - fundamentals
+  - intermediate_statements
+  - declarations
+  - variable_assignment

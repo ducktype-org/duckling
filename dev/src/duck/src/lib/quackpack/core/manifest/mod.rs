@@ -20,6 +20,7 @@ pub use source::*;
 
 use crate::{
     QuackError, StrId,
+    duck::util::duck_home::DuckHome,
     quackpack::{core::Version, schemas::registry},
 };
 
@@ -96,6 +97,11 @@ impl Manifest {
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
     }
+
+    /// Check if this is the manifest of the global venv.
+    pub fn is_global(&self) -> bool {
+        self.name == DuckHome::GLOBAL_PACKAGE_NAME
+    }
 }
 
 impl TryFrom<registry::Manifest> for Manifest {
@@ -116,9 +122,8 @@ impl TryFrom<registry::Manifest> for Manifest {
             name,
             description,
         } = metadata;
-        let authors = authors.into_iter().map(Into::into).collect();
-        let metadata =
-            PackageMetadata::new(authors, Some(license.into()), Some(description.into()));
+        let authors = authors.into_iter().collect();
+        let metadata = PackageMetadata::new(authors, Some(license), Some(description));
         Ok(Manifest::new(
             name.into(),
             version,
@@ -146,11 +151,7 @@ impl TryFrom<Manifest> for registry::Manifest {
         } = value;
         let license = metadata.license().map(Into::into).unwrap_or_default();
         let description = metadata.description().map(Into::into).unwrap_or_default();
-        let authors = metadata
-            .into_authors()
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        let authors = metadata.into_authors().into_iter().collect();
         let metadata = registry::Metadata {
             version,
             authors,

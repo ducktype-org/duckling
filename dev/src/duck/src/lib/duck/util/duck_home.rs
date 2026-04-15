@@ -9,8 +9,15 @@
 //! ├── global_venv/ <root of the global shared virtual environment>
 //! └── storage/ <root of the storage internal files>
 
-use crate::{QuackResult, util::env::Env};
-use std::path::{Path, PathBuf};
+use crate::{
+    QuackResult,
+    quackpack::core::PackageLoader,
+    util::{env::Env, path_ops_ext::PathOpsExt},
+};
+use std::{
+    fmt,
+    path::{Path, PathBuf},
+};
 use tracing::debug;
 
 macro_rules! getter {
@@ -137,7 +144,6 @@ macro_rules! call_on_dirs {
     };
 }
 
-#[derive(Debug)]
 /// Implementation of the above layout
 // We keep all of the paths, because then we don't have to do any allocations later.
 pub struct DuckHome {
@@ -150,6 +156,14 @@ pub struct DuckHome {
     user_config: PathBuf,
     storage_dir: PathBuf,
     global_venv_dir: PathBuf,
+}
+
+impl fmt::Debug for DuckHome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DuckHome")
+            .field("root", &self.root)
+            .finish_non_exhaustive()
+    }
 }
 
 impl DuckHome {
@@ -217,5 +231,29 @@ impl DuckHome {
 
     call_on_files! {
         ensure_file
+    }
+
+    pub const GLOBAL_PACKAGE_NAME: &str = "__global__";
+
+    /// Default minimal manifest for the global package.
+    pub fn default_global_manifest() -> String {
+        format!(
+            "\
+metadata:
+  name: {}
+  version: '0.1'
+  authors: []",
+            Self::GLOBAL_PACKAGE_NAME
+        )
+    }
+
+    /// Assure that the global package root folder exists and there is a manifest in it.
+    pub fn ensure_and_populate_global_dir(&self) -> QuackResult<&Path> {
+        let global_pkg_dir = self.ensure_global_dir()?;
+        let manifest_path = global_pkg_dir.join(PackageLoader::MANIFEST_NAME);
+        if !manifest_path.exists() {
+            manifest_path.write(Self::default_global_manifest().as_bytes())?;
+        }
+        Ok(global_pkg_dir)
     }
 }

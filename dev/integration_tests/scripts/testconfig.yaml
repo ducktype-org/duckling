@@ -1,30 +1,26 @@
-mode: "direct"
-folder: "." 
-duckc_bin: "../../../build/bin/duckc"
-vm_bin: "../../../build/bin/VM"
+# Integration tests for scripts in Duckling.
 
-# We introduce a variable to control whether the build artifacts should be kept after running the test in VM mode. 
-keep_build: "false"
+mode: "direct"
+folder: "."
+
+duckc_path: "@{build_dir}/bin/duckc"
+dvm_path: "@{build_dir}/bin/VM"
+clean_cmd: "rm -rf @{folder}/duck_build"
+
+Clean: "@{clean_cmd}"
 
 PreCase: "
+  @{clean_cmd};
   if [ '@{mode}' = 'vm' ]; then
-    @{duckc_bin} compile_script @{folder}/@{Name}.ds --dvm-backend;
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend;
   fi"
 
 Run: "
   if [ '@{mode}' = 'vm' ]; then
-    @{vm_bin} run duck_build/@{Name}.dbc;
-    
-    EXIT_CODE=$?; 
-    
-    if [ '@{keep_build}' != 'true' ]; then
-      rm -rf duck_build;
-    fi;
-    
-    exit $EXIT_CODE;
+    @{dvm_path} run @{folder}/duck_build/@{Name}.dbc;
   else
-    @{duckc_bin} run @{folder}/@{Name}.ds;
+    @{duckc_path} run @{folder}/@{Name}.ds;
   fi"
 
 SubDirs:
-  - working_tests
+  - basic_tests

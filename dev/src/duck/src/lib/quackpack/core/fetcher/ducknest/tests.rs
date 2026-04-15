@@ -9,7 +9,7 @@ use crate::quackpack::schemas::registry;
 use httpmock::prelude::*;
 use tempfile::tempdir;
 
-fn create_mock_server() -> (MockServer, DuckCtx) {
+fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {
         name: "pkg1".into(),
         version: vec![Version::new(2, 3, 6)],
@@ -151,7 +151,7 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
         then.status(200).body("foo-1.2.3");
     });
 
-    (server, DuckCtx::default())
+    (server, DuckContext::default())
 }
 
 #[test]

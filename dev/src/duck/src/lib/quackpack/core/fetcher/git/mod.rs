@@ -3,12 +3,13 @@
 use std::path::Path;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId,
+    DuckContext, QuackResult, QuackResultContext, StrId,
     quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
 };
 
 use git2::Oid;
 use git2::{Repository, build::RepoBuilder};
+use tracing::debug;
 
 #[cfg(test)]
 mod tests;
@@ -20,10 +21,11 @@ pub struct GitClient {}
 
 impl GitClient {
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
+    #[tracing::instrument(skip(ctx))]
     pub fn clone_blocking(
         source: &Git,
         destination: &Path,
-        ctx: &DuckCtx,
+        ctx: &DuckContext,
     ) -> QuackResult<GitCloneResponse> {
         let mut builder = RepoBuilder::new();
 
@@ -36,6 +38,7 @@ impl GitClient {
         let repository = match builder.clone(source.url().as_str(), destination) {
             Ok(repository) => repository,
             Err(e) => {
+                debug!("failed to clone: {e}");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
                 if !source.can_shallow_clone() {
                     return Err(e.into());
@@ -46,6 +49,8 @@ impl GitClient {
                 builder.clone(source.url().as_str(), destination)?
             }
         };
+
+        debug!("will checkout to tag...");
 
         // Prefer specific commits over tags.
         if let Some(commit) = source.rev() {
@@ -91,6 +96,7 @@ trait RepositoryExt {
 }
 
 impl RepositoryExt for Repository {
+    #[tracing::instrument(skip(self))]
     fn checkout_commit(&self, commit: StrId) -> QuackResult<()> {
         let oid =
             Oid::from_str(&commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
@@ -103,6 +109,7 @@ impl RepositoryExt for Repository {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self))]
     fn checkout_tag(&self, tag: StrId) -> QuackResult<()> {
         let refname = format!("refs/tags/{}", tag);
         let reference = self

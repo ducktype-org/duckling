@@ -2,6 +2,8 @@
 
 #include "process_info.hpp"
 
+#include <events/emitter.hpp>
+
 #include <filesystem/file.hpp>
 
 #include <vm/api/data/response.hpp>
@@ -95,6 +97,10 @@ namespace vm::api {
 			ThreadID thread_id;
 			u64      frame_index;
 		};
+
+		struct AttachStatusListener {
+			Ref<events::Listener<ProcStatus>> listener;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -120,7 +126,8 @@ namespace vm::api {
 		request::Attach,
 		request::Detach,
 		request::ExitCodeRequest,
-		request::DeinitAndValidate>;
+		request::DeinitAndValidate,
+		request::AttachStatusListener>;
 
 	struct SupervisorRequest {
 		PID            pid;

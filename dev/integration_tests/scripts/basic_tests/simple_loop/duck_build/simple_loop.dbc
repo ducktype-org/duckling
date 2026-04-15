@@ -1,0 +1,89 @@
+type primitive: i8 1
+type primitive: i16 2
+type primitive: i32 4
+type primitive: i64 8
+type primitive: byte 1
+type pointer: ptr_i16 i16
+type pointer: ptr_i32 i32
+type pointer: ptr_i64 i64
+type primitive: void 1
+type dynamic_table: string byte
+type pointer: ptr_string string
+type dynamic_table: argv ptr_string
+type pointer: ptr_argv argv
+type opaque: opaque_ptr 8
+type opaque: VTablePtr 8
+type opaque: mutex 8
+type opaque: condition_variable 8
+
+global_data _Q_M8script_0G1i i32 {
+    constructor: _Q_M8script_0G1igc,
+};
+
+function _Q_M8script_0G1igc {  } -> void {
+    label                   label_0;
+    mov_g32_imm            _Q_M8script_0G1i,        6;
+    # Terminator: ReturnVoid
+    ret                   ;
+}
+
+function _Q___repl_instr_wrapper_1 {  } -> void {
+    init_lany_type             var0,       i8;
+    init_lany_type             var1,      i32;
+    init_lany_type             var2,       i8;
+    init_lany_type             var3,      i64;
+    init_lany_type             var4,      i64;
+    init_lany_type             var5,       i8;
+    label                   label_0;
+    # Terminator: Jump
+    jmp_label               label_1;
+    label                   label_2;
+    init_lany_type         cast_src_tmp0,      i32;
+    mov_l32_g32            cast_src_tmp0, _Q_M8script_0G1i;
+    sext_l64_l32               var3, cast_src_tmp0;
+    deinit                ;
+    init_lany_type         call_result1,      i64;
+    init_lany_type         call_arg0_2,      i64;
+    mov_l64_l64            call_arg0_2,     var3;
+    call_builtinfunc       builtin_output_i64;
+    mov_l64_l64                var4, call_result1;
+    deinit                ;
+    init_lany_type         bin_tmp3,      i32;
+    mov_l32_g32            bin_tmp3, _Q_M8script_0G1i;
+    sub_l32_imm            bin_tmp3,        1;
+    mov_g32_l32            _Q_M8script_0G1i, bin_tmp3;
+    deinit                ;
+    # Terminator: Jump
+    jmp_label               label_1;
+    label                   label_1;
+    mov_l32_imm                var1,        0;
+    init_lany_type         lhs_temp4,      i32;
+    mov_l32_g32            lhs_temp4, _Q_M8script_0G1i;
+    init_lany_type         cnp_tmp5,       i8;
+    cmpGt_l32_l32          lhs_temp4,     var1;
+    mov_l8_imm             cnp_tmp5,        0;
+    cmov_l8_imm            cnp_tmp5,        1;
+    mov_l8_l8                  var2, cnp_tmp5;
+    deinit                ;
+    deinit                ;
+    mov_l8_l8                  var0,     var2;
+    # Terminator: Jump
+    jmp_label               label_3;
+    label                   label_3;
+    mov_l8_l8                  var5,     var0;
+    # Terminator: Branch
+    cmpEq_l8_imm               var5,        1;
+    jmpIf_label             label_2;
+    jmpIfNot_label          label_4;
+    label                   label_4;
+    # Terminator: ReturnVoid
+    ret                   ;
+}
+
+function main {  } -> i64 {
+    call_func              _Q___repl_instr_wrapper_1;
+    mov_l64_imm             ret_val,        0;
+    ret                   ;
+}
+
+

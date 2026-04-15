@@ -1,0 +1,25 @@
+# Aliases tests for Duckling REPL
+
+Tests:
+  basic_declarations:
+    Enabled: "false"
+    Cases:
+      basic_declarations:
+        Input:
+          File: "basic_declarations/basic_declarations.rtf"
+        Output:
+          String: "@{beginning}\n42@{end}"
+    
+  possible_conflicts:
+    Enabled: "false"
+    Cases:
+      variable_conflict:
+        Input:
+          File: "possible_conflicts/variable_conflict.rtf"
+        Output:
+          String: "@{beginning}\n42\n@{end}"
+      function_conflict:
+        Input:
+          File: "possible_conflicts/function_conflict.rtf"
+        Output:
+          String: "@{beginning}\n=> 42\n=> 100\n@{end}"
