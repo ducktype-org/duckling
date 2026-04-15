@@ -362,19 +362,19 @@ private:
 
 			CRef<TypeInterface> tuple_interface = tuple_type.getInterface(ctx);
 
-			const compiler::helios::SymID _1 = [&] {
+			const compiler::helios::SymID first = [&] {
 				const auto& matching = tuple_interface->getElementsWithName(base::StrID("_1"));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
 			}();
 
-			const compiler::helios::SymID _2 = [&] {
+			const compiler::helios::SymID second = [&] {
 				const auto& matching = tuple_interface->getElementsWithName(base::StrID("_2"));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
 			}();
 
-			const compiler::helios::SymID _3 = [&] {
+			const compiler::helios::SymID third = [&] {
 				const auto& matching = tuple_interface->getElementsWithName(base::StrID("_3"));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
@@ -383,13 +383,13 @@ private:
 			variant_match(tuple_layout->getVariant()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getOffsetOfFieldSymbol(_1) == Bytes(0)
-							&& l.getOffsetOfFieldSymbol(_2) == Bytes(2)
-							&& l.getOffsetOfFieldSymbol(_3) == Bytes(8),
+						l.getOffsetOfFieldSymbol(first) == Bytes(0)
+							&& l.getOffsetOfFieldSymbol(second) == Bytes(2)
+							&& l.getOffsetOfFieldSymbol(third) == Bytes(8),
 						"Tuple layout should align its component layouts."
 					);
 
-					for (const auto& field: { _1, _2, _3 }) {
+					for (const auto& field: { first, second, third }) {
 						assertTrue(
 							l.getFieldSymbolOfLayoutIndex(
 								l.getLayoutIndexOfFieldSymbol(field).value()

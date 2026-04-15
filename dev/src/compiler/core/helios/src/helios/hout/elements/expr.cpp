@@ -12,9 +12,9 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios/tsh/queries.hpp>
 
 #include <query_framework/context/context.hpp>
 

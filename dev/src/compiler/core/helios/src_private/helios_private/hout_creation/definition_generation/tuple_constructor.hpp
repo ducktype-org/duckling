@@ -1,7 +1,7 @@
 #pragma once
 
 #include <helios/hout/hout.hpp>
-#include <tsh/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
