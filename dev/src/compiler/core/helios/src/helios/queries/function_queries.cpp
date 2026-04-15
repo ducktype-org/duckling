@@ -326,8 +326,7 @@ namespace compiler::helios {
 				          ->valueOrThrow();
 				break;
 			default:
-				// @TODO: Log proper error.
-				return query::Failed();
+				CORE_PANIC("Implicit ctor of type kind", class_type.getKind(), " is not handled.");
 			}
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
