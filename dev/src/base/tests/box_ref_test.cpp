@@ -82,6 +82,7 @@ public:
 		TESTER_ADD_TEST(defaultMembersTest);
 		TESTER_ADD_TEST(testMBoxMRef);
 		TESTER_ADD_TEST(testDeleters);
+		TESTER_ADD_TEST(testBoxOrCRef);
 	}
 
 private:

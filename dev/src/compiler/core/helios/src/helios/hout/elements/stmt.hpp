@@ -63,11 +63,8 @@ namespace compiler::helios::code {
 	 * @brief Represents `var/let a : T = ..;` statement in HOUT
 	 */
 	struct VariableStmt final: public Stmt {
-		// Right now we allow no-initial value here for testing purposes.
-		// In the future either HELIOS or MIR should emit default initialization.
-		// For now MIR panics on no initial value.
-		base::Optional<BoxOrCRef<Expr>> initial_value;
-		tsh::SymbolType<>               type;
+		BoxOrCRef<Expr>   initial_value;
+		tsh::SymbolType<> type;
 
 		// @TODO decide if this is needed:
 		SymID helios_symbol;

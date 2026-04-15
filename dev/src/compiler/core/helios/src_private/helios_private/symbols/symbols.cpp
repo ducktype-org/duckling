@@ -1020,7 +1020,7 @@ namespace compiler::helios {
 			}
 
 			void visitVariableStmt(const code::VariableStmt& stmt) override {
-				if (stmt.initial_value) stmt.initial_value.value()->acceptVisitor(*this);
+				stmt.initial_value->acceptVisitor(*this);
 			}
 
 			void visitAssignmentStmt(const code::AssignmentStmt& stmt) override {

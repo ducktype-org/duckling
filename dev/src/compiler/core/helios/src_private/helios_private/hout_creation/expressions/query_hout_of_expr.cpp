@@ -770,12 +770,7 @@ namespace compiler::helios {
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) {
-				if (coercion.isEmptyCoercion())
-					return expr_hout;
-				else
-					return coercion.coerce(ctx, expr_hout->clone());
-			}
+			variant_case(Coercion, coercion) { return coercion.coerceFromRef(ctx, expr_hout); }
 			variant_default {
 				logCoercionFailure(
 					ctx,
