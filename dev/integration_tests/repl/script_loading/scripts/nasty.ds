@@ -1,7 +1,7 @@
-const BASE: i32 = 7;
-
 namespace Deep {
-    const OFFSET: i32 = BASE + 5;
+    fun bump(v: i32) = {
+        return v;
+    }
 }
 
 # NYI in current DVM backend path: class layout lowering.
@@ -19,7 +19,7 @@ fun nasty_value() = {
     }
 
     if (true) {
-        return acc + Deep.OFFSET; #consts don't work for now, so this returns 3...
+        return Deep.bump(acc);
     }
 
     return 0;

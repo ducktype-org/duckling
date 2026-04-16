@@ -10,7 +10,7 @@ Tests:
             /load @{script-basic}
             x
         Output:
-          String: "@{begining}\n13\nScript loaded: @{script-basic}\n=> 10\n@{end}"
+          String: "@{beginning}\n13\nScript loaded: @{script-basic}\n=> 10\n@{end}"
 
       load-if-flow-script:
         Input:
@@ -18,7 +18,7 @@ Tests:
             /load @{script-if-flow}
             y
         Output:
-          String: "@{begining}\n14\nScript loaded: @{script-if-flow}\n=> 10\n@{end}"
+          String: "@{beginning}\n14\nScript loaded: @{script-if-flow}\n=> 10\n@{end}"
 
       load-mixed-script:
         Input:
@@ -26,7 +26,7 @@ Tests:
             /load @{script-mixed}
             add_two()
         Output:
-          String: "@{begining}\n4\nScript loaded: @{script-mixed}\n=> 4\n@{end}"
+          String: "@{beginning}\n4\nScript loaded: @{script-mixed}\n=> 4\n@{end}"
 
       load-nested-functions-script:
         Input:
@@ -34,7 +34,7 @@ Tests:
             /load @{script-nested-functions}
             g()
         Output:
-          String: "@{begining}\n42\nScript loaded: @{script-nested-functions}\n=> 42\n@{end}"
+          String: "@{beginning}\n42\nScript loaded: @{script-nested-functions}\n=> 42\n@{end}"
 
   # Category: scripts with no explicit stdout during load.
   load-command-silent-load:
@@ -45,7 +45,7 @@ Tests:
             /load @{script-silent-state}
             sx
         Output:
-          String: "@{begining}\nScript loaded: @{script-silent-state}\n=> 12\n@{end}"
+          String: "@{beginning}\nScript loaded: @{script-silent-state}\n=> 12\n@{end}"
 
       load-silent-functions-script:
         Input:
@@ -53,7 +53,7 @@ Tests:
             /load @{script-silent-functions}
             twice_base()
         Output:
-          String: "@{begining}\nScript loaded: @{script-silent-functions}\n=> 12\n@{end}"
+          String: "@{beginning}\nScript loaded: @{script-silent-functions}\n=> 12\n@{end}"
 
   # Category: multiple /load commands in a single bare REPL session.
   load-command-multi-load:
@@ -66,7 +66,7 @@ Tests:
             x
             y
         Output:
-          String: "@{begining}\n13\nScript loaded: @{script-basic}\n14\nScript loaded: @{script-if-flow}\n=> 10\n=> 10\n@{end}"
+          String: "@{beginning}\n13\nScript loaded: @{script-basic}\n14\nScript loaded: @{script-if-flow}\n=> 10\n=> 10\n@{end}"
 
       mixed-silent-and-side-effect-loads:
         Input:
@@ -76,7 +76,7 @@ Tests:
             sx
             x
         Output:
-          String: "@{begining}\nScript loaded: @{script-silent-state}\n13\nScript loaded: @{script-basic}\n=> 12\n=> 10\n@{end}"
+          String: "@{beginning}\nScript loaded: @{script-silent-state}\n13\nScript loaded: @{script-basic}\n=> 12\n=> 10\n@{end}"
 
   # Category: intentionally complex syntax.
   load-command-evil-syntax:
@@ -87,5 +87,5 @@ Tests:
             /load @{script-nasty}
             nasty_value()
         Output:
-          String: "@{begining}\n3\nScript loaded: @{script-nasty}\n=> 3\n@{end}"
+          String: "@{beginning}\n3\nScript loaded: @{script-nasty}\n=> 3\n@{end}"
 

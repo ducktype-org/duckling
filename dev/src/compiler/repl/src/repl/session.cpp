@@ -32,10 +32,20 @@
 
 namespace compiler::repl {
 	namespace {
+		constexpr std::string_view WS_CHARS = " \t\r\n\f\v";
+
 		std::string_view trimLeft(std::string_view text) {
-			auto first_not_ws = text.find_first_not_of(" \t");
+			auto first_not_ws = text.find_first_not_of(WS_CHARS);
 			if (first_not_ws == std::string_view::npos) return {};
 			return text.substr(first_not_ws);
+		}
+
+		std::string_view trim(std::string_view text) {
+			auto first_not_ws = text.find_first_not_of(WS_CHARS);
+			if (first_not_ws == std::string_view::npos) return {};
+
+			auto last_not_ws = text.find_last_not_of(WS_CHARS);
+			return text.substr(first_not_ws, last_not_ws - first_not_ws + 1);
 		}
 	}
 
@@ -63,7 +73,7 @@ namespace compiler::repl {
 	}
 
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {
-		auto trimmed_path = trimLeft(file_path);
+		auto trimmed_path = trim(file_path);
 		if (trimmed_path.empty())
 			return ReplResult::error("Missing script path. Usage: /load <path-to-script.ds>");
 
@@ -122,7 +132,7 @@ namespace compiler::repl {
 	}
 
 	bool ReplSession::handleCommand(std::string_view line) {
-		auto command_end = line.find(' ');
+		auto command_end = line.find_first_of(" \t");
 		auto command     = line.substr(0, command_end);
 		auto args        = command_end == std::string_view::npos ? std::string_view{}
 		                                                         : trimLeft(line.substr(command_end + 1));
@@ -148,11 +158,12 @@ namespace compiler::repl {
 		}
 
 		if (command == "/load") {
-			auto load_result = loadScriptFile(args);
+			auto script_path = trim(args);
+			auto load_result = loadScriptFile(script_path);
 			if (load_result.status == ReplResult::Status::Error)
 				std::cerr << load_result.message << "\n";
 			else
-				std::cout << "Script loaded: " << args << "\n";
+				std::cout << "Script loaded: " << script_path << "\n";
 			return true;
 		}
 

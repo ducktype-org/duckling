@@ -10,11 +10,8 @@ end: "\nGoodbye!\n"
 instruction_prompt: "Instruction executed.\n"
 
 SubDirs:
+  - declarations
   - fundamentals
   - intermediate_statements
-  - declarations
-  - basic_expressions
-  - decl_of_functions
-  # - multiline
   - script_loading
   - variable_assignment

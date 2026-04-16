@@ -44,6 +44,9 @@ namespace compiler::repl {
 		 * Statements are executed in source order and become part of the current session state.
 		 * This means loaded definitions and variables can be used by subsequent interactive input.
 		 *
+		 * @note Loading is non-transactional: execution stops at the first error and statements
+		 * that finished successfully before that error remain applied in the session.
+		 *
 		 * @param file_path Path to a .ds file
 		 * @return ReplResult indicating success or an error message
 		 */
@@ -80,6 +83,9 @@ namespace compiler::repl {
 		 * Parses the full input to validate syntax and extract statement boundaries,
 		 * then creates a separate module for each top-level statement and executes
 		 * them in order. Stops at the first error.
+		 *
+		 * @note Execution is intentionally non-transactional: statements executed before
+		 * the failing one remain part of the active REPL state.
 		 *
 		 * @param input The code to execute (may contain multiple statements)
 		 * @return ReplResult with execution outcome and optional message
@@ -215,8 +221,9 @@ namespace compiler::repl {
 		/**
 		 * Suppresses REPL echo while a preload script is being loaded into the session.
 		 *
-		 * This keeps /load and `duckc repl <script>` quiet so only script-authored output
-		 * reaches the user, instead of REPL bookkeeping messages.
+		 * This prevents per-statement REPL echo/bookkeeping output during `/load` and
+		 * `duckc repl <script>`, while still allowing explicit status messages emitted by
+		 * the load flow itself.
 		 */
 		bool m_suppress_output = false;
 	};

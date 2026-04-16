@@ -657,6 +657,9 @@ clah::Clah getClahForMain() {
 					}
 
 					if (options.getExtraParameterCount() == 1) {
+						// Preload mode currently treats load failure as fatal: if the
+			            // script fails to load/compile, we print the error and exit
+			            // before entering the interactive REPL loop.
 						auto script_file = options.getExtra<fs::File>(0).value();
 						auto load_result
 							= session.loadScriptFile(script_file.getFilePath().string());
