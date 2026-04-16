@@ -115,7 +115,8 @@ private:
 			collection.flush();
 		}
 
-		std::ifstream     in(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+		std::ifstream in(root / artifacts::ArtifactCollection::BUILD_ID_FILE);
+		ASSERT_TRUE(in.is_open());
 		std::stringstream ss;
 		ss << in.rdbuf();
 		ASSERT_TRUE(ss.str() == std::string(artifacts::BUILD_ID));

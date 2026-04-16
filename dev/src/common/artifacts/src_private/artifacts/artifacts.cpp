@@ -58,8 +58,29 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 		);
 	}
 
-	for (const auto& entry: std::filesystem::directory_iterator(PATH))
-		std::filesystem::remove_all(entry.path());
+	std::error_code iter_ec;
+	for (const auto& entry: std::filesystem::directory_iterator(PATH, iter_ec)) {
+		std::error_code remove_ec;
+		std::filesystem::remove_all(entry.path(), remove_ec);
+		if (remove_ec) {
+			CORE_USER_LOG(
+				"Warning: failed to remove stale artifact entry '",
+				entry.path().string(),
+				"': ",
+				remove_ec.message(),
+				"\n"
+			);
+		}
+	}
+	if (iter_ec) {
+		CORE_USER_LOG(
+			"Warning: failed to iterate artifacts directory '",
+			PATH.string(),
+			"' while clearing cache: ",
+			iter_ec.message(),
+			"\n"
+		);
+	}
 }
 
 void artifacts::ArtifactCollection::writeBuildIdFile() const {
