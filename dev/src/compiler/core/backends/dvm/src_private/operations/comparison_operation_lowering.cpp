@@ -27,43 +27,43 @@ namespace {
 		auto lhs_numeric = lhs_numeric_opt.value();
 		auto rhs_numeric = rhs_numeric_opt.value();
 		auto result      = std::visit(
-			[&](auto&& lhs_num) -> bool {
-				using LhsNumT    = std::decay_t<decltype(lhs_num)>;
-				auto rhs_num_opt = rhs_numeric.template get<LhsNumT>();
-				CORE_ASSERT(
-					rhs_num_opt.has_value(),
-					"Comparison between different numeric types is not supported"
-				);
-				auto rhs_num = rhs_num_opt.value();
-				switch (operation) {
-				case OpKind::cmpEq:
-				case OpKind::fcmpEq:
-					return lhs_num == rhs_num;
-				case OpKind::cmpNeq:
-				case OpKind::fcmpNeq:
-					return lhs_num != rhs_num;
-				case OpKind::cmpGt:
-				case OpKind::fcmpGt:
-				case OpKind::ucmpGt:
-					return lhs_num > rhs_num;
-				case OpKind::cmpGe:
-				case OpKind::fcmpGe:
-				case OpKind::ucmpGe:
-					return lhs_num >= rhs_num;
-				case OpKind::cmpLt:
-				case OpKind::fcmpLt:
-				case OpKind::ucmpLt:
-					return lhs_num < rhs_num;
-				case OpKind::cmpLe:
-				case OpKind::fcmpLe:
-				case OpKind::ucmpLe:
-					return lhs_num <= rhs_num;
-				default:
-					CORE_PANIC("Unhandled comparison operation");
-				}
-			},
-			lhs_numeric.getStorage()
-		);
+            [&](auto&& lhs_num) -> bool {
+                using LhsNumT    = std::decay_t<decltype(lhs_num)>;
+                auto rhs_num_opt = rhs_numeric.template get<LhsNumT>();
+                CORE_ASSERT(
+                    rhs_num_opt.has_value(),
+                    "Comparison between different numeric types is not supported"
+                );
+                auto rhs_num = rhs_num_opt.value();
+                switch (operation) {
+                case OpKind::cmpEq:
+                case OpKind::fcmpEq:
+                    return lhs_num == rhs_num;
+                case OpKind::cmpNeq:
+                case OpKind::fcmpNeq:
+                    return lhs_num != rhs_num;
+                case OpKind::cmpGt:
+                case OpKind::fcmpGt:
+                case OpKind::ucmpGt:
+                    return lhs_num > rhs_num;
+                case OpKind::cmpGe:
+                case OpKind::fcmpGe:
+                case OpKind::ucmpGe:
+                    return lhs_num >= rhs_num;
+                case OpKind::cmpLt:
+                case OpKind::fcmpLt:
+                case OpKind::ucmpLt:
+                    return lhs_num < rhs_num;
+                case OpKind::cmpLe:
+                case OpKind::fcmpLe:
+                case OpKind::ucmpLe:
+                    return lhs_num <= rhs_num;
+                default:
+                    CORE_PANIC("Unhandled comparison operation");
+                }
+            },
+            lhs_numeric.getStorage()
+        );
 		return result;
 	}
 
@@ -109,11 +109,11 @@ namespace {
 
 namespace compiler::backend_vm::internal {
 	void ComparisonOperationLowerer::lower(
-		FunctionLoweringContext&    ctx,
-		const ComparisonOperation&  comparison_operation,
-		std::deque<DVMValue>& args,
-		const DVMPlace&             output,
-		const lir::Instruction&     lir_instruction
+		FunctionLoweringContext&   ctx,
+		const ComparisonOperation& comparison_operation,
+		std::deque<DVMValue>&      args,
+		const DVMPlace&            output,
+		const lir::Instruction&    lir_instruction
 	) {
 		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
 		OpKind operation = comparison_operation.op;

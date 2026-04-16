@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "operations/arithmetic_operation_lowering.hpp"
 
@@ -24,6 +25,7 @@ namespace compiler::backend_vm::internal {
 		friend class CastOperationLowerer;
 		friend class ComparisonOperationLowerer;
 		friend class ArithmeticOperationLowerer;
+		friend DVMOperation lirInstrToDVMOperation(FunctionLoweringContext&, const lir::Instruction&);
 
 		FunctionLoweringContext(
 			ProgramLoweringContext&                     program_context,
@@ -60,7 +62,6 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::Function finish() &&;
 
-	private:
 		struct FunctionCallInfo {
 			DVMCallable                          call_target;
 			base::Optional<vm::code::TypeOfData> return_type;
@@ -84,6 +85,7 @@ namespace compiler::backend_vm::internal {
 			);
 		};
 
+	private:
 		/**
 		 * @brief Translates a LIRPlace to a DVMPlace. In case of direct values returns a place
 		 * representing a local/global variable, for references and projection chains (like
@@ -91,7 +93,9 @@ namespace compiler::backend_vm::internal {
 		 */
 		DVMPlace resolveLirPlace(const lir::LIRPlace& place);
 
-		// Creates a mapping between a LIR local and DVM local.
+		/**
+		 * @brief Creates a mapping between a LIR local and DVM local.
+		 */
 		const DVMLocal& createLirLocalToDVMMapping(lir::LIRLocalRef local);
 
 		base::StrID getBlockLabel(lir::BlockRef block);

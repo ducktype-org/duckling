@@ -1,6 +1,15 @@
 #include "dvm_operation.hpp"
 
+#include "ctv/ctv.hpp"
+#include "function_lowering_context.hpp"
+
 #include <lir/lir_structure/lir_structure.hpp>
+
+#include "base/collections/optional.hpp"
+#include "base/except/exceptions.hpp"
+#include "base/extend_cpp/stringifyable_enum.hpp"
+
+#include <ranges>
 
 namespace {
 	using namespace compiler;
@@ -15,102 +24,230 @@ namespace {
 
 namespace compiler::backend_vm::internal {
 
-	DVMOperation lirInstrToDVMOperation(const lir::Instruction& instr) {
-		auto operation = instr.operation;
-		if (isMetaTypeOperation(operation)) return MetaOperation{ operation };
-
+	DVMOperation lirInstrToDVMOperation(FunctionLoweringContext& ctx, const lir::Instruction& instr) {
 		using enum lir::Operation;
+		auto operation = instr.operation;
+
+		auto lower_all_args = [&]() -> std::deque<DVMValue> {
+			return instr.arguments | std::views::transform([&](const auto& lir_arg) {
+					   return ctx.lowerLirValue(lir_arg);
+				   })
+			     | std::ranges::to<std::deque>();
+		};
+
+		auto lower_arg  = [&](const lir::LIRValue& value) { return ctx.lowerLirValue(value); };
+		auto lower_dest = [&]() -> DVMPlace {
+			CORE_ASSERT(
+				instr.output.has_value(),
+				"Expected output place for operation: ",
+				base::enumToStr(operation)
+			);
+			return ctx.resolveLirPlace(*instr.output);
+		};
+		auto lower_opt_dest = [&]() -> base::Optional<DVMPlace> {
+			return instr.output.map([&](const lir::LIRPlace& place) {
+				return ctx.resolveLirPlace(place);
+			});
+		};
+		auto get_ctv = [](const lir::LIRValue& value) -> base::Optional<ctv::CompileTimeValue> {
+			if (value.is<lir::LIRConstant>()) return value.get<lir::LIRConstant>().value;
+			return {};
+		};
+
+		auto map_lir_op_to_dvm = [](lir::Operation operation) {
+			// clang-format off
+            switch (operation) {
+            case IntegerNeg: return OpKind::neg;
+            case FloatNeg:   return OpKind::fneg;
+            case BooleanNot: return OpKind::log_not;
+			case IntegerAdd:  return OpKind::add;
+            case IntegerSub:  return OpKind::sub;
+            case IntegerMul:  return OpKind::mul;
+            case IntegerSDiv: return OpKind::div;
+            case IntegerSMod: return OpKind::mod;
+            case IntegerUDiv: return OpKind::udiv;
+            case IntegerUMod: return OpKind::umod;
+            case FloatAdd:    return OpKind::fadd;
+            case FloatSub:    return OpKind::fsub;
+            case FloatMul:    return OpKind::fmul;
+            case FloatDiv:    return OpKind::fdiv;
+            case BooleanAnd:  return OpKind::log_and;
+            case BooleanOr:   return OpKind::log_or;
+            case IntegerEq:    return OpKind::cmpEq;
+            case IntegerNeq:   return OpKind::cmpNeq;
+            case IntegerSLt:   return OpKind::cmpLt;
+            case IntegerSLteq: return OpKind::cmpLe;
+            case IntegerSGt:   return OpKind::cmpGt;
+            case IntegerSGteq: return OpKind::cmpGe;
+            case IntegerULt:   return OpKind::ucmpLt;
+            case IntegerULteq: return OpKind::ucmpLe;
+            case IntegerUGt:   return OpKind::ucmpGt;
+            case IntegerUGteq: return OpKind::ucmpGe;
+            case FloatLt:      return OpKind::fcmpLt;
+            case FloatGt:      return OpKind::fcmpGt;
+            case FloatLteq:    return OpKind::fcmpLe;
+            case FloatGteq:    return OpKind::fcmpGe;
+            case FloatEq:      return OpKind::fcmpEq;
+            case FloatNeq:     return OpKind::fcmpNeq;
+            default:         CORE_UNREACHABLE();
+            }
+			// clang-format on
+		};
+
+
+		if (isMetaTypeOperation(operation))
+			return MetaOperation{
+				.meta_op = operation,
+				.args    = lower_all_args(),
+				.dest    = lower_dest(),
+			};
+
 
 		switch (operation) {
 		/// Special operations ///
-		case Cast: {
-			const auto cast_params = std::get_if<lir::CastParameters>(&instr.extra_params);
-			CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
-			return CastOperation{ *cast_params };
-		}
-		case Call:
-			return CallOperation{};
-		case AddressOf:
-			return AddressOfOperation{};
 		case ZeroInitialize:
 			// Data in DVM is zeroinitialized by default, so this is a NoOp.
 			return NoOpOperation{};
-		case Assign:  // TODOP: Special operation?
-			return MoveOperation{};
+		case Cast: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"Cast expects 1 arguments, but got: ",
+				instr.arguments.size()
+			);
+			const auto cast_params = std::get_if<lir::CastParameters>(&instr.extra_params);
+			CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
+			return CastOperation{
+				.cast_params = *cast_params,
+				.src         = lower_arg(instr.arguments[0]),
+				.dest        = lower_dest(),
+			};
+		}
+		case Call: {
+			CORE_ASSERT(!instr.arguments.empty(), "Call expects at least 1 argument (the callable)");
+			auto func_literal = instr.arguments[0].get<lir::FunctionLiteral>();
+			// TODOP: Probably move FunctionCallInfo out of FunctionLoweringContextt
+			auto dvm_call_info = FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
+				func_literal, ctx.program_context
+			);
+
+			auto call_args = instr.arguments | std::views::drop(1)  // Drop the FunctionLiteral
+			               | std::views::transform([&](const auto& lir_arg) {
+								 return ctx.lowerLirValue(lir_arg);
+							 })
+			               | std::ranges::to<std::deque>();
+
+			return CallOperation{
+				.call_info = dvm_call_info,
+				.args      = std::move(call_args),
+				.dest      = lower_opt_dest(),
+			};
+		}
+		case AddressOf: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"AddressOf expects one argument, got: ",
+				instr.arguments.size()
+			);
+			CORE_ASSERT(
+				instr.arguments[0].is<lir::LIRPlace>(), "AddressOf argument must be a LIRPlace"
+			);
+
+			// This is an edge case where LIRValues should not be lowered to DVMValue as this
+			// creates a copy of the value we try to reference on the stack. We have to lower it to
+			// a place and if it's direct, take a pointer to it, but if it's not, the resulting
+			// address is the pointer returned by `resolveLirPlace`.
+			return AddressOfOperation{
+				.src  = ctx.resolveLirPlace(instr.arguments[0].get<lir::LIRPlace>()),
+				.dest = lower_dest(),
+			};
+		}
+		// TODOP: Special operation?
+		case Assign: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"Assign expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			return MoveOperation{
+				.src  = lower_arg(instr.arguments[0]),
+				.dest = lower_dest(),
+			};
+		}
 
 		/// Unary operations ///
 		case IntegerNeg:
-			return UnaryOperation{ OpKind::neg };
 		case FloatNeg:
-			return UnaryOperation{ OpKind::fneg };
-		case BooleanNot:
-			return UnaryOperation{ OpKind::log_not };
+		case BooleanNot: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"Unary operation expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			return UnaryOperation{
+				.op   = map_lir_op_to_dvm(operation),
+				.src  = lower_arg(instr.arguments[0]),
+				.dest = lower_dest(),
+			};
+		}
 
 		/// Binary operations ///
 		case IntegerAdd:
-			return BinaryOperation{ OpKind::add };
 		case IntegerSub:
-			return BinaryOperation{ OpKind::sub };
 		case IntegerMul:
-			return BinaryOperation{ OpKind::mul };
 		case IntegerSDiv:
-			return BinaryOperation{ OpKind::div };
 		case IntegerSMod:
-			return BinaryOperation{ OpKind::mod };
 		case IntegerUDiv:
-			return BinaryOperation{ OpKind::udiv };
 		case IntegerUMod:
-			return BinaryOperation{ OpKind::umod };
-
 		case FloatAdd:
-			return BinaryOperation{ OpKind::fadd };
 		case FloatSub:
-			return BinaryOperation{ OpKind::fsub };
 		case FloatMul:
-			return BinaryOperation{ OpKind::fmul };
 		case FloatDiv:
-			return BinaryOperation{ OpKind::fdiv };
-
 		case BooleanAnd:
-			return BinaryOperation{ OpKind::log_and };
-		case BooleanOr:
-			return BinaryOperation{ OpKind::log_or };
+		case BooleanOr: {
+			CORE_ASSERT(
+				instr.arguments.size() == 2,
+				"Binary operation expects 2 arguments, got: ",
+				instr.arguments.size()
+			);
+			return BinaryOperation{
+				.op   = map_lir_op_to_dvm(operation),
+				.lhs  = lower_arg(instr.arguments[0]),
+				.rhs  = lower_arg(instr.arguments[1]),
+				.dest = lower_dest(),
+			};
+		}
 
 		/// Comparison operations ///
 		case IntegerEq:
-			return ComparisonOperation{ OpKind::cmpEq };
 		case IntegerNeq:
-			return ComparisonOperation{ OpKind::cmpNeq };
 		case IntegerSLt:
-			return ComparisonOperation{ OpKind::cmpLt };
 		case IntegerSLteq:
-			return ComparisonOperation{ OpKind::cmpLe };
 		case IntegerSGt:
-			return ComparisonOperation{ OpKind::cmpGt };
 		case IntegerSGteq:
-			return ComparisonOperation{ OpKind::cmpGe };
-
 		case IntegerULt:
-			return ComparisonOperation{ OpKind::ucmpLt };
 		case IntegerULteq:
-			return ComparisonOperation{ OpKind::ucmpLe };
 		case IntegerUGt:
-			return ComparisonOperation{ OpKind::ucmpGt };
 		case IntegerUGteq:
-			return ComparisonOperation{ OpKind::ucmpGe };
-
 		case FloatLt:
-			return ComparisonOperation{ OpKind::fcmpLt };
 		case FloatGt:
-			return ComparisonOperation{ OpKind::fcmpGt };
 		case FloatLteq:
-			return ComparisonOperation{ OpKind::fcmpLe };
 		case FloatGteq:
-			return ComparisonOperation{ OpKind::fcmpGe };
 		case FloatEq:
-			return ComparisonOperation{ OpKind::fcmpEq };
-		case FloatNeq:
-			return ComparisonOperation{ OpKind::fcmpNeq };
+		case FloatNeq: {
+			CORE_ASSERT(
+				instr.arguments.size() == 2,
+				"Comparison operation expects 2 arguments, got: ",
+				instr.arguments.size()
+			);
+			return ComparisonOperation{
+				.op        = map_lir_op_to_dvm(operation),
+				.lhs       = lower_arg(instr.arguments[0]),
+				.rhs       = lower_arg(instr.arguments[1]),
+				.dest      = lower_dest(),
+				.lhs_const = get_ctv(instr.arguments[0]),
+				.rhs_const = get_ctv(instr.arguments[1]),
+			};
+		}
 
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));

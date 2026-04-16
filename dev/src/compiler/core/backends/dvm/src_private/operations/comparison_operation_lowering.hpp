@@ -27,11 +27,11 @@ namespace compiler::backend_vm::internal {
 		 */
 		// TODOP: Doc
 		static void lower(
-			FunctionLoweringContext&    ctx,
-			const ComparisonOperation&  comparison_operation,
-			std::deque<DVMValue>& args,
-			const DVMPlace&             output,
-			const lir::Instruction&     lir_instruction
+			FunctionLoweringContext&   ctx,
+			const ComparisonOperation& comparison_operation,
+			std::deque<DVMValue>&      args,
+			const DVMPlace&            output,
+			const lir::Instruction&    lir_instruction
 		);
 	};
 }

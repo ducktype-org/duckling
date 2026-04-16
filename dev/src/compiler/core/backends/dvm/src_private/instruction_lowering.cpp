@@ -67,37 +67,6 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 	}
 
-	// This is an edge case where LIRValues should not be lowered to DVMValue as this creates a copy
-	// of the value we try to reference on the stack. We have to lower it to a place and if it's
-	// direct, take a pointer to it, but if it's not, the resulting address is the pointer returned
-	// by `resolveLirPlace`.
-	if (lir_instruction.operation == lir::Operation::AddressOf) {
-		CORE_ASSERT(lir_instruction.arguments.size() == 1, "Invalid ref args count");
-		CORE_ASSERT(lir_instruction.arguments[0].is<lir::LIRPlace>(), "AddressOf on non place");
-		const auto& lir_place = lir_instruction.arguments[0].get<lir::LIRPlace>();
-
-		DVMPlace resolved_src = resolveLirPlace(lir_place);
-		auto     maybe_output
-			= lir_instruction.output.map([&](auto& place) { return resolveLirPlace(place); });
-
-		auto addr_temp = pushTempLocal(
-			program_context.lowerAndKeepTslType(lir_instruction.output->layout), "addr_of"
-		);
-
-		if (resolved_src.isDirect()) {
-			// If access to the variable is direct, we take it's address.
-			pushInstruction({ OpKind::ref, addr_temp.asArgument(), resolved_src.asAnyArgument() });
-		} else {
-			// Otherwise, if the resolved source is accessed through a pointer
-			// (AccessKind::Pointer), than we have the address in hand. We just move it.
-			pushInstruction({ OpKind::mov, addr_temp.asArgument(), resolved_src.asArgument() });
-		}
-
-		if (maybe_output.has_value())
-			storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
-		return;
-	}
-
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
 	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
@@ -132,13 +101,29 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			return;
 		}
 		variant_case(CallOperation, operation) {
-			auto called_function = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-			args.pop_front();
-			handleCall(
-				FunctionCallInfo::fromLirFunction(called_function, program_context),
-				args,
-				maybe_output
+			handleCall(operation.call_info, operation.args, operation.dest);
+			return;
+		}
+		variant_case(AddressOfOperation, operation) {
+			DVMPlace resolved_src = operation.src;
+			DVMPlace output_dest  = operation.dest;
+
+			auto addr_temp = pushTempLocal(
+				program_context.lowerAndKeepTslType(lir_instruction.output->layout), "addr_of"
 			);
+
+			if (resolved_src.isDirect()) {
+				// If access to the variable is direct, we take it's address.
+				pushInstruction({ OpKind::ref, addr_temp.asArgument(), resolved_src.asAnyArgument() }
+				);
+			} else {
+				// Otherwise, if the resolved source is accessed through a pointer
+				// (AccessKind::Pointer), than we have the address in hand. We just move it.
+				pushInstruction({ OpKind::mov, addr_temp.asArgument(), resolved_src.asArgument() });
+			}
+
+			if (maybe_output.has_value())
+				storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
 			return;
 		}
 		variant_case_novalue(MoveOperation) {

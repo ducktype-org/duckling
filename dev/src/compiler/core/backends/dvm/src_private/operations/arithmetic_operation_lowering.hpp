@@ -8,7 +8,7 @@ namespace compiler::backend_vm::internal {
 
 	class ArithmeticOperationLowerer {
 	public:
-        // TODOP: Doc
+		// TODOP: Doc
 		static void lowerUnary(
 			FunctionLoweringContext&    ctx,
 			const UnaryOperation&       op,
@@ -16,7 +16,7 @@ namespace compiler::backend_vm::internal {
 			const DVMPlace&             output
 		);
 
-        // TODOP: Doc
+		// TODOP: Doc
 		static void lowerBinary(
 			FunctionLoweringContext&    ctx,
 			const BinaryOperation&      op,
