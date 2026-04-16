@@ -39,7 +39,7 @@ namespace compiler::backend_vm::internal {
 		const DVMValue& type_arg, const base::Optional<DVMPlace>& output
 	) {
 		func_ctx.handleCall(
-			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+			FunctionCallInfo::fromExternCFunction(
 				base::StrID(comptime_func_names::CREATE_BOX), func_ctx.program_context
 			),
 			{ type_arg },
@@ -51,7 +51,7 @@ namespace compiler::backend_vm::internal {
 		const DVMValue& type_arg, const base::Optional<DVMPlace>& output
 	) {
 		func_ctx.handleCall(
-			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+			FunctionCallInfo::fromExternCFunction(
 				base::StrID(comptime_func_names::CREATE_REF), func_ctx.program_context
 			),
 			{ type_arg },
@@ -63,7 +63,7 @@ namespace compiler::backend_vm::internal {
 		const DVMValue& type_arg, const base::Optional<DVMPlace>& output
 	) {
 		func_ctx.handleCall(
-			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+			FunctionCallInfo::fromExternCFunction(
 				base::StrID(comptime_func_names::CREATE_CONST), func_ctx.program_context
 			),
 			{ type_arg },
@@ -102,7 +102,7 @@ namespace compiler::backend_vm::internal {
 	) {
 		CORE_ASSERT(type_args.size() == 2, "MetaEq should have two arguments");
 		func_ctx.handleCall(
-			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+			FunctionCallInfo::fromExternCFunction(
 				base::StrID(comptime_func_names::TYPES_EQUAL), func_ctx.program_context
 			),
 			type_args,
@@ -115,7 +115,7 @@ namespace compiler::backend_vm::internal {
 	) {
 		CORE_ASSERT(type_args.size() == 2, "MetaNeq should have two arguments");
 		func_ctx.handleCall(
-			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+			FunctionCallInfo::fromExternCFunction(
 				base::StrID(comptime_func_names::TYPES_NOT_EQUAL), func_ctx.program_context
 			),
 			type_args,
@@ -133,7 +133,7 @@ namespace compiler::backend_vm::internal {
 		);
 		DVMValue builder_value = { builder, DVMPlace::AccessKind::Direct };
 		func_ctx.handleCall(
-			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+			FunctionCallInfo::fromExternCFunction(
 				builder_sequence.new_func, func_ctx.program_context
 			),
 			{},
@@ -142,7 +142,7 @@ namespace compiler::backend_vm::internal {
 
 		for (const auto& type_arg: type_args) {
 			func_ctx.handleCall(
-				FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+				FunctionCallInfo::fromExternCFunction(
 					builder_sequence.push_func, func_ctx.program_context
 				),
 				{ builder_value, type_arg },
@@ -152,7 +152,7 @@ namespace compiler::backend_vm::internal {
 
 		auto ctx = getQueryContext();
 		func_ctx.handleCall(
-			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+			FunctionCallInfo::fromExternCFunction(
 				builder_sequence.finalize_func, func_ctx.program_context
 			),
 			{ ctx, builder_value },

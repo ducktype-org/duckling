@@ -2,7 +2,6 @@
 
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
-#include "operations/arithmetic_operation_lowering.hpp"
 
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -62,28 +61,6 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::Function finish() &&;
 
-		struct FunctionCallInfo {
-			DVMCallable                          call_target;
-			base::Optional<vm::code::TypeOfData> return_type;
-			std::vector<vm::code::TypeOfData>    param_types;
-			bool                                 is_extern_c;
-
-			/**
-			 * @brief Created call info for a LIR function.
-			 * Translates TSL type layouts to corresponding DVM types.
-			 */
-			static FunctionCallInfo fromLirFunction(
-				const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
-			);
-
-			/**
-			 * @brief Creates call info for an extern C function.
-			 * Translates type names from extern C function signatures to corresponding DVM types.
-			 */
-			static FunctionCallInfo fromExternCFunction(
-				const base::StrID& func_name, ProgramLoweringContext& program_context
-			);
-		};
 
 	private:
 		/**

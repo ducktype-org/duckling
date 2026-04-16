@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../dvm_operation.hpp"
-#include "../dvm_value.hpp"
-
 namespace compiler::backend_vm::internal {
+	// TODOP: Remove the FDs
 	class FunctionLoweringContext;
+	struct UnaryOperation;
+	struct BinaryOperation;
 
 	class ArithmeticOperationLowerer {
 	public:

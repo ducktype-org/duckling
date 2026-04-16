@@ -68,7 +68,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 	}
 
 	// TODOP: All of the outputs should be optional.
-	const auto dvm_operation = lirInstrToDVMOperation(lir_instruction);
+	auto dvm_operation = lirInstrToDVMOperation(*this, lir_instruction);
 	variant_match(dvm_operation) {
 		variant_case(MetaOperation, operation) {
 			MetaOperationLowerer(*this).lower(operation);

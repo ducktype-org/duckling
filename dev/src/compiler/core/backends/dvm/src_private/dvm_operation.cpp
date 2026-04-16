@@ -2,12 +2,15 @@
 
 #include "ctv/ctv.hpp"
 #include "function_lowering_context.hpp"
+#include "program_lowering_context.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include "base/collections/optional.hpp"
 #include "base/except/exceptions.hpp"
 #include "base/extend_cpp/stringifyable_enum.hpp"
+
+#include "vm/bytecode/builtin_types.hpp"
 
 #include <ranges>
 
@@ -23,6 +26,50 @@ namespace {
 }
 
 namespace compiler::backend_vm::internal {
+	FunctionCallInfo FunctionCallInfo::fromLirFunction(
+		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
+	) {
+		base::Optional<vm::code::TypeOfData> called_result_type = {};
+		if (func_literal.return_type_layout->getSize() != Bits{ 0 })
+			called_result_type
+				= program_context.lowerAndKeepTslType(func_literal.return_type_layout);
+
+		std::vector<vm::code::TypeOfData> param_types
+			= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
+				  return program_context.lowerAndKeepTslType(layout);
+			  })
+		    | std::ranges::to<std::vector>();
+
+		return FunctionCallInfo{
+			.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
+			.return_type = called_result_type,
+			.param_types = param_types,
+			.is_extern_c = false,
+		};
+	}
+
+	FunctionCallInfo FunctionCallInfo::fromExternCFunction(
+		const base::StrID& ext_func_name, ProgramLoweringContext& program_context
+	) {
+		const auto& ext_func = program_context.getExternCFunction(ext_func_name);
+
+		base::Optional<vm::code::TypeOfData> called_result_type = {};
+		if (ext_func.signature.result_type.str != base::StrID("void"))
+			called_result_type = vm::code::getBuiltinTypeByName(ext_func.signature.result_type);
+
+		std::vector<vm::code::TypeOfData> param_types
+			= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {
+				  return vm::code::getBuiltinTypeByName(type_name).value();
+			  })
+		    | std::ranges::to<std::vector>();
+
+		return FunctionCallInfo{
+			.call_target = DVMExternCFunctionName{ .name = ext_func_name },
+			.return_type = called_result_type,
+			.param_types = param_types,
+			.is_extern_c = true,
+		};
+	}
 
 	DVMOperation lirInstrToDVMOperation(FunctionLoweringContext& ctx, const lir::Instruction& instr) {
 		using enum lir::Operation;
@@ -54,9 +101,9 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		auto map_lir_op_to_dvm = [](lir::Operation operation) {
+		auto map_lir_op_to_dvm = [](lir::Operation op) {
 			// clang-format off
-            switch (operation) {
+            switch (op) {
             case IntegerNeg: return OpKind::neg;
             case FloatNeg:   return OpKind::fneg;
             case BooleanNot: return OpKind::log_not;
@@ -126,9 +173,8 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(!instr.arguments.empty(), "Call expects at least 1 argument (the callable)");
 			auto func_literal = instr.arguments[0].get<lir::FunctionLiteral>();
 			// TODOP: Probably move FunctionCallInfo out of FunctionLoweringContextt
-			auto dvm_call_info = FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
-				func_literal, ctx.program_context
-			);
+			auto dvm_call_info
+				= FunctionCallInfo::fromLirFunction(func_literal, ctx.program_context);
 
 			auto call_args = instr.arguments | std::views::drop(1)  // Drop the FunctionLiteral
 			               | std::views::transform([&](const auto& lir_arg) {

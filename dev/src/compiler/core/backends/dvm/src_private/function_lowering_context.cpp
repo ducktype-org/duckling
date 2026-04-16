@@ -377,50 +377,6 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	});
 }
 
-FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
-	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
-) {
-	base::Optional<vm::code::TypeOfData> called_result_type = {};
-	if (func_literal.return_type_layout->getSize() != Bits{ 0 })
-		called_result_type = program_context.lowerAndKeepTslType(func_literal.return_type_layout);
-
-	std::vector<vm::code::TypeOfData> param_types
-		= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-			  return program_context.lowerAndKeepTslType(layout);
-		  })
-	    | std::ranges::to<std::vector>();
-
-	return FunctionCallInfo{
-		.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
-		.return_type = called_result_type,
-		.param_types = param_types,
-		.is_extern_c = false,
-	};
-}
-
-FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
-	const base::StrID& ext_func_name, ProgramLoweringContext& program_context
-) {
-	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
-
-	base::Optional<vm::code::TypeOfData> called_result_type = {};
-	if (ext_func.signature.result_type.str != base::StrID("void"))
-		called_result_type = vm::code::getBuiltinTypeByName(ext_func.signature.result_type);
-
-	std::vector<vm::code::TypeOfData> param_types
-		= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {
-			  return vm::code::getBuiltinTypeByName(type_name).value();
-		  })
-	    | std::ranges::to<std::vector>();
-
-	return FunctionCallInfo{
-		.call_target = DVMExternCFunctionName{ .name = ext_func_name },
-		.return_type = called_result_type,
-		.param_types = param_types,
-		.is_extern_c = true,
-	};
-}
-
 usize compiler::backend_vm::internal::FunctionLoweringContext::instructionsCount() const {
 	return function_body.size();
 }
