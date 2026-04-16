@@ -9,7 +9,6 @@
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/char.hpp>
-#include <lexer/decode.hpp>
 #include <lexer/token.hpp>
 #include <token_source/forward.hpp>  // IWYU pragma: keep
 
@@ -19,7 +18,9 @@ namespace tokenizer {
 	/**
 	 * @brief Class managing source file data access and token metadata
 	 *
-	 * @note For now it's very minimal and doesn't check proper usage.
+	 * In normal usage it is created using makeTokenSource, then built using the tokenize() method
+	 * which: decodes, splits into lines then lexes. After that the data is ready to be used.
+	 *
 	 */
 	class TokenSource final {
 	private:
@@ -54,6 +55,18 @@ namespace tokenizer {
 
 		template<class... Ts>
 		friend Box<TokenSource> makeTokenSource(Ts&&... args);
+
+		/**
+		 * Decode the content into a character array.
+		 *
+		 * @tparam encoding Which encoding should the function use.
+		 *
+		 * @return CharArray of decoded data
+		 *
+		 * @note We should probably stick to only decoding UTF-8 for now
+		 */
+		template<fs::Encoding encoding>
+		lexer::CharArray internalDecode();
 
 	public:
 		TokenSource(const TokenSource&) = delete;
@@ -102,7 +115,7 @@ namespace tokenizer {
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
-			decoded.emplace(lexer::decode<encoding>(Ref(this), &int_log));
+			decoded.emplace(internalDecode<encoding>());
 		}
 
 		void countLines();
@@ -122,6 +135,12 @@ namespace tokenizer {
 			return not int_log.hasErrors();
 		}
 	};
+
+	template<>
+	lexer::CharArray TokenSource::internalDecode<fs::UsAscii>();
+
+	template<>
+	lexer::CharArray TokenSource::internalDecode<fs::UTF8>();
 
 	template<class... Ts>
 	Box<TokenSource> makeTokenSource(Ts&&... args) {

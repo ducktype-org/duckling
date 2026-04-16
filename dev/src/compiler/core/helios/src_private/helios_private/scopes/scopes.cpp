@@ -66,6 +66,11 @@ namespace compiler::helios {
 		// Inherits scope from its parent:
 		Transparent,
 
+		// Gets parent scope of what transparent scope would be.
+		// This is used for expand expressions, where the lookup should happen higher than the
+		// expand statement itself.
+		ParentTransparent,
+
 		// Does not have a scope:
 		Invalid,
 
@@ -78,6 +83,7 @@ namespace compiler::helios {
 
 	/**
 	 * Determines scope kind for given PST element.
+	 * @TODO: #2407 this could take unlocked access
 	 */
 	ElementScopeKind getScopeKind(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
 		// @TODO: move it to different file?
@@ -166,12 +172,14 @@ namespace compiler::helios {
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
-			// note: top expr creates a scope for lifetimes
-			auto as_expr_holder = element.dynamicCast<pst::ExprHolder>().value();
-			if (as_expr_holder->isTopLevel())
-				return ElementScopeKind::Standard;
-			else
-				return ElementScopeKind::Transparent;
+			auto expr_parent = element->getParent().value().unlockOpt(ctx);
+			if (expr_parent.has_value()
+			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
+				// This is a special case.
+				// Elements in macro expansions should have their scope parent be the grandparent.
+				return ElementScopeKind::ParentTransparent;
+			}
+			return ElementScopeKind::Transparent;
 		}
 
 		case pst::ElementKind::Param:
@@ -239,7 +247,7 @@ namespace compiler::helios {
 				));
 			}
 
-			ScopeID parent = [&]() {
+			ScopeID parent = [&]() -> ScopeID {
 				// @TODO: #2452 this logic should be unified
 
 				auto maybe_element_parent = element->getParent();
@@ -278,20 +286,24 @@ namespace compiler::helios {
 			// here we essentially return the same scope as the parent
 			// scope, with the same unstable hash, but we still create a new ScopeData object
 			// that is kept in our cache:
-			if (element_scope_kind == ElementScopeKind::Transparent)
+			if (element_scope_kind == ElementScopeKind::Transparent) {
 				return parent.ref->perfectClone();
+			} else if (element_scope_kind == ElementScopeKind::ParentTransparent) {
+				CORE_ASSERT(
+					parent.ref->parent.has_value(),
+					"Parent transparent scope kind used on element of which transparent scope that "
+					"has no parent."
+				);
+				return parent.ref->parent->ref->perfectClone();
+			}
+
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
-			// clang-format off
-			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID())) {
-				CORE_ASSERT(*scope_in_map == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
-			}
-			else {
-				parent_map.put(element->getID(), parent);
-			}
-			// clang-format on
+			parent_map.maybePutAndUpdate(element->getID(), parent, [&](CRef<ScopeID> existing) {
+				CORE_ASSERT(*existing == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
+			});
 
 			return ScopeData{
 				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
@@ -782,8 +794,7 @@ namespace compiler::helios {
 		// this implementation is fragile, adjust if needed.
 
 		CORE_ASSERT(
-			query::Context::getState().activeQueryCount() == 0,
-			"getAllHeliosScopes called from within query!"
+			!query::Context::areWeInsideQuery(), "getAllHeliosScopes called from within query!"
 		);
 
 		auto root_scopes = ImplementationOf_QueryRootScopeOf::getAllCachedScopes();
