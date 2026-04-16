@@ -175,11 +175,17 @@ python3 toolbox.py test          # Run tests
 **Use `pr-validate` for comprehensive validation before creating a pull request:**
 ```bash
 cd dev
-python3 toolbox.py pr-validate   # Comprehensive PR validation
+python3 toolbox.py pr-validate \
+  -b build \
+  -f /usr/bin/clang-format-19 \
+  -t /usr/bin/clang-tidy-19 \
+  --auto-fix
 ```
-- **What it does**: Runs a complete validation suite including build, tests, linting, duck-linter, and issue-checker
+- **What it does**: Runs a complete validation suite including build, tests, linting, duck-linter, todo-validate, and issue-checker
 - **When to use**: Before creating a pull request to ensure all checks pass
-- **Options**: Can specify custom clang-tidy-19 and clang-format-19 paths using `-t` and `-f` flags
+- **`--auto-fix`**: Automatically applies clang-format and clang-tidy fixes — **highly recommended**. Use `--no-fix` to only report issues without changing files.
+- **Tool paths**: `-f` sets the clang-format path and `-t` sets the clang-tidy path. The paths above (`/usr/bin/clang-format-19`, `/usr/bin/clang-tidy-19`) are typical on Ubuntu with `llvm-19` installed, but may differ on your system (e.g. `/usr/lib/llvm-19/bin/clang-format`). Run `which clang-format-19` to find the correct path.
+- **`-b`**: Path to the build directory containing `compile_commands.json` (e.g. `build`).
 - **TIMING**: Takes 20-30 minutes to complete all validations. NEVER CANCEL. Set timeout to 45+ minutes.
 
 ### CI Workflow Compatibility
