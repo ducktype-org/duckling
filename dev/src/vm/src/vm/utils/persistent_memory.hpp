@@ -10,6 +10,7 @@
 #include <bit>
 #include <deque>
 #include <functional>
+#include <optional>
 #include <ranges>
 #include <tuple>
 #include <unordered_set>
@@ -23,7 +24,7 @@ STRONGLY_TYPED_INT_STD_HASH(vm::persistent::detail::MemoryStateID)
 
 namespace vm::persistent::detail {
 	class MemoryStateView;
-	
+
 	class Memory {
 		static constexpr auto EMPTY = MemoryStateID{ 0 };
 		friend MemoryStateView;
@@ -69,43 +70,50 @@ namespace vm::persistent::detail {
 		base::HashMap<MemoryStateID, RootEntry> root_info{};
 		MemoryStateID                           next_node_id = MemoryStateID{ 1 };
 
-		constexpr void validateState(MemoryStateID state) const {
-			if (root_info.contains(state)) {
-				auto [size, height, offset] = root_info[state];
-
-				CORE_ASSERT(size <= (1 << height), "root's size is too large");
-				CORE_ASSERT(offset % (1 << height) == 0, "offset is not on multiple of 2^k");
-				return;
-			}
-
-			if_opt_none(leaf_entries.atRightOpt(state)) {
-				throw std::invalid_argument("got invalid state");
-			}
-		}
-
-		constexpr RootEntry getRootInfo(MemoryStateID state) const {
-			validateState(state);
-
-			if_opt_some(root_info.atMaybeCopy(state), opt_entry) { return opt_entry; }
-
-			if_opt_some(leaf_entries.atRightOpt(state), val) {
-				return RootEntry{
-					.size   = 1UL,
-					.height = 0UL,
-					.offset = val.idx,
+		constexpr std::pair<usize, usize> getHeightOffset(MemoryStateID state) const {
+			if_opt_some(root_info.atMaybeCopy(state), entry) {
+				return {
+					entry.height,
+					entry.offset,
 				};
 			}
 
-			throw std::invalid_argument("invalid state id");
+			if_opt_some(leaf_entries.atRightOpt(state), val) {
+				return {
+					0UL,
+					val.idx,
+				};
+			}
+
+			CORE_UNREACHABLE();
+		}
+
+		constexpr usize getSize(MemoryStateID state) const {
+			if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.size; }
+
+			if_opt_some(leaf_entries.atRightOpt(state), _) { return 1UL; }
+
+			CORE_UNREACHABLE();
+		}
+
+		constexpr void validateState(MemoryStateID state) const {
+			if (!root_info.contains(state) && !leaf_entries.atRightOpt(state))
+				throw std::invalid_argument("got invalid state");
+
+			auto size             = getSize(state);
+			auto [height, offset] = getHeightOffset(state);
+
+			CORE_ASSERT(size <= (1 << height), "root's size is too large");
+			CORE_ASSERT(
+				height >= 64 || offset % (1 << height) == 0, "offset is not on multiple of 2^k"
+			);
 		}
 
 		constexpr void validateIdx(MemoryStateID state, usize idx) const {
-			auto [size, height, offset] = getRootInfo(state);
+			auto [height, offset] = getHeightOffset(state);
 
 			if (idx < offset || idx >= offset + (1 << height))
 				throw std::invalid_argument("got idx out of state bounds");
-
-			return;
 		}
 
 		constexpr MemoryStateID nodeFromChildren(MemoryStateID left, MemoryStateID right) {
@@ -116,8 +124,11 @@ namespace vm::persistent::detail {
 
 			if (!is_new) return node;
 
-			auto [sizeL, heightL, offsetL] = getRootInfo(left);
-			auto [sizeR, heightR, offsetR] = getRootInfo(left);
+			auto sizeL = getSize(left);
+			auto sizeR = getSize(right);
+
+			auto [heightL, offsetL] = getHeightOffset(left);
+			auto [heightR, offsetR] = getHeightOffset(right);
 
 			CORE_ASSERT(
 				heightL == heightR || left == EMPTY || right == EMPTY,
@@ -156,6 +167,7 @@ namespace vm::persistent::detail {
 				.idx   = idx,
 				.value = var_id,
 			};
+
 			auto [is_new, node] = leaf_entries.emplaceByLeft(leaf, next_node_id);
 
 			if (is_new) next_node_id++;
@@ -165,8 +177,6 @@ namespace vm::persistent::detail {
 
 		[[nodiscard]]
 		constexpr MemoryStateID getChild(MemoryStateID state, Dir dir) const {
-			validateState(state);
-
 			if_opt_some(child_entries.atRightOpt(state), children) {
 				auto [left, right] = children;
 				return (dir == Dir::Left) ? left : right;
@@ -180,16 +190,14 @@ namespace vm::persistent::detail {
 		}
 
 		[[nodiscard]]
-		constexpr MemoryStateID getNodeAt(MemoryStateID state, usize idx) const {
-			auto [_, height, offset] = getRootInfo(state);
+		constexpr MemoryStateID getLeaf(MemoryStateID state, usize idx) const {
+			auto [height, offset] = getHeightOffset(state);
 
-			CORE_ASSERT(
-				offset <= idx && idx < offset + (1 << height), "idx asked was out of state bounds"
-			);
+			if (offset > idx || idx >= offset + (1 << height)) return EMPTY;
 
 			usize mask = (1 << height);
 			for (usize i = 0; i < height; i++) {
-				mask <<= 1;
+				mask >>= 1;
 				auto& entry = child_entries.atRight(state);
 				state       = (idx & mask) ? entry.right : entry.left;
 			}
@@ -199,10 +207,11 @@ namespace vm::persistent::detail {
 
 		[[nodiscard]]
 		constexpr Path getPathTo(MemoryStateID state, usize idx) const {
-			CORE_ASSERT(root_info.contains(state), "no info about the root");
-			auto [size, offset, height] = root_info[state];
+			auto [height, offset] = getHeightOffset(state);
 
-			CORE_ASSERT(offset % (1 << height) == 0, "The offset is not multple of power 2^k");
+			CORE_ASSERT(
+				height >= 64 || offset % (1 << height) == 0, "The offset is not multple of power 2^k"
+			);
 			CORE_ASSERT(idx >= offset && idx < offset + (1 << height), "The idx was out of bounds!");
 
 			std::vector<MemoryStateID> ans  = { state };
@@ -229,7 +238,7 @@ namespace vm::persistent::detail {
 
 		[[nodiscard]]
 		constexpr Path getLeftMostPath(MemoryStateID state) const {
-			auto [_, height, offset] = getRootInfo(state);
+			auto [height, offset] = getHeightOffset(state);
 			CORE_ASSERT(state != EMPTY, "Tryig to get path in empty state");
 
 			usize                      idx   = offset;
@@ -257,7 +266,7 @@ namespace vm::persistent::detail {
 
 		[[nodiscard]]
 		constexpr Path getRightMostPath(MemoryStateID state) const {
-			auto [size, height, offset] = getRootInfo(state);
+			auto [height, offset] = getHeightOffset(state);
 			CORE_ASSERT(state != EMPTY, "Tryig to get path in empty state");
 
 			usize                      idx   = offset;
@@ -283,7 +292,7 @@ namespace vm::persistent::detail {
 			};
 		}
 
-		bool pathForward(Path& path) const {
+		bool pathForward(Path& path, usize skip = 0) const {
 			if (path.trace.size() <= 1) return false;
 
 			const auto orig_size = path.trace.size();
@@ -294,11 +303,17 @@ namespace vm::persistent::detail {
 
 			for (; path.trace.size(); path.trace.pop_back(), mask <<= 1) {
 				MemoryStateID node_id = path.trace.back();
-				NodeEntry     entry   = child_entries.atRight(node_id);
+				auto     [_, right]   = child_entries.atRight(node_id);
 
 				if (path.idx & mask)
 					path.idx ^= mask;
-				else if (entry.right)
+
+				if (!right)
+					continue;
+
+				if (auto amount = getSize(right); amount <= skip)
+					skip -= amount;
+				else 
 					break;
 			}
 
@@ -407,7 +422,7 @@ namespace vm::persistent::detail {
 		}
 
 		MemoryStateID ensureHeightAtLeast(MemoryStateID state, usize height) {
-			auto [_, curr_height, offset] = getRootInfo(state);
+			auto [curr_height, offset] = getHeightOffset(state);
 
 			CORE_ASSERT(curr_height <= height, "node has to be at smaller height then desired");
 
@@ -447,7 +462,7 @@ namespace vm::persistent::detail {
 		std::vector<MemoryStateID> getSubNodesAtHeight(
 			MemoryStateID state, usize desired_height
 		) const {
-			auto [_, root_height, _] = getRootInfo(state);
+			auto [root_height, _] = getHeightOffset(state);
 			CORE_ASSERT(
 				root_height >= desired_height, "cannot get subnodes at height bigger than mine"
 			);
@@ -477,7 +492,9 @@ namespace vm::persistent::detail {
 		constexpr MemoryStateID setMultiple(
 			MemoryStateID state, std::deque<std::pair<usize, usize>> vals
 		) {
-			auto [_, height, offset] = getRootInfo(state);
+			validateState(state);
+
+			auto [height, offset] = getHeightOffset(state);
 			if (!vals.size()) return state;
 
 			std::ranges::sort(vals);
@@ -521,7 +538,7 @@ namespace vm::persistent::detail {
 			auto lambda = [&](
 							  this auto&& self, MemoryStateID root, usize height, usize offset
 						  ) -> MemoryStateID {
-				auto [_, _height, _offset] = getRootInfo(root);
+				auto [_height, _offset] = getHeightOffset(root);
 				CORE_ASSERT(_height == height && offset == _offset, "sth went terribly wrong");
 
 				while (in_bounds.size() && in_bounds.front().first < offset) in_bounds.pop_front();
@@ -550,7 +567,7 @@ namespace vm::persistent::detail {
 			}
 
 			for (auto& [idx, state]: to_merge) {
-				auto [_, _height, _offset] = getRootInfo(state);
+				auto [_height, _offset] = getHeightOffset(state);
 				CORE_ASSERT(_height <= height, "We should never go past the hight of original");
 				state = ensureHeightAtLeast(state, height);
 			}
@@ -559,7 +576,9 @@ namespace vm::persistent::detail {
 		}
 
 		MemoryStateID eraseMultiple(MemoryStateID state, std::deque<usize> idxs) {
-			auto [_, height, offset] = getRootInfo(state);
+			validateState(state);
+
+			auto [height, offset] = getHeightOffset(state);
 			if (idxs.empty()) return state;
 
 			std::ranges::sort(idxs);
@@ -591,7 +610,7 @@ namespace vm::persistent::detail {
 			auto lambda = [&](
 							  this auto&& self, MemoryStateID root, usize height, usize offset
 						  ) -> MemoryStateID {
-				auto [_, _height, _offset] = getRootInfo(root);
+				auto [_height, _offset] = getHeightOffset(root);
 				CORE_ASSERT(_height == height && offset == _offset, "sth went terribly wrong");
 
 				while (!idxs.empty() && idxs.front() < offset) idxs.pop_front();
@@ -611,7 +630,7 @@ namespace vm::persistent::detail {
 				CORE_UNREACHABLE();
 			};
 
-			auto [___, final_height, final_offset] = getRootInfo(common);
+			auto [final_height, final_offset] = getHeightOffset(common);
 
 			return lambda(common, final_height, final_offset);
 		}
@@ -681,8 +700,11 @@ namespace vm::persistent::detail {
 		}
 
 		auto getDiff(MemoryStateID stateL, MemoryStateID stateR) const {
-			auto [_, heightL, offsetL] = getRootInfo(stateL);
-			auto [_, heightR, offsetR] = getRootInfo(stateR);
+			validateState(stateL);
+			validateState(stateR);
+
+			auto [heightL, offsetL] = getHeightOffset(stateL);
+			auto [heightR, offsetR] = getHeightOffset(stateR);
 
 			bool change = (heightL < heightR);
 
@@ -708,7 +730,7 @@ namespace vm::persistent::detail {
 			base::Optional<MemoryStateID> counterpart = std::nullopt;
 
 			for (auto node: equiv) {
-				auto [_, _, offset] = getRootInfo(node);
+				auto [_, offset] = getHeightOffset(node);
 
 				if (offset == offsetR) {
 					counterpart = node;
@@ -720,8 +742,8 @@ namespace vm::persistent::detail {
 
 			auto detailDiff
 				= [&](this auto&& self, MemoryStateID node_1, MemoryStateID node_2) -> void {
-				auto [_, _height_1, _offset_1] = getRootInfo(node_1);
-				auto [_, _height_2, _offset_2] = getRootInfo(node_2);
+				auto [_height_1, _offset_1] = getHeightOffset(node_1);
+				auto [_height_2, _offset_2] = getHeightOffset(node_2);
 
 				CORE_ASSERT(node_1 || node_2, "one of the nodes has to be non-empty");
 				CORE_ASSERT(
@@ -787,6 +809,8 @@ namespace vm::persistent::detail {
 		}
 
 		MemoryStateID slice(MemoryStateID state, usize left_bound, usize right_bound) {
+			validateState(state);
+
 			validateIdx(state, left_bound);
 			validateIdx(state, right_bound);
 
@@ -839,13 +863,14 @@ namespace vm::persistent::detail {
 		}
 
 		base::Optional<usize> access(MemoryStateID state, usize idx) const {
+			validateState(state);
 			validateIdx(state, idx);
 
-			auto node = getNodeAt(state, idx);
+			auto node = getLeaf(state, idx);
 
 			if_opt_some(leaf_entries.atRightOpt(node), leaf_entry) { return leaf_entry.value; }
 
-			CORE_UNREACHABLE();
+			return std::nullopt;
 		}
 
 		MemoryStateID erase(MemoryStateID state, usize idx) {
@@ -858,13 +883,13 @@ namespace vm::persistent::detail {
 
 		[[nodiscard]]
 		usize size(MemoryStateID state) const {
-			return getRootInfo(state).size;
+			validateState(state);
+			return getSize(state);
 		}
 
 		bool active(MemoryStateID state, usize idx) const {
-			validateIdx(state, idx);
-
-			return getNodeAt(state, idx) == EMPTY;
+			validateState(state);
+			return getLeaf(state, idx) == EMPTY;
 		}
 
 		[[nodiscard]]
@@ -877,7 +902,7 @@ namespace vm::persistent::detail {
 				EMPTY,
 				RootEntry{
 					.size   = 0,
-					.height = 63,
+					.height = 64,
 					.offset = 0,
 				}
 			);
@@ -889,8 +914,45 @@ namespace vm::persistent::detail {
 		MemoryStateID id;
 		const Memory& mem;
 
+		class Iterator {
+			base::Optional<Memory::Path> maybe_path;
+			const Memory&                mem;
+
+		public:
+			Iterator& operator++() {
+				if_opt_some(maybe_path, path) {
+					bool success = mem.pathForward(path);
+					if (!success) maybe_path = std::nullopt;
+				}
+				return *this;
+			}
+
+			Iterator operator++(int) {
+				auto cpy = *this;
+				(*this)++;
+				return cpy;
+			}
+
+			Iterator& operator--() {
+				if_opt_some(maybe_path, path) {
+					bool success = mem.pathBackward(path);
+					if (!success) maybe_path = std::nullopt;
+				}
+				return *this;
+			}
+
+			Iterator operator--(int) {
+				auto cpy = *this;
+				(*this)--;
+				return cpy;
+			}
+
+	}
+
 	public:
-		MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}
+		  MemoryStateView(const Memory& mem, MemoryStateID id):
+		  id{ id },
+		  mem{ mem } {}
 
 		[[nodiscard]]
 		base::Optional<usize> atMaybe(usize idx) const {
