@@ -40,9 +40,14 @@ Duckling is a C++23 programming language project with a comprehensive build syst
 ### Running Tests
 - Run all tests:
   ```bash
-  python3 toolbox.py test
+  python3 toolbox.py test -b build
   ```
   - **TIMING**: Test suite takes 5-15 minutes. NEVER CANCEL. Set timeout to 30+ minutes.
+- Run tests matching a label regex (e.g. only VM tests):
+  ```bash
+  python3 toolbox.py test -b build -L vm
+  ```
+  - Use `-L <regex>` to filter by CTest label. For example, if you changed VM code, run `-L vm` to test only the VM portion instead of the full suite.
 - Run specific test suites:
   ```bash
   cd build
