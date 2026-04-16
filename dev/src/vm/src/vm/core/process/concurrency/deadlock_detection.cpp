@@ -2,7 +2,6 @@
 
 
 #include <vm/core/process/exceptions.hpp>
-#include <set>
 #include <vector>
 
 namespace vm {
@@ -33,11 +32,24 @@ namespace vm {
         // We are checking edge thread_id -> owner_thread_id.
         // So we want to see if there is path owner_thread_id -> ... -> thread_id.
 
-        std::set<api::ThreadID> visited;
+        std::vector<bool> visited;
         std::vector<api::ThreadID> stack;
+
+        auto is_visited = [&](api::ThreadID id) {
+            auto index = static_cast<usize>(id.asInt());
+            return index < visited.size() && visited[index];
+        };
+
+        auto mark_visited = [&](api::ThreadID id) {
+            auto index = static_cast<usize>(id.asInt());
+            if (index >= visited.size()) {
+                visited.resize(index + 1, false);
+            }
+            visited[index] = true;
+        };
         
         stack.push_back(owner_thread_id);
-        visited.insert(owner_thread_id);
+        mark_visited(owner_thread_id);
 
         while (!stack.empty()) {
             api::ThreadID current_thread = stack.back();
@@ -61,8 +73,8 @@ namespace vm {
                         throw exceptions::VMDeadlockException();
                     }
 
-                    if (visited.find(next_thread) == visited.end()) {
-                        visited.insert(next_thread);
+                    if (!is_visited(next_thread)) {
+                        mark_visited(next_thread);
                         stack.push_back(next_thread);
                     }
                 }
