@@ -72,6 +72,7 @@ namespace vm::opargs {
 	DEFINE_GLOBAL(32, "g32");
 	DEFINE_GLOBAL(64, "g64");
 	DEFINE_GLOBAL(Any, "gany");
+	DEFINE_GLOBAL(Vnt, "gvnt");
 	DEFINE_GLOBAL(Ptr, "gptr");
 	DEFINE_GLOBAL(Opq, "gopq");
 	DEFINE_GLOBAL(Structure, "gste");
@@ -79,8 +80,9 @@ namespace vm::opargs {
 	/**
 	 * @brief List of all argument types that target global data.
 	 */
-#define VM_OPARG_GLOBAL_TYPES \
-	Global64, Global32, Global16, Global8, GlobalAny, GlobalPtr, GlobalOpq, GlobalStructure
+#define VM_OPARG_GLOBAL_TYPES                                                          \
+	Global64, Global32, Global16, Global8, GlobalAny, GlobalVnt, GlobalPtr, GlobalOpq, \
+		GlobalStructure
 
 	/**
 	 * @brief Represents type name argument.
@@ -220,6 +222,12 @@ namespace vm::opargs {
 
 	template<typename T>
 	concept ArgumentType = base::IsVariantMember<T, OpCodeArg>;
+
+	template<typename T>
+	concept LocalArgumentType = base::IsVariantMember<T, OpCodeLocalArg>;
+
+	template<typename T>
+	concept GlobalArgumentType = base::IsVariantMember<T, OpCodeGlobalArg>;
 }
 
 #undef DEFINE_STR_ARG_TYPE

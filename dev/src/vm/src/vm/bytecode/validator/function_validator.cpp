@@ -336,6 +336,14 @@ class FunctionValidator {
 					if (!globals.contains(global->global_data_name))
 						throw UnknownGlobalNameError(*global);
 				}
+				variant_case(CRef<opargs::GlobalVnt>, global_variant) {
+					if (!globals.contains(global_variant->global_data_name))
+						throw UnknownGlobalNameError(*global_variant);
+					CRef<GlobalData> entry           = globals.at(global_variant->global_data_name);
+					CRef<valid_type::ValidType> type = types_ctx.at(entry->type);
+					if (!type->isKind<valid_type::finalized::Variant>())
+						throw InvalidArgumentTypeError(*global_variant);
+				}
 				variant_case(CRef<opargs::GlobalOpq>, global_opq) {
 					if (!globals.contains(global_opq->global_data_name))
 						throw UnknownGlobalNameError(*global_opq);
@@ -1275,6 +1283,14 @@ class FunctionValidator {
 					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_ref_lptr_gany, instr) {
+				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
+				                              ->getKindAs<valid_type::finalized::Pointer>();
+				const auto&                 global_entry = globals.at(instr.src.global_data_name);
+				CRef<valid_type::ValidType> global_type  = types_ctx.at(global_entry->type);
+				if (pointer_type->inner != global_type->getID())
+					throw PointerTypeMismatchError(instr);
+			}
+			instr_case(Op_ref_lptr_gvnt, instr) {
 				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				const auto&                 global_entry = globals.at(instr.src.global_data_name);
