@@ -22,8 +22,11 @@ namespace vm::persistent::detail {
 STRONGLY_TYPED_INT_STD_HASH(vm::persistent::detail::MemoryStateID)
 
 namespace vm::persistent::detail {
+	class MemoryStateView;
+	
 	class Memory {
 		static constexpr auto EMPTY = MemoryStateID{ 0 };
+		friend MemoryStateView;
 
 		struct NodeEntry {
 			MemoryStateID left;
@@ -879,6 +882,41 @@ namespace vm::persistent::detail {
 				}
 			);
 			child_entries.emplaceByLeft(NodeEntry{ .left = EMPTY, .right = EMPTY }, EMPTY);
+		}
+	};
+
+	class MemoryStateView {
+		MemoryStateID id;
+		const Memory& mem;
+
+	public:
+		MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}
+
+		[[nodiscard]]
+		base::Optional<usize> atMaybe(usize idx) const {
+			return mem.access(id, idx);
+		}
+
+		[[nodiscard]]
+		usize size() const {
+			return mem.size(id);
+		}
+
+		[[nodiscard]]
+		std::vector<std::pair<usize, usize>> toVec() const {
+			return mem.toVec(id);
+		}
+
+		[[nodiscard]]
+		auto diff(const MemoryStateView& oth) const {
+			return mem.getDiff(id, oth.id);
+		}
+
+		usize operator[](usize idx) const { return *mem.access(id, idx); }
+
+		[[nodiscard]]
+		bool contains(usize idx) const {
+			return mem.active(id, idx);
 		}
 	};
 }

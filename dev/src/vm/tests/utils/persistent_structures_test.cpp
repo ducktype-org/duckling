@@ -4,12 +4,11 @@
 #include <vm/utils/bijective_map.hpp>
 #include <vm/utils/persistent_array.hpp>
 #include <vm/utils/persistent_hashmap.hpp>
+#include <vm/utils/persistent_memory.hpp>
 #include <vm/utils/persistent_vector.hpp>
 
 #include <string>
 #include <utility>
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
 
 class PersistentStlTester: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -59,6 +58,19 @@ public:
 		ASSERT_TRUE(inserted);
 	}
 
+	void testMemoy() {
+		using namespace vm::persistent::detail;
+		Memory mem{};
+
+		auto checker
+			= [&](MemoryStateID state, std::vector<std::pair<usize, usize>> expected) -> void {
+			ASSERT_EQUAL(expected, mem.toVec(state));
+		};
+
+		auto empt = mem.getEmpty();
+		checker(empt, {});
+	}
+
 	void testVector() {
 		using namespace vm::persistent;
 
@@ -66,15 +78,13 @@ public:
 		auto checker = [&](VectorStateID state, std::vector<std::string> expected) -> void {
 			auto size = expected.size();
 			ASSERT_EQUAL(expected.size(), vec.size(state));
-            auto view = vec.view(state, 0, size);
-            ASSERT_EQUAL(expected, view);
+			auto view = vec.view(state, 0, size);
+			ASSERT_EQUAL(expected, view);
 
-            for (usize i = 1; i <= size; i++) {
-	            ASSERT_EQUAL(expected[i - 1], vec.access(state, i));            
-			}
+			for (usize i = 1; i <= size; i++) ASSERT_EQUAL(expected[i - 1], vec.access(state, i));
 		};
 
-		auto                                empt = vec.getEmpty();
+		auto empt = vec.getEmpty();
 		checker(empt, {});
 
 		auto op01 = vec.push(empt, std::string("val01"));
@@ -105,22 +115,22 @@ public:
 		checker(op09, { "val01", "val08", "val07", "val05", "val06" });
 
 		auto op10 = vec.push(op09, std::string("val09"));
-		checker(op10, { "val01", "val08", "val07", "val05", "val06" , "val09"});
-			
+		checker(op10, { "val01", "val08", "val07", "val05", "val06", "val09" });
+
 		auto op11 = vec.pop(op10, 2);
-		checker(op11, { "val01", "val08", "val07", "val05"});
+		checker(op11, { "val01", "val08", "val07", "val05" });
 
 		auto op12 = vec.change(op11, 1, std::string("val11"));
-		checker(op12, { "val11", "val08", "val07", "val05"});
+		checker(op12, { "val11", "val08", "val07", "val05" });
 
 		auto op13 = vec.change(op12, 2, std::string("val02"));
-		checker(op13, { "val11", "val02", "val07", "val05"});
+		checker(op13, { "val11", "val02", "val07", "val05" });
 
 		auto op14 = vec.change(op13, 1, std::string("val01"));
-		checker(op14, { "val01", "val02", "val07", "val05"});
+		checker(op14, { "val01", "val02", "val07", "val05" });
 
 		auto op15 = vec.change(op14, 3, std::string("val03"));
-		checker(op15, { "val01", "val02", "val03", "val05"});
+		checker(op15, { "val01", "val02", "val03", "val05" });
 
 		auto op16 = vec.getPrefix(op15, 3);
 		checker(op16, { "val01", "val02", "val03" });
@@ -128,7 +138,6 @@ public:
 		ASSERT_EQUAL(op16, op03);
 		ASSERT_EQUAL(op02, op04);
 		ASSERT_EQUAL(op05, op04);
-		
 	}
 
 	void testArray() {
@@ -141,14 +150,11 @@ public:
 		auto checker = [&](ArrayStateID state, act_t expected) -> void {
 			static constexpr usize SIZE = (1 << 5);
 
-			for (usize idx = 1; idx <= SIZE; idx++) {
-				if (expected.contains(idx)) {
-					ASSERT_EQUAL(expected[idx], array.access(state, idx));            
-				}
-				else {
+			for (usize idx = 1; idx <= SIZE; idx++)
+				if (expected.contains(idx))
+					ASSERT_EQUAL(expected[idx], array.access(state, idx));
+				else
 					ASSERT_TRUE(!array.active(state, idx));
-				}
-			}
 		};
 
 		auto empty = array.getEmpty();
@@ -158,7 +164,7 @@ public:
 		checker(op01, { { 1, "val01" } });
 
 		auto op02 = array.change(op01, 2, "val02");
-		checker(op02, { { 1, "val01" },{ 2, "val02" } });
+		checker(op02, { { 1, "val01" }, { 2, "val02" } });
 
 		auto op03 = array.change(op02, 1, "val03");
 		checker(op03, { { 1, "val03" }, { 2, "val02" } });
@@ -170,8 +176,8 @@ public:
 		checker(op05, { { 1, "val04" }, { 4, "val05" } });
 
 		auto op06 = array.change(op05, 27, "val06");
-		checker(op06, { { 1, "val04" }, { 4, "val05" }, {27, "val06"} });
-		
+		checker(op06, { { 1, "val04" }, { 4, "val05" }, { 27, "val06" } });
+
 		auto op07 = array.change(op06, 31, "val07");
 		checker(op07, { { 1, "val04" }, { 4, "val05" }, { 27, "val06" }, { 31, "val07" } });
 
@@ -188,7 +194,7 @@ public:
 		checker(op11, { {} });
 
 		auto op12 = array.change(op03, 1, "val01");
-		checker(op12, { { 1, "val01" },{ 2, "val02" } });
+		checker(op12, { { 1, "val01" }, { 2, "val02" } });
 
 		ASSERT_EQUAL(empty, op11);
 		ASSERT_EQUAL(op02, op12);
@@ -205,18 +211,13 @@ public:
 			static constexpr usize SIZE = (1 << 5);
 
 
-			for (auto [k, _]: expected) {
-				ASSERT_TRUE(map.contains(state, k));
-			}
+			for (auto [k, _]: expected) ASSERT_TRUE(map.contains(state, k));
 
-			for (usize idx = 1; idx <= SIZE; idx++) {
-				if (expected.contains(idx)) {
-					ASSERT_EQUAL(expected[idx], array.access(state, idx));            
-				}
-				else {
+			for (usize idx = 1; idx <= SIZE; idx++)
+				if (expected.contains(idx))
+					ASSERT_EQUAL(expected[idx], array.access(state, idx));
+				else
 					ASSERT_TRUE(!array.active(state, idx));
-				}
-			}
 		};
 	}
 };
