@@ -2,6 +2,7 @@
 
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
+#include <vm/core/thread/thread_abort_exception.hpp>
 
 std::expected<vm::api::Response, vm::api::ApiError> vm::IVMThread::join() {
 	if (!exec_thread || !exec_thread->joinable())
@@ -56,6 +57,8 @@ bool vm::IVMThread::waitForRunningResponse() {
 	return std::holds_alternative<api::Running>(execution_response_queue.pop());
 }
 
+void vm::IVMThread::cleanupAfterPanic() {}
+
 void vm::IVMThread::respondExecutionRequest(const api::ProcStatus& response) {
 	setProcessStatus(response);
 	execution_response_queue.push(response);
@@ -78,7 +81,11 @@ bool vm::IVMThread::joinExecutionThread() {
 void vm::IVMThread::safeRun(const std::string& func_name, const RunArguments& run_arguments) {
 	try {
 		run(func_name, run_arguments);
+	} catch (const ThreadAbortException&) {
+		cleanupAfterPanic();
+		execution_response_queue.push(api::ExecutionStopped{});
 	} catch (const exceptions::VMRuntimeException& e) {
+		cleanupAfterPanic();
 		std::cerr << "VMThread has panicked: " << e.what() << "\n";
 		respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 	}

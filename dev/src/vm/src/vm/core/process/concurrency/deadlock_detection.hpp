@@ -45,6 +45,8 @@ namespace vm {
 
 		void markThreadWaitingForMutex(api::ThreadID thread_id, usize mutex_id);
 
+		void markThreadNoLongerWaiting(api::ThreadID thread_id);
+
 		void markThreadAcquiredMutex(api::ThreadID thread_id, usize mutex_id);
 
 		void markThreadReleasedMutex(api::ThreadID thread_id, usize mutex_id);

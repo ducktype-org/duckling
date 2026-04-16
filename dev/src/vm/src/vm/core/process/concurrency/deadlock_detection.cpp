@@ -86,6 +86,10 @@ namespace vm {
 		thread_waiting_for_mutex[thread_id] = mutex_id;
 	}
 
+	void DeadlockDetector::markThreadNoLongerWaiting(api::ThreadID thread_id) {
+		thread_waiting_for_mutex.erase(thread_id);
+	}
+
 	void DeadlockDetector::markThreadAcquiredMutex(api::ThreadID thread_id, usize mutex_id) {
 		thread_waiting_for_mutex.erase(thread_id);
 		mutex_owners[mutex_id] = thread_id;

@@ -13,8 +13,11 @@
 #include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/thread_abort_exception.hpp>
 #include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
+
+#include <thread>
 
 namespace vm::builtins {
 
@@ -114,8 +117,15 @@ namespace vm::builtins {
 
 	void FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
 		thread.releaseGil();
-		vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
+		auto join_result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
+
+		if (!join_result.has_value()) {
+			if (thread.safe_process.shouldAbortBlockingOperations()) return;
+			throw vm::exceptions::VMRuntimeException(
+				"builtinJoinThread failed: " + vm::api::errorToString(join_result.error())
+			);
+		}
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
@@ -130,7 +140,15 @@ namespace vm::builtins {
 		deadlock_detector.beginWaitForMutexOrThrow(thread_id, mutex_id);
 		if (!mutex->try_lock()) {
 			thread.releaseGil();
-			mutex->lock();
+			while (!mutex->try_lock()) {
+				if (thread.safe_process.shouldAbortBlockingOperations()) {
+					thread.acquireGil();
+					deadlock_detector.markThreadNoLongerWaiting(thread_id);
+					throw vm::ThreadAbortException{};
+				}
+
+				std::this_thread::yield();
+			}
 			thread.acquireGil();
 		}
 		deadlock_detector.markThreadAcquiredMutex(thread_id, mutex_id);

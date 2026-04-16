@@ -147,6 +147,8 @@ namespace vm {
 	protected:
 		void executeOneStep() override;
 
+		void cleanupAfterPanic() override;
+
 	public:
 		SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process);
 

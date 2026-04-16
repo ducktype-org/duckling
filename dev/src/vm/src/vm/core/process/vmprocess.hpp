@@ -15,6 +15,7 @@
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 
+#include <atomic>
 #include <expected>
 #include <shared_mutex>
 #include <variant>
@@ -51,6 +52,7 @@ namespace vm {
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
+		std::atomic<bool>           abort_blocking_operations = false;
 
 		/**
 		 * @brief Emits current status when VM changes status
@@ -208,6 +210,12 @@ namespace vm {
 
 		// @TODO: #2400 Remove this
 		void setStatus(const api::ProcStatus& new_status) noexcept;
+
+		/**
+		 * @brief Returns true if process entered a terminal failure/stop state and blocking
+		 * operations should abort cooperatively.
+		 */
+		bool shouldAbortBlockingOperations();
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess

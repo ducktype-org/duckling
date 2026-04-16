@@ -147,12 +147,22 @@ namespace vm {
 	}
 
 	void IVMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
+		abort_blocking_operations.store(
+			std::holds_alternative<api::ExecutionPanicked>(new_status)
+			    || std::holds_alternative<api::ExecutionStopped>(new_status),
+			std::memory_order_release
+		);
+
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			status = new_status;
 			on_status_change.emitEvent(status);
 		}
 		status_cv.notify_all();
+	}
+
+	bool IVMProcess::shouldAbortBlockingOperations() {
+		return abort_blocking_operations.load(std::memory_order_acquire);
 	}
 
 	api::ProcStatus IVMProcess::getStatus() {

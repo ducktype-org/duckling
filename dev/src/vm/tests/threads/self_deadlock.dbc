@@ -1,0 +1,18 @@
+global_data m mutex {};
+
+function main { i64, ptr_argv } -> i64 {
+    init_lany_type      init_m, mutex;
+    call_builtinfunc    builtin_create_mutex;
+    mov_gopq_lopq       m, init_m;
+
+    init_lany_type      lock_m_1, mutex;
+    mov_lopq_gopq       lock_m_1, m;
+    call_builtinfunc    builtin_lock_mutex;
+
+    # Locking the same non-recursive mutex in the same thread must panic.
+    init_lany_type      lock_m_2, mutex;
+    mov_lopq_gopq       lock_m_2, m;
+    call_builtinfunc    builtin_lock_mutex;
+
+    ret;
+}

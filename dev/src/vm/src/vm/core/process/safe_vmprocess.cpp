@@ -169,10 +169,12 @@ namespace vm {
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::deinitAndValidate() {
 		std::unique_lock lock(rw_global);
-		for (auto& t: vm_threads) {
+		for (auto& t: vm_threads)
 			if (api::isExecuting(t.getStatus()))
 				if (auto res = stop(); !res.has_value()) return res;
-		}
+
+		for (auto& t: vm_threads) t.joinExecutionThread();
+
 		try {
 			// There might be numerous runtime exceptions during the deinitialization,
 			// any of those means there was an issue during the validation.

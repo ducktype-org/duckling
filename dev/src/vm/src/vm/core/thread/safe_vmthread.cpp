@@ -584,6 +584,10 @@ namespace vm {
 
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
 
+	void SafeVMThread::cleanupAfterPanic() {
+		if (has_gil) releaseGil();
+	}
+
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
 		// +1 because frame_stack_current points to the current frame, not the next free slot.
 		return u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;

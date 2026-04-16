@@ -169,6 +169,12 @@ namespace vm {
 		virtual bool waitForRunningResponse();
 
 		/**
+		 * @brief Cleanup hook invoked from panic handler before panic status is reported.
+		 * Thread implementations can release resources held during unwinding.
+		 */
+		virtual void cleanupAfterPanic();
+
+		/**
 		 * @brief Responds to an execution request by sending a response to the VMProcess.
 		 *
 		 * @param response The response to send.

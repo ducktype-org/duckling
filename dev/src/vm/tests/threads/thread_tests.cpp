@@ -14,6 +14,9 @@ public:
 		TESTER_ADD_TEST(multithreadingTest);
 		TESTER_ADD_TEST(mutexTest);
 		TESTER_ADD_TEST(cvTest);
+		TESTER_ADD_TEST(selfDeadlockPanicsTest);
+		TESTER_ADD_TEST(selfDeadlockPanicsStressTest);
+		TESTER_ADD_TEST(deterministicDeadlockPanicsTest);
 	}
 
 private:
@@ -32,6 +35,24 @@ private:
 		runTestOnVm("cv_permit_barrier_test.dbc", "", "20000221", {});
 		runTestOnVm("cv_simple_barrier_all_test.dbc", "", "22020201", {});
 		runTestOnVm("producer_consumer.dbc", "", "20000200000221", {});
+	}
+
+	void selfDeadlockPanicsTest() {
+		auto result = runTestOnVmGetResult("self_deadlock.dbc", "", {}, {});
+		assertExecutionPanickedWith(result, "Deadlock detected");
+	}
+
+	void selfDeadlockPanicsStressTest() {
+		for (usize i = 0; i < 5; i++) {
+			auto result = runTestOnVmGetResult("self_deadlock.dbc", "", {}, {});
+			assertExecutionPanickedWith(result, "Deadlock detected");
+		}
+	}
+
+	void deterministicDeadlockPanicsTest() {
+		auto result = runTestOnVmGetResult("deterministic_deadlock.dbc", "", {}, {});
+		ASSERT_TRUE(!result.run_result.has_value());
+		ASSERT_TRUE(vm::api::errorToString(result.run_result.error()).contains("Deadlock detected"));
 	}
 };
 
