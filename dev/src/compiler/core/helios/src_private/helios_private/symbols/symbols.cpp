@@ -11,6 +11,8 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -18,8 +20,6 @@
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <tsh/abstract_type.hpp>
-#include <tsh/queries/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -61,6 +61,7 @@ namespace compiler::helios {
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
+	// @TODO: #895 Reevaluate this helper when entry points become explicit.
 	bool isGlobalFun(SymID id) {
 		CORE_ASSERT(
 			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
@@ -1020,7 +1021,7 @@ namespace compiler::helios {
 			}
 
 			void visitVariableStmt(const code::VariableStmt& stmt) override {
-				if (stmt.initial_value) stmt.initial_value.value()->acceptVisitor(*this);
+				stmt.initial_value->acceptVisitor(*this);
 			}
 
 			void visitAssignmentStmt(const code::AssignmentStmt& stmt) override {
@@ -1169,8 +1170,7 @@ namespace compiler::helios {
 		// this implementation is fragile, adjust if needed
 
 		CORE_ASSERT(
-			query::Context::getState().activeQueryCount() == 0,
-			"getAllHeliosSymbols called from within query!"
+			!query::Context::areWeInsideQuery(), "getAllHeliosSymbols called from within query!"
 		);
 
 		auto pst_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();

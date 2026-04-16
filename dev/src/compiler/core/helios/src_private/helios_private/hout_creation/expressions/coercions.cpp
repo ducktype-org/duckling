@@ -2,8 +2,8 @@
 
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <tsh/queries/implicit_coercibility.hpp>
-#include <tsh/queries/types.hpp>
+#include <helios/tsh/queries/implicit_coercibility.hpp>
+#include <helios/tsh/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -166,4 +166,11 @@ namespace compiler::helios {
 		);
 	}
 
+	BoxOrCRef<code::Expr> Coercion::coerceFromRef(query::Context& ctx, CRef<code::Expr> from) const {
+		CORE_ASSERT(isValidFor(from), "Invalid expression for this coercion.");
+		if (isEmptyCoercion()) return from;
+
+		Box<code::Expr> from_box = from->clone();
+		return coerce(ctx, std::move(from_box));
+	}
 }

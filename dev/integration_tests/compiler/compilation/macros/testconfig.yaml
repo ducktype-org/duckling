@@ -41,6 +41,19 @@ Tests:
           String: "1\n2\n"
         ExitCode: 0
 
+  expand_expand:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0
+
   various_statements:
     Cases:
       llvm:
@@ -48,9 +61,26 @@ Tests:
         Output:
           String: "177\n"
         ExitCode: 0
-      # @TODO: #1560 reenable it.
+      # @TODO: #2476 Enable DVM case.
       # dvm:
       #   backend: dvm
       #   Output:
       #     String: "177\n"
       #   ExitCode: 0
+
+  expand_comp_time:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "42\n1\n"
+        ExitCode: 0
+      # @TODO: #1849 #2483 reenable DVM case, currently it fails because of both
+      # the fact that we don't handle string compilation to DVM and that we don't handle
+      # constants compilation to DVM.
+      # dvm:
+      #   backend: dvm
+      #   Output:
+      #     String: "42\n1\n"
+      #   ExitCode: 0
+

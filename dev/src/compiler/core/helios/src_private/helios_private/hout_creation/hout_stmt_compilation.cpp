@@ -12,15 +12,15 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/symbol_type.hpp>
-#include <tsh/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -98,17 +98,26 @@ namespace compiler::helios {
 				query::throwFailed();
 			}
 
+			if (op != base::StrID("=")) {
+				auto assignment_expr
+					= ctx.query<QueryHoutOfExpr>({ assignment })->valueOrThrow().ref();
+				output(code::ExprStmt(code::pstOrigin(assignment), assignment_expr));
+				return;
+			}
+
 			auto var = assignment->getVariables();
 			auto val = assignment->getValue();
 
-			auto location_expr = ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow()->clone();
+			BoxOrCRef<code::Expr> location_expr
+				= ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow().ref();
+
 
 			// If left side of the assignment is a ref/box, we have to dereference it and store
 			// the value in the memory pointed by the ref/box.
 			auto location_type = location_expr->expression_type.getSymbolType();
 			if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
 				location_expr = makeBox<code::DerefExpr>(
-					ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
+					ctx, location_expr->origin.generatedFrom(), location_expr->clone()
 				);
 
 			auto location_value_category
@@ -150,50 +159,6 @@ namespace compiler::helios {
 					std::move(new_value_expr_coerced)
 				));
 				return;
-			} else if (op == base::StrID("+=")) {
-				// @TODO: #1970 This implementation is temporary and should be handled by the
-				// `+=` operator in the future.
-				if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-					auto dyn_array    = location_type.getType().as<tsh::DynamicArrayAbstractType>();
-					auto element_type = dyn_array.getElementType();
-					auto value_expr_coerced
-						= getHoutOfExprWithExpectedType(ctx, val, element_type).valueOrThrow();
-
-					output(code::ExprStmt(
-						code::pstOrigin(assignment),
-						makeBox<code::ListPushExpr>(
-							code::pstOrigin(assignment),
-							std::move(location_expr),
-							std::move(value_expr_coerced)
-						)
-					));
-					return;
-				}
-			} else if (op == base::StrID("-=")) {
-				// @TODO: #1970 This implementation is temporary and should be handled by the
-				// `-=` operator in the future.
-				if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-					auto u64_type = tsh::SymbolType<>{
-						tsh::getIntegralType(
-							ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-						),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					};
-
-					auto value_expr_coerced
-						= getHoutOfExprWithExpectedType(ctx, val, u64_type).valueOrThrow();
-
-					output(code::ExprStmt(
-						code::pstOrigin(assignment),
-						makeBox<code::ListPopExpr>(
-							code::pstOrigin(assignment),
-							std::move(location_expr),
-							std::move(value_expr_coerced)
-						)
-					));
-					return;
-				}
 			}
 
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -235,8 +200,8 @@ namespace compiler::helios {
 
 			// else just create an expression statement:
 
-			auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })->valueOrThrow()->clone();
-			output(code::ExprStmt(code::pstOrigin(stmt), std::move(expr)));
+			auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })->valueOrThrow().ref();
+			output(code::ExprStmt(code::pstOrigin(stmt), expr));
 		}
 
 		void visitIf(pst::Access<pst::If> stmt) override {
@@ -303,16 +268,16 @@ namespace compiler::helios {
 					return;
 				}
 
-				auto initial_value
+				auto initial_value_qresult
 					= defgen::getDefaultInitializerExpr(ctx, symbol_type, stmt->getSourcePosition());
-				if (initial_value.hasFailed()) {
+				if (initial_value_qresult.hasFailed()) {
 					is_failed = true;
 					return;
 				}
+				auto initial_value = initial_value_qresult.valueOrThrow();
 
-				output(code::VariableStmt(
-					code::pstOrigin(stmt), std::move(initial_value.valueOrPanic()), symbol_type, symbol
-				));
+				output(code::VariableStmt(code::pstOrigin(stmt), initial_value, symbol_type, symbol)
+				);
 			} else {
 				auto initial_value_coerced
 					= getHoutOfExprWithExpectedType(

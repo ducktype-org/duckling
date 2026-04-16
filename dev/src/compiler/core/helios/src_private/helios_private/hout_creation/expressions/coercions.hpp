@@ -2,8 +2,10 @@
 
 #include <diagnostic_interactive/message.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <tsh/symbol_type.hpp>
+
+#include <base/pointers/box_or_ref.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
@@ -52,6 +54,16 @@ namespace compiler::helios {
 		 * Main function that creates a coerced expression from the old one.
 		 */
 		[[nodiscard]] Box<code::Expr> coerce(query::Context& ctx, Box<code::Expr> from) const;
+
+
+		/**
+		 * Same as `coerce` but accepts a reference to the expression instead of taking ownership.
+		 * This is useful when we don't know if the coercion will actually need to modify the
+		 * expression or not (e.g., in case of empty coercion), so we can avoid unnecessary cloning.
+		 */
+		[[nodiscard]] BoxOrCRef<code::Expr> coerceFromRef(
+			query::Context& ctx, CRef<code::Expr> from
+		) const;
 
 		/**
 		 * The symbol type that was validated to be coercible.

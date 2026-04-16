@@ -5,7 +5,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <tsh/queries/types.hpp>
+#include <helios/tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -48,6 +48,10 @@ namespace compiler::helios {
 
 		base::Bit256 GeneratedSymbolData::ReplInstructionWrapper::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(counter);
+		}
+
+		base::Bit256 GeneratedSymbolData::ScriptMainWrapper::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(script_id, scope.queryUnstablePerfectHash());
 		}
 
 		GeneratedSymbolData::GeneratedSymbolData(const GeneratedSymbolDataVariant& data):
@@ -172,7 +176,7 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(ReplInstructionWrapper, repl) {
+				variant_case_novalue(ReplInstructionWrapper) {
 					// Unit (not Void) is the correct return type for procedures.
 					// Per the language spec: "void ... cannot be returned from a function".
 					const auto void_type = tsh::SymbolType<>{
@@ -182,6 +186,20 @@ namespace compiler::helios {
 					};
 					const auto function_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ {}, void_type });
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case_novalue(ScriptMainWrapper) {
+					const auto return_type = tsh::SymbolType<>{
+						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+					const auto function_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
 					return tsh::SymbolType<>{
 						function_abstract_type,
 						tsh::ReferenceKind::Direct,
@@ -219,6 +237,7 @@ namespace compiler::helios {
 				variant_case(ReplInstructionWrapper, repl) {
 					CORE_PANIC("Can't get scope of repl instruction wrapper yet.");
 				}
+				variant_case(ScriptMainWrapper, script) { return script.scope; }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -235,30 +254,33 @@ namespace compiler::helios {
 				variant_case(Variable, var) { return {}; }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
 				variant_case(ReplInstructionWrapper, repl) { return {}; }
+				variant_case(ScriptMainWrapper, script) { return script.scope; }
 				variant_default { CORE_PANIC("Unhandled symbol kind"); }
 			}
 			CORE_UNREACHABLE();
 		}
 	}
 
+	SymbolData::SymbolData(CommonSymbolData common, OtherData other):
+		  common(common),
+		  other(other),
+		  id(SymbolDataID::next()) {}
+
 	SymbolData SymbolData::makePSTSymbolData(
 		const CommonSymbolData common_data, PstSymbolData pst_data
 	) {
-		return SymbolData{
-			.common = common_data,
-			.other  = pst_data,
-		};
+		return { common_data, pst_data };
 	}
 
 	SymbolData SymbolData::makeBuiltinFunction(
 		const base::StrID name, builtin::BuiltinFunctionData builtin_data
 	) {
-		return SymbolData{
-			.common = {
+		return {
+			{
 				.name = name,
 				.kind = SymbolKind::Function,
 			},
-			.other  = builtin_data,
+			builtin_data,
 		};
 	}
 
@@ -294,14 +316,17 @@ namespace compiler::helios {
 			variant_case_novalue(defgen::GeneratedSymbolData::ReplInstructionWrapper) {
 				kind = SymbolKind::Function;
 			}
+			variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
+				kind = SymbolKind::Function;
+			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
-		return SymbolData{
-			.common = {
+		return {
+			{
 				.name = name,
 				.kind = kind,
 			},
-			.other  = generated_data,
+			generated_data,
 		};
 	}
 }

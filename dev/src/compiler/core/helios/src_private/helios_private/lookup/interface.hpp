@@ -4,7 +4,7 @@
 
 #include <frontend/pst_parser/stable_position.hpp>
 #include <helios/scope_id.hpp>
-#include <tsh/abstract_type.hpp>
+#include <helios/tsh/abstract_type.hpp>
 
 #include <base/pointers/box.hpp>
 

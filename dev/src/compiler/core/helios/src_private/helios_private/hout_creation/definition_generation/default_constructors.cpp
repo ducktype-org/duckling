@@ -5,13 +5,15 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/queries/types.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
+
+#include <ranges>
 
 namespace compiler::helios::defgen {
 	// -----------------------------------------------------------
@@ -77,7 +79,7 @@ namespace compiler::helios::defgen {
 				                                .value();
 				auto field_init_expr_opt = field_pst_data->getInit();
 
-				auto init_expr = [&]() -> Box<code::Expr> {
+				auto init_expr = [&]() -> BoxOrCRef<code::Expr> {
 					match_optional(field_init_expr_opt) {
 						opt_some(field_init) {
 							// If the field has an initializer value we use it.
@@ -93,7 +95,7 @@ namespace compiler::helios::defgen {
 							// Otherwise initialize it with the default initializer expression.
 							return ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
 							    ->valueOrThrow()
-							    ->clone();
+							    .ref();
 						}
 					}
 					CORE_UNREACHABLE();
@@ -207,7 +209,7 @@ namespace compiler::helios::defgen {
 				// while (i < size) { res[i] = default_init(T); i = i + 1; }
 				code::CodeBlock loop_body{};
 				auto            element_init
-					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow()->clone();
+					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow().ref();
 
 				// res[i] = default_init(T)
 				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
@@ -218,7 +220,7 @@ namespace compiler::helios::defgen {
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
 					),
-					element_init->clone()
+					element_init
 				));
 
 				// i = i + 1
@@ -339,7 +341,7 @@ namespace compiler::helios::defgen {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
 
-	query::QResult<Box<code::Expr>> getDefaultInitializerExpr(
+	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
 		query::Context& ctx, const tsh::SymbolType<>& type, dia::SourcePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
@@ -351,7 +353,7 @@ namespace compiler::helios::defgen {
 
 		auto res = ctx.query<QueryDefaultInitializerExpr>(type);
 		if (res->hasFailed()) return query::Failed();
-		return res->valueOrThrow()->clone();
+		return res->valueOrThrow().ref();
 	}
 
 

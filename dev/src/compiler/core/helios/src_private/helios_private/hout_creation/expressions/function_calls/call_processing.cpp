@@ -10,13 +10,14 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <tsh/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -619,8 +620,8 @@ namespace compiler::helios::code {
 	 * argument collections.
 	 * @param ctx Query context
 	 * @param call_expr The PST call expression containing arguments
-	 * @param positional_arguments Output vector for positional arguments
-	 * @param named_arguments Output map for named arguments
+	 * @param[out] positional_arguments Output vector for positional arguments
+	 * @param[out] named_arguments Output map for named arguments
 	 * @return A vector of argument origins if successful, or a failure result if validation fails.
 	 */
 	query::QResult<std::vector<ElementOrigin>> fillCallArgs(
@@ -638,8 +639,8 @@ namespace compiler::helios::code {
 
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr_result
-				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			UNPACK_QRESULT_CREF_TO_BOX(auto arg_expr =, arg_expr_result);
+				= subExprFromPST(ctx, arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
+			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
@@ -652,7 +653,7 @@ namespace compiler::helios::code {
 						return query::Failed();
 					}
 				}
-				named_arguments.emplace_back(arg_name, arg_expr->clone());
+				named_arguments.emplace_back(arg_name, std::move(arg_expr));
 			} else {
 				if (!named_arguments.empty()) {
 					auto error = PositionalAfterNamedArgument{ arg_index };
@@ -662,7 +663,7 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 
-				positional_arguments.emplace_back(arg_expr->clone());
+				positional_arguments.emplace_back(std::move(arg_expr));
 			}
 			arg_index++;
 		}

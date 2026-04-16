@@ -5,7 +5,7 @@
 
 #include "abstract_type.hpp"
 
-#include <tsh/abstract_type_impl.hpp>
+#include <helios_private/tsh/abstract_type_impl.hpp>
 
 namespace compiler::tsh {
 	[[nodiscard]]

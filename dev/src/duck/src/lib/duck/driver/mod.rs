@@ -1,4 +1,4 @@
-use clap::{Command, crate_name, crate_version};
+use clap::{Command, ValueHint, builder::ValueParser, crate_name, crate_version};
 
 pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
@@ -6,8 +6,6 @@ pub mod global_options;
 pub mod run;
 pub mod styles;
 pub mod subcommands;
-
-use cli_ext::CommandExt;
 
 use crate::duck::driver::{
     cli_ext::{flag, optional},
@@ -34,7 +32,16 @@ fn cli() -> Command {
                 .conflicts_with("verbose")
                 .global(true),
         )
-        .add_chdir()
+        .arg(
+            optional(
+                "directory",
+                "Change to <DIRECTORY> before performing any actions",
+            )
+            .value_name("DIRECTORY")
+            .value_parser(ValueParser::path_buf())
+            .value_hint(ValueHint::DirPath)
+            .short('C'),
+        )
         .arg(
             optional("color", "Control the colored output")
                 .value_parser(["always", "never", "auto"])

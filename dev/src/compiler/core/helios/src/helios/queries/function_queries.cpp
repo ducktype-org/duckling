@@ -15,6 +15,10 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/expression_type.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
@@ -26,10 +30,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/expression_type.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/symbol_type.hpp>
-#include <tsh/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -345,7 +345,7 @@ namespace compiler::helios {
 				                                .value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
-					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
+					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
 						const auto field_type = field.getType(ctx);
 						auto       expr
 							= getHoutOfExprWithExpectedType(
@@ -492,6 +492,21 @@ namespace compiler::helios {
 							}
 							variant_case_novalue(defgen::GeneratedSymbolData::ReplInstructionWrapper
 							) {
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
+							}
+							variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
+								// Script main is a generated symbol with a regular function
+								// signature, so it needs a normal HOUT declaration for the backend
+								// pipeline.
 								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
 								                         ->valueOrThrow()
 								                         .getType()

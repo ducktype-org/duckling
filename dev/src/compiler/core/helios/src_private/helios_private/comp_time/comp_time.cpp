@@ -9,6 +9,7 @@
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -16,7 +17,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <tsh/queries/types.hpp>
 
 #include <base/str/str_utils.hpp>
 

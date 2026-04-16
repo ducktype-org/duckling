@@ -2,12 +2,14 @@
 
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <tsh/symbol_type.hpp>
-#include <tsh/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <variant>
 
@@ -127,6 +129,38 @@ namespace compiler::helios::defgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		/**
+		 * Represents a compiler-generated entry point for script execution.
+		 * This symbol is synthetic and exists only to orchestrate script statements.
+		 */
+		struct ScriptMainWrapper final {
+			/**
+			 * Stable per-script identity used by QueryGeneratedSymbol key hashing.
+			 * This helps keep generated-symbol identity/cache behavior deterministic
+			 * across script compilation units.
+			 *
+			 * @note This does NOT define the emitted linker symbol name.
+			 * The emitted entry name is still `main` (set separately as symbol name).
+			 */
+			base::StrID script_id;
+
+			/**
+			 * Root scope assigned to the generated script `main` symbol.
+			 *
+			 * This scope is required so `isGlobalFun` recognizes the symbol as global.
+			 *
+			 * @note For detailed explanation see docs for the buildScriptMainWrapper function in
+			 * helios/repl_utils/script_helpers.hpp.
+			 *
+			 * @TODO: #895 When entry points become explicit (not inferred from global `main`),
+			 * reevaluate whether this stored scope is still required for ScriptMainWrapper.
+			 */
+			ScopeID scope;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		using GeneratedSymbolDataVariant = std::variant<
 			ImplicitConstructor,
 			DefaultClassConstructor,
@@ -136,7 +170,8 @@ namespace compiler::helios::defgen {
 			SelfParameter,
 			Variable,
 			ReplExpressionWrapper,
-			ReplInstructionWrapper>;
+			ReplInstructionWrapper,
+			ScriptMainWrapper>;
 		GeneratedSymbolDataVariant data;
 
 		explicit GeneratedSymbolData(const GeneratedSymbolDataVariant& data);

@@ -1,6 +1,5 @@
 #include "vm.hpp"
 
-
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/core/process/interface_types.hpp>

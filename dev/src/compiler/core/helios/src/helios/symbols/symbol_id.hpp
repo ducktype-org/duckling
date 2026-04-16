@@ -21,11 +21,8 @@ namespace compiler::helios {
 	 * @brief Symbol Identifier. Used to represent HELIOS Symbol across the compiler.
 	 */
 	struct SymID final {
-		// @TODO: #2274 fix this
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			return reinterpret_cast<u64>(ref.get());
-		}
+		u64 queryUnstablePerfectHash() const;
 
 		bool operator==(const SymID&) const = default;
 

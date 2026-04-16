@@ -9,7 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <tsh/symbol_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <diagnostic/source_position.hpp>
 

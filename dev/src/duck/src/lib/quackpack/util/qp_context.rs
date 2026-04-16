@@ -1,15 +1,15 @@
 //! Trait extension used in parsing manifests.
 use url::Url;
 
-use crate::{DuckCtx, QuackResult, QuackResultContext, quackpack::core::fetcher};
+use crate::{DuckContext, QuackResult, QuackResultContext, quackpack::core::fetcher};
 
 /// Trait extension for methods used while parsing manifests.
-pub trait QpCtx {
+pub trait QpContext {
     /// Get the default registry URL.
     fn registry_url(&self) -> QuackResult<Url>;
 }
 
-impl QpCtx for DuckCtx {
+impl QpContext for DuckContext {
     fn registry_url(&self) -> QuackResult<Url> {
         let url = self
             .duck_cfg()
