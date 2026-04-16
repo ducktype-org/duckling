@@ -140,24 +140,23 @@ namespace vm::persistent {
 			return node;
 		}
 
-		void advancePath(Path& path) const {
+		bool advancePath(Path& path) const {
 			const auto orig_size = path.size();
 
 			while (path.size() && path.back().first == Dir::Right) path.pop_back();
 
-			CORE_ASSERT(
-				path.size() && path.back().first == Dir::Left,
-				"We require that at least node on path is left son"
-			);
+			if (path.size() && path.back().first == Dir::Left) return false;
 
 			NodeID node       = path.back().second;
 			path.back().first = Dir::Right;
 
 			while (path.size() < orig_size) {
 				auto [dir, node_id] = path.back();
-				node = getChild(node_id, dir);
+				node                = getChild(node_id, dir);
 				path.emplace_back(Dir::Left, node);
 			}
+
+			return true;
 		}
 
 		const VarT& getLeafValue(NodeID node) const {
@@ -274,7 +273,7 @@ namespace vm::persistent {
 
 				if (idx == right) break;
 
-				advancePath(path);
+				CORE_ASSERT(advancePath(path), "Advancing of the path failed");
 			}
 
 			return ans;

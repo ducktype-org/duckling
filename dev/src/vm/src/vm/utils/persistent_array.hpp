@@ -130,6 +130,41 @@ namespace vm::persistent {
 			return node;
 		}
 
+		bool advancePath(Path& path) const {
+			const auto orig_size = path.size();
+
+			while (path.size()) {
+				auto [dir, node_id] = path.back();
+				auto entry          = node_entries.atRight(node_id);
+
+				if (dir == Dir::Left && entry.rght != SENTINEL) break;
+
+				path.pop_back();
+			}
+
+			if (path.size() == 0) return false;
+
+			path.back().first = Dir::Right;
+
+			while (path.size() < orig_size) {
+				auto [dir, father] = path.back();
+				auto son           = getChild(father, dir);
+
+				auto dir_son = Dir::Left;
+				if (getChild(son, Dir::Left) == SENTINEL)
+					dir_son = Dir::Right;
+					
+				CORE_ASSERT(
+					getChild(son, dir_son) != SENTINEL,
+					"My son, must have at least one valid grandchild"
+				);
+
+				path.emplace_back(dir_son, son);
+			}
+
+			return true;
+		}
+
 	public:
 		bool active(ArrayStateID state_id, usize idx) {
 			auto root = getRootAndValidateIdx(state_id, idx);

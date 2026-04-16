@@ -187,10 +187,38 @@ public:
 		auto op11 = array.erase(op10, 4);
 		checker(op11, { {} });
 
+		auto op12 = array.change(op03, 1, "val01");
+		checker(op12, { { 1, "val01" },{ 2, "val02" } });
+
 		ASSERT_EQUAL(empty, op11);
+		ASSERT_EQUAL(op02, op12);
 	}
 
-	void testHashMap() {}
+	void testHashMap() {
+		using namespace vm::persistent;
+
+		using act_t = std::map<std::string, char>;
+
+		HashMap<std::string, char> map{ 5 };
+
+		auto checker = [&](HashMapStateID state, act_t expected) -> void {
+			static constexpr usize SIZE = (1 << 5);
+
+
+			for (auto [k, _]: expected) {
+				ASSERT_TRUE(map.contains(state, k));
+			}
+
+			for (usize idx = 1; idx <= SIZE; idx++) {
+				if (expected.contains(idx)) {
+					ASSERT_EQUAL(expected[idx], array.access(state, idx));            
+				}
+				else {
+					ASSERT_TRUE(!array.active(state, idx));
+				}
+			}
+		};
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/utils/");

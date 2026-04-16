@@ -3,7 +3,6 @@
 #include <base/collections/maps.hpp>
 
 #include <functional>
-#include <optional>
 #include <stdexcept>
 #include <unordered_set>
 #include <vector>

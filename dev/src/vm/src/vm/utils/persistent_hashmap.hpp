@@ -31,32 +31,45 @@ namespace vm::persistent {
 		Array<ValT>                       buffer;
 		detail::BijectiveMap<KeyT, usize> key_binding;
 
-		NodeID getIdxOfkey(const KeyT& var) {
+		NodeID emplaceKey(const KeyT& var) {
 			auto [_, idx] = key_binding.emplaceByLeft(var, key_binding.size());
 			return idx;
 		}
 
 	public:
+		bool contains(HashMapStateID state_id, const KeyT& key) const {
+			auto maybe_idx = key_binding.atLeftOpt(key);
+			if (!maybe_idx) return false;
+
+			auto inner = ArrayStateID{ u64(state_id) };
+
+			return buffer.active(inner, *maybe_idx);
+		}
+
 		const ValT& access(HashMapStateID state_id, const KeyT& key) const {
 			auto inner     = ArrayStateID{ u64(state_id) };
-			auto idx       = getIdxOfkey(key);
-			auto new_state = buffer.access(inner, idx);
+			auto maybe_idx = key_binding.atLeftOpt(key);
 
-			return HashMapStateID{ u64{ new_state } };
+			if (!maybe_idx) throw std::invalid_argument("no such key in map");
+
+			return buffer.access(inner, maybe_idx);
 		}
 
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
 			auto inner     = ArrayStateID{ u64(state_id) };
-			auto idx       = getIdxOfkey(key);
+			auto idx       = emplaceKey(key);
 			auto new_state = buffer.change(inner, idx, var);
 
 			return HashMapStateID{ u64{ new_state } };
 		}
 
-		HashMapStateID erase(HashMapStateID state_id, const KeyT& key, const ValT& var) {
+		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
 			auto inner     = ArrayStateID{ u64(state_id) };
-			auto idx       = getIdxOfkey(key);
-			auto new_state = buffer.erase(inner, idx, var);
+			auto maybe_idx = key_binding.atLeftOpt(key);
+
+			if (!maybe_idx) return state_id;
+
+			auto new_state = buffer.erase(inner, *maybe_idx);
 
 			return HashMapStateID{ u64{ new_state } };
 		}
@@ -65,7 +78,7 @@ namespace vm::persistent {
 			HashMapStateID state_id, const KeyT& key, const ValT& var
 		) {
 			auto inner               = ArrayStateID{ u64(state_id) };
-			auto idx                 = getIdxOfkey(key);
+			auto idx                 = emplaceKey(key);
 			auto [is_new, new_state] = buffer.emplace(inner, idx, var);
 
 			return { is_new, HashMapStateID{ u64{ new_state } } };
