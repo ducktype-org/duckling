@@ -9,7 +9,7 @@ function threadA {} -> void {
 
     # Wait for thread B to lock m2
     init_lany_type      i, i64;
-    mov_l64_imm         i, 100000;
+    mov_l64_imm         i, 10000000;
     label LoopA;
         sub_l64_imm     i, 1;
         cmpGt_l64_imm   i, 0;
@@ -40,7 +40,7 @@ function threadB {} -> void {
 
     # Wait for thread A to lock m1
     init_lany_type      j, i64;
-    mov_l64_imm         j, 100000;
+    mov_l64_imm         j, 10000000;
     label LoopB;
         sub_l64_imm     j, 1;
         cmpGt_l64_imm   j, 0;

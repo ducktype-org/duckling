@@ -7,12 +7,19 @@
 namespace vm {
 
 	void DeadlockDetector::beginWaitForMutexOrThrow(api::ThreadID thread_id, usize mutex_id) {
+		// This method's thread-safety relies on caller holding the process GIL.
+		// The two operations below form a logical atomic unit within bytecode execution:
+		// 1. Check if the acquisition would cause a deadlock
+		// 2. Mark thread as waiting (before actually acquiring the OS-level mutex)
+		// If a deadlock is detected, an exception is thrown and the thread is NOT marked as waiting.
 		checkForDeadlock(thread_id, mutex_id);
 		markThreadWaitingForMutex(thread_id, mutex_id);
 	}
 
 	void DeadlockDetector::checkForDeadlock(api::ThreadID thread_id, usize mutex_id) {
-		// Check if there is a cycle in resource allocation graph if we add edge thread_id -> mutex_id
+		// Thread-safety: No internal locking. Assumes caller holds the process GIL.
+		// Algorithm: Detects cycles in the wait-for graph using DFS.
+		// Check if there is a cycle if we add edge thread_id -> mutex owner
 
 		// If the mutex is not owned by anyone, no deadlock possible from this acquisition
 		auto owner_it = mutex_owners.find(mutex_id);
@@ -20,13 +27,14 @@ namespace vm {
 
 		api::ThreadID owner_thread_id = owner_it->second;
 
-		// std::mutex is non-recursive. Locking it again in the same thread deadlocks.
+		// Self-deadlock: std::mutex is non-recursive. Locking it again deadlocks.
 		if (owner_thread_id == thread_id) throw exceptions::VMDeadlockException();
 
-		// DFS to find if owner_thread_id can reach thread_id in the wait-for graph
-		// Graph edges: Thread A waiting for Mutex M (owned by Thread B) => A -> B
-		// We are checking edge thread_id -> owner_thread_id.
-		// So we want to see if there is path owner_thread_id -> ... -> thread_id.
+		// DFS to find if owner_thread_id can reach thread_id in the wait-for graph.
+		// If such a path exists, a cycle would be created (deadlock condition).
+		// Graph edges: Thread A waiting for Mutex M owned by Thread B => Edge A -> B
+		// We are adding edge (thread_id -> owner_thread_id) and checking if it creates a cycle
+		// by searching for a path from owner_thread_id back to thread_id.
 
 		std::vector<bool>          visited;
 		std::vector<api::ThreadID> stack;
@@ -49,18 +57,20 @@ namespace vm {
 			api::ThreadID current_thread = stack.back();
 			stack.pop_back();
 
+			// If we reached the original thread_id, a cycle exists -> deadlock
 			if (current_thread == thread_id) throw exceptions::VMDeadlockException();
 
-			// Find what mutex current_thread is waiting for
+			// Traverse the wait-for graph: find what mutex current_thread is waiting for,
+			// then find who owns that mutex (next thread to visit).
 			auto wait_it = thread_waiting_for_mutex.find(current_thread);
 			if (wait_it != thread_waiting_for_mutex.end()) {
 				usize waiting_for_mutex = wait_it->second;
 
-				// Find who owns that mutex
 				auto next_owner_it = mutex_owners.find(waiting_for_mutex);
 				if (next_owner_it != mutex_owners.end()) {
 					api::ThreadID next_thread = next_owner_it->second;
 
+					// Cycle found: current thread is waiting for a mutex ultimately held by thread_id
 					if (next_thread == thread_id) throw exceptions::VMDeadlockException();
 
 					if (!is_visited(next_thread)) {

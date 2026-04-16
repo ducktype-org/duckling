@@ -126,16 +126,14 @@ namespace vm::builtins {
 		auto mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 		auto thread_id = thread.getThreadID();
 
+		auto& deadlock_detector = thread.safe_process.getDeadlockDetector();
+		deadlock_detector.beginWaitForMutexOrThrow(thread_id, mutex_id);
 		if (!mutex->try_lock()) {
-			thread.safe_process.getDeadlockDetector().beginWaitForMutexOrThrow(thread_id, mutex_id);
-
 			thread.releaseGil();
 			mutex->lock();
 			thread.acquireGil();
-			thread.safe_process.getDeadlockDetector().markThreadAcquiredMutex(thread_id, mutex_id);
-		} else {
-			thread.safe_process.getDeadlockDetector().markThreadAcquiredMutex(thread_id, mutex_id);
 		}
+		deadlock_detector.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
