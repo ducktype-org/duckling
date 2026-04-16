@@ -121,9 +121,17 @@ namespace vm::builtins {
 		thread.acquireGil();
 
 		if (!join_result.has_value()) {
-			if (thread.safe_process.shouldAbortBlockingOperations()) return;
+			const auto& join_error = join_result.error();
+			if (std::holds_alternative<vm::api::OtherError>(join_error)) {
+				const auto& joined_error = std::get<vm::api::OtherError>(join_error).error;
+				constexpr std::string_view PANIC_PREFIX = "Execution panicked with error: ";
+				if (joined_error.starts_with(PANIC_PREFIX))
+					throw vm::exceptions::VMRuntimeException(
+						joined_error.substr(PANIC_PREFIX.size())
+					);
+			}
 			throw vm::exceptions::VMRuntimeException(
-				"builtinJoinThread failed: " + vm::api::errorToString(join_result.error())
+				"builtinJoinThread failed: " + vm::api::errorToString(join_error)
 			);
 		}
 	}

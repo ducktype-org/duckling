@@ -86,7 +86,6 @@ void vm::IVMThread::safeRun(const std::string& func_name, const RunArguments& ru
 		execution_response_queue.push(api::ExecutionStopped{});
 	} catch (const exceptions::VMRuntimeException& e) {
 		cleanupAfterPanic();
-		std::cerr << "VMThread has panicked: " << e.what() << "\n";
 		respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 	}
 }
