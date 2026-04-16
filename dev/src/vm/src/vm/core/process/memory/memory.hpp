@@ -54,8 +54,8 @@ namespace vm {
 		// need to allocate a new block, we first check if there are any free IDs available. Blocks
 		// are stored in a deque, so we can have pointers to them without worrying about
 		// reallocation.
-		std::deque<Block>   blocks   = {};
-		std::deque<BlockID> free_ids = {};
+		std::deque<Block>    blocks   = {};
+		std::vector<BlockID> free_ids = {};
 
 		[[nodiscard]]
 		Ref<Block> createBlock(BlockData data);

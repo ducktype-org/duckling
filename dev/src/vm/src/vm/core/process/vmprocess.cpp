@@ -155,10 +155,7 @@ namespace vm {
 		status_cv.notify_all();
 	}
 
-	api::ProcStatus IVMProcess::getStatus() {
-		std::shared_lock lock(rw_status);
-		return status;
-	}
+	api::ProcStatus IVMProcess::getStatus() { return status; }
 
 	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request
 	) {
