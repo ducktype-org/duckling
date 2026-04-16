@@ -129,8 +129,7 @@ namespace vm::builtins {
 
 		if (!mutex->try_lock()) {
 			std::thread::id thread_id = std::this_thread::get_id();
-			DeadlockDetector::checkForDeadlock(process_id, thread_id, mutex_id);
-			DeadlockDetector::markThreadWaitingForMutex(process_id, thread_id, mutex_id);
+			DeadlockDetector::beginWaitForMutexOrThrow(process_id, thread_id, mutex_id);
 			
 			thread.releaseGil();
 			mutex->lock();
@@ -152,6 +151,8 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
+		u64 process_id = static_cast<u64>(thread.safe_process.getPID());
+		DeadlockDetector::clearMutexState(process_id, mutex_id);
 		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
 

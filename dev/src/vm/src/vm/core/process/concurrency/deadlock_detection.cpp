@@ -11,6 +11,15 @@ namespace vm {
     std::map<std::pair<u64, std::thread::id>, usize> DeadlockDetector::thread_waiting_for_mutex;
     std::map<std::pair<u64, usize>, std::thread::id> DeadlockDetector::mutex_owners;
 
+    void DeadlockDetector::beginWaitForMutexOrThrow(
+        u64 process_id,
+        std::thread::id thread_id,
+        usize mutex_id
+    ) {
+        checkForDeadlock(process_id, thread_id, mutex_id);
+        markThreadWaitingForMutex(process_id, thread_id, mutex_id);
+    }
+
     void DeadlockDetector::checkForDeadlock(u64 process_id, std::thread::id thread_id, usize mutex_id) {
         // Check if there is a cycle in resource allocation graph if we add edge thread_id -> mutex_id
         
@@ -55,13 +64,14 @@ namespace vm {
                 auto next_owner_it = mutex_owners.find({ process_id, waiting_for_mutex });
                 if (next_owner_it != mutex_owners.end()) {
                     std::thread::id next_thread = next_owner_it->second;
-                    
+
+                    if (next_thread == thread_id) {
+                        throw exceptions::VMDeadlockException();
+                    }
+
                     if (visited.find(next_thread) == visited.end()) {
                         visited.insert(next_thread);
                         stack.push_back(next_thread);
-                    } else if (next_thread == thread_id) {
-                        // Found cycle back to thread_id
-                         throw exceptions::VMDeadlockException();
                     }
                 }
             }
@@ -81,6 +91,18 @@ namespace vm {
         auto it = mutex_owners.find({ process_id, mutex_id });
         if (it != mutex_owners.end() && it->second == thread_id) {
             mutex_owners.erase(it);
+        }
+    }
+
+    void DeadlockDetector::clearMutexState(u64 process_id, usize mutex_id) {
+        mutex_owners.erase({ process_id, mutex_id });
+
+        for (auto it = thread_waiting_for_mutex.begin(); it != thread_waiting_for_mutex.end();) {
+            if (it->first.first == process_id && it->second == mutex_id) {
+                it = thread_waiting_for_mutex.erase(it);
+            } else {
+                ++it;
+            }
         }
     }
 

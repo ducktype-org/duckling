@@ -11,6 +11,11 @@ namespace vm {
     class DeadlockDetector final {
     public:
         /**
+         * @brief Atomically checks if waiting for `mutex_id` would deadlock and marks thread as waiting.
+         */
+        static void beginWaitForMutexOrThrow(u64 process_id, std::thread::id thread_id, usize mutex_id);
+
+        /**
          * @brief Checks if acquiring mutex with id `mutex_id` by thread `thread_id` would cause a deadlock.
          * If it would, this function should throw an exception to prevent deadlock from happening.
          */
@@ -21,6 +26,11 @@ namespace vm {
         static void markThreadAcquiredMutex(u64 process_id, std::thread::id thread_id, usize mutex_id);
 
         static void markThreadReleasedMutex(u64 process_id, std::thread::id thread_id, usize mutex_id);
+
+        /**
+         * @brief Clears detector state related to a destroyed mutex.
+         */
+        static void clearMutexState(u64 process_id, usize mutex_id);
 
     private:
         // (process_id, thread_id) -> mutex_id (Thread is waiting for Mutex)
