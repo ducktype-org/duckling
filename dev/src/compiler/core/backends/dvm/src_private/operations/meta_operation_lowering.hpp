@@ -30,11 +30,7 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Lowers a meta operation instruction to DVM bytecode.
 		 */
-		void lower(
-			const MetaOperation&            lir_instruction,
-			const std::deque<DVMValue>&     args,
-			const base::Optional<DVMPlace>& output
-		);
+		void lower(const MetaOperation& meta_operation);
 
 	private:
 		FunctionLoweringContext& func_ctx;

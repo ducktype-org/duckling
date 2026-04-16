@@ -67,37 +67,27 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 	}
 
-	std::deque<DVMValue> args
-		= lir_instruction.arguments
-	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
-	    | std::ranges::to<std::deque>();
-	const auto maybe_output
-		= lir_instruction.output.map([&](auto& place) { return resolveLirPlace(place); });
-
-	const auto dvm_operation = lirInstrToDVMOperation(lir_instruction);
-
 	// TODOP: All of the outputs should be optional.
+	const auto dvm_operation = lirInstrToDVMOperation(lir_instruction);
 	variant_match(dvm_operation) {
 		variant_case(MetaOperation, operation) {
-			MetaOperationLowerer(*this).lower(operation, args, maybe_output);
+			MetaOperationLowerer(*this).lower(operation);
 			return;
 		}
 		variant_case(CastOperation, operation) {
-			CastOperationLowerer::lowerCastOperation(*this, operation, args, maybe_output.value());
+			CastOperationLowerer::lowerCastOperation(*this, operation);
 			return;
 		}
 		variant_case(ComparisonOperation, operation) {
-			ComparisonOperationLowerer::lower(
-				*this, operation, args, maybe_output.value(), lir_instruction
-			);
+			ComparisonOperationLowerer::lower(*this, operation);
 			return;
 		}
 		variant_case(UnaryOperation, operation) {
-			ArithmeticOperationLowerer::lowerUnary(*this, operation, args, maybe_output.value());
+			ArithmeticOperationLowerer::lowerUnary(*this, operation);
 			return;
 		}
 		variant_case(BinaryOperation, operation) {
-			ArithmeticOperationLowerer::lowerBinary(*this, operation, args, maybe_output.value());
+			ArithmeticOperationLowerer::lowerBinary(*this, operation);
 			return;
 		}
 		variant_case(CallOperation, operation) {
@@ -121,15 +111,13 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 				// (AccessKind::Pointer), than we have the address in hand. We just move it.
 				pushInstruction({ OpKind::mov, addr_temp.asArgument(), resolved_src.asArgument() });
 			}
-
-			if (maybe_output.has_value())
-				storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
+			storeResult(output_dest, { addr_temp, DVMPlace::AccessKind::Direct });
 			return;
 		}
-		variant_case_novalue(MoveOperation) {
+		variant_case(MoveOperation, operation) {
 			// TODOP: Move this somewhere.
 			// Otherwise, it's a simple assignment.
-			storeResult(maybe_output.value(), args[0]);
+			storeResult(operation.dest, operation.src);
 			return;
 		}
 		variant_case_novalue(NoOpOperation) { return; }

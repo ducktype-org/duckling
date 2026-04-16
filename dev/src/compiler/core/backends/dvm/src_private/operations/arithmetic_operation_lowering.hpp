@@ -9,19 +9,11 @@ namespace compiler::backend_vm::internal {
 	class ArithmeticOperationLowerer {
 	public:
 		// TODOP: Doc
-		static void lowerUnary(
-			FunctionLoweringContext&    ctx,
-			const UnaryOperation&       op,
-			const std::deque<DVMValue>& args,
-			const DVMPlace&             output
-		);
+		static void lowerUnary(FunctionLoweringContext& ctx, const UnaryOperation& unary_operation);
 
 		// TODOP: Doc
 		static void lowerBinary(
-			FunctionLoweringContext&    ctx,
-			const BinaryOperation&      op,
-			const std::deque<DVMValue>& args,
-			const DVMPlace&             output
+			FunctionLoweringContext& ctx, const BinaryOperation& binary_operation
 		);
 	};
 

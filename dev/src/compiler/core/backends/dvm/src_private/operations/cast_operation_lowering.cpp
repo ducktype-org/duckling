@@ -84,13 +84,9 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void CastOperationLowerer::lowerCastOperation(
-		FunctionLoweringContext&    ctx,
-		const CastOperation&        cast_operation,
-		const std::deque<DVMValue>& args,
-		const DVMPlace&             output
+		FunctionLoweringContext& ctx, const CastOperation& cast_operation
 	) {
 		// Operation in form a = OP b (like mov)
-		CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
 		auto operation = getOpKindFromLIRLayouts(cast_operation.cast_params);
 		auto target_type
 			= ctx.program_context.lowerAndKeepTslType(cast_operation.cast_params.target_layout);
@@ -101,12 +97,12 @@ namespace compiler::backend_vm::internal {
 
 		// If the destination is non-local, we put the result in a temporary local
 		// and then move the result to the final destination.
-		DVMLocal src_arg = ctx.forceToLocal(args[0], "cast_src_tmp");
+		DVMLocal src_arg = ctx.forceToLocal(cast_operation.src, "cast_src_tmp");
 
-		if (output.isDirect() && output.is<DVMLocal>()) {
+		if (cast_operation.dest.isDirect() && cast_operation.dest.is<DVMLocal>()) {
 			// If output is a direct (not a local storing a pointer to the output place) local,
 			// we optimize the cast to work directly on the local.
-			auto dst_local = output.get<DVMLocal>();
+			auto dst_local = cast_operation.dest.get<DVMLocal>();
 			ctx.pushInstruction({ operation, dst_local, src_arg });
 		} else {
 			// Otherwise, if the output place is not direct or a global we have to create a
@@ -114,7 +110,7 @@ namespace compiler::backend_vm::internal {
 			DVMLocal dst_temp = ctx.pushTempLocal(target_type, "cast_dst_tmp");
 
 			ctx.pushInstruction({ operation, dst_temp, src_arg });
-			ctx.storeResult(output, { dst_temp, DVMPlace::AccessKind::Direct });
+			ctx.storeResult(cast_operation.dest, { dst_temp, DVMPlace::AccessKind::Direct });
 		}
 	}
 }

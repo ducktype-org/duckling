@@ -49,7 +49,7 @@ namespace compiler::backend_vm::internal {
 				return ctx.resolveLirPlace(place);
 			});
 		};
-		auto get_ctv = [](const lir::LIRValue& value) -> base::Optional<ctv::CompileTimeValue> {
+		auto get_opt_ctv = [](const lir::LIRValue& value) -> base::Optional<ctv::CompileTimeValue> {
 			if (value.is<lir::LIRConstant>()) return value.get<lir::LIRConstant>().value;
 			return {};
 		};
@@ -244,8 +244,8 @@ namespace compiler::backend_vm::internal {
 				.lhs       = lower_arg(instr.arguments[0]),
 				.rhs       = lower_arg(instr.arguments[1]),
 				.dest      = lower_dest(),
-				.lhs_const = get_ctv(instr.arguments[0]),
-				.rhs_const = get_ctv(instr.arguments[1]),
+				.lhs_const = get_opt_ctv(instr.arguments[0]),
+				.rhs_const = get_opt_ctv(instr.arguments[1]),
 			};
 		}
 

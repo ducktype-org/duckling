@@ -4,35 +4,31 @@
 
 namespace compiler::backend_vm::internal {
 
-	void MetaOperationLowerer::lower(
-		const MetaOperation&            meta_operation,
-		const std::deque<DVMValue>&     args,
-		const base::Optional<DVMPlace>& output
-	) {
+	void MetaOperationLowerer::lower(const MetaOperation& meta_operation) {
 		switch (meta_operation.meta_op) {
 		case lir::Operation::MetaCreateBox:
-			CORE_ASSERT(args.size() == 1, "MetaCreateBox expects 1 argument");
-			lowerCreateBox(args[0], output);
+			CORE_ASSERT(meta_operation.args.size() == 1, "MetaCreateBox expects 1 argument");
+			lowerCreateBox(meta_operation.args[0], meta_operation.dest);
 			break;
 		case lir::Operation::MetaCreateRef:
-			CORE_ASSERT(args.size() == 1, "MetaCreateRef expects 1 argument");
-			lowerCreateRef(args[0], output);
+			CORE_ASSERT(meta_operation.args.size() == 1, "MetaCreateRef expects 1 argument");
+			lowerCreateRef(meta_operation.args[0], meta_operation.dest);
 			break;
 		case lir::Operation::MetaCreateConst:
-			CORE_ASSERT(args.size() == 1, "MetaCreateConst expects 1 argument");
-			lowerCreateConst(args[0], output);
+			CORE_ASSERT(meta_operation.args.size() == 1, "MetaCreateConst expects 1 argument");
+			lowerCreateConst(meta_operation.args[0], meta_operation.dest);
 			break;
 		case lir::Operation::MetaCreateTuple:
-			lowerCreateTuple(args, output);
+			lowerCreateTuple(meta_operation.args, meta_operation.dest);
 			break;
 		case lir::Operation::MetaCreateVariant:
-			lowerCreateVariant(args, output);
+			lowerCreateVariant(meta_operation.args, meta_operation.dest);
 			break;
 		case lir::Operation::MetaEq:
-			lowerTypesEqual(args, output);
+			lowerTypesEqual(meta_operation.args, meta_operation.dest);
 			break;
 		case lir::Operation::MetaNeq:
-			lowerTypesNotEqual(args, output);
+			lowerTypesNotEqual(meta_operation.args, meta_operation.dest);
 			break;
 		default:
 			CORE_PANIC("Unknown meta operation: ", base::enumToStr(meta_operation.meta_op));

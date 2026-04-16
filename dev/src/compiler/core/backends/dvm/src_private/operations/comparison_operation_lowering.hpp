@@ -26,12 +26,6 @@ namespace compiler::backend_vm::internal {
 		 * @param output The output place to store the result.
 		 */
 		// TODOP: Doc
-		static void lower(
-			FunctionLoweringContext&   ctx,
-			const ComparisonOperation& comparison_operation,
-			std::deque<DVMValue>&      args,
-			const DVMPlace&            output,
-			const lir::Instruction&    lir_instruction
-		);
+		static void lower(FunctionLoweringContext& ctx, ComparisonOperation& comparison_operation);
 	};
 }

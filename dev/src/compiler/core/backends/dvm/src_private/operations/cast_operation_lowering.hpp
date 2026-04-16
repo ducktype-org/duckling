@@ -26,10 +26,7 @@ namespace compiler::backend_vm::internal {
 		 * @param output The output place to store the result.
 		 */
 		static void lowerCastOperation(
-			FunctionLoweringContext&    ctx,
-			const CastOperation&        cast_operation,
-			const std::deque<DVMValue>& args,
-			const DVMPlace&             output
+			FunctionLoweringContext& ctx, const CastOperation& cast_operation
 		);
 	};
 }

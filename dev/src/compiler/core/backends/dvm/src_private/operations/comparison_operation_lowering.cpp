@@ -1,6 +1,7 @@
 #include "comparison_operation_lowering.hpp"
 
 #include "dvm_operation.hpp"
+#include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "lir/lir_structure/lir_structure.hpp"
 
@@ -109,50 +110,48 @@ namespace {
 
 namespace compiler::backend_vm::internal {
 	void ComparisonOperationLowerer::lower(
-		FunctionLoweringContext&   ctx,
-		const ComparisonOperation& comparison_operation,
-		std::deque<DVMValue>&      args,
-		const DVMPlace&            output,
-		const lir::Instruction&    lir_instruction
+		FunctionLoweringContext& ctx, ComparisonOperation& comparison_operation
 	) {
-		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
 		OpKind operation = comparison_operation.op;
 
 		DVMValue result_val = [&]() -> DVMValue {
-			if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
-				auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
-				auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
-				auto res       = compTimeEvaluateComparison(operation, lhs_value, rhs_value);
-				return { DVMImmediate::boolean(res) };
-			} else {
-				if (args[0].is<DVMImmediate>()) {
-					// Swap arguments to place immediate on the right side.
-					std::swap(args[0], args[1]);
-					operation = getComparisonOppositeDirection(operation);
-				}
-
-				// Force globals into locals if needed.
-				auto lhs = ctx.forceToLocal(args[0], "lhs_temp");
-				auto rhs = args[1].is<DVMGlobal>()
-				             ? DVMValue{ ctx.forceToLocal(args[1], "rhs_temp"),
-					                     DVMPlace::AccessKind::Direct }
-				             : args[1];
-
-				// This resolves e.g. `x = a CMP b;`
-				// by splitting it into three instructions:
-				// a CMP b;
-				// mov x, 0;
-				// cmov x, 1;
-				auto tmp_res
-					= ctx.pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
-				ctx.pushInstruction({ operation, lhs, rhs });
-				ctx.pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
-				ctx.pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
-				return { tmp_res, DVMPlace::AccessKind::Direct };
+			// Shortcut for comparing immediates to keep the same semantics as comp-time.
+			// TODOP: Expand comment.
+			if (comparison_operation.lhs.is<DVMImmediate>()
+			    && comparison_operation.rhs.is<DVMImmediate>()) {
+				bool const_result = compTimeEvaluateComparison(
+					operation, *comparison_operation.lhs_const, *comparison_operation.rhs_const
+				);
+				return { DVMImmediate::boolean(const_result) };
 			}
+
+			if (comparison_operation.lhs.is<DVMImmediate>()) {
+				// Swap arguments to place immediate on the right side.
+				std::swap(comparison_operation.lhs, comparison_operation.rhs);
+				comparison_operation.op = getComparisonOppositeDirection(comparison_operation.op);
+			}
+
+			// Force globals into locals if needed.
+			auto lhs = ctx.forceToLocal(comparison_operation.lhs, "lhs_temp");
+			auto rhs = comparison_operation.rhs.is<DVMGlobal>()
+			             ? DVMValue{ ctx.forceToLocal(comparison_operation.rhs, "rhs_temp"),
+				                     DVMPlace::AccessKind::Direct }
+			             : comparison_operation.rhs;
+
+			// This resolves e.g. `x = a CMP b;`
+			// by splitting it into three instructions:
+			// a CMP b;
+			// mov x, 0;
+			// cmov x, 1;
+			auto tmp_res
+				= ctx.pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cmp_tmp");
+			ctx.pushInstruction({ operation, lhs, rhs });
+			ctx.pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
+			ctx.pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
+			return { tmp_res, DVMPlace::AccessKind::Direct };
 		}();
 
-		ctx.storeResult(output, result_val);
+		ctx.storeResult(comparison_operation.dest, result_val);
 	}
 
 }
