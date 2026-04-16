@@ -138,7 +138,7 @@ jobs:
       - name: Install clang
         # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
-        run: sudo apt -y install clang-19 clang-tools-19
+        run: sudo apt -y install clang-20 clang-tools-20
 
       - name: Install xxd
         # Necessary to embed LLVM bitcode into duckc source files.

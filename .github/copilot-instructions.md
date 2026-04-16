@@ -137,7 +137,7 @@ python3 toolbox.py test                # Run unit tests
 python3 toolbox.py itest               # Run integration tests
 python3 toolbox.py coverage            # Run coverage analysis
 python3 toolbox.py docs                # Build documentation
-python3 toolbox.py cpp-linter           # Run clang-tidy-19 and clang-format-19
+python3 toolbox.py cpp-linter           # Run clang-tidy-20 and clang-format-20
 python3 toolbox.py duck-linter          # Run custom C++ linting
 python3 toolbox.py pr-validate          # Validate branch for PR
 python3 toolbox.py clean-init           # Clean initialization artifacts
@@ -147,7 +147,7 @@ python3 toolbox.py clean-init           # Clean initialization artifacts
 **ALWAYS run these commands before committing changes:**
 ```bash
 cd dev
-python3 toolbox.py cpp-linter    # C++ linting and formatting with clang-tidy-19 and clang-format-19
+python3 toolbox.py cpp-linter    # C++ linting and formatting with clang-tidy-20 and clang-format-20
 python3 toolbox.py duck-linter   # Custom linting rules
 python3 toolbox.py test          # Run tests
 ```
@@ -160,7 +160,7 @@ python3 toolbox.py pr-validate   # Comprehensive PR validation
 ```
 - **What it does**: Runs a complete validation suite including build, tests, linting, duck-linter, and issue-checker
 - **When to use**: Before creating a pull request to ensure all checks pass
-- **Options**: Can specify custom clang-tidy-19 and clang-format-19 paths using `-t` and `-f` flags
+- **Options**: Can specify custom clang-tidy-20 and clang-format-20 paths using `-t` and `-f` flags
 - **TIMING**: Takes 20-30 minutes to complete all validations. NEVER CANCEL. Set timeout to 45+ minutes.
 
 ### CI Workflow Compatibility
