@@ -7,6 +7,7 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/concurrency/deadlock_detection.hpp>
 #include <vm/core/process/concurrency/synchronization_primitives.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/process/safe_vmprocess.hpp>
@@ -14,7 +15,6 @@
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
-#include <vm/core/process/concurrency/deadlock_detection.hpp>
 
 namespace vm::builtins {
 
@@ -123,12 +123,12 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
-		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		auto mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 		auto thread_id = thread.getThreadID();
 
 		if (!mutex->try_lock()) {
 			thread.safe_process.getDeadlockDetector().beginWaitForMutexOrThrow(thread_id, mutex_id);
-			
+
 			thread.releaseGil();
 			mutex->lock();
 			thread.acquireGil();
@@ -140,7 +140,7 @@ namespace vm::builtins {
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
-		
+
 		auto thread_id = thread.getThreadID();
 		mutex->unlock();
 		thread.safe_process.getDeadlockDetector().markThreadReleasedMutex(thread_id, mutex_id);

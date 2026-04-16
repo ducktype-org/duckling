@@ -140,6 +140,7 @@ namespace vm {
 		SafeVMProcess(PID my_pid);
 
 		DeadlockDetector& getDeadlockDetector() { return deadlock_detector; }
+
 		const DeadlockDetector& getDeadlockDetector() const { return deadlock_detector; }
 
 		Memory& getMemory();
