@@ -345,7 +345,7 @@ namespace compiler::helios {
 				                                .value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
-					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
+					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
 						const auto field_type = field.getType(ctx);
 						auto       expr
 							= getHoutOfExprWithExpectedType(
@@ -492,6 +492,21 @@ namespace compiler::helios {
 							}
 							variant_case_novalue(defgen::GeneratedSymbolData::ReplInstructionWrapper
 							) {
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
+							}
+							variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
+								// Script main is a generated symbol with a regular function
+								// signature, so it needs a normal HOUT declaration for the backend
+								// pipeline.
 								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
 								                         ->valueOrThrow()
 								                         .getType()

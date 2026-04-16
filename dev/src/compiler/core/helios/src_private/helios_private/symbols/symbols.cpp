@@ -61,6 +61,7 @@ namespace compiler::helios {
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
+	// @TODO: #895 Reevaluate this helper when entry points become explicit.
 	bool isGlobalFun(SymID id) {
 		CORE_ASSERT(
 			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
@@ -1020,7 +1021,7 @@ namespace compiler::helios {
 			}
 
 			void visitVariableStmt(const code::VariableStmt& stmt) override {
-				if (stmt.initial_value) stmt.initial_value.value()->acceptVisitor(*this);
+				stmt.initial_value->acceptVisitor(*this);
 			}
 
 			void visitAssignmentStmt(const code::AssignmentStmt& stmt) override {
