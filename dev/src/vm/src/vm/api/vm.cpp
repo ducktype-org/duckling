@@ -209,4 +209,12 @@ namespace vm::api {
 		    .doRequest(SupervisorRequest(pid, request::DeinitAndValidate{}))
 		    .and_then(mapOrWrongResponse<response::Boolean>);
 	}
+
+	std::expected<void, ApiError> attachStatusListener(
+		PID pid, Ref<events::Listener<ProcStatus>> listener
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::AttachStatusListener{ .listener = listener }))
+		    .transform(ignoreResponse);
+	}
 }

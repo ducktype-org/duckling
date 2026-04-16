@@ -1,13 +1,15 @@
+use std::backtrace::Backtrace;
+
 use crate::duck::util::indent::indent;
-use crate::util::error::{DisplayPlace, ErrorExt, ErrorType};
-use crate::{DuckCtx, duck::util::terminal::Terminal};
+use crate::util::error::{DisplayPlace, ErrorExt, ErrorType, InternalError};
+use crate::{DuckContext, duck::util::terminal::Terminal};
 use crate::{QuackError, QuackResult, qp_bail_internal};
 use tracing::debug;
 
 /// Actual main entry point for the duck-binary.
 pub fn main() {
     setup_logger();
-    let mut ctx = match DuckCtx::new() {
+    let mut ctx = match DuckContext::new() {
         Ok(ctx) => ctx,
         Err(err) => {
             let stdout = Terminal::stdout();
@@ -143,15 +145,33 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
 ///
 /// This is done at the end, so URL shows at the bottom of the user's terminal.
 fn print_internals(error: &QuackError, term: &Terminal) {
-    let mut internal_errors = false;
-    for e in error.sources() {
-        if e.error_type() == ErrorType::Internal {
-            internal_errors = true;
-            term.print("");
-            term.critical(format!("got the internal error: {}", e));
-        }
+    let errors = error
+        .sources()
+        .filter_map(ErrorExt::context_aware_downcast_ref::<InternalError>)
+        .collect::<Vec<_>>();
+    if errors.is_empty() {
+        return;
     }
-    if internal_errors {
-        term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
+    for e in errors.iter() {
+        term.print("");
+        term.critical(format!("got the internal error: {}", e));
+    }
+    print_backtraces(errors.iter().map(|error| error.backtrace()), term);
+    term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
+}
+
+/// Print captured [`Backtrace`](std::backtrace::Backtrace)s of captured [`InternalError`]s.
+fn print_backtraces<'a>(backtraces: impl IntoIterator<Item = &'a Backtrace>, term: &Terminal) {
+    if std::env::var("DUCK_BACKTRACE").as_deref() != Ok("1") {
+        term.note("run with `DUCK_BACKTRACE=1` to see backtraces");
+        return;
+    }
+    for (i, bt) in backtraces.into_iter().enumerate() {
+        if i != 0 {
+            // Print a newline.
+            term.print("");
+        }
+        term.print(format!("Backtrace #{i}:"));
+        term.print(bt);
     }
 }

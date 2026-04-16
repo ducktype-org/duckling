@@ -1,10 +1,10 @@
 #include "builtin_operators.hpp"
 
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/types.hpp>
 
 #include <base/collections/maps.hpp>
 

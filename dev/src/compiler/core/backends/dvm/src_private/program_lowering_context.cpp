@@ -10,6 +10,7 @@
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
+#include <algorithm>
 #include <ranges>
 
 using namespace compiler::backend_vm::internal;
@@ -28,18 +29,42 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 
 const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
 ) {
-	if (tsl_type_to_dvm.contains(layout)) {
-		return tsl_type_to_dvm.at(layout);
-	} else {
-		auto dvm_type = lowerTslTypeInternal(layout);
-		tsl_type_to_dvm.put(layout, dvm_type);
+	if (auto maybe_name = type_storage.tsl_type_to_dvm_type_name.atMaybe(layout))
+		return type_storage.dvm_types.at(**maybe_name);
 
-		if_opt_some(debug_info_builder, builder) {
-			builder.addType(vm::code::typeName(dvm_type).str(), layout->getSourceType().toString());
-		}
+	vm::code::TypeOfData dvm_type  = lowerTslTypeInternal(layout);
+	base::StrID          type_name = vm::code::typeName(dvm_type);
 
-		return tsl_type_to_dvm.at(layout);
+
+	IF_BUILD_TYPE_DEV({
+		auto maybe_dvm_type = type_storage.dvm_types.atMaybe(type_name);
+		CORE_ASSERT(
+			!maybe_dvm_type.has_value() || **maybe_dvm_type == dvm_type,
+			"Type mismatch in type lowering"
+		);
+	});
+
+	type_storage.tsl_type_to_dvm_type_name.put(layout, type_name);
+	type_storage.dvm_types.put(type_name, std::move(dvm_type));
+
+	if_opt_some(debug_info_builder, builder) {
+		builder.addType(type_name.str(), layout->getSourceType().toString());
 	}
+
+	return type_storage.dvm_types.at(type_name);
+}
+
+const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
+	const vm::code::TypeOfData& pointee_type
+) {
+	base::StrID pointee_name = vm::code::typeName(pointee_type);
+	auto        pointer_name = base::StrID(base::strConcat("ptr_", pointee_name));
+
+	if (auto maybe_type = type_storage.dvm_types.atMaybe(pointer_name)) return **maybe_type;
+
+	vm::code::PointerType pointer_type(pointer_name, pointee_name);
+	type_storage.dvm_types.put(pointer_name, pointer_type);
+	return type_storage.dvm_types.at(pointer_name);
 }
 
 const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
@@ -177,7 +202,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			usize       bytes = bits / 8;
 			std::string name  = "i" + std::to_string(bits);
 
-			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::FloatTypeLayout) {
 			auto bits = usize(layout->getSize());
@@ -187,25 +212,40 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			usize       bytes = bits / 8;
 			std::string name  = "f" + std::to_string(bits);
 
-			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::MetaTypeLayout) {
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
 		}
-		variant_case_novalue(tsl::PointerTypeLayout) {
-			CORE_ASSERT(
-				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"
-			);
-			query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat(
-					"DVM backend does not yet support pointer types. Offending type "
-					"layout: ",
-					layout->toStringDefinition(*query_ctx_for_errors.value()),
-					". This usually means you used a pointer in compile time."
-				),
-				base::Optional<dia::SourcePosition>()
-			));
-			query::throwFailed();
+		variant_case(tsl::PointerTypeLayout, pointer_layout) {
+			auto pointee_type      = lowerAndKeepTslType(pointer_layout.getPointee());
+			auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
+			return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
+		}
+		variant_case(tsl::ClassTypeLayout, class_layout) {
+			std::vector<vm::code::Field> fields;
+			const usize                  num_fields = class_layout.getNumSubLayouts();
+			fields.reserve(num_fields);
+
+			/*
+			Class types are lowered to:
+			type data: <name> {
+			    _0: <type_of_field_0>
+			    _1: <type_of_field_1>
+			    _2: <type_of_field_2>
+			}
+			*/
+			// @TODO: #2100 Change that to indexes.
+			for (usize i{ 0 }; i < num_fields; i++) {
+				const auto  field_layout  = class_layout.getFieldLayoutOfLayoutIndex(i);
+				const auto& vm_field_type = lowerAndKeepTslType(field_layout);
+				fields.emplace_back(base::StrID(base::strConcat("_", i)), typeName(vm_field_type));
+			}
+
+			return vm::code::DataType{
+				base::StrID(class_layout.getMangledName()),
+				std::move(fields),
+			};
 		}
 		variant_default {
 			CORE_ASSERT(
@@ -229,14 +269,45 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 ) {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	// Sort globals and functions by their mangled names to ensure deterministic output, which is
+	// important for reproducibility. This also should guarantee that the order of functions and
+	// globals in the resulting DVM module is deterministic, which can be important for debugging
+	// and testing.
+	std::ranges::sort(
+		collection.functions,
+		[](const vm::code::Function& lhs, const vm::code::Function& rhs) {
+			return lhs.name.str < rhs.name.str;
+		}
+	);
 	collection.functions.insert(
 		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);
-	collection.global_data = std::ranges::to<std::vector>(
-		global_name_to_dvm_data | std::views::values
-		| std::views::transform([](const auto& tuple) { return tuple; })
+	collection.global_data
+		= std::ranges::to<std::vector>(global_name_to_dvm_data | std::views::values);
+	// Note, that this not only makes the output deterministic,
+	// but also ensures that globals are ordered as they are declared in the source code
+	// This is because they are sorted by mangled names base::StrID ids
+	// This ids are incrementally generated during lirLowering, so the order of declaration is
+	// preserved. This is true as long as the LIR globals are generated in the same order as the
+	// source globals, which is currently the case. This is desirable behavior because we want to
+	// generate globals in the order they appear in the file to prevent order initialization fiasco.
+	// @TODO: #1431 Think about this and make it better if needed
+	std::ranges::sort(
+		collection.global_data,
+		[](const vm::code::GlobalData& lhs, const vm::code::GlobalData& rhs) {
+			return lhs.name.str < rhs.name.str;
+		}
 	);
-	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
+
+	// Sorting types by their string identification to ensure deterministic output
+	collection.types = std::ranges::to<std::vector>(type_storage.dvm_types | std::views::values);
+	std::ranges::sort(
+		collection.types,
+		[](const vm::code::TypeOfData& lhs, const vm::code::TypeOfData& rhs) {
+			return vm::code::typeName(lhs).strView() < vm::code::typeName(rhs).strView();
+		}
+	);
+
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 

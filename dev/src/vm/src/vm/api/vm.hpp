@@ -203,4 +203,12 @@ namespace vm::api {
 	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
 		PID pid, ThreadID thread_id, u64 stack_frame_number
 	);
+
+	/**
+	 * @brief Attaches Listener to the on_status_change Emitter
+	 * @return Nothing if attached succesfully
+	 */
+	std::expected<void, ApiError> attachStatusListener(
+		PID pid, Ref<events::Listener<ProcStatus>> listener
+	);
 }

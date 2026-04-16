@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext,
+    DuckContext, QuackResult, QuackResultContext,
     duck::driver::subcommands::run_script::{check_is_script, possible_script_path_subcmd},
     qp_bail,
     quackpack::core::compile::duckc::Duckc,
@@ -19,13 +19,12 @@ use tracing::debug;
 use crate::duck::driver::{
     cli,
     cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
-    cli_no_err,
     global_options::GlobalOptions,
     subcommands::exec_for,
 };
 
-/// Run the duck with the given [`DuckCtx`].
-pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
+/// Run the duck with the given [`DuckContext`].
+pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
     debug!(
         "found the external subcommands `{}`",
@@ -33,11 +32,9 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     );
     let cli = cli();
 
-    if let Some(global_opts) = get_global_options() {
-        global_opts.update_context(ctx);
-    }
-
     let matches = cli.try_get_matches()?;
+    let mut global_opts = GlobalOptions::from_matches(&matches);
+
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
         std::env::set_current_dir(chdir).with_context(|| {
             format!(
@@ -49,6 +46,8 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     }
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
+    global_opts.update_with_subcommand_matches(&args);
+    global_opts.update_context(ctx)?;
     debug!(
         "after expanding everything we have the subcommand: `{:#?}`",
         args.subcommand_name()
@@ -56,22 +55,11 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     run_subcmd(ctx, args, &external)
 }
 
-/// Get [`GlobalOptions`] from the CLI arguments.
-fn get_global_options() -> Option<GlobalOptions> {
-    // We get matches without worrying about errors, only to retrieve GlobalCliOptions.
-    // Later matching is done again on the real command, so any errors will be taken care of there.
-    if let Ok(matches) = cli_no_err().try_get_matches() {
-        GlobalOptions::from_matches(&matches).ok()
-    } else {
-        None
-    }
-}
-
 /// Gather all known external subcommands.
 ///
 /// In the returned map, keys are stripped from prefixes and suffixes; in other words, keys are
 /// valid duck subcommands names.
-fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
+fn gather_external_subcmds(ctx: &DuckContext) -> HashMap<String, PathBuf> {
     use std::env;
     const PREFIX: &str = "duck-";
     const SUFFIX: &str = env::consts::EXE_SUFFIX;
@@ -105,7 +93,7 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
 
 /// Execute fully fixed, parsed, and expanded subcommand.
 fn run_subcmd(
-    ctx: &mut DuckCtx,
+    ctx: &mut DuckContext,
     args: ArgMatches,
     external: &HashMap<String, PathBuf>,
 ) -> QuackResult<()> {

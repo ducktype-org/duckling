@@ -38,7 +38,7 @@ namespace vm {
 	 * managing the input and output of the executing thread and some more.
 	 *
 	 */
-	class VMProcess {
+	class IVMProcess {
 	protected:
 		PID                              my_pid;
 		ProcIO                           io;
@@ -52,7 +52,12 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 
-		VMProcess(PID my_pid);
+		/**
+		 * @brief Emits current status when VM changes status
+		 */
+		events::Emitter<api::ProcStatus> on_status_change;
+
+		IVMProcess(PID my_pid);
 
 	private:
 		/**
@@ -195,11 +200,13 @@ namespace vm {
 		 * @brief Get the GIL of the process.
 		 */
 		GIL& getGIL();
+
 		/**
 		 * @brief Get the synchronization primitives of the process.
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 
+		// @TODO: #2400 Remove this
 		void setStatus(const api::ProcStatus& new_status) noexcept;
 
 		/**
@@ -228,6 +235,6 @@ namespace vm {
 		virtual Box<VmValue> createOwnedVmValue(TypeCRef type)              = 0;
 		virtual Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) = 0;
 
-		virtual ~VMProcess() = default;
+		virtual ~IVMProcess() = default;
 	};
 }

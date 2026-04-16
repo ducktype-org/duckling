@@ -3,8 +3,12 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use crate::{StrId, quackpack::core::storage};
+use crate::{
+    StrId,
+    quackpack::core::storage::{self, venv_id::ToVenvId},
+};
 
+use super::registry_url_hash;
 use super::setup_mock_storage;
 
 #[test]
@@ -25,8 +29,11 @@ fn concurrent_delete() {
         for _ in 0..thread_count {
             s.spawn(|| {
                 barrier.wait();
-                let result =
-                    storage::ops::delete_venv(ctx.default_storage_root(), StrId::new("venv1"));
+                let result = storage::ops::delete_venv(
+                    &ctx,
+                    ctx.default_storage_root(),
+                    StrId::new("venv1"),
+                );
                 if let Err(e) = result {
                     lock_failures.fetch_add(1, Ordering::SeqCst);
                     assert_eq!(
@@ -55,21 +62,31 @@ operation would block",
 /// This tests two things:
 /// 1. clean is a blocking operation,
 /// 2. cleaning an empty venv has empty result
-///
 fn concurrent_clean() {
-    let (ctx, _root) = setup_mock_storage();
+    let (ctx, root) = setup_mock_storage();
     let thread_count = 4;
     let barrier = Barrier::new(thread_count);
     let empty_cleans = AtomicUsize::default();
 
+    let mut expected_packages = [
+        root.path()
+            .join("pkg")
+            .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
+        root.path()
+            .join("pkg")
+            .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
+    ];
+    expected_packages.sort();
     std::thread::scope(|s| {
         for _ in 0..thread_count {
             s.spawn(|| {
                 barrier.wait();
-                let result = storage::ops::clean_storage(&ctx, ctx.default_storage_root()).unwrap();
+                let mut result =
+                    storage::ops::clean_storage(&ctx, ctx.default_storage_root()).unwrap();
                 if !result.removed_packages.is_empty() {
-                    assert_eq!(result.removed_packages.len(), 2);
-                    assert_eq!(result.removed_venvs.len(), 1);
+                    result.removed_packages.sort();
+                    assert_eq!(result.removed_venvs, ["root3".to_venv_id()]);
+                    assert_eq!(result.removed_packages, expected_packages);
                 } else {
                     assert!(result.removed_venvs.is_empty());
                     assert!(result.removed_packages.is_empty());
@@ -93,13 +110,9 @@ fn concurrent_different_deletes() {
             s.spawn(|| {
                 let is_leader = barrier.wait().is_leader();
 
-                let venv = if is_leader {
-                    StrId::new("venv1")
-                } else {
-                    StrId::new("venv2")
-                };
+                let venv = if is_leader { "venv1" } else { "venv2" };
 
-                storage::ops::delete_venv(ctx.default_storage_root(), venv).unwrap();
+                storage::ops::delete_venv(&ctx, ctx.default_storage_root(), venv).unwrap();
             });
         }
     });
