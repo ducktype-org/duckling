@@ -22,7 +22,7 @@ namespace base {
 		requires std::is_base_of_v<T, U> BoxOrCRef(Box<U> box): storage(Box<T>(std::move(box))) {}
 
 		template<typename U>
-		requires std::is_base_of_v<T, U> BoxOrCRef(Ref<const U> ref): storage(CRef<T>(ref)) {}
+		requires std::is_base_of_v<T, U> BoxOrCRef(CRef<U> ref): storage(CRef<T>(ref)) {}
 
 		template<typename U>  // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
 		requires std::is_base_of_v<T, U> BoxOrCRef(BoxOrCRef<U>&& other) noexcept:
