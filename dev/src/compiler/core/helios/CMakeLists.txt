@@ -45,6 +45,7 @@ add_library(HELIOS STATIC
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/repl_utils/repl_queries.cpp
+	src/helios/repl_utils/script_helpers.cpp
 	src/helios/ls_utils/ls_utils.cpp
 	src/helios/utils/go_to_definition.cpp
 	src/helios/tsh/queries/implicit_coercibility.cpp
