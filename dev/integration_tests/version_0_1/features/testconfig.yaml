@@ -44,6 +44,7 @@ SubDirs:
 #################################
   - comparison-operators-on-integers
   - float-literals
+  - unit-type
 #################################
 #         ONLY LLVM WORKING
 #################################

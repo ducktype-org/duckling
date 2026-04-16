@@ -1,3 +1,20 @@
+var counter: i64 = 0;
+
+
+fun count(x: i64) -> i64 = {
+
+    counter = counter + 1;
+    if (counter == 2) {
+        builtin_output_i64(999); # This should be ignored by the test framework.
+    }
+    return x;
+}
+
+fun reset() = {
+    counter = 0;
+}
+
+
 fun main() -> i64 = {
     var a: i64 = 5;
     var b: i64 = 10;
@@ -53,21 +70,24 @@ fun main() -> i64 = {
     }
 
     # Test comparison chaining (per docs: a < b < c is equivalent to a < b and b < c)
-    if (a < b < d) {
+    if (a < count(b) < d) {
         builtin_output_i64(13); # Should execute: 5 < 10 < 15
     }
-    if (d > b > a) {
+    reset();
+    if (d > count(b) > a) {
         builtin_output_i64(14); # Should execute: 15 > 10 > 5
     }
-    if (a < b > d) {
+    reset();
+    if (a < count(b) > d) {
         builtin_output_i64(15); # Should not execute: 5 < 10 but 10 > 15 is false
     }
-
+    reset();
+    
     # Test chained equality/inequality
     var e: i64 = 5;
-    if (a == c == e) {
+    if (a == count(c) == e) {
         builtin_output_i64(16); # Should execute: all equal to 5
     }
-
+    reset();
     return 0;
 }

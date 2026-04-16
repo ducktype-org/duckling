@@ -8,10 +8,10 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\nNewline:\nEnd:\n15\n42\n"
+          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\nNewline:\nEnd:\n15\n42\nPoint{x:3,y:4}\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\nNewline:\nEnd:\n15\n42\n"
+          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\nNewline:\nEnd:\n15\n42\nPoint{x:3,y:4}\n"
         ExitCode: 0
