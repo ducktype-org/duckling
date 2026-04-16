@@ -32,8 +32,8 @@ private:
 			if (counter == expected_statuses.size()) cv.notify_one();
 		});
 
-		auto debugger = vm::debugger::Debugger(fs::File(path(std::string(path_name))));
-		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
+		vm::debugger::Debugger debugger{ fs::File(path(std::string(path_name))) };
+		ASSERT_EQUAL_PRINT("NotStarted", debugger.getStatus());
 		debugger.attachOnVMStatusChangeListener(listener);
 		debugger.runMain();
 		std::unique_lock lk(m);
@@ -91,8 +91,8 @@ private:
 			if (counter == expected_statuses.size()) cv.notify_one();
 		});
 
-		auto debugger = vm::debugger::Debugger(fs::File(path("debugger_test.dbc")));
-		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
+		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
+		ASSERT_EQUAL_PRINT("NotStarted", debugger.getStatus());
 
 		debugger.attachOnVMStatusChangeListener(listener);
 

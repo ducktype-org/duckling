@@ -61,6 +61,6 @@ namespace vm::debugger {
 		 * @brief Gets the current status of the VM.
 		 * @return The current status of the VM.
 		 */
-		[[nodiscard]] vm::api::ProcStatus getStatus() const;
+		[[nodiscard]] std::string getStatus() const;
 	};
 }

@@ -24,9 +24,7 @@ namespace vm::debugger {
 
 	Debugger::~Debugger() {
 		updater.detach();
-		vm::api::stop(pid).transform_error([](const vm::api::ApiError& api_error) -> void* {
-			throw std::runtime_error(vm::api::errorToString(api_error));
-		});
+		vm::api::kill(pid);
 	}
 
 	void Debugger::attachOnVMStatusChangeListener(Ref<events::Listener<vm::api::ProcStatus>> listener
@@ -51,8 +49,17 @@ namespace vm::debugger {
 			});
 	}
 
-	vm::api::ProcStatus Debugger::getStatus() const {
+	std::string Debugger::getStatus() const {
 		return vm::api::getExecutionStatus(pid)
+		    .transform([&](const vm::api::ProcStatus& status) {
+				return std::visit(
+					[](auto&& arg) {
+						using T = std::decay_t<decltype(arg)>;
+						return TypeParseTraits<T>::NAME.data();
+					},
+					status
+				);
+			})
 		    .transform_error([](const vm::api::ApiError& api_error) -> void* {
 				throw std::runtime_error(vm::api::errorToString(api_error));
 			})
