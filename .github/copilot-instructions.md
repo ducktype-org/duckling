@@ -23,7 +23,8 @@ Duckling is a C++23 programming language project with a comprehensive build syst
   ```bash
   python3 toolbox.py setup-build -x g++-14 -c gcc-14 --gcov-version gcov-14
   ```
-  - Press ENTER for all prompts to use defaults
+  - There are 5 interactive prompts: build directory, build system, ccache, coverage, and JIT.
+    **All defaults are correct and should be accepted** (press ENTER for each) unless you have a specific reason to change them.
   - Takes ~10 seconds to configure
 
 ### Building the Project
