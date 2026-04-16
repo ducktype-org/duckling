@@ -327,6 +327,14 @@ namespace compiler::driver {
 			base::Optional<frontend::ModuleID> parent_module_id;
 			u64                                statement_counter = 0;
 
+			if (split_result->empty()) {
+				// Empty input should still produce a valid synthetic script main wrapper with no
+				// statement calls.
+				auto empty_script_module
+					= repl::createEphemeralChainedStatementModule("", {}, 0, "script_");
+				parent_module_id = empty_script_module->getModuleID();
+			}
+
 			for (const auto& statement_source: *split_result) {
 				auto module_ref = repl::createEphemeralChainedStatementModule(
 					statement_source, parent_module_id, statement_counter, "script_"
@@ -365,7 +373,7 @@ namespace compiler::driver {
 				} else {
 					// Executable statements are wrapped into functions so we can sequence them
 					// under a synthetic main while still lowering via the normal pipeline.
-					CORE_DEV_LOG(REPL, "compile_script_llvm: classified as executable statement\n");
+					CORE_DEV_LOG(REPL, "compile_script: classified as executable statement\n");
 					auto wrapper_result = repl::buildStatementWrapper(
 						ctx, statement_info_result.value(), statement_counter
 					);
@@ -389,11 +397,11 @@ namespace compiler::driver {
 			}
 
 			if (!parent_module_id.has_value())
-				return std::unexpected("Script has no statements to compile");
+				return std::unexpected("Script has no parent module for synthetic main");
 
-			// We use the last statement's module (parent_module_id) because it sits at the
-			// end of the REPL-style chain and has a main-file root scope that represents
-			// the full script context.
+			// We use the last (or empty one when script is empty) statement's module
+			// (parent_module_id) because it sits at the end of the REPL-style chain and has a
+			// main-file root scope that represents the full script context.
 			auto main_scope = repl::queryScriptMainRootScope(ctx, parent_module_id.value());
 			auto main_fun
 				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, wrapper_symbols);
