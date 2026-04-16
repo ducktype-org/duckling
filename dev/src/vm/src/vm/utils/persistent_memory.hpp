@@ -9,7 +9,9 @@
 #include <algorithm>
 #include <bit>
 #include <deque>
+#include <functional>
 #include <ranges>
+#include <tuple>
 #include <unordered_set>
 #include <vector>
 
@@ -162,10 +164,16 @@ namespace vm::persistent::detail {
 		constexpr MemoryStateID getChild(MemoryStateID state, Dir dir) const {
 			validateState(state);
 
-			if (leaf_entries.atRightOpt(state).has_value()) return EMPTY;
+			if_opt_some(child_entries.atRightOpt(state), children) {
+				auto [left, right] = children;
+				return (dir == Dir::Left) ? left : right;
+			}
 
-			auto& entry = child_entries.atRight(state);
-			return (dir == Dir::Left) ? entry.left : entry.right;
+			CORE_ASSERT(
+				leaf_entries.atRightOpt(state).has_value(), "if not a root, node, has to be a leaf"
+			);
+
+			return EMPTY;
 		}
 
 		[[nodiscard]]
@@ -299,8 +307,8 @@ namespace vm::persistent::detail {
 			while (mask > 0) {
 				Dir dir = (path.idx & mask) ? Dir::Right : Dir::Left;
 
-				MemoryStateID son = getChild(path.trace.back(), dir);
-				Dir dir_son       = getChild(son, Dir::Left) ? Dir::Left : Dir::Right;
+				MemoryStateID son     = getChild(path.trace.back(), dir);
+				Dir           dir_son = getChild(son, Dir::Left) ? Dir::Left : Dir::Right;
 
 				path.trace.emplace_back(son);
 
@@ -341,8 +349,8 @@ namespace vm::persistent::detail {
 			while (mask > 0) {
 				Dir dir = (path.idx & mask) ? Dir::Right : Dir::Left;
 
-				MemoryStateID son = getChild(path.trace.back(), dir);
-				Dir dir_son       = getChild(son, Dir::Right) ? Dir::Right : Dir::Left;
+				MemoryStateID son     = getChild(path.trace.back(), dir);
+				Dir           dir_son = getChild(son, Dir::Right) ? Dir::Right : Dir::Left;
 
 				path.trace.emplace_back(son);
 
@@ -431,6 +439,35 @@ namespace vm::persistent::detail {
 			);
 
 			return { common, new_height };
+		}
+
+		std::vector<MemoryStateID> getSubNodesAtHeight(
+			MemoryStateID state, usize desired_height
+		) const {
+			auto [_, root_height, _] = getRootInfo(state);
+			CORE_ASSERT(
+				root_height >= desired_height, "cannot get subnodes at height bigger than mine"
+			);
+
+			std::vector<MemoryStateID> ans = {};
+
+			auto lambda = [&](this auto&& self, MemoryStateID root, usize height) -> void {
+				if (root == EMPTY) return;
+				if (height == desired_height) ans.emplace_back(root);
+
+				if_opt_some(child_entries.atRightOpt(root), children) {
+					auto [left, right] = children;
+
+					self(left, height - 1);
+					self(right, height - 1);
+				}
+
+				CORE_UNREACHABLE();
+			};
+
+			lambda(state, root_height);
+
+			return ans;
 		}
 
 	public:
@@ -560,16 +597,15 @@ namespace vm::persistent::detail {
 				if (idxs.front() >= offset + (1 << height)) return root;
 				if (height == 0) return EMPTY;
 
-				CORE_ASSERT(
-					child_entries.atRightOpt(root).has_value(),
-					"It is a node with nonzero height - it must have children"
-				);
+				if_opt_some(child_entries.atRightOpt(root), children) {
+					auto [left, right] = children;
+					left               = self(left, height - 1, offset);
+					right              = self(right, height - 1, offset + (1 << (height - 1)));
 
-				auto [left, right] = child_entries.atRight(root);
-				left               = self(left, height - 1, offset);
-				right              = self(right, height - 1, offset + (1 << (height - 1)));
+					return (left || right) ? nodeFromChildren(left, right) : EMPTY;
+				}
 
-				return (left || right) ? nodeFromChildren(left, right) : EMPTY;
+				CORE_UNREACHABLE();
 			};
 
 			auto [___, final_height, final_offset] = getRootInfo(common);
@@ -604,12 +640,6 @@ namespace vm::persistent::detail {
 			std::unordered_set<MemoryStateID> leafs{};
 
 			for (auto node_id: stay) {
-				CORE_ASSERT(
-					child_entries.atRightOpt(node_id).has_value()
-						|| leaf_entries.atRightOpt(node_id).has_value(),
-					"Node has to be either root or leaf"
-				);
-
 				if_opt_some(child_entries.atRightOpt(node_id), _) {
 					nodes.insert(node_id);
 					continue;
@@ -627,6 +657,130 @@ namespace vm::persistent::detail {
 
 			child_entries.pruneByRight(nodes);
 			leaf_entries.pruneByRight(leafs);
+		}
+
+		std::vector<std::pair<usize, usize>> toVec(MemoryStateID state) const {
+			validateState(state);
+
+			auto leaves = getSubNodesAtHeight(state, 0);
+
+			std::vector<std::pair<usize, usize>> ans = {};
+
+			for (auto leaf: leaves) {
+				if_opt_some(leaf_entries.atRightOpt(leaf), entry) {
+					ans.emplace_back(entry.idx, entry.value);
+					continue;
+				}
+				CORE_UNREACHABLE();
+			}
+
+			return ans;
+		}
+
+		auto getDiff(MemoryStateID stateL, MemoryStateID stateR) const {
+			auto [_, heightL, offsetL] = getRootInfo(stateL);
+			auto [_, heightR, offsetR] = getRootInfo(stateR);
+
+			bool change = (heightL < heightR);
+
+			if (heightL < heightR)
+				std::swap(std::tie(heightL, offsetL, stateL), std::tie(heightR, offsetR, stateR));
+
+			using helper = std::function<void(MemoryStateID)>;
+			std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>> ans = {};
+
+			helper addLeft = [&](MemoryStateID state) {
+				auto vec = toVec(state);
+
+				for (auto [idx, val]: vec) ans.emplace_back(idx, val, std::nullopt);
+			};
+
+			helper addRight = [&](MemoryStateID state) {
+				auto vec = toVec(state);
+
+				for (auto [idx, val]: vec) ans.emplace_back(idx, std::nullopt, val);
+			};
+
+			std::vector<MemoryStateID>    equiv       = getSubNodesAtHeight(stateL, heightR);
+			base::Optional<MemoryStateID> counterpart = std::nullopt;
+
+			for (auto node: equiv) {
+				auto [_, _, offset] = getRootInfo(node);
+
+				if (offset == offsetR) {
+					counterpart = node;
+					continue;
+				}
+
+				addLeft(node);
+			}
+
+			auto detailDiff
+				= [&](this auto&& self, MemoryStateID node_1, MemoryStateID node_2) -> void {
+				auto [_, _height_1, _offset_1] = getRootInfo(node_1);
+				auto [_, _height_2, _offset_2] = getRootInfo(node_2);
+
+				CORE_ASSERT(node_1 || node_2, "one of the nodes has to be non-empty");
+				CORE_ASSERT(
+					_height_1 == _height_2 && _offset_1 == _offset_2,
+					"both nodes are responsible for the same memory region"
+				);
+
+				if (node_1 == node_2) return;
+
+				if (!node_1) {
+					addRight(node_2);
+					return;
+				}
+
+				if (!node_2) {
+					addLeft(node_1);
+					return;
+				}
+
+				match_optional(leaf_entries.atRightOpt(node_1)) {
+					opt_none {
+						CORE_ASSERT(
+							!leaf_entries.atRightOpt(node_1).has_value(),
+							"both nodes must be leaves or not"
+						);
+						CORE_ASSERT(
+							child_entries.atRightOpt(node_1).has_value()
+								&& child_entries.atRightOpt(node_2).has_value(),
+							"both nodes need to have children"
+						);
+						auto [left_1, right_1] = child_entries.atRight(node_1);
+						auto [left_2, right_2] = child_entries.atRight(node_2);
+
+						self(left_1, left_2);
+						self(right_1, right_2);
+					}
+					opt_some(leaf_entry1) {
+						if_opt_some(leaf_entries.atRightOpt(node_2), leaf_entry2) {
+							auto [idx_1, val_1] = leaf_entry1;
+							auto [idx_2, val_2] = leaf_entry2;
+
+							CORE_ASSERT(idx_1 == idx_2, "leaves must be of the same index");
+
+							ans.emplace_back(idx_1, val_1, val_2);
+
+							return;
+						}
+
+						CORE_UNREACHABLE();
+					}
+				}
+			};
+
+			match_optional(counterpart) {
+				opt_none { addRight(stateR); }
+				opt_some(mirrorR) { detailDiff(mirrorR, stateR); }
+			}
+
+			if (change)
+				for (auto& [_, val_1, val_2]: ans) std::swap(val_1, val_2);
+
+			return ans;
 		}
 
 		MemoryStateID slice(MemoryStateID state, usize left_bound, usize right_bound) {
@@ -686,11 +840,9 @@ namespace vm::persistent::detail {
 
 			auto node = getNodeAt(state, idx);
 
-			CORE_ASSERT(
-				leaf_entries.atRightOpt(node).has_value(), "expected that the node will be leaf"
-			);
+			if_opt_some(leaf_entries.atRightOpt(node), leaf_entry) { return leaf_entry.value; }
 
-			return leaf_entries.atRight(node).value;
+			CORE_UNREACHABLE();
 		}
 
 		MemoryStateID erase(MemoryStateID state, usize idx) {
