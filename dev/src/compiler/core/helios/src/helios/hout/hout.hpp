@@ -27,6 +27,7 @@ namespace compiler::repl {
 	// for friend:
 	struct ImplementationOf_QueryReplExpressionWrapper;
 	struct ImplementationOf_QueryReplInstructionWrapper;
+	struct ScriptMainWrapperBuilder;
 }
 
 namespace compiler::helios {
@@ -108,6 +109,7 @@ namespace compiler::helios {
 		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
+		friend compiler::repl::ScriptMainWrapperBuilder;
 
 	public:
 		HOUTFunction() = delete;

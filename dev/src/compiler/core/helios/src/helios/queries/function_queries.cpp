@@ -503,6 +503,21 @@ namespace compiler::helios {
 									code::generatedOrigin(),
 								};
 							}
+							variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
+								// Script main is a generated symbol with a regular function
+								// signature, so it needs a normal HOUT declaration for the backend
+								// pipeline.
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
+							}
 							variant_default {
 								// Other generated symbols are not functions.
 								CORE_UNREACHABLE();
