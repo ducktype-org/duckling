@@ -2,9 +2,8 @@
 
 
 #include <base/types/ints.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <map>
-#include <vector>
-#include <thread>
 
 namespace vm {
 
@@ -13,30 +12,30 @@ namespace vm {
         /**
          * @brief Atomically checks if waiting for `mutex_id` would deadlock and marks thread as waiting.
          */
-        static void beginWaitForMutexOrThrow(u64 process_id, std::thread::id thread_id, usize mutex_id);
+        void beginWaitForMutexOrThrow(api::ThreadID thread_id, usize mutex_id);
 
         /**
          * @brief Checks if acquiring mutex with id `mutex_id` by thread `thread_id` would cause a deadlock.
          * If it would, this function should throw an exception to prevent deadlock from happening.
          */
-        static void checkForDeadlock(u64 process_id, std::thread::id thread_id, usize mutex_id);
+        void checkForDeadlock(api::ThreadID thread_id, usize mutex_id);
 
-        static void markThreadWaitingForMutex(u64 process_id, std::thread::id thread_id, usize mutex_id);
+        void markThreadWaitingForMutex(api::ThreadID thread_id, usize mutex_id);
 
-        static void markThreadAcquiredMutex(u64 process_id, std::thread::id thread_id, usize mutex_id);
+        void markThreadAcquiredMutex(api::ThreadID thread_id, usize mutex_id);
 
-        static void markThreadReleasedMutex(u64 process_id, std::thread::id thread_id, usize mutex_id);
+        void markThreadReleasedMutex(api::ThreadID thread_id, usize mutex_id);
 
         /**
          * @brief Clears detector state related to a destroyed mutex.
          */
-        static void clearMutexState(u64 process_id, usize mutex_id);
+        void clearMutexState(usize mutex_id);
 
     private:
-        // (process_id, thread_id) -> mutex_id (Thread is waiting for Mutex)
-        static std::map<std::pair<u64, std::thread::id>, usize> thread_waiting_for_mutex;
+        // thread_id -> mutex_id (Thread is waiting for Mutex)
+        std::map<api::ThreadID, usize> thread_waiting_for_mutex;
 
-        // (process_id, mutex_id) -> thread_id (Mutex is held by Thread)
-        static std::map<std::pair<u64, usize>, std::thread::id> mutex_owners;
+        // mutex_id -> thread_id (Mutex is held by Thread)
+        std::map<usize, api::ThreadID> mutex_owners;
     };
 }

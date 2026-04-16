@@ -15,7 +15,6 @@
 #include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/core/process/concurrency/deadlock_detection.hpp>
-#include <thread>
 
 namespace vm::builtins {
 
@@ -125,34 +124,30 @@ namespace vm::builtins {
 
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
-		u64 process_id = static_cast<u64>(thread.safe_process.getPID());
+		auto thread_id = thread.getThreadID();
 
 		if (!mutex->try_lock()) {
-			std::thread::id thread_id = std::this_thread::get_id();
-			DeadlockDetector::beginWaitForMutexOrThrow(process_id, thread_id, mutex_id);
+			thread.safe_process.getDeadlockDetector().beginWaitForMutexOrThrow(thread_id, mutex_id);
 			
 			thread.releaseGil();
 			mutex->lock();
 			thread.acquireGil();
-			DeadlockDetector::markThreadAcquiredMutex(process_id, thread_id, mutex_id);
+			thread.safe_process.getDeadlockDetector().markThreadAcquiredMutex(thread_id, mutex_id);
 		} else {
-			std::thread::id thread_id = std::this_thread::get_id();
-			DeadlockDetector::markThreadAcquiredMutex(process_id, thread_id, mutex_id);
+			thread.safe_process.getDeadlockDetector().markThreadAcquiredMutex(thread_id, mutex_id);
 		}
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
-		u64 process_id = static_cast<u64>(thread.safe_process.getPID());
 		
-		std::thread::id thread_id = std::this_thread::get_id();
+		auto thread_id = thread.getThreadID();
 		mutex->unlock();
-		DeadlockDetector::markThreadReleasedMutex(process_id, thread_id, mutex_id);
+		thread.safe_process.getDeadlockDetector().markThreadReleasedMutex(thread_id, mutex_id);
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
-		u64 process_id = static_cast<u64>(thread.safe_process.getPID());
-		DeadlockDetector::clearMutexState(process_id, mutex_id);
+		thread.safe_process.getDeadlockDetector().clearMutexState(mutex_id);
 		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
 

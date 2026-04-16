@@ -10,11 +10,11 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/concurrency/deadlock_detection.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/loader/loader.hpp>
 
-#include <deque>
 #include <expected>
 #include <string>
 #include <variant>
@@ -49,6 +49,8 @@ namespace vm {
 		low::LowVMProgramCopy loaded_program_copy;
 
 		Memory memory;
+
+		DeadlockDetector deadlock_detector;
 
 		/**
 		 * @brief Storage for all VmValues which belong to this process.
@@ -136,6 +138,9 @@ namespace vm {
 
 	public:
 		SafeVMProcess(PID my_pid);
+
+		DeadlockDetector& getDeadlockDetector() { return deadlock_detector; }
+		const DeadlockDetector& getDeadlockDetector() const { return deadlock_detector; }
 
 		Memory& getMemory();
 
