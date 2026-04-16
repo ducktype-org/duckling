@@ -92,10 +92,12 @@ namespace vm {
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
 		for (auto& thread: vm_threads) {
+			const auto was_executing = api::isExecuting(thread.getStatus());
 			auto response = thread.stop();
 
-			if (!thread.joinExecutionThread())
+			if (was_executing && !thread.joinExecutionThread())
 				return std::unexpected(api::ApiError{ api::JoinError{} });
+			if (!was_executing) thread.joinExecutionThread();
 
 			// @TODO: #1222 make two different "stop" functions, one that throws error if
 			// program was not stopped successfully and another that does nothing

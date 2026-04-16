@@ -15,6 +15,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(stopTest);
 		TESTER_ADD_TEST(killTest);
+		TESTER_ADD_TEST(killCompletedProcessTest);
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(executesStepByStep);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
@@ -61,6 +62,22 @@ private:
 
 		auto kill_response = vm::api::kill(pid);
 		assertTrue(kill_response.has_value(), "Kill failed (1)");
+	}
+
+	/**
+	 * @brief Checks if kill does not deadlock when execution has already completed.
+	 */
+	void killCompletedProcessTest() {
+		auto pid = loadProgram("debugger_test.dbc");
+
+		auto run_response = vm::api::run(pid);
+		assertTrue(run_response.has_value(), "Run failed (completed kill test)");
+
+		auto join_response = vm::api::join(pid);
+		assertTrue(join_response.has_value(), "Join failed (completed kill test)");
+
+		auto kill_response = vm::api::kill(pid);
+		assertTrue(kill_response.has_value(), "Kill failed (completed kill test)");
 	}
 
 	/**

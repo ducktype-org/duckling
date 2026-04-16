@@ -138,6 +138,8 @@ bool vm::IVMThread::step() {
 }
 
 bool vm::IVMThread::stop() {
+	if (!api::isExecuting(getStatus())) return true;
+
 	{
 		std::unique_lock lock(execution_request_mutex);
 
