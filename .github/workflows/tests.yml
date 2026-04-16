@@ -332,13 +332,8 @@ jobs:
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
       # runs when at least one of the integration test steps actually failed.
       - name: Cat itests log file on failure
-<<<<<<< HEAD
-        if: ${{ failure() && (steps.integration-tests.outcome == 'failure' || steps.integration-tests-multithreaded-only-compiler.outcome == 'failure') }}
-        run: ldd /home/docker/_work/duckling/duckling/dev/build/bin/duckc && echo "====================" && ls /home/docker/_work/duckling/duckling/dev/build/_deps/ubuntu-icu-src/usr/local/lib/ && echo "====================" &&  cat /tmp/dit.log
-=======
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
         run: cat /tmp/dit.log
->>>>>>> origin/main
 
       - name: Test Coverage After Integration Tests
         id: test-coverage-itests
