@@ -61,6 +61,7 @@ namespace compiler::helios {
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
+	// @TODO: #895 Reevaluate this helper when entry points become explicit.
 	bool isGlobalFun(SymID id) {
 		CORE_ASSERT(
 			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
