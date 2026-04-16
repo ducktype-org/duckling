@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    DuckCtx, QuackResult, qp_bail_internal,
+    DuckContext, QuackResult, qp_bail_internal,
     quackpack::subcommands::init::{InitOptions, init},
     util::path_ops_ext::PathOpsExt,
 };
@@ -37,7 +37,7 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `init` subcommand.
-pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let unsupported_flags = [
         "venv",
         "full",

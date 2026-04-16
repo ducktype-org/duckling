@@ -161,8 +161,12 @@ namespace vm::code {
 				out << type.inner.strView();
 			}
 
-			void operator()(const DataType&) const {
-				throw base::NotYetImplemented("DataType serialization");
+			void operator()(const DataType& type) const {
+				out << "type data: ";
+				out << type.name.strView() << " {\n";
+				for (auto field: type.fields)
+					out << "    " << field.name.strView() << ": " << field.type.strView() << ",\n";
+				out << "}\n";
 			}
 
 			void operator()(const VariantType&) const {
@@ -199,7 +203,7 @@ namespace vm::code {
 				out << "type class:  " << clazz.name.strView() << "{\n";
 				out << "    fields: [";
 				for (auto field: clazz.fields)
-					out << field.name.strView() << ": " << field.name.strView() << ", ";
+					out << field.name.strView() << ": " << field.type.strView() << ", ";
 				out << "]\n";
 				out << "    abstract: " << clazz.is_abstract << ";\n";
 				if (clazz.extends.has_value())

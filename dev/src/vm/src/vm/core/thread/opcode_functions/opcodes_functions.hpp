@@ -8,11 +8,12 @@
 #include <logger/logger.hpp>  // IWYU pragma: export
 
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/module_flags/module_flags.hpp>
 
 #ifdef USE_TAIL_CALLS
@@ -114,11 +115,11 @@ namespace vm {
 				const MicroInstruction*& instr,
 				std::byte*&              local_stack,
 				Frame*&                  frame,
-				VMThread&                thread,
+				SafeVMThread&            thread,
 				usize                    function_id
 			) {
 			auto& runtime_data = thread.runtime_data;
-			auto& called_func  = thread.executing_program->getFunctions()[function_id];
+			auto& called_func  = thread.process_program->getFunctions()[function_id];
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
 				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
@@ -180,10 +181,9 @@ namespace vm {
 				[[maybe_unused]] const MicroInstruction*& instr,
 				std::byte*&                               local_stack,
 				Frame*&                                   frame,
-				VMThread&                                 thread,
-				TypeID                                    type_id
+				SafeVMThread&                             thread,
+				TypeCRef                                  type
 			) {
-			auto type     = thread.executing_program->getTypes().at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
@@ -200,7 +200,7 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			void
-			performDeinit(Frame*& frame, VMThread& thread) {
+			performDeinit(Frame*& frame, SafeVMThread& thread) {
 			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
 
@@ -216,15 +216,11 @@ namespace vm {
 #endif
 			void
 			setVariantType(
-				VMThread& thread,
-				Pointer   variant_pointer,
-				TypeID    wanted_type_id,
-				TypeID    variant_type_id
+				SafeVMThread& thread,
+				Pointer       variant_pointer,
+				TypeCRef      wanted_type,
+				TypeCRef      variant_type
 			) {
-
-			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
-			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
-
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block
@@ -236,7 +232,7 @@ namespace vm {
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
 			usize alternative_index = 0;
 			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
-				if (alt->getID() == wanted_type_id) alternative_index = static_cast<usize>(idx);
+				if (alt == wanted_type) alternative_index = static_cast<usize>(idx);
 
 			// Write the type tag
 			auto variant_block_data_view
@@ -271,13 +267,11 @@ namespace vm {
 #endif
 			Pointer
 			getVariantPtr(
-				VMThread& thread,
-				Pointer   variant_pointer,
-				TypeID    wanted_type_id,
-				TypeID    variant_type_id
+				SafeVMThread& thread,
+				Pointer       variant_pointer,
+				TypeCRef      wanted_type,
+				TypeCRef      variant_type
 			) {
-			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
-			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
 				variant_pointer.movedPointer(static_cast<i64>(*variant_type->getTypeTagSizeBytes())),

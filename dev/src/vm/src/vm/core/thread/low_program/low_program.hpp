@@ -42,9 +42,20 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of global data.
 	 */
 	struct LowGlobalData {
-		TypeCRef                    type;
+		/// Type
+		TypeCRef type;
+
+		/// Optional constructor name.
 		base::Optional<base::StrID> ctor_name;
+
+		/// Optional destructor name.
 		base::Optional<base::StrID> dtor_name;
+
+		/// The offset of the global variable's data in the global buffer.
+		usize global_buffer_offset;
+
+		/// The index of the global block ref in the global block array.
+		usize global_block_idx;
 	};
 
 	/**
@@ -69,7 +80,7 @@ namespace vm::low {
 			= 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
 			= 0;
 
 		[[nodiscard]]
@@ -78,6 +89,24 @@ namespace vm::low {
 
 		[[nodiscard]]
 		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
+			= 0;
+
+		/**
+		 * @brief Helper structure with the configuration for the global buffer in the program.
+		 * Global buffer is the contiguous memory area where the data of global variables is stored.
+		 *
+		 * Used mainly by the VMProcess to determine the amount of memory to allocate for the globals.
+		 */
+		struct GlobalBufferConfig {
+			Bytes buffer_size;   /// The sum of sizes of all the global variables in the program.
+			usize global_count;  /// The count of global variables in the program
+		};
+
+		/**
+		 * @brief Get the global buffer configuration.
+		 */
+		[[nodiscard]]
+		virtual GlobalBufferConfig getGlobalBufferConfig() const
 			= 0;
 
 		virtual ~ILowVMProgram() = default;
@@ -105,7 +134,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return extern_c_functions;
 		}
 
@@ -117,12 +146,19 @@ namespace vm::low {
 			return method_name_pool;
 		}
 
+		GlobalBufferConfig getGlobalBufferConfig() const override {
+			return { .buffer_size = global_buffer_size, .global_count = global_count };
+		}
+
 	private:
 		LowVMProgram()                                  = default;
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
-		ObjIdNameMap<LowExternCFunction>          extern_c_functions{};
+		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
+		Bytes                                     global_buffer_size = Bytes(0);
+		usize                                     global_count       = 0;
+
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
 		base::HashMap<u64, base::StrID> method_name_pool{};
@@ -130,6 +166,10 @@ namespace vm::low {
 
 	/**
 	 * @brief Overlay over `LowVMProgram` with its own and therefore modifiable copy of functions.
+	 * @note Only the functions can be copied and modified, the types and extern C
+	 * functions are shared with the original program and are not modifiable through this structure
+	 * because of the way instruction arguments are currently being lowered - they contain direct
+	 * pointers to types.
 	 *
 	 * @note Needs updating via `selfUpdate()` to make new functions visible.
 	 * @note Program with current everything except functions is still a valid program.
@@ -145,7 +185,7 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
-		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
+		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return original_program->getExternCFunctions();
 		}
 
@@ -155,6 +195,10 @@ namespace vm::low {
 
 		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
 			return original_program->getMethodNamePool();
+		}
+
+		GlobalBufferConfig getGlobalBufferConfig() const override {
+			return original_program->getGlobalBufferConfig();
 		}
 
 		CRef<LowVMProgram> getOriginalProgram() const { return original_program; }

@@ -1,0 +1,8 @@
+
+fun foo(a: i64) -> i64 = {
+    return 4;
+}
+
+fun foo(b: i64) -> i64 = {
+    return 7;
+}

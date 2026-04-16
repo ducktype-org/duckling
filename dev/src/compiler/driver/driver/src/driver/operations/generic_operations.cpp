@@ -8,6 +8,10 @@
 #include <debug_info/debug_info_io.hpp>
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
+#include <driver/repl_utils/repl_dvm_helpers.hpp>
+#include <driver/repl_utils/repl_split_helpers.hpp>
+#include <driver/repl_utils/repl_statement_helpers.hpp>
+#include <driver/repl_utils/script_helpers.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
@@ -16,6 +20,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
+#include <global_state/script_context.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
@@ -23,17 +28,21 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <utility>
@@ -293,19 +302,193 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
+	namespace {
+		std::expected<vm::code::CodeCollection, std::string> compileScriptToDVMCollection() {
+			auto& script_context = global_state::getScriptContext();
+			auto  script_source  = script_context.script_file.getContent().view().stdString();
+			auto  split_result   = repl::splitInputIntoStatements(script_source);
+			if (!split_result.has_value())
+				return std::unexpected(
+					base::strConcat("Script parsing failed: ", split_result.error())
+				);
+
+			CORE_DEV_LOG(
+				REPL, "compile_script: split into ", split_result->size(), " statement(s)\n"
+			);
+
+			std::expected<vm::code::CodeCollection, std::string> compiled_script;
+
+			query::utils::withContextDo([&](query::Context& ctx) {
+				backend_vm::ReplLoweringContext lowering_context(ctx);
+				lowering_context.setContext(ctx);
+				defer(lowering_context.invalidateContext());
+
+				auto validated_program = vm::code::ValidProgram::withBuiltins();
+				std::vector<repl::ScriptExecutableCall> executable_calls;
+				base::Optional<frontend::ModuleID>      parent_module_id;
+
+				auto try_insert_chunk = [&](const vm::code::CodeCollection& chunk) -> bool {
+					try {
+						validated_program = validated_program.tryInsertCode(chunk);
+						return true;
+					} catch (const std::exception& e) {
+						compiled_script = std::unexpected(base::strConcat(
+							"DVM bytecode validation failed while composing script chunks: ",
+							e.what()
+						));
+						return false;
+					}
+				};
+
+				u64 statement_counter = 0;
+				for (const auto& statement_source: *split_result) {
+					auto module_ref = repl::createEphemeralChainedStatementModule(
+						statement_source, parent_module_id, statement_counter, "script_"
+					);
+					auto module_id   = module_ref->getModuleID();
+					parent_module_id = module_id;
+
+					CORE_DEV_LOG(
+						REPL,
+						"compile_script: statement #",
+						statement_counter + 1,
+						", module #",
+						module_id.queryUnstablePerfectHash(),
+						"\n"
+					);
+
+					auto statement_info_result = repl::classifySingleStatement(ctx, module_id);
+					if (!statement_info_result.has_value()) {
+						compiled_script = std::unexpected(statement_info_result.error());
+						return;
+					}
+
+					auto module_name = repl::getStatementModuleName(module_id, "script_module_");
+
+					if (std::holds_alternative<repl::DefinitionSingleStatementInfo>(
+							statement_info_result.value()
+						)) {
+						CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
+						const auto& hout_unit    = repl::getDefinitionHOUTUnit(ctx, module_id);
+						auto        chunk_result = repl::compileHOUTUnitToDVMCode(
+                            ctx, hout_unit, module_name, lowering_context
+                        );
+						if (!chunk_result.has_value()) {
+							compiled_script = std::unexpected(chunk_result.error());
+							return;
+						}
+						if (!try_insert_chunk(chunk_result.value())) return;
+					} else {
+						CORE_DEV_LOG(REPL, "compile_script: classified as executable statement\n");
+
+						auto wrapper_result = repl::buildStatementWrapper(
+							ctx, statement_info_result.value(), statement_counter
+						);
+						if (!wrapper_result.has_value()) {
+							compiled_script = std::unexpected(wrapper_result.error());
+							return;
+						}
+
+						auto hout_unit
+							= repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
+						auto chunk_result = repl::compileHOUTUnitToDVMCode(
+							ctx, hout_unit, module_name, lowering_context
+						);
+						if (!chunk_result.has_value()) {
+							compiled_script = std::unexpected(chunk_result.error());
+							return;
+						}
+
+						auto call_meta = repl::getExecutableCallMetadata(
+							chunk_result.value(), wrapper_result->wrapper_func_name
+						);
+						if (!call_meta.has_value()) {
+							compiled_script = std::unexpected(base::strConcat(
+								"Failed to extract wrapper metadata: ", call_meta.error()
+							));
+							return;
+						}
+
+						executable_calls.push_back(call_meta.value());
+						if (!try_insert_chunk(chunk_result.value())) return;
+					}
+
+					++statement_counter;
+				}
+
+				vm::code::CodeCollection main_collection;
+				// Generate the main entry point that calls all statement wrappers in order.
+				// executable_calls contains the wrapper names + return types collected above.
+				main_collection.functions.push_back(repl::makeScriptMainFunction(executable_calls));
+				if (!try_insert_chunk(main_collection)) return;
+
+				compiled_script = validated_program.produceValidCodeCollection();
+			});
+
+			if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
+			return compiled_script.value();
+		}
+	}
+
 	base::OkBad compileScript(
-		[[maybe_unused]] const CompilerModeOfOperationAndOptions::ScriptMode& mode,
-		[[maybe_unused]] BackendType                                          backend_type,
-		[[maybe_unused]] const linker::LinkingOptions&                        linking_options
+		BackendType backend_type, [[maybe_unused]] const linker::LinkingOptions& linking_options
 	) {
-		// Steps:
-		// 1. Read mode.script_file content
-		// 2. Call repl::splitInputIntoStatements() to split into individual statement strings
-		// 3. For each statement: create a chained REPL module (ReplData with parent link)
-		// 4. For each module: compile and collect .dbc/.o artifacts
-		// 5. DVM:  merge CodeCollections and serialize to mode.output_path as .dbc
-		//    LLVM: compile entry-point module + link all .o files somehow (not yet sure how)
-		throw base::NotYetImplemented("compileScript");
+		if (backend_type != BackendType::DVM) {
+			CORE_USER_LOG("compile_script currently supports only --dvm-backend.\n");
+			return base::BAD;
+		}
+
+		auto compiled_script = compileScriptToDVMCollection();
+		if (!compiled_script.has_value()) {
+			CORE_USER_LOG(compiled_script.error(), "\n");
+			return base::BAD;
+		}
+
+		auto& script_context  = global_state::getScriptContext();
+		auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+            base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+        );
+		std::ofstream output_file(output_artifact.file.getFilePath().getPath(), std::ios::binary);
+		if (!output_file.is_open()) {
+			CORE_USER_LOG(
+				"Failed to open output file for script bytecode: ",
+				output_artifact.file.getFilePath().string(),
+				"\n"
+			);
+			return base::BAD;
+		}
+
+		vm::code::serializeCode(compiled_script.value(), output_file);
+		output_file.close();
+
+		CORE_USER_LOG(
+			"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
+		);
+		return base::OK;
+	}
+
+	std::expected<RunOutput, std::string> runScriptOnDVM() {
+		auto compiled_script = compileScriptToDVMCollection();
+		if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
+
+		vm::PID pid{};
+
+		return vm::api::spawn()
+		    .and_then([&](vm::api::ProcessInfo process) {
+				pid = process.pid;
+				return std::expected<void, vm::api::ApiError>{};
+			})
+		    .and_then([&] { return vm::api::loadCode(pid, compiled_script.value()); })
+		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
+		    .and_then([&] { return vm::api::run(pid); })
+		    .and_then([&] { return vm::api::join(pid); })
+		    .and_then([&] { return vm::api::getExitValue(pid); })
+		    .transform_error(vm::api::errorToString)
+		    .transform([](vm::api::ExitValue exit_values) {
+				CORE_ASSERT(exit_values.size() == 1, "Expecting exactly one exit value");
+				return RunOutput{ .exit_code
+				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
+			});
 	}
 
 	base::OkBad compileEntirePackage(
@@ -333,17 +516,43 @@ namespace compiler::driver {
 		// @TODO: #2354 This is temporary.
 		const bool build_debug_info = backend == BackendType::DVM;
 
-		std::function<void(frontend::ModuleID)> handle_module
-			= [&](frontend::ModuleID module_id) -> void {
-			auto module_result
-				= query::entryPoint<CompileModule>({ module_id, backend, build_debug_info });
+		// Schedule compilation of every module up front so worker threads can run
+		// them concurrently, then collect the results in a second pass.
+		struct ScheduledModule {
+			frontend::ModuleID     module_id;
+			query::EntryTaskHandle handle;
+		};
+
+		std::vector<ScheduledModule> compile_handles;
+		compile_handles.reserve(modules_to_compile.size());
+		for (const auto& module_id: modules_to_compile) {
+			compile_handles.push_back({ module_id,
+			                            query::scheduleEntryPoint<CompileModule>(
+											{ module_id, backend, build_debug_info }
+										) });
+		}
+
+		std::vector<query::EntryTaskHandle> debug_info_handles;
+		if (build_debug_info) debug_info_handles.reserve(modules_to_compile.size());
+
+		for (auto& [module_id, handle]: compile_handles) {
+			auto module_result = query::awaitEntryPoint<CompileModule>(handle);
+
 			if (module_result->hasValue()) {
 				objects.emplace_back(module_result->valueOrPanic().object_art);
-				if (build_debug_info) query::entryPoint<DebugInfoForModule>({ module_id, backend });
-			} else
+
+				// We schedule debug info here, to only schedule it for correctly compiled modules.
+				if (build_debug_info) {
+					debug_info_handles.push_back(
+						query::scheduleEntryPoint<DebugInfoForModule>({ module_id, backend })
+					);
+				}
+			} else {
 				result = base::BAD;
-		};
-		for (const auto& module_id: modules_to_compile) handle_module(module_id);
+			}
+		}
+
+		for (auto handle: debug_info_handles) query::awaitEntryPoint<DebugInfoForModule>(handle);
 
 		if (result.isBad()) return result;
 

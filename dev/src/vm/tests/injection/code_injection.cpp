@@ -20,6 +20,7 @@ public:
 		TESTER_ADD_TEST(manyRunFunctions);
 		TESTER_ADD_TEST(repl);
 		TESTER_ADD_TEST(replWithGlobals);
+		TESTER_ADD_TEST(incrementalGlobalVariantPersistsValue);
 		TESTER_ADD_TEST(separateGlobals);
 		TESTER_ADD_TEST(cyclicRepl);
 		TESTER_ADD_TEST(injectExistingFunction);
@@ -225,6 +226,22 @@ private:
 		fs::File file2(path("repl_with_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "globaler_reader", vm::FunctionRunArguments{}, {}, "12", {});
+		vm::api::deinitAndValidate(pid);
+	}
+
+	void incrementalGlobalVariantPersistsValue() {
+		vm::PID  pid = initProcess();
+		fs::File file1(path("incremental_global_variant_1.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+
+		runAndCheckExitCode(pid, "set_global_variant_value", vm::FunctionRunArguments{}, {}, {}, {});
+
+		fs::File file2(path("incremental_global_variant_2.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+
+		runAndCheckExitCode(
+			pid, "read_global_variant_value", vm::FunctionRunArguments{}, {}, "735", {}
+		);
 		vm::api::deinitAndValidate(pid);
 	}
 

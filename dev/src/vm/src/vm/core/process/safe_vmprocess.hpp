@@ -3,6 +3,7 @@
 #include "interface_types.hpp"
 #include "vmprocess.hpp"
 
+#include <base/collections/object_pool.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 
@@ -10,7 +11,7 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <deque>
@@ -27,7 +28,7 @@ namespace vm {
 	 * @note Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class SafeVMProcess final: public VMProcess {
+	class SafeVMProcess final: public IVMProcess {
 		friend class VmValue;
 		friend class VMValueRef;
 
@@ -41,7 +42,7 @@ namespace vm {
 		loader::Loader loader{};
 		/**
 		 * @brief The program being executed by this process.
-		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module.
+		 * Holds a constant and stable reference.
 		 */
 		CRef<low::ILowVMProgram> loaded_program;
 
@@ -56,25 +57,29 @@ namespace vm {
 		 */
 		std::vector<Box<VmValue>> owned_vm_values;
 
-		// @TODO: #2342 Improve this....
-		std::deque<VMThread> vm_threads;
+		/**
+		 * @brief Pool of threads in this process.
+		 * @note Thread with ID 0 is the main thread, it is created together with the process.
+		 * Not recycling, because SafeVMThread is not move-constructible.
+		 */
+		base::StableObjectPool<SafeVMThread, api::ThreadID, false, true> vm_threads;
 
 		/**
 		 * @brief Returns first thread in thread queue.
 		 */
-		VMThread& getMainVMThread();
+		SafeVMThread& getMainVMThread();
 
 		/**
 		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
 		 * then it returns main thread
 		 */
-		VMThread& getVMThreadByID(api::ThreadID thread_id);
+		base::Optional<Ref<SafeVMThread>> getVMThreadByID(api::ThreadID thread_id);
 
 		/**
 		 * @brief Returns reference to either existing empty thread or
 		 * creates new thread without worker and returns it
 		 */
-		VMThread& getEmptyThread();
+		SafeVMThread& getEmptyThread();
 
 		base::Optional<api::ApiError> assertProcessCanRespond();
 
@@ -129,6 +134,16 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		/**
+		 * @brief Updates the memory for globals of this process after loading a program with new
+		 * globals. Works in incremental way. Only supports adding new globals, not removing or
+		 * changing existing ones.
+		 *
+		 * Should be called after loading a new globals.
+		 * @param program The program with the new globals.
+		 */
+		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
+
 	public:
 		SafeVMProcess(PID my_pid);
 
@@ -141,5 +156,7 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type) override;
 
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
+
+		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 	};
 }

@@ -2,7 +2,7 @@
 use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
-        FeatureName, PackageCtx,
+        FeatureName, PackageContext,
         compile::{self, BuildContext, profiles::Profile},
         storage::{StorageSyncOptions, sync, venv_id::ToVenvId},
     },
@@ -12,7 +12,7 @@ use crate::{
 /// Options for compiling a project.
 pub struct BuildOptions<'duck> {
     /// Package to compile.
-    pub package: PackageCtx<'duck>,
+    pub package: PackageContext<'duck>,
     /// Enabled features from the CLI.
     pub used_features: Vec<FeatureName>,
     /// Selected build profile.
@@ -48,7 +48,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         .context("failed to acquire a compile lock")?;
     let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: venv.into(),
         storage,
         used_features,
