@@ -1,5 +1,7 @@
 #pragma once
 
+#include "abstract_type_impl.hpp"
+
 #include <helios/tsh/type_interface.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -20,7 +22,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return u64(value);
+			return value->toAbstractType().queryUnstablePerfectHash();
 		}
 	};
 
@@ -53,7 +55,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return u64(value);
+			return value->toAbstractType().queryUnstablePerfectHash();
 		}
 	};
 

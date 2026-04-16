@@ -112,7 +112,7 @@ namespace compiler::helios {
 				      .name = base::StrID{ base::strConcat("_", order + 1) },
 				      .generated_symbol_data
 				      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-						  .parent_type = key, .field_type = component, .index = order } } }
+						  .parent_type = key, .index = order } } }
 				));
 				order++;
 			}

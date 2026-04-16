@@ -87,7 +87,6 @@ namespace compiler::helios {
 					          .generated_symbol_data
 					          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
 								  .parent_type = source_type,
-								  .field_type  = component,
 								  .index       = order } } }
 						)
 					));

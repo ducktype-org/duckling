@@ -7,7 +7,9 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 
+#include "base/str/str_utils.hpp"
 #include <base/except/exceptions.hpp>
+#include "helios/tsh/types.hpp"
 
 namespace compiler::helios {
 	namespace defgen {
@@ -160,7 +162,19 @@ namespace compiler::helios {
 					};
 					return param_symbol_type;
 				}
-				variant_case(Field, field) { return field.field_type; }
+				variant_case(Field, field) { 
+					// @TODO: #2515 Implament other cases
+					switch (field.parent_type.getKind()) {
+					case tsh::Kind::Tuple:
+						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(field.index);
+					default:
+						throw base::NotYetImplemented(base::strConcat(
+							"Can not get the type of a member of the ",
+							base::enumToStr(field.parent_type.getKind()),
+							" kind."
+						));
+					}
+				}
 				variant_case(Variable, var) { return var.type; }
 				variant_case(ReplExpressionWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
