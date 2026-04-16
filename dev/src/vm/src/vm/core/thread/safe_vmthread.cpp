@@ -36,7 +36,9 @@ namespace vm {
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
-		  runtime_data(process.getMemory().initializeFrameStack()),
+		  runtime_data(
+			  process.getMemory().initializeFrameStack(), process.getMemory().getGlobalDataMemory()
+		  ),
 		  safe_process(process),
 		  process_memory(process.getMemory()),
 		  process_program(process.getLoadedProgram()) {}
@@ -130,7 +132,7 @@ namespace vm {
 
 		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
-		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_blany_type, 0, result_type_arg));
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_bany_type, 0, result_type_arg));
 
 		start_function.local_stack_size += func.result_type->getSize().asInt();
 
@@ -237,24 +239,24 @@ namespace vm {
 			{
 				// Program return value is fixes to return `i64`.
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 0, i64_type_arg
+					init_bany_type, 0, i64_type_arg
 				),  // stack [0, 8), block idx 0 program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 1, argv_ptr_type_arg
+					init_bany_type, 1, argv_ptr_type_arg
 				),  // stack [8, 24) block idx 1 *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 2, i64_type_arg
+					init_bany_type, 2, i64_type_arg
 				),  // stack  [24, 32) block idx 2 argc_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 3, i64_type_arg
+					init_bany_type, 3, i64_type_arg
 				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
-					mov_l64_imm, 24, args.size()
+					mov_p64_imm, 24, args.size()
 				),  // argc_internal := args.size()
 				MAKE_BYTECODE_INSTRUCTION(
-					dynTableReAlloc_lptr_type, 8, argv_type_arg
+					dynTableReAlloc_pptr_type, 8, argv_type_arg
 				),  // alloc *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
+				MAKE_BYTECODE_INSTRUCTION(ext_p64, 24, 0),
 			}
 		);
 
@@ -265,50 +267,50 @@ namespace vm {
 					start_function.bc.end(),
 					{
 						MAKE_BYTECODE_INSTRUCTION(
-							init_blany_type, 4, str_ptr_type_arg
+							init_bany_type, 4, str_ptr_type_arg
 						),  // stack [40, 56) block idx 4 ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
-							init_blany_type, 5, byte_type_arg
+							init_bany_type, 5, byte_type_arg
 						),  // stack [56, 57) block idx 5 char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
-							mov_l64_imm, 24, arg.size() + 1
+							mov_p64_imm, 24, arg.size() + 1
 						),  // argc_internal := arg.size() + 1 (for the \0 character)
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableReAlloc_lptr_type, 40, str_type_arg
+							dynTableReAlloc_pptr_type, 40, str_type_arg
 						),                                              // alloc ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
-						MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
+						MAKE_BYTECODE_INSTRUCTION(ext_p64, 24, 0),
+						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 					}
 				);
 				for (auto c: arg) {
 					start_function.bc.insert(
 						start_function.bc.end(),
 						{ MAKE_BYTECODE_INSTRUCTION(
-							  mov_l8_imm, 56, static_cast<u64>(c)
+							  mov_p8_imm, 56, static_cast<u64>(c)
 						  ),  // char_tmp_store := c
 					      MAKE_BYTECODE_INSTRUCTION(
-							  dynTableStore_lptr_blany, 40, 5
+							  dynTableStore_pptr_bany, 40, 5
 						  ),  // ptr_tmp_store[ix] := char_tmp_store
-					      MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
-					      MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1) }
+					      MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+					      MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1) }
 					);
 				}
 				start_function.bc.insert(
 					start_function.bc.end(),
 					{
 						// At this point ix == arg.size().
-						MAKE_BYTECODE_INSTRUCTION(mov_l8_imm, 56, 0),  // char_tmp_store := \0
+						MAKE_BYTECODE_INSTRUCTION(mov_p8_imm, 56, 0),  // char_tmp_store := \0
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableStore_lptr_blany, 40, 5
+							dynTableStore_pptr_bany, 40, 5
 						),  // ptr_tmp_store[ix] := char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
 						MAKE_BYTECODE_INSTRUCTION(
-							mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
+							mov_p64_imm, 32, base::safeIntConv<u64>(argv_index)
 						),  // ix := argv_index
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableStore_lptr_blany, 8, 4
+							dynTableStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
 					}
@@ -319,7 +321,7 @@ namespace vm {
 
 		// Now actually prepare to call 'main'.
 		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_blany_type, 4, i64_type_arg)  // [40, 48) main ret_val
+			MAKE_BYTECODE_INSTRUCTION(init_bany_type, 4, i64_type_arg)  // [40, 48) main ret_val
 		);
 
 		// Pass the command line arguments only if main signature specifies it.
@@ -327,12 +329,12 @@ namespace vm {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
-					MAKE_BYTECODE_INSTRUCTION(init_blany_type, 5, i64_type_arg),  // [48, 56) argc
+					MAKE_BYTECODE_INSTRUCTION(init_bany_type, 5, i64_type_arg),  // [48, 56) argc
 					MAKE_BYTECODE_INSTRUCTION(
-						init_blany_type, 6, argv_ptr_type_arg
+						init_bany_type, 6, argv_ptr_type_arg
 					),                                                        // [56, 72) *argv
-					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
-					MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),  // argv := argv_internal
+					MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),  // argc := args.size()
+					MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),  // argv := argv_internal
 				}
 			);
 		}
@@ -342,10 +344,10 @@ namespace vm {
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
+				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
+				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
-					init_blany_type, 5, str_ptr_type_arg
+					init_bany_type, 5, str_ptr_type_arg
 				),  // [48, 64) ptr_tmp_store
 			}
 		);
@@ -356,11 +358,11 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(
-						dynTableLoad_blany_lptr, 5, 8
+						dynTableLoad_bany_pptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
-					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
-					MAKE_BYTECODE_INSTRUCTION(free_lptr, 48, 0),    // free ptr_tmp_store
-					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1),  // ++ix
+					MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
 				}
 			);
 		}
@@ -369,7 +371,7 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(free_lptr, 8, 0),  // free *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),  // free *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ptr_tmp_store
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ix
@@ -465,14 +467,16 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
+			auto block_ref
+				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
 			// Insert the global data if it hasn't been initialized; then run constructor if present
-			if (process_memory.tryInsertGlobalData(id, global->type)
-			    && global->ctor_name.has_value()) {
+			if (not process_memory.isGlobalInitialized(block_ref) && global->ctor_name.has_value()) {
 				try {
 					const auto& func
 						= *process_program->getFunctions().atMaybe(global->ctor_name.value()).value();
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
+					process_memory.setGlobalInitialized(block_ref);
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}
@@ -591,5 +595,10 @@ namespace vm {
 
 	Frame& SafeVMThread::getStackFrame(u64 frame_index) {
 		return runtime_data.frame_stack_base[frame_index];
+	}
+
+	void SafeVMThread::updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers) {
+		runtime_data.global_data_buffer_base      = global_buffer_pointers.data_buffer_base;
+		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
 }

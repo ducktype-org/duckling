@@ -40,6 +40,7 @@ namespace vm {
 
 		if (code_result.has_value()) {
 			loaded_program_copy.selfUpdate();
+			updateGlobalDataMemory(&loaded_program_copy);
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -336,5 +337,30 @@ namespace vm {
 	api::ThreadID SafeVMProcess::getMainThreadID() {
 		std::shared_lock lock(rw_global);
 		return getMainVMThread().getThreadID();
+	}
+
+	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {
+		using namespace std::ranges;
+		auto global_buffer_config = program->getGlobalBufferConfig();
+		auto global_indices       = program->getGlobals()
+		                    | views::transform(&low::LowGlobalData::global_block_idx)
+		                    | to<std::vector>();
+		auto global_offsets = program->getGlobals()
+		                    | views::transform(&low::LowGlobalData::global_buffer_offset)
+		                    | to<std::vector>();
+		auto global_types = program->getGlobals() | views::transform(&low::LowGlobalData::type)
+		                  | to<std::vector>();
+
+		auto new_global_buffer_pointers
+			= memory.initializeNewGlobalBlocks(Memory::GlobalBlocksConfig{
+				.global_data_offsets    = std::move(global_offsets),
+				.global_blocks_idxs     = std::move(global_indices),
+				.global_types           = std::move(global_types),
+				.total_global_data_size = global_buffer_config.buffer_size,
+				.global_count           = global_buffer_config.global_count,
+			});
+
+		for (auto& thread: vm_threads)
+			thread.updateGlobalDataBufferPointers(new_global_buffer_pointers);
 	}
 }

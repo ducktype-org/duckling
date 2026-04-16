@@ -40,24 +40,33 @@ namespace vm {
 	constexpr u64 STACK_LENGTH = ThreadStack::STACK_LENGTH;
 
 	/**
-	 * @brief This structure holds pointers to `frame_stack` and `local_stack_reserved`
-	 * vectors for fast access during runtime. `frame_stack` is a vector of frames,
-	 * that we use like a stack. Top of the stack is saved in the `frame` argument
-	 * passed inside opcode functions, which is also the current frame. `local_stack_reserved` is
-	 * one continuous block of memory, from which every function gets it's own chunk. It also
-	 * behaves like a stack, but can be moved forward by many bytes, so `local_stack_top`
-	 * is kept to remember where the top of the stack currently is.
+	 * @brief This structure holds pointers to `frame_stack`, `local_stack`, `block_ref_stack`
+	 * and global buffer vectors for fast access during runtime.
+	 *
+	 * Note that these pointers are non-owning and just for easier access (less dereferencing)
+	 * from the opcode functions.
+	 *
+	 * `frame_stack` is a vector of frames, that we use like a stack. Top of the stack is saved in
+	 * the `frame` argument passed inside opcode functions, which is also the current frame.
+	 * `local_stack_reserved` is one continuous block of memory, from which every function gets it's
+	 * own chunk. It also behaves like a stack, but can be moved forward by many bytes, so
+	 * `local_stack_top` is kept to remember where the top of the stack currently is.
 	 */
 	struct RuntimeData {
-		Frame* frame_stack_base;      /// Pointer to the first frame from `frame_stack` vector.
-		Frame* frame_stack_end;       /// Pointer to the first value not allocated.
-		Frame* frame_stack_current;   /// Pointer to the current frame - used only when debugging.
-		std::byte* local_stack_base;  /// Pointer to the start of `local_stack_reserved`.
-		std::byte* local_stack_end;   /// Pointer to the first value not allocated.
-		Block**    block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
-		Block**    block_ref_stack_end;   /// Pointer to the first value not allocated.
+		Frame* frame_stack_base;       /// Pointer to the first frame from `frame_stack` vector.
+		Frame* frame_stack_end;        /// Pointer to the first value not allocated.
+		Frame* frame_stack_current;    /// Pointer to the current frame - used only when debugging.
 
-		RuntimeData(Ref<ThreadStack> stack):
+		std::byte* local_stack_base;   /// Pointer to the start of `local_stack_reserved`.
+		std::byte* local_stack_end;    /// Pointer to the first value not allocated.
+
+		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
+		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
+
+		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
+		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
+
+		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointers global_buffer_pointers):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
@@ -66,7 +75,9 @@ namespace vm {
 			  block_ref_stack_base(stack->getBlockRefStack()->data()),
 			  block_ref_stack_end(
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
-			  ) {}
+			  ),
+			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
+			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base) {}
 	};
 
 	/**
@@ -85,7 +96,6 @@ namespace vm {
 		 * @brief Parent process'es memory.
 		 */
 		Memory& process_memory;
-
 		/**
 		 * @brief Parent process'es program.
 		 */
@@ -194,5 +204,12 @@ namespace vm {
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
 		Frame& getStackFrame(u64 frame_index);
+
+		/**
+		 * @brief Update the pointers to the global data buffer and global blocks buffer.
+		 * For now only the VMProcess calls this function after the global data memory is
+		 * reallocated and the pointers change.
+		 */
+		void updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers);
 	};
 }

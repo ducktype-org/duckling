@@ -44,6 +44,11 @@ namespace vm {
 		return &threads_frame_stacks.back();
 	}
 
+	GlobalBufferPointers Memory::getGlobalDataMemory() {
+		return { .data_buffer_base   = global_data_buffer.data(),
+			     .blocks_buffer_base = global_data_blocks.data() };
+	}
+
 	auto Memory::allocateHeap(TypeCRef type) -> Ref<Block> {
 		return createBlock(heap_allocator.allocate(type));
 	}
@@ -89,6 +94,14 @@ namespace vm {
 		}
 	}
 
+	bool Memory::isGlobalInitialized(Ref<Block> global_block) {
+		return initialized_globals.contains(global_block->id);
+	}
+
+	void Memory::setGlobalInitialized(Ref<Block> global_block) {
+		initialized_globals.insert(global_block->id);
+	}
+
 	auto Memory::requestBlockID(Ref<Block> block) -> BlockID { return block->id; }
 
 	auto Memory::requestBlockData(BlockID id) -> base::RawView {
@@ -97,38 +110,6 @@ namespace vm {
 
 	auto Memory::requestBlockType(BlockID id) -> TypeCRef {
 		return getBlock(id)->data.element_type;
-	}
-
-	bool Memory::tryInsertGlobalData(GlobalDataID id, TypeCRef type) {
-		if (!global_data.contains(id)) {
-			auto             type_size = type->getSize().asInt();
-			base::OwningView storage(new byte[type_size], type_size);
-			auto             block = allocateDummy(type, storage.modView().getBegin());
-			increaseBlockRefcount(block);
-			global_blocks.put(id, block);
-			global_data.put(id, std::move(storage));
-			return true;
-		}
-		return false;
-	}
-
-	void Memory::deinitGlobals() {
-		try {
-			// We are first freeing all the data and then decreasing the refcounts.
-			// This is very important, because there might be links between the global variables,
-			// and if we were to free them and decrease the refcount in the wrong order we might
-			// throw a false-positive exception. This solution avoids this problem.
-
-			for (const auto& block: global_blocks | std::views::values) freeBlockData(block);
-
-			for (const auto& block: global_blocks | std::views::values)
-				decreaseBlockRefcount(block);
-		} catch (exceptions::VMFoundMemoryLeakException&) {
-			std::cerr
-				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
-				   "data, that was not freed.\n";
-			throw;
-		}
 	}
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
@@ -401,5 +382,94 @@ namespace vm {
 			TEST_HERE(!block.deallocated)
 		}
 		return true;
+	}
+
+	void Memory::deinitGlobals() {
+		try {
+			// We are first freeing all the data and then decreasing the refcounts.
+			// This is very important, because there might be links between the global variables,
+			// and if we were to free them and decrease the refcount in the wrong order we might
+			// throw a false-positive exception. This solution avoids this problem.
+
+			for (const auto& block_ptr: global_data_blocks) freeBlockData(Ref(block_ptr));
+
+			for (const auto& block_ptr: global_data_blocks) decreaseBlockRefcount(Ref(block_ptr));
+		} catch (exceptions::VMFoundMemoryLeakException&) {
+			std::cerr
+				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
+				   "data, that was not freed.\n";
+			throw;
+		}
+	}
+
+	GlobalBufferPointers Memory::initializeNewGlobalBlocks(const GlobalBlocksConfig& global_blocks) {
+		CORE_ASSERT(
+			global_blocks.global_count >= global_data_blocks.size(),
+			"Global blocks buffer cannot be shrunk"
+		);
+		CORE_ASSERT(
+			global_blocks.total_global_data_size.asInt() >= global_data_buffer.size(),
+			"Global data buffer cannot be shrunk"
+		);
+
+		global_data_buffer.resize(global_blocks.total_global_data_size.asInt());
+		global_data_blocks.resize(global_blocks.global_count);
+
+		for (usize i = 0; i < global_blocks.global_count; i++) {
+			usize    block_idx = global_blocks.global_blocks_idxs[i];
+			usize    off       = global_blocks.global_data_offsets[i];
+			TypeCRef type      = global_blocks.global_types[i];
+			usize    type_size = type->getSize().asInt();
+			CORE_ASSERT(
+				block_idx < global_data_blocks.size(),
+				"Global block index is out of bounds of the global blocks buffer"
+			);
+			MRef<Block> block_ref = MRef(global_data_blocks[block_idx]);
+
+			if (block_ref.toOpt().empty()) {
+				CORE_ASSERT(
+					off + type_size <= global_data_buffer.size(),
+					std::format(
+						"Trying to insert global data of size {}, at offset {}, but buffer size is "
+						"only {}",
+						type_size,
+						off,
+						global_data_buffer.size()
+					)
+				);
+
+				Ref<Block> block = allocateDummy(type, global_data_buffer.data() + off);
+				increaseBlockRefcount(block);
+				global_data_blocks[block_idx] = block.get();
+			} else {
+				// We have to update the view of the data block
+				updateBlockDataView(
+					block_ref.toOpt().value(), { global_data_buffer.data() + off, type_size }
+				);
+			}
+		}
+
+		return getGlobalDataMemory();
+	}
+
+	void Memory::updateBlockDataView(Ref<Block> block, base::ModRawView new_view) {
+		CORE_ASSERT(
+			block->data.element_type->getSize().asInt() == new_view.size(),
+			"New view size must match the block's type size"
+		);
+		base::ModRawView old_root_view = block->data.view;
+
+		std::function<void(Ref<Block>)> update_block_data_recursively
+			= [&](Ref<Block> current_block) -> void {
+			base::ModRawView current_view      = current_block->data.view;
+			auto             offset_from_start = current_view.getBegin() - old_root_view.getBegin();
+			current_block->data.view
+				= { new_view.getBegin() + offset_from_start, current_view.size() };
+
+			for (auto& child: current_block->children_blocks | std::views::values)
+				update_block_data_recursively(child);
+		};
+
+		update_block_data_recursively(block);
 	}
 }
