@@ -5,6 +5,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -77,6 +78,15 @@ namespace compiler::helios {
 				}
 			};
 
+			auto try_append_global_data = [&](SymID sym) {
+				auto hout_global = ctx.query<QueryHOUTGlobalData>(sym);
+				if (hout_global->hasFailed()) {
+					is_failed = true;
+					return;
+				}
+				out.glob_data.emplace_back(&hout_global->valueOrPanic());
+			};
+
 			for (auto scope: *scopes_to_process) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
@@ -87,10 +97,9 @@ namespace compiler::helios {
 						register_ctor_if_needed(sym);
 
 					// grab constants:
-					if (kind(sym) == SymbolKind::Const)
-						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
+					if (kind(sym) == SymbolKind::Const) try_append_global_data(sym);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
+						try_append_global_data(sym);
 
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
@@ -314,9 +323,9 @@ namespace compiler::helios {
 			for (auto sym: *symbols_in_module_root) {
 				// grab constants:
 				if (kind(sym) == SymbolKind::Const)
-					out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
+					out.glob_data.emplace_back(&ctx.query<QueryHOUTGlobalData>(sym)->valueOrThrow());
 				if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-					out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
+					out.glob_data.emplace_back(&ctx.query<QueryHOUTGlobalData>(sym)->valueOrThrow());
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.emplace_back(&ctx.query<QueryCodeOfFun>(sym)->valueOrThrow());
