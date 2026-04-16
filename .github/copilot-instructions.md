@@ -21,7 +21,7 @@ Duckling is a C++23 programming language project with a comprehensive build syst
   - **NOTE**: Binary downloads may fail in restricted environments - this is expected
 - Setup build directory:
   ```bash
-  python3 toolbox.py setup-build -x g++-14 -c gcc-14 --gcov-version gcov-14
+  yes '' | python3 toolbox.py setup-build -x g++-14 -c gcc-14 --gcov-version gcov-14
   ```
   - There are 5 interactive prompts: build directory, build system, ccache, coverage, and JIT.
     **All defaults are correct and should be accepted** (press ENTER for each) unless you have a specific reason to change them.
@@ -100,8 +100,7 @@ Duckling is a C++23 programming language project with a comprehensive build syst
    ```
 3. **Simple Test Run**: Run a subset of tests:
    ```bash
-   cd dev && python3 toolbox.py test
-   # Let it prompt for build directory, press ENTER for defaults
+   cd dev && python3 toolbox.py test -b build
    ```
 
 ### Advanced Validation
@@ -153,6 +152,10 @@ python3 toolbox.py install-llvm        # Compile and install LLVM from source
 python3 toolbox.py pr-validate         # Validate branch for PR
 python3 toolbox.py clean-init          # Clean initialization artifacts
 ```
+
+> **IMPORTANT**: Most toolbox commands prompt for input (e.g. build directory, compilers, build type).
+> When running these commands, **always pass the required values as CLI flags** (e.g. `-b build`, `-x g++-14`, `-t Dev`) so the command does not hang waiting for interactive input.
+> Run `python3 toolbox.py <command> --help` to see available flags for any command.
 
 ### Pre-commit Validation
 **ALWAYS run these commands before committing changes:**

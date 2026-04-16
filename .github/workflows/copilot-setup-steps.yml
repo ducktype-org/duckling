@@ -47,9 +47,9 @@ jobs:
       - name: Setup build directory
         working-directory: dev
         # setup-build has 5 interactive prompts (build dir, build system, ccache, coverage, JIT).
-        # All defaults are correct - press ENTER (empty line) for each.
+        # All defaults are correct - pipe `yes ''` to accept all defaults automatically.
         run: |
-          printf '\n\n\n\n\n' | python3 toolbox.py setup-build \
+          yes '' | python3 toolbox.py setup-build \
             -x g++-14 -c gcc-14 \
             --gcov-version gcov-14 \
             -t Dev
