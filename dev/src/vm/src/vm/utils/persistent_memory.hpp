@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/collections/optional.hpp"
 #include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
@@ -303,17 +304,15 @@ namespace vm::persistent::detail {
 
 			for (; path.trace.size(); path.trace.pop_back(), mask <<= 1) {
 				MemoryStateID node_id = path.trace.back();
-				auto     [_, right]   = child_entries.atRight(node_id);
+				auto [_, right]       = child_entries.atRight(node_id);
 
-				if (path.idx & mask)
-					path.idx ^= mask;
+				if (path.idx & mask) path.idx ^= mask;
 
-				if (!right)
-					continue;
+				if (!right) continue;
 
 				if (auto amount = getSize(right); amount <= skip)
 					skip -= amount;
-				else 
+				else
 					break;
 			}
 
@@ -814,6 +813,9 @@ namespace vm::persistent::detail {
 			validateIdx(state, left_bound);
 			validateIdx(state, right_bound);
 
+			if (left_bound > right_bound)
+				throw std::invalid_argument("left idx bigger than right idx");
+
 			if (state == EMPTY) return EMPTY;
 
 			auto left_path  = getPathTo(state, left_bound);
@@ -860,6 +862,37 @@ namespace vm::persistent::detail {
 			}
 
 			return nodeFromChildren(left_node, right_node);
+		}
+
+		/**
+		 * @brief deallocate lements from [left, right) interval
+		 */
+		MemoryStateID eraseRange(MemoryStateID state, usize left, usize right) {
+			validateState(state);
+
+			if (left > right) throw std::invalid_argument("left idx bigger than right idx");
+
+			auto lambda = [&](this auto&& self, MemoryStateID state) -> MemoryStateID {
+				auto [height, offset] = getHeightOffset(state);
+
+				if (right <= offset) return state;
+				if (offset + (1 << height) <= left) return state;
+
+				if (left <= offset && offset + (1 << height) <= right) return EMPTY;
+
+
+				if_opt_some(child_entries.atRightOpt(state), children) {
+					auto [left, right] = children;
+					left               = self(left);
+					right              = self(right);
+
+					return (left || right) ? nodeFromChildren(left, right) : EMPTY;
+				}
+
+				CORE_UNREACHABLE();
+			};
+
+			return lambda(state);
 		}
 
 		base::Optional<usize> access(MemoryStateID state, usize idx) const {
