@@ -688,7 +688,7 @@ namespace compiler::driver {
 		    .transform([](vm::api::ExitValue exit_values) {
 				CORE_ASSERT(exit_values.size() == 1, "Expected single exit value");
 				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_value.at(0)->readBytes<i64>()) };
+				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
 			});
 	}
 
