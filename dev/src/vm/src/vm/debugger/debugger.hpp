@@ -25,11 +25,11 @@ namespace vm::debugger {
 
 		// Event handlers for the debugger:
 
-		/**		 
+		/**
 		 * @brief Emits current VM status when VM changes status
 		 */
 		events::Emitter<std::string> on_vm_changes_status;
-		
+
 		/**
 		 * @brief Emits return vale when VM completes execution
 		 */
@@ -65,7 +65,7 @@ namespace vm::debugger {
 		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
 		 */
 		void attachOnVMCompletesExecutionListener(Ref<events::Listener<std::string>> listener);
-		
+
 		/**
 		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
 		 */
