@@ -128,7 +128,7 @@ namespace compiler::helios {
                               .valueOrThrow();
                       } else {
                           return defgen::getDefaultInitializerExpr(
-                                     ctx, variable_type, origin.getSourcePosition(ctx).value()
+                                     ctx, variable_type, origin.getSourcePosition(ctx).value() //NOLINT
                           )
                               .valueOrThrow();
                       }
