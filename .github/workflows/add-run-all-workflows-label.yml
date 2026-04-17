@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Add "Run All Workflows" label if missing
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.QUACKER_PAT }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           LABEL: "Run All Workflows"
