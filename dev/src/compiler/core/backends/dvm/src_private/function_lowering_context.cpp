@@ -153,7 +153,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 			= program_context.getOrInsertPointerType(global.type);
 
 		DVMLocal addr_tmp = pushTempLocal(ptr_to_global_type, "global_addr_ref");
-		pushInstruction({ vm::code::builders::OpKind::ref, addr_tmp, current_place.asAnyArgument() }
+		pushInstruction(
+			{ vm::code::builders::OpKind::ref, addr_tmp, current_place.asAnyArgument() }
 		);
 		current_place = { addr_tmp, DVMPlace::AccessKind::Pointer };
 	}
@@ -185,9 +186,11 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					DVMLocal loaded_val_tmp = pushTempLocal(vm_loaded_type, "deref_tmp");
 
 					// Emit the load instruction.
-					pushInstruction({ vm::code::builders::OpKind::load,
-					                  loaded_val_tmp.asAnyArgument(),
-					                  current_place });
+					pushInstruction(
+						{ vm::code::builders::OpKind::load,
+					      loaded_val_tmp.asAnyArgument(),
+					      current_place }
+					);
 
 					// Update types after the projection has been applied.
 					current_place = { loaded_val_tmp, DVMPlace::AccessKind::Pointer };
@@ -225,11 +228,12 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 				// Emit the pointer move instruction. Based on the `current_place` type,
 				// `structLea_lptr_lptr_field` or `structLea_lptr_lste_field` will be picked.
-				pushInstruction({ vm::code::builders::OpKind::structLea,
-				                  field_ptr_tmp,
-				                  current_place,
-				                  vm::opargs::Field{ typeName(vm_class_type),
-				                                     base::StrID(vm_field_name) } });
+				pushInstruction(
+					{ vm::code::builders::OpKind::structLea,
+				      field_ptr_tmp,
+				      current_place,
+				      vm::opargs::Field{ typeName(vm_class_type), base::StrID(vm_field_name) } }
+				);
 
 				// `field_ptr_tmp` now holds a pointer to the appropriate struct field.
 				current_place  = { field_ptr_tmp, DVMPlace::AccessKind::Pointer };
@@ -335,6 +339,7 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	for (const auto& param_type: function_parameter_types)
 		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
 	function.signature.result_types = {};
+	// @TODO: #2499 Make lowerAndKeepTslType return an optional and remove the void type from here
 	if (auto type_name = vm::code::typeName(function_return_type); type_name != "void")
 		function.signature.result_types.emplace_back(type_name);
 	function.body = std::move(function_body);
@@ -353,7 +358,7 @@ DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
 		);
 	}
 	return DVMLocal{
-		.name = base::StrID("ret_val_0"),
+		.name = base::StrID("ret0"),
 		.type = function_return_type,
 	};
 }
@@ -374,19 +379,21 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	}
 
 	auto dvm_local = insertLirLocal(lir_local);
-	pushInstruction({
-		vm::code::builders::OpKind::init,
-		dvm_local.asAnyArgument(),
-		vm::opargs::Type(typeName(dvm_local.type)),
-	});
+	pushInstruction(
+		{
+			vm::code::builders::OpKind::init,
+			dvm_local.asAnyArgument(),
+			vm::opargs::Type(typeName(dvm_local.type)),
+		}
+	);
 }
 
 FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
 	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 ) {
-	std::vector<vm::code::TypeOfData> called_result_type = {};
+	base::Optional<vm::code::TypeOfData> called_result_type = {};
 	if (!func_literal.return_type_layout->is<tsl::EmptyTypeLayout>())
-		called_result_type.emplace_back(
+		called_result_type.emplace(
 			program_context.lowerAndKeepTslType(func_literal.return_type_layout)
 		);
 
@@ -409,11 +416,13 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 ) {
 	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
 
-	std::vector<vm::code::TypeOfData> called_result_type
-		= ext_func.signature.result_types | std::views::transform([&](const auto& reslt) {
-			  return vm::code::getBuiltinTypeByName(reslt).value();
-		  })
-	    | std::ranges::to<std::vector>();
+	CORE_ASSERT(ext_func.signature.result_types.size() <= 1, "functions should return one value at most");
+	base::Optional<vm::code::TypeOfData> called_result_type = {};
+
+	if (ext_func.signature.result_types.size()) {
+		auto reslt         = ext_func.signature.result_types.at(0);
+		called_result_type = vm::code::getBuiltinTypeByName(reslt).value();
+	}
 
 	std::vector<vm::code::TypeOfData> param_types
 		= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {
