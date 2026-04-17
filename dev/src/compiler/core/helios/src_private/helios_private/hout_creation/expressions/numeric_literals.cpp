@@ -121,7 +121,6 @@ namespace compiler::helios::code {
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			return numeric_value::NumericValue::createMinimized(parsed_value);
 		}
-
 	}
 
 	base::Optional<compiler::numeric_value::NumericValue> fromExprNumericValue(

@@ -69,5 +69,4 @@ namespace compiler::helios::code {
 
 		return { pos, {}, false };
 	}
-
 }
