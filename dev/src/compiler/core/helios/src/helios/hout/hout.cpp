@@ -127,10 +127,13 @@ namespace compiler::helios {
                           return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
                               .valueOrThrow();
                       } else {
+                          // clang-format off
                           return defgen::getDefaultInitializerExpr(
-                                     ctx, variable_type, origin.getSourcePosition(ctx).value() //NOLINT
-                          )
-                              .valueOrThrow();
+                                     ctx, 
+                                      variable_type, 
+                                     origin.getSourcePosition(ctx).value()
+                          	).valueOrThrow();
+                          // clang-format on
                       }
 				  }();
 
