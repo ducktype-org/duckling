@@ -26,8 +26,9 @@ namespace compiler::helios {
 		frontend::ModuleID,
 		CRef<query::QResult<HOUTUnit>>,
 		({
-			// Compile module schedules other queries, so we don't want to interrupt it in the middle of execution.
-			// @TODO: #2496 maybe remove this tag.
+			// Compile module schedules other queries, so we don't want to interrupt it in the
+	        // middle of execution.
+	        // @TODO: #2496 maybe remove this tag.
 			.catch_exceptions_if_using_qresult = false,
 		})
 	)

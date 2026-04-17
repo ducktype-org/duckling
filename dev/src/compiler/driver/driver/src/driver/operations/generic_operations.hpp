@@ -106,9 +106,10 @@ namespace compiler::driver {
 			.used_hashes             = query::UsedHashes::StableHash,
 			.can_be_loaded_from_disk = true,
 			.preserve_in_graph       = true,
-			
-			// Compile module schedules other queries, so we don't want to interrupt it in the middle of execution.
-			// @TODO: #2496 maybe remove this tag.
+
+			// Compile module schedules other queries, so we don't want to interrupt it in the
+	        // middle of execution.
+	        // @TODO: #2496 maybe remove this tag.
 			.catch_exceptions_if_using_qresult = false,
 		})
 	);

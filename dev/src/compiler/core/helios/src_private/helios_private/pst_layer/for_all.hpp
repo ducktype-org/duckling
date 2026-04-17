@@ -12,16 +12,17 @@
 
 namespace compiler::helios {
 
-	namespace internal {	
+	namespace internal {
 
 		/**
-		 * Helper function for pstForAll, that performs the actual recursion. 
+		 * Helper function for pstForAll, that performs the actual recursion.
 		 */
 		template<typename ElementT, typename FunctionT>
 		[[nodiscard]]
-		base::OkBad pstForAllAux(query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function) {
+		base::OkBad pstForAllAux(
+			query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function
+		) {
 			if (element->getElementKind() == pst::ElementKind::Expand) {
-				
 				auto expansion_result = ctx.query<QueryMacroExpansion>({
 					element.template dynamicCast<pst::Expand>().value(),
 				});
@@ -29,7 +30,7 @@ namespace compiler::helios {
 				if (expansion_result.hasFailed()) return base::BAD;
 
 				pstForAll(ctx, expansion_result.valueOrPanic().unlock(ctx), function);
-				
+
 				return base::OK;
 			}
 
@@ -55,20 +56,21 @@ namespace compiler::helios {
 	 * Runs given function for a PST element and all its subelements.`
 	 * Performs recursive calls into macro expansions.
 	 *
-	 * @return If any query failed during the traversal, returns base::BAD. Otherwise, returns base::OK.
+	 * @return If any query failed during the traversal, returns base::BAD. Otherwise, returns
+	 * base::OK.
 	 */
 	template<typename ElementT, typename FunctionT>
 	[[nodiscard]]
-	base::CheckedOkBad pstForAll(query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function) {
+	base::CheckedOkBad pstForAll(
+		query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function
+	) {
 		base::OkBad result = base::OK;
-	
+
 		auto with_failed_exception = query::runFuncWithQueryFailedHandling([&] {
 			result = internal::pstForAllAux(ctx, element, function);
 		});
-		if (with_failed_exception.status().isBad()) {
-			return base::BAD;
-		}
+		if (with_failed_exception.status().isBad()) return base::BAD;
 		return result;
 	}
-	
+
 }

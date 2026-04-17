@@ -1,6 +1,7 @@
 
 #include "macros.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
@@ -9,8 +10,6 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <diagnostic_interactive/placeholder.hpp>
-
 
 #include <base/str/str_utils.hpp>
 
@@ -49,10 +48,11 @@ namespace compiler::helios {
 				);
 
 				if (not pst.getLogger()->good()) {
-					// Note that PST diagnostics are logged eagerly, so if the PST did not parse correctly, 
-					// the diagnostics should already be logged at this point.
+					// Note that PST diagnostics are logged eagerly, so if the PST did not parse
+					// correctly, the diagnostics should already be logged at this point.
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Macro expansion produced code with parsing errors (see other diagnostics for details)",
+						"Macro expansion produced code with parsing errors (see other diagnostics "
+					    "for details)",
 						expand->getSourcePosition()
 					));
 
@@ -79,9 +79,12 @@ namespace compiler::helios {
 				return query::Failed{};
 			else {
 				Ref pst_ref = &p_result->valueOrPanic();
-				CORE_ASSERT(pst_ref->getLogger()->good(), "PST from macro expansion should have been checked for errors in provide()");
+				CORE_ASSERT(
+					pst_ref->getLogger()->good(),
+					"PST from macro expansion should have been checked for errors in provide()"
+				);
 				return { pst_ref->getRootElement() };
-			}			
+			}
 		}
 
 

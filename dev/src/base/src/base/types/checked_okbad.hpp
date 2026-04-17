@@ -5,11 +5,13 @@
 namespace base {
 	/**
 	 * Utility type wraping the base::OkBad,
-	 * in a way that forces the value to be checked. the caller to check it (to avoid silent failures).
+	 * in a way that forces the value to be checked. the caller to check it (to avoid silent
+	 * failures).
 	 *
 	 * If status method is never called, the destructor will panic.
-     *
-     * @note This is mostly useful as a return type for functions that can fail, to force the caller to check the result.
+	 *
+	 * @note This is mostly useful as a return type for functions that can fail, to force the caller
+	 * to check the result.
 	 */
 	struct CheckedOkBad final {
 	private:

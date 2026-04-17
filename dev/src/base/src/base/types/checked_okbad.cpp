@@ -1,4 +1,5 @@
 #include "checked_okbad.hpp"
+
 #include <base/except/exceptions.hpp>
 
 namespace base {

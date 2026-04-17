@@ -41,7 +41,7 @@ namespace compiler::helios {
 			auto class_stmt = getSymRef(key)->stmtCast(ctx).value();
 
 			auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
-			Ref class_symbols    = &ctx.query<QuerySymbolsInScope>(class_body_scope)->valueOrThrow();
+			Ref  class_symbols = &ctx.query<QuerySymbolsInScope>(class_body_scope)->valueOrThrow();
 
 			ClassSymbolData class_info;
 			for (auto sym: *class_symbols) {

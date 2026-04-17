@@ -18,7 +18,7 @@ namespace compiler::helios {
 		QueryMacroExpansion,
 		pst::GenericPSTQueryKey<pst::Expand>,
 		query::QResult<pst::AccessLocked<pst::Stmt>>,
-		({	})
+		({})
 	)
 
 }

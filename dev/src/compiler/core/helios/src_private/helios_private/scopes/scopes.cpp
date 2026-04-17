@@ -27,8 +27,8 @@
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/query_result.hpp>
-#include <query_framework/utils/query_failed_try.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/utils/query_failed_try.hpp>
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
@@ -385,13 +385,13 @@ namespace compiler::helios {
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
-			
+
 			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
 			if (for_all_ok.status().isBad()) {
-				// if the pstForAll failed, we mark the whole query as failed, but we still return the scopes that we managed to obtain.
+				// if the pstForAll failed, we mark the whole query as failed, but we still return
+				// the scopes that we managed to obtain.
 				out->failed = true;
 			}
-			
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -632,12 +632,10 @@ namespace compiler::helios {
 				if (key.ref->is_root)
 					CORE_ASSERT(symbols.empty(), "Root scope should not have any symbols.");
 			};
-			
+
 			// Sanity check that the output symbols have correct scope. :
-			if (output.hasValue()) {
-				validate_output_symbols(output.valueOrPanic());
-			}
-			
+			if (output.hasValue()) validate_output_symbols(output.valueOrPanic());
+
 			return output;
 		}
 
