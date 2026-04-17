@@ -753,13 +753,7 @@ namespace compiler::driver {
 
 		for (auto handle: debug_info_handles) query::awaitEntryPoint<DebugInfoForModule>(handle);
 
-		if (result.isBad()) {
-			std::cerr << "THE END!\n";
-
-			// TEST CODE:
-			concurrent::worker::WorkerManager::get().waitForAllWorkersFree(std::chrono::milliseconds(10));
-			return result;
-		}
+		if (result.isBad()) return result;
 
 		if (backend == BackendType::LLVM) {
 			// Link all outputs into a single binary.
@@ -776,8 +770,6 @@ namespace compiler::driver {
 				return base::BAD;
 			}
 		}
-
-		
 
 		return result;
 	}
