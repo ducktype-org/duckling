@@ -77,16 +77,14 @@ namespace vm::code {
 		constexpr static std::string_view ERR_MSG = "Missing function declaration for ";
 
 		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
-			  ValidationError(
-				  base::strConcat(
-					  ERR_MSG,
-					  is_ctor ? "constructor '" : "destructor '",
-					  func_name,
-					  "' of global variable '",
-					  global_name,
-					  "'"
-				  )
-			  ) {}
+			  ValidationError(base::strConcat(
+				  ERR_MSG,
+				  is_ctor ? "constructor '" : "destructor '",
+				  func_name,
+				  "' of global variable '",
+				  global_name,
+				  "'"
+			  )) {}
 	};
 
 	/**
@@ -169,9 +167,8 @@ namespace vm::code {
 			  type_mismatch(type_mismatch) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return type_mismatch
-			         ? static_cast<CRef<ElementBase>>(&main_signature.result_types[0])
-			         : base::Optional<CRef<ElementBase>>{};
+			return type_mismatch ? static_cast<CRef<ElementBase>>(&main_signature.result_types[0])
+			                     : base::Optional<CRef<ElementBase>>{};
 		}
 	};
 

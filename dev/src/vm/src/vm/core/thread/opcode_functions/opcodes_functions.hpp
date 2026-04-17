@@ -9,12 +9,10 @@
 
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/safe_vmprocess.hpp>
-#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
-#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/module_flags/module_flags.hpp>
 

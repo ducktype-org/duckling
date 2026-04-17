@@ -119,11 +119,12 @@ namespace vm {
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
 			                             .bc               = {},
 			                             .local_stack_size = 0,
-										 .local_block_count = func.result_types.size() + func.parameters.size(),
-			                             .arg_size         = 0,
-			                             .ret_size         = func.ret_size,
-			                             .parameters       = {},
-			                             .result_types     = func.result_types };
+			                             .local_block_count
+			                             = func.result_types.size() + func.parameters.size(),
+			                             .arg_size     = 0,
+			                             .ret_size     = func.ret_size,
+			                             .parameters   = {},
+			                             .result_types = func.result_types };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 

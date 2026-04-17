@@ -165,13 +165,13 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                 \
 	}
 
-#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                 \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {         \
-		{                                                                         \
-			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                  \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value * static_cast<TYPE>(-1)); \
-		}                                                                         \
-		FUNCTION_CONT(1);                                                         \
+#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {        \
+		{                                                                        \
+			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                 \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value* static_cast<TYPE>(-1)); \
+		}                                                                        \
+		FUNCTION_CONT(1);                                                        \
 	}
 
 // @TODO: #1216 Check for over/under flows.

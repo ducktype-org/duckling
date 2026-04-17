@@ -8,29 +8,25 @@ namespace compiler::repl {
 	) {
 		// Statement wrappers compile to exactly one function per chunk
 		if (chunk.functions.size() != 1) {
-			return std::unexpected(
-				base::strConcat(
-					"Expected exactly 1 function in wrapper chunk for '",
-					wrapper_func_name,
-					"', got ",
-					chunk.functions.size()
-				)
-			);
+			return std::unexpected(base::strConcat(
+				"Expected exactly 1 function in wrapper chunk for '",
+				wrapper_func_name,
+				"', got ",
+				chunk.functions.size()
+			));
 		}
 
 		const auto& function           = chunk.functions[0];
 		auto        wrapper_name_strid = base::StrID(std::string(wrapper_func_name));
 
 		if (function.name.str != wrapper_name_strid) {
-			return std::unexpected(
-				base::strConcat(
-					"Compiled wrapper name mismatch. Expected '",
-					wrapper_func_name,
-					"', got '",
-					function.name.str.strView(),
-					"'"
-				)
-			);
+			return std::unexpected(base::strConcat(
+				"Compiled wrapper name mismatch. Expected '",
+				wrapper_func_name,
+				"', got '",
+				function.name.str.strView(),
+				"'"
+			));
 		}
 
 		return ScriptExecutableCall{

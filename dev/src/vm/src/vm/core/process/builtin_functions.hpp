@@ -26,8 +26,8 @@
 
 #include <string_id/string_id.hpp>
 
-#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 namespace vm {
@@ -99,7 +99,7 @@ namespace vm::builtins {
 	 */
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		const std::vector<TypeCRef>&            result_types,
+		const std::vector<TypeCRef>&     result_types,
 		IVMProcess&                      process,
 		SafeVMThread&                    thread,
 		const std::vector<Box<VmValue>>& arguments

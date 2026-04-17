@@ -90,8 +90,8 @@ namespace {
 		const vm::code::valid_type::ValidTypeMap&             types_ctx,
 		const std::vector<vm::code::valid_type::ValidTypeID>& new_types
 	) {
-		using std::views::transform;
 		using std::ranges::to;
+		using std::views::transform;
 
 		for (const auto& type_id: new_types) {
 			const auto& type             = types_ctx.at(type_id);
@@ -119,12 +119,10 @@ namespace {
 				variant_case(vm::code::valid_type::finalized::Structure, data) {
 					std::vector<std::pair<base::StrID, vm::TypeRef>> fields
 						= data.fields
-					    | transform(
-							  [&](auto& field) -> std::pair<base::StrID, vm::TypeRef> {
-								  return { field.name,
-							               type_metadata->at(vm::TypeID(field.type.asInt())) };
-							  }
-						)
+					    | transform([&](auto& field) -> std::pair<base::StrID, vm::TypeRef> {
+							  return { field.name,
+							           type_metadata->at(vm::TypeID(field.type.asInt())) };
+						  })
 					    | to<std::vector>();
 					base::Optional<vm::InheritanceMetadata> inh_metadata
 						= buildInheritanceMetadata(*type_metadata, *type, data);
@@ -132,8 +130,7 @@ namespace {
 				}
 				variant_case(vm::code::valid_type::finalized::Variant, data) {
 					std::vector<vm::TypeRef> variants
-						= data.alternatives_ordered
-					    | transform([&](auto& variant) -> vm::TypeRef {
+						= data.alternatives_ordered | transform([&](auto& variant) -> vm::TypeRef {
 							  return type_metadata->at(vm::TypeID(variant.asInt()));
 						  })
 					    | to<std::vector>();
