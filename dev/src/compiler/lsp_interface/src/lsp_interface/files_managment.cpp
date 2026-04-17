@@ -1,5 +1,7 @@
 #include "files_managment.hpp"
 
+#include "frontend/pst_parser/source_position_locked.hpp"
+
 #include <driver/incremental_utils/collect_input.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -353,6 +355,7 @@ namespace lsp {
 
 
 		std::vector<query::external::InputData> previous_inputs;
+		previous_inputs.push_back(pst::SourcePositionLocked::getQueryInputNode());
 
 		for (auto& source_file: source_files) {
 			auto pst = source_file->getPST();

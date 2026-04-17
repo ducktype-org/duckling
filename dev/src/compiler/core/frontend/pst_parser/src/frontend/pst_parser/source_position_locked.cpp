@@ -1,6 +1,7 @@
 
 #include "source_position_locked.hpp"
 
+#include <query_framework/external/api.hpp>
 #include <query_framework/input_query/query_input.hpp>
 #include <query_framework/input_query/query_input_impl.hpp>
 
@@ -23,6 +24,11 @@ namespace pst {
 	 */
 	DECLARE_QUERY_SIDE_INPUT(FileSourcePositionsSideInput, KeyOf_FileSourcePositions);
 	IMPLEMENT_QUERY_SIDE_INPUT(FileSourcePositionsSideInput);
+
+	query::external::InputData SourcePositionLocked::getQueryInputNode() {
+		return { FileSourcePositionsSideInput::getID(),
+			     KeyOf_FileSourcePositions{}.queryStablePerfectHash() };
+	}
 
 	dia::SourcePosition SourcePositionLocked::unlock(query::Context& ctx) const {
 		ctx.query<FileSourcePositionsSideInput>(KeyOf_FileSourcePositions{});
