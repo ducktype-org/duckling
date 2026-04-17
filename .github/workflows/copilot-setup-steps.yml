@@ -29,7 +29,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y \
             python3 python3-click \
-            doxygen graphviz-dev \
+            doxygen libgraphviz-dev \
             cmake ninja-build \
             g++-14 gcc-14 \
             lcov \
@@ -46,10 +46,15 @@ jobs:
 
       - name: Setup build directory
         working-directory: dev
-        # setup-build has 5 interactive prompts (build dir, build system, ccache, coverage, JIT).
-        # All defaults are correct - pipe `yes ''` to accept all defaults automatically.
+        # Non-boolean prompts (build dir, build system, build type, compilers) are
+        # bypassed by passing their CLI flags explicitly below. The three remaining
+        # boolean prompts (ccache, coverage, JIT) cannot be set to `false` via flags
+        # (only `--ccache`, `--coverage`, `--enable-jit` enable them), so we pipe
+        # `yes ''` to accept their defaults (all disabled).
         run: |
           yes '' | python3 toolbox.py setup-build \
+            -b build \
+            -s Ninja \
+            -t Dev \
             -x g++-14 -c gcc-14 \
-            --gcov-version gcov-14 \
-            -t Dev
+            --gcov-version gcov-14
