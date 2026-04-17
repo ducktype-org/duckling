@@ -126,8 +126,7 @@ namespace vm::jit {
 				switch (opcode) {
 				case vm::low::MicroOpcode::jit_call_entrypoint:
 				case vm::low::MicroOpcode::call_func:
-				case vm::low::MicroOpcode::virtual_call_lptr_method:
-				case vm::low::MicroOpcode::ret_tailcall_func: {
+				case vm::low::MicroOpcode::virtual_call_lptr_method:{
 					auto            trampoline = "externalTrampoline";
 					llvm::Function* callee     = module->getFunction(trampoline);
 					if (!callee) {
@@ -203,6 +202,12 @@ namespace vm::jit {
 				break;
 			}
 			}
+		}
+
+
+		// Debug function to print IR - remove.
+		void printModuleIR(llvm::Module& M) {
+			M.print(llvm::errs(), nullptr);
 		}
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {

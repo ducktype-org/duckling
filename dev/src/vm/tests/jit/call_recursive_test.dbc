@@ -1,30 +1,40 @@
-function fibonacci{ i64 } -> i64 {
+function fibonacci{ i64, i64 } -> i64 {
     cmpGt_l64_imm           arg0, 1;
     jmpIf_label             continue;
-    mov_l64_l64             ret_val, arg0;
+    mov_l64_l64             ret_val, arg1;
+    add_l64_l64             ret_val, arg0;
     ret;
     
 label continue;
-    init_lany_type          sub_res1, i64;
+    init_lany_type          sub_res, i64;
+
+    init_lany_type          sub_arg0, i64;
+    mov_l64_l64             sub_arg0, arg0;
+    add_l64_imm             sub_arg0, -1;
+
     init_lany_type          sub_arg1, i64;
-
-    mov_l64_l64             sub_arg1, arg0;
-    add_l64_imm             sub_arg1, -1;
+    mov_l64_l64             sub_arg1, arg1;
     call_func               fibonacci;
 
-    init_lany_type          sub_res2, i64;
-    init_lany_type          sub_arg2, i64;
+    mov_l64_l64             arg1, sub_res;
+    deinit;               # sub_res1
 
-    mov_l64_l64             sub_arg2, arg0;
-    add_l64_imm             sub_arg2, -2;
-    call_func               fibonacci;
+    add_l64_imm             arg0, -2;
+    ret_tailcall_func       fibonacci;
 
-    mov_l64_l64             ret_val, sub_res1;
-    add_l64_l64             ret_val, sub_res2;
-	deinit; # sub_res2
-	deinit; # sub_res1
-	deinit; # arg0
-	ret;
+    init_lany_type          trol, i64;
+    mov_l64_imm             trol, 9;
+    output_l64              trol;
+    output_l64              trol;
+    output_l64              trol;
+    output_l64              trol;
+    output_l64              trol;
+    output_l64              trol;
+    output_l64              trol;
+    output_l64              trol;
+    output_l64              trol;
+    output_l64              trol;
+    ret;    
 }
 
 function main { i64, ptr_argv } -> i64 {
@@ -45,8 +55,12 @@ label loop_start;
 	init_lany_type 			fibo_ret, i64;
     mov_l64_imm             fibo_ret, 0;
 
-	init_lany_type 			fibo_arg, i64;
-	mov_l64_l64             fibo_arg, counter;
+    init_lany_type          fibo_arg0, i64;
+	mov_l64_l64             fibo_arg0, counter;
+
+
+	init_lany_type 			fibo_arg1, i64;
+    mov_l64_imm             fibo_arg1, 0;
 
 	call_func          		fibonacci;
 
