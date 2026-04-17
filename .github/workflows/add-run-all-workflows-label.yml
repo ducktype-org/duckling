@@ -1,0 +1,27 @@
+name: Add Run All Workflows Label
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  add-label:
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add "Run All Workflows" label if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          LABEL: "Run All Workflows"
+        run: |
+          labels=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
+          if echo "$labels" | grep -Fxq "$LABEL"; then
+            echo "Label '$LABEL' already present, nothing to do."
+          else
+            echo "Label '$LABEL' missing, adding it."
+            gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL"
+          fi
