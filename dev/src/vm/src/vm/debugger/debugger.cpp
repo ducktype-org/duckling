@@ -25,8 +25,10 @@ namespace vm::debugger {
 
 					  if (type_name == base::StrID("i64"))
 						  out << completed.exit_value->readBytes<i64>();
-					  else
-						  out << "Unsupported type";
+					  else {
+						  on_error.emitEvent("Unsupported return type error");
+						  out << "<unsupported type>";
+					  }
 					  on_vm_completes_execution.emitEvent(out.str());
 				  }
 				  variant_case(vm::api::ExecutionPanicked, panicked) {
