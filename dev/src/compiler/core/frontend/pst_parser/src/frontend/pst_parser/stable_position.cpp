@@ -6,24 +6,43 @@
 
 namespace pst {
 
-	dia::SourcePosition StablePosition::getActiveSourcePosition() const {
+	dia::SourcePosition StablePosition::getActiveSourcePosition(query::Context& ctx) const {
 		auto first_pos = LangElement::getByStableHash(begin_scope_node)
-		                     .illegalAccess()
-		                     .value()
-		                     ->getSourcePosition();
+		                     .unlock(ctx)
+		                     ->getSourcePosition()
+		                     .unlock(ctx);
 
 		if (end_scope_node.has_value()) {
 			auto last_pos = LangElement::getByStableHash(end_scope_node.value())
-			                    .illegalAccess()
-			                    .value()
-			                    ->getSourcePosition();
+			                    .unlock(ctx)
+			                    ->getSourcePosition()
+			                    .unlock(ctx);
 			return dia::SourcePosition::merge(first_pos, last_pos);
 		} else {
 			return first_pos;
 		}
 	}
 
-	void StablePosition::extendWith(const StablePosition& other) {
+	dia::SourcePosition StablePosition::getActiveSourcePositionIllegalAccess() const {
+		auto first_pos = LangElement::getByStableHash(begin_scope_node)
+		                     .illegalAccess()
+		                     .value()
+		                     ->getSourcePosition()
+		                     .illegalAccess();
+
+		if (end_scope_node.has_value()) {
+			auto last_pos = LangElement::getByStableHash(end_scope_node.value())
+			                    .illegalAccess()
+			                    .value()
+			                    ->getSourcePosition()
+			                    .illegalAccess();
+			return dia::SourcePosition::merge(first_pos, last_pos);
+		} else {
+			return first_pos;
+		}
+	}
+
+	void StablePosition::extendWithSubsequentPos(const StablePosition& other) {
 		// Get the source position of the 4 hashes we need to compare
 		// and store the two that are the furthest apart (the one with the smallest start and the
 		// one with the largest end)
@@ -35,12 +54,21 @@ namespace pst {
 		if (other.end_scope_node.has_value())
 			hashes_to_compare.push_back(other.end_scope_node.value());
 
-		// Get first
+		// This code assumes that after the recompilation the order of the nodes does not change.
+		// But as a additional safety measure, we check the position of the elements before
+		// keeping the min and max hashes, so if the user of the function accidentally gives the
+		// hashes in the wrong order, we will still keep the correct position.
 		auto min_start_pos = [](HashType hash1, HashType hash2) {
-			auto pos1
-				= LangElement::getByStableHash(hash1).illegalAccess().value()->getSourcePosition();
-			auto pos2
-				= LangElement::getByStableHash(hash2).illegalAccess().value()->getSourcePosition();
+			auto pos1 = LangElement::getByStableHash(hash1)
+			                .illegalAccess()
+			                .value()
+			                ->getSourcePosition()
+			                .illegalAccess();
+			auto pos2 = LangElement::getByStableHash(hash2)
+			                .illegalAccess()
+			                .value()
+			                ->getSourcePosition()
+			                .illegalAccess();
 			CORE_ASSERT(
 				pos1.getSource() == pos2.getSource(),
 				"Cannot compare positions from different sources"
@@ -48,10 +76,16 @@ namespace pst {
 			return pos1.getStart() < pos2.getStart();
 		};
 		auto max_end_pos = [](HashType hash1, HashType hash2) {
-			auto pos1
-				= LangElement::getByStableHash(hash1).illegalAccess().value()->getSourcePosition();
-			auto pos2
-				= LangElement::getByStableHash(hash2).illegalAccess().value()->getSourcePosition();
+			auto pos1 = LangElement::getByStableHash(hash1)
+			                .illegalAccess()
+			                .value()
+			                ->getSourcePosition()
+			                .illegalAccess();
+			auto pos2 = LangElement::getByStableHash(hash2)
+			                .illegalAccess()
+			                .value()
+			                ->getSourcePosition()
+			                .illegalAccess();
 			CORE_ASSERT(
 				pos1.getSource() == pos2.getSource(),
 				"Cannot compare positions from different sources"
@@ -71,9 +105,9 @@ namespace pst {
 		}
 	}
 
-	StablePosition StablePosition::extendedWith(const StablePosition& other) const {
+	StablePosition StablePosition::extendedWithSubsequentPos(const StablePosition& other) const {
 		StablePosition copy = *this;
-		copy.extendWith(other);
+		copy.extendWithSubsequentPos(other);
 		return copy;
 	}
 }
