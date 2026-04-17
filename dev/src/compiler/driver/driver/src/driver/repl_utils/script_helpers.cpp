@@ -75,7 +75,7 @@ namespace compiler::repl {
 
 		// In lowered DVM code, function returns are written to a dedicated local named ret_val
 		script_main.body.emplace_back(
-			Op_mov_l64_imm(opargs::StackLocal64(base::StrID("ret_val")), opargs::Immediate(0))
+			Op_mov_l64_imm(opargs::StackLocal64(base::StrID("ret0")), opargs::Immediate(0))
 		);
 		script_main.body.emplace_back(Op_ret());
 

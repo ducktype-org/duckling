@@ -240,7 +240,7 @@ namespace vm::loader::compiler {
 		code::FuncSignature func_signature = ctx.function.signature;
 		using namespace std::views;
 		for (auto [idx, ret_type]: enumerate(func_signature.result_types))
-			push(base::StrID(base::strConcat("ret_val_", idx).c_str()), ret_type.str);
+			push(base::StrID(base::strConcat("ret", idx).c_str()), ret_type.str);
 		for (auto [idx, param_type]: enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size

@@ -111,7 +111,7 @@ public:
 		  number_of_ret_vals(signature.result_types.size()) {
 		using namespace std::views;
 		for (auto [idx, ret]: enumerate(signature.result_types))
-			push(base::StrID(base::strConcat("ret_val_", idx).c_str()), ret.str);
+			push(base::StrID(base::strConcat("ret", idx).c_str()), ret.str);
 
 		for (auto [idx, param]: enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
@@ -575,14 +575,14 @@ class FunctionValidator {
 			}
 
 			instr_case_novalue(Comment) {}
-			instr_case(Op_mov_l8_imm, instr) {}
-			instr_case(Op_mov_l8_l8, instr) {
+			instr_case_novalue(Op_mov_l8_imm) {}
+			instr_case_novalue(Op_mov_l8_l8) {
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_cmov_l8_l8, instr) {
+			instr_case_novalue(Op_cmov_l8_l8) {
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_cmov_l8_imm, instr) {}
+			instr_case_novalue(Op_cmov_l8_imm) {}
 			instr_case_novalue(Op_mov_l16_imm) {}
 			instr_case_novalue(Op_mov_l16_l16) {
 				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
@@ -1665,7 +1665,7 @@ class FunctionValidator {
 	void validateSignature() {
 		if (function.name.str == base::StrID("main")) {
 			if (function.signature.result_types.size() != 1)
-				throw InvalidMainReturnType(function.signature, 1);
+				throw InvalidMainReturnType(function.signature, {});
 			if (function.signature.result_types[0].str != base::StrID("i64"))
 				throw InvalidMainReturnType(function.signature, 0);
 		}
