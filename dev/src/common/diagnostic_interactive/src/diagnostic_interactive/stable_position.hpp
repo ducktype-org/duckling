@@ -4,42 +4,85 @@
 
 #include <diagnostic/source_position.hpp>
 
+namespace query {
+	struct Context;
+}
+
 namespace dia_int {
-	class StablePosition {
+	/**
+	 * @brief Class that represents a position in the source code that
+	 * that is stable across re-parses, if the order of the elements
+	 * that are inside the StablePosition does not change.
+	 *
+	 * This is different from the normal SourcePosition where
+	 * the position can become invalid after re-parses.
+	 *
+	 * @warning If used to contain a range from one element to another,
+	 * the position will become invalid if the order of the elements changes.
+	 * So it is safe to have elements like `<AccessExpr>, <CallExpr> in .a(x)`,
+	 * but not safe to have like range from one `<FunDecl>` to another in the same file `<FunDecl>`.
+	 */
+	class StablePosition final {
 	public:
 		using HashType = base::Bit256;
-
+		/**
+		 * @brief Node hash that defines start of the position range.
+		 */
 		HashType                 begin_node;
+
+		/**
+		 * @brief Node hash that defines the end of the position range.
+		 * If not set, the position is defined as the position of the @p begin_scope_node only.
+		 */
 		base::Optional<HashType> end_node;
 
-		using ConvertToSourcePosFunc = dia::SourcePosition (*)(const StablePosition&);
-		ConvertToSourcePosFunc to_source_position;
+		using ToSourcePosIllegalAccessFunc = dia::SourcePosition (*)(const StablePosition&);
+		ToSourcePosIllegalAccessFunc to_source_pos_illegal_access_fn;
+
+		using ToSourcePosFuncWithContexFunc
+			= dia::SourcePosition (*)(query::Context&, const StablePosition&);
+		ToSourcePosFuncWithContexFunc to_source_pos_with_context_fn;
 
 		StablePosition(
-			ConvertToSourcePosFunc   to_source_position_fn,
-			HashType                 begin_node,
-			base::Optional<HashType> end_node = {}
+			ToSourcePosIllegalAccessFunc  to_source_pos_illegal_access_fn,
+			ToSourcePosFuncWithContexFunc to_source_pos_with_context_fn,
+			HashType                      begin_node,
+			base::Optional<HashType>      end_node = {}
 		):
 			  begin_node(begin_node),
 			  end_node(end_node),
-			  to_source_position(to_source_position_fn) {}
+			  to_source_pos_illegal_access_fn(to_source_pos_illegal_access_fn),
+			  to_source_pos_with_context_fn(to_source_pos_with_context_fn) {}
 
 		/**
 		 * @brief Inplace extend the position to include the position of another StablePosition.
+		 * @warning This method assumes that the order of the nodes will never change after
+		 * recompilation.
 		 */
-		void extendWith(const StablePosition& other);
+		void extendWithSubsequentPos(const StablePosition& other);
 
 		/**
 		 * @brief Create a new StablePosition that is the extension of this position and another
 		 * position.
+		 * @warning This method assumes that the order of the nodes will never change after
+		 * recompilation.
 		 */
-		[[nodiscard]] StablePosition extendedWith(const StablePosition& other) const;
+		[[nodiscard]] StablePosition extendedWithSubsequentPos(const StablePosition& other) const;
 
 		/**
-		 * @brief Get the active source position corresponding to this stable position.
+		 * @brief Get the active source position corresponding to this stable position,
+		 * bypasses the query context.
 		 */
 		[[nodiscard]] dia::SourcePosition getActiveSourcePositionIllegalAccess() const {
-			return to_source_position(*this);
+			return to_source_pos_illegal_access_fn(*this);
+		}
+
+		/**
+		 * @brief Get the active source position corresponding to this stable position, with access to the
+		 * query context.
+		 */
+		[[nodiscard]] dia::SourcePosition getActiveSourcePosition(query::Context& ctx) const {
+			return to_source_pos_with_context_fn(ctx, *this);
 		}
 
 		static StablePosition fakePosition();

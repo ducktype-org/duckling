@@ -6,6 +6,7 @@
 #include "elements/lang_state_unmethods.hpp"
 #include "pst_config.hpp"
 #include "pst_id.hpp"
+#include "source_position_locked.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 
@@ -109,7 +110,7 @@ namespace pst {
 		 * @brief Position covering the whole element.
 		 */
 		[[nodiscard]]
-		const dia::SourcePosition& getSourcePosition() const;
+		SourcePositionLocked getSourcePosition() const;
 
 		/**
 		 * @brief The stable position of an element.

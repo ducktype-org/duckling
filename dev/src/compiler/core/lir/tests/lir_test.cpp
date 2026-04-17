@@ -224,10 +224,8 @@ private:
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
 
-		// withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
-
 		auto print_stable_position
-			= [](const base::Optional<dia_int::StablePosition>& stable, std::string_view label) {
+			= [&](const base::Optional<dia_int::StablePosition>& stable, std::string_view label) {
 				  if (!stable.has_value()) {
 					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
 					  return;
@@ -269,7 +267,13 @@ private:
 		auto fourth_pos
 			= fourth_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
 
-		ASSERT_POSITION(first_pos, 5, 5, 5, 21);
+		auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
+		auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
+		ASSERT_EQUAL(first_start_line, 5);
+		ASSERT_EQUAL(first_start_col, 5);
+		ASSERT_EQUAL(first_end_line, 5);
+		ASSERT_EQUAL(first_end_col, 21);
+
 		ASSERT_POSITION(second_pos, 7, 18, 7, 24);
 		ASSERT_POSITION(fourth_pos, 7, 5, 7, 30);
 

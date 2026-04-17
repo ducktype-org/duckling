@@ -76,10 +76,12 @@ std::string stringPosition(dia::SourcePosition pos) {
  * @note Adds information about position and element class
  */
 Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
-	// std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType() + "\n\""
+	// std::string name = stringPosition(el->getSourcePosition().unlock(ctx)) + "\n" +
+	// el->elementType() + "\n\""
 	// + el->getComponentHash().str() + "\"";
-	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType();
-	auto        self = hdl.addNode(name);
+	std::string name
+		= stringPosition(el->getSourcePosition().illegalAccess()) + "\n" + el->elementType();
+	auto self = hdl.addNode(name);
 
 	for (auto sub: el->viewSubElements()) {
 		variant_match(sub) {
