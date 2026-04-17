@@ -26,12 +26,13 @@
 
 #include <string_id/string_id.hpp>
 
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 namespace vm {
-	class SafeVMThread;
-	class IVMProcess;
+	class SafeSafeVMThread;
+	class IIVMProcess;
 }
 
 namespace vm::builtins {

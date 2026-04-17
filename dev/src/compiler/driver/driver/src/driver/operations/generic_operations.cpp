@@ -12,6 +12,11 @@
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <driver/repl_utils/script_helpers.hpp>
+#include <driver/repl_utils/repl_dvm_helpers.hpp>
+#include <driver/repl_utils/repl_split_helpers.hpp>
+#include <driver/repl_utils/repl_statement_helpers.hpp>
+#include <driver/repl_utils/script_helpers.hpp>
+#include <driver/options.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
@@ -431,64 +436,18 @@ namespace compiler::driver {
 	}
 
 	base::OkBad compileScript(
-		BackendType backend_type, [[maybe_unused]] const linker::LinkingOptions& linking_options
+		[[maybe_unused]] const CompilerModeOfOperationAndOptions::ScriptMode& mode,
+		[[maybe_unused]] BackendType                                          backend_type,
+		[[maybe_unused]] const linker::LinkingOptions&                        linking_options
 	) {
-		if (backend_type != BackendType::DVM) {
-			CORE_USER_LOG("compile_script currently supports only --dvm-backend.\n");
-			return base::BAD;
-		}
-
-		auto compiled_script = compileScriptToDVMCollection();
-		if (!compiled_script.has_value()) {
-			CORE_USER_LOG(compiled_script.error(), "\n");
-			return base::BAD;
-		}
-
-		auto& script_context  = global_state::getScriptContext();
-		auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-            base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
-        );
-		std::ofstream output_file(output_artifact.file.getFilePath().getPath(), std::ios::binary);
-		if (!output_file.is_open()) {
-			CORE_USER_LOG(
-				"Failed to open output file for script bytecode: ",
-				output_artifact.file.getFilePath().string(),
-				"\n"
-			);
-			return base::BAD;
-		}
-
-		vm::code::serializeCode(compiled_script.value(), output_file);
-		output_file.close();
-
-		CORE_USER_LOG(
-			"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
-		);
-		return base::OK;
-	}
-
-	std::expected<RunOutput, std::string> runScriptOnDVM() {
-		auto compiled_script = compileScriptToDVMCollection();
-		if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
-
-		vm::PID pid{};
-
-		return vm::api::spawn()
-		    .and_then([&](vm::api::ProcessInfo process) {
-				pid = process.pid;
-				return std::expected<void, vm::api::ApiError>{};
-			})
-		    .and_then([&] { return vm::api::loadCode(pid, compiled_script.value()); })
-		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-		    .and_then([&] { return vm::api::run(pid); })
-		    .and_then([&] { return vm::api::join(pid); })
-		    .and_then([&] { return vm::api::getExitValue(pid); })
-		    .transform_error(vm::api::errorToString)
-		    .transform([](vm::api::ExitValue exit_values) {
-				CORE_ASSERT(exit_values.size() == 1, "Expecting exactly one exit value");
-				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
-			});
+		// Steps:
+		// 1. Read mode.script_file content
+		// 2. Call repl::splitInputIntoStatements() to split into individual statement strings
+		// 3. For each statement: create a chained REPL module (ReplData with parent link)
+		// 4. For each module: compile and collect .dbc/.o artifacts
+		// 5. DVM:  merge CodeCollections and serialize to mode.output_path as .dbc
+		//    LLVM: compile entry-point module + link all .o files somehow (not yet sure how)
+		throw base::NotYetImplemented("compileScript");
 	}
 
 	base::OkBad compileEntirePackage(

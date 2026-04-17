@@ -165,13 +165,13 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                 \
 	}
 
-#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                 \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {         \
-		{                                                                         \
-			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                  \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value * static_cast<TYPE>(-1)); \
-		}                                                                         \
-		FUNCTION_CONT(1);                                                         \
+#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                        \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE)(FUNCTION_ARGS) {                \
+		{                                                                                \
+			auto value = readFromStack<TYPE>(local_stack, instr->arg0);                  \
+			writeToStack<TYPE>(local_stack, instr->arg0, value * static_cast<TYPE>(-1)); \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
 	}
 
 // @TODO: #1216 Check for over/under flows.
@@ -362,22 +362,15 @@ namespace vm {
 				const base::StrID arg_type  = function_signature->parameters[i];
 				TypeCRef          real_type = thread.process_program->getTypes().at(arg_type);
 				auto              block = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
-				args.push_back(thread.safe_process.createOwnedVmValue(real_type, Pointer(block, 0)));
-			}
-
-			std::vector<TypeCRef> ret_types = {};
-			if (function_signature->result_types.size()) {
-				CORE_ASSERT(
-					function_signature->result_types.size() == 1,
-					"No support for returning multiple types"
-				);
-				ret_types.emplace_back(
-					thread.process_program->getTypes().at(function_signature->result_types.at(0))
-				);
+				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
-				builtin_id, ret_types, thread.safe_process, thread, args
+				builtin_id,
+				thread.executing_program->getTypes().at(function_signature->result_type),
+				thread.process,
+				thread,
+				args
 			);
 
 			if (return_value.has_value()) {
