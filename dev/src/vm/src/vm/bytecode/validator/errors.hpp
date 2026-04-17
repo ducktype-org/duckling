@@ -77,14 +77,16 @@ namespace vm::code {
 		constexpr static std::string_view ERR_MSG = "Missing function declaration for ";
 
 		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
-			  ValidationError(base::strConcat(
-				  ERR_MSG,
-				  is_ctor ? "constructor '" : "destructor '",
-				  func_name,
-				  "' of global variable '",
-				  global_name,
-				  "'"
-			  )) {}
+			  ValidationError(
+				  base::strConcat(
+					  ERR_MSG,
+					  is_ctor ? "constructor '" : "destructor '",
+					  func_name,
+					  "' of global variable '",
+					  global_name,
+					  "'"
+				  )
+			  ) {}
 	};
 
 	/**
@@ -159,16 +161,17 @@ namespace vm::code {
 			= "It's required for the `main` function to return a single value of type `i64`";
 		const code::FuncSignature main_signature;
 
-		usize res_index;
+		const bool type_mismatch;
 
-		InvalidMainReturnType(code::FuncSignature main_signature, usize res_index = 0):
+		InvalidMainReturnType(code::FuncSignature main_signature, bool type_mismatch):
 			  ValidationError(ERR_MSG.data()),
 			  main_signature(std::move(main_signature)),
-			  res_index(res_index) {}
+			  type_mismatch(type_mismatch) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			if (main_signature.result_types.size() == 0) return std::nullopt;
-			return static_cast<CRef<ElementBase>>(&main_signature.result_types[res_index]);
+			return type_mismatch
+			         ? static_cast<CRef<ElementBase>>(&main_signature.result_types[0])
+			         : base::Optional<CRef<ElementBase>>{};
 		}
 	};
 
@@ -368,8 +371,7 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(
 		InvalidTailcallArgumentsError,
 		"Invalid tailcall arguments. The stack should contain exactly return values and arguments "
-		"for "
-		"calling: "
+		"for calling: "
 	);
 	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot instantiate a value of type: ");
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
