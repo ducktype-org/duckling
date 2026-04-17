@@ -32,7 +32,7 @@ namespace vm::low {
 		usize local_block_count;
 
 		usize arg_size;
-		// total summed size of all return values
+		// The total summed size of all return values.
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;

@@ -165,13 +165,13 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                 \
 	}
 
-#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {        \
-		{                                                                        \
-			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                 \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value* static_cast<TYPE>(-1)); \
-		}                                                                        \
-		FUNCTION_CONT(1);                                                        \
+#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                 \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {         \
+		{                                                                         \
+			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                  \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value * static_cast<TYPE>(-1)); \
+		}                                                                         \
+		FUNCTION_CONT(1);                                                         \
 	}
 
 // @TODO: #1216 Check for over/under flows.
@@ -376,8 +376,9 @@ namespace vm {
 				);
 			}
 
-			base::Optional<Box<VmValue>> return_value
-				= builtins::callBuiltinFunction(builtin_id, ret_types, thread.safe_process, thread, args);
+			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
+				builtin_id, ret_types, thread.safe_process, thread, args
+			);
 
 			if (return_value.has_value()) {
 				auto value = std::move(return_value.value());
@@ -512,8 +513,8 @@ namespace vm {
                     - callee_frame->local_block_ref_stack_base
                 );
 
-				// We're returning from a non-void function, so the last block on the stack is the
-				// return value. It's being used by the caller so we don't free it.
+				// We're returning from a non-void function, so the last `ret_count` blocks on the
+				// stack are the return values. It's being used by the caller so we don't free it.
 				if (block_ref_count > ret_count) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);

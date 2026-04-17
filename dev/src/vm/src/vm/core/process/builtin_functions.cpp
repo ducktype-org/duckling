@@ -32,8 +32,7 @@ namespace vm::builtins {
 				return {};
 			} else {
 				CORE_ASSERT(
-					vm_return_types.size() == 1,
-					"Builtin Function with multiple more than 1 return value"
+					vm_return_types.size() == 1, "Builtin Function with more than 1 return value"
 				);
 				auto value = function(thread, args[Is]->template readBytes<FunArgs>()...);
 				CORE_ASSERT(
@@ -203,7 +202,7 @@ namespace vm::builtins {
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		std::vector<TypeCRef>            result_types,
+		const std::vector<TypeCRef>&     result_types,
 		IVMProcess&                      process,
 		SafeVMThread&                    thread,
 		const std::vector<Box<VmValue>>& arguments
