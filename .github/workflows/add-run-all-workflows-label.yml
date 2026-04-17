@@ -9,6 +9,7 @@ jobs:
     if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
     permissions:
+      issues: write
       pull-requests: write
     steps:
       - name: Add "Run All Workflows" label if missing
