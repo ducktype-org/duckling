@@ -898,6 +898,33 @@ namespace vm::persistent::detail {
 
 			if (left > right) throw std::invalid_argument("left idx bigger than right idx");
 
+			if (state == EMPTY) return EMPTY;
+
+			auto path_l = getLeftMostPath(state);
+			auto path_r = getRightMostPath(state);
+
+			if (left <= path_l.idx && path_r.idx < right) return EMPTY;
+
+			if (left <= path_l.idx && path_l.idx < right) {
+				path_l = getPathTo(state, right);
+				if (!nodeAtHeight(path_l, 0))
+					CORE_ASSERT(pathForward(path_l), "there has to be sth on right");
+
+				return slice(state, path_l.idx, path_r.idx);
+			}
+
+			if (left <= path_r.idx && path_r.idx < right) {
+				CORE_ASSERT(
+					left >= 1, "since [left, right) not contain entire memory"
+				);
+				
+				path_r = getPathTo(state, left - 1);
+				if (!nodeAtHeight(path_r, 0))
+					CORE_ASSERT(pathBackward(path_r), "there has to be sth on left");
+
+				return slice(state, path_l.idx, path_r.idx);
+			}
+
 			auto lambda = [&](this auto&& self, MemoryStateID state) -> MemoryStateID {
 				auto [height, offset] = getHeightOffset(state);
 
